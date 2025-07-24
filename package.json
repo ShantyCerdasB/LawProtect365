@@ -1,0 +1,28 @@
+﻿{
+    "name":  "lawprotect365",
+    "version":  "1.0.0",
+    "description":  "",
+    "main":  "index.js",
+    "keywords":  [
+
+                 ],
+    "author":  "",
+    "license":  "ISC",
+    "type":  "commonjs",
+    "private":  true,
+    "workspaces":  [
+                       "services/*",
+                       "packages/*",
+                       "web-frontend",
+                       "mobile-android",
+                       "mobile-ios"
+                   ],
+    "scripts":  {
+                    "build":  "turbo build",
+                    "dev":  "turbo dev",
+                    "lint":  "turbo lint"
+                },
+    "devDependencies":  {
+                            "turbo":  "^1.10.0"
+                        }
+}
