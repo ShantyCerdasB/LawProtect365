@@ -1,0 +1,27 @@
+{
+  "name": "documents-service",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "services/*",
+    "packages/*",
+    "web-frontend",
+    "mobile-android",
+    "mobile-ios"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "clean": "turbo run clean",
+    "format": "prettier --write ."
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "turbo": "^1.8.4",
+    "typescript": "^4.9.5",
+    "eslint": "^8.23.1",
+    "prettier": "^2.7.1"
+  }
+}

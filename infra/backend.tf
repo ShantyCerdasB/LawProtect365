@@ -1,8 +1,10 @@
 ﻿terraform {
   backend "s3" {
-    bucket         = "<TU_BUCKET_TFSTATE>"
-    key            = "lawprotect365/terraform.tfstate"
+    bucket         = "lawprotect365-dev-tfstate-us-east-1"
+    key            = "lawprotect365/dev/terraform.tfstate"
     region         = "us-east-1"
-    dynamodb_table = "<TU_DYNAMODB_LOCK_TABLE>"
+    profile        = "lawprotect365"
+    # Uncomment and set once you have your DynamoDB lock table created:
+    # dynamodb_table = "lawprotect365-tfstate-locks-dev"
   }
 }
