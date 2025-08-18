@@ -1,6 +1,10 @@
 /**
  * @file errors.test.ts
  * @summary Tests for HttpError and its subclasses (100% line coverage).
+ * @remarks
+ * - Updated tests to align with constructors that now accept only `ErrorCode` (not arbitrary strings).
+ * - Replaced custom string overrides with valid `ErrorCodes` constants.
+ * - Typed the helper `expectDefault` to expect an `ErrorCode`.
  */
 
 import {
@@ -17,7 +21,7 @@ import {
   NotImplementedError,
 } from '../../src/errors/errors.js';
 import { AppError } from '../../src/errors/AppError.js';
-import { ErrorCodes } from '../../src/errors/codes.js';
+import { ErrorCodes, type ErrorCode } from '../../src/errors/codes.js';
 
 const expectDefault = (
   err: AppError,
@@ -26,7 +30,7 @@ const expectDefault = (
     status,
     code,
     message,
-  }: { name: string; status: number; code: string; message: string }
+  }: { name: string; status: number; code: ErrorCode; message: string }
 ) => {
   expect(err).toBeInstanceOf(Error);
   expect(err).toBeInstanceOf(AppError);
@@ -145,15 +149,15 @@ describe('HttpError subclasses (defaults)', () => {
 describe('HttpError subclasses (overrides and JSON)', () => {
   it('allows overriding message, code and details; toJSON reflects values', () => {
     const details = { hint: 'use a different thing' };
-    const err = new BadRequestError('Bad input', 'CUSTOM_CODE', details);
+    const err = new BadRequestError('Bad input', ErrorCodes.COMMON_CONFLICT, details);
 
     expect(err.statusCode).toBe(400);
     expect(err.message).toBe('Bad input');
-    expect(err.code).toBe('CUSTOM_CODE');
+    expect(err.code).toBe(ErrorCodes.COMMON_CONFLICT);
     expect(err.details).toBe(details);
 
     expect(err.toJSON()).toEqual({
-      error: 'CUSTOM_CODE',
+      error: ErrorCodes.COMMON_CONFLICT,
       message: 'Bad input',
       details,
       statusCode: 400,
@@ -161,14 +165,14 @@ describe('HttpError subclasses (overrides and JSON)', () => {
   });
 
   it('other subclasses also accept overrides', () => {
-    const e1 = new UnauthorizedError('No token', 'AUTH_MISSING', { field: 'Authorization' });
+    const e1 = new UnauthorizedError('No token', ErrorCodes.AUTH_FORBIDDEN, { field: 'Authorization' });
     expect(e1.statusCode).toBe(401);
-    expect(e1.code).toBe('AUTH_MISSING');
+    expect(e1.code).toBe(ErrorCodes.AUTH_FORBIDDEN);
     expect(e1.message).toBe('No token');
 
-    const e2 = new NotFoundError('Missing thing', 'THING_NOT_FOUND', { id: '123' });
+    const e2 = new NotFoundError('Missing thing', ErrorCodes.COMMON_CONFLICT, { id: '123' });
     expect(e2.statusCode).toBe(404);
-    expect(e2.code).toBe('THING_NOT_FOUND');
+    expect(e2.code).toBe(ErrorCodes.COMMON_CONFLICT);
     expect(e2.message).toBe('Missing thing');
   });
 });

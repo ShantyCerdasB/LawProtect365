@@ -1,6 +1,9 @@
 /**
  * POSIX path helpers for safe joining, normalization and inspection.
  * Uses forward slashes for consistency across platforms and keys.
+ * @remarks
+ * - Replaced the trailing-slash regex in `ensureTrailingSlash` with a loop-based trim to avoid any risk of super-linear backtracking.
+ * - Applied the same loop-based approach to `stripTrailingSlash` for consistency.
  */
 
 import * as nodePath from "node:path";
@@ -62,15 +65,23 @@ export const stripLeadingSlash = (input: string): string =>
  * Ensures a single trailing slash.
  * @param input Path string.
  */
-export const ensureTrailingSlash = (input: string): string =>
-  `${toPosix(input).replace(/\/+$/, "")}/`;
+export const ensureTrailingSlash = (input: string): string => {
+  const s = toPosix(input);
+  let end = s.length - 1;
+  while (end >= 0 && s[end] === "/") end--;
+  return s.slice(0, end + 1) + "/";
+};
 
 /**
  * Removes any trailing slashes.
  * @param input Path string.
  */
-export const stripTrailingSlash = (input: string): string =>
-  toPosix(input).replace(/\/+$/, "");
+export const stripTrailingSlash = (input: string): string => {
+  const s = toPosix(input);
+  let end = s.length - 1;
+  while (end >= 0 && s[end] === "/") end--;
+  return s.slice(0, end + 1);
+};
 
 /**
  * Returns true if `child` is contained within `parent` after normalization.

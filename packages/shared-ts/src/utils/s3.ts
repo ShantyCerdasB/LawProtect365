@@ -2,6 +2,8 @@
  * Utilities for working with S3 URIs and object keys (pure, SDK-agnostic).
  * Provides parsing/formatting of s3:// URIs, key joining/inspection,
  * validity checks, and HTTP URL construction (virtual-hosted or path-style).
+ * @remarks
+ * - Replaced regex-based edge-slash trimming in `joinKey` (and related helpers) with loop-based functions to avoid potential super-linear backtracking.
  */
 
 export interface S3Uri {
@@ -10,6 +12,19 @@ export interface S3Uri {
   /** S3 object key. */
   key: string;
 }
+
+// Internal helpers for slash trimming (no regex, linear time).
+const stripLeadingSlashes = (s: string): string => {
+  let i = 0;
+  while (i < s.length && s.charCodeAt(i) === 47 /* '/' */) i++;
+  return s.slice(i);
+};
+const stripTrailingSlashes = (s: string): string => {
+  let end = s.length;
+  while (end > 0 && s.charCodeAt(end - 1) === 47 /* '/' */) end--;
+  return s.slice(0, end);
+};
+const stripEdgeSlashes = (s: string): string => stripTrailingSlashes(stripLeadingSlashes(s));
 
 /**
  * Parses an s3:// URI into bucket and key.
@@ -36,7 +51,7 @@ export const parseS3Uri = (uri: string): S3Uri => {
  * @param key S3 object key.
  */
 export const formatS3Uri = (bucket: string, key: string): string =>
-  `s3://${bucket}/${String(key ?? "").replace(/^\/+/, "")}`;
+  `s3://${bucket}/${stripLeadingSlashes(String(key ?? ""))}`;
 
 /**
  * Returns true if the string looks like an S3 URI.
@@ -51,7 +66,7 @@ export const isS3Uri = (uri: string): boolean => /^s3:\/\//i.test(uri);
 export const joinKey = (...parts: Array<string | undefined | null>): string =>
   parts
     .filter((p): p is string => Boolean(p))
-    .map((p) => p!.replace(/^\/+|\/+$/g, ""))
+    .map((p) => stripEdgeSlashes(p))
     .filter(Boolean)
     .join("/");
 
@@ -79,8 +94,8 @@ export const basename = (key: string): string => {
  * @param prefix Prefix folder (e.g., "public/").
  */
 export const ensurePrefix = (key: string, prefix: string): string => {
-  const cleanPrefix = prefix.replace(/^\/+|\/+$/g, "");
-  const cleanKey = key.replace(/^\/+/, "");
+  const cleanPrefix = stripEdgeSlashes(prefix);
+  const cleanKey = stripLeadingSlashes(key);
   return cleanKey.startsWith(`${cleanPrefix}/`) ? cleanKey : `${cleanPrefix}/${cleanKey}`;
 };
 
@@ -124,7 +139,7 @@ export const toHttpUrl = (
   region: string,
   opts: { virtualHosted?: boolean; dualstack?: boolean; accelerate?: boolean } = {}
 ): string => {
-  const encodedKey = encodeURI(String(key ?? "").replace(/^\/+/, ""));
+  const encodedKey = encodeURI(stripLeadingSlashes(String(key ?? "")));
   const isUsEast1 = region === "us-east-1";
   const dual = opts.dualstack ? ".dualstack" : "";
   if (opts.accelerate) {
@@ -163,7 +178,7 @@ export const guessContentType = (filename: string): string | undefined => {
     zip: "application/zip",
     xml: "application/xml",
     docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   };
   return map[ext];
 };
