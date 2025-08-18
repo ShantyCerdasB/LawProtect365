@@ -1,0 +1,68 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2022"],
+    "types": ["node", "aws-lambda"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "rootDir": "src",
+    "outDir": "dist",
+    "declaration": true,
+    "baseUrl": "./src",
+    "paths": {
+      "@/*": ["*"],
+      "@app/*": ["app/*"],
+      "@app/*.js": ["app/*.ts"],
+
+      "@auth/*": ["auth/*"],
+      "@auth/*.js": ["auth/*.ts"],
+
+      "@aws/*": ["aws/*"],
+      "@aws/*.js": ["aws/*.ts"],
+
+      "@config/*": ["config/*"],
+      "@config/*.js": ["config/*.ts"],
+
+      "@db/*": ["db/*"],
+      "@db/*.js": ["db/*.ts"],
+
+      "@errors/*": ["errors/*"],
+      "@errors/*.js": ["errors/*.ts"],
+
+      "@http/*": ["http/*"],
+      "@http/*.js": ["http/*.ts"],
+
+      "@observability/*": ["observability/*"],
+      "@observability/*.js": ["observability/*.ts"],
+
+      "@utils/*": ["utils/*"],
+      "@utils/*.js": ["utils/*.ts"],
+
+      "@validation/*": ["validation/*"],
+      "@validation/*.js": ["validation/*.ts"],
+
+      "@types/*": ["types/*"],
+      "@types/*.js": ["types/*.ts"],
+
+      "@cache/*": ["cache/*"],
+      "@cache/*.js": ["cache/*.ts"],
+
+      "@contracts/*": ["contracts/*"],
+      "@contracts/*.js": ["contracts/*.ts"],
+
+      "@events/*": ["events/*"],
+      "@events/*.js": ["events/*.ts"],
+
+      "@messaging/*": ["messaging/*"],
+      "@messaging/*.js": ["messaging/*.ts"],
+
+      "@storage/*": ["storage/*"],
+      "@storage/*.js": ["storage/*.ts"]
+    },
+    "resolveJsonModule": true
+  },
+  "include": ["src", "src/types/env.d.ts"]
+}

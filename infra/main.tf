@@ -400,7 +400,6 @@ module "sign_service" {
 module "db_secret" {
   source        = "./modules/secretmanager"
   secret_name   = "${var.project_name}/database-${var.env}"
-  # Guarda TODO lo necesario para Prisma
   secret_string = jsonencode({
     engine   = "postgresql"
     host     = module.core_db.endpoint

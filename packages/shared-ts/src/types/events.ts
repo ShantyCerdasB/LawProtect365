@@ -1,0 +1,34 @@
+import type { ISODateString } from "./common.js";
+import type { TenantId, UserId } from "./brand.js";
+
+/** Event name (domain-specific string). */
+export type EventName = string;
+
+/**
+ * Metadata carried by domain and integration events.
+ */
+export interface EventMeta {
+  /** Event id (ulid/uuid). */
+  id: string;
+  /** Trace id for correlation across services. */
+  traceId?: string;
+  /** Event creation timestamp (ISO-8601). */
+  ts: ISODateString;
+  /** Logical source of the event (service name). */
+  source: string;
+  /** Multi-tenant hint when applicable. */
+  tenantId?: TenantId;
+  /** Actor responsible if applicable. */
+  actorId?: UserId;
+  /** Arbitrary tags (e.g., region, env). */
+  tags?: Record<string, string>;
+}
+
+/**
+ * Generic event envelope used for message buses and audit logs.
+ */
+export interface EventEnvelope<TPayload = unknown> {
+  name: EventName;
+  meta: EventMeta;
+  data: TPayload;
+}
