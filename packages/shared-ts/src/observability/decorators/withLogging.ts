@@ -1,4 +1,4 @@
-import type { AppContext } from "../../app/AppContext.js";
+import type { AppContext } from "@app/AppContext.js";
 
 /**
  * Async operation signature used by decorators.
@@ -20,16 +20,33 @@ export interface LoggingOptions {
  * @param op Operation to wrap.
  * @param opts Logging options.
  */
-export const withLogging = <I, O>(op: AsyncOp<I, O>, opts: LoggingOptions = {}): AsyncOp<I, O> => {
+export const withLogging = <I, O>(
+  op: AsyncOp<I, O>,
+  opts: LoggingOptions = {}
+): AsyncOp<I, O> => {
   const level = opts.level ?? "info";
-  const name = opts.name ?? op.name ?? "operation";
+
+  // Ensure a non-empty operation name, falling back to "operation" when anonymous.
+  const rawName = opts.name ?? op.name;
+  const name = typeof rawName === "string" && rawName.trim() ? rawName : "operation";
+
   return async (ctx, input) => {
     const start = Date.now();
-    ctx.logger[level](`${name}:start`, opts.includeInput ? { input } : undefined);
+
+    ctx.logger[level](
+      `${name}:start`,
+      opts.includeInput ? { input } : undefined
+    );
+
     try {
       const out = await op(ctx, input);
       const ms = Date.now() - start;
-      ctx.logger[level](`${name}:ok`, { ms, ...(opts.includeOutput ? { output: out } : {}) });
+
+      ctx.logger[level](
+        `${name}:ok`,
+        { ms, ...(opts.includeOutput ? { output: out } : {}) }
+      );
+
       return out;
     } catch (e) {
       const ms = Date.now() - start;
