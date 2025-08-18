@@ -1,5 +1,8 @@
 /**
  * String utilities for normalization, casing, trimming and identifiers.
+ * @remarks
+ * - Rewrote the trailing/leading hyphen trimming in `slugify` without regex to eliminate any risk of super-linear backtracking.
+ * - Collapsed non-alphanumeric runs to a single hyphen using a linear-time loop.
  */
 
 /** Returns true when the string is empty or only whitespace. */
@@ -16,16 +19,43 @@ export const trimTo = (s: string, max: number, suffix = "…"): string =>
 
 /** Converts text to Title Case (basic ASCII-safe). */
 export const toTitleCase = (s: string): string =>
-  s.toLowerCase().replace(/\b([a-z])/g, (m, c: string) => c.toUpperCase());
+  s.toLowerCase().replace(/\b([a-z])/g, (_m: string, c: string) => c.toUpperCase());
 
-/** Produces a URL-safe slug. */
-export const slugify = (s: string): string =>
-  s
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+/**
+ * Produces a URL-safe slug.
+ * - Normalizes to NFKD and strips combining marks.
+ * - Converts to lowercase.
+ * - Replaces any run of non-alphanumeric ASCII characters with a single hyphen.
+ * - Trims leading/trailing hyphens without regex.
+ */
+export const slugify = (s: string): string => {
+  const ascii = s.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+  let out = "";
+  let prevDash = false;
+  for (let i = 0; i < ascii.length; i++) {
+    const ch = ascii[i]!;
+    const code = ch.charCodeAt(0);
+    const isAlpha = code >= 97 && code <= 122; // a-z
+    const isDigit = code >= 48 && code <= 57; // 0-9
+    if (isAlpha || isDigit) {
+      out += ch;
+      prevDash = false;
+    } else {
+      if (!prevDash) {
+        out += "-";
+        prevDash = true;
+      }
+    }
+  }
+
+  let start = 0;
+  while (start < out.length && out.charCodeAt(start) === 45) start++; // '-'
+  let end = out.length;
+  while (end > start && out.charCodeAt(end - 1) === 45) end--; // '-'
+
+  return out.slice(start, end);
+};
 
 /** Removes non-printable characters. */
 export const stripControlChars = (s: string): string =>
