@@ -9,7 +9,6 @@ import { can } from '../../src/auth/access';
 import type {
   SecurityContext,
   ResourceRef,
-  Action,
   Permission,
   Scope,
 } from '../../src/types/security';
@@ -26,12 +25,10 @@ type PartialSubject = Partial<Omit<SecurityContext, 'userId' | 'tenantId'>> & {
 };
 
 const subject = (s: PartialSubject = {}): SecurityContext => {
-  const tenant =
-    s.tenantId != null
-      ? typeof s.tenantId === 'string'
-        ? T(s.tenantId)
-        : s.tenantId
-      : undefined;
+  let tenant: TenantId | undefined;
+  if (s.tenantId != null) {
+    tenant = typeof s.tenantId === 'string' ? T(s.tenantId) : s.tenantId;
+  }
 
   return {
     userId: U('user-1'),
@@ -46,16 +43,18 @@ const resource = (
   r: ResourceRef['resource'],
   tenantId?: string | TenantId,
   id?: string,
-): ResourceRef => ({
-  resource: r,
-  tenantId:
-    tenantId != null
-      ? typeof tenantId === 'string'
-        ? T(tenantId)
-        : tenantId
-      : undefined,
-  id,
-});
+): ResourceRef => {
+  let t: TenantId | undefined;
+  if (tenantId != null) {
+    t = typeof tenantId === 'string' ? T(tenantId) : tenantId;
+  }
+
+  return {
+    resource: r,
+    tenantId: t,
+    id,
+  };
+};
 
 describe('can', () => {
   describe('super_admin', () => {

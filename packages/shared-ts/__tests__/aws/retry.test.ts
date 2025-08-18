@@ -7,6 +7,8 @@ import { backoffDelay, shouldRetry } from '../../src/aws/retry.js';
 import type { BackoffOptions } from '../../src/aws/retry.js';
 
 const originalRandom = Math.random;
+
+/** Force Math.random() to a fixed value for the duration of a callback. */
 const withRandom = (v: number, fn: () => void) => {
   const n = Math.min(0.999999, Math.max(0, v)); // avoid 1 to prevent off-by-one
   // @ts-ignore
@@ -17,6 +19,17 @@ const withRandom = (v: number, fn: () => void) => {
     Math.random = originalRandom;
   }
 };
+
+/** Predicate helpers lifted to top level to avoid deep nesting in tests. */
+const always = () => true;
+const never = () => false;
+
+/** Extracted assertion to keep function nesting shallow in the defaults passthrough test. */
+function assertDefaultShouldRetryUpperBound() {
+  const r = shouldRetry(1, 3, always, new Error());
+  // backoffDelay(1) with defaults: exp = 200; full jitter upper bound -> 200
+  expect(r).toEqual({ retry: true, delayMs: 200 });
+}
 
 describe('backoffDelay', () => {
   it('computes exponential delay without jitter', () => {
@@ -54,7 +67,7 @@ describe('backoffDelay', () => {
   it('decorrelated jitter uses exp*3 as limiter when below cap', () => {
     // attempt=2 -> exp=400; exp*3=1200; cap=5000 -> max=min(5000,1200)=1200
     const opts: BackoffOptions = { jitter: 'decorrelated', baseMs: 100, capMs: 5_000 };
-    withRandom(0, () => expect(backoffDelay(2, opts)).toBe(100));      // lower bound = base
+    withRandom(0, () => expect(backoffDelay(2, opts)).toBe(100));        // lower bound = base
     withRandom(0.999999, () => expect(backoffDelay(2, opts)).toBe(1_200)); // upper bound = exp*3
   });
 
@@ -66,9 +79,6 @@ describe('backoffDelay', () => {
 });
 
 describe('shouldRetry', () => {
-  const always = () => true;
-  const never = () => false;
-
   it('stops when attempts exceed maxAttempts - 1', () => {
     const opts: BackoffOptions = { jitter: 'none', baseMs: 10 };
     expect(shouldRetry(0, 3, always, new Error(), opts).retry).toBe(true);
@@ -104,11 +114,12 @@ describe('shouldRetry', () => {
     // maxAttempts = 1 -> threshold 0 -> attempt 0 >= 0 => no retry
     expect(shouldRetry(0, 1, always, new Error(), opts)).toEqual({ retry: false, delayMs: 0 });
   });
+});
 
 describe('backoffDelay (defaults)', () => {
   it('uses default base=100, cap=10000, jitter=full when options are omitted', () => {
     // attempt=2 -> exp = min(10000, 100*2^2 = 400) = 400
-    withRandom(0, () => expect(backoffDelay(2)).toBe(0));          // lower bound (full jitter)
+    withRandom(0, () => expect(backoffDelay(2)).toBe(0));           // lower bound (full jitter)
     withRandom(0.999999, () => expect(backoffDelay(2)).toBe(400));  // upper bound (full jitter)
   });
 });
@@ -116,12 +127,6 @@ describe('backoffDelay (defaults)', () => {
 describe('shouldRetry (defaults passthrough)', () => {
   it('works with undefined opts (defaults inside backoffDelay)', () => {
     // attempt 1 of maxAttempts 3 -> retries; delay computed with defaults
-    withRandom(0.999999, () => {
-      const r = shouldRetry(1, 3, () => true, new Error());
-      // backoffDelay(1) with defaults: exp = 200; full jitter upper bound -> 200
-      expect(r).toEqual({ retry: true, delayMs: 200 });
-    });
+    withRandom(0.999999, assertDefaultShouldRetryUpperBound);
   });
-});
-
 });

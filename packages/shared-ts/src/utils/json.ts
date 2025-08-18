@@ -63,7 +63,7 @@ export const stableStringify = (value: JsonValue, space?: number): string => {
     if (Array.isArray(val)) return val.map(sorter);
 
     const out: Record<string, unknown> = {};
-    for (const key of Object.keys(val).sort()) {
+    for (const key of Object.keys(val).sort((a, b) => a.localeCompare(b))) {
       out[key] = sorter(val[key]);
     }
     return out;
@@ -77,8 +77,8 @@ export const stableStringify = (value: JsonValue, space?: number): string => {
  * @param value JSON-serializable value.
  */
 export const deepClone = <T extends JsonValue>(value: T): T => {
-  // @ts-ignore Node 18+ has structuredClone
-  if (typeof structuredClone === "function") return structuredClone(value);
+  const sc: ((v: unknown) => unknown) | undefined = (globalThis as any).structuredClone;
+  if (typeof sc === "function") return sc(value) as T;
   return JSON.parse(JSON.stringify(value)) as T;
 };
 
