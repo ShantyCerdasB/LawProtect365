@@ -1,22 +1,24 @@
 /**
  * @file repositoryBase.test.ts
  * @summary Tests for RepositoryBase (100% line coverage of concrete members).
+ * @remarks
+ * - Removed the redundant `type Id = string;` alias and replaced its usages with `string`.
+ * - Removed the stray duplicate `type Domain` declaration at the end of the file.
  */
 
 import { RepositoryBase } from '../../src/db/index.js';
 
 type Domain = { id: string; name?: string };
-type Id = string;
 type Spec = { q: number };
 
-class TestRepo extends RepositoryBase<Domain, Id, Spec> {
+class TestRepo extends RepositoryBase<Domain, string, Spec> {
   protected toDomain(row: unknown): Domain {
     return row as Domain;
   }
   protected toModel(entity: Partial<Domain>): unknown {
     return entity;
   }
-  protected whereById(id: Id): unknown {
+  protected whereById(id: string): unknown {
     return { id };
   }
   protected whereFromSpec(spec: Spec): unknown {
@@ -28,8 +30,6 @@ describe('RepositoryBase', () => {
   it('stores the provided prisma-like client', () => {
     const prisma = { $transaction: jest.fn() };
     const repo = new TestRepo(prisma as any);
-
-    // Access via cast because prisma is protected
     expect((repo as any).prisma).toBe(prisma);
   });
 

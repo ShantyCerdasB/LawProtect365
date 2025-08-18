@@ -2,13 +2,17 @@ import type { UserRole } from "../types/auth.js";
 
 /**
  * Role helpers for hierarchical checks and normalization.
+ * @remarks
+ * - Replaced `toSorted` with a non-mutating copy-and-sort (`[...arr].sort(...)`) to avoid requiring an ES2023 lib target.
+ * - Added explicit comparator parameter types to prevent the "implicitly has an 'any' type" error.
+ * - Kept sorting immutable by operating on a shallow copy of the normalized roles array.
  */
-export type Role = UserRole; 
+export type Role = UserRole;
 
 const ORDER: UserRole[] = ["client", "lawyer", "admin", "super_admin"];
 
 /**
- * Returns true when subject has at least the required role in the hierarchy.
+ * Returns true when the subject has at least the required role in the hierarchy.
  * @param roles Subject roles (arbitrary strings).
  * @param required Required minimum role.
  */
@@ -21,9 +25,12 @@ export const hasAtLeastRole = (roles: string[], required: UserRole): boolean =>
  */
 export const maxRole = (roles: string[]): UserRole => {
   const normalized = normalizeRoles(roles);
-  const best = normalized.sort((a, b) => rank(b) - rank(a))[0];
+  const sorted: UserRole[] = [...normalized].sort(
+    (a: UserRole, b: UserRole) => rank(b) - rank(a)
+  );
+  const best = sorted[0];
   return best ?? "client";
-}
+};
 
 /**
  * Checks membership for an exact role.
@@ -43,7 +50,7 @@ export const toRole = (r: string): UserRole | undefined => {
   if (x === "admin") return "admin";
   if (x === "lawyer" || x === "abogado") return "lawyer";
   if (x === "client" || x === "cliente") return "client";
-  if (x === "system") return "system"; 
+  if (x === "system") return "system";
   return undefined;
 };
 
@@ -54,4 +61,5 @@ export const toRole = (r: string): UserRole | undefined => {
 export const normalizeRoles = (roles: string[]): UserRole[] =>
   roles.map(toRole).filter(Boolean) as UserRole[];
 
+/** Returns the index rank for hierarchical comparison. Lower index = weaker role. */
 const rank = (r: UserRole) => ORDER.indexOf(r as Exclude<UserRole, "system">);
