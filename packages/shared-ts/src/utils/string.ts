@@ -27,6 +27,11 @@ export const toTitleCase = (s: string): string =>
  * - Converts to lowercase.
  * - Replaces any run of non-alphanumeric ASCII characters with a single hyphen.
  * - Trims leading/trailing hyphens without regex.
+ * @remarks
+ * - Removed the unnecessary non-null assertion when indexing the string.
+ *
+ * @param s Input string to slugify.
+ * @returns A lowercase, URL-safe slug.
  */
 export const slugify = (s: string): string => {
   const ascii = s.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -34,12 +39,11 @@ export const slugify = (s: string): string => {
   let out = "";
   let prevDash = false;
   for (let i = 0; i < ascii.length; i++) {
-    const ch = ascii[i]!;
-    const code = ch.charCodeAt(0);
+    const code = ascii.charCodeAt(i);
     const isAlpha = code >= 97 && code <= 122; // a-z
     const isDigit = code >= 48 && code <= 57; // 0-9
     if (isAlpha || isDigit) {
-      out += ch;
+      out += ascii[i];
       prevDash = false;
       continue;
     }
@@ -56,6 +60,7 @@ export const slugify = (s: string): string => {
 
   return out.slice(start, end);
 };
+
 
 /** Removes non-printable characters. */
 export const stripControlChars = (s: string): string =>

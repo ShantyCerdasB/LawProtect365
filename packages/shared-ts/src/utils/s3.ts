@@ -118,13 +118,23 @@ export const isValidBucketName = (name: string): boolean => {
 
 /**
  * Validates an S3 key for basic constraints (length and control chars).
+ * @remarks
+ * - Replaced the control-character regex with a deterministic loop to satisfy linters and avoid any backtracking risks.
+ * - Removed the duplicate `isValidKey` definition.
  * @param key Object key.
+ * @returns `true` when `key` is a string of length 1..1024 and contains no ASCII control characters.
  */
 export const isValidKey = (key: string): boolean => {
   if (typeof key !== "string") return false;
   if (key.length === 0 || key.length > 1024) return false;
-  return !/[\u0000-\u001F\u007F]/.test(key);
+
+  for (let i = 0; i < key.length; i++) {
+    const c = key.charCodeAt(i);
+    if (c <= 0x1f || c === 0x7f) return false; // ASCII control chars U+0000–U+001F and U+007F
+  }
+  return true;
 };
+
 
 /**
  * Builds an HTTPS URL for an S3 object (no signing).
