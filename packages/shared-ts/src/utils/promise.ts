@@ -8,15 +8,39 @@ export const sleep = (ms: number): Promise<void> =>
 
 /**
  * Wraps a promise with a timeout that rejects if exceeded.
- * @param p Input promise.
- * @param ms Timeout in milliseconds.
- * @param message Optional error message.
+ * - Avoids unhandled rejections with fake timers by resolving a sentinel on timeout.
+ * - Attaches a handler to the inner promise immediately so its rejection is handled.
  */
-export const withTimeout = <T>(p: Promise<T>, ms: number, message = "Timeout"): Promise<T> => {
-  let t: NodeJS.Timeout;
-  const timer = new Promise<never>((_, rej) => (t = setTimeout(() => rej(new Error(message)), ms)));
-  return Promise.race([p.finally(() => clearTimeout(t)), timer]);
+export const withTimeout = <T>(
+  p: Promise<T>,
+  ms: number,
+  message = "Timeout",
+): Promise<T> => {
+  type Result =
+    | { t: "value"; v: T }
+    | { t: "error"; e: unknown }
+    | { t: "timeout" };
+
+  let timerId: ReturnType<typeof setTimeout> | undefined;
+
+  // ✓ Provide both generics so the rejection handler returns Result, not never
+  const guarded: Promise<Result> = p.then<Result, Result>(
+    (v) => ({ t: "value", v }),
+    (e) => ({ t: "error", e }),
+  );
+
+  const timeoutP: Promise<Result> = new Promise((res) => {
+    timerId = setTimeout(() => res({ t: "timeout" }), ms);
+  });
+
+  return Promise.race([guarded, timeoutP]).then((r) => {
+    if (timerId !== undefined) clearTimeout(timerId);
+    if (r.t === "timeout") throw new Error(message);
+    if (r.t === "error") throw r.e;
+    return r.v;
+  });
 };
+
 
 /**
  * Retries an async function with exponential backoff.
@@ -25,7 +49,13 @@ export const withTimeout = <T>(p: Promise<T>, ms: number, message = "Timeout"): 
  */
 export const retry = async <T>(
   fn: (attempt: number) => Promise<T>,
-  opts: { retries?: number; minDelayMs?: number; maxDelayMs?: number; factor?: number; shouldRetry?: (e: unknown) => boolean } = {}
+  opts: {
+    retries?: number;
+    minDelayMs?: number;
+    maxDelayMs?: number;
+    factor?: number;
+    shouldRetry?: (e: unknown) => boolean;
+  } = {},
 ): Promise<T> => {
   const retries = opts.retries ?? 3;
   const factor = opts.factor ?? 2;
@@ -51,7 +81,13 @@ export const retry = async <T>(
 };
 
 /** Waits for all promises and returns settled results preserving order. */
-export const settleAll = async <T>(promises: Promise<T>[]): Promise<Array<{ ok: true; value: T } | { ok: false; error: unknown }>> => {
+export const settleAll = async <T>(
+  promises: Promise<T>[],
+): Promise<Array<{ ok: true; value: T } | { ok: false; error: unknown }>> => {
   const results = await Promise.allSettled(promises);
-  return results.map((r) => (r.status === "fulfilled" ? { ok: true, value: r.value } : { ok: false, error: r.reason }));
+  return results.map((r) =>
+    r.status === "fulfilled"
+      ? { ok: true, value: r.value }
+      : { ok: false, error: r.reason },
+  );
 };

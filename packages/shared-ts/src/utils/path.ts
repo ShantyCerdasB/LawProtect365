@@ -73,15 +73,17 @@ export const ensureTrailingSlash = (input: string): string => {
 };
 
 /**
- * Removes any trailing slashes.
+ * Removes trailing slashes but preserves the root "/" (doesn't trim past index 0).
  * @param input Path string.
  */
 export const stripTrailingSlash = (input: string): string => {
   const s = toPosix(input);
   let end = s.length - 1;
-  while (end >= 0 && s[end] === "/") end--;
+  // keep at least one leading slash if the entire string is slashes
+  while (end > 0 && s[end] === "/") end--;
   return s.slice(0, end + 1);
 };
+
 
 /**
  * Returns true if `child` is contained within `parent` after normalization.

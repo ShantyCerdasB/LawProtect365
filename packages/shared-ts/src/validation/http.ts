@@ -4,18 +4,23 @@ import { AppError } from "@errors/AppError.js";
 import { ErrorCodes } from "@errors/codes.js";
 
 /**
- * HTTP request validation helpers for path params, query and JSON body.
+ * HTTP request validation helpers for path parameters, query string, and JSON body.
+ * @remarks
+ * - Accept any Zod schema (<S extends z.ZodTypeAny>) and return z.infer<S> to preserve transforms/pipes.
+ * - Uses simple branching to keep cognitive complexity low.
  */
 
 /**
- * Validates and returns typed path params.
- * @param evt API event.
- * @param schema Zod schema for params.
+ * Validates and returns typed path parameters.
+ * @param evt - API event.
+ * @param schema - Zod schema for params (input and output may differ).
+ * @returns Parsed params inferred from the schema.
+ * @throws AppError 400 when validation fails.
  */
-export const validatePath = <T extends Record<string, unknown>>(
+export const validatePath = <S extends z.ZodTypeAny>(
   evt: ApiEvent,
-  schema: z.ZodType<T>
-): T => {
+  schema: S
+): z.infer<S> => {
   const input = { ...(evt.pathParameters ?? {}) } as Record<string, unknown>;
   const out = schema.safeParse(input);
   if (!out.success) {
@@ -26,18 +31,20 @@ export const validatePath = <T extends Record<string, unknown>>(
       { issues: out.error.issues }
     );
   }
-  return out.data;
+  return out.data as z.infer<S>;
 };
 
 /**
- * Validates and returns typed query params.
- * @param evt API event.
- * @param schema Zod schema for query string.
+ * Validates and returns typed query parameters.
+ * @param evt - API event.
+ * @param schema - Zod schema for query string (input and output may differ).
+ * @returns Parsed query object inferred from the schema.
+ * @throws AppError 400 when validation fails.
  */
-export const validateQuery = <T extends Record<string, unknown>>(
+export const validateQuery = <S extends z.ZodTypeAny>(
   evt: ApiEvent,
-  schema: z.ZodType<T>
-): T => {
+  schema: S
+): z.infer<S> => {
   const src = evt.queryStringParameters ?? {};
   const normalized = Object.fromEntries(Object.entries(src));
   const out = schema.safeParse(normalized);
@@ -49,34 +56,58 @@ export const validateQuery = <T extends Record<string, unknown>>(
       { issues: out.error.issues }
     );
   }
-  return out.data;
+  return out.data as z.infer<S>;
 };
 
 /**
- * Validates and returns a typed JSON body.
- * Handles base64-encoded bodies.
- * @param evt API event.
- * @param schema Zod schema for the body.
+ * Validates and returns a typed JSON body. Supports strict base64-encoded payloads.
+ * @param evt - API event.
+ * @param schema - Zod schema for the body (input and output may differ).
+ * @returns Parsed body inferred from the schema.
+ * @throws AppError 400 when the body is missing, encoding is invalid, or JSON fails to parse.
+ * @throws AppError 422 when schema validation fails.
  */
-export const validateJsonBody = <T>(
+export const validateJsonBody = <S extends z.ZodTypeAny>(
   evt: ApiEvent,
-  schema: z.ZodType<T>
-): T => {
+  schema: S
+): z.infer<S> => {
   if (!evt.body) {
     throw new AppError(ErrorCodes.COMMON_BAD_REQUEST, 400, "Empty request body");
   }
+
   let raw: string;
-  try {
-    raw = evt.isBase64Encoded ? Buffer.from(evt.body, "base64").toString("utf8") : evt.body;
-  } catch {
-    throw new AppError(ErrorCodes.COMMON_BAD_REQUEST, 400, "Invalid body encoding");
+
+  if (evt.isBase64Encoded) {
+    // Strict base64 check: alphabet and length multiple of 4 (no whitespace).
+    const s = String(evt.body);
+    const base64Pattern = /^[A-Za-z0-9+/=]*$/;
+    if (s.length === 0 || s.length % 4 !== 0 || !base64Pattern.test(s)) {
+      throw new AppError(
+        ErrorCodes.COMMON_BAD_REQUEST,
+        400,
+        "Invalid body encoding"
+      );
+    }
+    try {
+      raw = Buffer.from(s, "base64").toString("utf8");
+    } catch {
+      throw new AppError(
+        ErrorCodes.COMMON_BAD_REQUEST,
+        400,
+        "Invalid body encoding"
+      );
+    }
+  } else {
+    raw = String(evt.body);
   }
+
   let json: unknown;
   try {
     json = JSON.parse(raw);
   } catch {
     throw new AppError(ErrorCodes.COMMON_BAD_REQUEST, 400, "Invalid JSON");
   }
+
   const out = schema.safeParse(json);
   if (!out.success) {
     throw new AppError(
@@ -86,5 +117,5 @@ export const validateJsonBody = <T>(
       { issues: out.error.issues }
     );
   }
-  return out.data;
+  return out.data as z.infer<S>;
 };

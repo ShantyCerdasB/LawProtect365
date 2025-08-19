@@ -1,8 +1,8 @@
 /**
  * String utilities for normalization, casing, trimming and identifiers.
  * @remarks
- * - Rewrote the trailing/leading hyphen trimming in `slugify` without regex to eliminate any risk of super-linear backtracking.
- * - Collapsed non-alphanumeric runs to a single hyphen using a linear-time loop.
+ * - Trailing/leading hyphen trimming in `slugify` is regex-free.
+ * - Non-alphanumeric runs collapse in linear time.
  */
 
 /** Returns true when the string is empty or only whitespace. */
@@ -27,9 +27,6 @@ export const toTitleCase = (s: string): string =>
  * - Converts to lowercase.
  * - Replaces any run of non-alphanumeric ASCII characters with a single hyphen.
  * - Trims leading/trailing hyphens without regex.
- * @remarks
- * - Removed the unnecessary non-null assertion when indexing the string.
- *
  * @param s Input string to slugify.
  * @returns A lowercase, URL-safe slug.
  */
@@ -61,11 +58,10 @@ export const slugify = (s: string): string => {
   return out.slice(start, end);
 };
 
-
-/** Removes non-printable characters. */
+/** Removes ASCII control characters (U+0000–U+001F, U+007F). */
 export const stripControlChars = (s: string): string =>
   s.replace(/[\u0000-\u001F\u007F]/g, "");
 
-/** Left pads a string to length with given char. */
+/** Left-pads a string to the given length using the provided character. */
 export const leftPad = (s: string, len: number, ch = " "): string =>
   s.length >= len ? s : ch.repeat(len - s.length) + s;
