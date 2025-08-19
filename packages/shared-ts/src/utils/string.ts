@@ -41,11 +41,11 @@ export const slugify = (s: string): string => {
     if (isAlpha || isDigit) {
       out += ch;
       prevDash = false;
-    } else {
-      if (!prevDash) {
-        out += "-";
-        prevDash = true;
-      }
+      continue;
+    }
+    if (!prevDash) {
+      out += "-";
+      prevDash = true;
     }
   }
 
