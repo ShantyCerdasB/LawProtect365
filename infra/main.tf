@@ -334,11 +334,34 @@ module "documents_service" {
 ############################################
 
 
+module "events" {
+  source       = "./modules/eventbridge"
+  project_name = var.project_name
+  env          = var.env
+  common_tags  = local.common_tags
+
+  create_rule   = true
+  create_target = true
+
+  event_pattern = jsonencode({
+    "source"      = ["sign.service"]
+    "detail-type" = [
+      "InvitationSent","ReminderSent","EnvelopeFinalised",
+      "EnvelopeDeclined","EnvelopeCancelled","InputCompleted","DocumentLocked"
+    ]
+  })
+
+  # Target: Lambda de notificaciones cambiar luego
+  target_arn  = module.documents_service.documents_lambda_templates_arn
+  target_type = "lambda"
+}
+
 module "sign_service" {
   source       = "./services/signature-service"
   project_name = var.project_name
   env          = var.env
-  aws_region = var.region
+  aws_region   = var.region
+  aws_caller   = data.aws_caller_identity.current
 
   # Code artifacts
   code_bucket = module.code_bucket.bucket_id
@@ -359,6 +382,7 @@ module "sign_service" {
   attach_waf_web_acl = var.attach_waf_web_acl
   waf_web_acl_arn    = var.waf_web_acl_arn
   budgets_alerts_topic_arn = aws_sns_topic.budgets_alerts.arn
+  event_bus_arn = module.events.eventbridge_bus_arn
 
   # JWT authorizer (Cognito)
   enable_jwt_authorizer = true

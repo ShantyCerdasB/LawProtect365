@@ -18,6 +18,11 @@ resource "aws_dynamodb_table" "table" {
     type = var.hash_key_type                         # Attribute type: "S" (String) | "N" (Number) | "B" (Binary)
   }
 
+  ttl {
+    enabled        = var.ttl_enabled
+    attribute_name = var.ttl_enabled ? var.ttl_attribute_name : null
+  }
+
   /**
    * Optional sort key attribute definition.
    * Only created if `range_key` is provided.

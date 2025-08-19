@@ -1,31 +1,48 @@
 /**
- * Name of the created EventBridge event bus.
+ * @file outputs.tf
+ * @brief Public outputs from the EventBridge (Bus/Rule/Target) module.
+ */
+
+/**
+ * Event bus name.
+ * @example "lawprotect365-event-bus-dev"
  */
 output "eventbridge_bus_name" {
-  description = "The name of the created EventBridge event bus."
-  value       = aws_eventbridge_bus.event_bus.name
+  description = "Event bus name"
+  value       = aws_cloudwatch_event_bus.event_bus.name
 }
 
 /**
- * Name of the created EventBridge rule.
+ * Event bus ARN.
+ */
+output "eventbridge_bus_arn" {
+  description = "Event bus ARN"
+  value       = aws_cloudwatch_event_bus.event_bus.arn
+}
+
+/**
+ * Rule name (if created).
+ * @remarks Returns null when `create_rule = false`.
  */
 output "eventbridge_rule_name" {
-  description = "The name of the created EventBridge rule."
-  value       = aws_eventbridge_rule.event_rule.name
+  description = "Rule name (if created)"
+  value       = try(aws_cloudwatch_event_rule.event_rule[0].name, null)
 }
 
 /**
- * ARN of the created EventBridge rule.
+ * Rule ARN (if created).
+ * @remarks Returns null when `create_rule = false`.
  */
 output "eventbridge_rule_arn" {
-  description = "The ARN of the created EventBridge rule."
-  value       = aws_eventbridge_rule.event_rule.arn
+  description = "Rule ARN (if created)"
+  value       = try(aws_cloudwatch_event_rule.event_rule[0].arn, null)
 }
 
 /**
- * Target ID attached to the EventBridge rule.
+ * Target ID (if created).
+ * @remarks Returns null when `create_target = false` or `create_rule = false`.
  */
 output "eventbridge_target_id" {
-  description = "The target ID attached to the EventBridge rule."
-  value       = aws_eventbridge_target.event_target.target_id
+  description = "Target ID (if created)"
+  value       = try(aws_cloudwatch_event_target.event_target[0].target_id, null)
 }

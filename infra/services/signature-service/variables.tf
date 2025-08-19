@@ -8,9 +8,19 @@ variable "project_name" {
   type        = string
 }
 
+variable "aws_caller" {
+  description = "AWS caller identity information"
+  type        = any
+}
+
 # Deployment environment (e.g., dev, prod)
 variable "env" {
   description = "Environment (e.g., dev, prod)"
+  type        = string
+}
+
+variable "event_bus_arn" {
+  description = "ARN of the EventBridge bus for domain events"
   type        = string
 }
 

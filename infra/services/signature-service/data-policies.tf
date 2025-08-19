@@ -15,10 +15,11 @@
  */
 data "aws_iam_policy_document" "sign_kms_sign" {
   statement {
-    sid     = "AllowKmsSign"
+    sid     = "AllowKmsSignAndVerify"
     effect  = "Allow"
     actions = [
       "kms:Sign",
+      "kms:Verify",
       "kms:GetPublicKey",
       "kms:DescribeKey"
     ]
@@ -164,25 +165,332 @@ data "aws_iam_policy_document" "sign_kms_evidence_s3" {
 }
 
 /**
- * Local maps:
- * - inline_policies_base: Base inline IAM policies required by sign-service
- * - inline_policies_kms: Additional policies for SSE-KMS encryption (conditional)
- * - inline_policies: Final merged policies (base + kms + extra overrides from root)
+ * @policy DynamoDB RW — Envelopes table
+ * @purpose CRUD + queries on the envelopes aggregate (envelopes, parties, inputs, steps).
+ * @permissions
+ *  - PutItem, GetItem, UpdateItem, DeleteItem
+ *  - BatchWriteItem, BatchGetItem
+ *  - Query, Scan, DescribeTable
+ * @resources
+ *  - module.ddb_envelopes.table_arn
+ *  - module.ddb_envelopes.table_arn/index/*
  */
-locals {
-  inline_policies_base = {
-    "kms-sign"          = data.aws_iam_policy_document.sign_kms_sign.json
-    "s3-documents-read" = data.aws_iam_policy_document.sign_s3_documents_read.json
-    "s3-evidence-rw"    = data.aws_iam_policy_document.sign_s3_evidence_rw.json
+data "aws_iam_policy_document" "sign_dynamo_envelopes_rw" {
+  statement {
+    sid     = "DdbRWEnvelopes"
+    effect  = "Allow"
+    actions = [
+      "dynamodb:PutItem","dynamodb:GetItem","dynamodb:UpdateItem","dynamodb:DeleteItem",
+      "dynamodb:BatchWriteItem","dynamodb:BatchGetItem","dynamodb:Query","dynamodb:Scan",
+      "dynamodb:DescribeTable"
+    ]
+    resources = [
+      module.ddb_envelopes.table_arn,
+      "${module.ddb_envelopes.table_arn}/index/*"
+    ]
+  }
+}
+
+/**
+ * @policy DynamoDB RW — Signing tokens table
+ * @purpose Issue/consume short-lived signing tokens (email links, magic links).
+ * @permissions
+ *  - PutItem, GetItem, UpdateItem, DeleteItem
+ *  - BatchWriteItem, BatchGetItem
+ *  - Query, Scan, DescribeTable
+ * @resources
+ *  - module.ddb_signing_tokens.table_arn
+ *  - module.ddb_signing_tokens.table_arn/index/*
+ */
+data "aws_iam_policy_document" "sign_dynamo_tokens_rw" {
+  statement {
+    sid     = "DdbRWTokens"
+    effect  = "Allow"
+    actions = [
+      "dynamodb:PutItem","dynamodb:GetItem","dynamodb:UpdateItem","dynamodb:DeleteItem",
+      "dynamodb:BatchWriteItem","dynamodb:BatchGetItem","dynamodb:Query","dynamodb:Scan",
+      "dynamodb:DescribeTable"
+    ]
+    resources = [
+      module.ddb_signing_tokens.table_arn,
+      "${module.ddb_signing_tokens.table_arn}/index/*"
+    ]
+  }
+}
+
+/**
+ * @policy DynamoDB transactions & conditional checks — Envelopes table
+ * @purpose Atomic multi-record state transitions (e.g., pending→viewed→signed) and idempotency.
+ * @permissions
+ *  - TransactWriteItems, TransactGetItems, ConditionCheckItem
+ * @resources
+ *  - module.ddb_envelopes.table_arn
+ *  - module.ddb_envelopes.table_arn/index/*
+ */
+data "aws_iam_policy_document" "sign_dynamo_transact" {
+  statement {
+    sid     = "DdbTransactAndConditions"
+    effect  = "Allow"
+    actions = [
+      "dynamodb:TransactWriteItems",
+      "dynamodb:TransactGetItems",
+      "dynamodb:ConditionCheckItem"
+    ]
+    resources = [
+      module.ddb_envelopes.table_arn,
+      "${module.ddb_envelopes.table_arn}/index/*"
+    ]
+  }
+}
+
+/**
+ * @policy CloudWatch custom metrics
+ * @purpose Publish service KPIs (latency, errors, signature counts).
+ * @permissions
+ *  - cloudwatch:PutMetricData (scoped to a specific namespace)
+ */
+data "aws_iam_policy_document" "sign_cloudwatch_metrics" {
+  statement {
+    sid     = "AllowPutMetricData"
+    effect  = "Allow"
+    actions = ["cloudwatch:PutMetricData"]
+    resources = ["*"]
+    condition {
+      test     = "StringEquals"
+      variable = "cloudwatch:namespace"
+      values   = ["SignService"]
+    }
+  }
+}
+
+/**
+ * @policy EventBridge (optional)
+ * @purpose Publish domain/integration events when envelopes change state.
+ * @permissions
+ *  - events:PutEvents
+ * @resources
+ *  - var.event_bus_arn (when provided)
+ */
+data "aws_iam_policy_document" "sign_eventbridge_put" {
+  statement {
+    sid     = "AllowPutEvents"
+    effect  = "Allow"
+    actions = ["events:PutEvents"]
+    resources = [local.event_bus_arn_safe]
+  }
+}
+
+/**
+ * @policy S3 multipart upload (evidence) with enforced SSE
+ * @purpose Efficient uploads for large evidence files while forcing server-side encryption.
+ * @permissions
+ *  - s3:CreateMultipartUpload, s3:UploadPart, s3:ListMultipartUploadParts,
+ *    s3:CompleteMultipartUpload, s3:AbortMultipartUpload
+ * @resources
+ *  - local.evidence_objs_arn (bucket/*)
+ * @encryption
+ *  - Enforce AES256 for SSE_S3, or aws:kms + specific CMK for SSE_KMS
+ */
+data "aws_iam_policy_document" "sign_s3_evidence_mpu" {
+  statement {
+    sid     = "CreateMultipartWithKMSEnforced"
+    effect  = "Allow"
+    actions = ["s3:CreateMultipartUpload"]
+    resources = [local.evidence_objs_arn]
+
+    # Enforce SSE at initiation
+    dynamic "condition" {
+      for_each = var.evidence_encryption == "SSE_KMS" ? [1] : []
+      content {
+        test     = "StringEquals"
+        variable = "s3:x-amz-server-side-encryption"
+        values   = ["aws:kms"]
+      }
+    }
+    dynamic "condition" {
+      for_each = var.evidence_encryption == "SSE_KMS" ? [1] : []
+      content {
+        test     = "StringEquals"
+        variable = "s3:x-amz-server-side-encryption-aws-kms-key-id"
+        values   = [var.evidence_kms_key_arn]
+      }
+    }
+    dynamic "condition" {
+      for_each = var.evidence_encryption == "SSE_S3" ? [1] : []
+      content {
+        test     = "StringEquals"
+        variable = "s3:x-amz-server-side-encryption"
+        values   = ["AES256"]
+      }
+    }
   }
 
+  statement {
+    sid     = "UploadAndCompleteMultipart"
+    effect  = "Allow"
+    actions = [
+      "s3:UploadPart",
+      "s3:ListMultipartUploadParts",
+      "s3:CompleteMultipartUpload",
+      "s3:AbortMultipartUpload"
+    ]
+    resources = [local.evidence_objs_arn]
+  }
+}
+
+/**
+ * @policy S3 Object Lock management (WORM)
+ * @purpose Set/inspect retention and legal holds for evidence immutability policies.
+ * @permissions
+ *  - s3:GetObjectRetention, s3:PutObjectRetention,
+ *    s3:GetObjectLegalHold, s3:PutObjectLegalHold
+ * @resources
+ *  - local.evidence_objs_arn (bucket/*)
+ */
+data "aws_iam_policy_document" "sign_s3_object_lock" {
+  statement {
+    sid     = "ObjectLockRetentionAndLegalHold"
+    effect  = "Allow"
+    actions = [
+      "s3:GetObjectRetention",
+      "s3:PutObjectRetention",
+      "s3:GetObjectLegalHold",
+      "s3:PutObjectLegalHold"
+    ]
+    resources = [local.evidence_objs_arn]
+  }
+}
+
+/**
+ * @policy DynamoDB Streams (optional)
+ * @purpose Read change stream from envelopes table (for async processors/auditing).
+ * @permissions
+ *  - dynamodb:DescribeStream, GetRecords, GetShardIterator, ListStreams
+ * @resources
+ *  - module.ddb_envelopes.table_stream_arn (when streams are enabled)
+ */
+data "aws_iam_policy_document" "sign_dynamo_stream_consumer" {
+  statement {
+    sid     = "DdbStreamsRead"
+    effect  = "Allow"
+    actions = [
+      "dynamodb:DescribeStream",
+      "dynamodb:GetRecords",
+      "dynamodb:GetShardIterator",
+      "dynamodb:ListStreams"
+    ]
+    resources = [
+      "arn:aws:dynamodb:${var.aws_region}:${var.aws_caller.account_id}:table/${module.ddb_envelopes.table_name}/stream/*"
+    ]
+  }
+}
+
+/**
+ * @policy SSM Parameter Store (feature flags / client config)
+ * @purpose Read service feature flags and client-specific settings.
+ * @permissions
+ *  - ssm:GetParameter, ssm:GetParameters, ssm:GetParametersByPath
+ * @resources
+ *  - arn:aws:ssm:${var.aws_region}:${account}:parameter/${var.project_name}/${var.env}/*
+ */
+data "aws_iam_policy_document" "sign_ssm_read" {
+  statement {
+    sid     = "ReadFeatureFlags"
+    effect  = "Allow"
+    actions = ["ssm:GetParameter","ssm:GetParameters","ssm:GetParametersByPath"]
+    resources = ["arn:aws:ssm:${var.aws_region}:${var.aws_caller.account_id}:parameter/${var.project_name}/${var.env}/*"]
+  }
+}
+
+############################################################
+# Inline policies map
+############################################################
+/**
+ * @local inline_policies_base
+ * Core policies used by all sign-service Lambdas.
+ */
+
+ locals {
+  # Si var.event_bus_arn aún es unknown o null, usa un ARN placeholder inofensivo.
+  event_bus_arn_safe = coalesce(
+    var.event_bus_arn,
+    "arn:aws:events:${var.aws_region}:${var.aws_caller.account_id}:event-bus/__unused__"
+  )
+}
+locals {
+  inline_policies_base = {
+    # KMS asymmetric signing/verification for document hashes & certs
+    "kms-sign"            = data.aws_iam_policy_document.sign_kms_sign.json
+
+    # Read from documents S3 (final PDFs to be signed/validated)
+    "s3-documents-read"   = data.aws_iam_policy_document.sign_s3_documents_read.json
+
+    # Evidence bucket RW with enforced SSE (Put/Get/Abort/Multipart list)
+    "s3-evidence-rw"      = data.aws_iam_policy_document.sign_s3_evidence_rw.json
+
+    # Multipart upload flow (CreateMultipart, UploadPart, Complete/Abort)
+    "s3-evidence-mpu"     = data.aws_iam_policy_document.sign_s3_evidence_mpu.json
+
+    # Object Lock (retention & legal hold) for evidence immutability
+    "s3-object-lock"      = data.aws_iam_policy_document.sign_s3_object_lock.json
+
+    # DynamoDB RW — envelopes aggregate
+    "ddb-rw-envelopes"    = data.aws_iam_policy_document.sign_dynamo_envelopes_rw.json
+
+    # DynamoDB RW — signing tokens
+    "ddb-rw-tokens"       = data.aws_iam_policy_document.sign_dynamo_tokens_rw.json
+
+    # DynamoDB transactions & conditional checks — envelopes
+    "ddb-transact"        = data.aws_iam_policy_document.sign_dynamo_transact.json
+
+    # CloudWatch custom metrics in the "SignService" namespace
+    "cw-metrics"          = data.aws_iam_policy_document.sign_cloudwatch_metrics.json
+
+    # SSM Parameter Store read (feature flags/config)
+    "ssm-read"            = data.aws_iam_policy_document.sign_ssm_read.json
+  }
+
+  /**
+   * @local inline_policies_kms
+   * Extra KMS permissions when evidence SSE mode is SSE_KMS.
+   */
   inline_policies_kms = var.evidence_encryption == "SSE_KMS" ? {
     "kms-evidence-s3" = data.aws_iam_policy_document.sign_kms_evidence_s3[0].json
   } : {}
 
+  /**
+   * @local inline_policies_optional
+   * EventBridge and DynamoDB Streams policies, only when configured.
+   *
+   * Always define keys with `null` when not used, then clean them below.
+   */
+  inline_policies_optional = {
+    "events-put" = var.event_bus_arn != null ? data.aws_iam_policy_document.sign_eventbridge_put.json : null
+    "ddb-streams-read" = (
+      can(module.ddb_envelopes.table_stream_arn) && module.ddb_envelopes.table_stream_arn != ""
+    ) ? one(data.aws_iam_policy_document.sign_dynamo_stream_consumer[*].json) : null
+  }
+
+  /**
+   * @local inline_policies_clean
+   * Filter out null values from optional policies.
+   */
+  inline_policies_clean = {
+    for k, v in local.inline_policies_optional : k => v if v != null
+  }
+
+  /**
+   * @local inline_policies
+   * Final merged inline policies:
+   *  - base + (optional KMS for SSE_KMS) + (optional EB/Streams) + extra overrides from root.
+   */
   inline_policies = merge(
     local.inline_policies_base,
     local.inline_policies_kms,
+    {
+      "events-put"       = data.aws_iam_policy_document.sign_eventbridge_put.json
+      "ddb-streams-read" = data.aws_iam_policy_document.sign_dynamo_stream_consumer.json
+    },
     var.extra_inline_policies
   )
 }

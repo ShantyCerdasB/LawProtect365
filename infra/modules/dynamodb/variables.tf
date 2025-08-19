@@ -16,6 +16,18 @@ variable "hash_key" {
   type        = string
 }
 
+variable "ttl_enabled" {
+  type = bool
+  description = "Whether TTL (Time to Live) is enabled for the table"
+  default = false
+}
+
+variable "ttl_attribute_name" {
+  type    = string
+  description = "Name of the attribute used for TTL (Time to Live)"
+  default = ""
+}
+
 /**
  * Type of the hash key: "S" (String), "N" (Number), or "B" (Binary).
  */

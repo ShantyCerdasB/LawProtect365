@@ -5,3 +5,4 @@ export * from "./errors.js";
 export * from "./retry.js";
 export * from "./ports.js";
 export * from "./s3Presign.js";
+export * from "./ddb.js";

@@ -28,7 +28,11 @@ output "lambda_function_names" {
   value = [
     module.lambda_consent.lambda_function_name,
     module.lambda_sign.lambda_function_name,
-    module.lambda_certificate.lambda_function_name
+    module.lambda_certificate.lambda_function_name,
+    module.lambda_envelopes.lambda_function_name,
+    module.lambda_documents.lambda_function_name,
+    module.lambda_inputs.lambda_function_name,
+    module.lambda_parties.lambda_function_name
   ]
 }
 
@@ -37,7 +41,11 @@ output "lambda_function_arns" {
   value = [
     module.lambda_consent.lambda_function_arn,
     module.lambda_sign.lambda_function_arn,
-    module.lambda_certificate.lambda_function_arn
+    module.lambda_certificate.lambda_function_arn,
+    module.lambda_envelopes.lambda_function_arn,
+    module.lambda_documents.lambda_function_arn,
+    module.lambda_inputs.lambda_function_arn,
+    module.lambda_parties.lambda_function_arn
   ]
 }
 
@@ -200,4 +208,14 @@ output "sign_pipeline_role_arn" {
 output "sign_pipeline_role_name" {
   description = "IAM Role name for CodePipeline (sign-service)"
   value       = try(module.sign_deployment.pipeline_role_name, null)
+}
+
+output "ddb_envelopes_table_name" {
+  description = "Name of the DynamoDB table used by sign-service"
+  value       = module.ddb_envelopes.table_name
+}
+
+output "ddb_signing_tokens_table_name" {
+  description = "Name of the DynamoDB table for signing tokens"
+  value       = module.ddb_signing_tokens.table_name
 }

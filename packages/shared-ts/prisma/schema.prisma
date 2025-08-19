@@ -1,14 +1,385 @@
+/// Prisma Client generator
 generator client {
   provider = "prisma-client-js"
 }
 
+/// Primary Postgres connection (set from your Terraform Secret Manager)
 datasource db {
-  provider = "postgresql" 
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-model Example {
-  id        String   @id @default(uuid())
-  name      String
-  createdAt DateTime @default(now())
+/// ----------------------------------------------
+/// Enums
+/// ----------------------------------------------
+
+/**
+ * Cohesive membership roles for multi-tenant access control.
+ * Keep authZ simple here; fine-grained sharing lives in DocumentShare.
+ */
+enum OrgRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+/**
+ * Logical lifecycle for a Document stored in the Document Service.
+ * Note: signing workflow is in DynamoDB; this state mirrors the projection.
+ */
+enum DocumentStatus {
+  DRAFT        // Being edited or assembled
+  READY        // Ready to kick off a signing envelope
+  IN_SIGNING   // There is an active Sign envelope (DynamoDB)
+  COMPLETED    // Signing completed (certificate available)
+  VOID         // Cancelled/voided
+  ARCHIVED     // Retained, read-only
+}
+
+/**
+ * Soft status for templates; versions remain immutable.
+ */
+enum TemplateStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+/**
+ * Simple permission model for sharing within the tenant.
+ */
+enum SharePermission {
+  VIEW
+  EDIT
+}
+
+/// ----------------------------------------------
+/// Core Identity (OIDC-only; no passwords)
+/// ----------------------------------------------
+
+/**
+ * Application user. No password fields—auth is OIDC-only
+ * through linked OAuth Accounts (Microsoft 365, Google, Apple).
+ */
+model User {
+  /// Primary key (UUID v4)
+  id                  String       @id @default(uuid()) @db.Uuid
+  /// Email is unique tenant-wide
+  email               String       @unique @db.Citext
+  /// Optional display name
+  name                String?
+  /// Avatar or profile image URL
+  image               String?
+  /// Default org to open after login (optional)
+  defaultOrganizationId String?     @db.Uuid
+  defaultOrganization   Organization? @relation("UserDefaultOrg", fields: [defaultOrganizationId], references: [id])
+
+  /// OAuth provider links (Microsoft 365, Google, Apple)
+  accounts           OAuthAccount[]
+
+  /// Org membership
+  memberships        Membership[]
+
+  /// Documents owned/created by this user
+  documents          Document[]    @relation("DocumentOwner")
+
+  /// Who created a given template (soft ownership)
+  templatesCreated   Template[]    @relation("TemplateCreator")
+
+  /// Who created a given document version
+  documentVersions   DocumentVersion[] @relation("DocumentVersionCreator")
+
+  /// Who created a given template version
+  templateVersions   TemplateVersion[] @relation("TemplateVersionCreator")
+
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  @@index([email])
+}
+
+/**
+ * OAuth provider linkage for a user.
+ * Stores provider IDs and tokens for refresh.
+ * Composite uniqueness on (provider, providerAccountId).
+ */
+model OAuthAccount {
+  id                 String   @id @default(uuid()) @db.Uuid
+  userId             String   @db.Uuid
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// e.g. "azure-ad", "google", "apple"
+  provider           String
+  /// Provider-side subject / account id
+  providerAccountId  String
+
+  /// Access/refresh token storage (encrypted at rest by Postgres/KMS-at-app-layer)
+  accessToken        String?
+  refreshToken       String?
+  expiresAt          DateTime?
+
+  scope              String?
+  tokenType          String?
+
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+/**
+ * A tenant/workspace. All templates and documents belong to exactly one org.
+ */
+model Organization {
+  id             String        @id @default(uuid()) @db.Uuid
+  name           String
+  /// URL-safe unique handle (e.g., "acme")
+  slug           String        @unique
+  billingEmail   String?
+  /// Optional metadata for billing/integrations
+  metadata       Json?
+
+  memberships    Membership[]
+  templates      Template[]
+  documents      Document[]
+
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([slug])
+}
+
+/**
+ * Membership of a User in an Organization with a coarse-grained role.
+ */
+model Membership {
+  id             String        @id @default(uuid()) @db.Uuid
+  organizationId String        @db.Uuid
+  userId         String        @db.Uuid
+  role           OrgRole       @default(MEMBER)
+
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt      DateTime      @default(now())
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+  @@index([organizationId, role])
+}
+
+/// ----------------------------------------------
+/// Templates (static design-time assets)
+/// ----------------------------------------------
+
+/**
+ * A reusable template. Each edit yields a new immutable TemplateVersion.
+ * The active version is pointed by currentVersionId.
+ */
+model Template {
+  id                String            @id @default(uuid()) @db.Uuid
+  organizationId    String            @db.Uuid
+  name              String
+  description       String?
+  status            TemplateStatus     @default(ACTIVE)
+
+  /// Creator (soft ownership)
+  createdByUserId   String?           @db.Uuid
+  createdBy         User?             @relation("TemplateCreator", fields: [createdByUserId], references: [id])
+
+  /// Immutable versions
+  versions          TemplateVersion[]
+
+  /// Convenience pointer to the published/active version
+  currentVersionId  String?           @db.Uuid
+  currentVersion    TemplateVersion?  @relation("TemplateCurrentVersion", fields: [currentVersionId], references: [id])
+
+  organization      Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@index([organizationId, status])
+  @@index([currentVersionId])
+}
+
+/**
+ * An immutable snapshot of a Template: the source PDF reference and the blueprint fields.
+ * Field blueprints are used by the Sign Service to materialize runtime inputs in DynamoDB.
+ */
+model TemplateVersion {
+  id               String                   @id @default(uuid()) @db.Uuid
+  templateId       String                   @db.Uuid
+  versionNumber    Int
+  /// S3 bucket/key for the master PDF used by this version
+  bucket           String
+  s3Key            String
+  /// File integrity/metadata (useful for downstream validation)
+  sha256           String?
+  pageCount        Int?
+
+  /// Who authored this version
+  createdByUserId  String?                  @db.Uuid
+  createdBy        User?                    @relation("TemplateVersionCreator", fields: [createdByUserId], references: [id])
+
+  /// Design-time field blueprints (roles, types, positions)
+  fields           TemplateFieldBlueprint[]
+
+  template         Template                 @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  createdAt        DateTime                 @default(now())
+
+  @@unique([templateId, versionNumber])
+  @@index([templateId])
+}
+
+/**
+ * Design-time field definition used to place inputs for specific roles.
+ * Positions are normalized in [0..1] relative to page width/height for portability.
+ */
+model TemplateFieldBlueprint {
+  id                String           @id @default(uuid()) @db.Uuid
+  templateVersionId String           @db.Uuid
+  name              String
+  /// Logical type consumed by the Sign Service at runtime
+  type              String           // e.g., "SIGNATURE" | "INITIALS" | "DATE" | "TEXT" | "EMAIL" | "CHECKBOX"
+  /// Key of the role expected to fill this field (e.g., "signer", "witness")
+  roleKey           String
+  required          Boolean          @default(true)
+
+  /// Page (0-based) and normalized rectangle
+  pageIndex         Int
+  x                 Decimal          @db.Decimal(10, 6)
+  y                 Decimal          @db.Decimal(10, 6)
+  width             Decimal          @db.Decimal(10, 6)
+  height            Decimal          @db.Decimal(10, 6)
+
+  /// Optional additional constraints (min/max length, regex, date format, etc.)
+  constraints       Json?
+
+  templateVersion   TemplateVersion  @relation(fields: [templateVersionId], references: [id], onDelete: Cascade)
+
+  createdAt         DateTime         @default(now())
+
+  @@index([templateVersionId, roleKey])
+}
+
+/// ----------------------------------------------
+/// Documents (runtime artifacts stored in S3)
+/// ----------------------------------------------
+
+/**
+ * A document instance belonging to an organization.
+ * If created from a template, we keep that linkage for lineage.
+ * Signing workflow state is projected from DynamoDB (envelopeId, status, certificateS3Key).
+ */
+model Document {
+  id                 String           @id @default(uuid()) @db.Uuid
+  organizationId     String           @db.Uuid
+  ownerUserId        String           @db.Uuid
+  /// Optional lineage to the template used to create this document
+  templateId         String?          @db.Uuid
+  title              String
+  description        String?
+
+  /// Current lifecycle in the Document Service (projection of Sign)
+  status             DocumentStatus   @default(DRAFT)
+
+  /// Optional pointer to the currently active envelope in DynamoDB
+  envelopeId         String?          // e.g., "ENV#<uuid>" stored by Sign Service
+
+  /// Convenience pointer to the latest immutable version
+  currentVersionId   String?          @db.Uuid
+  currentVersion     DocumentVersion? @relation("DocumentCurrentVersion", fields: [currentVersionId], references: [id])
+
+  /// When signing completes, we keep the evidence/certificate S3 key here
+  certificateBucket  String?
+  certificateS3Key   String?
+  completedAt        DateTime?
+
+  organization       Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner              User             @relation("DocumentOwner", fields: [ownerUserId], references: [id])
+  template           Template?        @relation(fields: [templateId], references: [id])
+
+  /// Immutable versions (uploaded/assembled PDFs)
+  versions           DocumentVersion[]
+
+  /// Optional internal sharing
+  shares             DocumentShare[]
+
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  @@index([organizationId, status])
+  @@index([ownerUserId])
+  @@index([templateId])
+  @@index([envelopeId])
+  @@index([currentVersionId])
+}
+
+/**
+ * An immutable snapshot of a Document: uploaded/generated PDF stored in S3.
+ */
+model DocumentVersion {
+  id               String     @id @default(uuid()) @db.Uuid
+  documentId       String     @db.Uuid
+  versionNumber    Int
+  bucket           String
+  s3Key            String
+  sha256           String?
+  pageCount        Int?
+
+  createdByUserId  String?    @db.Uuid
+  createdBy        User?      @relation("DocumentVersionCreator", fields: [createdByUserId], references: [id])
+
+  document         Document   @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  createdAt        DateTime   @default(now())
+
+  @@unique([documentId, versionNumber])
+  @@index([documentId])
+}
+
+/**
+ * Optional internal sharing of a document with a user in the same org.
+ * External recipients for signing are handled by the Sign Service in DynamoDB.
+ */
+model DocumentShare {
+  id             String          @id @default(uuid()) @db.Uuid
+  documentId     String          @db.Uuid
+  sharedWithId   String          @db.Uuid
+  permission     SharePermission @default(VIEW)
+
+  document       Document        @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  sharedWith     User            @relation(fields: [sharedWithId], references: [id], onDelete: Cascade)
+
+  createdAt      DateTime        @default(now())
+
+  @@unique([documentId, sharedWithId])
+  @@index([sharedWithId])
+}
+
+/// ----------------------------------------------
+/// Integrations / Projections from Sign Service
+/// ----------------------------------------------
+
+/**
+ * Idempotent sink for significant Sign events projected from DynamoDB/EventBridge.
+ * Lets you update Document status/certificate and keep a minimal audit in SQL for BI.
+ * Deduplicate on (envelopeId, eventType, eventIdFromSign) at application layer.
+ */
+model SignEventProjection {
+  id               String    @id @default(uuid()) @db.Uuid
+  envelopeId       String
+  documentId       String    @db.Uuid
+  eventType        String    // e.g., "ENVELOPE_COMPLETED" | "ENVELOPE_DECLINED" | "REMINDER_SENT"
+  occurredAt       DateTime
+  payload          Json?
+
+  createdAt        DateTime  @default(now())
+
+  document         Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([envelopeId, occurredAt])
+  @@index([documentId, occurredAt])
 }

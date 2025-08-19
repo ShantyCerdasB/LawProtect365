@@ -539,3 +539,224 @@ output "core_db_subnet_group_name" {
   description = "DB subnet group name for the Core DB "
   value       = module.core_db.subnet_group_name
 }
+
+
+############################################
+# sign-service — bubbled outputs from module.sign_service
+############################################
+
+# ----------------------------
+# API Gateway (HTTP API v2)
+# ----------------------------
+output "sign_api_id" {
+  description = "HTTP API ID for sign-service"
+  value       = module.sign_service.sign_api_id
+}
+
+output "sign_api_endpoint" {
+  description = "Base URL for the sign-service HTTP API"
+  value       = module.sign_service.sign_api_endpoint
+}
+
+output "sign_api_stage" {
+  description = "Deployed stage name for the sign-service HTTP API"
+  value       = module.sign_service.sign_api_stage
+}
+
+# ----------------------------
+# Lambda functions
+# ----------------------------
+output "lambda_function_names" {
+  description = "Names of the Lambda functions (consent, sign, certificate)"
+  value       = module.sign_service.lambda_function_names
+}
+
+output "lambda_function_arns" {
+  description = "ARNs of the Lambda functions (consent, sign, certificate)"
+  value       = module.sign_service.lambda_function_arns
+}
+
+# ----------------------------
+# Evidence bucket
+# ----------------------------
+output "evidence_bucket_id" {
+  description = "S3 bucket name/ID where evidence packages are stored"
+  value       = module.sign_service.evidence_bucket_id
+}
+
+output "evidence_bucket_arn" {
+  description = "S3 bucket ARN for the evidence bucket"
+  value       = module.sign_service.evidence_bucket_arn
+}
+
+# ----------------------------
+# Alerts topic (SNS)
+# ----------------------------
+output "alerts_topic_arn" {
+  description = "SNS topic ARN used for sign-service alarms/notifications"
+  value       = module.sign_service.alerts_topic_arn
+}
+
+output "alerts_topic_name" {
+  description = "SNS topic name used for sign-service alarms/notifications"
+  value       = module.sign_service.alerts_topic_name
+}
+
+# ----------------------------
+# CloudWatch monitoring
+# ----------------------------
+output "cloudwatch_dashboard_name" {
+  description = "CloudWatch dashboard name for sign-service"
+  value       = module.sign_service.cloudwatch_dashboard_name
+}
+
+output "lambda_error_alarm_arns" {
+  description = "Lambda error alarm ARNs for sign-service"
+  value       = module.sign_service.lambda_error_alarm_arns
+}
+
+output "lambda_throttle_alarm_arns" {
+  description = "Lambda throttle alarm ARNs for sign-service"
+  value       = module.sign_service.lambda_throttle_alarm_arns
+}
+
+output "lambda_p95_duration_alarm_arns" {
+  description = "Lambda p95 duration alarm ARNs for sign-service"
+  value       = module.sign_service.lambda_p95_duration_alarm_arns
+}
+
+output "apigw_5xx_alarm_arn" {
+  description = "API Gateway 5XX alarm ARN for sign-service"
+  value       = module.sign_service.apigw_5xx_alarm_arn
+}
+
+output "apigw_latency_p99_alarm_arn" {
+  description = "API Gateway p99 latency alarm ARN for sign-service"
+  value       = module.sign_service.apigw_latency_p99_alarm_arn
+}
+
+# ----------------------------
+# Budgets (FinOps)
+# ----------------------------
+output "sign_budget_ids" {
+  description = "List of budget IDs created for sign-service"
+  value       = module.sign_service.sign_budget_ids
+}
+
+output "sign_budgets_dashboard_name" {
+  description = "Name of the budgets dashboard for sign-service"
+  value       = module.sign_service.sign_budgets_dashboard_name
+}
+
+# ----------------------------
+# CI/CD (deployment-service)
+# ----------------------------
+output "sign_codebuild_project_name" {
+  description = "CodeBuild project name for sign-service"
+  value       = module.sign_service.sign_codebuild_project_name
+}
+
+output "sign_codedeploy_application_name" {
+  description = "CodeDeploy application name for sign-service"
+  value       = module.sign_service.sign_codedeploy_application_name
+}
+
+output "sign_codedeploy_deployment_group_name" {
+  description = "CodeDeploy deployment group name for sign-service"
+  value       = module.sign_service.sign_codedeploy_deployment_group_name
+}
+
+output "sign_codepipeline_name" {
+  description = "CodePipeline name for sign-service"
+  value       = module.sign_service.sign_codepipeline_name
+}
+
+output "sign_codepipeline_arn" {
+  description = "CodePipeline ARN for sign-service"
+  value       = module.sign_service.sign_codepipeline_arn
+}
+
+output "sign_codepipeline_console_url" {
+  description = "Console URL for the sign-service pipeline"
+  value       = module.sign_service.sign_codepipeline_console_url
+}
+
+# ----------------------------
+# GitHub connection (CI/CD visibility)
+# ----------------------------
+output "sign_github_connection_arn" {
+  description = "CodeStar GitHub connection ARN used by sign-service"
+  value       = module.sign_service.sign_github_connection_arn
+}
+
+output "sign_github_owner" {
+  description = "GitHub repository owner for sign-service"
+  value       = module.sign_service.sign_github_owner
+}
+
+output "sign_github_repository" {
+  description = "GitHub repository name for sign-service"
+  value       = module.sign_service.sign_github_repository
+}
+
+output "sign_github_branch" {
+  description = "GitHub branch used for sign-service deployments"
+  value       = module.sign_service.sign_github_branch
+}
+
+# ----------------------------
+# IAM roles (from deployment-service)
+# ----------------------------
+output "sign_codebuild_role_arn" {
+  description = "IAM Role ARN for CodeBuild (sign-service)"
+  value       = module.sign_service.sign_codebuild_role_arn
+}
+
+output "sign_codebuild_role_name" {
+  description = "IAM Role name for CodeBuild (sign-service)"
+  value       = module.sign_service.sign_codebuild_role_name
+}
+
+output "sign_codedeploy_role_arn" {
+  description = "IAM Role ARN for CodeDeploy (sign-service)"
+  value       = module.sign_service.sign_codedeploy_role_arn
+}
+
+output "sign_codedeploy_role_name" {
+  description = "IAM Role name for CodeDeploy (sign-service)"
+  value       = module.sign_service.sign_codedeploy_role_name
+}
+
+output "sign_pipeline_role_arn" {
+  description = "IAM Role ARN for CodePipeline (sign-service)"
+  value       = module.sign_service.sign_pipeline_role_arn
+}
+
+output "sign_pipeline_role_name" {
+  description = "IAM Role name for CodePipeline (sign-service)"
+  value       = module.sign_service.sign_pipeline_role_name
+}
+
+# ----------------------------
+# DynamoDB tables
+# ----------------------------
+output "ddb_envelopes_table_name" {
+  description = "Name of the DynamoDB table used by sign-service"
+  value       = module.sign_service.ddb_envelopes_table_name
+}
+
+output "ddb_signing_tokens_table_name" {
+  description = "Name of the DynamoDB table for signing tokens"
+  value       = module.sign_service.ddb_signing_tokens_table_name
+}
+
+output "KMS_SIGN_KEY_ARN" {
+  description = "ARN of the KMS key used for signing"
+  value       = module.kms_factory.signing_kms_key_arn
+}
+
+output "event_bus_arn" {
+  description = "ARN of the EventBridge bus used for sign-service"
+  value       = module.events.eventbridge_bus_arn
+}
+
