@@ -1,0 +1,23 @@
+/**
+ * @file PresignUpload.schema.ts
+ * @summary Request/response schemas for pre-signed upload URLs.
+ */
+
+import { z } from "@lawprotect/shared-ts";
+import { UuidV4 } from "@lawprotect/shared-ts";
+
+/** Body payload requesting a pre-signed upload URL. */
+export const PresignUploadBody = z.object({
+  envelopeId: UuidV4,
+  filename: z.string().min(1),
+  contentType: z.string().min(1),
+});
+export type PresignUploadBody = z.infer<typeof PresignUploadBody>;
+
+/** Response payload containing pre-signed upload details. */
+export const PresignUploadResponse = z.object({
+  uploadUrl: z.string().url(),
+  objectKey: z.string(),
+  expiresAt: z.string().datetime(),
+});
+export type PresignUploadResponse = z.infer<typeof PresignUploadResponse>;

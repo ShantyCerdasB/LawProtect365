@@ -65,3 +65,4 @@ export const stripControlChars = (s: string): string =>
 /** Left-pads a string to the given length using the provided character. */
 export const leftPad = (s: string, len: number, ch = " "): string =>
   s.length >= len ? s : ch.repeat(len - s.length) + s;
+

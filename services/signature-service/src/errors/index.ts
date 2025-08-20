@@ -6,7 +6,7 @@
  * - call use-case
  * - map result -> HTTP response
  */
-import { AppError } from "@lawprotect/shared-ts/errors";
+import { AppError } from "@lawprotect/shared-ts";
 
 export class EnvelopeNotFound extends AppError {
   constructor(id: string) {

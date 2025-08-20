@@ -8,3 +8,5 @@ export * from "./auth/index.js";
 export * from "./config/index.js";
 export * from "./messaging/ports.js";
 export * from "./storage/ports.js";
+export * from "./validation/index.js";
+export * from "./http/index.js";

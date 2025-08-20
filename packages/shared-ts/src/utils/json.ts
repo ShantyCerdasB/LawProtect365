@@ -103,3 +103,8 @@ export const isJsonObject = (v: unknown): v is Record<string, JsonValue> =>
  */
 export const stringifyCompact = (value: JsonValue): string =>
   JSON.stringify(value);
+
+/** Stable stringify but tolerant with unknown inputs (unsafe). */
+export function stableStringifyUnsafe(input: unknown): string {
+  return stableStringify(input as any);
+}

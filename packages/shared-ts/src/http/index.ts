@@ -4,4 +4,6 @@ export * from "./cors.js";
 export * from "./apiHandler.js";
 export * from "./request.js";
 export * from "./middleware.js";
-export * from "./controllerFactory.js";
+export * from "./withControllerLogging.js";
+export * from "./withObservability.js";
+export * from "./withRequestContext.js";
