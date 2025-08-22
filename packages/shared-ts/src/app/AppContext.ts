@@ -1,5 +1,10 @@
 /**
- * Minimal logger contract.
+ * @file AppContext.ts
+ * @summary Request-scoped application context contracts.
+ */
+
+/**
+ * Minimal logger contract for structured logging.
  */
 export interface LoggerLike {
   debug(msg: string, meta?: unknown): void;
@@ -10,7 +15,7 @@ export interface LoggerLike {
 }
 
 /**
- * Minimal metrics contract.
+ * Minimal metrics contract for counters, gauges and timings.
  */
 export interface MetricsLike {
   increment(name: string, tags?: Record<string, string>, value?: number): void;
@@ -19,7 +24,7 @@ export interface MetricsLike {
 }
 
 /**
- * Minimal tracer contract.
+ * Minimal tracer contract for span lifecycle.
  */
 export interface TracerLike {
   startSpan(
@@ -29,12 +34,12 @@ export interface TracerLike {
 }
 
 /**
- * Application-wide per-request context passed into use cases.
+ * Request-scoped application context shared across controllers and use cases.
  */
 export interface AppContext {
   /** Environment name (dev/staging/prod). */
   env: string;
-  /** Correlation id for logs/metrics/traces. */
+  /** Correlation identifier for observability. */
   requestId?: string;
   /** Logger implementation. */
   logger: LoggerLike;
@@ -42,6 +47,6 @@ export interface AppContext {
   metrics: MetricsLike;
   /** Tracer implementation. */
   tracer: TracerLike;
-  /** Arbitrary attachments (tenant, auth, feature flags). */
+  /** Arbitrary bag for tenant/auth/flags or other per-request data. */
   bag?: Record<string, unknown>;
 }

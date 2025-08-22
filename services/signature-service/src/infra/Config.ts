@@ -1,132 +1,173 @@
-// services/signature-service/src/infra/Config.ts
-
-import { buildAppConfig } from "@lawprotect/shared-ts";
-import { getEnv, getRequired, getNumber, getBoolean } from "@lawprotect/shared-ts";
+import { buildAppConfig, getEnv, getRequired, getNumber, getBoolean } from "@lawprotect/shared-ts";
 import type { AppConfig } from "@lawprotect/shared-ts";
+import type { SigningAlgorithmSpec } from "@aws-sdk/client-kms";
+import { KmsAlgorithmSchema } from "@/domain/value-objects";
 
 /**
  * Service-specific configuration for the signature-service.
- * Extends the shared AppConfig with domain resources (DynamoDB, S3, KMS, EventBridge) and feature toggles.
+ * Extends the shared {@link AppConfig} with domain resources and feature toggles.
  */
 export interface SignatureServiceConfig extends AppConfig {
-  /** DynamoDB tables used by the service. */
+  /**
+   * DynamoDB tables used by the service.
+   * @remarks
+   * Table names are expected to be supplied via environment variables.
+   */
   ddb: {
+    /** Table holding Envelope aggregates. */
     envelopesTable: string;
+    /**
+     * Optional GSI name used for listing envelopes by tenant.
+     * If omitted, consumers should fall back to their own defaults.
+     */
+    envelopesGsi1Name?: string;
+    /** Table holding Document aggregates or records. */
     documentsTable: string;
+    /** Table holding input artifacts (e.g., uploads, form inputs). */
     inputsTable: string;
+    /** Table holding Party aggregates or records. */
     partiesTable: string;
+    /** Table used for idempotency tokens/locks. */
     idempotencyTable: string;
   };
 
-  /** S3 buckets and defaults for storage and presigning. */
+  /**
+   * S3 buckets and defaults for storage and presigning.
+   * @remarks
+   * TTL and ACL defaults are read from environment variables and validated.
+   */
   s3: {
-    /** Bucket for evidences/uploads (e.g., render artifacts, attachments). */
+    /** Bucket where evidentiary artifacts are stored. */
     evidenceBucket: string;
-    /** Bucket for final signed PDFs (optional; falls back to evidenceBucket if not provided). */
+    /** Bucket where signed outputs are stored. Defaults to `evidenceBucket` if not provided. */
     signedBucket: string;
-    /** KMS key to use for SSE-KMS on PUTs (optional). */
+    /** Optional SSE-KMS key ID used for bucket-side encryption. */
     sseKmsKeyId?: string;
-    /** Default presign expiration in seconds. */
+    /** Default TTL (in seconds) for presigned URLs. */
     presignTtlSeconds: number;
-    /** Optional Cache-Control used on uploads. */
+    /** Optional default Cache-Control header value for uploads. */
     defaultCacheControl?: string;
-    /** Whether to set ACL public-read on presigned PUTs (false by default). */
+    /** Whether to apply a public ACL by default for specific operations. */
     defaultPublicAcl: boolean;
   };
 
-  /** Keys for KMS operations (document signing and generic crypto). */
+  /**
+   * Keys and defaults for KMS operations.
+   * @remarks
+   * The signing algorithm is validated by {@link KmsAlgorithmSchema}.
+   */
   kms: {
-    /** KMS key used to produce signatures (Sign/Verify). */
+    /** CMK used for signing operations. */
     signerKeyId: string;
-    /** Optional KMS key for auxiliary encryption operations. */
+    /** Optional CMK used for data-key operations. */
     dataKeyId?: string;
-    /** Default signing algorithm (e.g., RSASSA_PSS_SHA_256). */
-    signingAlgorithm: string;
+    /** KMS signing algorithm used for signatures. */
+    signingAlgorithm: SigningAlgorithmSpec;
   };
 
-  /** EventBridge integration for domain events. */
+  /**
+   * EventBridge integration for domain events.
+   */
   events: {
+    /** Target EventBridge bus name. */
     busName: string;
+    /**
+     * Default event `source`. If not provided, it is derived from
+     * `projectName.serviceName` (from the shared {@link AppConfig}).
+     */
     source: string;
   };
 
-  /** Optional SSM base path used by adapters that fetch runtime parameters. */
+  /**
+   * Optional SSM base path used by adapters that fetch runtime parameters.
+   */
   ssm?: {
+    /** Base path prefix for SSM parameter lookups. */
     basePath?: string;
   };
 
-  /** Upload and multipart defaults. */
+  /**
+   * Upload and multipart defaults.
+   */
   uploads: {
-    /** Minimum multipart part size in bytes. */
+    /** Minimum part size in bytes for multipart uploads. */
     minPartSizeBytes: number;
-    /** Maximum parts allowed by the service policy. */
+    /** Maximum number of parts for multipart uploads. */
     maxParts: number;
   };
 }
 
 /**
- * Loads the typed configuration for the signature-service by composing the shared AppConfig
- * with domain-specific resources and defaults. All reads come from process.env.
+ * Loads the typed configuration for the signature-service by composing the shared {@link AppConfig}
+ * with domain-specific resources and defaults.
  *
- * Environment variables (suggested):
- * - Tables:
- *   ENVELOPES_TABLE, DOCUMENTS_TABLE, INPUTS_TABLE, PARTIES_TABLE, IDEMPOTENCY_TABLE
- * - S3:
- *   EVIDENCE_BUCKET, SIGNED_BUCKET?, S3_SSE_KMS_KEY_ID?, PRESIGN_TTL_SECONDS?, S3_DEFAULT_CACHE_CONTROL?, S3_DEFAULT_PUBLIC_ACL?
- * - KMS:
- *   KMS_SIGNER_KEY_ID, KMS_DATA_KEY_ID?, KMS_SIGNING_ALGORITHM?
- * - EventBridge:
- *   EVENTS_BUS_NAME, EVENTS_SOURCE
- * - SSM:
- *   SSM_BASE_PATH?
- * - Uploads:
- *   UPLOAD_MIN_PART_SIZE_BYTES?, UPLOAD_MAX_PARTS?
+ * @param overrides - Optional partial configuration to overlay on top of the computed values.
+ * @returns A fully-typed {@link SignatureServiceConfig} object ready for dependency injection.
  *
- * @param overrides Optional partial overrides (useful for tests and local runs).
- * @returns A fully-populated, strongly-typed configuration object.
+ * @throws {Error} If any required environment variable is missing (thrown by {@link getRequired}).
+ * @throws {Error} If numeric or boolean environment variables fail validation (thrown by {@link getNumber} / {@link getBoolean}).
+ * @throws {Error} If the KMS signing algorithm is invalid (thrown by {@link KmsAlgorithmSchema.parse}).
+ *
+ * @remarks
+ * All reads come from `process.env`. Sensible defaults are applied where appropriate:
+ * - `SIGNED_BUCKET` falls back to `EVIDENCE_BUCKET`.
+ * - `PRESIGN_TTL_SECONDS` defaults to 900 and is clamped to [60, 86400].
+ * - `UPLOAD_MIN_PART_SIZE_BYTES` defaults to 5 MiB and is clamped to [5 MiB, ∞).
+ * - `UPLOAD_MAX_PARTS` defaults to 500 and is clamped to [1, 10000].
+ * - `EVENTS_SOURCE` falls back to `${projectName}.${serviceName}` from the shared config.
+ * - `KMS_SIGNING_ALGORITHM` defaults to `"RSASSA_PSS_SHA_256"`.
  */
-export const loadConfig = (overrides?: Partial<SignatureServiceConfig>): SignatureServiceConfig => {
+export const loadConfig = (
+  overrides?: Partial<SignatureServiceConfig>
+): SignatureServiceConfig => {
   const base = buildAppConfig();
+
+  const signingAlgorithm = KmsAlgorithmSchema.parse(
+    getEnv("KMS_SIGNING_ALGORITHM") ?? "RSASSA_PSS_SHA_256"
+  ) as SigningAlgorithmSpec;
 
   const cfg: SignatureServiceConfig = {
     ...base,
 
     ddb: {
       envelopesTable: getRequired("ENVELOPES_TABLE"),
+      envelopesGsi1Name: getEnv("ENVELOPES_GSI1_NAME"),
       documentsTable: getRequired("DOCUMENTS_TABLE"),
       inputsTable: getRequired("INPUTS_TABLE"),
       partiesTable: getRequired("PARTIES_TABLE"),
-      idempotencyTable: getRequired("IDEMPOTENCY_TABLE")
+      idempotencyTable: getRequired("IDEMPOTENCY_TABLE"),
     },
 
     s3: {
       evidenceBucket: getRequired("EVIDENCE_BUCKET"),
       signedBucket: getEnv("SIGNED_BUCKET") ?? getRequired("EVIDENCE_BUCKET"),
       sseKmsKeyId: getEnv("S3_SSE_KMS_KEY_ID"),
-      presignTtlSeconds: getNumber("PRESIGN_TTL_SECONDS", 900, { min: 60, max: 86400 }),
+      presignTtlSeconds: getNumber("PRESIGN_TTL_SECONDS", 900, { min: 60, max: 86_400 }),
       defaultCacheControl: getEnv("S3_DEFAULT_CACHE_CONTROL"),
-      defaultPublicAcl: getBoolean("S3_DEFAULT_PUBLIC_ACL", false)
+      defaultPublicAcl: getBoolean("S3_DEFAULT_PUBLIC_ACL", false),
     },
 
     kms: {
       signerKeyId: getRequired("KMS_SIGNER_KEY_ID"),
       dataKeyId: getEnv("KMS_DATA_KEY_ID"),
-      signingAlgorithm: getEnv("KMS_SIGNING_ALGORITHM") ?? "RSASSA_PSS_SHA_256"
+      signingAlgorithm,
     },
 
     events: {
       busName: getRequired("EVENTS_BUS_NAME"),
-      source: getEnv("EVENTS_SOURCE") ?? `${base.projectName}.${base.serviceName}`
+      source: getEnv("EVENTS_SOURCE") ?? `${base.projectName}.${base.serviceName}`,
     },
 
     ssm: {
-      basePath: getEnv("SSM_BASE_PATH")
+      basePath: getEnv("SSM_BASE_PATH"),
     },
 
     uploads: {
-      minPartSizeBytes: getNumber("UPLOAD_MIN_PART_SIZE_BYTES", 5 * 1024 * 1024, { min: 5 * 1024 * 1024 }),
-      maxParts: getNumber("UPLOAD_MAX_PARTS", 500, { min: 1, max: 10000 })
-    }
+      minPartSizeBytes: getNumber("UPLOAD_MIN_PART_SIZE_BYTES", 5 * 1024 * 1024, {
+        min: 5 * 1024 * 1024,
+      }),
+      maxParts: getNumber("UPLOAD_MAX_PARTS", 500, { min: 1, max: 10_000 }),
+    },
   };
 
   return { ...cfg, ...(overrides ?? {}) };

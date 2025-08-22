@@ -10,3 +10,6 @@ export * from "./messaging/ports.js";
 export * from "./storage/ports.js";
 export * from "./validation/index.js";
 export * from "./http/index.js";
+export * from "./db/index.js";
+export * from "./events/index.js";
+export * from "./observability/index.js"

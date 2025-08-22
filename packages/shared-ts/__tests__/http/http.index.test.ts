@@ -10,7 +10,7 @@ import * as CorsMod from '../../src/http/cors.js';
 import * as ApiHandlerMod from '../../src/http/apiHandler.js';
 import * as RequestMod from '../../src/http/request.js';
 import * as MiddlewareMod from '../../src/http/middleware.js';
-import * as ControllerFactoryMod from '../../src/http/controllerFactory.js';
+
 
 describe('http index (barrel) re-exports', () => {
   it('re-exports selected runtime symbols with identity preserved', () => {
@@ -47,7 +47,7 @@ describe('http index (barrel) re-exports', () => {
 
     // middleware & controller factory
     expect(HTTP.compose).toBe(MiddlewareMod.compose);
-    expect(HTTP.controllerFactory).toBe(ControllerFactoryMod.controllerFactory);
+
   });
 
   it('exposes all runtime named exports from each submodule', () => {
@@ -64,7 +64,6 @@ describe('http index (barrel) re-exports', () => {
     assertAllExportsPresent(ApiHandlerMod);
     assertAllExportsPresent(RequestMod);
     assertAllExportsPresent(MiddlewareMod);
-    assertAllExportsPresent(ControllerFactoryMod);
   });
 
   it('smoke-tests a couple of helpers via the barrel', () => {

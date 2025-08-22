@@ -17,7 +17,7 @@
  *  - ttl?           : epoch seconds (number)
  *
  * Notes:
- *  - Uses an SDK-agnostic client (`DdbClientLike`) to keep adapters decoupled.
+ *  - Uses an SDK-agnostic client (`DdbClientLike`) to remain decoupled.
  *  - Employs a runtime/type guard to ensure `update` is present when needed.
  */
 
@@ -51,8 +51,8 @@ interface DdbIdempotencyItem {
 /**
  * Runtime guard for safe deserialization.
  *
- * @param v Unknown value to validate.
- * @returns `true` iff `v` matches `DdbIdempotencyItem`.
+ * @param v Value to validate.
+ * @returns `true` if `v` matches `DdbIdempotencyItem`.
  */
 const isDdbIdempotencyItem = (v: unknown): v is DdbIdempotencyItem => {
   const o = v as DdbIdempotencyItem;
@@ -72,7 +72,7 @@ const isDdbIdempotencyItem = (v: unknown): v is DdbIdempotencyItem => {
 /**
  * Converts a relative TTL in seconds to epoch seconds.
  *
- * @param ttlSeconds Optional relative TTL in seconds.
+ * @param ttlSeconds Relative TTL in seconds.
  * @returns Epoch seconds or `undefined` if `ttlSeconds` is falsy or not positive.
  */
 const toTtl = (ttlSeconds: number | undefined): number | undefined =>
@@ -90,9 +90,9 @@ const toDdbItem = <T extends object>(v: T): Record<string, unknown> =>
   (v as unknown) as Record<string, unknown>;
 
 /**
- * Produces a stable JSON snapshot for unknown payloads.
+ * Produces a stable JSON snapshot for an arbitrary payload.
  *
- * @param result Arbitrary result to snapshot.
+ * @param result Payload to snapshot.
  * @returns JSON string; falls back to a safe payload if serialization fails.
  */
 const stringifyResult = (result: unknown): string => {
@@ -107,16 +107,16 @@ const stringifyResult = (result: unknown): string => {
  * DynamoDB implementation of `IdempotencyStore`.
  *
  * Semantics:
- * - `putPending` creates the record iff it does not exist (conditional write).
+ * - `putPending` creates the record if it does not already exist.
  * - `get` returns `"pending" | "completed" | null`.
- * - `putCompleted` flips state to `"completed"`, stores a stable JSON snapshot and sets TTL.
+ * - `putCompleted` sets state to `"completed"`, stores a JSON snapshot, and sets TTL.
  */
 export class IdempotencyStoreDdb implements IdempotencyStore {
   /**
-   * Creates a new store.
+   * Creates a new instance of the store.
    *
    * @param tableName DynamoDB table name.
-   * @param ddb Minimal client compatible with the shared `DdbClientLike`.
+   * @param ddb Minimal client compatible with `DdbClientLike`.
    */
   constructor(
     private readonly tableName: string,
@@ -128,6 +128,7 @@ export class IdempotencyStoreDdb implements IdempotencyStore {
    *
    * @param key Idempotency key.
    * @returns `"pending" | "completed" | null`.
+   * @throws Normalized HttpError via `mapAwsError`.
    */
   async get(key: string): Promise<"pending" | "completed" | null> {
     try {
@@ -183,7 +184,7 @@ export class IdempotencyStoreDdb implements IdempotencyStore {
    * Marks a key as `completed` with a stable result snapshot and TTL.
    *
    * @param key Idempotency key.
-   * @param result Arbitrary result payload to snapshot.
+   * @param result Arbitrary result payload.
    * @param ttlSeconds Relative TTL in seconds.
    * @throws {NotFoundError} If the record does not exist.
    */
@@ -197,7 +198,6 @@ export class IdempotencyStoreDdb implements IdempotencyStore {
     const resultJson = stringifyResult(result);
 
     try {
-      // Runtime + type assertion that `update` is implemented.
       requireUpdate(this.ddb);
 
       await this.ddb.update({

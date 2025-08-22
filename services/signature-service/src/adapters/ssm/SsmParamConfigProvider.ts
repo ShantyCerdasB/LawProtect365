@@ -1,12 +1,13 @@
 /**
  * @file SsmParamConfigProvider.ts
  * @summary SSM adapter and minimal config provider with in-memory cache.
- * @description
+ *
  * - Implements the shared `SsmPort`
  * - Provides helpers to read string, JSON, boolean, and integer parameters
  * - Retries throttling and 5xx errors with `shouldRetry` and `isAwsRetryable`
  * - Maps AWS errors through `mapAwsError`
  * - Supports optional environment variable fallback using `SSM_FALLBACK_PREFIX`
+ * - Per-call cache TTL overrides (`ttlMs`) and decrypt control for SecureString
  */
 
 import {
@@ -22,15 +23,16 @@ import { isAwsRetryable } from "@lawprotect/shared-ts";
 import { parseJson } from "@lawprotect/shared-ts";
 import { getEnv, getNumber } from "@lawprotect/shared-ts";
 
+/** Lightweight sleep helper for backoff. */
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**
- * Options for `SsmParamConfigProvider`.
+ * Options for {@link SsmParamConfigProvider}.
  *
- * @property maxAttempts - Maximum attempts per SSM call. Default: `SSM_MAX_ATTEMPTS` (3).
- * @property defaultTtlMs - Default cache TTL in milliseconds. Default: `SSM_DEFAULT_TTL_MS` (30000).
- * @property envFallbackPrefix - Optional prefix to read env fallbacks. If set, a parameter like `/foo/bar`
- * maps to `process.env[<prefix>__FOO_BAR]` (slashes → `_`). Default: `SSM_FALLBACK_PREFIX` or `undefined`.
+ * @property maxAttempts        Maximum attempts per SSM call. Default: `SSM_MAX_ATTEMPTS` (3).
+ * @property defaultTtlMs       Default cache TTL in milliseconds. Default: `SSM_DEFAULT_TTL_MS` (30000).
+ * @property envFallbackPrefix  Optional prefix to read env fallbacks. If set, a parameter like `/foo/bar`
+ *                              maps to `process.env[<prefix>__FOO_BAR]` (slashes → `_`). Default: `SSM_FALLBACK_PREFIX`.
  */
 export interface SsmParamConfigProviderOptions {
   maxAttempts?: number;
@@ -60,8 +62,8 @@ export class SsmParamConfigProvider implements SsmPort {
   /**
    * Creates a new provider.
    *
-   * @param client - Preconfigured `SSMClient` instance.
-   * @param opts - Optional provider settings. Defaults use environment variables when available.
+   * @param client Preconfigured `SSMClient` instance.
+   * @param opts   Optional provider settings. Defaults use environment variables when available.
    */
   constructor(client: SSMClient, opts: SsmParamConfigProviderOptions = {}) {
     this.ssm = client;
@@ -81,8 +83,8 @@ export class SsmParamConfigProvider implements SsmPort {
   /**
    * Retrieves a plain string parameter.
    *
-   * @param name - Parameter name (e.g., `/service/feature/flag`).
-   * @param withDecryption - Whether to decrypt `SecureString` values. Default: `true`.
+   * @param name           Parameter name (e.g., `/service/feature/flag`).
+   * @param withDecryption Whether to decrypt `SecureString` values. Default: `true`.
    * @returns The parameter value or `undefined` if not found.
    */
   async getParameter(name: string, withDecryption = true): Promise<string | undefined> {
@@ -92,9 +94,9 @@ export class SsmParamConfigProvider implements SsmPort {
   /**
    * Reads a parameter as a string with in-memory caching and optional ENV fallback.
    *
-   * @param name - Parameter name.
-   * @param opts.decrypt - Decrypt `SecureString` values. Default: `true`.
-   * @param opts.ttlMs - Cache TTL override in milliseconds.
+   * @param name        Parameter name.
+   * @param opts.decrypt Decrypt `SecureString` values. Default: `true`.
+   * @param opts.ttlMs   Cache TTL override in milliseconds.
    * @returns The parameter value or `undefined`.
    */
   async getString(
@@ -121,9 +123,9 @@ export class SsmParamConfigProvider implements SsmPort {
   /**
    * Reads a parameter and parses it as JSON.
    *
-   * @typeParam T - Expected JSON shape.
-   * @param name - Parameter name.
-   * @param opts - Options for decryption and caching.
+   * @typeParam T Expected JSON shape.
+   * @param name  Parameter name.
+   * @param opts  Options for decryption and caching.
    * @returns Parsed value or `undefined`.
    * @throws If the value exists but is not valid JSON.
    */
@@ -139,11 +141,11 @@ export class SsmParamConfigProvider implements SsmPort {
   /**
    * Reads a parameter and parses it as a boolean.
    *
-   * Truthy forms: `1`, `true`, `yes`, `on`.  
-   * Falsy forms: `0`, `false`, `no`, `off`.
+   * Truthy: `1`, `true`, `yes`, `on`.  
+   * Falsy : `0`, `false`, `no`, `off`.
    *
-   * @param name - Parameter name.
-   * @param opts - Options for decryption and caching.
+   * @param name Parameter name.
+   * @param opts Options for decryption and caching.
    * @returns `true`/`false` or `undefined` if unrecognized.
    */
   async getBool(
@@ -161,8 +163,8 @@ export class SsmParamConfigProvider implements SsmPort {
   /**
    * Reads a parameter and parses it as an integer.
    *
-   * @param name - Parameter name.
-   * @param opts - Options for decryption and caching.
+   * @param name Parameter name.
+   * @param opts Options for decryption and caching.
    * @returns A finite number or `undefined`.
    */
   async getInt(
@@ -175,6 +177,7 @@ export class SsmParamConfigProvider implements SsmPort {
     return Number.isFinite(n) ? n : undefined;
   }
 
+  /** Fetches the raw string value from SSM with retries and maps provider errors. */
   private async fetchString(name: string, decrypt: boolean): Promise<string | undefined> {
     const ctx = "SsmParamConfigProvider.getParameter";
     let lastErr: unknown;
@@ -195,6 +198,7 @@ export class SsmParamConfigProvider implements SsmPort {
     throw mapAwsError(lastErr, ctx);
   }
 
+  /** Builds an environment variable key from the SSM name if fallback prefix is configured. */
   private readEnvFallback(name: string): string | undefined {
     if (!this.envPrefix) return undefined;
     const normalized = name.replaceAll("/", "_").replace(/__+/g, "_").toUpperCase();

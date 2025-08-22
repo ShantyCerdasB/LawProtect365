@@ -1,58 +1,78 @@
 /**
- * Discriminated union for success/failure results.
+ * @file Result.ts
+ * @summary Discriminated union for success/failure with collision-safe helper names.
  */
+
 export type Result<T, E = unknown> =
   | { readonly ok: true; readonly value: T }
   | { readonly ok: false; readonly error: E };
 
 /**
- * Creates an Ok result.
- * @param value Successful payload.
+ * Creates a successful result.
+ *
+ * @param value Payload for the success case.
+ * @returns An `Ok` result.
  */
-export const ok = <T>(value: T): Result<T, never> => ({ ok: true, value });
+export const resultOk = <T>(value: T): Result<T, never> => ({ ok: true, value });
 
 /**
- * Creates an Err result.
- * @param error Failure payload.
+ * Creates a failed result.
+ *
+ * @param error Error payload.
+ * @returns An `Err` result.
  */
-export const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
+export const resultErr = <E>(error: E): Result<never, E> => ({ ok: false, error });
 
 /**
- * Maps a successful result.
+ * Transforms the value on success.
+ *
  * @param r Input result.
- * @param fn Transform applied to Ok values.
+ * @param fn Mapping function applied to `Ok` values.
+ * @returns Mapped result or the original error.
  */
-export const map = <T, U, E>(r: Result<T, E>, fn: (v: T) => U): Result<U, E> =>
-  r.ok ? ok(fn(r.value)) : r;
+export const resultMap = <T, U, E>(r: Result<T, E>, fn: (v: T) => U): Result<U, E> =>
+  r.ok ? resultOk(fn(r.value)) : r;
 
 /**
- * Maps an error result.
+ * Transforms the error on failure.
+ *
  * @param r Input result.
- * @param fn Transform applied to Err values.
+ * @param fn Mapping function applied to `Err` errors.
+ * @returns Result with transformed error or the original success.
  */
-export const mapErr = <T, E, F>(r: Result<T, E>, fn: (e: E) => F): Result<T, F> =>
-  r.ok ? r : err(fn(r.error));
+export const resultMapErr = <T, E, F>(r: Result<T, E>, fn: (e: E) => F): Result<T, F> =>
+  r.ok ? r : resultErr(fn(r.error));
 
 /**
- * Chains computations that return Result.
+ * Chains computations that themselves return a `Result`.
+ *
  * @param r Input result.
- * @param fn Continuation for Ok values.
+ * @param fn Continuation invoked on `Ok` values.
+ * @returns The continuation output when `Ok`, otherwise the original `Err`.
  */
-export const andThen = <T, U, E>(r: Result<T, E>, fn: (v: T) => Result<U, E>): Result<U, E> =>
-  r.ok ? fn(r.value) : r;
+export const resultAndThen = <T, U, E>(
+  r: Result<T, E>,
+  fn: (v: T) => Result<U, E>
+): Result<U, E> => (r.ok ? fn(r.value) : r);
 
 /**
- * Unwraps a result or throws on error.
+ * Extracts the success value or throws the error.
+ *
  * @param r Input result.
+ * @throws The `error` when `Err`.
+ * @returns The contained value when `Ok`.
  */
-export const unwrap = <T, E>(r: Result<T, E>): T => {
+export const resultUnwrap = <T, E>(r: Result<T, E>): T => {
   if (r.ok) return r.value;
   throw r.error;
 };
 
 /**
- * Unwraps a result or returns a default value.
+ * Extracts the value or returns a fallback for failures.
+ *
  * @param r Input result.
- * @param fallback Default value when Err.
+ * @param fallback Default value when `Err`.
+ * @returns The value on success, otherwise `fallback`.
  */
-export const unwrapOr = <T, E>(r: Result<T, E>, fallback: T): T => (r.ok ? r.value : fallback);
+export const resultUnwrapOr = <T, E>(r: Result<T, E>, fallback: T): T =>
+  r.ok ? r.value : fallback;

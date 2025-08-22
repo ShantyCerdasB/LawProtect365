@@ -4,7 +4,7 @@ import type { DomainEvent } from "./DomainEvent.js";
  * Transport envelope for domain events.
  * Captures broker-specific metadata without leaking into domain.
  */
-export interface EventEnvelope<T = unknown> {
+export interface EventEnvelopes<T = unknown> {
   /** Embedded domain event. */
   event: DomainEvent<T>;
   /** Broker message id or delivery tag. */

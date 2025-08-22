@@ -1,30 +1,50 @@
 /**
- * @file Envelope entity.
+ * @file Envelope.ts
+ * @summary Envelope aggregate root for the signature domain.
+ *
  * @description
- * Root aggregate of the signature domain.
- * Owns documents, parties, and inputs. Enforces high-level status transitions.
+ * Represents an e-signature envelope that owns documents, parties, and inputs.
+ * Lifecycle invariants and transitions are enforced by dedicated domain rules.
+ * This aggregate is intentionally minimal and serializable.
  */
 
-export type EnvelopeStatus = "draft" | "sent" | "completed" | "cancelled";
+import type { EnvelopeId, TenantId, UserId } from "../value-objects/Ids";
+import type { EnvelopeStatus } from "../value-objects/EnvelopeStatus";
 
 /**
- * Envelope domain entity.
+ * Envelope aggregate.
  */
 export interface Envelope {
-  /** Unique identifier of the envelope. */
-  envelopeId: string;
-  /** Owner userId (creator). */
-  ownerId: string;
-  /** Human-friendly title. */
+  /** Canonical identifier of the envelope (ULID/UUID brand). */
+  envelopeId: EnvelopeId;
+
+  /** Owner (creator) of the envelope. */
+  ownerId: UserId;
+
+  /** Tenant owning the resource (multitenancy boundary). */
+  tenantId: TenantId;
+
+  /** Human-friendly title (trimmed, typically ≤ 255 chars). */
   title: string;
-  /** Lifecycle status. */
+
+  /** Current lifecycle status of the envelope. */
   status: EnvelopeStatus;
-  /** ISO8601 creation timestamp. */
+
+  /** ISO-8601 creation timestamp. */
   createdAt: string;
-  /** ISO8601 last update timestamp. */
+
+  /** ISO-8601 last update timestamp. */
   updatedAt: string;
-  /** List of associated party IDs. */
+
+  /** Associated party identifiers. */
   parties: string[];
-  /** List of associated document IDs. */
+
+  /** Associated document identifiers. */
   documents: string[];
+
+  /** Optional policy configuration at the envelope level. */
+  policies?: Record<string, unknown>;
+
+  /** Free-form metadata for extensibility. */
+  metadata?: Record<string, unknown>;
 }

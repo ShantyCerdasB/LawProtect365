@@ -1,47 +1,81 @@
-import { z } from "@lawprotect/shared-ts";
+﻿/**
+ * @file Ids.ts
+ * @summary Branded identifiers and Zod schemas for core domain entities.
+ *
+ * @description
+ * Provides compile-time nominal typing (branding) for identifiers and
+ * reusable Zod schemas to validate and normalize incoming values. Brands
+ * prevent accidental mixing of semantically distinct strings while remaining
+ * zero-cost at runtime.
+ */
+
+import { z, Ulid, UuidV4, TrimmedString } from "@lawprotect/shared-ts";
 import type { Brand } from "@lawprotect/shared-ts";
 
-/**
- * Branded identifier types for domain entities.
- */
+/* ────────────────────────────────────────────────────────────────────────────
+ * Brands
+ * ────────────────────────────────────────────────────────────────────────────*/
+
+/** Envelope identifier (ULID/UUID). */
 export type EnvelopeId = Brand<string, "EnvelopeId">;
+/** Document identifier (ULID/UUID). */
 export type DocumentId = Brand<string, "DocumentId">;
+/** Party identifier (ULID/UUID). */
 export type PartyId = Brand<string, "PartyId">;
+/** Input (field) identifier (ULID/UUID). */
 export type InputId = Brand<string, "InputId">;
+/** Signature record identifier (ULID/UUID). */
 export type SignatureId = Brand<string, "SignatureId">;
 
+/** Tenant identifier (trimmed, non-empty). */
 export type TenantId = Brand<string, "TenantId">;
+/** User identifier (trimmed, non-empty). */
 export type UserId = Brand<string, "UserId">;
 
-/**
- * Common ULID/UUID schema.
- */
-const UlidOrUuid = z
-  .string()
-  .regex(
-    /^(?:[0-9A-HJKMNP-TV-Z]{26}|[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/i,
-    "Expected ULID or UUID"
-  );
+/* ────────────────────────────────────────────────────────────────────────────
+ * Schemas
+ * ────────────────────────────────────────────────────────────────────────────*/
 
 /**
- * Branded id schemas.
+ * Generic schema for entity identifiers that accept either ULID or UUIDv4.
+ * Useful for path/query params and shared VO usage.
  */
-export const EnvelopeIdSchema = UlidOrUuid.transform((v) => v as EnvelopeId);
-export const DocumentIdSchema = UlidOrUuid.transform((v) => v as DocumentId);
-export const PartyIdSchema = UlidOrUuid.transform((v) => v as PartyId);
-export const InputIdSchema = UlidOrUuid.transform((v) => v as InputId);
-export const SignatureIdSchema = UlidOrUuid.transform((v) => v as SignatureId);
+export const EntityIdSchema = z.union([Ulid, UuidV4]);
 
-export const TenantIdSchema = z.string().min(1).transform((v) => v as TenantId);
-export const UserIdSchema = z.string().min(1).transform((v) => v as UserId);
+/** EnvelopeId validator (ULID/UUID → brand). */
+export const EnvelopeIdSchema = EntityIdSchema.transform(
+  (v: string) => v as EnvelopeId
+);
+/** DocumentId validator (ULID/UUID → brand). */
+export const DocumentIdSchema = EntityIdSchema.transform(
+  (v: string) => v as DocumentId
+);
+/** PartyId validator (ULID/UUID → brand). */
+export const PartyIdSchema = EntityIdSchema.transform(
+  (v: string) => v as PartyId
+);
+/** InputId validator (ULID/UUID → brand). */
+export const InputIdSchema = EntityIdSchema.transform(
+  (v: string) => v as InputId
+);
+/** SignatureId validator (ULID/UUID → brand). */
+export const SignatureIdSchema = EntityIdSchema.transform(
+  (v: string) => v as SignatureId
+);
 
 /**
- * Safe casters from unknown strings.
+ * TenantId validator.
+ * Uses a trimmed string piped into a length constraint to avoid chaining
+ * `.min` directly on a ZodEffects instance.
  */
-export const asEnvelopeId = (v: string): EnvelopeId => EnvelopeIdSchema.parse(v);
-export const asDocumentId = (v: string): DocumentId => DocumentIdSchema.parse(v);
-export const asPartyId = (v: string): PartyId => PartyIdSchema.parse(v);
-export const asInputId = (v: string): InputId => InputIdSchema.parse(v);
-export const asSignatureId = (v: string): SignatureId => SignatureIdSchema.parse(v);
-export const asTenantId = (v: string): TenantId => TenantIdSchema.parse(v);
-export const asUserId = (v: string): UserId => UserIdSchema.parse(v);
+export const TenantIdSchema = TrimmedString.pipe(z.string().min(1)).transform(
+  (v: string) => v as TenantId
+);
+/**
+ * UserId validator.
+ * Uses a trimmed string piped into a length constraint to avoid chaining
+ * `.min` directly on a ZodEffects instance.
+ */
+export const UserIdSchema = TrimmedString.pipe(z.string().min(1)).transform(
+  (v: string) => v as UserId
+);

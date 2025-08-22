@@ -1,16 +1,20 @@
 import { AppError } from "./AppError.js";
-import { ErrorCodes, type ErrorCode } from "./codes.js";
+import { ErrorCodes } from "./codes.js";
 
 /**
  * Base class for HTTP-mapped errors with a fixed status.
- * Prefer concrete subclasses below for common categories.
- * @remarks
- * - Removed the redundant `| string` unions that widened literal types and triggered:
- *   `"AUTH_UNAUTHORIZED" | ... is overridden by string in this union type`.
- * - `HttpError` now defaults to `ErrorCode`, and all subclasses use `ErrorCode` for `code`.
- *   If arbitrary string codes are ever required, create a separate variant using `HttpError<string>`.
+ *
+ * @typeParam C - Machine-readable error code string. Defaults to `string` so
+ * domain services can pass their own codes (e.g., `"SIG_ENVELOPE_INVALID_STATE"`).
  */
-export abstract class HttpError<C extends string = ErrorCode> extends AppError<C> {
+export abstract class HttpError<C extends string = string> extends AppError<C> {
+  /**
+   * @param statusCode HTTP status code associated with the error.
+   * @param code Stable machine-readable code (platform or domain-specific).
+   * @param message Human-readable message.
+   * @param details Optional, safe-to-expose structured details.
+   * @param cause Optional underlying cause for diagnostics.
+   */
   protected constructor(
     statusCode: number,
     code: C,
@@ -23,10 +27,15 @@ export abstract class HttpError<C extends string = ErrorCode> extends AppError<C
 }
 
 /** 400 Bad Request. */
-export class BadRequestError extends HttpError<ErrorCode> {
+export class BadRequestError extends HttpError<string> {
+  /**
+   * @param message Defaults to `"Bad Request"`.
+   * @param code Defaults to {@link ErrorCodes.COMMON_BAD_REQUEST}.
+   * @param details Optional structured details.
+   */
   constructor(
     message = "Bad Request",
-    code: ErrorCode = ErrorCodes.COMMON_BAD_REQUEST,
+    code: string = ErrorCodes.COMMON_BAD_REQUEST,
     details?: unknown
   ) {
     super(400, code, message, details);
@@ -34,10 +43,15 @@ export class BadRequestError extends HttpError<ErrorCode> {
 }
 
 /** 401 Unauthorized. */
-export class UnauthorizedError extends HttpError<ErrorCode> {
+export class UnauthorizedError extends HttpError<string> {
+  /**
+   * @param message Defaults to `"Unauthorized"`.
+   * @param code Defaults to {@link ErrorCodes.AUTH_UNAUTHORIZED}.
+   * @param details Optional structured details.
+   */
   constructor(
     message = "Unauthorized",
-    code: ErrorCode = ErrorCodes.AUTH_UNAUTHORIZED,
+    code: string = ErrorCodes.AUTH_UNAUTHORIZED,
     details?: unknown
   ) {
     super(401, code, message, details);
@@ -45,10 +59,15 @@ export class UnauthorizedError extends HttpError<ErrorCode> {
 }
 
 /** 403 Forbidden. */
-export class ForbiddenError extends HttpError<ErrorCode> {
+export class ForbiddenError extends HttpError<string> {
+  /**
+   * @param message Defaults to `"Forbidden"`.
+   * @param code Defaults to {@link ErrorCodes.AUTH_FORBIDDEN}.
+   * @param details Optional structured details.
+   */
   constructor(
     message = "Forbidden",
-    code: ErrorCode = ErrorCodes.AUTH_FORBIDDEN,
+    code: string = ErrorCodes.AUTH_FORBIDDEN,
     details?: unknown
   ) {
     super(403, code, message, details);
@@ -56,10 +75,15 @@ export class ForbiddenError extends HttpError<ErrorCode> {
 }
 
 /** 404 Not Found. */
-export class NotFoundError extends HttpError<ErrorCode> {
+export class NotFoundError extends HttpError<string> {
+  /**
+   * @param message Defaults to `"Not Found"`.
+   * @param code Defaults to {@link ErrorCodes.COMMON_NOT_FOUND}.
+   * @param details Optional structured details.
+   */
   constructor(
     message = "Not Found",
-    code: ErrorCode = ErrorCodes.COMMON_NOT_FOUND,
+    code: string = ErrorCodes.COMMON_NOT_FOUND,
     details?: unknown
   ) {
     super(404, code, message, details);
@@ -67,21 +91,63 @@ export class NotFoundError extends HttpError<ErrorCode> {
 }
 
 /** 409 Conflict. */
-export class ConflictError extends HttpError<ErrorCode> {
+export class ConflictError extends HttpError<string> {
+  /**
+   * @param message Defaults to `"Conflict"`.
+   * @param code Defaults to {@link ErrorCodes.COMMON_CONFLICT}.
+   * @param details Optional structured details.
+   */
   constructor(
     message = "Conflict",
-    code: ErrorCode = ErrorCodes.COMMON_CONFLICT,
+    code: string = ErrorCodes.COMMON_CONFLICT,
     details?: unknown
   ) {
     super(409, code, message, details);
   }
 }
 
+/** 412 Precondition Failed. */
+export class PreconditionFailedError extends HttpError<string> {
+  /**
+   * @param message Defaults to `"Precondition Failed"`.
+   * @param code Defaults to {@link ErrorCodes.COMMON_PRECONDITION_FAILED}.
+   * @param details Optional structured details.
+   */
+  constructor(
+    message = "Precondition Failed",
+    code: string = ErrorCodes.COMMON_PRECONDITION_FAILED,
+    details?: unknown
+  ) {
+    super(412, code, message, details);
+  }
+}
+
+/** 413 Payload Too Large. */
+export class PayloadTooLargeError extends HttpError<string> {
+  /**
+   * @param message Defaults to `"Payload Too Large"`.
+   * @param code Defaults to {@link ErrorCodes.COMMON_PAYLOAD_TOO_LARGE}.
+   * @param details Optional structured details.
+   */
+  constructor(
+    message = "Payload Too Large",
+    code: string = ErrorCodes.COMMON_PAYLOAD_TOO_LARGE,
+    details?: unknown
+  ) {
+    super(413, code, message, details);
+  }
+}
+
 /** 415 Unsupported Media Type. */
-export class UnsupportedMediaTypeError extends HttpError<ErrorCode> {
+export class UnsupportedMediaTypeError extends HttpError<string> {
+  /**
+   * @param message Defaults to `"Unsupported Media Type"`.
+   * @param code Defaults to {@link ErrorCodes.COMMON_UNSUPPORTED_MEDIA_TYPE}.
+   * @param details Optional structured details.
+   */
   constructor(
     message = "Unsupported Media Type",
-    code: ErrorCode = ErrorCodes.COMMON_UNSUPPORTED_MEDIA_TYPE,
+    code: string = ErrorCodes.COMMON_UNSUPPORTED_MEDIA_TYPE,
     details?: unknown
   ) {
     super(415, code, message, details);
@@ -89,10 +155,15 @@ export class UnsupportedMediaTypeError extends HttpError<ErrorCode> {
 }
 
 /** 422 Unprocessable Entity (e.g., schema validation). */
-export class UnprocessableEntityError extends HttpError<ErrorCode> {
+export class UnprocessableEntityError extends HttpError<string> {
+  /**
+   * @param message Defaults to `"Unprocessable Entity"`.
+   * @param code Defaults to {@link ErrorCodes.COMMON_UNPROCESSABLE_ENTITY}.
+   * @param details Optional structured details.
+   */
   constructor(
     message = "Unprocessable Entity",
-    code: ErrorCode = ErrorCodes.COMMON_UNPROCESSABLE_ENTITY,
+    code: string = ErrorCodes.COMMON_UNPROCESSABLE_ENTITY,
     details?: unknown
   ) {
     super(422, code, message, details);
@@ -100,10 +171,15 @@ export class UnprocessableEntityError extends HttpError<ErrorCode> {
 }
 
 /** 429 Too Many Requests (rate limit or throttling). */
-export class TooManyRequestsError extends HttpError<ErrorCode> {
+export class TooManyRequestsError extends HttpError<string> {
+  /**
+   * @param message Defaults to `"Too Many Requests"`.
+   * @param code Defaults to {@link ErrorCodes.COMMON_TOO_MANY_REQUESTS}.
+   * @param details Optional structured details.
+   */
   constructor(
     message = "Too Many Requests",
-    code: ErrorCode = ErrorCodes.COMMON_TOO_MANY_REQUESTS,
+    code: string = ErrorCodes.COMMON_TOO_MANY_REQUESTS,
     details?: unknown
   ) {
     super(429, code, message, details);
@@ -111,10 +187,15 @@ export class TooManyRequestsError extends HttpError<ErrorCode> {
 }
 
 /** 500 Internal Server Error. */
-export class InternalError extends HttpError<ErrorCode> {
+export class InternalError extends HttpError<string> {
+  /**
+   * @param message Defaults to `"Internal Error"`.
+   * @param code Defaults to {@link ErrorCodes.COMMON_INTERNAL_ERROR}.
+   * @param details Optional structured details.
+   */
   constructor(
     message = "Internal Error",
-    code: ErrorCode = ErrorCodes.COMMON_INTERNAL_ERROR,
+    code: string = ErrorCodes.COMMON_INTERNAL_ERROR,
     details?: unknown
   ) {
     super(500, code, message, details);
@@ -122,12 +203,33 @@ export class InternalError extends HttpError<ErrorCode> {
 }
 
 /** 501 Not Implemented. */
-export class NotImplementedError extends HttpError<ErrorCode> {
+export class NotImplementedError extends HttpError<string> {
+  /**
+   * @param message Defaults to `"Not Implemented"`.
+   * @param code Defaults to {@link ErrorCodes.COMMON_NOT_IMPLEMENTED}.
+   * @param details Optional structured details.
+   */
   constructor(
     message = "Not Implemented",
-    code: ErrorCode = ErrorCodes.COMMON_NOT_IMPLEMENTED,
+    code: string = ErrorCodes.COMMON_NOT_IMPLEMENTED,
     details?: unknown
   ) {
     super(501, code, message, details);
+  }
+}
+
+/** 503 Service Unavailable (dependency outage or temporary unavailability). */
+export class ServiceUnavailableError extends HttpError<string> {
+  /**
+   * @param message Defaults to `"Service Unavailable"`.
+   * @param code Defaults to {@link ErrorCodes.COMMON_DEPENDENCY_UNAVAILABLE}.
+   * @param details Optional structured details.
+   */
+  constructor(
+    message = "Service Unavailable",
+    code: string = ErrorCodes.COMMON_DEPENDENCY_UNAVAILABLE,
+    details?: unknown
+  ) {
+    super(503, code, message, details);
   }
 }

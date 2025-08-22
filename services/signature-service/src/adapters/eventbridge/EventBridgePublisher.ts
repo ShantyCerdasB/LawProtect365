@@ -3,7 +3,7 @@
  * @summary Publishes integration events to Amazon EventBridge.
  * @description
  * - SDK-agnostic: depends on a minimal `EventBridgeClientLike` interface.
- * - Safe error normalization via `mapAwsError` from `@lawprotect/shared-ts`.
+ * - Safe error normalization via `mapAwsError` from the shared package.
  * - Uses `stableStringifyUnsafe` to serialize arbitrary envelopes without
  *   forcing them to conform to `JsonValue`.
  *
@@ -23,9 +23,8 @@
  * ```
  */
 
-import { InternalError, mapAwsError } from "@lawprotect/shared-ts";
+import { InternalError, mapAwsError, stableStringifyUnsafe, ErrorCodes } from "@lawprotect/shared-ts";
 import type { EventEnvelope } from "@lawprotect/shared-ts";
-import { stableStringifyUnsafe } from "@lawprotect/shared-ts";
 
 /**
  * Minimal, SDK-agnostic surface for EventBridge.
@@ -87,13 +86,13 @@ export class EventBridgePublisher {
   /**
    * Publishes one `EventEnvelope` to EventBridge.
    * @param envelope Structured event (name/meta/data).
-   * @returns The EventBridge-assigned EventId when available.
+   * @returns The EventBridge-assigned `eventId` when available.
    * @throws HttpError (normalized via `mapAwsError`) on provider failures.
    */
   async publish(envelope: EventEnvelope): Promise<{ eventId?: string }> {
     try {
-      // We intentionally use the unsafe variant to avoid narrowing `EventEnvelope`
-      // to `JsonValue` at call sites. This is the right place to centralize the cast.
+      // Intentionally use the unsafe variant to avoid narrowing `EventEnvelope`
+      // to `JsonValue` at call sites; this centralizes the cast here.
       const detail = stableStringifyUnsafe(envelope);
 
       const res = await this.client.putEvents({
@@ -103,7 +102,7 @@ export class EventBridgePublisher {
             DetailType: envelope.name,
             Detail: detail,
             EventBusName: this.busName,
-            // Prefer the envelope timestamp when present; fall back to now
+            // Prefer envelope timestamp when present; fall back to now
             Time: envelope?.meta?.ts ? new Date(envelope.meta.ts) : new Date(),
             Resources: this.resources,
             // If you propagate tracing (e.g., AWS X-Ray), attach it here:
@@ -112,18 +111,26 @@ export class EventBridgePublisher {
         ],
       });
 
-      // Handle partial failures explicitly even when the call succeeded.
+      // Explicitly surface partial failures even when the call succeeded.
       if (res?.FailedEntryCount && res.FailedEntryCount > 0) {
         const entry = res.Entries?.[0];
-        // Surface a clear error with provider details for observability.
+        // Use structured `details` for observability and debugging.
         throw new InternalError(
-          `EventBridge putEvents failed: ${entry?.ErrorCode ?? "Unknown"} - ${entry?.ErrorMessage ?? "No message"}`
+          `EventBridge putEvents reported ${res.FailedEntryCount} failed entr${res.FailedEntryCount === 1 ? "y" : "ies"}`,
+          ErrorCodes.COMMON_INTERNAL_ERROR,
+          {
+            failedCount: res.FailedEntryCount,
+            firstError: {
+              errorCode: entry?.ErrorCode,
+              errorMessage: entry?.ErrorMessage,
+            },
+          }
         );
       }
 
       return { eventId: res?.Entries?.[0]?.EventId };
     } catch (err) {
-      // Normalize anything AWS/SDK throws into your shared HttpErrors.
+      // Normalize AWS/SDK errors into shared HttpErrors (throttling, access denied, etc.).
       throw mapAwsError(err, "EventBridgePublisher.publish");
     }
   }

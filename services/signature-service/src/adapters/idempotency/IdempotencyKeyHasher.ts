@@ -1,49 +1,62 @@
 /**
- * IdempotencyKeyHasher
- * ---------------------
- * Derives deterministic keys for idempotency control.
- *
- * Keys are derived from request metadata (method, path, tenant, user, query, body).
- * Ensures stable hashing regardless of field ordering.
- *
- * @remarks
- * - Does **NOT** depend on AWS SDK.
- * - Uses only shared contracts (`IdempotencyStore`) and utils (`crypto`, `stableStringify`).
+ * @file IdempotencyKeyHasher.ts
+ * @summary Deterministic key derivation for idempotent request handling.
+ * @description
+ * Produces a stable SHA-256 hex key from request metadata:
+ * method, path, tenant, user, normalized query/body and an optional scope.
+ * Uses shared utils only (no AWS SDK).
  */
 
 import { sha256Hex } from "@lawprotect/shared-ts";
-import { stableStringify, type JsonValue, type JsonObject } from "@lawprotect/shared-ts";
+import { stableStringify, type JsonObject } from "@lawprotect/shared-ts";
 
+/** Metadata captured to derive an idempotency key. */
 export interface IdempotencyKeyInput {
-  method: string;   // HTTP method
-  path: string;     // API route
-  tenantId: string; // Tenant / org
-  userId: string;   // End user ID
-  query: JsonObject | null; // Query params (normalized)
-  body: JsonObject | null;  // Body params (normalized)
-  scope: string;    // Optional logical scope (per-service)
+  /** HTTP method (e.g., GET, POST). */
+  method: string;
+  /** API route/path (as received). */
+  path: string;
+  /** Tenant or organization id. */
+  tenantId: string;
+  /** End user id. */
+  userId: string;
+  /** Normalized query parameters object (or null). */
+  query: JsonObject | null;
+  /** Normalized JSON body (or null). */
+  body: JsonObject | null;
+  /** Optional logical scope (service/feature). */
+  scope?: string;
 }
 
+/**
+ * Derives stable hex keys from request metadata.
+ * Keys are independent of property order due to stable stringification.
+ */
 export class IdempotencyKeyHasher {
   /**
-   * Derives a stable SHA-256 hex key from request metadata.
-   * @param input - Request metadata including route, user, tenant, etc.
-   * @returns Hex-encoded hash string
+   * Derives a SHA-256 hex key from the input.
+   * @param input Request metadata.
+   * @returns 64-char hex string.
    */
   static derive(input: IdempotencyKeyInput): string {
-    // Normalize fields to ensure consistent hashing
-    const normalized: JsonObject = {
-      m: input.method.toUpperCase(),
-      p: input.path,
-      t: input.tenantId,
-      u: input.userId,
-      q: input.query ?? null,
-      b: input.body ?? null,
-      s: input.scope,
-    };
+    const normalized = IdempotencyKeyHasher.normalize(input);
+    const payload = stableStringify(normalized);
+    return sha256Hex(payload);
+  }
 
-    // stableStringify expects a JsonValue, so we force type here
-    const str = stableStringify(normalized as JsonValue);
-    return sha256Hex(str);
+  /**
+   * Builds a compact, order-stable object used for hashing.
+   * @param i Raw input.
+   */
+  private static normalize(i: IdempotencyKeyInput): JsonObject {
+    return {
+      m: i.method.toUpperCase(),
+      p: i.path,
+      t: i.tenantId,
+      u: i.userId,
+      q: i.query ?? null,
+      b: i.body ?? null,
+      s: i.scope ?? ""
+    } as const;
   }
 }

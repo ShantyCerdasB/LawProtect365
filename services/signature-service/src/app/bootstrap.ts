@@ -1,34 +1,48 @@
-﻿/**
- * NOTE:
- * This file is part of the signature-service. Controllers are thin:
- * - validate (Zod from @lawprotect/shared-ts)
- * - authenticate/authorize
- * - call use-case
- * - map result -> HTTP response
- */
+﻿
 /**
- * App bootstrap: wires dependencies for handlers.
- * Keep it side-effect free; handlers import a factory from here.
+ * @file bootstrap.ts
+ * @summary Thin app bootstrap that exposes the DI container to handlers.
+ *
+ * @description
+ * - Uses the existing infra Container (singleton).
+ * - Ensures one-time initialization on cold start.
+ * - Provides a stable surface for handlers/tests.
  */
-import { logger } from "@lawprotect/shared-ts/observability";
-import type { EventBusPort } from "@lawprotect/shared-ts/events";
-import type { StoragePort } from "@lawprotect/shared-ts/storage/ports";
 
-export interface AppDeps {
-  eventBus: EventBusPort;
-  storage: StoragePort;
-  // add more ports (dynamo repo, kms, ssm, etc.)
+import { getContainer, type Container } from "@/infra/Container";
+import { corsFromEnv } from "@/middleware/http";
+import { logger } from "@lawprotect/shared-ts";
+
+export interface App {
+  container: Container;
+  services: Container["services"];
+  config: Container["config"];
+  cors: ReturnType<typeof corsFromEnv>;
 }
 
-let _deps: AppDeps | null = null;
+let appSingleton: App | null = null;
 
-export function getDeps(): AppDeps {
-  if (_deps) return _deps;
-  // TODO: construct real adapters in src/infra and set here
-  throw new Error("Deps not initialized. Call initDeps() in your dev runner or provision in handler.");
+/** Idempotent init; safe to call from handlers/tests. */
+export function initApp(): App {
+  if (appSingleton) return appSingleton;
+
+  const container = getContainer();
+  appSingleton = {
+    container,
+    services: container.services,
+    config: container.config,
+    cors: corsFromEnv(),
+  };
+
+  logger.info("signature-service bootstrapped", {
+    service: appSingleton.config.serviceName,
+    env: appSingleton.config.env,
+  });
+
+  return appSingleton;
 }
 
-export function initDeps(d: AppDeps) {
-  _deps = d;
-  logger.info("signature-service deps initialized");
+/** Accessor used by controllers. */
+export function getApp(): App {
+  return initApp();
 }

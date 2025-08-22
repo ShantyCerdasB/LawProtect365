@@ -4,6 +4,7 @@ import {
   ForbiddenError,
   InternalError,
   NotFoundError,
+  ServiceUnavailableError,
   TooManyRequestsError,
 } from "./errors.js";
 import { ErrorCodes } from "./codes.js";
@@ -16,28 +17,19 @@ import {
 } from "../aws/errors.js";
 
 /**
- * @file awsMap.ts
- * @description
- * Maps raw AWS SDK errors into shared `HttpError` subclasses with stable error
- * codes. This provides a single, reusable place to translate provider-specific
- * failures into the API/Domain error vocabulary used across services.
+ * Maps raw AWS SDK errors into shared {@link HttpError} subclasses with stable error codes.
  *
  * Mapping strategy (in priority order):
- *  1. **Coarse-grained classifiers** — quick checks for throttling, access
- *     denial, and service unavailability. These short-circuit to the appropriate
- *     HTTP error without consulting the lookup table.
- *  2. **Name/code lookup table** — a compact map from common AWS error
- *     identifiers (e.g., `ConditionalCheckFailedException`) to specific
- *     `HttpError` factories. This avoids long `if/else` chains and makes
- *     extensions trivial.
- *  3. **Fallback** — anything not matched above maps to a generic `InternalError`.
+ *  1. Coarse-grained classifiers — quick checks for throttling, access denial, and service unavailability.
+ *  2. Name/code lookup table — compact map from common AWS identifiers to specific HTTP error factories.
+ *  3. Fallback — anything not matched above maps to a generic {@link InternalError}.
  *
  * @example
  * ```ts
  * try {
  *   await client.send(cmd);
  * } catch (err) {
- *   throw mapAwsError(err, "EnvelopeRepositoryDb.put");
+ *   throw mapAwsError(err, "EnvelopeRepository.put");
  * }
  * ```
  */
@@ -45,60 +37,36 @@ import {
 /** Factory type that produces a specific `HttpError` for a given context string. */
 type ErrFactory = (ctx: string) => Error;
 
-/**
- * Error factory: 429 Too Many Requests (throttling/backoff scenario).
- * @param ctx Human-readable context (e.g., "Repo.method").
- */
+/** 429 Too Many Requests (throttling/backoff). */
 const mkTooMany: ErrFactory = (ctx) =>
   new TooManyRequestsError(`${ctx}: throttled`, ErrorCodes.COMMON_TOO_MANY_REQUESTS);
 
-/**
- * Error factory: 403 Forbidden (authorization failure).
- * @param ctx Human-readable context (e.g., "Repo.method").
- */
+/** 403 Forbidden (authorization failure). */
 const mkForbidden: ErrFactory = (ctx) =>
   new ForbiddenError(`${ctx}: access denied`, ErrorCodes.AUTH_FORBIDDEN);
 
-/**
- * Error factory: 500 Internal Error (generic server failure).
- * @param ctx Human-readable context (e.g., "Repo.method").
- */
+/** 500 Internal Error (generic server failure). */
 const mkInternal: ErrFactory = (ctx) =>
   new InternalError(`${ctx}: internal error`, ErrorCodes.COMMON_INTERNAL_ERROR);
 
-/**
- * Error factory: temporary unavailability mapped as 500.
- * Use when AWS indicates 5xx/availability issues.
- * @param ctx Human-readable context (e.g., "Repo.method").
- */
+/** 503 Service Unavailable (dependency or AWS 5xx/unavailable). */
 const mkUnavailable: ErrFactory = (ctx) =>
-  new InternalError(`${ctx}: service unavailable`, ErrorCodes.COMMON_INTERNAL_ERROR);
+  new ServiceUnavailableError(`${ctx}: service unavailable`, ErrorCodes.COMMON_DEPENDENCY_UNAVAILABLE);
 
-/**
- * Error factory: 409 Conflict (e.g., DynamoDB conditional check failures).
- * @param ctx Human-readable context (e.g., "Repo.method").
- */
+/** 409 Conflict (e.g., DynamoDB conditional check failures). */
 const mkConflict: ErrFactory = (ctx) =>
   new ConflictError(`${ctx}: conflict`, ErrorCodes.COMMON_CONFLICT);
 
-/**
- * Error factory: 404 Not Found (missing resource identifiers).
- * @param ctx Human-readable context (e.g., "Repo.method").
- */
+/** 404 Not Found (missing resources). */
 const mkNotFound: ErrFactory = (ctx) =>
   new NotFoundError(`${ctx}: not found`, ErrorCodes.COMMON_NOT_FOUND);
 
-/**
- * Error factory: 400 Bad Request (validation/parameter errors).
- * @param ctx Human-readable context (e.g., "Repo.method").
- */
+/** 400 Bad Request (validation/parameter errors). */
 const mkBadRequest: ErrFactory = (ctx) =>
   new BadRequestError(`${ctx}: bad request`, ErrorCodes.COMMON_BAD_REQUEST);
 
 /**
  * Compact name/code → error mapping for common AWS failures.
- * Extend by adding new keys without changing control flow.
- *
  * Keys correspond to `err.name` or `err.code` values observed from AWS SDKs.
  */
 const NAME_TO_ERROR: Record<string, ErrFactory> = {
@@ -122,16 +90,15 @@ const NAME_TO_ERROR: Record<string, ErrFactory> = {
  *
  * @param err Raw error thrown by an AWS SDK client/command.
  * @param context Short identifier of the caller (component.operation).
- * @returns A `HttpError` (e.g., `TooManyRequestsError`, `ForbiddenError`, etc.)
- *          appropriate for transport and client handling.
+ * @returns An `Error` suitable for transport and client handling.
  */
 export const mapAwsError = (err: unknown, context: string): Error => {
-  // 1) Coarse classifiers (fast exit; keeps complexity low)
+  // 1) Coarse classifiers (fast exit)
   if (isAwsThrottling(err) || isAwsRetryable(err)) return mkTooMany(context);
   if (isAwsAccessDenied(err)) return mkForbidden(context);
   if (isAwsServiceUnavailable(err)) return mkUnavailable(context);
 
-  // 2) Name/code lookup (single table, no if-chains)
+  // 2) Name/code lookup
   const { name, code } = extractAwsError(err);
   const key = String(name ?? code ?? "");
   const named = NAME_TO_ERROR[key];

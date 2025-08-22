@@ -2,9 +2,9 @@
  * Shared configuration types for environment, logging and service metadata.
  */
 
-export type Environment = "dev" | "staging" | "prod";
+import { LogLevel } from "@/observability/index.js";
 
-export type LogLevel = "debug" | "info" | "warn" | "error";
+export type Environment = "dev" | "staging" | "prod";
 
 /**
  * Service identity and platform metadata.

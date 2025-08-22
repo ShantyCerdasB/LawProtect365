@@ -35,7 +35,7 @@ export interface ListRepository<T, Filter = unknown> {
  * Unit of Work abstraction for grouping operations in a transaction.
  * Implementations bridge to the underlying client (e.g., Prisma.$transaction).
  */
-export interface UnitOfWork<C = unknown> {
+export interface UnitOfWorkPrisma<C = unknown> {
   /** Executes a function within a transaction and returns its result. */
   withTransaction<T>(fn: (ctx: C) => Promise<T>): Promise<T>;
 }

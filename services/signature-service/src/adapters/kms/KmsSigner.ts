@@ -1,12 +1,19 @@
-// src/adapters/kms/KmsSigner.ts
 /**
  * @file KmsSigner.ts
  * @summary AWS KMS adapter implementing the shared `KmsPort` contract.
- * @description
+ *
  * - Uses AWS SDK v3 (@aws-sdk/client-kms)
  * - Normalizes provider failures via `mapAwsError`
- * - Retries throttling/5xx using shared jittered backoff (`shouldRetry`, `isAwsRetryable`)
- * - Picks MessageType RAW vs DIGEST automatically for `sign/verify`
+ * - Retries throttling/5xx with shared jittered backoff (`shouldRetry`, `isAwsRetryable`)
+ * - Chooses MessageType (RAW vs DIGEST) automatically for `sign/verify`
+ * - Supports default KeyId and SigningAlgorithm via constructor options; per-call
+ *   values can override defaults.
+ *
+ * Error policy
+ * ------------
+ * - Local input/usage errors (e.g., missing KeyId) → `BadRequestError` with shared code.
+ * - Provider/SDK errors → catch and rethrow via `mapAwsError`.
+ * - Unexpected empty SDK responses (no ciphertext/plaintext/signature) → `InternalError`.
  */
 
 import {
@@ -26,61 +33,135 @@ import type {
   KmsVerifyInput,
 } from "@lawprotect/shared-ts";
 
-import { mapAwsError } from "@lawprotect/shared-ts";
-import { shouldRetry } from "@lawprotect/shared-ts";
-import { isAwsRetryable } from "@lawprotect/shared-ts";
+import {
+  BadRequestError,
+  InternalError,
+  ErrorCodes,
+  mapAwsError,
+  shouldRetry,
+  isAwsRetryable,
+} from "@lawprotect/shared-ts";
 
-/** Minimal config for the adapter. Extend as needed. */
+/**
+ * Configuration options for {@link KmsSigner}.
+ *
+ * @remarks
+ * `signerKeyId` and `signingAlgorithm` exist for backward compatibility and act as
+ * defaults when a call does not specify them. Prefer `defaultKeyId` and
+ * `defaultSigningAlgorithm` in new code.
+ */
 export interface KmsSignerOptions {
-  /** Max total attempts per call (retries = maxAttempts - 1). Default: 3 */
+  /** Max total attempts per call (retries = maxAttempts - 1). Default: 3. */
   maxAttempts?: number;
-  /** Backoff base/cap/jitter are taken from shared defaults via `shouldRetry`. */
+
+  /** @deprecated Use {@link defaultKeyId}. */
+  signerKeyId?: string;
+
+  /** @deprecated Use {@link defaultSigningAlgorithm}. */
+  signingAlgorithm?: SigningAlgorithmSpec;
+
+  /** Default KMS KeyId used when a call omits `input.keyId`. */
+  defaultKeyId?: string;
+
+  /** Default signing algorithm used when a call omits `input.signingAlgorithm`. */
+  defaultSigningAlgorithm?: SigningAlgorithmSpec;
 }
 
 /** Small sleep helper (kept local to avoid extra deps). */
-const sleep = (ms: number) => new Promise(res => setTimeout(res, ms));
+const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
-/** Heuristic: choose MessageType (RAW vs DIGEST) based on algorithm + message size. */
+/**
+ * Chooses KMS `MessageType` automatically.
+ *
+ * Heuristic:
+ * - If the algorithm contains SHA_256/384/512 and the message length equals the digest size (32/48/64),
+ *   treat input as a precomputed digest (`DIGEST`); otherwise use `RAW`.
+ */
 const pickMessageType = (
   message: Uint8Array,
   signingAlgorithm?: string
 ): "RAW" | "DIGEST" => {
   const algo = String(signingAlgorithm ?? "").toUpperCase();
-  // Common KMS algos: RSASSA_PSS_SHA_256, RSASSA_PKCS1_V1_5_SHA_256, ECDSA_SHA_256, etc.
-  const isSha256 = algo.includes("SHA_256");
-  // If caller passed a 32-byte value and algo mentions SHA_256, assume it is a digest.
-  if (isSha256 && message.byteLength === 32) return "DIGEST";
+  const len = message.byteLength;
+
+  if (algo.includes("SHA_256") && len === 32) return "DIGEST";
+  if (algo.includes("SHA_384") && len === 48) return "DIGEST";
+  if (algo.includes("SHA_512") && len === 64) return "DIGEST";
+
   return "RAW";
 };
 
 /**
  * AWS KMS adapter that fulfills the shared `KmsPort`.
- * Inject your preconfigured `KMSClient` (region/creds/middleware) from bootstrap.
+ *
+ * @example
+ * ```ts
+ * const signer = new KmsSigner(kmsClient, {
+ *   defaultKeyId: process.env.KMS_SIGNER_KEY_ID!,
+ *   defaultSigningAlgorithm: "RSASSA_PSS_SHA_256",
+ *   maxAttempts: 3,
+ * });
+ *
+ * // Uses defaults:
+ * await signer.sign({ message: new Uint8Array([1,2,3]) });
+ *
+ * // Per-call override:
+ * await signer.sign({ keyId: otherKey, signingAlgorithm: "ECDSA_SHA_256", message });
+ * ```
  */
 export class KmsSigner implements KmsPort {
   private readonly client: KMSClient;
   private readonly maxAttempts: number;
 
+  /** Default KeyId used when a call omits `input.keyId`. */
+  private readonly defaultKeyId?: string;
+
+  /** Default algorithm used when a call omits `input.signingAlgorithm`. */
+  private readonly defaultAlgorithm: SigningAlgorithmSpec;
+
   constructor(client: KMSClient, opts: KmsSignerOptions = {}) {
     this.client = client;
     this.maxAttempts = Math.max(1, opts.maxAttempts ?? 3);
+
+    // Back-compat + preferred names
+    this.defaultKeyId = opts.defaultKeyId ?? opts.signerKeyId;
+    this.defaultAlgorithm =
+      (opts.defaultSigningAlgorithm ??
+        opts.signingAlgorithm ??
+        "RSASSA_PSS_SHA_256") as SigningAlgorithmSpec;
   }
 
+  /**
+   * Encrypts plaintext with the specified (or default) KMS key.
+   */
   async encrypt(input: KmsEncryptInput): Promise<{ ciphertext: Uint8Array }> {
     const ctx = "KmsSigner.encrypt";
+
+    const keyId = (input as any).keyId ?? this.defaultKeyId;
+    if (!keyId) {
+      throw new BadRequestError("Missing KeyId", ErrorCodes.COMMON_BAD_REQUEST);
+    }
+
     return this.withRetry(ctx, async () => {
       const res = await this.client.send(
         new EncryptCommand({
-          KeyId: input.keyId,
+          KeyId: keyId,
           Plaintext: input.plaintext,
           EncryptionContext: input.context,
         })
       );
-      if (!res.CiphertextBlob) throw mapAwsError(new Error("Empty CiphertextBlob"), ctx);
+      if (!res.CiphertextBlob) {
+        throw new InternalError("KMS returned empty CiphertextBlob", ErrorCodes.COMMON_INTERNAL_ERROR, {
+          op: ctx,
+        });
+      }
       return { ciphertext: res.CiphertextBlob };
     });
   }
 
+  /**
+   * Decrypts a ciphertext. (KMS can infer the key from the blob; KeyId is optional.)
+   */
   async decrypt(input: KmsDecryptInput): Promise<{ plaintext: Uint8Array }> {
     const ctx = "KmsSigner.decrypt";
     return this.withRetry(ctx, async () => {
@@ -90,45 +171,72 @@ export class KmsSigner implements KmsPort {
           EncryptionContext: input.context,
         })
       );
-      if (!res.Plaintext) throw mapAwsError(new Error("Empty Plaintext"), ctx);
+      if (!res.Plaintext) {
+        throw new InternalError("KMS returned empty Plaintext", ErrorCodes.COMMON_INTERNAL_ERROR, {
+          op: ctx,
+        });
+      }
       return { plaintext: res.Plaintext };
     });
   }
 
+  /**
+   * Signs a message (RAW or DIGEST) with the specified (or default) key and algorithm.
+   *
+   * - If the message length matches the digest size for SHA-256/384/512, `MessageType` is set to `DIGEST`;
+   *   otherwise `RAW` is used.
+   */
   async sign(input: KmsSignInput): Promise<{ signature: Uint8Array }> {
     const ctx = "KmsSigner.sign";
-    const messageType = pickMessageType(input.message, input.signingAlgorithm);
-    const algo = (input.signingAlgorithm ??
-      "RSASSA_PSS_SHA_256") as SigningAlgorithmSpec;
+    const keyId = (input as any).keyId ?? this.defaultKeyId;
+    if (!keyId) {
+      throw new BadRequestError("Missing KeyId", ErrorCodes.COMMON_BAD_REQUEST);
+    }
+
+    const algo = (input as any).signingAlgorithm ?? this.defaultAlgorithm;
+    const messageType = pickMessageType(input.message, algo);
 
     return this.withRetry(ctx, async () => {
       const res = await this.client.send(
         new SignCommand({
-          KeyId: input.keyId,
+          KeyId: keyId,
           Message: input.message,
           MessageType: messageType,
-          SigningAlgorithm: algo,
+          SigningAlgorithm: algo as SigningAlgorithmSpec,
         })
       );
-      if (!res.Signature) throw mapAwsError(new Error("Empty Signature"), ctx);
+      if (!res.Signature) {
+        throw new InternalError("KMS returned empty Signature", ErrorCodes.COMMON_INTERNAL_ERROR, {
+          op: ctx,
+        });
+      }
       return { signature: res.Signature };
     });
   }
 
+  /**
+   * Verifies a signature for a message using the specified (or default) key and algorithm.
+   *
+   * - Automatically selects `MessageType` (RAW/DIGEST) using the same heuristic as {@link sign}.
+   */
   async verify(input: KmsVerifyInput): Promise<{ valid: boolean }> {
     const ctx = "KmsSigner.verify";
-    const messageType = pickMessageType(input.message, input.signingAlgorithm);
-    const algo = (input.signingAlgorithm ??
-      "RSASSA_PSS_SHA_256") as SigningAlgorithmSpec;
+    const keyId = (input as any).keyId ?? this.defaultKeyId;
+    if (!keyId) {
+      throw new BadRequestError("Missing KeyId", ErrorCodes.COMMON_BAD_REQUEST);
+    }
+
+    const algo = (input as any).signingAlgorithm ?? this.defaultAlgorithm;
+    const messageType = pickMessageType(input.message, algo);
 
     return this.withRetry(ctx, async () => {
       const res = await this.client.send(
         new VerifyCommand({
-          KeyId: input.keyId,
+          KeyId: keyId,
           Message: input.message,
           MessageType: messageType,
           Signature: input.signature,
-          SigningAlgorithm: algo,
+          SigningAlgorithm: algo as SigningAlgorithmSpec,
         })
       );
       return { valid: Boolean(res.SignatureValid) };
@@ -139,7 +247,7 @@ export class KmsSigner implements KmsPort {
    * Shared retry wrapper:
    * - Uses `isAwsRetryable` classification
    * - Delay policy via `shouldRetry` (full/decorrelated jitter in shared)
-   * - On non-retryable or maxed attempts → map via `mapAwsError`
+   * - On non-retryable or exhausted attempts → map via `mapAwsError`
    */
   private async withRetry<T>(op: string, fn: () => Promise<T>): Promise<T> {
     let lastErr: unknown;
@@ -148,12 +256,16 @@ export class KmsSigner implements KmsPort {
         return await fn();
       } catch (err) {
         lastErr = err;
-        const { retry, delayMs } = shouldRetry(attempt, this.maxAttempts, isAwsRetryable, err);
+        const { retry, delayMs } = shouldRetry(
+          attempt,
+          this.maxAttempts,
+          isAwsRetryable,
+          err
+        );
         if (!retry) throw mapAwsError(err, op);
         await sleep(delayMs);
       }
     }
-    // Should not reach here, but keep a safe fallback:
     throw mapAwsError(lastErr, op);
   }
 }

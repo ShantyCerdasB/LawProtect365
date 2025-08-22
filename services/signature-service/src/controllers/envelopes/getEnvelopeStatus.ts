@@ -1,25 +1,34 @@
 ﻿/**
- * NOTE:
- * This file is part of the signature-service. Controllers are thin:
- * - validate (Zod from @lawprotect/shared-ts)
- * - authenticate/authorize
- * - call use-case
- * - map result -> HTTP response
+ * @file getEnvelopeStatus.ts
+ * @summary HTTP controller for GET /envelopes/{id}/status
+ *
+ * @description
+ * - Validates path.
+ * - Returns consolidated status (current lifecycle).
+ * - No audit (read-only).
  */
-import { apiHandler, ok } from "@lawprotect/shared-ts/http";
-import { authenticate } from "@lawprotect/shared-ts/auth";
-import { z, validate } from "@lawprotect/shared-ts/validation";
+import type { HandlerFn } from "@lawprotect/shared-ts";
+import { ok, getPathParam } from "@lawprotect/shared-ts";
 
-const Params = z.object({});      // adjust per-route
-const Query  = z.object({});      // adjust per-route
-const Body   = z.object({}).optional(); // adjust per-route
+import { wrapController, corsFromEnv } from "@/middleware/http";
+import { getContainer } from "@/infra/Container";
+import { EnvelopeIdPath } from "@/schemas/common/path";
+import { getEnvelopeStatus } from "@/use-cases/envelopes/GetEnvelopeStatus";
 
-export const handler = apiHandler(async (evt) => {
-  const auth = await authenticate(evt); // principal/tenant/scopes
-  const { params, query, body } = validate(evt, { params: Params, query: Query, body: Body });
+const base: HandlerFn = async (evt) => {
+  const { repos } = getContainer();
+  const path = EnvelopeIdPath.parse({ id: getPathParam(evt, "id")! });
 
-  // TODO: call use-case via DI from infra (e.g., ctx.getUseCase("..."))
-  // const result = await useCase.execute({ ...params, ...query, ...body }, { auth });
+  const out = await getEnvelopeStatus(
+    { envelopeId: path.id },
+    { repos: { envelopes: repos.envelopes } }
+  );
 
-  return ok({ status: "stub", route: evt.requestContext?.http?.path });
+  return ok({ data: out });
+};
+
+export const handler = wrapController(base, {
+  auth: true,
+  observability: { logger: (b) => console, metrics: () => ({} as any), tracer: () => ({} as any) },
+  cors: corsFromEnv(),
 });

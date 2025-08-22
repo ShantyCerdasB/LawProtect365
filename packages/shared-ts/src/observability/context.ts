@@ -22,7 +22,7 @@ const storage = new AsyncLocalStorage<RequestContext>();
  * @param ctx Initial context. Missing ids are auto-generated.
  * @param fn Function to execute within the scope.
  */
-export const withRequestContext = <T>(
+export const withRequestContexts = <T>(
   ctx: Partial<RequestContext>,
   fn: () => T
 ): T => {

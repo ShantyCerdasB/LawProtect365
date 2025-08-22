@@ -1,38 +1,52 @@
 /**
- * Optional value container.
+ * @file Maybe.ts
+ * @summary Functional optional container with collision-safe helper names.
  */
-export type Maybe<T> = { readonly kind: "some"; readonly value: T } | { readonly kind: "none" };
+
+export type Maybe<T> =
+  | { readonly kind: "some"; readonly value: T }
+  | { readonly kind: "none" };
 
 /**
- * Creates a Some.
- * @param v Present value.
+ * Creates a present value container.
+ *
+ * @param value Value to wrap.
+ * @returns A `Maybe<T>` representing presence.
  */
-export const some = <T>(v: T): Maybe<T> => ({ kind: "some", value: v });
+export const maybeSome = <T>(value: T): Maybe<T> => ({ kind: "some", value });
 
 /**
- * None singleton.
+ * Creates an absent value container.
+ *
+ * @returns A `Maybe<T>` representing absence.
  */
-export const none = <T = never>(): Maybe<T> => ({ kind: "none" });
+export const maybeNone = <T = never>(): Maybe<T> => ({ kind: "none" });
 
 /**
- * Lifts a nullable/undefined to Maybe.
- * @param v Possibly-null value.
+ * Lifts a nullable/undefined value into a `Maybe<T>`.
+ *
+ * @param value Possibly-null input.
+ * @returns `maybeSome(value)` when defined, otherwise `maybeNone()`.
  */
-export const fromNullable = <T>(v: T | null | undefined): Maybe<T> =>
-  v === null || v === undefined ? none<T>() : some(v);
+export const maybeFromNullable = <T>(value: T | null | undefined): Maybe<T> =>
+  value === null || value === undefined ? maybeNone<T>() : maybeSome(value);
 
 /**
- * Maps a present value.
- * @param m Maybe input.
- * @param fn Transform function.
+ * Applies a transformation when the value is present.
+ *
+ * @param m Input maybe.
+ * @param fn Mapping function for present values.
+ * @returns Transformed maybe or the original `none`.
  */
-export const map = <T, U>(m: Maybe<T>, fn: (v: T) => U): Maybe<U> =>
-  m.kind === "some" ? some(fn(m.value)) : m;
+export const maybeMap = <T, U>(m: Maybe<T>, fn: (v: T) => U): Maybe<U> =>
+  m.kind === "some" ? maybeSome(fn(m.value)) : m;
 
 /**
- * Unwraps or returns a default value.
- * @param m Maybe input.
- * @param fallback Default value.
+ * Extracts the present value or returns a fallback.
+ *
+ * @param m Input maybe.
+ * @param fallback Default value when absent.
+ * @returns The contained value or the provided fallback.
  */
-export const unwrapOr = <T>(m: Maybe<T>, fallback: T): T =>
+export const maybeUnwrapOr = <T>(m: Maybe<T>, fallback: T): T =>
   m.kind === "some" ? m.value : fallback;

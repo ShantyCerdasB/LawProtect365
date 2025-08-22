@@ -1,119 +1,114 @@
 /**
  * @file commonSchemas.test.ts
- * @summary Tests for common Zod schemas: NonEmptyString, SafeString, ISODateString, EmailString, PositiveInt, JsonUnknown, JsonObject.
- * @remarks
- * - Verifies success and failure paths, including custom error messages where defined.
- * - Keeps assertions minimal and focused on the documented behavior.
+ * @summary Tests for common Zod schemas: NonEmptyStringSchema, SafeStringSchema, ISODateStringSchema, EmailStringSchema, PositiveIntSchema, JsonUnknownSchema, JsonObjectSchema.
  */
 
 import {
-  NonEmptyString,
-  SafeString,
-  ISODateString,
-  EmailString,
-  PositiveInt,
-  JsonUnknown,
-  JsonObject,
-} from "../../src/validation/commonSchemas";
+  NonEmptyStringSchema,
+  SafeStringSchema,
+  ISODateStringSchema,
+  EmailStringSchema,
+  PositiveIntSchema,
+  JsonUnknownSchema,
+  JsonObjectSchema,
+} from "../../src/validation";
 
 describe("validation/schemas", () => {
-  describe("NonEmptyString", () => {
+  describe("NonEmptyStringSchema", () => {
     it("accepts non-empty strings", () => {
-      expect(NonEmptyString.parse("a")).toBe("a");
-      expect(NonEmptyString.parse("  x")).toBe("  x");
+      expect(NonEmptyStringSchema.parse("a")).toBe("a");
+      expect(NonEmptyStringSchema.parse("  x")).toBe("  x");
     });
 
     it("rejects empty strings with message 'Required'", () => {
-      const r = NonEmptyString.safeParse("");
+      const r = NonEmptyStringSchema.safeParse("");
       expect(r.success).toBe(false);
       if (!r.success) expect(r.error.issues[0]?.message).toBe("Required");
     });
   });
 
-  describe("SafeString", () => {
+  describe("SafeStringSchema", () => {
     it("accepts strings without ASCII control characters", () => {
-      expect(SafeString.parse("hello")).toBe("hello");
-      expect(SafeString.parse("line—ok_123")).toBe("line—ok_123");
+      expect(SafeStringSchema.parse("hello")).toBe("hello");
+      expect(SafeStringSchema.parse("line—ok_123")).toBe("line—ok_123");
     });
 
     it("rejects strings containing control chars (U+0000–U+001F or U+007F)", () => {
       for (const s of ["bad\u0000", "\u001Fbad", "bad\u007Fend"]) {
-        const r = SafeString.safeParse(s);
+        const r = SafeStringSchema.safeParse(s);
         expect(r.success).toBe(false);
         if (!r.success) expect(r.error.issues[0]?.message).toBe("Control characters not allowed");
       }
     });
   });
 
-  describe("ISODateString", () => {
-    it("accepts ISO-ish date/time strings parseable by Date.parse", () => {
-      // Full timestamp with Z
-      expect(ISODateString.parse("2020-01-01T00:00:00.000Z")).toBe("2020-01-01T00:00:00.000Z");
-      // Date-only is parseable by Date.parse in JS engines
-      expect(ISODateString.parse("2025-08-18")).toBe("2025-08-18");
+  describe("ISODateStringSchema", () => {
+    it("accepts ISO-like date/time strings parseable by Date.parse", () => {
+      expect(ISODateStringSchema.parse("2020-01-01T00:00:00.000Z")).toBe("2020-01-01T00:00:00.000Z");
+      expect(ISODateStringSchema.parse("2025-08-18")).toBe("2025-08-18");
     });
 
     it("rejects non-parseable strings with message 'Invalid ISO-8601 timestamp'", () => {
       for (const s of ["not-a-date", "2020-13-01", "2020-02-30T25:61:61Z"]) {
-        const r = ISODateString.safeParse(s);
+        const r = ISODateStringSchema.safeParse(s);
         expect(r.success).toBe(false);
         if (!r.success) expect(r.error.issues[0]?.message).toBe("Invalid ISO-8601 timestamp");
       }
     });
   });
 
-  describe("EmailString", () => {
+  describe("EmailStringSchema", () => {
     it("accepts valid email strings", () => {
-      expect(EmailString.parse("a@b.co")).toBe("a@b.co");
-      expect(EmailString.parse("user.name+tag@sub.example.com")).toBe("user.name+tag@sub.example.com");
+      expect(EmailStringSchema.parse("a@b.co")).toBe("a@b.co");
+      expect(EmailStringSchema.parse("user.name+tag@sub.example.com")).toBe("user.name+tag@sub.example.com");
     });
 
     it("rejects invalid emails with message 'Invalid email'", () => {
       for (const s of ["", "plain", "a@b", "a@b.", "a @b.com"]) {
-        const r = EmailString.safeParse(s);
+        const r = EmailStringSchema.safeParse(s);
         expect(r.success).toBe(false);
         if (!r.success) expect(r.error.issues[0]?.message).toBe("Invalid email");
       }
     });
   });
 
-  describe("PositiveInt", () => {
+  describe("PositiveIntSchema", () => {
     it("accepts positive safe integers", () => {
-      expect(PositiveInt.parse(1)).toBe(1);
-      expect(PositiveInt.parse(123456)).toBe(123456);
+      expect(PositiveIntSchema.parse(1)).toBe(1);
+      expect(PositiveIntSchema.parse(123456)).toBe(123456);
     });
 
     it("rejects zero, negatives, and non-integers", () => {
       for (const v of [0, -1, 1.5, NaN, Infinity, -Infinity]) {
-        const r = PositiveInt.safeParse(v as number);
+        const r = PositiveIntSchema.safeParse(v as number);
         expect(r.success).toBe(false);
       }
     });
   });
 
-  describe("JsonUnknown", () => {
+  describe("JsonUnknownSchema", () => {
     it("accepts any value and returns it unchanged", () => {
-      expect(JsonUnknown.parse(42)).toBe(42);
+      expect(JsonUnknownSchema.parse(42)).toBe(42);
       const obj = { a: 1, b: [2, 3] };
-      expect(JsonUnknown.parse(obj)).toBe(obj);
-      expect(JsonUnknown.parse(null)).toBeNull();
+      expect(JsonUnknownSchema.parse(obj)).toBe(obj);
+      expect(JsonUnknownSchema.parse(null)).toBeNull();
     });
   });
 
-  describe("JsonObject", () => {
+  describe("JsonObjectSchema", () => {
     it("defaults to an empty object when input is undefined", () => {
-      const r = JsonObject.parse(undefined);
+      const r = JsonObjectSchema.parse(undefined);
       expect(r).toEqual({});
     });
 
     it("accepts records with arbitrary values", () => {
       const o = { a: 1, b: "x", c: true, d: null, e: { nested: 1 } };
-      expect(JsonObject.parse(o)).toEqual(o);
+      expect(JsonObjectSchema.parse(o)).toEqual(o);
     });
 
     it("rejects non-object inputs", () => {
       for (const v of [null, 1, "x", true]) {
-        const r = JsonObject.safeParse(v as any);
+        const r = JsonObjectSchema.safeParse(v as any);
         expect(r.success).toBe(false);
       }
     });

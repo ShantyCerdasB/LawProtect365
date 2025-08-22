@@ -1,7 +1,6 @@
 /**
  * @file Party entity.
- * @description
- * Represents a signer, viewer, or other participant in an envelope.
+ * @description Represents a signer, viewer, or approver participating in an envelope.
  */
 
 export type PartyRole = "signer" | "viewer" | "approver";
@@ -23,10 +22,16 @@ export interface Party {
   role: PartyRole;
   /** Current status of the party. */
   status: PartyStatus;
-  /** Invitation timestamp (ISO8601). */
+  /** Invitation timestamp (ISO 8601). */
   invitedAt: string;
-  /** Optional signature completion timestamp (ISO8601). */
+  /** Optional signature completion timestamp (ISO 8601). */
   signedAt?: string;
-  /** Creation timestamp (ISO8601). */
+  /**
+   * Signing sequence number used for ordered flows.
+   * Must be a positive integer when the party participates in signing/approval.
+   * Ignored for viewers.
+   */
+  sequence: number;
+  /** Creation timestamp (ISO 8601). */
   createdAt: string;
 }

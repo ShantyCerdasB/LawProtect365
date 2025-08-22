@@ -1,25 +1,99 @@
 ﻿/**
- * NOTE:
- * This file is part of the signature-service. Controllers are thin:
- * - validate (Zod from @lawprotect/shared-ts)
- * - authenticate/authorize
- * - call use-case
- * - map result -> HTTP response
+ * @file createEnvelope.ts
+ * @summary HTTP controller for `POST /envelopes`.
+ *
+ * @description
+ * Validates the request body against `CreateEnvelopeBody`, derives a stable
+ * idempotency key, invokes the envelope creation service, and returns
+ * `201 Created` with the new resource identifier.
  */
-import { apiHandler, ok } from "@lawprotect/shared-ts/http";
-import { authenticate } from "@lawprotect/shared-ts/auth";
-import { z, validate } from "@lawprotect/shared-ts/validation";
 
-const Params = z.object({});      // adjust per-route
-const Query  = z.object({});      // adjust per-route
-const Body   = z.object({}).optional(); // adjust per-route
+import type { HandlerFn, JsonObject } from "@lawprotect/shared-ts";
+import { created, validateJsonBody } from "@lawprotect/shared-ts";
 
-export const handler = apiHandler(async (evt) => {
-  const auth = await authenticate(evt); // principal/tenant/scopes
-  const { params, query, body } = validate(evt, { params: Params, query: Query, body: Body });
+import { wrapController, corsFromEnv } from "@/middleware/http";
+import { getContainer } from "@/infra/Container";
+import { CreateEnvelopeBody } from "@/schemas/envelopes/CreateEnvelope.schema";
+import { TenantIdSchema, UserIdSchema } from "@/domain/value-objects/Ids";
+import { IdempotencyKeyHasher } from "@/adapters/idempotency/IdempotencyKeyHasher";
+import { buildAuditActor } from "@/utils/index";
 
-  // TODO: call use-case via DI from infra (e.g., ctx.getUseCase("..."))
-  // const result = await useCase.execute({ ...params, ...query, ...body }, { auth });
+/**
+ * Base controller handler for `POST /envelopes`.
+ *
+ * @remarks
+ * - Extracts auth context from the event (tenant and user).
+ * - Validates and parses the request body with `CreateEnvelopeBody`.
+ * - Normalizes and validates IDs with Zod schemas (`TenantIdSchema`, `UserIdSchema`).
+ * - Derives a deterministic idempotency key using method, path, tenant/user, scope, and body.
+ * - Builds an audit actor from the request for observability and compliance.
+ * - Delegates the creation to `services.envelopes.create` (DI container).
+ * - Responds with `201 Created` and a minimal resource representation (id, createdAt).
+ *
+ * @param evt - The incoming HTTP event as defined by `HandlerFn`.
+ * @returns A `201 Created` response containing the new envelope id and timestamp.
+ */
+const base: HandlerFn = async (evt) => {
+  const { services } = getContainer();
+  const auth = (evt as any).ctx?.auth ?? {};
 
-  return ok({ status: "stub", route: evt.requestContext?.http?.path });
+  // Validate and parse request body
+  const body = validateJsonBody(evt, CreateEnvelopeBody);
+
+  // Validate/normalize identifiers from auth + body
+  const tenantId = TenantIdSchema.parse(String(auth.tenantId ?? ""));
+  const callerId = UserIdSchema.parse(String(auth.userId ?? ""));
+  const ownerId = UserIdSchema.parse(String(body.ownerId));
+
+  // Derive a stable idempotency key for POST semantics
+  const idempotencyKey = IdempotencyKeyHasher.derive({
+    method: evt.requestContext.http.method,
+    path: evt.requestContext.http.path,
+    tenantId: String(tenantId),
+    userId: String(callerId),
+    scope: "envelopes:create",
+    query: null,
+    body: body as unknown as JsonObject,
+  });
+
+  // Build audit actor (ip, ua, locale, etc.)
+  const actor = buildAuditActor(evt, auth);
+
+  // Delegate to application service with idempotency
+  const out = await services.envelopes.create(
+    {
+      tenantId,
+      ownerId,
+      title: String(body.name),
+      actor,
+    },
+    { idempotencyKey }
+  );
+
+  // Return minimal representation of the created resource
+  return created({
+    data: {
+      id: out.envelope.envelopeId,
+      createdAt: out.envelope.createdAt,
+    },
+  });
+};
+
+/**
+ * Wrapped Lambda handler with auth, observability hooks, and CORS.
+ *
+ * @remarks
+ * `wrapController` applies:
+ * - Authentication enforcement
+ * - Pluggable logger/metrics/tracer (no-ops by default here)
+ * - CORS configuration resolved from environment
+ */
+export const handler = wrapController(base, {
+  auth: true,
+  observability: {
+    logger: () => console,
+    metrics: () => ({} as any),
+    tracer: () => ({} as any),
+  },
+  cors: corsFromEnv(),
 });

@@ -1,15 +1,44 @@
 ﻿/**
- * NOTE:
- * This file is part of the signature-service. Controllers are thin:
- * - validate (Zod from @lawprotect/shared-ts)
- * - authenticate/authorize
- * - call use-case
- * - map result -> HTTP response
+ * @file index.ts
+ * @summary Error barrel for the signature service.
+ *
+ * Re-exports the shared errors module and augments it with:
+ * - signature-service specific codes
+ * - domain-friendly factory helpers
  */
-import { AppError } from "@lawprotect/shared-ts";
 
-export class EnvelopeNotFound extends AppError {
-  constructor(id: string) {
-    super("SIGN_ENVELOPE_NOT_FOUND", `Envelope ${id} was not found`, 404);
-  }
-}
+export {
+  // Base / subclasses
+  AppError,
+  HttpError,
+  BadRequestError,
+  UnauthorizedError,
+  ForbiddenError,
+  NotFoundError,
+  ConflictError,
+  UnsupportedMediaTypeError,
+  UnprocessableEntityError,
+  TooManyRequestsError,
+  InternalError,
+  NotImplementedError,
+
+  // Mappers & classifiers
+  mapError,
+  mapAwsError,
+  isOperational,
+  isRetryable,
+  isClientError,
+  isServerError,
+
+  // Shared codes
+  ErrorCodes,
+  type ErrorCode,
+} from "@lawprotect/shared-ts";
+
+export {
+  SignatureErrorCodes,
+  type SignatureErrorCode,
+  type AnyErrorCode,
+} from "./codes.js";
+
+export * from "./factories.js";
