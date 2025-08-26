@@ -22,7 +22,7 @@
   },
   "scripts": {
     "clean": "rimraf dist",
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "watch": "tsc -p tsconfig.json -w",
     "test": "jest --config ./jest.config.cjs",
@@ -44,7 +44,7 @@
     "prisma": "^5.16.1",
     "rimraf": "^5.0.5",
     "ts-jest": "^29.4.1",
+    "tsc-alias": "^1.8.16",
     "typescript": "^5.5.4"
-    
   }
 }
