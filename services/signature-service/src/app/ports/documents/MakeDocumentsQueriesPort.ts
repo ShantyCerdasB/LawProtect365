@@ -5,11 +5,11 @@
  * - Keeps cursor opaque (passes through nextCursor).
  */
 import type { DocumentsQueriesPort } from "./DocumentsQueriesPort";
-import type { DocumentHead } from "@/app/ports/shared/documents";
+import type { DocumentHead } from "@/app/ports/shared/documents/documents";
 import type { TenantId, EnvelopeId, Page, PageOpts } from "@/app/ports/shared";
-import { toIso } from "@lawprotect/shared-ts";
+import type { AllowedContentType } from "@/domain/values/enums";
 
-/** Flexible upstream row (repos may vary field names). */
+/** Upstream row shape (lenient across repos). */
 type RepoRow = {
   id?: string;
   documentId?: string;
@@ -18,39 +18,40 @@ type RepoRow = {
   name?: string;
   title?: string;
 
-  contentType?: string;
+  contentType?: AllowedContentType | string;
   createdAt?: string | Date | number;
 };
 
 type RepoListInput  = { tenantId: TenantId; envelopeId: EnvelopeId } & PageOpts;
 type RepoListOutput = Page<RepoRow>;
 
-/**
- * Compatible repo shape. The index signature keeps this adapter infra-agnostic
- * and avoids “no properties in common” when passing a concrete class.
- */
-type DocumentsRepoLike = Record<string, unknown> & {
+/** Narrow view we care about from any repo instance. */
+type WithListByEnvelope = {
   listByEnvelope?: (input: RepoListInput) => Promise<RepoListOutput>;
 };
 
-export const makeDocumentsQueriesPort = (repo: DocumentsRepoLike): DocumentsQueriesPort => ({
+export const makeDocumentsQueriesPort = (repo: unknown): DocumentsQueriesPort => ({
   async listByEnvelope(input) {
-    if (typeof repo.listByEnvelope !== "function") {
+    const r = repo as WithListByEnvelope;
+
+    if (typeof r.listByEnvelope !== "function") {
       return { items: [], nextCursor: undefined };
     }
 
-    const page = await repo.listByEnvelope(input);
+    const page = await r.listByEnvelope(input);
 
-    const items: DocumentHead[] = (page.items ?? []).map((r) => ({
-      id: r.id ?? r.documentId ?? r.docId ?? "",
-      name: r.name ?? r.title ?? "",
-      contentType: r.contentType ?? "",
+    const items: DocumentHead[] = (page.items ?? []).map((row) => ({
+      id: row.id ?? row.documentId ?? row.docId ?? "",
+      name: row.name ?? row.title ?? "",
+      contentType: (row.contentType ?? "") as string,
       createdAt:
-        typeof r.createdAt === "string"
-          ? r.createdAt
-          : r.createdAt != null
-            ? toIso(r.createdAt as Date | number)
-            : "",
+        typeof row.createdAt === "string"
+          ? row.createdAt
+          : row.createdAt instanceof Date
+            ? row.createdAt.toISOString()
+            : typeof row.createdAt === "number"
+              ? new Date(row.createdAt).toISOString()
+              : "",
     }));
 
     return { items, nextCursor: page.nextCursor };

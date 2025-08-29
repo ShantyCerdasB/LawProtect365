@@ -16,7 +16,7 @@ import { getContainer } from "@/infra/Container";
 
 // ✅ imports explícitos
 import { makeEnvelopesQueriesPort } from "@/app/ports/envelopes/index";
-import { makePartiesPort }          from "@/app/ports/parties/makePartiesPort";
+import { makePartiesPort }          from "@/app/ports/parties/MakePartiesPort";
 import { makeConsentsPort }         from "@/app/ports/consent/index";
 import { makeDelegationsPort }      from "@/app/ports/consent/index";
 

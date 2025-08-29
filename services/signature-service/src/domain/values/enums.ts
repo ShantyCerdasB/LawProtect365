@@ -49,3 +49,5 @@ export type PartyRole = (typeof PARTY_ROLES)[number];
 export const REQUEST_TOKEN_SCOPES = ["signing", "presign", "download"] as const;
 export type RequestTokenScope = (typeof REQUEST_TOKEN_SCOPES)[number];
 
+export const SIGNATURE_METHODS = ["drawn", "typed", "uploaded"] as const;
+export type SignatureMethod = (typeof SIGNATURE_METHODS)[number];

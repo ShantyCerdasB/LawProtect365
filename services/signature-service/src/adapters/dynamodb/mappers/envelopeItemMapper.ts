@@ -160,7 +160,7 @@ export const envelopeItemMapper: Mapper<Envelope, EnvelopeItem> = {
     return Object.freeze<Envelope>({
       envelopeId: persisted.envelopeId as EnvelopeId,
       tenantId: persisted.tenantId as TenantId,
-      ownerId: persisted.ownerId as UserId | string,
+      ownerId: persisted.ownerId as UserId,
 
       title: persisted.title,
       status: persisted.status,

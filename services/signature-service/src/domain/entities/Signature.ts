@@ -4,7 +4,9 @@
  * Records an actual signature action by a party on an input.
  */
 
-export type SignatureMethod = "drawn" | "typed" | "uploaded";
+import { SignatureMethod } from "../values/enums";
+
+
 
 /**
  * Signature domain entity.

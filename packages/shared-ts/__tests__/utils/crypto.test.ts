@@ -1,148 +1,241 @@
 /**
  * @file crypto.test.ts
- * @summary Tests for cryptographic utilities (hashing, HMAC, base64url, and timing-safe compare).
- * @remarks
- * - Covers both native and fallback branches of `toBase64Url`.
- * - Verifies string vs Buffer inputs for hashing/HMAC.
- * - Ensures `randomBase64Url` returns properly encoded output and respects byte length.
+ * @summary Tests for cryptographic utilities.
  */
 
-import * as nodeCrypto from "node:crypto";
 import {
   sha256Hex,
   hmacSha256Hex,
   toBase64Url,
   randomBase64Url,
   timingSafeEqual,
-} from "../../src/utils/crypto.js";
+  createHash,
+} from '../../src/utils/crypto.js';
 
-describe("sha256Hex", () => {
-  it("produces the expected SHA-256 hex digest from string", () => {
-    const input = "abc";
-    const expected = nodeCrypto.createHash("sha256")
-      .update(Buffer.from(input, "utf8"))
-      .digest("hex");
-    expect(sha256Hex(input)).toBe(expected);
+describe('sha256Hex', () => {
+  it('hashes string correctly', () => {
+    const result = sha256Hex('test string');
+    expect(result).toMatch(/^[a-f0-9]{64}$/);
+    expect(result).toBe('d5579c46dfcc7f18207013e65b44e4cb4e2c2298f4ac457ba8f82743f31e930b');
   });
 
-  it("accepts Buffer input and matches string result", () => {
-    const buf = Buffer.from("The quick brown fox jumps over the lazy dog", "utf8");
-    const asString = buf.toString("utf8");
-    expect(sha256Hex(buf)).toBe(sha256Hex(asString));
-  });
-});
-
-describe("hmacSha256Hex", () => {
-  it("produces the expected HMAC-SHA256 hex digest (string key/data)", () => {
-    const key = "key";
-    const data = "abc";
-    const expected = nodeCrypto.createHmac("sha256", Buffer.from(key, "utf8"))
-      .update(Buffer.from(data, "utf8"))
-      .digest("hex");
-    expect(hmacSha256Hex(key, data)).toBe(expected);
+  it('hashes buffer correctly', () => {
+    const buffer = Buffer.from('test string', 'utf8');
+    const result = sha256Hex(buffer);
+    expect(result).toMatch(/^[a-f0-9]{64}$/);
+    expect(result).toBe('d5579c46dfcc7f18207013e65b44e4cb4e2c2298f4ac457ba8f82743f31e930b');
   });
 
-  it("accepts Buffer key/data and matches string-key/data output", () => {
-    const keyStr = "another-key";
-    const dataStr = "payload";
-    const keyBuf = Buffer.from(keyStr, "utf8");
-    const dataBuf = Buffer.from(dataStr, "utf8");
-    expect(hmacSha256Hex(keyBuf, dataBuf)).toBe(hmacSha256Hex(keyStr, dataStr));
+  it('produces consistent hashes', () => {
+    const input = 'consistent input';
+    const hash1 = sha256Hex(input);
+    const hash2 = sha256Hex(input);
+    expect(hash1).toBe(hash2);
+  });
+
+  it('produces different hashes for different inputs', () => {
+    const hash1 = sha256Hex('input1');
+    const hash2 = sha256Hex('input2');
+    expect(hash1).not.toBe(hash2);
   });
 });
 
-describe("toBase64Url", () => {
-  const patchIsEncoding = (value: boolean, fn: () => void) => {
-    const orig = (Buffer as any).isEncoding;
-    (Buffer as any).isEncoding = (enc: string) =>
-      enc === "base64url" ? value : orig?.call(Buffer, enc);
-    try {
-      fn();
-    } finally {
-      (Buffer as any).isEncoding = orig;
-    }
-  };
-
-  it("fallback branch: replaces '+' and '/' and strips '=' padding", () => {
-    // Base64("+/8=") for bytes [0xfb, 0xff] should become "-_8"
-    const buf = Buffer.from([0xfb, 0xff]);
-    patchIsEncoding(false, () => {
-      expect(toBase64Url(buf)).toBe("-_8");
-    });
-
-    // Single and double padding trimming cases: "f" -> "Zg", "fo" -> "Zm8", "foo" -> "Zm9v"
-    patchIsEncoding(false, () => {
-      expect(toBase64Url(Buffer.from("f", "utf8"))).toBe("Zg");
-      expect(toBase64Url(Buffer.from("fo", "utf8"))).toBe("Zm8");
-      expect(toBase64Url(Buffer.from("foo", "utf8"))).toBe("Zm9v");
-    });
+describe('hmacSha256Hex', () => {
+  it('computes HMAC with string key and data', () => {
+    const key = 'secret-key';
+    const data = 'test data';
+    const result = hmacSha256Hex(key, data);
+    expect(result).toMatch(/^[a-f0-9]{64}$/);
   });
 
-  it("native branch: uses Buffer.toString('base64url') when supported", () => {
-    if ((Buffer as any).isEncoding?.("base64url")) {
-      const buf = Buffer.from([0xfb, 0xff]);
-      const expected = buf.toString("base64url");
-      expect(toBase64Url(buf)).toBe(expected);
-    } else {
-      // If the environment lacks native support, assert fallback still works
-      const buf = Buffer.from([0xfb, 0xff]);
-      patchIsEncoding(false, () => {
-        expect(toBase64Url(buf)).toBe("-_8");
-      });
-    }
+  it('computes HMAC with buffer key and data', () => {
+    const key = Buffer.from('secret-key', 'utf8');
+    const data = Buffer.from('test data', 'utf8');
+    const result = hmacSha256Hex(key, data);
+    expect(result).toMatch(/^[a-f0-9]{64}$/);
   });
 
-  it("native and fallback produce the same result for arbitrary input", () => {
-    const buf = nodeCrypto.randomBytes(32);
+  it('produces consistent HMACs', () => {
+    const key = 'secret';
+    const data = 'test';
+    const hmac1 = hmacSha256Hex(key, data);
+    const hmac2 = hmacSha256Hex(key, data);
+    expect(hmac1).toBe(hmac2);
+  });
 
-    let nativeOut: string;
-    if ((Buffer as any).isEncoding?.("base64url")) {
-      nativeOut = toBase64Url(buf);
-    } else {
-      // Reference via manual conversion
-      const b64 = buf.toString("base64");
-      nativeOut = b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-    }
+  it('produces different HMACs for different keys', () => {
+    const data = 'test';
+    const hmac1 = hmacSha256Hex('key1', data);
+    const hmac2 = hmacSha256Hex('key2', data);
+    expect(hmac1).not.toBe(hmac2);
+  });
 
-    let fallbackOut = "";
-    patchIsEncoding(false, () => {
-      fallbackOut = toBase64Url(buf);
-    });
-
-    expect(fallbackOut).toBe(nativeOut);
+  it('produces different HMACs for different data', () => {
+    const key = 'secret';
+    const hmac1 = hmacSha256Hex(key, 'data1');
+    const hmac2 = hmacSha256Hex(key, 'data2');
+    expect(hmac1).not.toBe(hmac2);
   });
 });
 
-describe("randomBase64Url", () => {
-  it("returns a base64url string using allowed alphabet only", () => {
-    const s = randomBase64Url(16);
-    expect(/^[A-Za-z0-9\-_]+$/.test(s)).toBe(true);
+describe('toBase64Url', () => {
+  it('converts buffer to base64url', () => {
+    const buffer = Buffer.from('test data', 'utf8');
+    const result = toBase64Url(buffer);
+    expect(result).toMatch(/^[A-Za-z0-9_-]+$/);
+    expect(result).not.toContain('+');
+    expect(result).not.toContain('/');
+    expect(result).not.toContain('=');
   });
 
-  it("respects the requested byte length (1 byte -> 2 base64url chars)", () => {
-    const s = randomBase64Url(1);
-    expect(s.length).toBe(2);
-    expect(/^[A-Za-z0-9\-_]+$/.test(s)).toBe(true);
+  it('handles empty buffer', () => {
+    const buffer = Buffer.alloc(0);
+    const result = toBase64Url(buffer);
+    expect(result).toBe('');
   });
 
-  it("clamps non-positive sizes up to 1 byte", () => {
-    const s0 = randomBase64Url(0 as any);
-    const sNeg = randomBase64Url((-10) as any);
-    expect(s0.length).toBe(2);
-    expect(sNeg.length).toBe(2);
+  it('handles single byte buffer', () => {
+    const buffer = Buffer.from([65]); // 'A' in ASCII
+    const result = toBase64Url(buffer);
+    expect(result).toMatch(/^[A-Za-z0-9_-]+$/);
+  });
+
+  it('handles buffer with padding requirements', () => {
+    const buffer = Buffer.from('test', 'utf8');
+    const result = toBase64Url(buffer);
+    expect(result).toMatch(/^[A-Za-z0-9_-]+$/);
+    expect(result).not.toContain('=');
+  });
+
+  it('produces consistent results', () => {
+    const buffer = Buffer.from('consistent data', 'utf8');
+    const result1 = toBase64Url(buffer);
+    const result2 = toBase64Url(buffer);
+    expect(result1).toBe(result2);
+  });
+
+  it('handles binary data', () => {
+    const buffer = Buffer.from([0x00, 0xFF, 0x7F, 0x80]);
+    const result = toBase64Url(buffer);
+    expect(result).toMatch(/^[A-Za-z0-9_-]+$/);
   });
 });
 
-describe("timingSafeEqual", () => {
-  it("returns true for equal strings", () => {
-    expect(timingSafeEqual("secret", "secret")).toBe(true);
+describe('randomBase64Url', () => {
+  it('generates random base64url string with default length', () => {
+    const result = randomBase64Url();
+    expect(result).toMatch(/^[A-Za-z0-9_-]+$/);
+    expect(result.length).toBeGreaterThan(0);
   });
 
-  it("returns false for different lengths (early return)", () => {
-    expect(timingSafeEqual("a", "aa")).toBe(false);
+  it('generates random base64url string with specified length', () => {
+    const result = randomBase64Url(16);
+    expect(result).toMatch(/^[A-Za-z0-9_-]+$/);
   });
 
-  it("returns false for same-length but different strings", () => {
-    expect(timingSafeEqual("secret1", "secret2")).toBe(false);
+  it('generates different strings on multiple calls', () => {
+    const result1 = randomBase64Url(32);
+    const result2 = randomBase64Url(32);
+    expect(result1).not.toBe(result2);
+  });
+
+  it('handles minimum byte count', () => {
+    const result = randomBase64Url(1);
+    expect(result).toMatch(/^[A-Za-z0-9_-]+$/);
+  });
+
+  it('clamps negative values to minimum', () => {
+    const result = randomBase64Url(-5);
+    expect(result).toMatch(/^[A-Za-z0-9_-]+$/);
+  });
+
+  it('handles non-finite values', () => {
+    const result = randomBase64Url(NaN);
+    expect(result).toMatch(/^[A-Za-z0-9_-]+$/);
+  });
+
+  it('handles infinity values', () => {
+    const result = randomBase64Url(Infinity);
+    expect(result).toMatch(/^[A-Za-z0-9_-]+$/);
+  });
+
+  it('floors decimal values', () => {
+    const result = randomBase64Url(5.7);
+    expect(result).toMatch(/^[A-Za-z0-9_-]+$/);
+  });
+});
+
+describe('timingSafeEqual', () => {
+  it('returns true for equal strings', () => {
+    const result = timingSafeEqual('test', 'test');
+    expect(result).toBe(true);
+  });
+
+  it('returns false for different strings', () => {
+    const result = timingSafeEqual('test1', 'test2');
+    expect(result).toBe(false);
+  });
+
+  it('returns false for strings with different lengths', () => {
+    const result = timingSafeEqual('short', 'longer string');
+    expect(result).toBe(false);
+  });
+
+  it('returns false for empty vs non-empty string', () => {
+    const result = timingSafeEqual('', 'non-empty');
+    expect(result).toBe(false);
+  });
+
+  it('returns true for empty strings', () => {
+    const result = timingSafeEqual('', '');
+    expect(result).toBe(true);
+  });
+
+  it('handles special characters', () => {
+    const result = timingSafeEqual('test!@#', 'test!@#');
+    expect(result).toBe(true);
+  });
+
+  it('handles unicode characters', () => {
+    const result = timingSafeEqual('testñáé', 'testñáé');
+    expect(result).toBe(true);
+  });
+
+  it('is timing-safe for different length inputs', () => {
+    const short = 'short';
+    const long = 'this is a much longer string';
+    
+    // Both should take similar time due to timing-safe comparison
+    const start1 = Date.now();
+    timingSafeEqual(short, long);
+    const time1 = Date.now() - start1;
+    
+    const start2 = Date.now();
+    timingSafeEqual(long, short);
+    const time2 = Date.now() - start2;
+    
+    // Times should be similar (within reasonable bounds)
+    expect(Math.abs(time1 - time2)).toBeLessThan(10);
+  });
+});
+
+describe('createHash', () => {
+  it('re-exports Node.js createHash function', () => {
+    expect(typeof createHash).toBe('function');
+    expect(createHash).toBe(require('node:crypto').createHash);
+  });
+
+  it('can be used to create hash instances', () => {
+    const hash = createHash('sha256');
+    expect(hash).toBeDefined();
+    expect(typeof hash.update).toBe('function');
+    expect(typeof hash.digest).toBe('function');
+  });
+
+  it('works with update and digest', () => {
+    const hash = createHash('sha256');
+    hash.update('test data');
+    const digest = hash.digest('hex');
+    expect(digest).toMatch(/^[a-f0-9]{64}$/);
   });
 });

@@ -23,6 +23,7 @@ const UTILS_MODULES = {
   validation: '../../src/utils/validation.js',
   crypto: '../../src/utils/crypto.js',
   math: '../../src/utils/math.js',
+  security: '../../src/utils/security.js',
 } as const;
 
 type UtilsModuleExports = Record<string, unknown>;
@@ -76,6 +77,7 @@ describe('utils barrel (src/utils/index.ts)', () => {
       UTILS_MODULES.validation,
       UTILS_MODULES.crypto,
       UTILS_MODULES.math,
+      UTILS_MODULES.security,
     ];
 
     for (const p of starModules) {
@@ -145,6 +147,7 @@ describe('utils barrel (src/utils/index.ts)', () => {
       UTILS_MODULES.validation,
       UTILS_MODULES.crypto,
       UTILS_MODULES.math,
+      UTILS_MODULES.security,
     ];
     for (const p of starModules) {
       const mod: UtilsModuleExports = await import(p);

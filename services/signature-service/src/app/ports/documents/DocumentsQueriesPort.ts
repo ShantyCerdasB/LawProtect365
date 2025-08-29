@@ -3,7 +3,7 @@
  * Controllers depend on this interface; infra stays behind adapters.
  */
 import type { TenantId, EnvelopeId, Page, PageOpts } from "@/app/ports/shared";
-import type { DocumentHead } from "@/app/ports/shared/documents";
+import type { DocumentHead } from "@/app/ports/shared/documents/documents";
 
 export interface DocumentsQueriesPort {
   listByEnvelope(

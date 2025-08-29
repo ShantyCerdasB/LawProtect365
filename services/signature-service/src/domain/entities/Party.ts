@@ -3,8 +3,7 @@
  * @description Represents a signer, viewer, or approver participating in an envelope.
  */
 
-export type PartyRole = "signer" | "viewer" | "approver";
-export type PartyStatus = "pending" | "signed" | "declined";
+import { OtpChannel, PartyRole, PartyStatus } from "../values/enums";
 
 /**
  * OTP state for party authentication.
@@ -13,7 +12,7 @@ export interface OtpState {
   /** Hashed OTP code for secure storage. */
   codeHash: string;
   /** Delivery channel (email or SMS). */
-  channel: "email" | "sms";
+  channel: OtpChannel
   /** Expiration timestamp (ISO 8601). */
   expiresAt: string;
   /** Number of attempts made. */

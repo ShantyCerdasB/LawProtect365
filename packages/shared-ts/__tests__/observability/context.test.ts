@@ -1,106 +1,263 @@
 /**
  * @file context.test.ts
- * @summary Tests for request-scoped AsyncLocalStorage context utilities (100% line & branch coverage).
+ * @summary Tests for request context utilities.
  */
 
-// Mock the exact specifier the SUT uses
-jest.mock('ulid', () => ({
-  ulid: jest.fn(),
-}));
-
 import {
-  withRequestContext,
+  withRequestContexts,
   getRequestContext,
   getRequestId,
   getTraceId,
   setContextFields,
-} from '../../src/observability/index';
-import { ulid } from 'ulid';
+} from '../../src/observability/context.js';
 
-const ulidMock = ulid as unknown as jest.Mock;
+describe('withRequestContexts', () => {
+  it('runs function with provided context', () => {
+    const ctx = { requestId: 'test-request', traceId: 'test-trace' };
+    let capturedContext: any = null;
+    
+    const result = withRequestContexts(ctx, () => {
+      capturedContext = getRequestContext();
+      return 'test-result';
+    });
+    
+    expect(result).toBe('test-result');
+    expect(capturedContext).toEqual({
+      requestId: 'test-request',
+      traceId: 'test-trace',
+      fields: {},
+    });
+  });
 
-beforeEach(() => {
-  jest.clearAllMocks();
+  it('auto-generates missing requestId', () => {
+    const ctx = { traceId: 'test-trace' };
+    let capturedContext: any = null;
+    
+    withRequestContexts(ctx, () => {
+      capturedContext = getRequestContext();
+    });
+    
+    expect(capturedContext?.requestId).toBeDefined();
+    expect(capturedContext?.requestId).toMatch(/^[0-9A-Z]{26}$/); // ULID format
+    expect(capturedContext?.traceId).toBe('test-trace');
+  });
+
+  it('auto-generates missing traceId', () => {
+    const ctx = { requestId: 'test-request' };
+    let capturedContext: any = null;
+    
+    withRequestContexts(ctx, () => {
+      capturedContext = getRequestContext();
+    });
+    
+    expect(capturedContext?.requestId).toBe('test-request');
+    expect(capturedContext?.traceId).toBeDefined();
+    expect(capturedContext?.traceId).toMatch(/^[0-9A-Z]{26}$/); // ULID format
+  });
+
+  it('auto-generates both IDs when not provided', () => {
+    const ctx = {};
+    let capturedContext: any = null;
+    
+    withRequestContexts(ctx, () => {
+      capturedContext = getRequestContext();
+    });
+    
+    expect(capturedContext?.requestId).toBeDefined();
+    expect(capturedContext?.traceId).toBeDefined();
+    expect(capturedContext?.requestId).toMatch(/^[0-9A-Z]{26}$/);
+    expect(capturedContext?.traceId).toMatch(/^[0-9A-Z]{26}$/);
+    expect(capturedContext?.requestId).not.toBe(capturedContext?.traceId);
+  });
+
+  it('preserves parentSpanId when provided', () => {
+    const ctx = { parentSpanId: 'parent-123' };
+    let capturedContext: any = null;
+    
+    withRequestContexts(ctx, () => {
+      capturedContext = getRequestContext();
+    });
+    
+    expect(capturedContext?.parentSpanId).toBe('parent-123');
+  });
+
+  it('initializes empty fields object', () => {
+    const ctx = {};
+    let capturedContext: any = null;
+    
+    withRequestContexts(ctx, () => {
+      capturedContext = getRequestContext();
+    });
+    
+    expect(capturedContext?.fields).toEqual({});
+  });
+
+  it('preserves provided fields', () => {
+    const ctx = { fields: { tenant: 'test-tenant', user: 'test-user' } };
+    let capturedContext: any = null;
+    
+    withRequestContexts(ctx, () => {
+      capturedContext = getRequestContext();
+    });
+    
+    expect(capturedContext?.fields).toEqual({
+      tenant: 'test-tenant',
+      user: 'test-user',
+    });
+  });
+
+  it('isolates context between different calls', () => {
+    const ctx1 = { requestId: 'request-1', traceId: 'trace-1' };
+    const ctx2 = { requestId: 'request-2', traceId: 'trace-2' };
+    let context1: any = null;
+    let context2: any = null;
+    
+    withRequestContexts(ctx1, () => {
+      context1 = getRequestContext();
+    });
+    
+    withRequestContexts(ctx2, () => {
+      context2 = getRequestContext();
+    });
+    
+    expect(context1?.requestId).toBe('request-1');
+    expect(context2?.requestId).toBe('request-2');
+  });
+
+  it('returns undefined context outside of scope', () => {
+    const context = getRequestContext();
+    expect(context).toBeUndefined();
+  });
 });
 
-describe('withRequestContext', () => {
-  it('generates missing ids, copies fields by value, exposes context inside scope, and returns callback result', () => {
-    // Arrange deterministic ids for requestId and traceId
-    ulidMock.mockReturnValueOnce('RID-GEN').mockReturnValueOnce('TID-GEN');
-
-    const inputFields = { a: 1 };
-
-    // Outside the scope there is no context
-    expect(getRequestContext()).toBeUndefined();
-
-    const result = withRequestContext({ fields: inputFields }, () => {
-      const ctx = getRequestContext();
-      expect(ctx).toBeDefined();
-      expect(ctx?.requestId).toBe('RID-GEN');
-      expect(ctx?.traceId).toBe('TID-GEN');
-      expect(ctx?.parentSpanId).toBeUndefined();
-
-      // Fields are copied, not referenced
-      expect(ctx?.fields).toEqual({ a: 1 });
-      expect(ctx?.fields).not.toBe(inputFields);
-
-      // Merge new fields
-      setContextFields({ b: 2 });
-      expect(getRequestContext()?.fields).toEqual({ a: 1, b: 2 });
-
-      return 42;
-    });
-
-    // Returned value from callback is propagated
-    expect(result).toBe(42);
-
-    // Context does not leak outside
-    expect(getRequestContext()).toBeUndefined();
-
-    // ulid invoked twice (requestId + traceId)
-    expect(ulidMock).toHaveBeenCalledTimes(2);
+describe('getRequestContext', () => {
+  it('returns undefined when no context is set', () => {
+    const context = getRequestContext();
+    expect(context).toBeUndefined();
   });
 
-  it('respects provided ids and parentSpanId; does not generate new ones', () => {
-    const ctxIn = { requestId: 'RID', traceId: 'TID', parentSpanId: 'SPAN', fields: { x: 'y' } };
-
-    const res = withRequestContext(ctxIn, () => {
-      const ctx = getRequestContext();
-      expect(ctx?.requestId).toBe('RID');
-      expect(ctx?.traceId).toBe('TID');
-      expect(ctx?.parentSpanId).toBe('SPAN');
-      expect(ctx?.fields).toEqual({ x: 'y' });
-
-      // getRequestId/getTraceId should read from context (no new ulid())
-      expect(getRequestId()).toBe('RID');
-      expect(getTraceId()).toBe('TID');
-
-      // Merge more fields
-      setContextFields({ z: 1 });
-      expect(getRequestContext()?.fields).toEqual({ x: 'y', z: 1 });
-
-      return 'ok';
+  it('returns current context when set', () => {
+    const ctx = { requestId: 'test-request', traceId: 'test-trace' };
+    let capturedContext: any = null;
+    
+    withRequestContexts(ctx, () => {
+      capturedContext = getRequestContext();
     });
-
-    expect(res).toBe('ok');
-    expect(ulidMock).not.toHaveBeenCalled();
+    
+    expect(capturedContext).toBeDefined();
+    expect(capturedContext?.requestId).toBe('test-request');
   });
 });
 
-describe('fallback helpers outside of any scope', () => {
-  it('getRequestId generates a new id when no context is present', () => {
-    ulidMock.mockReturnValueOnce('RID-OUT');
-    expect(getRequestId()).toBe('RID-OUT');
-    expect(ulidMock).toHaveBeenCalledTimes(1);
+describe('getRequestId', () => {
+  it('returns generated ID when no context exists', () => {
+    const requestId = getRequestId();
+    expect(requestId).toBeDefined();
+    expect(requestId).toMatch(/^[0-9A-Z]{26}$/);
   });
 
-  it('getTraceId generates a new id when no context is present', () => {
-    ulidMock.mockReturnValueOnce('TID-OUT');
-    expect(getTraceId()).toBe('TID-OUT');
-    expect(ulidMock).toHaveBeenCalledTimes(1);
+  it('returns context requestId when available', () => {
+    const ctx = { requestId: 'test-request' };
+    let requestId: string = '';
+    
+    withRequestContexts(ctx, () => {
+      requestId = getRequestId();
+    });
+    
+    expect(requestId).toBe('test-request');
   });
 
-  it('setContextFields is a no-op when no context is present', () => {
-    expect(() => setContextFields({ any: 'thing' })).not.toThrow();
+  it('generates different IDs on multiple calls outside context', () => {
+    const id1 = getRequestId();
+    const id2 = getRequestId();
+    expect(id1).not.toBe(id2);
+  });
+});
+
+describe('getTraceId', () => {
+  it('returns generated ID when no context exists', () => {
+    const traceId = getTraceId();
+    expect(traceId).toBeDefined();
+    expect(traceId).toMatch(/^[0-9A-Z]{26}$/);
+  });
+
+  it('returns context traceId when available', () => {
+    const ctx = { traceId: 'test-trace' };
+    let traceId: string = '';
+    
+    withRequestContexts(ctx, () => {
+      traceId = getTraceId();
+    });
+    
+    expect(traceId).toBe('test-trace');
+  });
+
+  it('generates different IDs on multiple calls outside context', () => {
+    const id1 = getTraceId();
+    const id2 = getTraceId();
+    expect(id1).not.toBe(id2);
+  });
+});
+
+describe('setContextFields', () => {
+  it('does nothing when no context exists', () => {
+    expect(() => {
+      setContextFields({ test: 'value' });
+    }).not.toThrow();
+  });
+
+  it('merges fields into existing context', () => {
+    const ctx = { fields: { existing: 'value' } };
+    let capturedContext: any = null;
+    
+    withRequestContexts(ctx, () => {
+      setContextFields({ new: 'value', another: 'field' });
+      capturedContext = getRequestContext();
+    });
+    
+    expect(capturedContext?.fields).toEqual({
+      existing: 'value',
+      new: 'value',
+      another: 'field',
+    });
+  });
+
+  it('creates fields object when none exists', () => {
+    const ctx = {};
+    let capturedContext: any = null;
+    
+    withRequestContexts(ctx, () => {
+      setContextFields({ test: 'value' });
+      capturedContext = getRequestContext();
+    });
+    
+    expect(capturedContext?.fields).toEqual({ test: 'value' });
+  });
+
+  it('overwrites existing fields with same keys', () => {
+    const ctx = { fields: { key: 'old-value' } };
+    let capturedContext: any = null;
+    
+    withRequestContexts(ctx, () => {
+      setContextFields({ key: 'new-value' });
+      capturedContext = getRequestContext();
+    });
+    
+    expect(capturedContext?.fields).toEqual({ key: 'new-value' });
+  });
+
+  it('preserves other fields when overwriting', () => {
+    const ctx = { fields: { key1: 'value1', key2: 'value2' } };
+    let capturedContext: any = null;
+    
+    withRequestContexts(ctx, () => {
+      setContextFields({ key1: 'new-value1' });
+      capturedContext = getRequestContext();
+    });
+    
+    expect(capturedContext?.fields).toEqual({
+      key1: 'new-value1',
+      key2: 'value2',
+    });
   });
 });

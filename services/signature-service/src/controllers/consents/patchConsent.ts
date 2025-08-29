@@ -16,7 +16,7 @@ import { getContainer } from "@/infra/Container";
 import { makeEnvelopesQueriesPort } from "@/app/ports/envelopes";
 import { makeUpdateConsentPort }    from "@/app/ports/consent";
 
-import { toTenantId, toEnvelopeId } from "@/app/ports/shared/cast";
+import { toTenantId, toEnvelopeId } from "@/app/ports/shared/common/cast";
 
 const base: HandlerFn = async (evt) => {
   const { path, body } = validateRequest(evt, { path: PatchConsentPath, body: PatchConsentBody });

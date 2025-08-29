@@ -1,3 +1,9 @@
+/**
+ * @file index.ts
+ * @summary Exports all envelope controllers
+ * @description Centralized export file for all envelope-related controllers
+ */
+
 export { handler as createEnvelope } from "./createEnvelope";
 export { handler as getEnvelopes } from "./getEnvelopes";
 export { handler as getEnvelopeById } from "./getEnvelopeById";

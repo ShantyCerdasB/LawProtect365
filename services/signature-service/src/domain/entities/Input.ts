@@ -5,7 +5,8 @@
  * such as a signature, initials, text box, or date input.
  */
 
-export type InputType = "signature" | "initials" | "text" | "date";
+import { InputType } from "../values/enums";
+
 
 /**
  * Position of the input on a document page.

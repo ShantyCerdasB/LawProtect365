@@ -17,7 +17,7 @@ import type { EnvelopeId } from "@/domain/value-objects/Ids";
 
 // ✅ Queries para envelope; port simple (pre-bound) para party
 import { makeEnvelopesQueriesPort } from "@/app/ports/envelopes";
-import { makePartiesPort }         from "@/app/ports/parties/makePartiesPort";
+import { makePartiesPort }         from "@/app/ports/parties/MakePartiesPort";
 
 // ✅ Commands para consents
 import { makeConsentsPort } from "@/app/ports/consent/makeConsent";
