@@ -7,3 +7,4 @@ export * from "./middleware.js";
 export * from "./withControllerLogging.js";
 export * from "./withObservability.js";
 export * from "./withRequestContext.js";
+export * from "./headers.js";

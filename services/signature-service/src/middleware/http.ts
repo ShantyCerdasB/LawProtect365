@@ -1,49 +1,59 @@
+/**
+ * @file http.ts
+ * @summary Thin HTTP wrapper that assembles the shared pipeline for this service.
+ *
+ * @description
+ * This module provides:
+ * - `wrapController`: composes the shared middlewares (request IDs, observability, optional JWT auth,
+ *   controller logging) and delegates error mapping + CORS handling to the shared `apiHandler`.
+ * - `wrapPublicController`: convenience wrapper with auth disabled.
+ * - `corsFromEnv`: a small helper to build a CORS config from environment variables.
+ *
+ * Why there's no "errors middleware" here?
+ * Error rendering is centralized in `apiHandler` (from `@lawprotect/shared-ts`), which uses `mapError`
+ * to consistently translate thrown/returned errors into HTTP responses. Keeping it central avoids
+ * duplication and reduces controller complexity.
+ */
+
 import type { HandlerFn } from "@lawprotect/shared-ts";
-import { compose, type BeforeMiddleware, type AfterMiddleware } from "@lawprotect/shared-ts";
-import { apiHandler } from "@lawprotect/shared-ts";
-import { buildCorsHeaders } from "@lawprotect/shared-ts";
-import { withAuth } from "@lawprotect/shared-ts";
-import { withRequestContext as withReqIds } from "@lawprotect/shared-ts";
-import { withObservability, type ObservabilityFactories } from "@lawprotect/shared-ts";
-import { withControllerLogging } from "@lawprotect/shared-ts";
-import type { JwtVerifyOptions } from "@lawprotect/shared-ts";
-import type { CorsConfig } from "@lawprotect/shared-ts";
-import { getEnv } from "@lawprotect/shared-ts";
+import {
+  compose,
+  apiHandler,
+  buildCorsHeaders,
+  withAuth,
+  withRequestContext as withReqIds,
+  withObservability,
+  withControllerLogging,
+  type BeforeMiddleware,
+  type AfterMiddleware,
+  type CorsConfig,
+  type JwtVerifyOptions,
+  type ObservabilityFactories,
+  getEnv,
+} from "@lawprotect/shared-ts";
 
 /**
- * Options used to wrap a controller with the shared HTTP pipeline.
+ * Options to wrap a business controller with the shared HTTP pipeline.
  */
 export interface WrapControllerOptions {
-  /**
-   * Enables JWT verification. Defaults to true for private endpoints.
-   */
+  /** Enable JWT verification (default: true). */
   auth?: boolean;
 
-  /**
-   * Optional overrides for JWT verification (issuer, audience, jwksUri, tolerance).
-   * If omitted, values are taken from the environment.
-   */
+  /** Optional overrides for JWT verification (issuer, audience, jwksUri, clock tolerance). */
   jwt?: JwtVerifyOptions;
 
-  /**
-   * Additional "before" middlewares to run prior to the handler.
-   */
+  /** Additional "before" middlewares to run prior to the handler. */
   before?: BeforeMiddleware[];
 
-  /**
-   * Additional "after" middlewares to run after the handler.
-   */
+  /** Additional "after" middlewares to run after the handler. */
   after?: AfterMiddleware[];
 
-  /**
-   * Factories for per-request logger, metrics, and tracer.
-   * Keeps middleware SDK-agnostic.
-   */
+  /** Factories for per-request logger, metrics, and tracer (SDK-agnostic). */
   observability: ObservabilityFactories;
 
   /**
-   * Overrides CORS behavior. If omitted, CORS is built from environment.
-   * Pass `false` to disable CORS entirely for this handler.
+   * CORS configuration override. If omitted, it is built from environment via `corsFromEnv`.
+   * Pass `false` to disable CORS.
    */
   cors?: CorsConfig | false;
 }
@@ -51,7 +61,7 @@ export interface WrapControllerOptions {
 /**
  * Builds a CORS configuration from environment variables.
  *
- * Supported variables:
+ * Supported env vars:
  * - CORS_ALLOWED_ORIGINS="*" or CSV list
  * - CORS_ALLOW_HEADERS="Authorization,Content-Type"
  * - CORS_ALLOW_METHODS="GET,POST,DELETE"
@@ -61,11 +71,15 @@ export interface WrapControllerOptions {
  */
 export const corsFromEnv = (): CorsConfig => {
   const origins = (getEnv("CORS_ALLOWED_ORIGINS") || "*").trim();
-  const allowOrigins = origins === "*" ? "*" : origins.split(",").map((s) => s.trim()).filter(Boolean);
+  const allowOrigins =
+    origins === "*" ? "*" : origins.split(",").map((s) => s.trim()).filter(Boolean);
 
-  const csv = (v?: string) => (v ? v.split(",").map((s) => s.trim()).filter(Boolean) : undefined);
+  const csv = (v?: string) =>
+    v ? v.split(",").map((s) => s.trim()).filter(Boolean) : undefined;
+
   const allowHeaders = csv(getEnv("CORS_ALLOW_HEADERS"));
-  const allowMethods = csv(getEnv("CORS_ALLOW_METHODS")) ?? ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"];
+  const allowMethods =
+    csv(getEnv("CORS_ALLOW_METHODS")) ?? ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"];
   const exposeHeaders = csv(getEnv("CORS_EXPOSE_HEADERS"));
   const allowCredentials = /^true$/i.test(getEnv("CORS_ALLOW_CREDENTIALS") ?? "");
   const maxAge = Number(getEnv("CORS_MAX_AGE_SECONDS") ?? "600");
@@ -77,7 +91,7 @@ export const corsFromEnv = (): CorsConfig => {
     allowMethods,
     exposeHeaders,
     allowCredentials,
-    maxAgeSeconds
+    maxAgeSeconds,
   };
 };
 
@@ -86,19 +100,12 @@ export const corsFromEnv = (): CorsConfig => {
  * - Request IDs (x-request-id / x-trace-id)
  * - Per-request observability (logger/metrics/tracer)
  * - Optional JWT authentication
- * - Request logging (start/finish)
+ * - Request logging (finish)
  * - CORS (from env unless overridden)
  *
- * The per-request AppContext is attached to the event as `(evt as any).ctx`.
- *
- * @param base Business handler.
- * @param opts Pipeline options (auth, jwt, middlewares, observability, cors).
- * @returns A Lambda-ready handler with uniform behavior.
+ * Errors are mapped by `apiHandler` using the shared `mapError`.
  */
-export const wrapController = (
-  base: HandlerFn,
-  opts: WrapControllerOptions
-): HandlerFn => {
+export const wrapController = (base: HandlerFn, opts: WrapControllerOptions): HandlerFn => {
   const { before = [], after = [], observability, auth = true, jwt, cors } = opts;
 
   const builtCors = cors === false ? undefined : (cors ?? corsFromEnv());
@@ -106,29 +113,20 @@ export const wrapController = (
 
   const logging = withControllerLogging();
 
-  const pipeline = compose(base, {
-    before: [
-      withReqIds(),
-      withObservability(observability),
-      ...(auth ? [withAuth.bind(null, jwt ?? {}) as unknown as BeforeMiddleware] : []),
-      ...before
-    ],
-    after: [
-      logging.after,
-      ...after
-    ]
+  // Auth is applied first if enabled
+  let handler: HandlerFn = auth ? withAuth(base, jwt) : base;
+
+  // Compose remaining middlewares
+  handler = compose(handler, {
+    before: [withReqIds(), withObservability(observability), ...before],
+    after: [logging.after, ...after],
   });
 
-  // Ensures CORS, default headers and consistent error mapping.
-  return apiHandler(pipeline, { cors: builtCors, defaultHeaders: corsHeaders });
+  // Let apiHandler manage CORS & error mapping uniformly
+  return apiHandler(handler, { cors: builtCors, defaultHeaders: corsHeaders });
 };
 
-/**
- * Helper for public endpoints (no JWT).
- *
- * @param base Business handler.
- * @param opts Same as WrapControllerOptions but with auth disabled.
- */
+/** Convenience for public (no-auth) endpoints. */
 export const wrapPublicController = (
   base: HandlerFn,
   opts: Omit<WrapControllerOptions, "auth">

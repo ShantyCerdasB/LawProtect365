@@ -18,7 +18,7 @@ import {
   partyItemMapper,
   partyPk,
   partySk,
-} from "./__mappers__/partyItemMapper";
+} from "./mappers/partyItemMapper";
 
 /**
  * Narrows a typed object into the loose `Record<string, unknown>` shape
@@ -126,6 +126,7 @@ export class PartyRepositoryDdb
         role: patch.role ?? current.role,
         status: patch.status ?? current.status,
         signedAt: patch.signedAt ?? current.signedAt,
+        otpState: patch.otpState ?? current.otpState,
       });
 
       await this.ddb.put({

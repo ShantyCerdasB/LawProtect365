@@ -1,9 +1,9 @@
-import { loadEnv, Env } from "@validation/env.js";
+import { loadEnv, Env } from "../validation/env.js";
 import { buildDefaultCors } from "./cors.js";
 import { defaultRateLimit } from "./rateLimit.js";
 import { loadFeatureFlags } from "./flags.js";
 import type { AppConfig, Environment } from "./types.js";
-import { LogLevel } from "@/index.js";
+import { LogLevel } from "..//index.js";
 
 /**
  * Builds the typed application configuration from process.env and defaults.

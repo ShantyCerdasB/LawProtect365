@@ -134,4 +134,14 @@ describe("shouldRetry", () => {
     expect(res.retry).toBe(true);
     expect(res.delayMs).toBe(123);
   });
+
+  it("handles edge cases for maxAttempts", () => {
+    // Test with maxAttempts = 0 (invalid but should handle gracefully)
+    expect(shouldRetry(0, 0, () => true, new Error("x"))).toEqual({ retry: false, delayMs: 0 });
+    
+    // Test with negative maxAttempts
+    expect(shouldRetry(0, -1, () => true, new Error("x"))).toEqual({ retry: false, delayMs: 0 });
+  });
 });
+
+

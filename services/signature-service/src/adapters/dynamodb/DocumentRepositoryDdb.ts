@@ -13,7 +13,7 @@
 import type { Repository } from "@lawprotect/shared-ts";
 import type { DdbClientLike } from "@lawprotect/shared-ts";
 import type { Document } from "../../domain/entities/Document";
-import { documentItemMapper } from "./__mappers__/documentItemMapper";
+import { documentItemMapper } from "./mappers/documentItemMapper";
 
 import {
   mapAwsError,

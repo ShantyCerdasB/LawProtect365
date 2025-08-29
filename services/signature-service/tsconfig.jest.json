@@ -1,11 +1,55 @@
 {
+  // Hereda de tu tsconfig de la app
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "module": "CommonJS",
-    "moduleResolution": "Node",
-    "rootDir": ".",
-    "noEmit": true,
-    "types": ["node", "jest"]
+    // Para que TS resuelva los aliases abajo
+    "baseUrl": ".",
+
+    // Con Bundler, TS entiende imports TS con sufijo ".js" (Node/ESM friendly)
+    // y juega mejor con path aliases apuntando a .ts
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+
+    // Asegura tipos de Jest y Node en tests
+    "types": ["jest", "node"],
+
+    // Mapea el paquete compartido y sus aliases internos
+    "paths": {
+      "@lawprotect/shared-ts": ["../../packages/shared-ts/src/index.ts"],
+      "@lawprotect/shared-ts/*": ["../../packages/shared-ts/src/*"],
+
+      "@http/*": ["../../packages/shared-ts/src/http/*"],
+      "@errors/*": ["../../packages/shared-ts/src/errors/*"],
+      "@auth/*": ["../../packages/shared-ts/src/auth/*"],
+      "@app/*": ["../../packages/shared-ts/src/app/*"],
+      "@aws/*": ["../../packages/shared-ts/src/aws/*"],
+      "@config/*": ["../../packages/shared-ts/src/config/*"],
+      "@db/*": ["../../packages/shared-ts/src/db/*"],
+      "@observability/*": ["../../packages/shared-ts/src/observability/*"],
+      "@utils/*": ["../../packages/shared-ts/src/utils/*"],
+      "@validation/*": ["../../packages/shared-ts/src/validation/*"],
+      "@types/*": ["../../packages/shared-ts/src/types/*"],
+      "@cache/*": ["../../packages/shared-ts/src/cache/*"],
+      "@contracts/*": ["../../packages/shared-ts/src/contracts/*"],
+      "@events/*": ["../../packages/shared-ts/src/events/*"],
+      "@messaging/*": ["../../packages/shared-ts/src/messaging/*"],
+      "@storage/*": ["../../packages/shared-ts/src/storage/*"],
+
+      // Aliases locales del servicio
+      "@/*": ["src/*"],
+      "@adapters/*": ["src/adapters/*"],
+      "@controllers/*": ["src/controllers/*"],
+      "@domain/*": ["src/domain/*"],
+      "@guard/*": ["src/guard/*"],
+      "@infra/*": ["src/infra/*"],
+      "@mappers/*": ["src/mappers/*"],
+      "@middleware/*": ["src/middleware/*"],
+      "@ports/*": ["src/ports/*"],
+      "@schemas/*": ["src/schemas/*"],
+      "@use-cases/*": ["src/use-cases/*"]
+    }
   },
-  "include": ["src", "__tests__/**/*.ts", "src/types/env.d.ts"]
+
+  // Asegura que TS procese src y tests en este modo
+  "include": ["src", "__tests__"]
 }

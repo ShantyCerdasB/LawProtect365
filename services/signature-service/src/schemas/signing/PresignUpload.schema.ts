@@ -1,14 +1,15 @@
+// file: src/schemas/signing/PresignUpload.schema.ts
 /**
  * @file PresignUpload.schema.ts
  * @summary Request/response schemas for pre-signed upload URLs.
  */
 
 import { z } from "@lawprotect/shared-ts";
-import { UuidV4 } from "@lawprotect/shared-ts";
+import { EnvelopeId } from "@/schemas/common/path";
 
 /** Body payload requesting a pre-signed upload URL. */
 export const PresignUploadBody = z.object({
-  envelopeId: UuidV4,
+  envelopeId: EnvelopeId,
   filename: z.string().min(1),
   contentType: z.string().min(1),
 });

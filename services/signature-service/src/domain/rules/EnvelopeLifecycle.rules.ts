@@ -27,7 +27,7 @@ export const assertLifecycleTransition = (from: EnvelopeStatus, to: EnvelopeStat
 
   // Forward-only transitions
   if (sFrom === "draft" && sTo === "sent") return;
-  if (sFrom === "sent" && (sTo === "completed" || sTo === "cancelled" || sTo === "declined")) return;
+  if (sFrom === "sent" && (sTo === "completed" || sTo === "canceled" || sTo === "declined")) return;
 
   throw invalidEnvelopeState({ from: sFrom, to: sTo });
 };

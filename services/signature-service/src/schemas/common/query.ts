@@ -3,6 +3,7 @@
  * @summary Reusable Zod schemas for common query strings.
  */
 
+import { ENVELOPE_STATUSES } from "@/domain/values/enums";
 import { z } from "@lawprotect/shared-ts";
 import { ISODateStringSchema } from "@lawprotect/shared-ts";
 import { paginationQuerySchema } from "@lawprotect/shared-ts";
@@ -18,14 +19,7 @@ export type PaginationQuery = z.infer<typeof PaginationQuery>;
  * Envelope list filters. Keep statuses aligned with your domain.
  * If your domain has a canonical enum, import it instead.
  */
-export const EnvelopeStatus = z.enum([
-  "draft",
-  "sent",
-  "in_progress",
-  "completed",
-  "canceled",
-  "declined",
-]);
+export const EnvelopeStatus = z.enum(ENVELOPE_STATUSES);
 
 export const ListEnvelopesQuery = z
   .object({

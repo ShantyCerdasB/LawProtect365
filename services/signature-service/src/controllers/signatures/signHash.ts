@@ -1,25 +1,77 @@
 ﻿/**
- * NOTE:
- * This file is part of the signature-service. Controllers are thin:
- * - validate (Zod from @lawprotect/shared-ts)
- * - authenticate/authorize
- * - call use-case
- * - map result -> HTTP response
+ * @file signHash.ts
+ * @summary HTTP controller for POST /signatures/hash:sign
+ *
+ * @description
+ * Internal endpoint that accepts a precomputed hash digest and returns a KMS signature.
+ * - Auth enforced by the shared pipeline (JWT)
+ * - Input validated via Zod (local schema helper)
+ * - Delegates to the SignHash use case
+ * - Errors are mapped uniformly by the shared HTTP middleware
  */
-import { apiHandler, ok } from "@lawprotect/shared-ts/http";
-import { authenticate } from "@lawprotect/shared-ts/auth";
-import { z, validate } from "@lawprotect/shared-ts/validation";
 
-const Params = z.object({});      // adjust per-route
-const Query  = z.object({});      // adjust per-route
-const Body   = z.object({}).optional(); // adjust per-route
+import type { HandlerFn } from "@lawprotect/shared-ts";
+import { ok } from "@lawprotect/shared-ts";
+import { wrapController, corsFromEnv } from "@/middleware/http";
+import { parseSignHashRequest } from "@/schemas/signing/SignHash.schema";
+import { executeSignHash } from "@/use-cases/signatures/SignHash";
+import { getContainer } from "@/infra/Container";
 
-export const handler = apiHandler(async (evt) => {
-  const auth = await authenticate(evt); // principal/tenant/scopes
-  const { params, query, body } = validate(evt, { params: Params, query: Query, body: Body });
+/**
+ * Business handler: signs a precomputed hash digest using KMS.
+ *
+ * @param evt API event enriched by middleware (auth, logger, ids).
+ * @returns 200 OK with `{ data: { signature, algorithm, keyId } }`.
+ * @throws Domain/App errors which are mapped by the shared middleware.
+ */
+const base: HandlerFn = async (evt) => {
+  // Validate & parse request body
+  const request = parseSignHashRequest(evt);
 
-  // TODO: call use-case via DI from infra (e.g., ctx.getUseCase("..."))
-  // const result = await useCase.execute({ ...params, ...query, ...body }, { auth });
+  // Observability context (provided by wrapController)
+  const ctx = (evt as any).ctx;
+  const logger = ctx?.logger ?? console;
 
-  return ok({ status: "stub", route: evt.requestContext?.http?.path });
+  // Resolve dependencies
+  const { crypto: { signer }, config } = getContainer();
+
+  // Execute use case
+  const result = await executeSignHash(
+    {
+      digest: request.digest,
+      algorithm: request.algorithm,
+      keyId: request.keyId,
+    },
+    {
+      kms: signer,
+      defaultKeyId: config.kms.signerKeyId,
+      // Keep the allowed algorithms constrained by configuration
+      allowedAlgorithms: [config.kms.signingAlgorithm],
+    }
+  );
+
+  logger?.info?.("Hash digest signed successfully", {
+    requestId: ctx?.requestId,
+    algorithm: result.algorithm,
+    keyId: result.keyId,
+  });
+
+  // Uniform payload shape across controllers
+  return ok({ data: result });
+};
+
+/**
+ * Lambda handler with:
+ * - Request IDs & observability
+ * - JWT auth
+ * - CORS and uniform error mapping
+ */
+export const handler = wrapController(base, {
+  auth: true,
+  observability: {
+    logger: () => console,
+    metrics: () => ({} as any),
+    tracer: () => ({} as any),
+  },
+  cors: corsFromEnv(),
 });

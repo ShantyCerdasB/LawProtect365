@@ -51,6 +51,14 @@ export const documentLockExists = (details?: unknown) =>
 export const badRequest = (message: string, code: AnyErrorCode = SignatureErrorCodes.INPUT_TYPE_NOT_ALLOWED, details?: unknown) =>
   new BadRequestError(message, code, details);
 
+/** Upload request validation error (400). */
+export const invalidUploadRequest = (details?: unknown) =>
+  new BadRequestError("Invalid upload request", SignatureErrorCodes.INPUT_TYPE_NOT_ALLOWED, details);
+
+/** Download request validation error (400). */
+export const invalidDownloadRequest = (details?: unknown) =>
+  new BadRequestError("Invalid download request", SignatureErrorCodes.INPUT_TYPE_NOT_ALLOWED, details);
+
 /** Semantically valid JSON but fails business rules (422). */
 export const unprocessable = (message: string, code: AnyErrorCode, details?: unknown) =>
   new UnprocessableEntityError(message, code, details);

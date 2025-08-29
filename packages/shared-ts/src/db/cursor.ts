@@ -33,7 +33,7 @@ export const decodeCursor = <T = unknown>(cursor?: string): T | undefined => {
  * Converts common non-JSON types (Date, Buffer, bigint) into strings.
  * @param v Arbitrary value.
  */
-const toJsonValue = (v: unknown): JsonValue => {
+export const toJsonValue = (v: unknown): JsonValue => {
   if (v === null) return null;
   const t = typeof v;
 

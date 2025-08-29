@@ -43,9 +43,11 @@ import { EnvelopeRepositoryDdb } from "../adapters/dynamodb/EnvelopeRepositoryDb
 import { InputRepositoryDdb } from "../adapters/dynamodb/InputRepositoryDdb.js";
 import { PartyRepositoryDdb } from "../adapters/dynamodb/PartyRepositoryDdb.js";
 import { IdempotencyStoreDdb } from "../adapters/dynamodb/IdempotencyStoreDdb.js";
+import { AuditRepositoryDdb, ConsentRepositoryDdb } from "../adapters/dynamodb/index";
 
 import { IdempotencyKeyHasher } from "../adapters/idempotency/IdempotencyKeyHasher.js";
 import { IdempotencyRunner } from "../adapters/idempotency/IdempotencyRunner.js";
+import { RateLimitStoreDdb } from "../adapters/ratelimit/RateLimitStoreDdb.js";
 
 import { S3EvidenceStorage } from "../adapters/s3/S3EvidenceStorage.js";
 import { S3Presigner } from "../adapters/s3/S3Presigner.js";
@@ -55,83 +57,13 @@ import { KmsSigner } from "../adapters/kms/KmsSigner.js";
 
 import { EventBridgePublisher } from "../adapters/eventbridge/EventBridgePublisher.js";
 import { SsmParamConfigProvider } from "../adapters/ssm/SsmParamConfigProvider.js";
-
+import { DelegationRepositoryDdb } from "../adapters/dynamodb/DelegationRepositoryDdb.js";
 import type { Envelope } from "@/domain/entities/Envelope";
 import type { TenantId, UserId } from "@/domain/value-objects/Ids";
 import { createEnvelope } from "@/use-cases/envelopes/CreateEnvelope";
-import type { ISODateString, EventEnvelope, DomainEvent } from "@lawprotect/shared-ts";
+import { type ISODateString, type EventEnvelope, type DomainEvent, randomToken, uuid, ulid, DdbClientLike } from "@lawprotect/shared-ts";
 
-/**
- * Minimal DynamoDB client contract used by repositories and stores.
- *
- * @public
- * @remarks
- * This lightweight interface allows injecting custom or mocked implementations
- * (e.g., for testing) that wrap `DynamoDBDocumentClient`.
- */
-export interface DdbClientLike {
-  /**
-   * Read a single item by primary key.
-   * @param params Table name, key, and optional consistent read flag.
-   * @returns Object containing the optional `Item`.
-   */
-  get(params: {
-    TableName: string;
-    Key: Record<string, unknown>;
-    ConsistentRead?: boolean;
-  }): Promise<{ Item?: Record<string, unknown> }>;
 
-  /**
-   * Put (insert or replace) an item.
-   * @param params Table name, item, and optional condition expression.
-   */
-  put(params: {
-    TableName: string;
-    Item: Record<string, unknown>;
-    ConditionExpression?: string;
-  }): Promise<unknown>;
-
-  /**
-   * Delete an item by primary key.
-   * @param params Table name, key, and optional condition expression.
-   */
-  delete(params: {
-    TableName: string;
-    Key: Record<string, unknown>;
-    ConditionExpression?: string;
-  }): Promise<unknown>;
-
-  /**
-   * Update attributes of an existing item.
-   * @param params Update expression, names, values, optional condition and return settings.
-   * @returns Optional `Attributes`, depending on `ReturnValues`.
-   */
-  update?(params: {
-    TableName: string;
-    Key: Record<string, unknown>;
-    UpdateExpression: string;
-    ExpressionAttributeNames?: Record<string, string>;
-    ExpressionAttributeValues?: Record<string, unknown>;
-    ConditionExpression?: string;
-    ReturnValues?: "ALL_NEW" | "ALL_OLD" | "UPDATED_NEW" | "UPDATED_OLD" | "NONE";
-  }): Promise<{ Attributes?: Record<string, unknown> }>;
-
-  /**
-   * Query items via key condition (table or index).
-   * @param params Key condition, optional index and pagination settings.
-   * @returns Items and optional `LastEvaluatedKey` for pagination.
-   */
-  query?(params: {
-    TableName: string;
-    IndexName?: string;
-    KeyConditionExpression: string;
-    ExpressionAttributeNames?: Record<string, string>;
-    ExpressionAttributeValues?: Record<string, unknown>;
-    Limit?: number;
-    ScanIndexForward?: boolean;
-    ExclusiveStartKey?: Record<string, unknown>;
-  }): Promise<{ Items?: Record<string, unknown>[]; LastEvaluatedKey?: Record<string, unknown> }>;
-}
 
 /**
  * Application services exposed to controllers.
@@ -140,13 +72,6 @@ export interface DdbClientLike {
  */
 export interface Services {
   envelopes: {
-    /**
-     * Creates a new envelope (draft) with optional idempotency and emits a domain event.
-     *
-     * @param input Envelope metadata and optional actor context.
-     * @param opts Optional idempotency key and TTL for idempotency record.
-     * @returns Newly created envelope.
-     */
     create(
       input: {
         tenantId: TenantId;
@@ -171,10 +96,8 @@ export interface Services {
  * @public
  */
 export interface Container {
-  /** Loaded static configuration. */
   config: SignatureServiceConfig;
 
-  /** Low-level AWS SDK clients. */
   aws: {
     ddb: DynamoDBClient;
     s3: S3Client;
@@ -183,60 +106,62 @@ export interface Container {
     ssm: SSMClient;
   };
 
-  /** Data access layer (repositories & stores). */
   repos: {
     documents: DocumentRepositoryDdb;
     envelopes: EnvelopeRepositoryDdb;
     inputs: InputRepositoryDdb;
     parties: PartyRepositoryDdb;
+    audit: AuditRepositoryDdb;
     idempotency: IdempotencyStoreDdb;
+    consents: ConsentRepositoryDdb;
+    delegations: DelegationRepositoryDdb;
   };
 
-  /** Idempotency utilities. */
   idempotency: {
     hasher: IdempotencyKeyHasher;
     runner: IdempotencyRunner;
   };
 
-  /** Storage helpers (S3 presigning, evidence storage, PDF ingestion). */
+  rateLimit: {
+    otpStore: RateLimitStoreDdb;
+  };
+
   storage: {
     evidence: S3EvidenceStorage;
     presigner: S3Presigner;
     pdfIngestor: S3SignedPdfIngestor;
   };
 
-  /** Cryptographic utilities. */
   crypto: {
     signer: KmsSigner;
   };
 
-  /** Event publishing utilities. */
   events: {
     publisher: EventBridgePublisher;
   };
 
-  /** Configuration provider backed by SSM Parameter Store (with env fallback). */
   configProvider: SsmParamConfigProvider;
 
-  /** High-level application services. */
   services: Services;
+
+  ids: {
+    ulid(): string;
+    uuid(): string;
+    token(bytes?: number): string;
+  };
+
+  time: {
+    now(): number;
+  };
 }
 
-let singleton: Container | undefined;
+let singleton: Container;
 
 /**
  * Returns the singleton DI container for the signature-service.
  *
  * @remarks
- * Lazily initializes all dependencies on first call:
- * - Loads configuration
- * - Instantiates AWS clients
- * - Wraps DynamoDB with `DynamoDBDocumentClient` and adapts it to `DdbClientLike`
- * - Constructs repositories, idempotency utilities, storage helpers, crypto utilities,
- *   event publisher, and SSM-backed configuration provider
- * - Wires application services (e.g., `envelopes.create`)
- *
- * Subsequent calls return the same instance.
+ * Lazily initializes all dependencies on first call and reuses them afterwards.
  */
 export const getContainer = (): Container => {
   if (singleton) return singleton;
@@ -284,11 +209,20 @@ export const getContainer = (): Container => {
   const envelopes = new EnvelopeRepositoryDdb(config.ddb.envelopesTable, ddbLike);
   const inputs = new InputRepositoryDdb(config.ddb.inputsTable, ddbLike);
   const parties = new PartyRepositoryDdb(config.ddb.partiesTable, ddbLike);
+  const audit = new AuditRepositoryDdb({
+    tableName: config.ddb.auditTable || config.ddb.envelopesTable,
+    client: ddbLike,
+  });
   const idempotencyStore = new IdempotencyStoreDdb(config.ddb.idempotencyTable, ddbLike);
+  const consents = new ConsentRepositoryDdb(config.ddb.envelopesTable, ddbLike);
 
   // Idempotency helpers
   const hasher = new IdempotencyKeyHasher();
   const runner = new IdempotencyRunner(idempotencyStore, { defaultTtlSeconds: 300 });
+
+  // Rate limiting helpers
+  const otpRateLimitStore = new RateLimitStoreDdb(config.ddb.idempotencyTable, ddbLike);
+  const delegations = new DelegationRepositoryDdb(config.ddb.envelopesTable, ddbLike);
 
   // S3 helpers
   const presigner = new S3Presigner(s3, {
@@ -353,26 +287,21 @@ export const getContainer = (): Container => {
             {
               repos: { envelopes },
               ids: {
-                ulid: () =>
-                  (globalThis as any).crypto?.randomUUID?.() ??
-                  `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`,
+                ulid: () => ulid(),
               },
             }
           );
 
-          // Publish domain events to EventBridge
           for (const evt of out.events as Array<DomainEvent<Record<string, unknown>>>) {
             const data: Record<string, unknown> = {
               tenantId: out.envelope.tenantId,
-              ...(evt.payload ?? {}), // payload is Record<string, unknown> thanks to the cast above
+              ...(evt.payload ?? {}),
             };
 
             const envelope: EventEnvelope = {
-              name: evt.type, // (Previously you used "name")
+              name: evt.type,
               meta: {
-                id:
-                  (globalThis as any).crypto?.randomUUID?.() ??
-                  `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`,
+                id: ulid(),
                 ts: evt.occurredAt as unknown as ISODateString,
                 source: config.events.source,
               },
@@ -392,16 +321,27 @@ export const getContainer = (): Container => {
     },
   };
 
+  const ids = {
+    ulid,
+    uuid,
+    token: (bytes = 32) => randomToken(bytes),
+  };
+
+  const time = { now: () => Date.now() };
+
   singleton = {
     config,
     aws: { ddb, s3, kms, evb, ssm },
-    repos: { documents, envelopes, inputs, parties, idempotency: idempotencyStore },
+    repos: { documents, envelopes, inputs, parties, audit, idempotency: idempotencyStore, consents, delegations },
     idempotency: { hasher, runner },
+    rateLimit: { otpStore: otpRateLimitStore },
     storage: { evidence, presigner, pdfIngestor },
     crypto: { signer },
     events: { publisher },
     configProvider,
     services,
+    ids,
+    time,
   };
 
   return singleton;

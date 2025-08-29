@@ -29,6 +29,8 @@ export interface SignatureServiceConfig extends AppConfig {
     partiesTable: string;
     /** Table used for idempotency tokens/locks. */
     idempotencyTable: string;
+    /** Table holding audit events. Defaults to envelopesTable if not provided. */
+    auditTable?: string;
   };
 
   /**

@@ -1,9 +1,13 @@
-﻿import { z, TrimmedString } from "@lawprotect/shared-ts";
+﻿import { z } from "zod";
+import { HASH_ALGORITHM } from "../values/enums";
+
+const TrimmedString = z.string().trim();
 
 /**
  * Supported hashing algorithms for digest signatures.
  */
-export const HashAlgorithmSchema = z.enum(["sha256", "sha384", "sha512"]);
+export const HashAlgorithmSchema = z.enum(HASH_ALGORITHM);
+export type HashAlgorithmType = z.infer<typeof HashAlgorithmSchema>;
 
 /**
  * Base64url without padding.

@@ -3,6 +3,9 @@
  * All helpers are timezone-agnostic unless explicitly named with UTC.
  */
 
+import { ISODateString } from "@/index.js";
+import { z } from "@/validation/z.js";
+
 /** Returns current time as ISO-8601 string. */
 export const nowIso = (): string => new Date().toISOString();
 
@@ -70,3 +73,12 @@ export const formatDateUTC = (d: Date): string => {
   const day = String(d.getUTCDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 };
+
+const iso = z.string().datetime({ offset: true });
+
+/** Validate and brand a required ISO string. */
+export const asISO = (s: string): ISODateString => iso.parse(s) as ISODateString;
+
+/** Validate and brand an optional ISO string (passthrough undefined). */
+export const asISOOpt = (s?: string | null): ISODateString | undefined =>
+  typeof s === "string" && s.length > 0 ? (iso.parse(s) as ISODateString) : undefined;

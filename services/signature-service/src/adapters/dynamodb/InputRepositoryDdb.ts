@@ -19,7 +19,7 @@ import {
   inputItemMapper,
   inputPk,
   inputSk,
-} from "./__mappers__/inputItemMapper";
+} from "./mappers/inputItemMapper";
 
 
 /**

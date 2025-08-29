@@ -14,7 +14,7 @@ import * as RedactMod from '../../src/observability/redact.js';
 describe('observability index (barrel) re-exports', () => {
   it('re-exports selected symbols with identity preserved', () => {
     // context
-    expect(Obs.withRequestContext).toBe(ContextMod.withRequestContext);
+    expect(Obs.withRequestContexts).toBe(ContextMod.withRequestContexts);
     expect(Obs.getRequestContext).toBe(ContextMod.getRequestContext);
     expect(Obs.getRequestId).toBe(ContextMod.getRequestId);
     expect(Obs.getTraceId).toBe(ContextMod.getTraceId);

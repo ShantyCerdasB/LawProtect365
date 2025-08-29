@@ -1,95 +1,115 @@
-
 /**
  * @file Audit.rules.ts
  * @summary Domain invariants for immutable audit trail events.
  *
- * @description
- * Provides lightweight guards to enforce immutability, ordering, scoping, and
+ * Provides guards to enforce immutability, ordering, scoping, and
  * basic payload sanity for audit events persisted by the adapters.
  */
 
 import type { AuditEvent } from "../value-objects/Audit";
+import { badRequest } from "@/errors";
 
 /**
- * Asserts the event has the minimal immutable shape.
- * Guards against accidental mutation-prone shapes reaching persistence.
+ * Assert the minimal immutable shape of an audit event.
  *
- * @throws Error when required fields are missing.
+ * @param e - Candidate audit event.
+ * @throws {BadRequestError} When the value is not an object or required fields are missing.
  */
 export const assertImmutable = (e: AuditEvent): void => {
-  if (!e || typeof e !== "object") throw new Error("Invalid audit event value");
+  if (!e || typeof e !== "object") {
+    throw badRequest("Invalid audit event value");
+  }
   if (!e.id || !e.occurredAt || !e.type) {
-    throw new Error("Invalid audit event shape");
+    throw badRequest("Invalid audit event shape");
   }
 };
 
 /**
- * Asserts items are strictly ordered by `occurredAt` ascending,
+ * Assert items are strictly ordered by `occurredAt` ascending,
  * using `id` as a stable tiebreaker when timestamps are equal.
  *
- * @throws Error when the order is not strictly ascending.
+ * @param items - Sequence of audit events to validate.
+ * @throws {BadRequestError} When the order is not strictly ascending or stable by id.
  */
 export const assertAscendingByTime = (items: readonly AuditEvent[]): void => {
   for (let i = 1; i < items.length; i++) {
     const a = items[i - 1];
     const b = items[i];
     if (a.occurredAt > b.occurredAt) {
-      throw new Error("Audit events are not ordered by occurredAt ASC");
+      throw badRequest("Audit events are not ordered by occurredAt ASC");
     }
     if (a.occurredAt === b.occurredAt && a.id > b.id) {
-      throw new Error("Audit events are not stable-ordered (id tiebreaker)");
+      throw badRequest("Audit events are not stable-ordered (id tiebreaker)");
     }
   }
 };
 
-/** Returns true when the event belongs to the given tenant. */
+/**
+ * Check if the event belongs to the given tenant.
+ *
+ * @param eventTenantId - Tenant id in the event.
+ * @param tenantId - Expected tenant id.
+ * @returns True when both tenant ids match.
+ */
 export const sameTenant = (eventTenantId: string, tenantId: string): boolean =>
   eventTenantId === tenantId;
 
-/** Returns true when the event belongs to the given envelope. */
+/**
+ * Check if the event belongs to the given envelope.
+ *
+ * @param eventEnvelopeId - Envelope id in the event.
+ * @param envelopeId - Expected envelope id.
+ * @returns True when both envelope ids match.
+ */
 export const sameEnvelope = (eventEnvelopeId: string, envelopeId: string): boolean =>
   eventEnvelopeId === envelopeId;
 
 /**
- * Asserts a non-empty event type string.
+ * Assert a non-empty event type string.
  *
- * @throws Error when the type is empty or not a string.
+ * @param t - Event type to validate.
+ * @throws {BadRequestError} When the type is empty or not a string.
  */
 export const assertEventType = (t: string): void => {
   if (!t || typeof t !== "string" || !t.trim()) {
-    throw new Error("Invalid audit event type");
+    throw badRequest("Invalid audit event type");
   }
 };
 
 /**
- * Asserts the actor payload has an object shape (if present).
+ * Assert the actor payload has an object shape (if present).
  *
- * @throws Error when the actor payload is invalid.
+ * @param a - Actor payload to validate.
+ * @throws {BadRequestError} When the actor payload is not an object.
  */
 export const assertActorShape = (a: unknown): void => {
-  if (a && typeof a !== "object") throw new Error("Invalid actor payload");
+  if (a && typeof a !== "object") {
+    throw badRequest("Invalid actor payload");
+  }
 };
 
 /**
- * Asserts the metadata is JSON-serializable at a basic level.
+ * Assert the metadata is JSON-serializable at a basic level.
  *
- * @throws Error when serialization fails.
+ * @param m - Metadata to validate.
+ * @throws {BadRequestError} When serialization fails.
  */
 export const assertMetadataSerializable = (m: unknown): void => {
   try {
     JSON.stringify(m);
   } catch {
-    throw new Error("Audit metadata is not serializable");
+    throw badRequest("Audit metadata is not serializable");
   }
 };
 
 /**
  * Chain-link invariant: if `prevHash` is present then `hash` must be present.
  *
- * @throws Error when the chain-link is inconsistent.
+ * @param e - Audit event to validate.
+ * @throws {BadRequestError} When `prevHash` exists but `hash` is missing.
  */
 export const assertChainLink = (e: AuditEvent): void => {
   if (e.prevHash && !e.hash) {
-    throw new Error("prevHash present but hash missing");
+    throw badRequest("prevHash present but hash missing");
   }
 };

@@ -1,9 +1,10 @@
 ﻿import { z, TrimmedString } from "@lawprotect/shared-ts";
+import { REQUEST_TOKEN_SCOPES } from "../values/enums";
 
 /**
  * Token scopes for public signing flows.
  */
-export const RequestTokenScopeSchema = z.enum(["signing", "presign"]);
+export const RequestTokenScopeSchema = z.enum(REQUEST_TOKEN_SCOPES);
 export type RequestTokenScope = z.infer<typeof RequestTokenScopeSchema>;
 
 /**

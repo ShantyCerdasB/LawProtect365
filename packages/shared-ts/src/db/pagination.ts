@@ -1,4 +1,4 @@
-import { encodeCursor, decodeCursor, cursorFromRecord } from "./cursor.js";
+import { decodeCursor, cursorFromRecord } from "./cursor.js";
 
 /**
  * Result page shape for cursor pagination.

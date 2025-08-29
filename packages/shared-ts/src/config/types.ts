@@ -2,7 +2,7 @@
  * Shared configuration types for environment, logging and service metadata.
  */
 
-import { LogLevel } from "@/observability/index.js";
+import { LogLevel } from "../observability/index.js";
 
 export type Environment = "dev" | "staging" | "prod";
 

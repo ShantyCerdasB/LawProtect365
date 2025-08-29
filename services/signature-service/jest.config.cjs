@@ -1,43 +1,58 @@
 /**
  * @file jest.config.cjs
  * @summary Jest setup for TypeScript units and coverage in signature-service.
- * @details
- * - Transforms .ts/.tsx via ts-jest.
- * - Collects coverage for all source files.
- * - Resolves TS path aliases and `.js`-suffixed imports (ESM-friendly in TS).
+ *
+ * Claves:
+ * - ts-jest usa tsconfig.jest.json (que mapea aliases).
+ * - moduleNameMapper mapea aliases para el *runtime* de Jest.
+ * - extensionsToTreatAsEsm + useESM true: coherencia con NodeNext/ESM en TS.
  */
 
 /** @type {import('jest').Config} */
 module.exports = {
   preset: "ts-jest",
   testEnvironment: "node",
-  transformIgnorePatterns: [
-    "node_modules/(?!@lawprotect/shared-ts)"
-  ],
 
-  /** Package root so relative globs resolve as expected. */
+  // Trata .ts como ESM cuando corresponda (coherente con "module": NodeNext/ESNext).
+  extensionsToTreatAsEsm: [".ts"],
+
+  // Transforma TypeScript usando el tsconfig especial para tests.
+  transform: {
+    "^.+\\.tsx?$": [
+      "ts-jest",
+      {
+        tsconfig: "tsconfig.jest.json",
+        useESM: true, // importante si tu TS usa NodeNext/ESNext
+      },
+    ],
+  },
+
+  // Permite transformar código de @lawprotect/shared-ts si entra por node_modules
+  transformIgnorePatterns: ["node_modules/(?!@lawprotect/shared-ts)"],
+
+  /** Package root para que los globs funcionen. */
   roots: ["<rootDir>"],
 
-  /** Transform TS for tests and files included only by coverage. */
-  transform: { "^.+\\.tsx?$": ["ts-jest", { tsconfig: "tsconfig.jest.json" }] },
-
-  /** Include every .ts under src for coverage, even if not imported by tests. */
+  /** Coverage de todo src (salvo .d.ts) */
   collectCoverageFrom: ["<rootDir>/src/**/*.ts", "!<rootDir>/src/**/*.d.ts"],
   coverageDirectory: "<rootDir>/coverage",
   coverageReporters: ["text", "lcov", "html"],
   coveragePathIgnorePatterns: ["/node_modules/", "/dist/", "/__tests__/"],
 
   /**
-   * Path aliases and ESM-style `.js` imports inside TS.
-   * Order matters: place the `.js` variants BEFORE the base aliases.
+   * Mapear aliases para el *runtime* de Jest.
+   * IMPORTANTE: los mapeos con \.js van *antes* de los genéricos.
+   * También mapeamos el paquete compartido a su "src" para compilarlo en tests.
    */
   moduleNameMapper: {
+    // Permite que imports relativos con sufijo .js apunten al .ts
     "^(\\.{1,2}/.*)\\.js$": "$1",
 
+    // Paquete compartido
     "^@lawprotect/shared-ts$": "<rootDir>/../../packages/shared-ts/src/index.ts",
     "^@lawprotect/shared-ts/(.*)$": "<rootDir>/../../packages/shared-ts/src/$1",
 
-    // Shared-ts internal path mappings (with .js variants first)
+    // Aliases internos del paquete compartido (con variantes .js primero)
     "^@http/(.*)\\.js$": "<rootDir>/../../packages/shared-ts/src/http/$1",
     "^@http/(.*)$": "<rootDir>/../../packages/shared-ts/src/http/$1",
     "^@auth/(.*)\\.js$": "<rootDir>/../../packages/shared-ts/src/auth/$1",
@@ -71,44 +86,34 @@ module.exports = {
     "^@storage/(.*)\\.js$": "<rootDir>/../../packages/shared-ts/src/storage/$1",
     "^@storage/(.*)$": "<rootDir>/../../packages/shared-ts/src/storage/$1",
 
+    // Aliases locales del servicio
     "^@/(.*)\\.js$": "<rootDir>/src/$1",
     "^@/(.*)$": "<rootDir>/src/$1",
-
     "^@adapters/(.*)\\.js$": "<rootDir>/src/adapters/$1",
     "^@adapters/(.*)$": "<rootDir>/src/adapters/$1",
-
     "^@controllers/(.*)\\.js$": "<rootDir>/src/controllers/$1",
     "^@controllers/(.*)$": "<rootDir>/src/controllers/$1",
-
     "^@domain/(.*)\\.js$": "<rootDir>/src/domain/$1",
     "^@domain/(.*)$": "<rootDir>/src/domain/$1",
-
     "^@guard/(.*)\\.js$": "<rootDir>/src/guard/$1",
     "^@guard/(.*)$": "<rootDir>/src/guard/$1",
-
     "^@infra/(.*)\\.js$": "<rootDir>/src/infra/$1",
     "^@infra/(.*)$": "<rootDir>/src/infra/$1",
-
     "^@mappers/(.*)\\.js$": "<rootDir>/src/mappers/$1",
     "^@mappers/(.*)$": "<rootDir>/src/mappers/$1",
-
     "^@middleware/(.*)\\.js$": "<rootDir>/src/middleware/$1",
     "^@middleware/(.*)$": "<rootDir>/src/middleware/$1",
-
     "^@ports/(.*)\\.js$": "<rootDir>/src/ports/$1",
     "^@ports/(.*)$": "<rootDir>/src/ports/$1",
-
     "^@schemas/(.*)\\.js$": "<rootDir>/src/schemas/$1",
     "^@schemas/(.*)$": "<rootDir>/src/schemas/$1",
-
     "^@use-cases/(.*)\\.js$": "<rootDir>/src/use-cases/$1",
     "^@use-cases/(.*)$": "<rootDir>/src/use-cases/$1",
   },
 
-  /** Test file globs. */
+  /** Globs de tests */
   testMatch: ["<rootDir>/__tests__/**/*.test.ts"],
 
-  /** Useful defaults for Node services. */
   clearMocks: true,
   restoreMocks: true,
   moduleFileExtensions: ["ts", "tsx", "js", "json"],

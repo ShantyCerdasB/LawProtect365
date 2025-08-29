@@ -30,7 +30,7 @@ import {
   randomToken,
 } from "@lawprotect/shared-ts";
 
-import type { AuditRepository, ListByEnvelopeInput } from "@/ports/Audit";
+import type { AuditRepository, ListByEnvelopeInput } from "@/domain/ports/Audit";
 import type { AuditEvent } from "@/domain/value-objects/Audit";
 import {
   auditItemMapper,
@@ -41,7 +41,7 @@ import {
   gsi1Sk,
   gsi2Pk,
   type AuditItem,
-} from "./__mappers__/AuditItemMapper";
+} from "./mappers/AuditItemMapper";
 import { toJsonObject } from "@/utils";
 
 export interface AuditRepositoryDdbProps {

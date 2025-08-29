@@ -60,6 +60,14 @@ export const unauthorized = (message = "Unauthorized") =>
   json(HttpStatus.UNAUTHORIZED, { error: "Unauthorized", message });
 
 /**
+ * Builds a 202 Accepted JSON response.
+ * @param data Optional JSON payload.
+ * @param headers Optional extra headers.
+ */
+export const accepted = (data?: unknown, headers?: Headers) =>
+  json(HttpStatus.ACCEPTED, data, headers);
+
+/**
  * Builds a 403 Forbidden JSON error response.
  * @param message Human-readable message.
  */

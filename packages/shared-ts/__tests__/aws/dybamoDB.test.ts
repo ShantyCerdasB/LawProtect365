@@ -5,6 +5,7 @@
 
 import {
   requireUpdate,
+  requireQuery,
   type DdbClientLike,
 } from "../../src/aws";
 
@@ -67,5 +68,75 @@ describe("requireUpdate", () => {
       })
     );
     expect(res).toEqual({ Attributes: { ok: true } });
+  });
+});
+
+describe("requireQuery", () => {
+  it("throws when query is missing", () => {
+    const client: DdbClientLike = {
+      get: jest.fn(async () => ({})),
+      put: jest.fn(async () => undefined),
+      delete: jest.fn(async () => undefined),
+      // query is intentionally absent
+    };
+
+    expect(() => requireQuery(client)).toThrow(
+      "DdbClientLike.query is required by this operation but is undefined."
+    );
+  });
+
+  it("throws when query is present but not a function", () => {
+    const client = {
+      get: jest.fn(async () => ({})),
+      put: jest.fn(async () => undefined),
+      delete: jest.fn(async () => undefined),
+      query: 123 as any,
+    } as DdbClientLike;
+
+    expect(() => requireQuery(client)).toThrow(
+      "DdbClientLike.query is required by this operation but is undefined."
+    );
+  });
+
+  it("narrows the client and allows invoking query after the guard", async () => {
+    const query = jest.fn(async () => ({ 
+      Items: [{ pk: "A", sk: "1" }], 
+      LastEvaluatedKey: { pk: "A", sk: "1" } 
+    }));
+    const client: DdbClientLike = {
+      get: jest.fn(async () => ({})),
+      put: jest.fn(async () => undefined),
+      delete: jest.fn(async () => undefined),
+      query,
+    };
+
+    // Call the guard directly so TypeScript narrows `client` in this scope
+    requireQuery(client);
+
+    const res = await client.query({
+      TableName: "tbl",
+      IndexName: "gsi1",
+      KeyConditionExpression: "pk = :pk",
+      ExpressionAttributeNames: { "#pk": "pk" },
+      ExpressionAttributeValues: { ":pk": "A" },
+      Limit: 10,
+      ScanIndexForward: false,
+      ExclusiveStartKey: { pk: "A", sk: "0" },
+    });
+
+    expect(query).toHaveBeenCalledTimes(1);
+    expect(query).toHaveBeenCalledWith(
+      expect.objectContaining({
+        TableName: "tbl",
+        IndexName: "gsi1",
+        KeyConditionExpression: "pk = :pk",
+        Limit: 10,
+        ScanIndexForward: false,
+      })
+    );
+    expect(res).toEqual({ 
+      Items: [{ pk: "A", sk: "1" }], 
+      LastEvaluatedKey: { pk: "A", sk: "1" } 
+    });
   });
 });

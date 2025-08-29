@@ -1,6 +1,6 @@
-import { AppError } from "@lawprotect/shared-ts";
-import { ErrorCodes } from "@lawprotect/shared-ts";
+import { AppError, ErrorCodes } from "@lawprotect/shared-ts";
 import { ContentTypeSchema } from "../value-objects/ContentType";
+import { ALLOWED_CONTENT_TYPES, type AllowedContentType } from "../values/enums";
 
 /**
  * Validates S3 routing policy based on tenant/envelope/document.
@@ -19,8 +19,8 @@ export const buildEvidencePath = (p: { tenantId: string; envelopeId: string; doc
  * Validates presign policy for content type and file size.
  */
 export const assertPresignPolicy = (contentType: string, size: number, maxSize: number): void => {
-  const ct = ContentTypeSchema.parse(contentType);
-  if (!["application/pdf", "image/png", "image/jpeg", "image/webp"].includes(ct)) {
+  const ct = ContentTypeSchema.parse(contentType) as AllowedContentType; 
+  if (!ALLOWED_CONTENT_TYPES.includes(ct)) {
     throw new AppError(ErrorCodes.COMMON_UNSUPPORTED_MEDIA_TYPE, 415, "Unsupported content-type for evidence");
   }
   if (size > maxSize) {

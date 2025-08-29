@@ -1,9 +1,10 @@
 ﻿import { z, TrimmedString } from "@lawprotect/shared-ts";
+import { OTP_CHANNELS } from "../values/enums";
 
 /**
  * OTP delivery channels.
  */
-export const OtpChannelSchema = z.enum(["email", "sms"]);
+export const OtpChannelSchema = z.enum(OTP_CHANNELS);
 export type OtpChannel = z.infer<typeof OtpChannelSchema>;
 
 /**

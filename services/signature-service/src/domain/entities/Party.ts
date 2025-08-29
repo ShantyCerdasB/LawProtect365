@@ -7,9 +7,28 @@ export type PartyRole = "signer" | "viewer" | "approver";
 export type PartyStatus = "pending" | "signed" | "declined";
 
 /**
+ * OTP state for party authentication.
+ */
+export interface OtpState {
+  /** Hashed OTP code for secure storage. */
+  codeHash: string;
+  /** Delivery channel (email or SMS). */
+  channel: "email" | "sms";
+  /** Expiration timestamp (ISO 8601). */
+  expiresAt: string;
+  /** Number of attempts made. */
+  tries: number;
+  /** Maximum allowed attempts. */
+  maxTries: number;
+  /** Creation timestamp (ISO 8601). */
+  createdAt: string;
+}
+
+/**
  * Party domain entity.
  */
 export interface Party {
+  tenantId: string;
   /** Unique identifier of the party. */
   partyId: string;
   /** Envelope the party belongs to. */
@@ -34,4 +53,7 @@ export interface Party {
   sequence: number;
   /** Creation timestamp (ISO 8601). */
   createdAt: string;
+  updatedAt: string;
+  /** Optional OTP state for authentication. */
+  otpState?: OtpState;
 }

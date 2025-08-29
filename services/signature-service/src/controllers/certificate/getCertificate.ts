@@ -1,25 +1,71 @@
 ﻿/**
- * NOTE:
- * This file is part of the signature-service. Controllers are thin:
- * - validate (Zod from @lawprotect/shared-ts)
- * - authenticate/authorize
- * - call use-case
- * - map result -> HTTP response
+ * @file getCertificate.ts
+ * @summary HTTP controller for GET /envelopes/:envelopeId/certificate
+ *
+ * @description
+ * Retrieves the certificate and audit trail for an envelope.
+ * Validates path and query parameters, derives tenant from the shared auth context,
+ * and delegates to the GetCertificate use case.
+ * Errors are mapped by the shared HTTP middleware (apiHandler via wrapController).
  */
-import { apiHandler, ok } from "@lawprotect/shared-ts/http";
-import { authenticate } from "@lawprotect/shared-ts/auth";
-import { z, validate } from "@lawprotect/shared-ts/validation";
 
-const Params = z.object({});      // adjust per-route
-const Query  = z.object({});      // adjust per-route
-const Body   = z.object({}).optional(); // adjust per-route
+import type { HandlerFn } from "@lawprotect/shared-ts";
+import { ok, validateRequest } from "@lawprotect/shared-ts";
+import { wrapController, corsFromEnv } from "@/middleware/http";
+import { tenantFromCtx } from "@/middleware/auth";
+import {
+  GetCertificatePath,
+  GetCertificateQuery,
+} from "@/schemas/certificate/GetCertificate.schema";
+import { getCertificate } from "@/use-cases/certificate/GetCertificate";
+import { getContainer } from "@/infra/Container";
+import { envelopeNotFound } from "@/errors";
 
-export const handler = apiHandler(async (evt) => {
-  const auth = await authenticate(evt); // principal/tenant/scopes
-  const { params, query, body } = validate(evt, { params: Params, query: Query, body: Body });
+const base: HandlerFn = async (evt) => {
+  // Single-shot validation to reduce cognitive complexity
+  const { path, query } = validateRequest(evt, {
+    path: GetCertificatePath,
+    query: GetCertificateQuery,
+  });
 
-  // TODO: call use-case via DI from infra (e.g., ctx.getUseCase("..."))
-  // const result = await useCase.execute({ ...params, ...query, ...body }, { auth });
+  // Resolve tenant from shared auth context (populated by withAuth)
+  const tenantId = tenantFromCtx(evt);
 
-  return ok({ status: "stub", route: evt.requestContext?.http?.path });
+  // Resolve dependencies once
+  const container = getContainer();
+  const { envelopes, audit } = container.repos;
+
+  // Execute use case
+  const result = await getCertificate(
+    {
+      tenantId,
+      envelopeId: path.envelopeId,
+      limit: query.limit,
+      cursor: query.cursor,
+    },
+    { envelopes, audit }
+  );
+
+  if (!result) {
+    // Let apiHandler map this to 404 with your standardized body
+    throw envelopeNotFound({ envelopeId: path.envelopeId, tenantId });
+  }
+
+  return ok({ data: result });
+};
+
+/**
+ * Lambda handler with shared pipeline:
+ * - request IDs & observability
+ * - JWT auth
+ * - uniform error mapping + CORS
+ */
+export const handler = wrapController(base, {
+  auth: true,
+  observability: {
+    logger: () => console,
+    metrics: () => ({} as any),
+    tracer: () => ({} as any),
+  },
+  cors: corsFromEnv(),
 });

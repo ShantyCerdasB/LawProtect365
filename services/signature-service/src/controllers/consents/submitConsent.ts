@@ -1,25 +1,63 @@
-﻿/**
- * NOTE:
- * This file is part of the signature-service. Controllers are thin:
- * - validate (Zod from @lawprotect/shared-ts)
- * - authenticate/authorize
- * - call use-case
- * - map result -> HTTP response
+﻿// @/controllers/consents/patchConsent.ts
+/**
+ * Controller for PATCH /envelopes/:envelopeId/consents/:consentId
+ * - Validates path & body
+ * - Derives tenant/actor from auth context
+ * - Wires app ports (read envelopes, write consents)
+ * - Delegates to use case
  */
-import { apiHandler, ok } from "@lawprotect/shared-ts/http";
-import { authenticate } from "@lawprotect/shared-ts/auth";
-import { z, validate } from "@lawprotect/shared-ts/validation";
+import type { HandlerFn } from "@lawprotect/shared-ts";
+import { ok, validateRequest } from "@lawprotect/shared-ts";
+import { wrapController, corsFromEnv } from "@/middleware/http";
+import { tenantFromCtx, actorFromCtx } from "@/middleware/auth";
 
-const Params = z.object({});      // adjust per-route
-const Query  = z.object({});      // adjust per-route
-const Body   = z.object({}).optional(); // adjust per-route
+import {
+  PatchConsentPath,
+  PatchConsentBody,
+} from "@/schemas/consents/PatchConsent.schema";
 
-export const handler = apiHandler(async (evt) => {
-  const auth = await authenticate(evt); // principal/tenant/scopes
-  const { params, query, body } = validate(evt, { params: Params, query: Query, body: Body });
+import { patchConsent } from "@/use-cases/consents/PatchConsent";
+import { getContainer } from "@/infra/Container";
 
-  // TODO: call use-case via DI from infra (e.g., ctx.getUseCase("..."))
-  // const result = await useCase.execute({ ...params, ...query, ...body }, { auth });
+// explicit adapters
+import { makeEnvelopesQueriesPort } from "@/app/ports/envelopes";
+import { makeUpdateConsentPort } from "@/app/ports/consent";
 
-  return ok({ status: "stub", route: evt.requestContext?.http?.path });
+const base: HandlerFn = async (evt) => {
+  const { path, body } = validateRequest(evt, {
+    path: PatchConsentPath,
+    body: PatchConsentBody,
+  });
+
+  const tenantId = tenantFromCtx(evt);
+  const actor = actorFromCtx(evt);
+
+  const c = getContainer();
+  const envelopes = makeEnvelopesQueriesPort(c.repos.envelopes);
+  const consents = makeUpdateConsentPort(c.repos.consents);
+
+  const result = await patchConsent(
+    {
+      tenantId,
+      envelopeId: path.envelopeId,
+      consentId: path.consentId,
+      status: body.status,
+      metadata: body.metadata,
+      expiresAt: body.expiresAt,
+      actor,
+    },
+    { envelopes, consents }
+  );
+
+  return ok({ data: result });
+};
+
+export const handler = wrapController(base, {
+  auth: true,
+  observability: {
+    logger: () => console,
+    metrics: () => ({} as any),
+    tracer: () => ({} as any),
+  },
+  cors: corsFromEnv(),
 });

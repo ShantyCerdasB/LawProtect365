@@ -1,11 +1,12 @@
 import { AppError } from "@lawprotect/shared-ts";
 import { ErrorCodes } from "@lawprotect/shared-ts";
 import { ReasonSchema } from "../value-objects/Reason";
+import { EnvelopeStatus } from "../values/enums";
 
 /**
  * Validates cancel/decline preconditions and reason.
  */
-export const assertCancelDeclineAllowed = (status: "draft" | "sent" | "completed" | "cancelled" | "declined"): void => {
+export const assertCancelDeclineAllowed = (status: EnvelopeStatus): void => {
   if (status !== "sent") {
     throw new AppError(ErrorCodes.COMMON_CONFLICT, 409, "Only sent envelopes can be cancelled or declined");
   }

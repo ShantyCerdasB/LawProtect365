@@ -1,40 +1,27 @@
 ﻿/**
  * @file deleteEnvelope.ts
- * @summary HTTP controller for DELETE /envelopes/{id}
+ * @summary Controller for DELETE /envelopes/:envelopeId
  *
  * @description
- * - Validates path.
- * - Calls delete use case.
- * - Records "envelope.deleted" audit.
- * - Returns 204.
+ * Validates input and delegates to the DeleteEnvelope use case. Errors are mapped by apiHandler.
  */
-import type { HandlerFn } from "@lawprotect/shared-ts";
-import { noContent, getPathParam } from "@lawprotect/shared-ts";
 
+import type { HandlerFn } from "@lawprotect/shared-ts";
+import { noContent, validateRequest } from "@lawprotect/shared-ts";
 import { wrapController, corsFromEnv } from "@/middleware/http";
 import { getContainer } from "@/infra/Container";
 import { EnvelopeIdPath } from "@/schemas/common/path";
 import { deleteEnvelope } from "@/use-cases/envelopes/DeleteEnvelope";
-import { recordAuditEvent } from "@/use-cases/audit/RecordAuditEvent";
+import type { EnvelopeId } from "@/domain/value-objects/Ids";
 
 const base: HandlerFn = async (evt) => {
-  const auth = (evt as any).ctx?.auth ?? {};
-  const { repos } = getContainer();
-  const path = EnvelopeIdPath.parse({ id: getPathParam(evt, "id")! });
+  const { path } = validateRequest(evt, { path: EnvelopeIdPath });
+
+  const c = getContainer();
 
   await deleteEnvelope(
-    { tenantId: auth.tenantId, envelopeId: path.id },
-    { repos }
-  );
-
-  await recordAuditEvent(
-    {
-      tenantId: auth.tenantId,
-      envelopeId: path.id as any, // already validated by schema
-      type: "envelope.deleted",
-      actor: { userId: String(auth.userId ?? ""), email: String(auth.email ?? "") },
-    },
-    { repos }
+    { envelopeId: path.id as EnvelopeId },
+    { repos: { envelopes: c.repos.envelopes } }
   );
 
   return noContent();
@@ -42,6 +29,10 @@ const base: HandlerFn = async (evt) => {
 
 export const handler = wrapController(base, {
   auth: true,
-  observability: { logger: (b) => console, metrics: () => ({} as any), tracer: () => ({} as any) },
+  observability: {
+    logger: () => console,
+    metrics: () => ({} as any),
+    tracer: () => ({} as any),
+  },
   cors: corsFromEnv(),
 });

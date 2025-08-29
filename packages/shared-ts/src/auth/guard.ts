@@ -1,7 +1,7 @@
-import type { ApiEvent } from "@http/httpTypes.js";
+import type { ApiEvent } from "../http/httpTypes.js";
 import type { AuthContext } from "../types/auth.js";
 import type { Permission } from "../types/security.js";
-import { ErrorCodes } from "@errors/codes.js";
+import { ErrorCodes } from "../errors/codes.js";
 
 /**
  * Retrieves the attached AuthContext or throws an Unauthorized error-like object.

@@ -113,6 +113,7 @@ export interface DdbClientLike {
     Limit?: number;
     ScanIndexForward?: boolean;
     ExclusiveStartKey?: Record<string, unknown>;
+    FilterExpression?: string;
   }): Promise<{
     Items?: Record<string, unknown>[];
     LastEvaluatedKey?: Record<string, unknown>;

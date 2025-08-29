@@ -1,47 +1,49 @@
 ﻿/**
  * @file getEnvelopes.ts
- * @summary HTTP controller for GET /envelopes
+ * @summary Controller for GET /envelopes
  *
  * @description
- * - Parses filters/pagination using `ListEnvelopesQuery`.
- * - Delegates to repo `listByTenant` (forward cursor).
- * - Returns items and nextCursor in `meta`.
- * - No audit (read-only).
+ * Validates input, derives tenant from the shared auth context, wires ports,
+ * and delegates to the ListEnvelopes use case. Errors are mapped by apiHandler.
  */
-import type { HandlerFn } from "@lawprotect/shared-ts";
-import { ok, getQueryParam } from "@lawprotect/shared-ts";
 
+import type { HandlerFn } from "@lawprotect/shared-ts";
+import { ok, validateRequest } from "@lawprotect/shared-ts";
 import { wrapController, corsFromEnv } from "@/middleware/http";
+import { tenantFromCtx } from "@/middleware/auth";
 import { getContainer } from "@/infra/Container";
 import { ListEnvelopesQuery } from "@/schemas/envelopes/ListEnvelopes.schema";
+import { listEnvelopes } from "@/use-cases/envelopes/ListEnvelopes";
+import type { TenantId } from "@/domain/value-objects/Ids";
 
 const base: HandlerFn = async (evt) => {
-  const auth = (evt as any).ctx?.auth ?? {};
-  const { repos } = getContainer();
+  const { query } = validateRequest(evt, { query: ListEnvelopesQuery });
 
-  const statusParams =
-    evt.multiValueQueryStringParameters?.status ??
-    (evt.queryStringParameters?.status ? [evt.queryStringParameters.status] : []);
+  const tenantId = tenantFromCtx(evt) as TenantId;
 
-  const query = ListEnvelopesQuery.parse({
-    status: statusParams && statusParams.length ? statusParams : undefined,
-    from: getQueryParam(evt, "from"),
-    to: getQueryParam(evt, "to"),
-    limit: Number(getQueryParam(evt, "limit") ?? "25"),
-    cursor: getQueryParam(evt, "cursor") ?? undefined,
-  });
+  const c = getContainer();
 
-  const page = await repos.envelopes.listByTenant({
-    tenantId: auth.tenantId,
-    limit: query.limit,
-    cursor: query.cursor ?? undefined,
-  });
+  const page = await listEnvelopes(
+    { tenantId, limit: query.limit, cursor: query.cursor },
+    { repos: { envelopes: c.repos.envelopes } }
+  );
 
-  return ok({ data: page.items, meta: { nextCursor: page.nextCursor ?? null } });
+  const items = page.items.map((envelope) => ({
+    id: envelope.envelopeId,
+    title: envelope.title,
+    status: envelope.status,
+    createdAt: envelope.createdAt,
+  }));
+
+  return ok({ data: { items, nextCursor: page.nextCursor } });
 };
 
 export const handler = wrapController(base, {
   auth: true,
-  observability: { logger: (b) => console, metrics: () => ({} as any), tracer: () => ({} as any) },
+  observability: {
+    logger: () => console,
+    metrics: () => ({} as any),
+    tracer: () => ({} as any),
+  },
   cors: corsFromEnv(),
 });

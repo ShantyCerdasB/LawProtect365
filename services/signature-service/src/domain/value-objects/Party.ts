@@ -1,9 +1,10 @@
 ﻿import { z } from "@lawprotect/shared-ts";
+import { PARTY_ROLES } from "../values/enums";
 
 /**
  * Party roles within an envelope.
  */
-export const PartyRoleSchema = z.enum(["signer", "approver", "viewer"]);
+export const PartyRoleSchema = z.enum(PARTY_ROLES);
 export type PartyRole = z.infer<typeof PartyRoleSchema>;
 
 /**

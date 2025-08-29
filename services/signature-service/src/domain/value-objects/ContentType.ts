@@ -1,16 +1,6 @@
 ﻿import { z } from "@lawprotect/shared-ts";
+import { ALLOWED_CONTENT_TYPES } from "../values/enums";
 
-/**
- * Whitelisted content types used by documents and thumbnails.
- */
-export const AllowedContentTypes = [
-  "application/pdf",
-  "image/png",
-  "image/jpeg",
-  "image/gif",
-  "image/webp",
-  "image/svg+xml",
-] as const;
-
-export const ContentTypeSchema = z.enum(AllowedContentTypes);
-export type ContentType = typeof AllowedContentTypes[number];
+/** Whitelisted content types used by documents and thumbnails. */
+export const ContentTypeSchema = z.enum(ALLOWED_CONTENT_TYPES);
+export type AllowedContentType = z.infer<typeof ContentTypeSchema>;

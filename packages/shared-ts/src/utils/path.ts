@@ -103,3 +103,6 @@ export const isSubpath = (parent: string, child: string): boolean => {
  */
 export const split = (input: string): string[] =>
   stripLeadingSlash(normalize(input)).split("/").filter(Boolean);
+
+
+export const Base64UrlNoPad = /^[A-Za-z0-9_-]+$/;

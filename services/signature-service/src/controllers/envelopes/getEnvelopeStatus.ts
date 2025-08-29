@@ -1,34 +1,38 @@
 ﻿/**
  * @file getEnvelopeStatus.ts
- * @summary HTTP controller for GET /envelopes/{id}/status
+ * @summary Controller for GET /envelopes/:envelopeId/status
  *
  * @description
- * - Validates path.
- * - Returns consolidated status (current lifecycle).
- * - No audit (read-only).
+ * Validates input and delegates to the GetEnvelopeStatus use case. Errors are mapped by apiHandler.
  */
-import type { HandlerFn } from "@lawprotect/shared-ts";
-import { ok, getPathParam } from "@lawprotect/shared-ts";
 
+import type { HandlerFn } from "@lawprotect/shared-ts";
+import { ok, validateRequest } from "@lawprotect/shared-ts";
 import { wrapController, corsFromEnv } from "@/middleware/http";
 import { getContainer } from "@/infra/Container";
 import { EnvelopeIdPath } from "@/schemas/common/path";
 import { getEnvelopeStatus } from "@/use-cases/envelopes/GetEnvelopeStatus";
+import type { EnvelopeId } from "@/domain/value-objects/Ids";
 
 const base: HandlerFn = async (evt) => {
-  const { repos } = getContainer();
-  const path = EnvelopeIdPath.parse({ id: getPathParam(evt, "id")! });
+  const { path } = validateRequest(evt, { path: EnvelopeIdPath });
 
-  const out = await getEnvelopeStatus(
-    { envelopeId: path.id },
-    { repos: { envelopes: repos.envelopes } }
+  const c = getContainer();
+
+  const result = await getEnvelopeStatus(
+    { envelopeId: path.id as EnvelopeId },
+    { repos: c.repos }
   );
 
-  return ok({ data: out });
+  return ok({ data: result });
 };
 
 export const handler = wrapController(base, {
   auth: true,
-  observability: { logger: (b) => console, metrics: () => ({} as any), tracer: () => ({} as any) },
+  observability: {
+    logger: () => console,
+    metrics: () => ({} as any),
+    tracer: () => ({} as any),
+  },
   cors: corsFromEnv(),
 });

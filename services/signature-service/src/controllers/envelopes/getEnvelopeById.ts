@@ -1,37 +1,38 @@
 ﻿/**
  * @file getEnvelopeById.ts
- * @summary HTTP controller for GET /envelopes/{id}
+ * @summary Controller for GET /envelopes/:envelopeId
  *
  * @description
- * - Validates path with `EnvelopeIdPath`.
- * - Calls use case; returns 404 when missing.
- * - No audit (read-only).
+ * Validates input and delegates to the GetEnvelopeById use case. Errors are mapped by apiHandler.
  */
-import type { HandlerFn } from "@lawprotect/shared-ts";
-import { ok, notFound, getPathParam } from "@lawprotect/shared-ts";
 
+import type { HandlerFn } from "@lawprotect/shared-ts";
+import { ok, validateRequest } from "@lawprotect/shared-ts";
 import { wrapController, corsFromEnv } from "@/middleware/http";
 import { getContainer } from "@/infra/Container";
 import { EnvelopeIdPath } from "@/schemas/common/path";
 import { getEnvelopeById } from "@/use-cases/envelopes/GetEnvelopeById";
+import type { EnvelopeId } from "@/domain/value-objects/Ids";
 
 const base: HandlerFn = async (evt) => {
-  const auth = (evt as any).ctx?.auth ?? {};
-  const { repos } = getContainer();
+  const { path } = validateRequest(evt, { path: EnvelopeIdPath });
 
-  const path = EnvelopeIdPath.parse({ id: getPathParam(evt, "id")! });
+  const c = getContainer();
 
-  const out = await getEnvelopeById(
-    { tenantId: auth.tenantId, envelopeId: path.id },
-    { repos }
+  const result = await getEnvelopeById(
+    { envelopeId: path.id as EnvelopeId },
+    { repos: c.repos }
   );
 
-  if (!out) return notFound("Envelope not found");
-  return ok({ data: out.envelope });
+  return ok({ data: result.envelope });
 };
 
 export const handler = wrapController(base, {
   auth: true,
-  observability: { logger: (b) => console, metrics: () => ({} as any), tracer: () => ({} as any) },
+  observability: {
+    logger: () => console,
+    metrics: () => ({} as any),
+    tracer: () => ({} as any),
+  },
   cors: corsFromEnv(),
 });

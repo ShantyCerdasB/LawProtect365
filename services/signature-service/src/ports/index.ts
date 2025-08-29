@@ -1,1 +1,1 @@
-﻿export * from "./Audit"
+﻿export * from "../domain/ports/Audit"
