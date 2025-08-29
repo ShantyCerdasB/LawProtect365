@@ -28,3 +28,4 @@ export type PatchConsentPathType = z.infer<typeof PatchConsentPath>;
 export type PatchConsentBodyType = z.infer<typeof PatchConsentBody>;
 export type PatchConsentResponseType = z.infer<typeof PatchConsentResponse>;
 
+

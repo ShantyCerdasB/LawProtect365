@@ -1,25 +1,52 @@
 ﻿/**
- * NOTE:
- * This file is part of the signature-service. Controllers are thin:
- * - validate (Zod from @lawprotect/shared-ts)
- * - authenticate/authorize
- * - call use-case
- * - map result -> HTTP response
+ * @file DeleteDocumentController.controller.ts
+ * @summary Controller for DELETE /documents/:documentId
+ * @description Validates input, derives tenant from auth context, wires ports,
+ * and delegates to the DeleteDocument app service. Errors are mapped by apiHandler.
  */
-import { apiHandler, ok } from "@lawprotect/shared-ts/http";
-import { authenticate } from "@lawprotect/shared-ts/auth";
-import { z, validate } from "@lawprotect/shared-ts/validation";
 
-const Params = z.object({});      // adjust per-route
-const Query  = z.object({});      // adjust per-route
-const Body   = z.object({}).optional(); // adjust per-route
+import type { HandlerFn } from "@lawprotect/shared-ts";
+import { noContent, validateRequest } from "@lawprotect/shared-ts";
+import { wrapController, corsFromEnv } from "@/middleware/http";
+import { getContainer } from "@/infra/Container";
+import { DocumentIdPath } from "@/schemas/common/path";
+import { toDocumentId } from "@/app/ports/shared";
+import { deleteDocumentApp } from "@/app/services/Documents/DeleteDocumentApp.service";
+import { makeDocumentsCommandsPort } from "@/app/adapters/documents/makeDocumentsCommandsPort";
 
-export const handler = apiHandler(async (evt) => {
-  const auth = await authenticate(evt); // principal/tenant/scopes
-  const { params, query, body } = validate(evt, { params: Params, query: Query, body: Body });
+/**
+ * Base handler function for deleting a document
+ * @param evt - The Lambda event containing HTTP request data
+ * @returns Promise resolving to HTTP response
+ * @throws {AppError} When document is not found or validation fails
+ */
+const base: HandlerFn = async (evt) => {
+  const { path } = validateRequest(evt, { path: DocumentIdPath });
 
-  // TODO: call use-case via DI from infra (e.g., ctx.getUseCase("..."))
-  // const result = await useCase.execute({ ...params, ...query, ...body }, { auth });
+  const documentId = toDocumentId(path.id);
 
-  return ok({ status: "stub", route: evt.requestContext?.http?.path });
+  const c = getContainer();
+  const documentsCommands = makeDocumentsCommandsPort(c.repos.documents, c.repos.envelopes, { ids: c.ids });
+
+  await deleteDocumentApp(
+    { documentId },
+    { documentsCommands }
+  );
+
+  return noContent();
+};
+
+/**
+ * Lambda handler for DELETE /documents/:documentId endpoint
+ * @param evt - The Lambda event containing HTTP request data
+ * @returns Promise resolving to HTTP response
+ */
+export const handler = wrapController(base, {
+  auth: true,
+  observability: {
+    logger: () => console,
+    metrics: () => ({} as any),
+    tracer: () => ({} as any),
+  },
+  cors: corsFromEnv(),
 });

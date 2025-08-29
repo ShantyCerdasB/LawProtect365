@@ -1,77 +1,82 @@
+/**
+ * @file Config.ts
+ * @summary Service-specific configuration for the signature-service
+ * @description Service-specific configuration for the signature-service.
+ * Extends the shared AppConfig with domain resources and feature toggles.
+ * Provides configuration for DynamoDB tables, S3 buckets, KMS keys, EventBridge, and upload settings.
+ */
+
 import { buildAppConfig, getEnv, getRequired, getNumber, getBoolean } from "@lawprotect/shared-ts";
 import type { AppConfig } from "@lawprotect/shared-ts";
 import type { SigningAlgorithmSpec } from "@aws-sdk/client-kms";
 import { KmsAlgorithmSchema } from "@/domain/value-objects";
 
 /**
- * Service-specific configuration for the signature-service.
+ * @description Service-specific configuration for the signature-service.
  * Extends the shared {@link AppConfig} with domain resources and feature toggles.
  */
 export interface SignatureServiceConfig extends AppConfig {
   /**
-   * DynamoDB tables used by the service.
-   * @remarks
+   * @description DynamoDB tables used by the service.
    * Table names are expected to be supplied via environment variables.
    */
   ddb: {
-    /** Table holding Envelope aggregates. */
+    /** Table holding Envelope aggregates */
     envelopesTable: string;
     /**
      * Optional GSI name used for listing envelopes by tenant.
      * If omitted, consumers should fall back to their own defaults.
      */
     envelopesGsi1Name?: string;
-    /** Table holding Document aggregates or records. */
+    /** Table holding Document aggregates or records */
     documentsTable: string;
-    /** Table holding input artifacts (e.g., uploads, form inputs). */
+    /** Table holding input artifacts (e.g., uploads, form inputs) */
     inputsTable: string;
-    /** Table holding Party aggregates or records. */
+    /** Table holding Party aggregates or records */
     partiesTable: string;
-    /** Table used for idempotency tokens/locks. */
+    /** Table used for idempotency tokens/locks */
     idempotencyTable: string;
-    /** Table holding audit events. Defaults to envelopesTable if not provided. */
+    /** Table holding audit events. Defaults to envelopesTable if not provided */
     auditTable?: string;
   };
 
   /**
-   * S3 buckets and defaults for storage and presigning.
-   * @remarks
+   * @description S3 buckets and defaults for storage and presigning.
    * TTL and ACL defaults are read from environment variables and validated.
    */
   s3: {
-    /** Bucket where evidentiary artifacts are stored. */
+    /** Bucket where evidentiary artifacts are stored */
     evidenceBucket: string;
-    /** Bucket where signed outputs are stored. Defaults to `evidenceBucket` if not provided. */
+    /** Bucket where signed outputs are stored. Defaults to `evidenceBucket` if not provided */
     signedBucket: string;
-    /** Optional SSE-KMS key ID used for bucket-side encryption. */
+    /** Optional SSE-KMS key ID used for bucket-side encryption */
     sseKmsKeyId?: string;
-    /** Default TTL (in seconds) for presigned URLs. */
+    /** Default TTL (in seconds) for presigned URLs */
     presignTtlSeconds: number;
-    /** Optional default Cache-Control header value for uploads. */
+    /** Optional default Cache-Control header value for uploads */
     defaultCacheControl?: string;
-    /** Whether to apply a public ACL by default for specific operations. */
+    /** Whether to apply a public ACL by default for specific operations */
     defaultPublicAcl: boolean;
   };
 
   /**
-   * Keys and defaults for KMS operations.
-   * @remarks
+   * @description Keys and defaults for KMS operations.
    * The signing algorithm is validated by {@link KmsAlgorithmSchema}.
    */
   kms: {
-    /** CMK used for signing operations. */
+    /** CMK used for signing operations */
     signerKeyId: string;
-    /** Optional CMK used for data-key operations. */
+    /** Optional CMK used for data-key operations */
     dataKeyId?: string;
-    /** KMS signing algorithm used for signatures. */
+    /** KMS signing algorithm used for signatures */
     signingAlgorithm: SigningAlgorithmSpec;
   };
 
   /**
-   * EventBridge integration for domain events.
+   * @description EventBridge integration for domain events.
    */
   events: {
-    /** Target EventBridge bus name. */
+    /** Target EventBridge bus name */
     busName: string;
     /**
      * Default event `source`. If not provided, it is derived from
@@ -81,20 +86,20 @@ export interface SignatureServiceConfig extends AppConfig {
   };
 
   /**
-   * Optional SSM base path used by adapters that fetch runtime parameters.
+   * @description Optional SSM base path used by adapters that fetch runtime parameters.
    */
   ssm?: {
-    /** Base path prefix for SSM parameter lookups. */
+    /** Base path prefix for SSM parameter lookups */
     basePath?: string;
   };
 
   /**
-   * Upload and multipart defaults.
+   * @description Upload and multipart defaults.
    */
   uploads: {
-    /** Minimum part size in bytes for multipart uploads. */
+    /** Minimum part size in bytes for multipart uploads */
     minPartSizeBytes: number;
-    /** Maximum number of parts for multipart uploads. */
+    /** Maximum number of parts for multipart uploads */
     maxParts: number;
   };
 }

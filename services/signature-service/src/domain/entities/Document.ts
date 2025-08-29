@@ -1,82 +1,60 @@
 /**
- * @file Document entity definition.
+ * @file Document.ts
+ * @summary Document aggregate for the signature domain.
  *
- * Represents a document uploaded and associated with an envelope.
- * This is a domain-level model, independent of persistence.
+ * @description
+ * Represents a document within an envelope that can be signed.
+ * Contains document metadata, storage information, and lifecycle state.
+ * This aggregate is intentionally minimal and serializable.
  */
-export class Document {
-  /**
-   * Unique identifier for the document.
-   */
-  readonly documentId: string;
 
-  /**
-   * Identifier of the envelope this document belongs to.
-   */
-  readonly envelopeId: string;
+import type { DocumentId, EnvelopeId, TenantId } from "../value-objects/Ids";
+import type { DocumentStatus } from "../value-objects/DocumentStatus";
+import type { S3ObjectRef } from "../value-objects/S3ObjectRef";
+import type { HashDigestString } from "../value-objects/HashDigest";
+import type { FileSize } from "../value-objects/FileSize";
+import type { ContentType } from "../value-objects/ContentType";
 
-  /**
-   * Human-readable name of the document (e.g., "contract.pdf").
-   */
-  readonly name: string;
+/**
+ * Document aggregate.
+ */
+export interface Document {
+  /** Canonical identifier of the document (ULID/UUID brand). */
+  documentId: DocumentId;
 
-  /**
-   * MIME type of the document (e.g., "application/pdf").
-   */
-  readonly mimeType: string;
+  /** Envelope this document belongs to. */
+  envelopeId: EnvelopeId;
 
-  /**
-   * Size of the document in bytes.
-   */
-  readonly size: number;
+  /** Tenant owning the resource (multitenancy boundary). */
+  tenantId: TenantId;
 
-  /**
-   * S3 bucket name where the document is stored.
-   */
-  readonly bucket: string;
+  /** Human-friendly name of the document. */
+  name: string;
 
-  /**
-   * Storage key (path) within the bucket.
-   */
-  readonly key: string;
+  /** Current lifecycle status of the document. */
+  status: DocumentStatus;
 
-  /**
-   * Current status of the document (e.g., "PENDING", "UPLOADED").
-   */
-  readonly status: string;
+  /** MIME type of the document. */
+  contentType: ContentType;
 
-  /**
-   * ISO 8601 timestamp when the document was created.
-   */
-  readonly createdAt: string;
+  /** Size of the document in bytes. */
+  size: FileSize;
 
-  /**
-   * ISO 8601 timestamp when the document was last updated.
-   */
-  readonly updatedAt: string;
+  /** SHA-256 hash digest of the document content. */
+  digest: HashDigestString;
 
-  constructor(params: {
-    documentId: string;
-    envelopeId: string;
-    name: string;
-    mimeType: string;
-    size: number;
-    bucket: string;
-    key: string;
-    status: string;
-    createdAt: string;
-    updatedAt: string;
-  }) {
-    this.documentId = params.documentId;
-    this.envelopeId = params.envelopeId;
-    this.name = params.name;
-    this.mimeType = params.mimeType;
-    this.size = params.size;
-    this.bucket = params.bucket;
-    this.key = params.key;
-    this.status = params.status;
-    this.createdAt = params.createdAt;
-    this.updatedAt = params.updatedAt;
-    Object.freeze(this);
-  }
+  /** S3 storage reference. */
+  s3Ref: S3ObjectRef;
+
+  /** Number of pages in the document (for PDFs). */
+  pageCount?: number;
+
+  /** ISO-8601 creation timestamp. */
+  createdAt: string;
+
+  /** ISO-8601 last update timestamp. */
+  updatedAt: string;
+
+  /** Optional metadata for extensibility. */
+  metadata?: Record<string, unknown>;
 }

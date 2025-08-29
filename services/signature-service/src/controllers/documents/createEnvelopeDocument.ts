@@ -1,25 +1,72 @@
 ﻿/**
- * NOTE:
- * This file is part of the signature-service. Controllers are thin:
- * - validate (Zod from @lawprotect/shared-ts)
- * - authenticate/authorize
- * - call use-case
- * - map result -> HTTP response
+ * @file createEnvelopeDocument.ts
+ * @description Controller for creating new documents within envelopes via POST /envelopes/:envelopeId/documents endpoint.
+ * Validates input, derives tenant and actor from auth context, and delegates to the CreateDocument app service.
  */
-import { apiHandler, ok } from "@lawprotect/shared-ts/http";
-import { authenticate } from "@lawprotect/shared-ts/auth";
-import { z, validate } from "@lawprotect/shared-ts/validation";
 
-const Params = z.object({});      // adjust per-route
-const Query  = z.object({});      // adjust per-route
-const Body   = z.object({}).optional(); // adjust per-route
+import type { HandlerFn } from "@lawprotect/shared-ts";
+import { created, validateRequest } from "@lawprotect/shared-ts";
+import { wrapController, corsFromEnv } from "@/middleware/http";
+import { tenantFromCtx, actorFromCtx } from "@/middleware/auth";
+import { getContainer } from "@/infra/Container";
+import { CreateDocumentBody } from "@/schemas/documents/CreateDocument.schema";
+import { EnvelopeIdPath } from "@/schemas/common/path";
+import { toTenantId, toEnvelopeId } from "@/app/ports/shared";
+import { createDocumentApp } from "@/app/services/Documents/CreateDocumentApp.service";
+import { makeDocumentsCommandsPort } from "@/app/adapters/documents/makeDocumentsCommandsPort";
 
-export const handler = apiHandler(async (evt) => {
-  const auth = await authenticate(evt); // principal/tenant/scopes
-  const { params, query, body } = validate(evt, { params: Params, query: Query, body: Body });
+/**
+ * @description Base handler function for creating a new document within an envelope.
+ * Validates request body and path parameters, extracts tenant and actor information, and delegates to the app service.
+ *
+ * @param {any} evt - The Lambda event containing HTTP request data
+ * @returns {Promise<any>} Promise resolving to HTTP response with created document data or error
+ * @throws {AppError} When validation fails or document creation fails
+ */
+const base: HandlerFn = async (evt) => {
+  const { body, path } = validateRequest(evt, { 
+    body: CreateDocumentBody,
+    path: EnvelopeIdPath 
+  });
 
-  // TODO: call use-case via DI from infra (e.g., ctx.getUseCase("..."))
-  // const result = await useCase.execute({ ...params, ...query, ...body }, { auth });
+  const tenantId = toTenantId(tenantFromCtx(evt));
+  const envelopeId = toEnvelopeId(path.id);
+  const actor = actorFromCtx(evt);
 
-  return ok({ status: "stub", route: evt.requestContext?.http?.path });
+  const c = getContainer();
+  const documentsCommands = makeDocumentsCommandsPort(c.repos.documents, c.repos.envelopes, { ids: c.ids });
+
+  const result = await createDocumentApp(
+    { 
+      tenantId, 
+      envelopeId, 
+      name: body.name,
+      contentType: body.contentType,
+      size: body.size,
+      digest: body.digest,
+      s3Ref: { bucket: body.bucket, key: body.key },
+      pageCount: body.pageCount,
+      actor 
+    },
+    { documentsCommands }
+  );
+
+  return created({ data: { id: result.documentId, createdAt: result.createdAt } });
+};
+
+/**
+ * @description Lambda handler for POST /envelopes/:envelopeId/documents endpoint.
+ * Wraps the base handler with authentication, observability, and CORS middleware.
+ *
+ * @param {any} evt - The Lambda event containing HTTP request data
+ * @returns {Promise<any>} Promise resolving to HTTP response with created document data
+ */
+export const handler = wrapController(base, {
+  auth: true,
+  observability: {
+    logger: () => console,
+    metrics: () => ({} as any),
+    tracer: () => ({} as any),
+  },
+  cors: corsFromEnv(),
 });

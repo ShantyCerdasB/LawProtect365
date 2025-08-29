@@ -1,4 +1,10 @@
 /**
+ * @file EnvelopeRepositoryDb.ts
+ * @description DynamoDB-backed repository for the Envelope aggregate.
+ * Implements the Repository contract using single-table pattern with GSI for tenant-scoped queries.
+ */
+
+/**
  * @file EnvelopeRepositoryDdb.ts
  * @summary DynamoDB-backed repository for the `Envelope` aggregate.
  * @description
@@ -30,16 +36,19 @@ import {
 } from "./mappers/envelopeItemMapper";
 import { envelopeNotFound } from "@/errors";
 
-/** Cursor payload used by `listByTenant` (stable ordering: createdAt + envelopeId). */
+/** @description Cursor payload used by `listByTenant` (stable ordering: createdAt + envelopeId) */
 type ListCursorPayload = { createdAt: string; envelopeId: string };
 
 /**
- * Converts a typed object into a `Record<string, unknown>` suitable for DynamoDB clients.
+ * @description Converts a typed object into a `Record<string, unknown>` suitable for DynamoDB clients.
+ *
+ * @param {T} v - The object to convert
+ * @returns {Record<string, unknown>} DynamoDB-compatible record
  */
 const toDdbItem = <T extends object>(v: T): Record<string, unknown> =>
   (v as unknown) as Record<string, unknown>;
 
-/** Minimal shape of the `query` operation required (SDK-agnostic). */
+/** @description Minimal shape of the `query` operation required (SDK-agnostic) */
 type DdbQueryParams = {
   TableName: string;
   IndexName?: string;
@@ -55,13 +64,17 @@ type DdbQueryResult = {
   LastEvaluatedKey?: Record<string, unknown>;
 };
 
-/** DynamoDB client with `query` support. */
+/** @description DynamoDB client with `query` support */
 type DdbClientWithQuery = DdbClientLike & {
   query(params: DdbQueryParams): Promise<DdbQueryResult>;
 };
 
 /**
- * Asserts at runtime (and narrows at type-level) that the provided client implements `query`.
+ * @description Asserts at runtime (and narrows at type-level) that the provided client implements `query`.
+ * Throws an error if the client doesn't support the query operation.
+ *
+ * @param {DdbClientLike} ddb - The DynamoDB client to check
+ * @throws {Error} When the client doesn't implement query functionality
  */
 function requireQuery(ddb: DdbClientLike): asserts ddb is DdbClientWithQuery {
   if (typeof (ddb as any)?.query !== "function") {
@@ -73,13 +86,22 @@ function requireQuery(ddb: DdbClientLike): asserts ddb is DdbClientWithQuery {
 }
 
 /**
- * DynamoDB implementation of `Repository<Envelope, EnvelopeId>`.
+ * @description DynamoDB implementation of `Repository<Envelope, EnvelopeId>`.
+ * Provides CRUD operations for envelope entities using DynamoDB single-table pattern.
  */
 export class EnvelopeRepositoryDdb
   implements Repository<Envelope, EnvelopeId, undefined>
 {
   private readonly indexName: string;
 
+  /**
+   * @description Creates a new EnvelopeRepositoryDdb instance.
+   *
+   * @param {string} tableName - DynamoDB table name
+   * @param {DdbClientLike} ddb - DynamoDB client instance
+   * @param {Object} opts - Optional configuration
+   * @param {string} opts.indexName - GSI name for tenant queries (default: from env or "gsi1")
+   */
   constructor(
     private readonly tableName: string,
     private readonly ddb: DdbClientLike,
@@ -88,6 +110,13 @@ export class EnvelopeRepositoryDdb
     this.indexName = opts?.indexName || process.env.ENVELOPES_GSI1_NAME || "gsi1";
   }
 
+  /**
+   * @description Retrieves an envelope by its identifier.
+   *
+   * @param {EnvelopeId} envelopeId - The envelope identifier
+   * @returns {Promise<Envelope | null>} Promise resolving to envelope or null if not found
+   * @throws {AppError} When DynamoDB operation fails
+   */
   async getById(envelopeId: EnvelopeId): Promise<Envelope | null> {
     try {
       const res = await this.ddb.get({

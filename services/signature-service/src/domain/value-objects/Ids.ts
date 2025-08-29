@@ -16,20 +16,20 @@ import type { Brand } from "@lawprotect/shared-ts";
  * Brands
  * ────────────────────────────────────────────────────────────────────────────*/
 
-/** Envelope identifier (ULID/UUID). */
+/** @description Envelope identifier (ULID/UUID) */
 export type EnvelopeId = Brand<string, "EnvelopeId">;
-/** Document identifier (ULID/UUID). */
+/** @description Document identifier (ULID/UUID) */
 export type DocumentId = Brand<string, "DocumentId">;
-/** Party identifier (ULID/UUID). */
+/** @description Party identifier (ULID/UUID) */
 export type PartyId = Brand<string, "PartyId">;
-/** Input (field) identifier (ULID/UUID). */
+/** @description Input (field) identifier (ULID/UUID) */
 export type InputId = Brand<string, "InputId">;
-/** Signature record identifier (ULID/UUID). */
+/** @description Signature record identifier (ULID/UUID) */
 export type SignatureId = Brand<string, "SignatureId">;
 
-/** Tenant identifier (trimmed, non-empty). */
+/** @description Tenant identifier (trimmed, non-empty) */
 export type TenantId = Brand<string, "TenantId">;
-/** User identifier (trimmed, non-empty). */
+/** @description User identifier (trimmed, non-empty) */
 export type UserId = Brand<string, "UserId">;
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -37,34 +37,34 @@ export type UserId = Brand<string, "UserId">;
  * ────────────────────────────────────────────────────────────────────────────*/
 
 /**
- * Generic schema for entity identifiers that accept either ULID or UUIDv4.
+ * @description Generic schema for entity identifiers that accept either ULID or UUIDv4.
  * Useful for path/query params and shared VO usage.
  */
 export const EntityIdSchema = z.union([Ulid, UuidV4]);
 
-/** EnvelopeId validator (ULID/UUID → brand). */
+/** @description EnvelopeId validator (ULID/UUID → brand) */
 export const EnvelopeIdSchema = EntityIdSchema.transform(
   (v: string) => v as EnvelopeId
 );
-/** DocumentId validator (ULID/UUID → brand). */
+/** @description DocumentId validator (ULID/UUID → brand) */
 export const DocumentIdSchema = EntityIdSchema.transform(
   (v: string) => v as DocumentId
 );
-/** PartyId validator (ULID/UUID → brand). */
+/** @description PartyId validator (ULID/UUID → brand) */
 export const PartyIdSchema = EntityIdSchema.transform(
   (v: string) => v as PartyId
 );
-/** InputId validator (ULID/UUID → brand). */
+/** @description InputId validator (ULID/UUID → brand) */
 export const InputIdSchema = EntityIdSchema.transform(
   (v: string) => v as InputId
 );
-/** SignatureId validator (ULID/UUID → brand). */
+/** @description SignatureId validator (ULID/UUID → brand) */
 export const SignatureIdSchema = EntityIdSchema.transform(
   (v: string) => v as SignatureId
 );
 
 /**
- * TenantId validator.
+ * @description TenantId validator.
  * Uses a trimmed string piped into a length constraint to avoid chaining
  * `.min` directly on a ZodEffects instance.
  */
@@ -72,7 +72,7 @@ export const TenantIdSchema = TrimmedString.pipe(z.string().min(1)).transform(
   (v: string) => v as TenantId
 );
 /**
- * UserId validator.
+ * @description UserId validator.
  * Uses a trimmed string piped into a length constraint to avoid chaining
  * `.min` directly on a ZodEffects instance.
  */

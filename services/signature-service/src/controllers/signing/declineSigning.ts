@@ -1,4 +1,3 @@
-// file: src/controllers/signing/declineSigning.ts
 /**
  * @file declineSigning.ts
  * @summary Controller for POST /signing/decline

@@ -1,10 +1,9 @@
 /**
  * @file S3Presigner.ts
- * @summary AWS S3 presigner implementing the shared `S3Presigner` port.
- * @description
+ * @summary AWS S3 presigner implementing the shared S3Presigner port
+ * @description AWS S3 presigner implementing the shared `S3Presigner` port.
  * Provides helpers to generate pre-signed GET and PUT URLs using the AWS SDK v3
- * `S3Client` and `@aws-sdk/s3-request-presigner`.
- *
+ * `S3Client` and `@aws-sdk/s3-request-presigner` with configurable defaults and error handling.
  * @remarks
  * - Supports GET (with response header overrides) and PUT (with ACL, metadata, cache control).
  * - Optionally includes SSE-KMS settings for PUT when a KMS key is provided.
@@ -60,7 +59,7 @@ import type {
 import { mapAwsError } from "@lawprotect/shared-ts";
 
 /**
- * Construction options for {@link S3Presigner}.
+ * @description Construction options for {@link S3Presigner}.
  * All values are used only when the per-call input does not provide them.
  */
 export interface S3PresignerOptions {
@@ -91,7 +90,7 @@ export interface S3PresignerOptions {
 }
 
 /**
- * S3 pre-signing utility that implements the shared {@link S3PresignerPort}.
+ * @description S3 pre-signing utility that implements the shared {@link S3PresignerPort}.
  *
  * @remarks
  * - Uses the calling credentials/config of the provided {@link S3Client}.

@@ -1,51 +1,75 @@
 /**
  * @file AddParty.schema.ts
  * @summary Zod schemas for the AddParty endpoint
- * 
- * @description
+ * @description Zod schemas for the AddParty endpoint.
  * Defines input validation schemas for adding a party to an envelope.
- * Handles path parameters and request body validation.
+ * Handles path parameters and request body validation with proper error messages.
  */
+
 
 import { z } from "zod";
 
 /**
- * Path parameters for POST /envelopes/:envelopeId/parties
+ * @description Path parameters schema for POST /envelopes/:envelopeId/parties.
+ * Validates the envelope identifier in the URL path.
  */
 export const AddPartyPath = z.object({
+  /** Envelope identifier (required, non-empty) */
   envelopeId: z.string().min(1, "Envelope ID is required"),
 });
 
 /**
- * Request body for adding a party
+ * @description Request body schema for adding a party.
+ * Validates all required and optional fields for party creation.
  */
 export const AddPartyBody = z.object({
+  /** Party email address (required, valid email format) */
   email: z.string().email("Valid email is required"),
+  /** Party full name (required, 1-255 characters) */
   name: z.string().min(1, "Name is required").max(255, "Name too long"),
+  /** Party role in the envelope (signer, viewer, or delegate) */
   role: z.enum(["signer", "viewer", "delegate"]),
+  /** Optional signing order for sequential signing (minimum 1) */
   order: z.number().int().min(1, "Order must be at least 1").optional(),
+  /** Optional metadata for additional party information */
   metadata: z.record(z.unknown()).optional(),
+  /** Optional notification preferences */
   notificationPreferences: z.object({
+    /** Email notifications enabled (default: true) */
     email: z.boolean().default(true),
+    /** SMS notifications enabled (default: false) */
     sms: z.boolean().default(false),
   }).optional(),
 });
 
 /**
- * Response schema for party addition
+ * @description Response schema for party addition.
+ * Defines the structure of the response returned after successful party creation.
  */
 export const AddPartyResponse = z.object({
+  /** Generated party identifier */
   partyId: z.string(),
+  /** Envelope identifier */
   envelopeId: z.string(),
+  /** Party email address */
   email: z.string(),
+  /** Party full name */
   name: z.string(),
+  /** Party role in the envelope */
   role: z.enum(["signer", "viewer", "delegate"]),
+  /** Optional signing order */
   order: z.number().optional(),
+  /** Current party status */
   status: z.enum(["pending", "invited", "signed", "declined"]),
+  /** Creation timestamp */
   createdAt: z.string(),
+  /** Optional metadata */
   metadata: z.record(z.unknown()).optional(),
+  /** Notification preferences */
   notificationPreferences: z.object({
+    /** Email notifications enabled */
     email: z.boolean(),
+    /** SMS notifications enabled */
     sms: z.boolean(),
   }).optional(),
 });

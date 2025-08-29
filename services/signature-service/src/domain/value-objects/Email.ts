@@ -1,12 +1,21 @@
-﻿import { NormalizedEmail } from "@lawprotect/shared-ts";
+﻿/**
+ * @file Email.ts
+ * @summary Email value object with normalization and validation
+ * @description Email value object with normalization and RFC validation.
+ * Provides branded email type and schema for consistent email handling across the domain.
+ */
+
+import { NormalizedEmail } from "@lawprotect/shared-ts";
 import type { Brand } from "@lawprotect/shared-ts";
 
 /**
- * Normalized email (trimmed + lowercased) with RFC validation.
+ * @description Normalized email (trimmed + lowercased) with RFC validation.
+ * Branded type for compile-time email validation.
  */
 export type Email = Brand<string, "Email">;
 
 /**
- * Email schema with normalization.
+ * @description Email schema with normalization.
+ * Validates and normalizes email addresses according to RFC standards.
  */
 export const EmailSchema = NormalizedEmail.transform((v) => v as Email);

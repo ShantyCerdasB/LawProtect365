@@ -1,70 +1,49 @@
 /**
  * @file DocumentRepositoryDdb.ts
- * @summary DynamoDB-backed repository for the `Document` aggregate.
- * @remarks
- * Single-table pattern:
- * - `pk = "ENVELOPE#<envelopeId>"`
- * - `sk = "DOCUMENT#<documentId>"`
+ * @summary DynamoDB-backed repository for the Document aggregate.
  *
- * The implementation is SDK-agnostic via {@link DdbClientLike}. All provider errors
- * are normalized with {@link mapAwsError}.
+ * @description
+ * Single-table pattern:
+ *   - `pk = "ENVELOPE#<envelopeId>"`
+ *   - `sk = "DOCUMENT#<documentId>"`
+ *
+ * This adapter is SDK-agnostic via {@link DdbClientLike}. Provider errors are
+ * normalized with {@link mapAwsError}. The optional `query` method is asserted
+ * at runtime via {@link requireQuery}.
  */
 
 import type { Repository } from "@lawprotect/shared-ts";
 import type { DdbClientLike } from "@lawprotect/shared-ts";
-import type { Document } from "../../domain/entities/Document";
-import { documentItemMapper } from "./mappers/documentItemMapper";
+import { requireQuery, mapAwsError, ConflictError, ErrorCodes, nowIso } from "@lawprotect/shared-ts";
 
-import {
-  mapAwsError,
-  ConflictError,
-  ErrorCodes,
-  /** Domain factory for a not-found error with a stable code. */
-  documentNotFound,
-} from "@/errors";
-import { nowIso } from "@lawprotect/shared-ts";
+import type { Document } from "../../domain/entities/Document";
+import type { DocumentId } from "../../domain/value-objects/Ids";
+import { documentItemMapper, type DocumentItem } from "./mappers/documentItemMapper";
+import { documentNotFound } from "@/errors";
 
 /**
- * Loosens a typed object into the generic `Record<string, unknown>` shape
- * expected by DocumentClient-like DynamoDB adapters.
- *
- * @typeParam T - Narrow, strongly-typed item.
- * @param v - The value to coerce.
- * @returns A `Record<string, unknown>` suitable for DynamoDB adapters.
+ * Coerces a typed object into the `Record<string, unknown>` shape expected by
+ * DynamoDB clients. This keeps the adapter marshalling-agnostic.
  */
 const toDdbItem = <T extends object>(v: T): Record<string, unknown> =>
   (v as unknown) as Record<string, unknown>;
 
-/**
- * Builds the partition key for a document.
- * @param envelopeId - Envelope identifier.
- * @returns The partition key (e.g., `ENVELOPE#abc`).
- */
+/** Partition key builder for envelope-scoped documents. */
 const docPk = (envelopeId: string): string => `ENVELOPE#${envelopeId}`;
 
-/**
- * Builds the sort key for a document.
- * @param documentId - Document identifier.
- * @returns The sort key (e.g., `DOCUMENT#xyz`).
- */
+/** Sort key builder for document items. */
 const docSk = (documentId: string): string => `DOCUMENT#${documentId}`;
 
-/** Composite identifier for a document entity. */
-export type DocumentId = { envelopeId: string; documentId: string };
-
 /**
- * DynamoDB implementation of {@link Repository} for {@link Document}.
- *
- * @remarks
- * - Uses conditional expressions to guarantee idempotent creates/updates.
- * - Maps AWS/adapter errors to stable HTTP/domain errors.
+ * DynamoDB implementation of `Repository<Document, DocumentId>`.
  */
 export class DocumentRepositoryDdb
   implements Repository<Document, DocumentId, undefined>
 {
   /**
-   * @param tableName - DynamoDB table name.
-   * @param ddb - Minimal DynamoDB client (see {@link DdbClientLike}).
+   * Creates a new repository instance.
+   * @param tableName DynamoDB table name.
+   * @param ddb Minimal DynamoDB client (see {@link DdbClientLike}).
    */
   constructor(
     private readonly tableName: string,
@@ -72,79 +51,64 @@ export class DocumentRepositoryDdb
   ) {}
 
   /**
-   * Loads a document by composite id.
+   * Loads a document by id.
    *
-   * @param id - `{ envelopeId, documentId }`.
+   * @remarks
+   * This lookup uses a direct `DOCUMENT#<id>` PK/SK. If your table stores
+   * documents only under `ENVELOPE#<envelopeId>`, you will need a GSI or an
+   * alternative access path.
+   *
+   * @param id Document identifier.
    * @returns The document or `null` if not found.
-   * @throws Error - Provider errors mapped via {@link mapAwsError}.
    */
   async getById(id: DocumentId): Promise<Document | null> {
     try {
       const res = await this.ddb.get({
         TableName: this.tableName,
-        Key: { pk: docPk(id.envelopeId), sk: docSk(id.documentId) },
+        Key: { pk: `DOCUMENT#${id}`, sk: docSk(String(id)) },
       });
-      return res.Item ? documentItemMapper.fromDTO(res.Item as any) : null;
+      return res.Item
+        ? documentItemMapper.fromDTO(res.Item as unknown as DocumentItem)
+        : null;
     } catch (err) {
       throw mapAwsError(err, "DocumentRepositoryDdb.getById");
     }
   }
 
   /**
-   * Checks if a document exists.
-   *
-   * @param id - Composite id.
-   * @returns `true` if the item exists; otherwise `false`.
-   * @throws Error - Provider errors mapped via {@link mapAwsError}.
+   * Checks existence of a document.
+   * @param id Document identifier.
    */
   async exists(id: DocumentId): Promise<boolean> {
     return (await this.getById(id)) !== null;
-  }
+    }
 
   /**
-   * Creates a new document (fails if it already exists).
-   *
-   * @remarks
-   * Uses a conditional write:
-   * `attribute_not_exists(pk) AND attribute_not_exists(sk)`.
-   *
-   * @param entity - Document to persist.
-   * @returns The created document (echo of the input).
-   * @throws ConflictError - When the item already exists.
-   * @throws Error - Other provider errors mapped via {@link mapAwsError}.
+   * Persists a new document (idempotent create).
+   * @param entity Document to persist.
+   * @throws ConflictError when the item already exists.
    */
   async create(entity: Document): Promise<Document> {
     try {
       await this.ddb.put({
         TableName: this.tableName,
         Item: toDdbItem(documentItemMapper.toDTO(entity)),
-        ConditionExpression:
-          "attribute_not_exists(pk) AND attribute_not_exists(sk)",
+        ConditionExpression: "attribute_not_exists(pk) AND attribute_not_exists(sk)",
       });
       return entity;
     } catch (err: any) {
       if (String(err?.name) === "ConditionalCheckFailedException") {
-        throw new ConflictError(
-          "Document already exists",
-          ErrorCodes.COMMON_CONFLICT
-        );
+        throw new ConflictError("Document already exists", ErrorCodes.COMMON_CONFLICT);
       }
       throw mapAwsError(err, "DocumentRepositoryDdb.create");
     }
   }
 
   /**
-   * Performs a read–modify–write partial update.
-   *
-   * @remarks
-   * Only a whitelisted set of fields is mutable. Identifiers and `createdAt`
-   * remain immutable. Update is implemented as a full `put` guarded by:
-   * `attribute_exists(pk) AND attribute_exists(sk)`.
-   *
-   * @param id - Composite id.
-   * @param patch - Partial state to apply (name, mimeType, size, bucket, key, status).
-   * @returns The updated document.
-   * @throws Error - When the current item cannot be loaded (mapped `not found`) or provider error via {@link mapAwsError}.
+   * Read–modify–write update guarded by existence.
+   * @param id Document id.
+   * @param patch Mutable fields to apply.
+   * @returns Updated snapshot.
    */
   async update(id: DocumentId, patch: Partial<Document>): Promise<Document> {
     try {
@@ -153,20 +117,14 @@ export class DocumentRepositoryDdb
 
       const next: Document = Object.freeze({
         ...current,
-        name: patch.name ?? current.name,
-        mimeType: patch.mimeType ?? current.mimeType,
-        size: patch.size ?? current.size,
-        bucket: patch.bucket ?? current.bucket,
-        key: patch.key ?? current.key,
-        status: patch.status ?? current.status,
+        ...patch,
         updatedAt: nowIso(),
       });
 
       await this.ddb.put({
         TableName: this.tableName,
         Item: toDdbItem(documentItemMapper.toDTO(next)),
-        ConditionExpression:
-          "attribute_exists(pk) AND attribute_exists(sk)",
+        ConditionExpression: "attribute_exists(pk) AND attribute_exists(sk)",
       });
 
       return next;
@@ -179,25 +137,69 @@ export class DocumentRepositoryDdb
   }
 
   /**
-   * Deletes a document by composite id.
-   *
-   * @param id - Composite id.
-   * @returns Resolves when the item has been deleted.
-   * @throws Error - Mapped `not found` when the item does not exist; other provider errors via {@link mapAwsError}.
+   * Deletes a document by id (conditional on prior existence).
+   * @param id Document id.
    */
   async delete(id: DocumentId): Promise<void> {
     try {
       await this.ddb.delete({
         TableName: this.tableName,
-        Key: { pk: docPk(id.envelopeId), sk: docSk(id.documentId) },
-        ConditionExpression:
-          "attribute_exists(pk) AND attribute_exists(sk)",
+        Key: { pk: `DOCUMENT#${id}`, sk: docSk(String(id)) },
+        ConditionExpression: "attribute_exists(pk) AND attribute_exists(sk)",
       });
     } catch (err: any) {
       if (String(err?.name) === "ConditionalCheckFailedException") {
         throw documentNotFound({ id });
       }
       throw mapAwsError(err, "DocumentRepositoryDdb.delete");
+    }
+  }
+
+  /**
+   * Lists documents under an envelope (forward-only pagination).
+   *
+   * @param args.envelopeId Envelope identifier (partition scope).
+   * @param args.limit Page size.
+   * @param args.cursor Opaque continuation token (stringified LastEvaluatedKey).
+   * @returns Page of documents and optional `nextCursor`.
+   */
+  async listByEnvelope(args: {
+    envelopeId: string;
+    limit: number;
+    cursor?: string;
+  }): Promise<{ items: Document[]; nextCursor?: string }> {
+    try {
+      // Assert presence of `query` and narrow type (fixes “possibly undefined”).
+      requireQuery(this.ddb);
+
+      const params: {
+        TableName: string;
+        KeyConditionExpression: string;
+        ExpressionAttributeValues: Record<string, unknown>;
+        Limit: number;
+        ExclusiveStartKey?: Record<string, unknown>;
+      } = {
+        TableName: this.tableName,
+        KeyConditionExpression: "pk = :pk",
+        ExpressionAttributeValues: { ":pk": docPk(args.envelopeId) },
+        Limit: args.limit,
+        ...(args.cursor ? { ExclusiveStartKey: JSON.parse(args.cursor) as Record<string, unknown> } : {}),
+      };
+
+      const result = await this.ddb.query(params);
+
+      const items = (result.Items ?? []).map((raw) =>
+        documentItemMapper.fromDTO(raw as unknown as DocumentItem)
+      );
+
+      return {
+        items,
+        nextCursor: result.LastEvaluatedKey
+          ? JSON.stringify(result.LastEvaluatedKey)
+          : undefined,
+      };
+    } catch (err) {
+      throw mapAwsError(err, "DocumentRepositoryDdb.listByEnvelope");
     }
   }
 }

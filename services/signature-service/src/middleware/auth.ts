@@ -20,22 +20,22 @@ import { getHeaders, requireHeaderToken } from "@lawprotect/shared-ts";
 const DEFAULT_TENANT = "default-tenant";
 
 /**
- * Resolves the tenant identifier from the normalized auth context.
+ * @description Resolves the tenant identifier from the normalized auth context.
+ * Provides a safe fallback to default tenant when auth context doesn't include tenant information.
  *
- * @param evt - API event (already passed through the shared `withAuth` middleware).
- * @returns Tenant id string; falls back to {@link DEFAULT_TENANT}.
- * @throws If there is no auth context attached to the event.
+ * @param {ApiEvent} evt - API event (already passed through the shared `withAuth` middleware)
+ * @returns {string} Tenant id string; falls back to {@link DEFAULT_TENANT}
+ * @throws {Error} If there is no auth context attached to the event
  */
 export const tenantFromCtx = (evt: ApiEvent): string =>
   requireAuth(evt).tenantId ?? DEFAULT_TENANT;
 
 /**
- * Best-effort client IP extraction:
- * - Prefer the first value in the X-Forwarded-For header (if present).
- * - Fallback to API Gateway's requestContext.http.sourceIp (when available).
+ * @description Extracts client IP address from request headers and API Gateway context.
+ * Uses best-effort approach: prefers X-Forwarded-For header, falls back to API Gateway source IP.
  *
- * @param evt - API event
- * @returns A client IP string or `undefined` when it cannot be determined.
+ * @param {ApiEvent} evt - API event containing headers and request context
+ * @returns {string | undefined} A client IP string or `undefined` when it cannot be determined
  */
 export const clientIp = (evt: ApiEvent): string | undefined => {
   const xff = getHeaders(evt.headers, "x-forwarded-for");
@@ -48,11 +48,12 @@ export const clientIp = (evt: ApiEvent): string | undefined => {
 };
 
 /**
- * Builds an "actor" snapshot from auth & transport details.
+ * @description Builds an "actor" snapshot from authentication and transport details.
+ * Combines user information from auth context with client information from transport layer.
  *
- * @param evt - API event (already passed through the shared `withAuth` middleware).
- * @returns An object with userId/email from auth and ip/userAgent from transport.
- * @throws If there is no auth context attached to the event.
+ * @param {ApiEvent} evt - API event (already passed through the shared `withAuth` middleware)
+ * @returns {Object} An object containing userId, email from auth and ip, userAgent from transport
+ * @throws {Error} If there is no auth context attached to the event
  */
 export const actorFromCtx = (evt: ApiEvent) => {
   const auth = requireAuth(evt);
@@ -65,13 +66,13 @@ export const actorFromCtx = (evt: ApiEvent) => {
 };
 
 /**
- * Requires an opaque request token from a header (e.g., "x-request-token").
- * Throws a typed 401 error when missing/invalid.
+ * @description Requires an opaque request token from a specified header.
+ * Validates token presence and minimum length, throwing typed 401 error when validation fails.
  *
- * @param evt - API event
- * @param header - Header name to read (default: "x-request-token")
- * @param minLength - Minimum allowed token length (default: 16)
- * @returns The token string
+ * @param {ApiEvent} evt - API event containing headers
+ * @param {string} header - Header name to read (default: "x-request-token")
+ * @param {number} minLength - Minimum allowed token length (default: 16)
+ * @returns {string} The validated token string
  * @throws {AppError} 401 when the header is missing or shorter than `minLength`
  */
 export const requireRequestToken = (

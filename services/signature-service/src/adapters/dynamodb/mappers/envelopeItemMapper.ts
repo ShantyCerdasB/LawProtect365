@@ -1,4 +1,10 @@
 /**
+ * @file envelopeItemMapper.ts
+ * @description Bidirectional mapper between domain Envelope aggregate and DynamoDB persistence representation.
+ * Handles conversion between domain entities and DynamoDB items with proper key generation and validation.
+ */
+
+/**
  * @file EnvelopeItemMapper.ts
  * @summary Bidirectional mapper between the domain `Envelope` aggregate
  * and its DynamoDB persistence representation (`EnvelopeItem`).
@@ -23,22 +29,44 @@ import type { EnvelopeId, TenantId, UserId } from "@/domain/value-objects";
 import type { Mapper } from "@lawprotect/shared-ts";
 import { BadRequestError, ErrorCodes } from "@lawprotect/shared-ts";
 
-/** DynamoDB entity label for Envelope rows. */
+/** @description DynamoDB entity label for Envelope rows */
 export const ENVELOPE_ENTITY = "Envelope" as const;
-/** Fixed sort key for Envelope meta row. */
+/** @description Fixed sort key for Envelope meta row */
 const ENVELOPE_META = "META" as const;
 
 /* ────────────────────────────────────────────────────────────────────────── */
 /* Key builders                                                              */
 /* ────────────────────────────────────────────────────────────────────────── */
 
-/** Builds the partition key for an envelope. */
+/**
+ * @description Builds the partition key for an envelope.
+ *
+ * @param {string} envelopeId - The envelope identifier
+ * @returns {string} DynamoDB partition key
+ */
 export const envelopePk = (envelopeId: string): string => `ENVELOPE#${envelopeId}`;
-/** Returns the fixed meta sort key. */
+
+/**
+ * @description Returns the fixed meta sort key.
+ *
+ * @returns {string} Fixed meta sort key
+ */
 export const envelopeMetaSk = (): string => ENVELOPE_META;
-/** Example owner-based GSI partition key. */
+
+/**
+ * @description Example owner-based GSI partition key.
+ *
+ * @param {string} ownerId - The owner identifier
+ * @returns {string} GSI partition key
+ */
 export const gsi1OwnerPk = (ownerId: string): string => `OWNER#${ownerId}`;
- /** Example owner-based GSI sort key (stable, time-sortable). */
+
+/**
+ * @description Example owner-based GSI sort key (stable, time-sortable).
+ *
+ * @param {string} updatedAtIso - ISO timestamp for sorting
+ * @returns {string} GSI sort key
+ */
 export const gsi1OwnerSk = (updatedAtIso: string): string => `ENVELOPE#${updatedAtIso}`;
 
 /* ────────────────────────────────────────────────────────────────────────── */
@@ -46,29 +74,43 @@ export const gsi1OwnerSk = (updatedAtIso: string): string => `ENVELOPE#${updated
 /* ────────────────────────────────────────────────────────────────────────── */
 
 /**
- * DynamoDB persistence shape for an `Envelope` meta row.
- * (Values are plain strings/arrays for storage compatibility.)
+ * @description DynamoDB persistence shape for an `Envelope` meta row.
+ * Values are plain strings/arrays for storage compatibility.
  */
 export interface EnvelopeItem {
+  /** DynamoDB partition key */
   pk: string;
+  /** DynamoDB sort key */
   sk: string;
+  /** Entity type identifier */
   type: typeof ENVELOPE_ENTITY;
 
+  /** Envelope identifier */
   envelopeId: string;
-  tenantId: string;   // stored as plain string
-  ownerId: string;    // stored as plain string
+  /** Tenant identifier (stored as plain string) */
+  tenantId: string;
+  /** Owner identifier (stored as plain string) */
+  ownerId: string;
 
+  /** Envelope title */
   title: string;
+  /** Envelope status */
   status: Envelope["status"];
-  createdAt: string;  // ISO-8601
-  updatedAt: string;  // ISO-8601
+  /** Creation timestamp (ISO-8601) */
+  createdAt: string;
+  /** Last update timestamp (ISO-8601) */
+  updatedAt: string;
 
+  /** Array of party identifiers */
   parties: string[];
+  /** Array of document identifiers */
   documents: string[];
 
-  // Optional TTL & GSI keys (presence depends on your table/index design)
+  /** Optional TTL & GSI keys (presence depends on your table/index design) */
   ttl?: number;
+  /** GSI1 partition key */
   gsi1pk?: string;
+  /** GSI1 sort key */
   gsi1sk?: string;
 }
 
@@ -77,10 +119,11 @@ export interface EnvelopeItem {
 /* ────────────────────────────────────────────────────────────────────────── */
 
 /**
- * Runtime guard to ensure the raw item looks like an `EnvelopeItem`.
+ * @description Runtime guard to ensure the raw item looks like an `EnvelopeItem`.
+ * Performs lightweight validation before mapping from DTO.
  *
- * @param value Arbitrary object.
- * @returns `true` if the value has the minimal required envelope shape.
+ * @param {unknown} value - Arbitrary object to validate
+ * @returns {boolean} `true` if the value has the minimal required envelope shape
  */
 export function isEnvelopeItem(value: unknown): value is EnvelopeItem {
   const o = value as EnvelopeItem;

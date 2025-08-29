@@ -58,3 +58,4 @@ export type ListPartiesQueryType = z.infer<typeof ListPartiesQuery>;
 export type ListPartiesResponseType = z.infer<typeof ListPartiesResponse>;
 
 
+

@@ -1,5 +1,22 @@
 /**
  * @file OutboxRepositoryDdb.ts
+ * @summary DynamoDB-backed implementation of the shared OutboxPort
+ * @description DynamoDB-backed implementation of the shared `OutboxPort`.
+ * Persists `OutboxRecord` entries and supports:
+ * - `save` to append a new pending record (append-only semantics).
+ * - `pullPending` to fetch the next N pending records in chronological order.
+ * - `markDispatched` to mark a record as dispatched and move it out of the pending index.
+ * - `markFailed` to mark a record as failed and increment the attempts counter.
+ * Key design (single-table friendly):
+ *  PK  = `OUTBOX`
+ *  SK  = `ID#<id>`
+ * Status GSI (by current state):
+ *  GSI1 PK = `STATUS#<status>`                // pending | dispatched | failed
+ *  GSI1 SK = `<occurredAt>#<id>`              // time-then-id for stable ordering
+ */
+
+/**
+ * @file OutboxRepositoryDdb.ts
  * @summary DynamoDB-backed implementation of the shared `OutboxPort`.
  *
  * @description
@@ -45,7 +62,9 @@ const OUTBOX_ENTITY = "Outbox" as const;
 /** Default index name for status-based lookups (override via `indexes`). */
 const DEFAULT_IDX_STATUS = "gsi1";
 
-/** DynamoDB persistence shape for an outbox row. */
+/**
+ * @description DynamoDB persistence shape for an outbox row.
+ */
 interface OutboxItem {
   pk: string;        // "OUTBOX"
   sk: string;        // "ID#<id>"
@@ -71,7 +90,9 @@ const skOf = (id: string) => `ID#${id}`;
 const statusPk = (status: OutboxRecord["status"]) => `STATUS#${status}`;
 const statusSk = (occurredAt: string, id: string) => `${occurredAt}#${id}`;
 
-/** Construction options for the repository. */
+/**
+ * @description Construction options for the repository.
+ */
 export interface OutboxRepositoryDdbProps {
   /** DynamoDB table name. */
   tableName: string;
@@ -84,7 +105,7 @@ export interface OutboxRepositoryDdbProps {
 }
 
 /**
- * DynamoDB implementation of the `OutboxPort`.
+ * @description DynamoDB implementation of the `OutboxPort`.
  *
  * The repository is storage/SDK-agnostic via `DdbClientLike`.
  * It relies on:
@@ -97,6 +118,10 @@ export class OutboxRepositoryDdb implements OutboxPort {
   private readonly ddb: DdbClientLike;
   private readonly idxByStatus: string;
 
+  /**
+   * @description Creates a new OutboxRepositoryDdb instance.
+   * @param {OutboxRepositoryDdbProps} props - Repository configuration properties
+   */
   constructor(props: OutboxRepositoryDdbProps) {
     this.table = props.tableName;
     this.ddb = props.client;

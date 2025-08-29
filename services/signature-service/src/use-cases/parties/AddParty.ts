@@ -1,6 +1,14 @@
 /**
  * @file AddParty.ts
  * @summary Use case for adding a party to an envelope
+ * @description Use case for adding a party to an envelope with proper validation and lifecycle management.
+ * Validates envelope existence, party uniqueness, and role constraints.
+ * Handles party creation, notification preferences, and audit trail tracking.
+ */
+
+/**
+ * @file AddParty.ts
+ * @summary Use case for adding a party to an envelope
  * 
  * @description
  * Adds a new party to an envelope with proper validation and lifecycle management.
@@ -10,7 +18,8 @@
 import { ConsentType, PartyRole, PartyStatus } from "@/domain/values/enums";
 
 /**
- * Input parameters for the AddParty use case
+ * @description Input parameters for the AddParty use case.
+ * Contains all required and optional data for adding a party to an envelope.
  */
 export interface AddPartyInput {
   /** Tenant identifier for multi-tenancy boundary */
@@ -42,7 +51,8 @@ export interface AddPartyInput {
 }
 
 /**
- * Output result of the AddParty use case
+ * @description Output result of the AddParty use case.
+ * Contains the created party information and status.
  */
 export interface AddPartyOutput {
   /** Generated party identifier */
@@ -71,7 +81,8 @@ export interface AddPartyOutput {
 }
 
 /**
- * Context dependencies for the AddParty use case
+ * @description Context dependencies for the AddParty use case.
+ * Provides repository access and utilities for party creation.
  */
 export interface AddPartyContext {
   /** Repository for envelope operations */
@@ -128,11 +139,13 @@ export interface AddPartyContext {
 }
 
 /**
- * Adds a party to an envelope
+ * @description Adds a party to an envelope.
+ * Validates input, checks for existing parties, and creates a new party record.
+ * Handles party creation, notification preferences, and audit trail tracking.
  * 
- * @param input - Input parameters including party details and envelope ID
- * @param context - Repository dependencies and utilities
- * @returns Promise resolving to created party record
+ * @param input - Input parameters including party details and envelope ID.
+ * @param context - Repository dependencies and utilities.
+ * @returns Promise resolving to the created party record.
  * 
  * @example
  * ```typescript
@@ -207,5 +220,6 @@ export async function addParty(
     notificationPreferences: party.notificationPreferences,
   };
 }
+
 
 

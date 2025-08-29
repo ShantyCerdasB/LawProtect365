@@ -1,9 +1,8 @@
 /**
  * @file addParty.ts
  * @summary HTTP controller for POST /envelopes/:envelopeId/parties
- * 
- * @description
- * Adds a new party to an envelope.
+ * @description HTTP controller for POST /envelopes/:envelopeId/parties.
+ * Adds a new party to an envelope with proper validation and error handling.
  * Validates path parameters and request body, then creates the party.
  * Returns 201 with party data on success, 400/404/409 on errors.
  */
@@ -14,10 +13,11 @@ import { addParty } from "@/use-cases/parties/AddParty";
 import { getContainer } from "@/infra/Container";
 
 /**
- * HTTP handler for adding a party
+ * @description HTTP handler for adding a party to an envelope.
+ * Validates input parameters, extracts tenant and actor information, and delegates to the use case.
  * 
- * @param event - API Gateway event with path parameters and request body
- * @returns Promise resolving to HTTP response with party data or error
+ * @param {APIGatewayProxyEventV2} event - API Gateway event with path parameters and request body
+ * @returns {Promise<APIGatewayProxyResultV2>} Promise resolving to HTTP response with party data or error
  * 
  * @example
  * ```typescript
@@ -168,5 +168,6 @@ export const handler = async (
     };
   }
 };
+
 
 

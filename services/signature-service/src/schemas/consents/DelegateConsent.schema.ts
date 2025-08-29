@@ -33,3 +33,4 @@ export type DelegateConsentPathType = z.infer<typeof DelegateConsentPath>;
 export type DelegateConsentBodyType = z.infer<typeof DelegateConsentBody>;
 export type DelegateConsentResponseType = z.infer<typeof DelegateConsentResponse>;
 
+

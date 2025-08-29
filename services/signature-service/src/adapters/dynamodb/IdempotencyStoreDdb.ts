@@ -1,5 +1,25 @@
 /**
  * @file IdempotencyStoreDdb.ts
+ * @summary DynamoDB-backed implementation of the IdempotencyStore contract
+ * @description DynamoDB-backed implementation of the `IdempotencyStore` contract.
+ * Single-table layout:
+ *  - PK = `IDEMPOTENCY#<key>`
+ *  - SK = `META`
+ * Attributes:
+ *  - type           : `"Idempotency"`
+ *  - idempotencyKey : string
+ *  - state          : `"pending"` | `"completed"`
+ *  - resultJson?    : string (stable JSON snapshot when completed)
+ *  - createdAt      : ISO-8601 string
+ *  - updatedAt      : ISO-8601 string
+ *  - ttl?           : epoch seconds (number)
+ * Notes:
+ *  - Uses an SDK-agnostic client (`DdbClientLike`) to remain decoupled.
+ *  - Employs a runtime/type guard to ensure `update` is present when needed.
+ */
+
+/**
+ * @file IdempotencyStoreDdb.ts
  * @description
  * DynamoDB-backed implementation of the `IdempotencyStore` contract.
  *
@@ -35,7 +55,9 @@ const META = "META" as const;
 const idempotencyPk = (key: string): string => `IDEMPOTENCY#${key}`;
 const idempotencySk = (): string => META;
 
-/** Persisted item shape. */
+/**
+ * @description Persisted item shape for idempotency records.
+ */
 interface DdbIdempotencyItem {
   pk: string;
   sk: string;
@@ -49,10 +71,9 @@ interface DdbIdempotencyItem {
 }
 
 /**
- * Runtime guard for safe deserialization.
- *
- * @param v Value to validate.
- * @returns `true` if `v` matches `DdbIdempotencyItem`.
+ * @description Runtime guard for safe deserialization.
+ * @param {unknown} v Value to validate.
+ * @returns {boolean} `true` if `v` matches `DdbIdempotencyItem`.
  */
 const isDdbIdempotencyItem = (v: unknown): v is DdbIdempotencyItem => {
   const o = v as DdbIdempotencyItem;
@@ -70,10 +91,9 @@ const isDdbIdempotencyItem = (v: unknown): v is DdbIdempotencyItem => {
 };
 
 /**
- * Converts a relative TTL in seconds to epoch seconds.
- *
- * @param ttlSeconds Relative TTL in seconds.
- * @returns Epoch seconds or `undefined` if `ttlSeconds` is falsy or not positive.
+ * @description Converts a relative TTL in seconds to epoch seconds.
+ * @param {number | undefined} ttlSeconds Relative TTL in seconds.
+ * @returns {number | undefined} Epoch seconds or `undefined` if `ttlSeconds` is falsy or not positive.
  */
 const toTtl = (ttlSeconds: number | undefined): number | undefined =>
   typeof ttlSeconds === "number" && ttlSeconds > 0
@@ -81,19 +101,17 @@ const toTtl = (ttlSeconds: number | undefined): number | undefined =>
     : undefined;
 
 /**
- * Narrows an object to the DocumentClient-compatible item shape.
- *
- * @param v Arbitrary object.
- * @returns The same value typed as `Record<string, unknown>`.
+ * @description Narrows an object to the DocumentClient-compatible item shape.
+ * @param {T} v Arbitrary object.
+ * @returns {Record<string, unknown>} The same value typed as `Record<string, unknown>`.
  */
 const toDdbItem = <T extends object>(v: T): Record<string, unknown> =>
   (v as unknown) as Record<string, unknown>;
 
 /**
- * Produces a stable JSON snapshot for an arbitrary payload.
- *
- * @param result Payload to snapshot.
- * @returns JSON string; falls back to a safe payload if serialization fails.
+ * @description Produces a stable JSON snapshot for an arbitrary payload.
+ * @param {unknown} result Payload to snapshot.
+ * @returns {string} JSON string; falls back to a safe payload if serialization fails.
  */
 const stringifyResult = (result: unknown): string => {
   try {

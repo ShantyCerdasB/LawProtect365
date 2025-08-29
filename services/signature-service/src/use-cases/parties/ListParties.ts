@@ -1,16 +1,16 @@
 /**
  * @file ListParties.ts
  * @summary Use case for listing parties of an envelope
- * 
- * @description
- * Lists parties for a given envelope with pagination and filtering capabilities.
+ * @description Use case for listing parties of an envelope with pagination and filtering capabilities.
  * Validates envelope existence and applies tenant boundary checks.
+ * Supports filtering by role, status, and email with forward-only pagination.
  */
 
 import { ConsentType, PartyStatus } from "@/domain/values/enums";
 
 /**
- * Input parameters for the ListParties use case
+ * @description Input parameters for the ListParties use case.
+ * Contains filtering and pagination options for party listing.
  */
 export interface ListPartiesInput {
   /** Tenant identifier for multi-tenancy boundary */
@@ -30,7 +30,8 @@ export interface ListPartiesInput {
 }
 
 /**
- * Output result of the ListParties use case
+ * @description Output result of the ListParties use case.
+ * Contains the list of parties and pagination metadata.
  */
 export interface ListPartiesOutput {
   /** Array of party records */
@@ -58,7 +59,8 @@ export interface ListPartiesOutput {
 }
 
 /**
- * Context dependencies for the ListParties use case
+ * @description Context dependencies for the ListParties use case.
+ * Provides repository access for envelope and party operations.
  */
 export interface ListPartiesContext {
   /** Repository for envelope operations */
@@ -105,11 +107,12 @@ export interface ListPartiesContext {
 }
 
 /**
- * Lists parties for an envelope with pagination and filtering
+ * @description Lists parties for an envelope with pagination and filtering.
+ * Validates envelope existence and applies tenant boundary checks.
  * 
- * @param input - Input parameters including envelope ID and filtering options
- * @param context - Repository dependencies
- * @returns Promise resolving to party list with pagination metadata
+ * @param input - Input parameters including envelope ID and filtering options.
+ * @param context - Repository dependencies.
+ * @returns Promise resolving to party list with pagination metadata.
  * 
  * @example
  * ```typescript
@@ -167,5 +170,6 @@ export async function listParties(
     meta: result.meta,
   };
 }
+
 
 

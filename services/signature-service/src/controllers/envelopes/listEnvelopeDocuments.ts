@@ -6,53 +6,55 @@
  */
 
 import type { HandlerFn } from "@lawprotect/shared-ts";
-import { ok, validateRequest } from "@lawprotect/shared-ts";
+import { ok, validateRequest, z } from "@lawprotect/shared-ts";
 import { wrapController, corsFromEnv } from "@/middleware/http";
-import { tenantFromCtx } from "@/middleware/auth";
 import { getContainer } from "@/infra/Container";
 import { EnvelopeIdPath } from "@/schemas/common/path";
-import { PaginationQuery } from "@/schemas/common/query";
-import { toTenantId, toEnvelopeId } from "@/app/ports/shared";
-import { listDocumentsApp } from "@/app/services/Envelope/ListDocumentsApp.service";
+import { toEnvelopeId } from "@/app/ports/shared";
+import { listDocumentsApp } from "@/app/services/Documents/ListDocumentsApp.service";
 import { makeDocumentsQueriesPort } from "@/app/ports/documents/MakeDocumentsQueriesPort";
 
 /**
- * Base handler function for listing documents of an envelope
+ * Base handler function for listing documents by envelope
  * @param evt - The Lambda event containing HTTP request data
- * @returns Promise resolving to HTTP response with documents list
- * @throws {AppError} When validation fails or query fails
+ * @returns Promise resolving to HTTP response with document list
+ * @throws {AppError} When validation fails
  */
 const base: HandlerFn = async (evt) => {
-  const { path, query } = validateRequest(evt, {
+  const { path, query } = validateRequest(evt, { 
     path: EnvelopeIdPath,
-    query: PaginationQuery,
+    query: z.object({
+      limit: z.coerce.number().int().positive().optional(),
+      cursor: z.string().optional(),
+    }).optional()
   });
 
-  const tenantId = toTenantId(tenantFromCtx(evt));
   const envelopeId = toEnvelopeId(path.id);
 
   const c = getContainer();
   const documentsQueries = makeDocumentsQueriesPort(c.repos.documents);
 
   const result = await listDocumentsApp(
-    {
-      tenantId,
+    { 
       envelopeId,
-      limit: query.limit,
-      cursor: query.cursor,
+      limit: query?.limit,
+      cursor: query?.cursor
     },
-    {
-      documentsQueries,
-    }
+    { documentsQueries }
   );
 
-  return ok({ data: { items: result.items } });
+  return ok({ 
+    data: {
+      items: result.items,
+      nextCursor: result.nextCursor,
+    }
+  });
 };
 
 /**
  * Lambda handler for GET /envelopes/:envelopeId/documents endpoint
  * @param evt - The Lambda event containing HTTP request data
- * @returns Promise resolving to HTTP response with documents list
+ * @returns Promise resolving to HTTP response with document list
  */
 export const handler = wrapController(base, {
   auth: true,

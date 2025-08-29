@@ -17,6 +17,10 @@ export type PartyStatus = (typeof PARTY_STATUSES)[number];
 export const ENVELOPE_STATUSES = ["draft","sent","in_progress","completed","canceled","declined","in_progress"] as const;
 export type EnvelopeStatus = (typeof ENVELOPE_STATUSES)[number];
 
+// Documents
+export const DOCUMENT_STATUSES = ["pending","uploaded","processing","ready","error"] as const;
+export type DocumentStatus = (typeof DOCUMENT_STATUSES)[number];
+
 // Signature flows
 export const SIGNATURE_EVENTS = ["signing.completed","signing.declined","otp.requested","otp.verified"] as const;
 export type SignatureEvent = (typeof SIGNATURE_EVENTS)[number];

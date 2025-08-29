@@ -8,7 +8,7 @@
  * - Uses existing adapters for specific operations
  */
 
-import type { ConsentCommandsPort, CreateConsentCommand, CreateConsentResult, UpdateConsentResult, SubmitConsentResult, DelegateConsentCommand, DelegateConsentResult, ActorContext } from "../../ports/consent/ConsentCommandsPort";
+import type { ConsentCommandsPort, CreateConsentCommand, CreateConsentResult, UpdateConsentResult, SubmitConsentResult, DelegateConsentCommand, DelegateConsentResult } from "../../ports/consent/ConsentCommandsPort";
 import type { ConsentPatch } from "../../ports/shared/consents/types.consent";
 import type { ConsentId, EnvelopeId, ConsentStatus } from "../../ports/shared/common/types";
 
@@ -97,7 +97,7 @@ export function makeConsentCommandsPort(
     /**
      * Submits a consent
      */
-    async submit(envelopeId: EnvelopeId, consentId: ConsentId, actor?: ActorContext): Promise<SubmitConsentResult> {
+    async submit(envelopeId: EnvelopeId, consentId: ConsentId): Promise<SubmitConsentResult> {
       const row = await consentsRepo.update(
         { envelopeId, consentId },
         { status: "granted" as ConsentStatus }

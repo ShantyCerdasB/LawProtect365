@@ -1,4 +1,3 @@
-// file: src/controllers/signing/downloadSignedDocument.ts
 /**
  * @file downloadSignedDocument.ts
  * @summary Controller for POST /signing/download-signed-document

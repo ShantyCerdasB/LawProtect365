@@ -24,8 +24,7 @@ const base: HandlerFn = async (evt) => {
   // 1) Validate request body
   const { body } = validateRequest(evt, { body: CompleteSigningBody });
 
-  // 2) Require request token header (throws 401 if missing/invalid)
-  //    Default header: "x-request-token", default min length: 16
+
   const token = requireRequestToken(evt);
 
   // 3) Build actor envelope (auth-derived + transport)

@@ -1,11 +1,10 @@
 /**
  * @file DelegationRepositoryDdb.ts
- * @summary DynamoDB-backed repository for the Delegation aggregate.
- *
+ * @summary DynamoDB-backed repository for the Delegation aggregate
+ * @description DynamoDB-backed repository for the Delegation aggregate.
  * Single-table pattern (reusing the envelopes table):
  *   - PK = "ENVELOPE#<envelopeId>"
  *   - SK = "DELEGATION#<delegationId>"
- *
  * This repository exposes a low-level `create` operation. It persists DTOs with
  * plain string timestamps and maps them back to standardized repo rows using
  * branded ISO helpers (`asISO`, `asISOOpt`) so callers get strong typing.
@@ -32,7 +31,9 @@ type RepoStatus = "pending" | "accepted" | "declined" | "expired";
 const pk = (envelopeId: string) => `ENVELOPE#${envelopeId}`;
 const sk = (delegationId: string) => `DELEGATION#${delegationId}`;
 
-/** Shape stored in DynamoDB (plain strings for timestamps). */
+/**
+ * @description Shape stored in DynamoDB (plain strings for timestamps).
+ */
 interface DelegationItemDTO {
   pk: string;
   sk: string;
@@ -51,24 +52,26 @@ interface DelegationItemDTO {
 }
 
 /**
- * Low-level DynamoDB repository.
+ * @description Low-level DynamoDB repository.
  * Maps between DTOs (persistence layer) and standardized repo rows.
  */
 export class DelegationRepositoryDdb {
+  /**
+   * @description Creates a new DelegationRepositoryDdb instance.
+   * @param {string} tableName - DynamoDB table name
+   * @param {DdbClientLike} ddb - DynamoDB client instance
+   */
   constructor(
     private readonly tableName: string,
     private readonly ddb: DdbClientLike
   ) {}
 
   /**
-   * Creates a delegation item. Fails if (PK, SK) already exists.
-   *
-   * @param input - {@link DelegationRepoCreateInput} payload. The caller provides
-   *                envelope/consent/party identifiers and optional metadata.
-   *                `status` is the domain status (same literal values as stored).
-   * @returns A {@link DelegationRepoRow} with branded ISO timestamps.
-   * @throws ConflictError when a delegation with the same composite key exists.
-   * @throws Error mapped by {@link mapAwsError} for AWS client failures.
+   * @description Creates a delegation item. Fails if (PK, SK) already exists.
+   * @param {DelegationRepoCreateInput} input - Delegation creation parameters
+   * @returns {Promise<DelegationRepoRow>} Promise resolving to the created delegation record
+   * @throws {ConflictError} When a delegation with the same composite key exists
+   * @throws {Error} Mapped by mapAwsError for AWS client failures
    */
   async create(input: DelegationRepoCreateInput): Promise<DelegationRepoRow> {
     const now = nowIso();

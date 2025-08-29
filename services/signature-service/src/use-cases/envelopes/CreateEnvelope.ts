@@ -1,5 +1,11 @@
 /**
  * @file CreateEnvelope.ts
+ * @description Use case to create a new envelope (draft) and emit a domain event.
+ * Handles envelope creation with validation, persistence, and domain event emission for audit tracking.
+ */
+
+/**
+ * @file CreateEnvelope.ts
  * @summary Use case to create a new envelope (draft) and emit a domain event.
  *
  * @description
@@ -25,53 +31,73 @@ import type { Envelope } from "@/domain/entities/Envelope";
 import type { EnvelopeId, TenantId, UserId } from "@/domain/value-objects/Ids";
 
 /**
- * Minimal actor context propagated for attribution/auditing purposes.
+ * @description Minimal actor context propagated for attribution/auditing purposes.
+ * Contains user and request information for audit trail tracking.
  */
 export interface ActorContext {
+  /** User identifier */
   userId?: string;
+  /** User email address */
   email?: string;
+  /** Client IP address */
   ip?: string;
+  /** User agent string */
   userAgent?: string;
+  /** User locale preference */
   locale?: string;
 }
 
 /**
- * Input contract for CreateEnvelope.
+ * @description Input contract for CreateEnvelope use case.
+ * Defines the required parameters for creating a new envelope.
  */
 export interface CreateEnvelopeInput {
+  /** Tenant identifier */
   tenantId: TenantId;
+  /** Owner identifier */
   ownerId: UserId;
+  /** Envelope title */
   title: string;
-  /** Optional actor context for downstream subscribers. */
+  /** Optional actor context for downstream subscribers */
   actor?: ActorContext;
 }
 
 /**
- * Output contract for CreateEnvelope.
+ * @description Output contract for CreateEnvelope use case.
+ * Contains the created envelope and emitted domain events.
  */
 export interface CreateEnvelopeOutput {
+  /** Created envelope entity */
   envelope: Envelope;
-  /** Domain events emitted by this use case. */
+  /** Domain events emitted by this use case */
   events: ReadonlyArray<DomainEvent>;
 }
 
 /**
- * Execution context for CreateEnvelope.
+ * @description Execution context for CreateEnvelope use case.
+ * Provides repository access and ID generation capabilities.
  */
 export interface CreateEnvelopeContext {
+  /** Repository dependencies */
   repos: {
+    /** Envelope repository */
     envelopes: Repository<Envelope, EnvelopeId>;
   };
+  /** ID generation utilities */
   ids: {
-    /** Monotonic or time-ordered id generator (e.g., ULID). */
+    /** Monotonic or time-ordered id generator (e.g., ULID) */
     ulid(): string;
   };
 }
 
 /**
- * Creates a new envelope with status "draft" and emits `envelope.created`.
+ * @description Creates a new envelope with status "draft" and emits `envelope.created` domain event.
+ * Validates input, creates envelope entity, persists to repository, and emits audit event.
  *
- * @throws {AppError} 400 when invariants are violated.
+ * @param {CreateEnvelopeInput} input - Input parameters for envelope creation
+ * @param {CreateEnvelopeContext} ctx - Execution context with repositories and utilities
+ * @returns {Promise<CreateEnvelopeOutput>} Promise resolving to created envelope and domain events
+ * @throws {AppError} 400 when invariants are violated
  */
 export const createEnvelope = async (
   input: CreateEnvelopeInput,

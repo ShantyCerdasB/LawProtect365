@@ -9,8 +9,7 @@
  */
 
 import type { EnvelopesPort } from "@/domain/ports/envelopes";
-import type { ConsentRecord as DomainConsentRecord } from "@/domain/ports/consent/ConsentsPort";
-import type { UpdateConsentPort } from "@/app/ports/consent/MakeUpdateConsentPort";
+import type { ConsentRecord as DomainConsentRecord, ConsentState } from "@/domain/ports/consent/ConsentsPort";
 import { unprocessable } from "@/errors";
 import { SignatureErrorCodes } from "@/errors/codes";
 import {
@@ -19,7 +18,9 @@ import {
   ensureConsentInEnvelope,
 } from "@/use-cases/shared/guards/consent.guard";
 import type {
-  TenantEnvelopeConsentInput,
+  TenantScoped,
+  EnvelopeScoped,
+  ConsentScoped,
   WithActor,
   WithMetadataOptional,
 } from "@/use-cases/shared/types/types";
@@ -31,7 +32,7 @@ import type {
 
 /** Input for submitting (granting) a consent. */
 export interface SubmitConsentInput
-  extends TenantEnvelopeConsentInput, WithActor, WithMetadataOptional {
+  extends TenantScoped, EnvelopeScoped, ConsentScoped, WithActor, WithMetadataOptional {
   /** Consent evidence (timestamp/ip/ua/locale) validated at the edge. */
   consent: ConsentEvidence;
 }
@@ -39,10 +40,25 @@ export interface SubmitConsentInput
 /** Output is the updated domain-level consent record. */
 export type SubmitConsentOutput = DomainConsentRecord;
 
+/**
+ * Minimal write port needed by this use case (get + update).
+ * Keep this local and stable; adapters conform to it.
+ */
+export interface UpdateConsentPort {
+  getById(envelopeId: string, consentId: string): Promise<ConsentState | null>;
+  update(
+    envelopeId: string,
+    consentId: string,
+    changes: {
+      status: string;
+      metadata?: Record<string, unknown>;
+    }
+  ): Promise<DomainConsentRecord>;
+}
+
 /** External dependencies (ports). */
 export interface SubmitConsentContext {
   envelopes: EnvelopesPort;
-  /** getById(envelopeId, consentId) + update(...) */
   consents: UpdateConsentPort;
 }
 

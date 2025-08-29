@@ -1,25 +1,72 @@
 ﻿/**
- * NOTE:
- * This file is part of the signature-service. Controllers are thin:
- * - validate (Zod from @lawprotect/shared-ts)
- * - authenticate/authorize
- * - call use-case
- * - map result -> HTTP response
+ * @file getDocumentPage.ts
+ * @description Controller for getting document page preview via GET /envelopes/:envelopeId/documents/:docId/pages/:pageNo endpoint.
+ * Validates input, derives tenant from auth context, and delegates to the GetDocumentPage app service.
  */
-import { apiHandler, ok } from "@lawprotect/shared-ts/http";
-import { authenticate } from "@lawprotect/shared-ts/auth";
-import { z, validate } from "@lawprotect/shared-ts/validation";
 
-const Params = z.object({});      // adjust per-route
-const Query  = z.object({});      // adjust per-route
-const Body   = z.object({}).optional(); // adjust per-route
+import type { HandlerFn } from "@lawprotect/shared-ts";
+import { ok, validateRequest } from "@lawprotect/shared-ts";
+import { wrapController, corsFromEnv } from "@/middleware/http";
+import { getContainer } from "@/infra/Container";
+import { EnvelopeDocPagePath } from "@/schemas/common/path";
+import { toEnvelopeId, toDocumentId } from "@/app/ports/shared";
+import { getDocumentPageApp } from "@/app/services/Documents/GetDocumentPageApp.service";
+import { makeDocumentsQueriesPort } from "@/app/adapters/documents/MakeDocumentsQueriesPort";
+import { z } from "@lawprotect/shared-ts";
 
-export const handler = apiHandler(async (evt) => {
-  const auth = await authenticate(evt); // principal/tenant/scopes
-  const { params, query, body } = validate(evt, { params: Params, query: Query, body: Body });
+/**
+ * @description Base handler function for getting document page preview.
+ * Validates path parameters, extracts tenant information, and delegates to the app service.
+ *
+ * @param {any} evt - The Lambda event containing HTTP request data
+ * @returns {Promise<any>} Promise resolving to HTTP response with document page data or error
+ * @throws {AppError} When validation fails or page retrieval fails
+ */
+const base: HandlerFn = async (evt) => {
+  const { path, query } = validateRequest(evt, { 
+    path: EnvelopeDocPagePath,
+    query: z.object({
+      w: z.coerce.number().int().positive().optional(),
+      h: z.coerce.number().int().positive().optional(),
+      quality: z.coerce.number().int().min(1).max(100).optional(),
+    }).optional()
+  });
 
-  // TODO: call use-case via DI from infra (e.g., ctx.getUseCase("..."))
-  // const result = await useCase.execute({ ...params, ...query, ...body }, { auth });
+  const envelopeId = toEnvelopeId(path.envelopeId);
+  const documentId = toDocumentId(path.docId);
+  const pageNo = path.pageNo;
 
-  return ok({ status: "stub", route: evt.requestContext?.http?.path });
+  const c = getContainer();
+  const documentsQueries = makeDocumentsQueriesPort(c.repos.documents);
+
+  const result = await getDocumentPageApp(
+    { 
+      envelopeId,
+      documentId,
+      pageNo,
+      width: query?.w,
+      height: query?.h,
+      quality: query?.quality
+    },
+    { documentsQueries }
+  );
+
+  return ok({ data: { page: result.page, imageUrl: result.imageUrl } });
+};
+
+/**
+ * @description Lambda handler for GET /envelopes/:envelopeId/documents/:docId/pages/:pageNo endpoint.
+ * Wraps the base handler with authentication, observability, and CORS middleware.
+ *
+ * @param {any} evt - The Lambda event containing HTTP request data
+ * @returns {Promise<any>} Promise resolving to HTTP response with document page data
+ */
+export const handler = wrapController(base, {
+  auth: true,
+  observability: {
+    logger: () => console,
+    metrics: () => ({} as any),
+    tracer: () => ({} as any),
+  },
+  cors: corsFromEnv(),
 });

@@ -1,4 +1,3 @@
-// file: src/controllers/signing/requestOtp.ts
 /**
  * @file requestOtp.ts
  * @summary Controller for POST /signing/otp/request

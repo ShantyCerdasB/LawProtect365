@@ -31,3 +31,4 @@ export type AddConsentPathType = z.infer<typeof AddConsentPath>;
 export type AddConsentBodyType = z.infer<typeof AddConsentBody>;
 export type AddConsentResponseType = z.infer<typeof AddConsentResponse>;
 
+

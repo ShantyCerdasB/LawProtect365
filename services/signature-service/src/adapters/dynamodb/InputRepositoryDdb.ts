@@ -21,33 +21,32 @@ import {
   inputSk,
 } from "./mappers/inputItemMapper";
 
-
 /**
- * Narrows a typed object to `Record<string, unknown>` expected by generic clients.
+ * @description Narrows a typed object to `Record<string, unknown>` expected by generic clients.
  * @typeParam T Source object type.
- * @param v Source object.
- * @returns Loosened record view of the source object.
+ * @param {T} v Source object.
+ * @returns {Record<string, unknown>} Loosened record view of the source object.
  */
 const toDdbItem = <T extends object>(v: T): Record<string, unknown> =>
   (v as unknown) as Record<string, unknown>;
 
 /**
- * Composite identifier for Input rows.
+ * @description Composite identifier for Input rows.
  * - `envelopeId` scopes inputs.
  * - `inputId` identifies the input within the envelope.
  */
 export type InputId = { envelopeId: string; inputId: string };
 
 /**
- * DynamoDB implementation of `Repository<Input, InputId>`.
+ * @description DynamoDB implementation of `Repository<Input, InputId>`.
  */
 export class InputRepositoryDdb
   implements Repository<Input, InputId, undefined>
 {
   /**
-   * Creates a repository instance.
-   * @param tableName DynamoDB table name.
-   * @param ddb Minimal DynamoDB client.
+   * @description Creates a repository instance.
+   * @param {string} tableName DynamoDB table name.
+   * @param {DdbClientLike} ddb Minimal DynamoDB client.
    */
   constructor(
     private readonly tableName: string,
@@ -55,10 +54,10 @@ export class InputRepositoryDdb
   ) {}
 
   /**
-   * Loads an Input by composite id.
-   * @param id Composite id `{ envelopeId, inputId }`.
-   * @returns The `Input` or `null` if not found.
-   * @throws HttpError Normalized provider error via `mapAwsError`.
+   * @description Loads an Input by composite id.
+   * @param {InputId} id Composite id `{ envelopeId, inputId }`.
+   * @returns {Promise<Input | null>} The `Input` or `null` if not found.
+   * @throws {HttpError} Normalized provider error via `mapAwsError`.
    */
   async getById(id: InputId): Promise<Input | null> {
     try {
@@ -73,20 +72,20 @@ export class InputRepositoryDdb
   }
 
   /**
-   * Checks whether an Input exists.
-   * @param id Composite id `{ envelopeId, inputId }`.
-   * @returns `true` if the item exists; otherwise `false`.
+   * @description Checks whether an Input exists.
+   * @param {InputId} id Composite id `{ envelopeId, inputId }`.
+   * @returns {Promise<boolean>} `true` if the item exists; otherwise `false`.
    */
   async exists(id: InputId): Promise<boolean> {
     return (await this.getById(id)) !== null;
   }
 
   /**
-   * Creates a new Input. Fails if it already exists.
-   * @param entity Domain entity to persist.
-   * @returns The persisted entity (same reference).
-   * @throws ConflictError When the conditional write fails due to preexistence.
-   * @throws HttpError Normalized provider error via `mapAwsError`.
+   * @description Creates a new Input. Fails if it already exists.
+   * @param {Input} entity Domain entity to persist.
+   * @returns {Promise<Input>} The persisted entity (same reference).
+   * @throws {ConflictError} When the conditional write fails due to preexistence.
+   * @throws {HttpError} Normalized provider error via `mapAwsError`.
    */
   async create(entity: Input): Promise<Input> {
     try {
@@ -106,13 +105,13 @@ export class InputRepositoryDdb
   }
 
   /**
-   * Partially updates an Input using read–modify–write.
+   * @description Partially updates an Input using read–modify–write.
    * Only whitelisted fields are updated; identifiers and `createdAt` remain immutable.
-   * @param id Composite id `{ envelopeId, inputId }`.
-   * @param patch Partial fields to apply.
-   * @returns The updated `Input`.
-   * @throws NotFoundError When the item does not exist.
-   * @throws HttpError Normalized provider error via `mapAwsError`.
+   * @param {InputId} id Composite id `{ envelopeId, inputId }`.
+   * @param {Partial<Input>} patch Partial fields to apply.
+   * @returns {Promise<Input>} The updated `Input`.
+   * @throws {NotFoundError} When the item does not exist.
+   * @throws {HttpError} Normalized provider error via `mapAwsError`.
    */
   async update(id: InputId, patch: Partial<Input>): Promise<Input> {
     try {
@@ -145,11 +144,11 @@ export class InputRepositoryDdb
   }
 
   /**
-   * Deletes an Input by composite id.
-   * @param id Composite id `{ envelopeId, inputId }`.
-   * @returns Resolves when the item is deleted.
-   * @throws NotFoundError When the item does not exist.
-   * @throws HttpError Normalized provider error via `mapAwsError`.
+   * @description Deletes an Input by composite id.
+   * @param {InputId} id Composite id `{ envelopeId, inputId }`.
+   * @returns {Promise<void>} Resolves when the item is deleted.
+   * @throws {NotFoundError} When the item does not exist.
+   * @throws {HttpError} Normalized provider error via `mapAwsError`.
    */
   async delete(id: InputId): Promise<void> {
     try {

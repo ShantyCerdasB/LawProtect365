@@ -1,11 +1,10 @@
 /**
  * @file ConsentRepositoryDdb.ts
- * @summary DynamoDB-backed repository for the Consent aggregate.
- *
+ * @summary DynamoDB-backed repository for the Consent aggregate
+ * @description DynamoDB-backed repository for the Consent aggregate.
  * Single-table pattern (reusing the envelopes table):
  *   - PK = "ENVELOPE#<envelopeId>"
  *   - SK = "CONSENT#<consentId>"
- *
  * Exposes low-level CRUD and a paginated list used by app-layer adapters.
  * Validates runtime shapes (Zod) and delegates mapping to mappers/.
  */
@@ -38,9 +37,24 @@ import type {
 const pk = (envelopeId: string) => `ENVELOPE#${envelopeId}`;
 const sk = (consentId: string) => `CONSENT#${consentId}`;
 
+/**
+ * @description DynamoDB-backed repository for the Consent aggregate.
+ * Provides CRUD operations and paginated listing for consent records.
+ */
 export class ConsentRepositoryDdb {
+  /**
+   * @description Creates a new ConsentRepositoryDdb instance.
+   * @param {string} tableName - DynamoDB table name
+   * @param {DdbClientLike} ddb - DynamoDB client instance
+   */
   constructor(private readonly tableName: string, private readonly ddb: DdbClientLike) {}
 
+  /**
+   * @description Creates a new consent record in DynamoDB.
+   * @param {ConsentRepoCreateInput} input - Consent creation parameters
+   * @returns {Promise<ConsentRepoRow>} Promise resolving to the created consent record
+   * @throws {ConflictError} When consent already exists
+   */
   async create(input: ConsentRepoCreateInput): Promise<ConsentRepoRow> {
     const now = input.createdAt ?? nowIso();
     const dto: ConsentItemDTO = {
@@ -73,6 +87,11 @@ export class ConsentRepositoryDdb {
     }
   }
 
+  /**
+   * @description Retrieves a consent record by its keys.
+   * @param {ConsentRepoKey} keys - Consent identifier keys
+   * @returns {Promise<ConsentRepoRow | null>} Promise resolving to consent record or null if not found
+   */
   async getById(keys: ConsentRepoKey): Promise<ConsentRepoRow | null> {
     try {
       const out = await this.ddb.get({
@@ -88,6 +107,12 @@ export class ConsentRepositoryDdb {
     }
   }
 
+  /**
+   * @description Updates a consent record with the specified changes.
+   * @param {ConsentRepoKey} keys - Consent identifier keys
+   * @param {ConsentRepoUpdateInput} changes - Fields to update
+   * @returns {Promise<ConsentRepoRow>} Promise resolving to the updated consent record
+   */
   async update(keys: ConsentRepoKey, changes: ConsentRepoUpdateInput): Promise<ConsentRepoRow> {
     try {
       if (!this.ddb.update) throw new Error("DDB client does not implement update()");

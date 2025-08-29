@@ -1,119 +1,127 @@
-import { Document } from "../../../domain/entities/Document";
-import { Mapper } from "@lawprotect/shared-ts";
-import { BadRequestError } from "@lawprotect/shared-ts";
-import { ErrorCodes } from "@lawprotect/shared-ts";
+import type { Mapper } from "@lawprotect/shared-ts";
+import { BadRequestError, ErrorCodes } from "@lawprotect/shared-ts";
 
-/**
- * @file DocumentItemMapper.ts
- *
- * Provides bidirectional mapping logic between the domain-level `Document` entity
- * and its DynamoDB persistence representation (`DocumentItem`).
- *
- * - Ensures type safety using a type guard.
- * - Throws a shared `BadRequestError` if validation fails.
- */
+import type { Document } from "../../../domain/entities/Document";
+import type { DocumentId, EnvelopeId, TenantId } from "../../../domain/value-objects/Ids";
+import type { AllowedContentType } from "../../../domain/values/enums";
 
 /**
  * DynamoDB representation of a Document.
+ * pk = ENVELOPE#<envelopeId>
+ * sk = DOCUMENT#<documentId>
  */
 export interface DocumentItem {
-  /** Partition key → Envelope grouping */
   pk: string;
-  /** Sort key → Document grouping */
   sk: string;
-  /** Unique document identifier */
+
   documentId: string;
-  /** Parent envelope identifier */
   envelopeId: string;
-  /** Human-readable file name */
+  tenantId: string;
+
   name: string;
-  /** MIME type of the file */
-  mimeType: string;
-  /** File size in bytes */
-  size: number;
-  /** S3 bucket name */
-  bucket: string;
-  /** S3 object key */
-  key: string;
-  /** Current document status (e.g., UPLOADED, SIGNED, DELETED) */
   status: string;
-  /** ISO string when the document was created */
+  contentType: string;
+
+  size: number;
+  digest: string;
+
+  s3Bucket: string;
+  s3Key: string;
+
+  pageCount?: number;
+
   createdAt: string;
-  /** ISO string when the document was last updated */
   updatedAt: string;
+
+  metadata?: Record<string, unknown>;
 }
 
-/**
- * Type guard for DocumentItem.
- *
- * @param value - Arbitrary object to validate.
- * @returns True if value is a DocumentItem.
- */
-export function isDocumentItem(value: unknown): value is DocumentItem {
+/** Type guard básico para asegurar shape esperado del item. */
+export function isDocumentItem(v: unknown): v is DocumentItem {
+  if (typeof v !== "object" || v === null) return false;
+  const o = v as Record<string, unknown>;
   return (
-    typeof value === "object" &&
-    value !== null &&
-    "documentId" in value &&
-    "envelopeId" in value &&
-    "name" in value &&
-    "bucket" in value &&
-    "key" in value
+    typeof o.pk === "string" &&
+    typeof o.sk === "string" &&
+    typeof o.documentId === "string" &&
+    typeof o.envelopeId === "string" &&
+    typeof o.tenantId === "string" &&
+    typeof o.name === "string" &&
+    typeof o.status === "string" &&
+    typeof o.contentType === "string" &&
+    typeof o.size === "number" &&
+    typeof o.digest === "string" &&
+    typeof o.s3Bucket === "string" &&
+    typeof o.s3Key === "string" &&
+    typeof o.createdAt === "string" &&
+    typeof o.updatedAt === "string"
   );
 }
 
-/**
- * Mapper implementation for Document ↔ DocumentItem.
- */
+/** Mapper: Domain ↔ DDB item */
 export const documentItemMapper: Mapper<Document, DocumentItem> = {
-  /**
-   * Maps a domain `Document` entity into a DynamoDB `DocumentItem`.
-   *
-   * @param entity - Domain `Document` entity.
-   * @returns DynamoDB-compatible `DocumentItem`.
-   */
+  /** Domain → DDB */
   toDTO(entity: Document): DocumentItem {
     return {
       pk: `ENVELOPE#${entity.envelopeId}`,
       sk: `DOCUMENT#${entity.documentId}`,
+
       documentId: entity.documentId,
       envelopeId: entity.envelopeId,
+      tenantId: entity.tenantId,
+
       name: entity.name,
-      mimeType: entity.mimeType,
-      size: entity.size,
-      bucket: entity.bucket,
-      key: entity.key,
       status: entity.status,
+      contentType: entity.contentType,
+
+      size: entity.size,
+      digest: entity.digest,
+
+      s3Bucket: entity.s3Ref.bucket,
+      s3Key: entity.s3Ref.key,
+
+      pageCount: entity.pageCount,
+
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
+
+      metadata: entity.metadata,
     };
   },
 
-  /**
-   * Maps a DynamoDB `DocumentItem` into a domain `Document`.
-   *
-   * @param persisted - DynamoDB `DocumentItem`.
-   * @returns Domain `Document` entity.
-   * @throws BadRequestError if validation fails.
-   */
+  /** DDB → Domain */
   fromDTO(persisted: DocumentItem): Document {
     if (!isDocumentItem(persisted)) {
       throw new BadRequestError(
         "Invalid persistence object for Document",
         ErrorCodes.COMMON_BAD_REQUEST,
-        { received: persisted }
+        { item: persisted }
       );
     }
-    return new Document({
-      documentId: persisted.documentId,
-      envelopeId: persisted.envelopeId,
+
+    return {
+      documentId: persisted.documentId as DocumentId,
+      envelopeId: persisted.envelopeId as EnvelopeId,
+      tenantId: persisted.tenantId as TenantId,
+
       name: persisted.name,
-      mimeType: persisted.mimeType,
+      status: persisted.status as Document["status"],
+      contentType: persisted.contentType as AllowedContentType,
+
       size: persisted.size,
-      bucket: persisted.bucket,
-      key: persisted.key,
-      status: persisted.status,
+      digest: persisted.digest,
+
+      s3Ref: {
+        bucket: persisted.s3Bucket,
+        key: persisted.s3Key,
+      },
+
+      pageCount: persisted.pageCount,
+
       createdAt: persisted.createdAt,
       updatedAt: persisted.updatedAt,
-    });
+
+      metadata: persisted.metadata,
+    };
   },
 };

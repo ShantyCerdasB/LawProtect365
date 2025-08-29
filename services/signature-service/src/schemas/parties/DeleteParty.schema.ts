@@ -31,3 +31,4 @@ export type DeletePartyPathType = z.infer<typeof DeletePartyPath>;
 export type DeletePartyResponseType = z.infer<typeof DeletePartyResponse>;
 
 
+

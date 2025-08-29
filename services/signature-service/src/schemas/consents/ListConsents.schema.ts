@@ -30,3 +30,4 @@ export type ListConsentsPathType = z.infer<typeof ListConsentsPath>;
 export type ListConsentsQueryType = z.infer<typeof ListConsentsQuery>;
 export type ListConsentsResponseType = z.infer<typeof ListConsentsResponse>;
 
+

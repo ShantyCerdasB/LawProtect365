@@ -1,4 +1,10 @@
 ﻿/**
+ * @file createEnvelope.ts
+ * @description Controller for creating new envelopes via POST /envelopes endpoint.
+ * Validates input, derives tenant and actor from auth context, and delegates to the CreateEnvelope app service.
+ */
+
+/**
  * @file CreateEnvelopeController.controller.ts
  * @summary Controller for POST /envelopes
  * @description Validates input, derives tenant & actor from the shared auth context, wires ports,
@@ -16,9 +22,11 @@ import { createEnvelopeApp } from "@/app/services/Envelope/CreateEnvelopeApp.ser
 import { makeEnvelopesCommandsPort } from "@/app/adapters/envelopes/makeEnvelopesCommandsPort";
 
 /**
- * Base handler function for creating a new envelope
- * @param evt - The Lambda event containing HTTP request data
- * @returns Promise resolving to HTTP response with created envelope data
+ * @description Base handler function for creating a new envelope.
+ * Validates request body, extracts tenant and actor information, and delegates to the app service.
+ *
+ * @param {any} evt - The Lambda event containing HTTP request data
+ * @returns {Promise<any>} Promise resolving to HTTP response with created envelope data
  * @throws {AppError} When validation fails or envelope creation fails
  */
 const base: HandlerFn = async (evt) => {
@@ -40,9 +48,11 @@ const base: HandlerFn = async (evt) => {
 };
 
 /**
- * Lambda handler for POST /envelopes endpoint
- * @param evt - The Lambda event containing HTTP request data
- * @returns Promise resolving to HTTP response with created envelope data
+ * @description Lambda handler for POST /envelopes endpoint.
+ * Wraps the base handler with authentication, observability, and CORS middleware.
+ *
+ * @param {any} evt - The Lambda event containing HTTP request data
+ * @returns {Promise<any>} Promise resolving to HTTP response with created envelope data
  */
 export const handler = wrapController(base, {
   auth: true,

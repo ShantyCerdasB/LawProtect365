@@ -1,4 +1,3 @@
-// file: src/controllers/signing/verifyOtp.ts
 /**
  * @file verifyOtp.ts
  * @summary Controller for POST /signing/otp/verify

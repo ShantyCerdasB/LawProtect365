@@ -16,3 +16,4 @@ export const DeleteConsentResponse = z.object({
 export type DeleteConsentPathType = z.infer<typeof DeleteConsentPath>;
 export type DeleteConsentResponseType = z.infer<typeof DeleteConsentResponse>;
 
+

@@ -1,25 +1,77 @@
 ﻿/**
- * NOTE:
- * This file is part of the signature-service. Controllers are thin:
- * - validate (Zod from @lawprotect/shared-ts)
- * - authenticate/authorize
- * - call use-case
- * - map result -> HTTP response
+ * @file createDocumentLock.ts
+ * @description Controller for creating document locks via POST /documents/:documentId/locks endpoint.
+ * Validates input, derives tenant and actor from auth context, and delegates to the CreateDocumentLock app service.
  */
-import { apiHandler, ok } from "@lawprotect/shared-ts/http";
-import { authenticate } from "@lawprotect/shared-ts/auth";
-import { z, validate } from "@lawprotect/shared-ts/validation";
 
-const Params = z.object({});      // adjust per-route
-const Query  = z.object({});      // adjust per-route
-const Body   = z.object({}).optional(); // adjust per-route
+import type { HandlerFn } from "@lawprotect/shared-ts";
+import { created, validateRequest, z } from "@lawprotect/shared-ts";
+import { wrapController, corsFromEnv } from "@/middleware/http";
+import {actorFromCtx } from "@/middleware/auth";
+import { getContainer } from "@/infra/Container";
+import { DocumentIdPath } from "@/schemas/common/path";
+import { toDocumentId, toUserId } from "@/app/ports/shared";
+import { createDocumentLockApp } from "@/app/services/Documents/CreateDocumentLockApp.service";
+import { makeDocumentsCommandsPort } from "@/app/adapters/documents/makeDocumentsCommandsPort";
 
-export const handler = apiHandler(async (evt) => {
-  const auth = await authenticate(evt); // principal/tenant/scopes
-  const { params, query, body } = validate(evt, { params: Params, query: Query, body: Body });
+/**
+ * @description Body payload schema for creating a document lock.
+ */
+const CreateDocumentLockBody = z.object({
+  ttlSeconds: z.number().int().positive().optional(),
+  metadata: z.record(z.unknown()).optional(),
+});
 
-  // TODO: call use-case via DI from infra (e.g., ctx.getUseCase("..."))
-  // const result = await useCase.execute({ ...params, ...query, ...body }, { auth });
+/**
+ * @description Base handler function for creating a document lock.
+ * Validates request body and path parameters, extracts tenant and actor information, and delegates to the app service.
+ *
+ * @param {any} evt - The Lambda event containing HTTP request data
+ * @returns {Promise<any>} Promise resolving to HTTP response with created lock data or error
+ * @throws {AppError} When validation fails or lock creation fails
+ */
+const base: HandlerFn = async (evt) => {
+  const { body, path } = validateRequest(evt, { 
+    body: CreateDocumentLockBody,
+    path: DocumentIdPath 
+  });
 
-  return ok({ status: "stub", route: evt.requestContext?.http?.path });
+  const documentId = toDocumentId(path.id);
+  const actor = actorFromCtx(evt);
+  const ownerId = toUserId(actor.userId || "");
+
+  const c = getContainer();
+  const documentsCommands = makeDocumentsCommandsPort(c.repos.documents, c.repos.envelopes, { ids: c.ids });
+
+  const result = await createDocumentLockApp(
+    { 
+      documentId,
+      ownerId,
+      ownerEmail: actor.email,
+      ownerIp: actor.ip,
+      ownerUserAgent: actor.userAgent,
+      ttlSeconds: body.ttlSeconds,
+      metadata: body.metadata
+    },
+    { documentsCommands }
+  );
+
+  return created({ data: { lockId: result.lockId, expiresAt: result.expiresAt } });
+};
+
+/**
+ * @description Lambda handler for POST /documents/:documentId/locks endpoint.
+ * Wraps the base handler with authentication, observability, and CORS middleware.
+ *
+ * @param {any} evt - The Lambda event containing HTTP request data
+ * @returns {Promise<any>} Promise resolving to HTTP response with created lock data
+ */
+export const handler = wrapController(base, {
+  auth: true,
+  observability: {
+    logger: () => console,
+    metrics: () => ({} as any),
+    tracer: () => ({} as any),
+  },
+  cors: corsFromEnv(),
 });

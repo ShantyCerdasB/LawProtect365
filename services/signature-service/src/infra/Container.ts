@@ -63,15 +63,22 @@ import type { TenantId, UserId } from "@/domain/value-objects/Ids";
 import { createEnvelope } from "@/use-cases/envelopes/CreateEnvelope";
 import { type ISODateString, type EventEnvelope, type DomainEvent, randomToken, uuid, ulid, DdbClientLike } from "@lawprotect/shared-ts";
 
-
-
 /**
- * Application services exposed to controllers.
+ * @description Application services exposed to controllers.
+ * Provides high-level business operations for envelope management.
  *
  * @public
  */
 export interface Services {
+  /** Envelope-related business operations */
   envelopes: {
+    /**
+     * @description Creates a new envelope with the specified parameters.
+     *
+     * @param input - Envelope creation parameters including tenant, owner, title, and actor
+     * @param opts - Optional idempotency and TTL settings
+     * @returns Promise resolving to the created envelope
+     */
     create(
       input: {
         tenantId: TenantId;
@@ -91,11 +98,13 @@ export interface Services {
 }
 
 /**
- * Root DI container type.
+ * @description Root DI container type.
+ * Contains all infrastructure dependencies and application services.
  *
  * @public
  */
 export interface Container {
+  /** Application configuration */
   config: SignatureServiceConfig;
 
   aws: {

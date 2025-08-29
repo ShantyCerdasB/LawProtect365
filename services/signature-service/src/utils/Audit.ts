@@ -1,5 +1,12 @@
 
 /**
+ * @file Audit.ts
+ * @description Helpers for building audit metadata from HTTP requests.
+ * Provides utilities for creating normalized actor objects for audit events using
+ * authentication context and request headers.
+ */
+
+/**
  * @file audit.ts
  * @summary Helpers for building audit metadata from HTTP requests.
  *
@@ -8,27 +15,45 @@
  * authentication context and selected request headers.
  */
 
+/**
+ * @description Interface representing authentication-like data containing user identifiers.
+ * Used as input for building audit actor information.
+ */
 export interface AuthLike {
+  /** User identifier */
   userId?: string;
+  /** User email address */
   email?: string;
-  role?: string;
-}
-
-export interface AuditActor {
-  userId?: string;
-  email?: string;
-  ip?: string;
-  userAgent?: string;
-  locale?: string;
+  /** User role */
   role?: string;
 }
 
 /**
- * Builds a sanitized actor descriptor for audit events.
+ * @description Interface representing a complete audit actor with user and request information.
+ * Contains sanitized and normalized data for audit event logging.
+ */
+export interface AuditActor {
+  /** User identifier */
+  userId?: string;
+  /** User email address */
+  email?: string;
+  /** Client IP address */
+  ip?: string;
+  /** User agent string */
+  userAgent?: string;
+  /** User locale preference */
+  locale?: string;
+  /** User role */
+  role?: string;
+}
+
+/**
+ * @description Builds a sanitized actor descriptor for audit events.
+ * Extracts and normalizes user and request information from API Gateway events and authentication context.
  *
- * @param evt API Gateway (or similar) event carrying headers and request context.
- * @param auth Authentication context with user identifiers.
- * @returns A minimal, sanitized actor payload.
+ * @param {any} evt - API Gateway (or similar) event carrying headers and request context
+ * @param {AuthLike} auth - Authentication context with user identifiers (default: empty object)
+ * @returns {AuditActor} A minimal, sanitized actor payload for audit logging
  */
 export const buildAuditActor = (evt: any, auth: AuthLike = {}): AuditActor => {
   const hdr = (name: string): string | undefined => {

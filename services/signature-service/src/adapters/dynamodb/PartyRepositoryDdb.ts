@@ -21,33 +21,33 @@ import {
 } from "./mappers/partyItemMapper";
 
 /**
- * Narrows a typed object into the loose `Record<string, unknown>` shape
+ * @description Narrows a typed object into the loose `Record<string, unknown>` shape
  * expected by generic DynamoDB clients, without mutating the input.
  * @typeParam T - Source object type.
- * @param v Source object.
- * @returns A `Record<string, unknown>` view of the source object.
+ * @param {T} v Source object.
+ * @returns {Record<string, unknown>} A `Record<string, unknown>` view of the source object.
  */
 const toDdbItem = <T extends object>(v: T): Record<string, unknown> =>
   (v as unknown) as Record<string, unknown>;
 
 /**
- * Composite identifier used by this repository.
+ * @description Composite identifier used by this repository.
  * - `envelopeId` scopes all parties.
  * - `partyId` identifies the specific party.
  */
 export type PartyKey = { envelopeId: string; partyId: string };
 
 /**
- * DynamoDB implementation of `Repository<Party, PartyKey>`.
+ * @description DynamoDB implementation of `Repository<Party, PartyKey>`.
  * Uses composite keys because `Party` rows are scoped to their `Envelope`.
  */
 export class PartyRepositoryDdb
   implements Repository<Party, PartyKey, undefined>
 {
   /**
-   * Creates a new repository instance.
-   * @param tableName DynamoDB table name.
-   * @param ddb Minimal DynamoDB client.
+   * @description Creates a new repository instance.
+   * @param {string} tableName DynamoDB table name.
+   * @param {DdbClientLike} ddb Minimal DynamoDB client.
    */
   constructor(
     private readonly tableName: string,
@@ -55,10 +55,10 @@ export class PartyRepositoryDdb
   ) {}
 
   /**
-   * Loads a `Party` by `(envelopeId, partyId)`.
-   * @param key Composite key `{ envelopeId, partyId }`.
-   * @returns The `Party` or `null` if not found.
-   * @throws HttpError Normalized AWS error (e.g., throttling) via `mapAwsError`.
+   * @description Loads a `Party` by `(envelopeId, partyId)`.
+   * @param {PartyKey} key Composite key `{ envelopeId, partyId }`.
+   * @returns {Promise<Party | null>} The `Party` or `null` if not found.
+   * @throws {HttpError} Normalized AWS error (e.g., throttling) via `mapAwsError`.
    */
   async getById(key: PartyKey): Promise<Party | null> {
     try {
@@ -73,21 +73,21 @@ export class PartyRepositoryDdb
   }
 
   /**
-   * Checks whether a `Party` exists.
-   * @param key Composite key `{ envelopeId, partyId }`.
-   * @returns `true` when found; otherwise `false`.
-   * @throws HttpError Normalized AWS error via `mapAwsError`.
+   * @description Checks whether a `Party` exists.
+   * @param {PartyKey} key Composite key `{ envelopeId, partyId }`.
+   * @returns {Promise<boolean>} `true` when found; otherwise `false`.
+   * @throws {HttpError} Normalized AWS error via `mapAwsError`.
    */
   async exists(key: PartyKey): Promise<boolean> {
     return (await this.getById(key)) !== null;
   }
 
   /**
-   * Creates a new `Party`. Fails if the item already exists.
-   * @param entity Domain entity to persist.
-   * @returns The same `Party` entity.
-   * @throws ConflictError When the conditional write fails (already exists).
-   * @throws HttpError Normalized AWS error via `mapAwsError`.
+   * @description Creates a new `Party`. Fails if the item already exists.
+   * @param {Party} entity Domain entity to persist.
+   * @returns {Promise<Party>} The same `Party` entity.
+   * @throws {ConflictError} When the conditional write fails (already exists).
+   * @throws {HttpError} Normalized AWS error via `mapAwsError`.
    */
   async create(entity: Party): Promise<Party> {
     try {
@@ -107,13 +107,13 @@ export class PartyRepositoryDdb
   }
 
   /**
-   * Partially updates a `Party` via read–modify–write.
+   * @description Partially updates a `Party` via read–modify–write.
    * Only whitelisted fields are updated.
-   * @param key Composite key `{ envelopeId, partyId }`.
-   * @param patch Partial fields to update.
-   * @returns The updated `Party`.
-   * @throws NotFoundError When the item does not exist.
-   * @throws HttpError Normalized AWS error via `mapAwsError`.
+   * @param {PartyKey} key Composite key `{ envelopeId, partyId }`.
+   * @param {Partial<Party>} patch Partial fields to update.
+   * @returns {Promise<Party>} The updated `Party`.
+   * @throws {NotFoundError} When the item does not exist.
+   * @throws {HttpError} Normalized AWS error via `mapAwsError`.
    */
   async update(key: PartyKey, patch: Partial<Party>): Promise<Party> {
     try {
@@ -146,11 +146,11 @@ export class PartyRepositoryDdb
   }
 
   /**
-   * Deletes a `Party` by `(envelopeId, partyId)`.
-   * @param key Composite key `{ envelopeId, partyId }`.
-   * @returns Resolves when the item has been deleted.
-   * @throws NotFoundError When the item does not exist.
-   * @throws HttpError Normalized AWS error via `mapAwsError`.
+   * @description Deletes a `Party` by `(envelopeId, partyId)`.
+   * @param {PartyKey} key Composite key `{ envelopeId, partyId }`.
+   * @returns {Promise<void>} Resolves when the item has been deleted.
+   * @throws {NotFoundError} When the item does not exist.
+   * @throws {HttpError} Normalized AWS error via `mapAwsError`.
    */
   async delete(key: PartyKey): Promise<void> {
     try {
