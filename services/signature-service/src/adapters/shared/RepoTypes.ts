@@ -7,6 +7,7 @@ import type {
   WithTimestamps,
   WithMetadata,
   EnvelopeScoped,
+  TenantScoped,
   ConsentKey,
 } from "@/domain/Types/Common";
 import type {
@@ -20,6 +21,7 @@ export type ConsentRepoKey = ConsentKey;
 
 export type ConsentRepoRow =
   & EnvelopeScoped
+  & TenantScoped
   & WithTimestamps
   & WithMetadata
   & {

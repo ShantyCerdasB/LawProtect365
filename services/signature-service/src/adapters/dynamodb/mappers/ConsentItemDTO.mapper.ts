@@ -31,6 +31,7 @@ const asIsoOptional = (s?: string): ISODateString | undefined => {
 export const dtoToConsentRow = (dto: ConsentItemDTO): ConsentRepoRow => ({
   consentId: dto.consentId,
   envelopeId: dto.envelopeId,
+  tenantId: dto.tenantId,
   partyId: dto.partyId,
   consentType: dto.consentType,
   status: dto.status as ConsentRepoRow["status"],

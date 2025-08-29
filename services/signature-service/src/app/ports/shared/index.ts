@@ -10,3 +10,4 @@ export * from "./common";
 // Domain-specific types
 export * from "./envelopes";
 export * from "./parties";
+export * from "./consents";

@@ -44,6 +44,7 @@ export function makeConsentsPort(repo: ConsentsRepo, ids: Ids): ConsentsPort {
     async create(input: CreateConsentInput): Promise<ConsentRecord> {
       const row = await repo.create({
         consentId: ids.ulid(),
+        tenantId: input.tenantId,
         envelopeId: input.envelopeId,
         partyId: input.partyId,
         consentType: input.consentType, // repo stores raw string

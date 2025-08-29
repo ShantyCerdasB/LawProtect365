@@ -13,7 +13,7 @@ import { getContainer } from "@/infra/Container";
 import { AddPartyPath, AddPartyBody } from "@/schemas/parties/AddParty.schema";
 import { toTenantId, toEnvelopeId } from "@/app/ports/shared";
 import { addPartyApp } from "@/app/services/Envelope/AddPartyApp.service";
-import { makePartiesCommandsPort } from "@/app/ports/parties/makePartiesCommandsPort";
+import { makePartiesCommandsPort } from "@/app/ports/parties/MakePartiesCommandsPort";
 import type { PartyRole } from "@/domain/values/enums";
 
 /**

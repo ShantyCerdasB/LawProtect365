@@ -14,7 +14,7 @@ import { EnvelopeIdPath } from "@/schemas/common/path";
 import { PaginationQuery } from "@/schemas/common/query";
 import { toTenantId, toEnvelopeId } from "@/app/ports/shared";
 import { listPartiesApp } from "@/app/services/Envelope/ListPartiesApp.service";
-import { makePartiesQueriesPort } from "@/app/ports/parties/makePartiesQueryPort";
+import { makePartiesQueriesPort } from "@/app/ports/parties/MakePartiesQueryPort";
 
 /**
  * Base handler function for listing parties of an envelope

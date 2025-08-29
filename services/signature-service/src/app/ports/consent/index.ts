@@ -1,4 +1,8 @@
-export * from "./makeConsent";
-export * from "./MakeDelegationPort";
-export * from "./MakeConsentQueryPort";
-export * from "./MakeUpdateConsentPort";
+/**
+ * @file index.ts
+ * @summary Barrel export for consent ports
+ * @description Centralizes exports for consent-related ports
+ */
+
+export * from "./ConsentCommandsPort";
+export * from "./ConsentQueriesPort";

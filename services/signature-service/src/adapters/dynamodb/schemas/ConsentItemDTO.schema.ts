@@ -14,6 +14,7 @@ export const ConsentItemDTOSchema = z.object({
   sk: z.string(),
   type: z.literal("Consent"),
   envelopeId: z.string(),
+  tenantId: z.string(),
   consentId: z.string(),
   partyId: z.string(),
   consentType: z.string(),

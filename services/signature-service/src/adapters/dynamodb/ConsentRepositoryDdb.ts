@@ -48,6 +48,7 @@ export class ConsentRepositoryDdb {
       sk: sk(input.consentId),
       type: "Consent",
       envelopeId: input.envelopeId,
+      tenantId: input.tenantId,
       consentId: input.consentId,
       partyId: input.partyId,
       consentType: input.consentType,
