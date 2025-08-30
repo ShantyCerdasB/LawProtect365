@@ -3,3 +3,4 @@ export type { GetAuditTrailAppInput, GetAuditTrailAppResult } from "./GetAuditTr
 
 export { GetAuditEventAppService } from "./GetAuditEventApp.service";
 export type { GetAuditEventAppInput, GetAuditEventAppResult } from "./GetAuditEventApp.service";
+

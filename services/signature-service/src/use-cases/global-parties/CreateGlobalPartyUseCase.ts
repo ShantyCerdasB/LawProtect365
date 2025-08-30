@@ -8,7 +8,7 @@
 import type { GlobalParty } from "@/domain/entities/GlobalParty";
 import type { GlobalPartiesCommandsPort, GlobalPartiesQueriesPort } from "@/app/ports/global-parties";
 import type { CreateGlobalPartyCommand, CreateGlobalPartyResult } from "@/app/ports/global-parties";
-import { badRequest, conflict } from "@/errors";
+import { badRequest, conflict } from "@/shared/errors";
 import { createGlobalPartyStats } from "@/domain/value-objects/global-party/GlobalPartyStats";
 import { createGlobalPartyTags } from "@/domain/value-objects/global-party/GlobalPartyTags";
 
@@ -129,3 +129,4 @@ export const executeCreateGlobalParty = async (
     globalParty: result.globalParty,
   };
 };
+

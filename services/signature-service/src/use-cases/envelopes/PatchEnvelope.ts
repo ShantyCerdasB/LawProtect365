@@ -11,7 +11,7 @@
 import type { Envelope } from "@/domain/entities/Envelope";
 import type { EnvelopeId } from "@/domain/value-objects";
 import type { Repository } from "@lawprotect/shared-ts";
-import { envelopeNotFound } from "@/errors";
+import { envelopeNotFound } from "@/shared/errors";
 import * as Rules from "@/domain/rules";
 
 export interface PatchEnvelopeInput {

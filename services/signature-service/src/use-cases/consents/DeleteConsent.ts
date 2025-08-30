@@ -13,8 +13,8 @@ import type {
   ConsentsPort,
   DeleteConsentResult,
 } from "@/domain/ports/consent/ConsentsPort";
-import { unprocessable } from "@/errors";
-import { SignatureErrorCodes } from "@/errors/codes";
+import { unprocessable } from "@/shared/errors";
+import { SignatureErrorCodes } from "@/shared/errors/codes";
 import {
   ensureEnvelopeAccess,
   assertEnvelopeMutable,
@@ -76,5 +76,6 @@ export async function deleteConsent(
   // 5) Delegate deletion to the port (returns receipt with deletedAt)
   return consents.delete(envelopeId, consentId);
 }
+
 
 

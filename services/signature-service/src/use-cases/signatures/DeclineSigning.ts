@@ -23,7 +23,7 @@ import {
   assertCancelDeclineAllowed,
   assertReasonValid,
 } from "@/domain/rules/CancelDecline.rules";
-import { envelopeNotFound, partyNotFound, requestTokenInvalid } from "@/errors";
+import { envelopeNotFound, partyNotFound, requestTokenInvalid } from "@/shared/errors";
 import type { IdempotencyRunner } from "@/adapters/idempotency/IdempotencyRunner";
 import type { EventBridgePublisher } from "@/adapters/eventbridge/EventBridgePublisher";
 import {

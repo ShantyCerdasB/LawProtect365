@@ -6,7 +6,7 @@
  */
 
 import type { SigningCommandsPort, RequestOtpCommand } from "@/app/ports/signing/SigningCommandsPort";
-import { badRequest } from "@/errors";
+import { badRequest } from "@/shared/errors";
 
 /**
  * Input parameters for OTP request

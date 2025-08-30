@@ -111,3 +111,6 @@ export interface GlobalPartiesCommandsPort {
    */
   delete(command: DeleteGlobalPartyCommand): Promise<DeleteGlobalPartyResult>;
 }
+
+
+

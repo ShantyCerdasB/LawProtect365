@@ -48,3 +48,6 @@ export const createGlobalPartyTags = (tags: string[]): GlobalPartyTags => {
   if (!tags || tags.length === 0) return undefined;
   return normalizeTags(tags);
 };
+
+
+

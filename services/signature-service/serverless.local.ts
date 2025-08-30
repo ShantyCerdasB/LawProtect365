@@ -34,7 +34,7 @@ process.env.KMS_SIGNING_ALGORITHM ??= "RSASSA_PSS_SHA_256";
 // process.env.AWS_ENDPOINT_URL ??= "http://localhost:4566";
 
 import type { APIGatewayProxyEventV2, Context } from "aws-lambda";
-import { initApp } from "./src/app/bootstrap";
+import { initApp } from "./src/bootstrap/bootstrap";
 
 // --- CLI args: module path, method, path, body ---
 const modPath = process.argv[2];

@@ -8,7 +8,7 @@
 import type { GlobalParty } from "@/domain/entities/GlobalParty";
 import type { GlobalPartiesQueriesPort } from "@/app/ports/global-parties";
 import type { GetGlobalPartyQuery, GetGlobalPartyResult } from "@/app/ports/global-parties";
-import { notFound } from "@/errors";
+import { notFound } from "@/shared/errors";
 
 /**
  * @description Dependencies for the GetGlobalParty use case.
@@ -67,3 +67,4 @@ export const executeGetGlobalParty = async (
     globalParty: result.globalParty,
   };
 };
+

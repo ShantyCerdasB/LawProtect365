@@ -8,8 +8,8 @@
 import type { DocumentId, UserId } from "@/app/ports/shared";
 import type { DocumentsCommandsPort } from "@/app/ports/documents/DocumentsCommandsPort";
 import { fromIso } from "@lawprotect/shared-ts";
-import { documentNotFound, badRequest } from "@/errors";
-import { SignatureErrorCodes } from "@/errors/codes";
+import { documentNotFound, badRequest } from "@/shared/errors";
+import { SignatureErrorCodes } from "@/shared/errors/codes";
 
 /**
  * Input parameters for deleting a document lock

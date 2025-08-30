@@ -7,7 +7,7 @@
 
 import type { SigningCommandsPort, CompleteSigningCommand } from "@/app/ports/signing/SigningCommandsPort";
 import { HashAlgorithm, KmsAlgorithm } from "@/domain/values/enums";
-import { badRequest } from "@/errors";
+import { badRequest } from "@/shared/errors";
 
 /**
  * Input parameters for signing completion

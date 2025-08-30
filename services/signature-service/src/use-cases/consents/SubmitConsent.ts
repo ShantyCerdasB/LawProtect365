@@ -10,8 +10,8 @@
 
 import type { EnvelopesPort } from "@/domain/ports/envelopes";
 import type { ConsentRecord as DomainConsentRecord, ConsentState } from "@/domain/ports/consent/ConsentsPort";
-import { unprocessable } from "@/errors";
-import { SignatureErrorCodes } from "@/errors/codes";
+import { unprocessable } from "@/shared/errors";
+import { SignatureErrorCodes } from "@/shared/errors/codes";
 import {
   ensureEnvelopeAccess,
   assertEnvelopeMutable,

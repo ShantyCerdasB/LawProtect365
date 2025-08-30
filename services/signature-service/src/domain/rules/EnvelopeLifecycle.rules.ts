@@ -1,7 +1,7 @@
 
 import type { Envelope } from "../entities";
 import { EnvelopeStatusSchema, type EnvelopeStatus } from "../value-objects/EnvelopeStatus";
-import { invalidEnvelopeState } from "@/errors";
+import { invalidEnvelopeState } from "@/shared/errors";
 
 /**
  * Validates a lifecycle transition for envelopes.

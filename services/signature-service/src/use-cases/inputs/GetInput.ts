@@ -20,7 +20,7 @@ import type { Repository } from "@lawprotect/shared-ts";
 import type { Input } from "@/domain/entities/Input";
 import type { EnvelopeId } from "@/domain/value-objects/Ids";
 import type { InputId } from "@/adapters/dynamodb/InputRepositoryDdb";
-import { inputNotFound } from "@/errors";
+import { inputNotFound } from "@/shared/errors";
 
 /**
  * @description Input contract for GetInput use case.
@@ -81,3 +81,4 @@ export const getInput = async (
   // 3. Return result
   return { input: inputEntity };
 };
+

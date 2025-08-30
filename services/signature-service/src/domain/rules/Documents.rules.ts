@@ -2,7 +2,7 @@ import type { Document } from "../entities/Document";
 import type { Envelope } from "../entities/Envelope";
 import { DocumentStatusSchema, type DocumentStatus } from "../value-objects/DocumentStatus";
 import { ALLOWED_CONTENT_TYPES } from "../values/enums";
-import { invalidDocumentState, invalidDocumentContent } from "@/errors";
+import { invalidDocumentState, invalidDocumentContent } from "@/shared/errors";
 
 /**
  * Validates that a document status transition is allowed.

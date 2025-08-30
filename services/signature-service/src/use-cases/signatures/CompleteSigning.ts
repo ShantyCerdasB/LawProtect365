@@ -40,12 +40,12 @@ import {
   kmsPermissionDenied,
   invalidEnvelopeState,
   signatureFailed,
-} from "@/errors";
+} from "@/shared/errors";
 
 import type { IdempotencyRunner } from "@/adapters/idempotency/IdempotencyRunner";
 import type { EventBridgePublisher } from "@/adapters/eventbridge/EventBridgePublisher";
 import type { KmsSigner } from "@/adapters/kms/KmsSigner";
-import { base64urlToBytes } from "@/utils/Base64Url.util";
+import { base64urlToBytes } from "@/shared/utils/Base64Url.util";
 
 /** Input contract for completing signing. */
 export interface CompleteSigningInput

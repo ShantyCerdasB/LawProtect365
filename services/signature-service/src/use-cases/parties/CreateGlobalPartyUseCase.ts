@@ -7,7 +7,7 @@
 
 import type { CreateGlobalPartyInput, CreateGlobalPartyResult, GlobalPartiesCommandsPort } from "../../app/ports/parties/GlobalPartiesCommandsPort";
 import type { GlobalPartiesQueriesPort } from "../../app/ports/parties/GlobalPartiesQueriesPort";
-import { badRequest } from "../../errors";
+import { badRequest } from "../../shared/errors";
 import { toPartyEmail } from "../../domain/value-objects/party/PartyEmail";
 import { toPartyPhone } from "../../domain/value-objects/party/PartyPhone";
 import { PersonNameSchema } from "../../domain/value-objects/PersonName";

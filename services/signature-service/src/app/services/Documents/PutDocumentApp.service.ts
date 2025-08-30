@@ -11,7 +11,7 @@ import type { S3ObjectRef } from "@/domain/value-objects/S3ObjectRef";
 import type { HashDigestString } from "@/domain/value-objects/HashDigest";
 import type { FileSize } from "@/domain/value-objects/FileSize";
 import type { ContentType } from "@/domain/value-objects/ContentType";
-import { documentNotFound, badRequest } from "@/errors";
+import { documentNotFound, badRequest } from "@/shared/errors";
 
 /**
  * Input parameters for updating document binary

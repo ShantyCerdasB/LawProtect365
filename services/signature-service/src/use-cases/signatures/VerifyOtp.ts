@@ -21,7 +21,7 @@ import {
   partyNotFound,
   requestTokenInvalid,
   otpInvalid,
-} from "@/errors";
+} from "@/shared/errors";
 
 import type {
   OtpVerifyInput,

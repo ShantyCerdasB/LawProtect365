@@ -71,3 +71,4 @@ export const executeListGlobalParties = async (
     total: result.total,
   };
 };
+

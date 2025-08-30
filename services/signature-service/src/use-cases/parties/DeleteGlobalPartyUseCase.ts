@@ -8,7 +8,7 @@
 import type { DeleteGlobalPartyInput, GlobalPartiesCommandsPort } from "../../app/ports/parties/GlobalPartiesCommandsPort";
 import type { GlobalPartiesQueriesPort } from "../../app/ports/parties/GlobalPartiesQueriesPort";
 import { assertPartyCanBeDeleted } from "../../domain/rules/GlobalParties.rules";
-import { badRequest, partyNotFound } from "../../errors";
+import { badRequest, partyNotFound } from "../../shared/errors";
 import { validateTenantAndPartyIds } from "../shared/GlobalPartyValidations";
 
 /**

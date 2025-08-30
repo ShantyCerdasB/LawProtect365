@@ -25,7 +25,7 @@ import {
   envelopeNotFound,
   requestTokenInvalid,
   invalidUploadRequest,
-} from "@/errors";
+} from "@/shared/errors";
 
 import type { IdempotencyRunner } from "@/adapters/idempotency/IdempotencyRunner";
 

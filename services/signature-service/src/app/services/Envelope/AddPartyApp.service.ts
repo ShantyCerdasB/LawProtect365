@@ -10,7 +10,7 @@ import type { PartiesCommandsPort } from "@/app/ports/parties/PartiesCommandsPor
 import type { Repository } from "@lawprotect/shared-ts";
 import type { Envelope } from "@/domain/entities/Envelope";
 import type { PartyRole } from "@/domain/values/enums";
-import { envelopeNotFound } from "@/errors";
+import { envelopeNotFound } from "@/shared/errors";
 
 
 /**

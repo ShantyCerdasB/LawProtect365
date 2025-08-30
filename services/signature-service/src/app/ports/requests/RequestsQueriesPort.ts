@@ -88,3 +88,4 @@ export interface RequestsQueriesPort {
    */
   getPartyStatus(query: GetPartyStatusQuery): Promise<PartyStatus>;
 }
+

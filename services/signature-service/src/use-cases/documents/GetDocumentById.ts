@@ -6,7 +6,7 @@
 import type { Document } from "@/domain/entities/Document";
 import type { DocumentId } from "@/domain/value-objects";
 import type { Repository } from "@lawprotect/shared-ts";
-import { documentNotFound } from "@/errors";
+import { documentNotFound } from "@/shared/errors";
 
 export interface GetDocumentByIdInput {
   documentId: DocumentId;

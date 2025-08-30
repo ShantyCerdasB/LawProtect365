@@ -12,7 +12,7 @@ import type { PartyPhone } from "../value-objects/party/PartyPhone";
 import type { PartyMetadata } from "../value-objects/party/PartyMetadata";
 import type { GlobalPartyRepository } from "../ports/GlobalPartyRepository";
 import { PARTY_ROLES, PARTY_SOURCES, DELEGATION_TYPES } from "../values/enums";
-import { badRequest, partyNotFound, invalidPartyState } from "../../errors";
+import { badRequest, partyNotFound, invalidPartyState } from "../../shared/errors";
 
 /**
  * Validates that a party email is unique within a tenant for global parties.

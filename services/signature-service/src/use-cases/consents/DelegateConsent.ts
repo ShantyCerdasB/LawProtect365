@@ -7,8 +7,8 @@ import type { EnvelopesPort } from "@/domain/ports/envelopes";
 import type { PartiesPort } from "@/domain/ports/parties";
 import type { ConsentsPort, DelegationsPort, DelegationRecord } from "@/domain/ports/consent";
 import { asISOOpt } from "@lawprotect/shared-ts";
-import { unprocessable } from "@/errors";
-import { SignatureErrorCodes } from "@/errors/codes";
+import { unprocessable } from "@/shared/errors";
+import { SignatureErrorCodes } from "@/shared/errors/codes";
 import {
   ensureEnvelopeAccess,
   assertEnvelopeMutable,

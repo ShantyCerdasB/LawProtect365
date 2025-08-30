@@ -8,7 +8,7 @@
 import type { Party } from "@/domain/entities/Party";
 import type { PartiesCommandsPort, PartiesQueriesPort } from "@/app/ports/parties";
 import type { CreatePartyCommand, CreatePartyResult } from "@/app/ports/parties";
-import { badRequest, conflict } from "@/errors";
+import { badRequest, conflict } from "@/shared/errors";
 import { DEFAULT_PARTY_AUTH } from "@/domain/value-objects/party/PartyAuth";
 import { getNextSequence } from "@/domain/value-objects/party/PartySequence";
 
@@ -124,3 +124,4 @@ export const executeCreateParty = async (
     party: result.party,
   };
 };
+

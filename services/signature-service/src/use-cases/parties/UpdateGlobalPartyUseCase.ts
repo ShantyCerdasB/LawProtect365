@@ -8,7 +8,7 @@
 import type { UpdateGlobalPartyInput, UpdateGlobalPartyResult, GlobalPartiesCommandsPort } from "../../app/ports/parties/GlobalPartiesCommandsPort";
 import type { GlobalPartiesQueriesPort } from "../../app/ports/parties/GlobalPartiesQueriesPort";
 import { assertPartyIsActive } from "../../domain/rules/GlobalParties.rules";
-import { badRequest, partyNotFound } from "../../errors";
+import { badRequest, partyNotFound } from "../../shared/errors";
 import { toPartyPhone } from "../../domain/value-objects/party/PartyPhone";
 import { PersonNameSchema } from "../../domain/value-objects/PersonName";
 import { validatePartyUpdateFields } from "../shared/GlobalPartyValidations";

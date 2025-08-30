@@ -45,3 +45,6 @@ export const getGlobalPartyApp = async (
   const result = await executeGetGlobalParty(input, deps);
   return result;
 };
+
+
+

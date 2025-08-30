@@ -65,3 +65,4 @@ export const remindPartiesApp = async (
     skipped: result.skipped,
   };
 };
+

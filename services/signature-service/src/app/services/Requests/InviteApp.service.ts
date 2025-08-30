@@ -68,3 +68,4 @@ export const invitePartiesApp = async (
     statusChanged: result.statusChanged,
   };
 };
+

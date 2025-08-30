@@ -71,3 +71,6 @@ export const incrementTotalEnvelopes = (stats: GlobalPartyStats): GlobalPartySta
     totalEnvelopes: stats.totalEnvelopes + 1,
   };
 };
+
+
+

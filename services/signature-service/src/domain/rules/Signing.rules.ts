@@ -1,7 +1,7 @@
 
 import { HashDigestSchema } from "../value-objects/HashDigest";
 import { KmsAlgorithmSchema } from "../value-objects/Kms";
-import { signatureHashMismatch, kmsPermissionDenied, invalidEnvelopeState } from "@/errors";
+import { signatureHashMismatch, kmsPermissionDenied, invalidEnvelopeState } from "@/shared/errors";
 
 /**
  * Validates that the uploaded PDF digest matches the expected digest.

@@ -4,7 +4,7 @@
  */
 
 import type { EnvelopeStatus } from "@/domain/value-objects/EnvelopeStatus";
-import { invalidEnvelopeState } from "@/errors";
+import { invalidEnvelopeState } from "@/shared/errors";
 
 /**
  * Asserts that download operations are allowed based on the envelope's lifecycle state.

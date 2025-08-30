@@ -1,5 +1,5 @@
 import type { Party, Input } from "../entities";
-import { badRequest, rateLimitPartyInvite } from "@/errors";
+import { badRequest, rateLimitPartyInvite } from "@/shared/errors";
 
 /**
  * Validates readiness to send an envelope.

@@ -8,7 +8,7 @@
 import type { CreateDelegationInput, CreateDelegationResult, GlobalPartiesCommandsPort } from "../../app/ports/parties/GlobalPartiesCommandsPort";
 import type { GlobalPartiesQueriesPort } from "../../app/ports/parties/GlobalPartiesQueriesPort";
 import { assertPartyIsActive, assertValidDelegation } from "../../domain/rules/GlobalParties.rules";
-import { badRequest, partyNotFound } from "../../errors";
+import { badRequest, partyNotFound } from "../../shared/errors";
 import { toPartyEmail } from "../../domain/value-objects/party/PartyEmail";
 import { PersonNameSchema } from "../../domain/value-objects/PersonName";
 import { validateDelegationCreationFields, validateRequiredString } from "../shared/GlobalPartyValidations";

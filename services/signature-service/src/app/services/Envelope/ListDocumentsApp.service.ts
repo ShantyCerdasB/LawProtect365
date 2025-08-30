@@ -7,7 +7,7 @@
 
 import type { TenantId, EnvelopeId } from "@/app/ports/shared";
 import type { DocumentsQueriesPort } from "@/app/ports/documents/DocumentsQueriesPort";
-import { badRequest } from "@/errors";
+import { badRequest } from "@/shared/errors";
 
 /**
  * Input parameters for listing documents of an envelope

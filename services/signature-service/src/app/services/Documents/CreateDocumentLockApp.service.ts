@@ -8,7 +8,7 @@
 import type { DocumentId, UserId } from "@/app/ports/shared";
 import type { DocumentsCommandsPort } from "@/app/ports/documents/DocumentsCommandsPort";
 import { nowIso, fromIso, addMinutes, toIso } from "@lawprotect/shared-ts";
-import { documentNotFound, documentLockExists } from "@/errors";
+import { documentNotFound, documentLockExists } from "@/shared/errors";
 
 /**
  * Input parameters for creating a document lock

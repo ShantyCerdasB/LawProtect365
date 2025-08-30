@@ -22,7 +22,7 @@ import { createDocument } from "@/use-cases/documents/CreateDocument";
 import { patchDocument } from "@/use-cases/documents/PatchDocument";
 import { deleteDocument } from "@/use-cases/documents/DeleteDocument";
 import { toDocumentId } from "@/app/ports/shared";
-import { documentNotFound } from "@/errors";
+import { documentNotFound } from "@/shared/errors";
 
 /**
  * Creates a DocumentsCommandsPort implementation

@@ -12,7 +12,7 @@ import type { KmsPort } from "@lawprotect/shared-ts";
 import { toBase64Url } from "@lawprotect/shared-ts";
 import { assertKmsAlgorithmAllowed } from "@/domain/rules/Signing.rules";
 import type { HashDigest, KmsAlgorithmType, KmsKeyId } from "@/domain/value-objects";
-import { base64urlToBytes } from "@/utils/Base64Url.util";
+import { base64urlToBytes } from "@/shared/utils/Base64Url.util";
 
 /**
  * Input parameters for the SignHash use case.

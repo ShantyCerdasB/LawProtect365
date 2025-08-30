@@ -1,6 +1,6 @@
 import type { EventEnvelope, ISODateString } from "@lawprotect/shared-ts";
 import { asISO } from "@lawprotect/shared-ts";
-import { envelopeNotFound, partyNotFound, requestTokenInvalid } from "@/errors";
+import { envelopeNotFound, partyNotFound, requestTokenInvalid } from "@/shared/errors";
 import { assertRequestToken } from "@/domain/rules/Token.rules";
 import { OTP_POLICY } from "@/domain/values/enums";
 import { generateNumericOtp, hashOtp } from "@lawprotect/shared-ts";

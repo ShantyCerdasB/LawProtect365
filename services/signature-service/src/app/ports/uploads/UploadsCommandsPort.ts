@@ -110,3 +110,4 @@ export interface UploadsCommandsPort {
    */
   uploadSignedPdf(command: UploadSignedPdfCommand): Promise<UploadSignedPdfResult>;
 }
+

@@ -9,7 +9,7 @@ import type { DocumentId } from "@/app/ports/shared";
 import type { DocumentsQueriesPort } from "@/app/ports/documents/DocumentsQueriesPort";
 import type { DocumentLock } from "@/domain/value-objects/DocumentLock";
 import { fromIso, nowIso } from "@lawprotect/shared-ts";
-import { documentNotFound } from "@/errors";
+import { documentNotFound } from "@/shared/errors";
 
 /**
  * Input parameters for listing document locks

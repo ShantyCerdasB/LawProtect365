@@ -6,3 +6,6 @@
 
 // Por ahora no hay tipos específicos de inputs en shared, pero mantenemos la estructura
 // para futuras expansiones
+
+
+

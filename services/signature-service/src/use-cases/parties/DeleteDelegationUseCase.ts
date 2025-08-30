@@ -7,7 +7,7 @@
 
 import type { DeleteDelegationInput, GlobalPartiesCommandsPort } from "../../app/ports/parties/GlobalPartiesCommandsPort";
 import type { GlobalPartiesQueriesPort } from "../../app/ports/parties/GlobalPartiesQueriesPort";
-import { badRequest, partyNotFound } from "../../errors";
+import { badRequest, partyNotFound } from "../../shared/errors";
 import { validateTenantAndPartyIds } from "../shared/GlobalPartyValidations";
 
 /**

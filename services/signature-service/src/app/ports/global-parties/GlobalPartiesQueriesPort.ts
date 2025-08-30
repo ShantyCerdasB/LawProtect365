@@ -82,3 +82,6 @@ export interface GlobalPartiesQueriesPort {
    */
   searchByEmail(query: SearchGlobalPartiesByEmailQuery): Promise<SearchGlobalPartiesByEmailResult>;
 }
+
+
+

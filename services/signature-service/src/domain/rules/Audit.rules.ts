@@ -7,7 +7,7 @@
  */
 
 import type { AuditEvent } from "../value-objects/Audit";
-import { badRequest } from "@/errors";
+import { badRequest } from "@/shared/errors";
 
 /**
  * Assert the minimal immutable shape of an audit event.

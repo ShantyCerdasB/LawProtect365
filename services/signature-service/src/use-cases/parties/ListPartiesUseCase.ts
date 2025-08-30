@@ -67,3 +67,4 @@ export const executeListParties = async (
     total: result.total,
   };
 };
+

@@ -10,7 +10,7 @@ import type { Envelope } from "../entities/Envelope";
 import type { PartyId, EnvelopeId } from "../value-objects/Ids";
 import { PARTY_ROLES, PARTY_STATUSES } from "../values/enums";
 import { validateSequentialSequences, getNextSequence } from "../value-objects/party/PartySequence";
-import { badRequest, partyNotFound, invalidPartyState, envelopeNotFound } from "../../errors";
+import { badRequest, partyNotFound, invalidPartyState, envelopeNotFound } from "../../shared/errors";
 import { PartiesPort } from "@/app/ports/parties/PartiesPort";
 
 /**

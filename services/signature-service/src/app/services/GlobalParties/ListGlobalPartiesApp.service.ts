@@ -53,3 +53,6 @@ export const listGlobalPartiesApp = async (
   const result = await executeListGlobalParties(input, deps);
   return result;
 };
+
+
+

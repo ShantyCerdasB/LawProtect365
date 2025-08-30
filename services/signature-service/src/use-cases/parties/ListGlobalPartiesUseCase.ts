@@ -6,7 +6,7 @@
  */
 
 import type { ListGlobalPartiesInput, ListGlobalPartiesResult, GlobalPartiesQueriesPort } from "../../app/ports/parties/GlobalPartiesQueriesPort";
-import { badRequest } from "../../errors";
+import { badRequest } from "../../shared/errors";
 import { validateRequiredString } from "../shared/GlobalPartyValidations";
 
 /**

@@ -31,7 +31,7 @@ import type { EnvelopeId } from "@/domain/value-objects/Ids";
 import type { InputId } from "@/adapters/dynamodb/InputRepositoryDdb";
 import { assertDraft } from "@/domain/rules/EnvelopeLifecycle.rules";
 import { InputTypeSchema } from "@/domain/value-objects/InputType";
-import { envelopeNotFound, inputNotFound } from "@/errors";
+import { envelopeNotFound, inputNotFound } from "@/shared/errors";
 
 /**
  * @description Input contract for PatchInput use case.
