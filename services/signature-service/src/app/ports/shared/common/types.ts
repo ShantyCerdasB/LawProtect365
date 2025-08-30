@@ -5,12 +5,12 @@
  */
 
 import type { EnvelopeStatus, PartyRole, PartyStatus, ConsentStatus, ConsentType, DocumentStatus } from "../../../../domain/values/enums";
-import type { TenantId, EnvelopeId, PartyId, UserId, DocumentId } from "../../../../domain/value-objects/Ids";
+import type { TenantId, EnvelopeId, PartyId, UserId, DocumentId, InputId } from "../../../../domain/value-objects/Ids";
 
 /**
  * Re-export domain IDs to keep single source of truth for types
  */
-export type { TenantId, EnvelopeId, PartyId, UserId, DocumentId };
+export type { TenantId, EnvelopeId, PartyId, UserId, DocumentId, InputId };
 
 /**
  * Re-export domain enums to keep single source of truth for types

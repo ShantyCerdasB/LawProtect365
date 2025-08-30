@@ -8,6 +8,7 @@
 
 
 import { z } from "zod";
+import { PARTY_ROLES, PARTY_STATUSES } from "../../domain/values/enums";
 
 /**
  * @description Path parameters schema for POST /envelopes/:envelopeId/parties.
@@ -28,7 +29,7 @@ export const AddPartyBody = z.object({
   /** Party full name (required, 1-255 characters) */
   name: z.string().min(1, "Name is required").max(255, "Name too long"),
   /** Party role in the envelope (signer, viewer, or delegate) */
-  role: z.enum(["signer", "viewer", "delegate"]),
+  role: z.enum(PARTY_ROLES),
   /** Optional signing order for sequential signing (minimum 1) */
   order: z.number().int().min(1, "Order must be at least 1").optional(),
   /** Optional metadata for additional party information */
@@ -56,11 +57,11 @@ export const AddPartyResponse = z.object({
   /** Party full name */
   name: z.string(),
   /** Party role in the envelope */
-  role: z.enum(["signer", "viewer", "delegate"]),
+  role: z.enum(PARTY_ROLES),
   /** Optional signing order */
   order: z.number().optional(),
   /** Current party status */
-  status: z.enum(["pending", "invited", "signed", "declined"]),
+  status: z.enum(PARTY_STATUSES),
   /** Creation timestamp */
   createdAt: z.string(),
   /** Optional metadata */

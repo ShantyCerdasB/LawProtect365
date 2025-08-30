@@ -16,7 +16,8 @@ import { actorFromCtx, requireRequestToken } from "@/middleware/auth";
 
 import { getContainer } from "@/infra/Container";
 import { DeclineSigningBody } from "@/schemas/signing/DeclineSigning.schema";
-import { executeDeclineSigning } from "@/use-cases/signatures/DeclineSigning";
+import { declineSigningApp } from "@/app/services/Signing/DeclineSigningApp.service";
+import { makeSigningCommandsPort } from "@/app/adapters/signing/makeSigningCommandsPort";
 
 
 const base: HandlerFn = async (evt) => {
@@ -28,10 +29,26 @@ const base: HandlerFn = async (evt) => {
   // 3) Actor from shared context
   const actor = actorFromCtx(evt);
 
-  // 4) Wire raw repositories and dependencies
+  // 4) Wire dependencies
   const c = getContainer();
+  const signingCommands = makeSigningCommandsPort(
+    c.repos.envelopes,
+    c.repos.parties,
+    {
+      events: c.events.publisher,
+      ids: c.ids,
+      time: c.time,
+      signer: c.crypto.signer,
+      idempotency: c.idempotency.runner,
+      signingConfig: {
+        defaultKeyId: c.config.kms.signerKeyId,
+        allowedAlgorithms: [c.config.kms.signingAlgorithm],
+      },
+    }
+  );
 
-  const result = await executeDeclineSigning(
+  // 5) Delegate to app service
+  const result = await declineSigningApp(
     {
       envelopeId: body.envelopeId,
       signerId: body.signerId,
@@ -39,16 +56,7 @@ const base: HandlerFn = async (evt) => {
       token,
       actor,
     },
-    {
-      repos: {
-        envelopes: c.repos.envelopes,
-        parties: c.repos.parties,
-      },
-      events: c.events.publisher,
-      idempotency: c.idempotency.runner,
-      ids: { ulid: c.ids.ulid },
-      time: { now: c.time.now },
-    }
+    { signingCommands }
   );
 
   // 5) Standard OK response (avoid duplicating `status`)

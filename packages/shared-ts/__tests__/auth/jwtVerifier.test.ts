@@ -32,6 +32,15 @@ describe('bearerFromAuthHeader', () => {
     expect(bearerFromAuthHeader('Basic foo')).toBeUndefined();
     expect(bearerFromAuthHeader('Bearer')).toBeUndefined();
   });
+
+  it('handles whitespace in header', () => {
+    expect(bearerFromAuthHeader('  Bearer  token  ')).toBe('token');
+    expect(bearerFromAuthHeader('Bearer   token')).toBe('token');
+  });
+
+  it('handles empty string', () => {
+    expect(bearerFromAuthHeader('')).toBeUndefined();
+  });
 });
 
 describe('verifyJwt', () => {
@@ -121,5 +130,38 @@ describe('verifyJwt', () => {
     );
 
     expect(res.claims.sub).toBe('s');
+  });
+
+  it('handles issuer with trailing slashes', async () => {
+    createRemoteJWKSetMock.mockReturnValueOnce({ jwks: true });
+    jwtVerifyMock.mockResolvedValueOnce({
+      payload: { sub: 's', iss: 'i' },
+      protectedHeader: {},
+    });
+
+    await verifyJwt('tkn', {
+      issuer: 'https://issuer.example.com///',
+      jwksUri: 'https://custom.example.com/jwks.json',
+    });
+
+    expect(createRemoteJWKSetMock).toHaveBeenCalledTimes(1);
+    const urlArg = createRemoteJWKSetMock.mock.calls[0][0] as URL;
+    expect(urlArg.href).toBe('https://custom.example.com/jwks.json');
+  });
+
+  it('handles issuer with single trailing slash', async () => {
+    createRemoteJWKSetMock.mockReturnValueOnce({ jwks: true });
+    jwtVerifyMock.mockResolvedValueOnce({
+      payload: { sub: 's', iss: 'i' },
+      protectedHeader: {},
+    });
+
+    await verifyJwt('tkn', {
+      issuer: 'https://issuer.example.com/',
+    });
+
+    expect(createRemoteJWKSetMock).toHaveBeenCalledTimes(1);
+    const urlArg = createRemoteJWKSetMock.mock.calls[0][0] as URL;
+    expect(urlArg.href).toBe('https://issuer.example.com/.well-known/jwks.json');
   });
 });

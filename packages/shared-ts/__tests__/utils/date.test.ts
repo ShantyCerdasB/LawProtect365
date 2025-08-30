@@ -21,6 +21,8 @@ import {
   endOfDayUTC,
   diffMs,
   formatDateUTC,
+  asISO,
+  asISOOpt,
 } from "../../src/utils/date.js";
 
 describe("nowIso", () => {
@@ -131,5 +133,50 @@ describe("formatDateUTC", () => {
   it("pads month and day to two digits", () => {
     const d = new Date("1999-03-07T00:00:00.000Z");
     expect(formatDateUTC(d)).toBe("1999-03-07");
+  });
+});
+
+describe("asISO", () => {
+  it("validates and brands a valid ISO string", () => {
+    const validIso = "2023-01-01T00:00:00.000Z";
+    const result = asISO(validIso);
+    expect(result).toBe(validIso);
+    expect(typeof result).toBe("string");
+  });
+
+  it("throws error for invalid ISO string", () => {
+    expect(() => asISO("not-a-date")).toThrow();
+  });
+
+  it("throws error for empty string", () => {
+    expect(() => asISO("")).toThrow();
+  });
+});
+
+describe("asISOOpt", () => {
+  it("validates and brands a valid ISO string", () => {
+    const validIso = "2023-01-01T00:00:00.000Z";
+    const result = asISOOpt(validIso);
+    expect(result).toBe(validIso);
+    expect(typeof result).toBe("string");
+  });
+
+  it("returns undefined for undefined input", () => {
+    const result = asISOOpt(undefined);
+    expect(result).toBeUndefined();
+  });
+
+  it("returns undefined for null input", () => {
+    const result = asISOOpt(null);
+    expect(result).toBeUndefined();
+  });
+
+  it("returns undefined for empty string", () => {
+    const result = asISOOpt("");
+    expect(result).toBeUndefined();
+  });
+
+  it("throws error for invalid ISO string", () => {
+    expect(() => asISOOpt("not-a-date")).toThrow();
   });
 });

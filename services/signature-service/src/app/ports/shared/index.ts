@@ -7,6 +7,9 @@
 // Common types (pagination, domain IDs, enums)
 export * from "./common";
 
+// Shared interfaces
+export * from "./ActorContext";
+
 // Domain-specific types
 export * from "./envelopes";
 export * from "./parties";

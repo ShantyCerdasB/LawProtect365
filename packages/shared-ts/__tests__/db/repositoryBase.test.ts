@@ -92,7 +92,9 @@ class TestRepository extends RepositoryBase<TestDomain, string, TestSpec> {
       this.toDomain({ id: '1', name: 'Item 1', value: 10 }),
       this.toDomain({ id: '2', name: 'Item 2', value: 20 }),
     ];
-    return { items, nextCursor: cursor ? 'next-cursor' : undefined };
+    // Return nextCursor when there's a specification (indicating filtered results)
+    // Return undefined when no specification (indicating all results, no more pages)
+    return { items, nextCursor: Object.keys(spec).length > 0 ? 'next-cursor' : undefined };
   }
 }
 

@@ -25,6 +25,7 @@ export {
   stripTrailingSlash,
   isSubpath,
   split,
+  Base64UrlNoPad,
 } from "./path.js";
 export * from "./json.js";
 export * from "./date.js";

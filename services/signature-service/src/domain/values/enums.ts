@@ -10,8 +10,16 @@ export const DELEGATION_STATUSES = ["pending","accepted","declined","expired"] a
 export type DelegationStatus = (typeof DELEGATION_STATUSES)[number];
 
 // Parties
-export const PARTY_STATUSES = ["pending","invited","signed","declined"] as const;
+export const PARTY_STATUSES = ["pending","invited","signed","declined","active"] as const;
 export type PartyStatus = (typeof PARTY_STATUSES)[number];
+
+// Global Parties (Contacts)
+export const GLOBAL_PARTY_STATUSES = ["active","inactive","deleted"] as const;
+export type GlobalPartyStatus = (typeof GLOBAL_PARTY_STATUSES)[number];
+
+// Authentication Methods
+export const AUTH_METHODS = ["otpViaEmail","otpViaSms"] as const;
+export type AuthMethod = (typeof AUTH_METHODS)[number];
 
 // Envelopes
 export const ENVELOPE_STATUSES = ["draft","sent","in_progress","completed","canceled","declined","in_progress"] as const;
@@ -30,6 +38,32 @@ export type SignatureActorField = (typeof SIGNATURE_ACTOR_FIELDS)[number];
 
 export const ALLOWED_CONTENT_TYPES = ["application/pdf","image/png","image/jpeg","image/gif","image/webp","image/svg+xml"] as const; 
 export type AllowedContentType = (typeof ALLOWED_CONTENT_TYPES)[number];
+
+// Upload Status
+export const UPLOAD_STATUSES = ["pending", "uploading", "completed", "failed", "cancelled"] as const;
+export type UploadStatus = (typeof UPLOAD_STATUSES)[number];
+
+// Evidence Types
+export const EVIDENCE_TYPES = ["photo", "video", "audio", "document", "screenshot"] as const;
+export type EvidenceType = (typeof EVIDENCE_TYPES)[number];
+
+// Upload Formats
+export const UPLOAD_FORMATS = ["json", "pdf"] as const;
+export type UploadFormat = (typeof UPLOAD_FORMATS)[number];
+
+// File Size Limits (in bytes)
+export const FILE_SIZE_LIMITS = {
+  EVIDENCE: 100 * 1024 * 1024, // 100MB
+  PDF: 50 * 1024 * 1024, // 50MB
+  MULTIPART_PART: 5 * 1024 * 1024, // 5MB per part
+} as const;
+
+// Rate Limits
+export const UPLOAD_RATE_LIMITS = {
+  EVIDENCE_PER_DAY: 10,
+  EVIDENCE_PER_HOUR: 5,
+  MULTIPART_PER_DAY: 20,
+} as const;
 
 export const HASH_ALGORITHM = ["sha256", "sha384", "sha512"] as const; 
 export type HashAlgorithm = (typeof HASH_ALGORITHM)[number];
@@ -55,3 +89,13 @@ export type RequestTokenScope = (typeof REQUEST_TOKEN_SCOPES)[number];
 
 export const SIGNATURE_METHODS = ["drawn", "typed", "uploaded"] as const;
 export type SignatureMethod = (typeof SIGNATURE_METHODS)[number];
+
+// Party Types and Sources
+export const PARTY_TYPES = ["global", "envelope"] as const;
+export type PartyType = (typeof PARTY_TYPES)[number];
+
+export const DELEGATION_TYPES = ["temporary", "permanent"] as const;
+export type DelegationType = (typeof DELEGATION_TYPES)[number];
+
+export const PARTY_SOURCES = ["manual", "import", "api"] as const;
+export type PartySource = (typeof PARTY_SOURCES)[number];

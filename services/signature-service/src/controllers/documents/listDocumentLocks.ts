@@ -11,7 +11,8 @@ import { getContainer } from "@/infra/Container";
 import { DocumentIdPath } from "@/schemas/common/path";
 import { toDocumentId } from "@/app/ports/shared";
 import { listDocumentLocksApp } from "@/app/services/Documents/ListDocumentLocksApp.service";
-import { makeDocumentsQueriesPort } from "@/app/adapters/documents/MakeDocumentsQueriesPort";
+import { makeDocumentsQueriesPort } from "@/app/ports/documents";
+
 
 /**
  * @description Base handler function for listing document locks.

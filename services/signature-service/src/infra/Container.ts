@@ -42,6 +42,7 @@ import { DocumentRepositoryDdb } from "../adapters/dynamodb/DocumentRepositoryDd
 import { EnvelopeRepositoryDdb } from "../adapters/dynamodb/EnvelopeRepositoryDb.js";
 import { InputRepositoryDdb } from "../adapters/dynamodb/InputRepositoryDdb.js";
 import { PartyRepositoryDdb } from "../adapters/dynamodb/PartyRepositoryDdb.js";
+import { GlobalPartyRepositoryDdb } from "../adapters/dynamodb/GlobalPartyRepositoryDdb.js";
 import { IdempotencyStoreDdb } from "../adapters/dynamodb/IdempotencyStoreDdb.js";
 import { AuditRepositoryDdb, ConsentRepositoryDdb } from "../adapters/dynamodb/index";
 
@@ -120,6 +121,7 @@ export interface Container {
     envelopes: EnvelopeRepositoryDdb;
     inputs: InputRepositoryDdb;
     parties: PartyRepositoryDdb;
+    globalParties: GlobalPartyRepositoryDdb;
     audit: AuditRepositoryDdb;
     idempotency: IdempotencyStoreDdb;
     consents: ConsentRepositoryDdb;
@@ -147,6 +149,10 @@ export interface Container {
 
   events: {
     publisher: EventBridgePublisher;
+  };
+
+  audit: {
+    log(action: string, details: any): Promise<void>;
   };
 
   configProvider: SsmParamConfigProvider;
@@ -218,6 +224,7 @@ export const getContainer = (): Container => {
   const envelopes = new EnvelopeRepositoryDdb(config.ddb.envelopesTable, ddbLike);
   const inputs = new InputRepositoryDdb(config.ddb.inputsTable, ddbLike);
   const parties = new PartyRepositoryDdb(config.ddb.partiesTable, ddbLike);
+  const globalParties = new GlobalPartyRepositoryDdb(config.ddb.partiesTable, ddbLike);
   const audit = new AuditRepositoryDdb({
     tableName: config.ddb.auditTable || config.ddb.envelopesTable,
     client: ddbLike,
@@ -338,15 +345,24 @@ export const getContainer = (): Container => {
 
   const time = { now: () => Date.now() };
 
+  // Audit service
+  const auditService = {
+    log: async (action: string, details: any) => {
+      // For now, just log to console. In production, this would write to audit repository
+      console.log(`AUDIT: ${action}`, details);
+    },
+  };
+
   singleton = {
     config,
     aws: { ddb, s3, kms, evb, ssm },
-    repos: { documents, envelopes, inputs, parties, audit, idempotency: idempotencyStore, consents, delegations },
+    repos: { documents, envelopes, inputs, parties, globalParties, audit, idempotency: idempotencyStore, consents, delegations },
     idempotency: { hasher, runner },
     rateLimit: { otpStore: otpRateLimitStore },
     storage: { evidence, presigner, pdfIngestor },
     crypto: { signer },
     events: { publisher },
+    audit: auditService,
     configProvider,
     services,
     ids,

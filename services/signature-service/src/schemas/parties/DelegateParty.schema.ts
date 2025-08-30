@@ -3,29 +3,33 @@
  * @summary Zod schemas for the DelegateParty endpoint
  * 
  * @description
- * Defines input validation schemas for delegating a party's signing authority.
+ * Defines input validation schemas for delegating a global party's signing authority.
  * Handles path parameters and request body validation.
  */
 
 import { z } from "zod";
+import { DELEGATION_STATUSES, DELEGATION_TYPES } from "../../domain/values/enums";
+import { EmailSchema } from "../../domain/value-objects/Email";
+import { PersonNameSchema } from "../../domain/value-objects/PersonName";
+import { PartyMetadataSchema } from "../../domain/value-objects/party/PartyMetadata";
 
 /**
- * Path parameters for POST /envelopes/:envelopeId/parties/:partyId/delegate
+ * Path parameters for POST /parties/:partyId/delegate
  */
 export const DelegatePartyPath = z.object({
-  envelopeId: z.string().min(1, "Envelope ID is required"),
   partyId: z.string().min(1, "Party ID is required"),
 });
 
 /**
- * Request body for delegating a party
+ * Request body for delegating a global party
  */
 export const DelegatePartyBody = z.object({
-  delegateEmail: z.string().email("Valid delegate email is required"),
-  delegateName: z.string().min(1, "Delegate name is required").max(255, "Delegate name too long"),
+  delegateEmail: EmailSchema,
+  delegateName: PersonNameSchema,
   reason: z.string().min(1, "Reason is required").max(500, "Reason too long"),
+  type: z.enum(DELEGATION_TYPES).default("temporary"),
   expiresAt: z.string().datetime().optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: PartyMetadataSchema.optional(),
 });
 
 /**
@@ -33,13 +37,13 @@ export const DelegatePartyBody = z.object({
  */
 export const DelegatePartyResponse = z.object({
   delegationId: z.string(),
-  envelopeId: z.string(),
   originalPartyId: z.string(),
   delegatePartyId: z.string(),
   delegateEmail: z.string(),
   delegateName: z.string(),
   reason: z.string(),
-  status: z.enum(["pending", "accepted", "declined", "expired"]),
+  type: z.enum(DELEGATION_TYPES),
+  status: z.enum(DELEGATION_STATUSES),
   createdAt: z.string(),
   expiresAt: z.string().optional(),
   metadata: z.record(z.unknown()).optional(),

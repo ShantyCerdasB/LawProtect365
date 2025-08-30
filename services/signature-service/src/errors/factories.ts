@@ -54,6 +54,15 @@ export const partyNotFound = (details?: unknown) =>
   new NotFoundError("Party not found", SignatureErrorCodes.PARTY_NOT_FOUND, details);
 
 /**
+ * @description Creates a ConflictError for invalid party state (409).
+ *
+ * @param {unknown} details - Optional additional error details
+ * @returns {ConflictError} Error instance for invalid party state
+ */
+export const invalidPartyState = (details?: unknown) =>
+  new ConflictError("Invalid party state", SignatureErrorCodes.PARTY_INVALID_STATE, details);
+
+/**
  * @description Creates a NotFoundError for when an input was not found (404).
  *
  * @param {unknown} details - Optional additional error details

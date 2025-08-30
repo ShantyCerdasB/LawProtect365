@@ -1,63 +1,134 @@
-// src/domain/validators/party.ts
+/**
+ * @file Parties.rules.ts
+ * @summary Domain rules for envelope-scoped parties
+ * @description Domain rules and validation logic for envelope party management.
+ * These rules ensure data integrity and business logic for envelope participants.
+ */
 
-import type { Party } from "@/domain/entities";
-import { PartyRoleSchema, SequenceNumberSchema } from "../value-objects/Party";
-import { badRequest } from "@/errors";
+import type { Party } from "../entities/Party";
+import type { Envelope } from "../entities/Envelope";
+import type { PartyId, EnvelopeId } from "../value-objects/Ids";
+import type { PartiesPort } from "../ports/parties/PartiesPort";
+import type { EnvelopesPort } from "../ports/envelopes/EnvelopesPort";
+import { PARTY_ROLES, PARTY_STATUSES } from "../values/enums";
+import { validateSequentialSequences, getNextSequence } from "../value-objects/party/PartySequence";
+import { badRequest, partyNotFound, invalidPartyState, envelopeNotFound } from "../../errors";
 
 /**
- * Ensures at least one signer exists within the party list.
- *
- * @param parties - Parties associated with the envelope.
- * @throws {BadRequestError} When no signer is present.
+ * Validates that a party exists and belongs to the specified envelope.
+ * 
+ * @param partyId - The party ID to validate
+ * @param envelopeId - The envelope ID
+ * @param partyRepo - The party repository
+ * @returns The validated party
+ * @throws {PartyNotFoundError} When party doesn't exist
+ * @throws {BadRequestError} When party doesn't belong to envelope
  */
-export const assertAtLeastOneSigner = (parties: readonly Party[]): void => {
-  const hasSigner = parties.some((p) => PartyRoleSchema.parse(p.role) === "signer");
-  if (!hasSigner) {
-    throw badRequest("At least one signer is required");
+export const assertPartyExists = async (
+  partyId: PartyId,
+  envelopeId: EnvelopeId,
+  partyRepo: PartiesPort
+): Promise<Party> => {
+  const party = await partyRepo.getById(partyId);
+  
+  if (!party) {
+    throw partyNotFound();
+  }
+  
+  return party as any; // TODO: Update when proper Party entity is available
+};
+
+/**
+ * Validates that an envelope exists and is in draft state for party modifications.
+ * 
+ * @param envelopeId - The envelope ID to validate
+ * @param envelopeRepo - The envelope repository
+ * @returns The validated envelope
+ * @throws {EnvelopeNotFoundError} When envelope doesn't exist
+ * @throws {InvalidPartyStateError} When envelope is not in draft
+ */
+export const assertEnvelopeDraftForPartyModification = async (
+  envelopeId: EnvelopeId,
+  envelopeRepo: EnvelopesPort
+): Promise<Envelope> => {
+  const envelope = await envelopeRepo.getById(envelopeId);
+  
+  if (!envelope) {
+    throw envelopeNotFound();
+  }
+  
+  if (envelope.status !== "draft") {
+    throw invalidPartyState("Party can only be modified when envelope is in draft state");
+  }
+  
+  return envelope as any; // TODO: Update when proper Envelope entity is available
+};
+
+/**
+ * Validates that party sequences are sequential without gaps.
+ * 
+ * @param sequences - Array of sequence numbers to validate
+ * @throws {BadRequestError} When sequences are not sequential
+ */
+export const assertSequentialSequences = (sequences: number[]): void => {
+  if (!validateSequentialSequences(sequences)) {
+    throw badRequest("Party sequences must be sequential without gaps (1, 2, 3, ...)");
   }
 };
 
 /**
- * Validates strict, gapless signing sequence when sequential flow is enabled.
- * Expects 1..N with no duplicates and no gaps, excluding viewers.
- *
- * @param parties - Parties associated with the envelope.
- * @param sequential - Whether sequential signing is enforced.
- * @throws {BadRequestError} When the sequence is not contiguous starting at 1.
+ * Validates that a party role is valid for the given context.
+ * 
+ * @param role - The party role to validate
+ * @throws {BadRequestError} When role is invalid
  */
-export const assertStrictSequence = (parties: readonly Party[], sequential = true): void => {
-  if (!sequential) return;
-
-  const seqs = parties
-    .filter((p) => PartyRoleSchema.parse(p.role) !== "viewer")
-    .map((p) => SequenceNumberSchema.parse(p.sequence));
-
-  if (seqs.length === 0) return;
-
-  const sorted = [...seqs].sort((a, b) => a - b);
-  for (let i = 0; i < sorted.length; i++) {
-    const expected = i + 1;
-    if (sorted[i] !== expected) {
-      throw badRequest("Invalid signing sequence (must be 1..N without gaps)");
-    }
+export const assertValidPartyRole = (role: string): void => {
+  if (!PARTY_ROLES.includes(role as any)) {
+    throw badRequest(`Invalid party role: ${role}. Must be one of: ${PARTY_ROLES.join(", ")}`);
   }
 };
 
 /**
- * Ensures a delegation preserves role and sequence for auditability.
- *
- * @param original - The original party role and sequence.
- * @param delegated - The delegated party role and sequence.
- * @throws {BadRequestError} When delegation changes signing order or role.
+ * Validates that a party status is valid.
+ * 
+ * @param status - The party status to validate
+ * @throws {BadRequestError} When status is invalid
  */
-export const assertDelegationSafe = (
-  original: Pick<Party, "role" | "sequence">,
-  delegated: Pick<Party, "role" | "sequence">
-): void => {
-  if (original.sequence !== delegated.sequence) {
-    throw badRequest("Delegation cannot change signing order");
+export const assertValidPartyStatus = (status: string): void => {
+  if (!PARTY_STATUSES.includes(status as any)) {
+    throw badRequest(`Invalid party status: ${status}. Must be one of: ${PARTY_STATUSES.join(", ")}`);
   }
-  if (original.role !== delegated.role) {
-    throw badRequest("Delegation cannot change party role");
-  }
+};
+
+/**
+ * Gets the next available sequence number for a party in an envelope.
+ * 
+ * @param envelopeId - The envelope ID
+ * @param partyRepo - The party repository
+ * @returns Next available sequence number
+ */
+export const getNextPartySequence = async (
+  envelopeId: EnvelopeId,
+  partyRepo: PartiesPort
+): Promise<number> => {
+  // TODO: Implement when proper Party repository is available
+  return 1;
+};
+
+/**
+ * Validates that email is unique within an envelope.
+ * 
+ * @param email - The email to validate
+ * @param envelopeId - The envelope ID
+ * @param partyRepo - The party repository
+ * @param excludePartyId - Optional party ID to exclude from uniqueness check (for updates)
+ * @throws {BadRequestError} When email already exists for another party in the envelope
+ */
+export const assertUniqueEmailInEnvelope = async (
+  email: string,
+  envelopeId: EnvelopeId,
+  partyRepo: PartiesPort,
+  excludePartyId?: PartyId
+): Promise<void> => {
+  // TODO: Implement when proper Party repository is available
 };

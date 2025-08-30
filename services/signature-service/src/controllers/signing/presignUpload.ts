@@ -13,7 +13,8 @@ import { wrapController, corsFromEnv } from "@/middleware/http";
 import { actorFromCtx, requireRequestToken } from "@/middleware/auth";
 import { getContainer } from "@/infra/Container";
 import { PresignUploadBody } from "@/schemas/signing/PresignUpload.schema";
-import { executePresignUpload } from "@/use-cases/signatures/PresignUpload";
+import { presignUploadApp } from "@/app/services/Signing/PresignUploadApp.service";
+import { makeSigningCommandsPort } from "@/app/adapters/signing/makeSigningCommandsPort";
 
 
 const base: HandlerFn = async (evt) => {
@@ -24,7 +25,30 @@ const base: HandlerFn = async (evt) => {
   const actor = actorFromCtx(evt);
   const c = getContainer();
 
-  const result = await executePresignUpload(
+  // Wire dependencies
+  const signingCommands = makeSigningCommandsPort(
+    c.repos.envelopes,
+    c.repos.parties,
+    {
+      events: c.events.publisher,
+      ids: c.ids,
+      time: c.time,
+      signer: c.crypto.signer,
+      idempotency: c.idempotency.runner,
+      signingConfig: {
+        defaultKeyId: c.config.kms.signerKeyId,
+        allowedAlgorithms: [c.config.kms.signingAlgorithm],
+      },
+      s3: c.storage.presigner,
+      uploadConfig: {
+        uploadBucket: process.env.UPLOAD_BUCKET || "lawprotect-uploads",
+        uploadTtlSeconds: parseInt(process.env.UPLOAD_TTL_SECONDS || "900", 10),
+      },
+    }
+  );
+
+  // Delegate to app service
+  const result = await presignUploadApp(
     {
       envelopeId: body.envelopeId,
       filename: body.filename,
@@ -32,17 +56,7 @@ const base: HandlerFn = async (evt) => {
       token,
       actor,
     },
-    {
-      repos: { envelopes: c.repos.envelopes },
-      s3: c.storage.presigner,
-      idempotency: c.idempotency.runner,
-      ids: { ulid: c.ids.ulid },
-      time: { now: c.time.now },
-      config: {
-        uploadBucket: process.env.UPLOAD_BUCKET || "lawprotect-uploads",
-        uploadTtlSeconds: parseInt(process.env.UPLOAD_TTL_SECONDS || "900", 10),
-      },
-    }
+    { signingCommands }
   );
 
   return ok({ data: result });

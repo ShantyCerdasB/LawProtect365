@@ -12,7 +12,7 @@ import { getContainer } from "@/infra/Container";
 import { DocumentIdPath } from "@/schemas/common/path";
 import { toDocumentId } from "@/app/ports/shared";
 import { getDocumentByIdApp } from "@/app/services/Documents/GetDocumentByIdApp.service";
-import { makeDocumentsQueriesPort } from "@/app/adapters/documents/MakeDocumentsQueriesPort";
+import { makeDocumentsQueriesPort } from "@/app/ports/documents/MakeDocumentsQueriesPort";
 
 /**
  * Base handler function for getting a document by ID

@@ -1,61 +1,42 @@
 /**
  * @file ListParties.schema.ts
- * @summary Zod schemas for the ListParties endpoint
- * 
- * @description
- * Defines input validation schemas for listing parties of an envelope.
- * Handles path parameters and query parameters for pagination and filtering.
+ * @summary Schema for listing Parties in envelopes
+ * @description Zod schemas for validating Party listing requests.
+ * Provides type-safe validation for HTTP path and query parameters.
  */
 
 import { z } from "zod";
 
 /**
- * Path parameters for GET /envelopes/:envelopeId/parties
+ * @description Path parameters schema for listing Parties.
  */
-export const ListPartiesPath = z.object({
-  envelopeId: z.string().min(1, "Envelope ID is required"),
+export const ListPartiesParams = z.object({
+  envelopeId: z.string().min(1, "Envelope ID is required").max(255, "Envelope ID too long"),
 });
 
 /**
- * Query parameters for listing parties with pagination and filtering
+ * @description Query parameters schema for listing Parties.
  */
 export const ListPartiesQuery = z.object({
-  limit: z.coerce.number().int().min(1).max(100).default(50),
+  role: z.enum(["signer", "approver", "viewer"], {
+    errorMap: () => ({ message: "Role must be signer, approver, or viewer" }),
+  }).optional(),
+  status: z.enum(["pending", "invited", "signed", "declined", "active"], {
+    errorMap: () => ({ message: "Status must be pending, invited, signed, declined, or active" }),
+  }).optional(),
+  limit: z.coerce.number().min(1, "Limit must be at least 1").max(100, "Limit cannot exceed 100").optional(),
   cursor: z.string().optional(),
-  role: z.enum(["signer", "viewer", "delegate"]).optional(),
-  status: z.enum(["pending", "invited", "signed", "declined"]).optional(),
-  email: z.string().email().optional(),
 });
 
 /**
- * Response schema for party listing
+ * @description Type for ListParties path parameters.
  */
-export const ListPartiesResponse = z.object({
-  parties: z.array(z.object({
-    partyId: z.string(),
-    envelopeId: z.string(),
-    email: z.string(),
-    name: z.string(),
-    role: z.enum(["signer", "viewer", "delegate"]),
-    order: z.number().optional(),
-    status: z.enum(["pending", "invited", "signed", "declined"]),
-    createdAt: z.string(),
-    metadata: z.record(z.unknown()).optional(),
-    notificationPreferences: z.object({
-      email: z.boolean(),
-      sms: z.boolean(),
-    }).optional(),
-  })),
-  meta: z.object({
-    limit: z.number(),
-    nextCursor: z.string().optional(),
-    total: z.number().optional(),
-  }),
-});
+export type ListPartiesParams = z.infer<typeof ListPartiesParams>;
 
-export type ListPartiesPathType = z.infer<typeof ListPartiesPath>;
-export type ListPartiesQueryType = z.infer<typeof ListPartiesQuery>;
-export type ListPartiesResponseType = z.infer<typeof ListPartiesResponse>;
+/**
+ * @description Type for ListParties query parameters.
+ */
+export type ListPartiesQuery = z.infer<typeof ListPartiesQuery>;
 
 
 

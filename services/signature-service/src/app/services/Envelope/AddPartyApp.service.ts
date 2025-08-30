@@ -10,6 +10,8 @@ import type { PartiesCommandsPort } from "@/app/ports/parties/PartiesCommandsPor
 import type { Repository } from "@lawprotect/shared-ts";
 import type { Envelope } from "@/domain/entities/Envelope";
 import type { PartyRole } from "@/domain/values/enums";
+import { envelopeNotFound } from "@/errors";
+
 
 /**
  * Actor context for audit and attribution purposes
@@ -26,9 +28,8 @@ export interface ActorContext {
  * Notification preferences for party
  */
 export interface NotificationPreferences {
-  email?: boolean;
-  sms?: boolean;
-  push?: boolean;
+  email: boolean;
+  sms: boolean;
 }
 
 /**
@@ -76,7 +77,7 @@ export const addPartyApp = async (
   // Validate that envelope exists and belongs to tenant
   const envelope = await deps.envelopes.getById(input.envelopeId);
   if (!envelope || envelope.tenantId !== input.tenantId) {
-    throw new Error("Envelope not found or access denied");
+    throw envelopeNotFound();
   }
 
   // Create party using the commands port
@@ -89,7 +90,6 @@ export const addPartyApp = async (
     order: input.order,
     metadata: input.metadata,
     notificationPreferences: input.notificationPreferences,
-    actor: input.actor,
   });
 
   return { partyId: result.partyId };

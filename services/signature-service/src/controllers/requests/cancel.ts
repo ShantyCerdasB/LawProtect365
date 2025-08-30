@@ -6,20 +6,53 @@
  * - call use-case
  * - map result -> HTTP response
  */
-import { apiHandler, ok } from "@lawprotect/shared-ts/http";
-import { authenticate } from "@lawprotect/shared-ts/auth";
-import { z, validate } from "@lawprotect/shared-ts/validation";
+import { wrapController, corsFromEnv } from "@/middleware/http";
+import { actorFromCtx } from "@/middleware/auth";
+import { validateRequest } from "@lawprotect/shared-ts";
+import { CancelEnvelopeBody } from "@/schemas/requests";
+import { toEnvelopeId } from "@/app/ports/shared";
+import { getContainer } from "@/infra/Container";
+import { makeRequestsCommandsPort } from "@/app/adapters/requests/makeRequestsCommandsPort";
+import { z } from "zod";
 
-const Params = z.object({});      // adjust per-route
-const Query  = z.object({});      // adjust per-route
-const Body   = z.object({}).optional(); // adjust per-route
+const base = async (evt: any) => {
+  const { path, body } = validateRequest(evt, {
+    path: z.object({ id: z.string() }),
+    body: CancelEnvelopeBody,
+  });
 
-export const handler = apiHandler(async (evt) => {
-  const auth = await authenticate(evt); // principal/tenant/scopes
-  const { params, query, body } = validate(evt, { params: Params, query: Query, body: Body });
+  const actor = actorFromCtx(evt);
+  const c = getContainer();
 
-  // TODO: call use-case via DI from infra (e.g., ctx.getUseCase("..."))
-  // const result = await useCase.execute({ ...params, ...query, ...body }, { auth });
+  const requestsCommands = makeRequestsCommandsPort(
+    c.repos.envelopes,
+    c.repos.parties,
+    c.repos.inputs,
+    {
+      ids: c.ids,
+      events: { publish: async (event: any) => { await c.events.publisher.publish(event); } },
+      audit: c.audit,
+    }
+  );
 
-  return ok({ status: "stub", route: evt.requestContext?.http?.path });
+  const result = await requestsCommands.cancelEnvelope({
+    envelopeId: toEnvelopeId(path.id),
+    reason: body.reason,
+    actor,
+  });
+
+  return {
+    statusCode: 200,
+    body: JSON.stringify(result),
+  };
+};
+
+export const handler = wrapController(base, {
+  auth: true,
+  observability: {
+    logger: () => console,
+    metrics: () => ({} as any),
+    tracer: () => ({} as any),
+  },
+  cors: corsFromEnv(),
 });

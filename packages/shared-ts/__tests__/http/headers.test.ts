@@ -104,9 +104,9 @@ describe('extractHeaderToken', () => {
   });
 
   it('uses default header name', () => {
-    const headers = { 'x-request-token': 'valid-token-123' };
+    const headers = { 'x-request-token': 'valid-token-123456' };
     const result = extractHeaderToken(headers);
-    expect(result).toBe('valid-token-123');
+    expect(result).toBe('valid-token-123456');
   });
 
   it('uses default minimum length', () => {
@@ -158,8 +158,8 @@ describe('requireHeaderToken', () => {
   });
 
   it('handles case-insensitive header lookup', () => {
-    const headers = { 'X-REQUEST-TOKEN': 'valid-token-123' };
+    const headers = { 'X-REQUEST-TOKEN': 'valid-token-123456' };
     const result = requireHeaderToken(headers);
-    expect(result).toBe('valid-token-123');
+    expect(result).toBe('valid-token-123456');
   });
 });

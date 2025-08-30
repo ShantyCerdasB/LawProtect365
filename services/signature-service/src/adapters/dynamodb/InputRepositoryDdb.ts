@@ -14,6 +14,7 @@ import { ConflictError, NotFoundError } from "@lawprotect/shared-ts";
 import { mapAwsError } from "@lawprotect/shared-ts";
 import { nowIso } from "@lawprotect/shared-ts";
 import type { DdbClientLike } from "@lawprotect/shared-ts";
+import { requireQuery } from "@lawprotect/shared-ts";
 import type { Input } from "../../domain/entities/Input";
 import {
   inputItemMapper,
@@ -36,6 +37,23 @@ const toDdbItem = <T extends object>(v: T): Record<string, unknown> =>
  * - `inputId` identifies the input within the envelope.
  */
 export type InputId = { envelopeId: string; inputId: string };
+
+/**
+ * @description Query parameters for listing inputs by envelope.
+ */
+export interface ListInputsQuery {
+  envelopeId: string;
+  limit?: number;
+  cursor?: string;
+}
+
+/**
+ * @description Result of listing inputs by envelope.
+ */
+export interface ListInputsResult {
+  items: Input[];
+  nextCursor?: string;
+}
 
 /**
  * @description DynamoDB implementation of `Repository<Input, InputId>`.
@@ -68,6 +86,46 @@ export class InputRepositoryDdb
       return res.Item ? inputItemMapper.fromDTO(res.Item as any) : null;
     } catch (err) {
       throw mapAwsError(err, "InputRepositoryDdb.getById");
+    }
+  }
+
+  /**
+   * @description Lists inputs by envelope with pagination support.
+   * @param {ListInputsQuery} query Query parameters including envelopeId, limit, and cursor.
+   * @returns {Promise<ListInputsResult>} Paginated list of inputs.
+   * @throws {HttpError} Normalized provider error via `mapAwsError`.
+   */
+  async listByEnvelope(query: ListInputsQuery): Promise<ListInputsResult> {
+    try {
+      const limit = query.limit || 50;
+      const params: any = {
+        TableName: this.tableName,
+        KeyConditionExpression: "pk = :pk",
+        ExpressionAttributeValues: {
+          ":pk": inputPk(query.envelopeId),
+        },
+        Limit: limit,
+      };
+
+      if (query.cursor) {
+        params.ExclusiveStartKey = JSON.parse(query.cursor);
+      }
+
+      requireQuery(this.ddb);
+      const res = await this.ddb.query(params);
+
+      const items = (res.Items ?? []).map((item) => 
+        inputItemMapper.fromDTO(item as any)
+      );
+
+      return {
+        items,
+        nextCursor: res.LastEvaluatedKey 
+          ? JSON.stringify(res.LastEvaluatedKey) 
+          : undefined,
+      };
+    } catch (err) {
+      throw mapAwsError(err, "InputRepositoryDdb.listByEnvelope");
     }
   }
 

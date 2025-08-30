@@ -1,14 +1,8 @@
 /**
  * @file requestOtp.ts
  * @summary Controller for POST /signing/otp/request
- *
- * @description
- * Public endpoint to initiate an OTP challenge for a signer.
- * - Validates the body with `OtpRequestBody`.
- * - Extracts the request token from `x-request-token`.
- * - Derives the actor from the shared context.
- * - Wires repositories, rate-limit store, and delegates to the use case.
- * - Returns 202 Accepted with neutral metadata (no OTP value).
+ * @description Validates input, derives actor from auth context, wires ports,
+ * and delegates to the RequestOtp app service. Errors are mapped by apiHandler.
  */
 
 import type { HandlerFn } from "@lawprotect/shared-ts";
@@ -19,23 +13,47 @@ import { actorFromCtx, requireRequestToken } from "@/middleware/auth";
 
 import { getContainer } from "@/infra/Container";
 import { OtpRequestBody } from "@/schemas/signing/OtpRequest.schema";
-import { executeRequestOtp } from "@/use-cases/signatures/RequestOtp";
+import { requestOtpApp } from "@/app/services/Signing/RequestOtpApp.service";
+import { makeSigningCommandsPort } from "@/app/adapters/signing/makeSigningCommandsPort";
 
 
+/**
+ * Base handler function for OTP request
+ * @param evt - The Lambda event containing HTTP request data
+ * @returns Promise resolving to HTTP response with request result
+ * @throws {AppError} When validation fails
+ */
 const base: HandlerFn = async (evt) => {
   // 1) Validate body
   const { body } = validateRequest(evt, { body: OtpRequestBody });
 
   // 2) Required request token header
- const token = requireRequestToken(evt);
+  const token = requireRequestToken(evt);
 
   // 3) Actor from shared context
   const actor = actorFromCtx(evt);
 
-  // 4) Wire repositories and dependencies
+  // 4) Wire dependencies
   const c = getContainer();
+  const signingCommands = makeSigningCommandsPort(
+    c.repos.envelopes,
+    c.repos.parties,
+    {
+      events: c.events.publisher,
+      ids: c.ids,
+      time: c.time,
+      rateLimit: c.rateLimit.otpStore,
+      signer: c.crypto.signer,
+      idempotency: c.idempotency.runner,
+      signingConfig: {
+        defaultKeyId: c.config.kms.signerKeyId,
+        allowedAlgorithms: [c.config.kms.signingAlgorithm],
+      },
+    }
+  );
 
-  const result = await executeRequestOtp(
+  // 5) Delegate to app service
+  const result = await requestOtpApp(
     {
       envelopeId: body.envelopeId,
       signerId: body.signerId,
@@ -43,20 +61,10 @@ const base: HandlerFn = async (evt) => {
       token,
       actor,
     },
-    {
-      repos: {
-        envelopes: c.repos.envelopes,
-        parties: c.repos.parties,
-      },
-      idempotency: c.idempotency.runner,
-      events: c.events.publisher,
-      rateLimit: c.rateLimit.otpStore,
-      ids: { ulid: c.ids.ulid },
-      time: { now: c.time.now },
-    }
+    { signingCommands }
   );
 
-  // 5) 202 Accepted with neutral metadata (do not include the OTP secret/value)
+  // 6) 202 Accepted with neutral metadata (do not include the OTP secret/value)
   return json(HttpStatus.ACCEPTED, { data: result });
 };
 

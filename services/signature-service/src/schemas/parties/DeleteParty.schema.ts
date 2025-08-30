@@ -3,17 +3,16 @@
  * @summary Zod schemas for the DeleteParty endpoint
  * 
  * @description
- * Defines input validation schemas for deleting a party record.
+ * Defines input validation schemas for deleting a global party record.
  * Handles path parameters validation.
  */
 
 import { z } from "zod";
 
 /**
- * Path parameters for DELETE /envelopes/:envelopeId/parties/:partyId
+ * Path parameters for DELETE /parties/:partyId
  */
 export const DeletePartyPath = z.object({
-  envelopeId: z.string().min(1, "Envelope ID is required"),
   partyId: z.string().min(1, "Party ID is required"),
 });
 
@@ -23,7 +22,6 @@ export const DeletePartyPath = z.object({
 export const DeletePartyResponse = z.object({
   message: z.string(),
   partyId: z.string(),
-  envelopeId: z.string(),
   deletedAt: z.string(),
 });
 

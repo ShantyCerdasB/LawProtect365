@@ -1,0 +1,39 @@
+/**
+ * @file GetAuditTrail.schema.ts
+ * @summary Zod schema for audit trail query validation
+ * @description Defines validation rules for GET /envelopes/:id/audit endpoint
+ */
+
+import { z } from "zod";
+
+/**
+ * @description Query parameters for getting audit trail
+ */
+export const GetAuditTrailQuerySchema = z.object({
+  /** Output format */
+  format: z.enum(["json", "pdf"]).default("json"),
+  /** Locale for PDF generation */
+  locale: z.string().optional(),
+  /** Page size limit */
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+  /** Pagination cursor */
+  cursor: z.string().optional(),
+});
+
+/**
+ * @description Path parameters for getting audit trail
+ */
+export const GetAuditTrailPathSchema = z.object({
+  /** Envelope identifier */
+  id: z.string(),
+});
+
+/**
+ * @description Type for query parameters
+ */
+export type GetAuditTrailQuery = z.infer<typeof GetAuditTrailQuerySchema>;
+
+/**
+ * @description Type for path parameters
+ */
+export type GetAuditTrailPath = z.infer<typeof GetAuditTrailPathSchema>;

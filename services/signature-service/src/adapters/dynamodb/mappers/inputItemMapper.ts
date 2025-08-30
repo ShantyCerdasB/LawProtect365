@@ -69,13 +69,26 @@ export const toInputItem = (src: Input): DdbInputItem => ({
  * Narrowing type guard for DdbInputItem.
  */
 export const isDdbInputItem = (v: unknown): v is DdbInputItem => {
-  const o = v as DdbInputItem;
+  const o = v as Partial<DdbInputItem> | null | undefined;
   return Boolean(
     o &&
-      typeof o === "object" &&
-      typeof o?.pk === "string" &&
-      typeof o?.sk === "string" &&
-      o?.type === INPUT_ENTITY
+      typeof o.pk === "string" &&
+      typeof o.sk === "string" &&
+      o.type === INPUT_ENTITY &&
+      typeof o.inputId === "string" &&
+      typeof o.envelopeId === "string" &&
+      typeof o.partyId === "string" &&
+      typeof o.documentId === "string" &&
+      typeof o.inputType === "string" &&
+      typeof o.required === "boolean" &&
+      o.position &&
+      typeof o.position.page === "number" &&
+      typeof o.position.x === "number" &&
+      typeof o.position.y === "number" &&
+      typeof o.position.width === "number" &&
+      typeof o.position.height === "number" &&
+      typeof o.createdAt === "string" &&
+      typeof o.updatedAt === "string"
   );
 };
 

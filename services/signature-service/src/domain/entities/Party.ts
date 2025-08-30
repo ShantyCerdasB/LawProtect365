@@ -10,7 +10,7 @@
  * @description Represents a signer, viewer, or approver participating in an envelope.
  */
 
-import { OtpChannel, PartyRole, PartyStatus } from "../values/enums";
+import { OtpChannel, PartyRole, PartyStatus, AuthMethod } from "../values/enums";
 
 /**
  * @description OTP state for party authentication.
@@ -20,7 +20,7 @@ export interface OtpState {
   /** Hashed OTP code for secure storage */
   codeHash: string;
   /** Delivery channel (email or SMS) */
-  channel: OtpChannel
+  channel: OtpChannel;
   /** Expiration timestamp (ISO 8601) */
   expiresAt: string;
   /** Number of attempts made */
@@ -29,6 +29,15 @@ export interface OtpState {
   maxTries: number;
   /** Creation timestamp (ISO 8601) */
   createdAt: string;
+}
+
+/**
+ * @description Authentication configuration for party.
+ * Defines how the party should authenticate (OTP via email/SMS).
+ */
+export interface PartyAuth {
+  /** Authentication methods enabled for this party */
+  methods: AuthMethod[];
 }
 
 /**
@@ -60,10 +69,18 @@ export interface Party {
    * Ignored for viewers.
    */
   sequence: number;
+  /** Optional phone number of the party */
+  phone?: string;
+  /** Optional locale preference of the party */
+  locale?: string;
+  /** Authentication configuration for this party */
+  auth: PartyAuth;
+  /** Optional reference to global party (contact) */
+  globalPartyId?: string;
   /** Creation timestamp (ISO 8601) */
   createdAt: string;
   /** Last update timestamp (ISO 8601) */
   updatedAt: string;
-  /** Optional OTP state for authentication */
+  /** Optional OTP state for authentication (managed by Signing/Requests) */
   otpState?: OtpState;
 }

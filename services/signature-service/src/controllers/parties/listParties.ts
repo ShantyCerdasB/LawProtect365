@@ -1,127 +1,76 @@
 /**
  * @file listParties.ts
- * @summary HTTP controller for GET /envelopes/:envelopeId/parties
- * 
- * @description
- * Lists parties for an envelope with pagination and filtering.
- * Validates path and query parameters, then returns party list.
- * Returns 200 with party data on success, 400/404 on errors.
+ * @description Controller for listing Parties via GET /envelopes/{envelopeId}/parties endpoint.
+ * Validates input, derives tenant from auth context, and delegates to the ListParties app service.
  */
 
-import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
-import { ListPartiesPath, ListPartiesQuery } from "@/schemas/parties/ListParties.schema";
-import { listParties } from "@/use-cases/parties/ListParties";
+import type { HandlerFn } from "@lawprotect/shared-ts";
+import { ok, validateRequest } from "@lawprotect/shared-ts";
+import { wrapController, corsFromEnv } from "@/middleware/http";
+import { tenantFromCtx } from "@/middleware/auth";
 import { getContainer } from "@/infra/Container";
+import { ListPartiesParams, ListPartiesQuery } from "@/schemas/parties";
+import { listPartiesApp } from "@/app/services/Parties/ListPartiesApp.service";
+import { makePartiesQueriesPort } from "@/app/adapters/parties/MakePartiesQueriesPort";
 
 /**
- * HTTP handler for listing parties
- * 
- * @param event - API Gateway event with path and query parameters
- * @returns Promise resolving to HTTP response with party list or error
- * 
- * @example
- * ```typescript
- * // GET /envelopes/123/parties?limit=25&role=signer
- * const response = await handler(event);
- * ```
+ * @description Base handler function for listing Parties.
+ * Validates path and query parameters, extracts tenant information, and delegates to the app service.
+ *
+ * @param {any} evt - The Lambda event containing HTTP request data
+ * @returns {Promise<any>} Promise resolving to HTTP response with Parties list
+ * @throws {AppError} When validation fails or listing fails
  */
-export const handler = async (
-  event: APIGatewayProxyEventV2
-): Promise<APIGatewayProxyResultV2> => {
-  try {
-    // Validate path parameters
-    const pathParams = ListPartiesPath.safeParse(event.pathParameters);
-    if (!pathParams.success) {
-      return {
-        statusCode: 400,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: "Invalid envelope ID",
-          errors: pathParams.error.errors,
-        }),
-      };
+const base: HandlerFn = async (evt) => {
+  const { params, query } = validateRequest(evt, { 
+    params: ListPartiesParams,
+    query: ListPartiesQuery,
+  });
+
+  const tenantId = tenantFromCtx(evt);
+
+  const c = getContainer();
+  const partiesQueries = makePartiesQueriesPort({ parties: c.repos.parties });
+
+  const result = await listPartiesApp(
+    {
+      tenantId,
+      envelopeId: params.envelopeId,
+      role: query.role,
+      status: query.status,
+      limit: query.limit,
+      cursor: query.cursor,
+    },
+    {
+      partiesQueries,
     }
+  );
 
-    // Validate query parameters
-    const queryParams = ListPartiesQuery.safeParse(event.queryStringParameters || {});
-    if (!queryParams.success) {
-      return {
-        statusCode: 400,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: "Invalid query parameters",
-          errors: queryParams.error.errors,
-        }),
-      };
-    }
-
-    // Get dependencies from container
-    const container = getContainer();
-    const { envelopes } = container.repos;
-
-    // Extract tenant ID from event (you may need to adjust this based on your auth setup)
-    const tenantId = event.requestContext.authorizer?.tenantId || "default-tenant";
-
-    // Execute use case
-    const result = await listParties(
-      {
-        tenantId,
-        envelopeId: pathParams.data.envelopeId,
-        limit: queryParams.data.limit,
-        cursor: queryParams.data.cursor,
-        role: queryParams.data.role,
-        status: queryParams.data.status,
-        email: queryParams.data.email,
-      },
-      {
-        envelopes,
-        parties: {
-          listByEnvelope: async (input) => {
-            // This would be implemented by your actual party repository
-            return {
-              items: [],
-              meta: {
-                limit: input.limit,
-                nextCursor: undefined,
-                total: 0,
-              },
-            };
-          },
-        },
-      }
-    );
-
-    // Return 404 if envelope not found
-    if (!result) {
-      return {
-        statusCode: 404,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: "Envelope not found",
-        }),
-      };
-    }
-
-    // Return success response
-    return {
-      statusCode: 200,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        data: result,
-      }),
-    };
-  } catch (error) {
-    console.error("Error listing parties:", error);
-    
-    return {
-      statusCode: 500,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        message: "Internal server error",
-      }),
-    };
-  }
+  return ok({
+    data: result.parties,
+    pagination: {
+      nextCursor: result.nextCursor,
+      total: result.total,
+    },
+  });
 };
+
+/**
+ * @description Lambda handler for GET /envelopes/{envelopeId}/parties endpoint.
+ * Wraps the base handler with authentication, observability, and CORS middleware.
+ *
+ * @param {any} evt - The Lambda event containing HTTP request data
+ * @returns {Promise<any>} Promise resolving to HTTP response with Parties list
+ */
+export const handler = wrapController(base, {
+  auth: true,
+  observability: {
+    logger: () => console,
+    metrics: () => ({} as any),
+    tracer: () => ({} as any),
+  },
+  cors: corsFromEnv(),
+});
 
 
 

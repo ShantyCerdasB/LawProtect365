@@ -1,13 +1,37 @@
-// packages/shared-ts/src/security/otp.ts
+/**
+ * @file security.ts
+ * @summary Security utilities for OTP (One-Time Password) generation and verification.
+ * @description
+ * Provides secure OTP functionality including:
+ * - Numeric OTP generation with configurable length
+ * - SHA-256 hashing for OTP storage
+ * - Constant-time verification to prevent timing attacks
+ */
 
 import { randomInt } from "./math.js";
 import { createHash, timingSafeEqual } from "./crypto.js";
 
 /**
- * Generate a numeric OTP with fixed length using a secure RNG.
- *
- * @param length - Number of digits (e.g., 6).
- * @returns Zero-padded numeric string (e.g., "042913").
+ * Generates a cryptographically secure numeric OTP with fixed length.
+ * 
+ * @description
+ * Creates a random numeric string of specified length using a secure random number generator.
+ * The OTP is zero-padded to ensure consistent length and uses rejection sampling to avoid bias.
+ * 
+ * @param length - Number of digits in the OTP (1-12 inclusive).
+ * @returns Zero-padded numeric string (e.g., "042913" for length 6).
+ * @throws {Error} When length is not an integer, less than 1, or greater than 12.
+ * 
+ * @example
+ * ```ts
+ * const otp = generateNumericOtp(6); // Returns "123456" (example)
+ * const shortOtp = generateNumericOtp(4); // Returns "0429" (example)
+ * ```
+ * 
+ * @security
+ * - Uses cryptographically secure random number generation
+ * - Implements rejection sampling to prevent modulo bias
+ * - Suitable for authentication and verification purposes
  */
 export function generateNumericOtp(length: number): string {
   if (!Number.isInteger(length) || length < 1 || length > 12) {
@@ -19,21 +43,58 @@ export function generateNumericOtp(length: number): string {
 }
 
 /**
- * Hash an OTP using SHA-256 and return a base64url-encoded digest.
- *
- * @param otp - Plain OTP value.
- * @returns Base64url-encoded SHA-256 digest.
+ * Hashes an OTP using SHA-256 and returns a base64url-encoded digest.
+ * 
+ * @description
+ * Creates a cryptographic hash of the OTP for secure storage. The hash is deterministic,
+ * meaning the same OTP will always produce the same hash. This function should be used
+ * to hash OTPs before storing them in databases or other persistent storage.
+ * 
+ * @param otp - Plain OTP value to hash.
+ * @returns Base64url-encoded SHA-256 digest (URL-safe base64 without padding).
+ * 
+ * @example
+ * ```ts
+ * const hash = hashOtp("123456");
+ * // Returns something like "jZae727K08KaOmKSgOaGzww_XVqGr_PKEgIMkjrcbJI"
+ * ```
+ * 
+ * @security
+ * - Uses SHA-256 for cryptographic strength
+ * - Returns base64url encoding (URL-safe, no padding)
+ * - Deterministic: same input always produces same output
  */
 export function hashOtp(otp: string): string {
   return createHash("sha256").update(otp, "utf8").digest("base64url");
 }
 
 /**
- * Constant-time verification of an OTP against a stored hash (base64url).
- *
- * @param otp - Plain OTP value provided by the user.
- * @param expectedBase64UrlSha256 - Stored base64url SHA-256 digest.
- * @returns True when the hash of `otp` matches `expectedBase64UrlSha256`.
+ * Verifies an OTP against a stored hash using constant-time comparison.
+ * 
+ * @description
+ * Compares a user-provided OTP against a previously stored hash. This function uses
+ * constant-time comparison to prevent timing attacks that could reveal information
+ * about the stored hash or the verification process.
+ * 
+ * @param otp - Plain OTP value provided by the user for verification.
+ * @param expectedBase64UrlSha256 - Previously stored base64url SHA-256 digest.
+ * @returns True when the hash of the provided OTP matches the stored hash.
+ * 
+ * @example
+ * ```ts
+ * // Store the hash when OTP is generated
+ * const otp = generateNumericOtp(6);
+ * const hash = hashOtp(otp);
+ * 
+ * // Later, verify user input
+ * const userInput = "123456";
+ * const isValid = verifyOtp(userInput, hash);
+ * ```
+ * 
+ * @security
+ * - Uses constant-time comparison to prevent timing attacks
+ * - Performs length check before comparison to avoid timing leaks
+ * - Implements defense-in-depth with multiple security measures
  */
 export function verifyOtp(otp: string, expectedBase64UrlSha256: string): boolean {
   const actual = hashOtp(otp);

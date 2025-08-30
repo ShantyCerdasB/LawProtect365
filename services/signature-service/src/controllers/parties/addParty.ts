@@ -1,173 +1,80 @@
 /**
  * @file addParty.ts
- * @summary HTTP controller for POST /envelopes/:envelopeId/parties
- * @description HTTP controller for POST /envelopes/:envelopeId/parties.
- * Adds a new party to an envelope with proper validation and error handling.
- * Validates path parameters and request body, then creates the party.
- * Returns 201 with party data on success, 400/404/409 on errors.
+ * @description Controller for adding new Parties via POST /envelopes/{envelopeId}/parties endpoint.
+ * Validates input, derives tenant and actor from auth context, and delegates to the CreateParty app service.
  */
 
-import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
-import { AddPartyPath, AddPartyBody } from "@/schemas/parties/AddParty.schema";
-import { addParty } from "@/use-cases/parties/AddParty";
+import type { HandlerFn } from "@lawprotect/shared-ts";
+import { created, validateRequest } from "@lawprotect/shared-ts";
+import { wrapController, corsFromEnv } from "@/middleware/http";
+import { tenantFromCtx, actorFromCtx } from "@/middleware/auth";
 import { getContainer } from "@/infra/Container";
+import { CreatePartyParams, CreatePartyBody } from "@/schemas/parties";
+import { createPartyApp } from "@/app/services/Parties/CreatePartyApp.service";
+import { makePartiesCommandsPort } from "@/app/adapters/parties/MakePartiesCommandsPort";
+import { makePartiesQueriesPort } from "@/app/adapters/parties/MakePartiesQueriesPort";
 
 /**
- * @description HTTP handler for adding a party to an envelope.
- * Validates input parameters, extracts tenant and actor information, and delegates to the use case.
- * 
- * @param {APIGatewayProxyEventV2} event - API Gateway event with path parameters and request body
- * @returns {Promise<APIGatewayProxyResultV2>} Promise resolving to HTTP response with party data or error
- * 
- * @example
- * ```typescript
- * // POST /envelopes/123/parties
- * // Body: { "email": "john@example.com", "name": "John Doe", "role": "signer" }
- * const response = await handler(event);
- * ```
+ * @description Base handler function for adding a new Party.
+ * Validates request body and path parameters, extracts tenant and actor information, and delegates to the app service.
+ *
+ * @param {any} evt - The Lambda event containing HTTP request data
+ * @returns {Promise<any>} Promise resolving to HTTP response with created Party data
+ * @throws {AppError} When validation fails or Party creation fails
  */
-export const handler = async (
-  event: APIGatewayProxyEventV2
-): Promise<APIGatewayProxyResultV2> => {
-  try {
-    // Validate path parameters
-    const pathParams = AddPartyPath.safeParse(event.pathParameters);
-    if (!pathParams.success) {
-      return {
-        statusCode: 400,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: "Invalid envelope ID",
-          errors: pathParams.error.errors,
-        }),
-      };
+const base: HandlerFn = async (evt) => {
+  const { path, body } = validateRequest(evt, { 
+    path: CreatePartyParams,
+    body: CreatePartyBody,
+  });
+
+  const tenantId = tenantFromCtx(evt);
+  const actor = actorFromCtx(evt);
+
+  const c = getContainer();
+  const partiesCommands = makePartiesCommandsPort({ parties: c.repos.parties, events: c.events });
+  const partiesQueries = makePartiesQueriesPort({ parties: c.repos.parties });
+
+  const result = await createPartyApp(
+    {
+      tenantId,
+      envelopeId: path.envelopeId,
+      name: body.name,
+      email: body.email,
+      role: body.role,
+      sequence: body.sequence,
+      phone: body.phone,
+      locale: body.locale,
+      auth: body.auth,
+      globalPartyId: body.globalPartyId,
+      actor,
+    },
+    {
+      partiesCommands,
+      partiesQueries,
+      idempotencyRunner: c.idempotency.runner,
     }
+  );
 
-    // Validate request body
-    const body = event.body ? JSON.parse(event.body) : {};
-    const bodyParams = AddPartyBody.safeParse(body);
-    if (!bodyParams.success) {
-      return {
-        statusCode: 400,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: "Invalid request body",
-          errors: bodyParams.error.errors,
-        }),
-      };
-    }
-
-    // Get dependencies from container
-    const container = getContainer();
-    const { envelopes, parties } = container.repos;
-
-    // Extract tenant ID from event (you may need to adjust this based on your auth setup)
-    const tenantId = event.requestContext.authorizer?.tenantId || "default-tenant";
-
-    // Extract actor information from event
-    const actor = {
-      userId: event.requestContext.authorizer?.userId,
-      email: event.requestContext.authorizer?.email,
-      ip: event.requestContext.http.sourceIp,
-      userAgent: event.headers["user-agent"],
-    };
-
-    // Execute use case
-    const result = await addParty(
-      {
-        tenantId,
-        envelopeId: pathParams.data.envelopeId,
-        email: bodyParams.data.email,
-        name: bodyParams.data.name,
-        role: bodyParams.data.role,
-        order: bodyParams.data.order,
-        metadata: bodyParams.data.metadata,
-        notificationPreferences: bodyParams.data.notificationPreferences,
-        actor,
-      },
-      {
-        envelopes,
-        parties: {
-          create: async (input) => {
-            // This would be implemented by your actual party repository
-            const partyId = `party-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-            return {
-              partyId,
-              envelopeId: input.envelopeId,
-              email: input.email,
-              name: input.name,
-              role: input.role,
-              order: input.order,
-              status: "pending",
-              createdAt: new Date().toISOString(),
-              metadata: input.metadata,
-              notificationPreferences: input.notificationPreferences,
-            };
-          },
-          listByEnvelope: async (input) => {
-            // This would be implemented by your actual party repository
-            return [];
-          },
-        },
-        ids: {
-          ulid: () => `party-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        },
-      }
-    );
-
-    // Return success response
-    return {
-      statusCode: 201,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        data: result,
-      }),
-    };
-  } catch (error) {
-    console.error("Error adding party:", error);
-    
-    // Handle specific error types
-    if (error instanceof Error) {
-      if (error.message.includes("not found")) {
-        return {
-          statusCode: 404,
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            message: error.message,
-          }),
-        };
-      }
-      
-      if (error.message.includes("already exists")) {
-        return {
-          statusCode: 409,
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            message: error.message,
-          }),
-        };
-      }
-      
-      if (error.message.includes("Cannot add parties")) {
-        return {
-          statusCode: 422,
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            message: error.message,
-          }),
-        };
-      }
-    }
-    
-    return {
-      statusCode: 500,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        message: "Internal server error",
-      }),
-    };
-  }
+  return created({ data: result.party });
 };
+
+/**
+ * @description Lambda handler for POST /envelopes/{envelopeId}/parties endpoint.
+ * Wraps the base handler with authentication, observability, and CORS middleware.
+ *
+ * @param {any} evt - The Lambda event containing HTTP request data
+ * @returns {Promise<any>} Promise resolving to HTTP response with created Party data
+ */
+export const handler = wrapController(base, {
+  auth: true,
+  observability: {
+    logger: () => console,
+    metrics: () => ({} as any),
+    tracer: () => ({} as any),
+  },
+  cors: corsFromEnv(),
+});
 
 
 

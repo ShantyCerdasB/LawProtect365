@@ -1,13 +1,8 @@
 /**
  * @file completeSigning.ts
  * @summary Controller for POST /signing/complete
- *
- * @description
- * Public endpoint to finalize a signing operation for a signer using a request token.
- * - Validates the body
- * - Requires an opaque request token header (x-request-token)
- * - Derives actor metadata (ip/userAgent + auth context if present)
- * - Wires repositories and delegates to the CompleteSigning use case
+ * @description Validates input, derives actor from auth context, wires ports,
+ * and delegates to the CompleteSigning app service. Errors are mapped by apiHandler.
  */
 
 import type { HandlerFn } from "@lawprotect/shared-ts";
@@ -18,13 +13,20 @@ import { actorFromCtx, requireRequestToken } from "@/middleware/auth";
 
 import { getContainer } from "@/infra/Container";
 import { CompleteSigningBody } from "@/schemas/signing/CompleteSigning.schema";
-import { executeCompleteSigning } from "@/use-cases/signatures/CompleteSigning";
+import { completeSigningApp } from "@/app/services/Signing/CompleteSigningApp.service";
+import { makeSigningCommandsPort } from "@/app/adapters/signing/makeSigningCommandsPort";
 
+/**
+ * Base handler function for signing completion
+ * @param evt - The Lambda event containing HTTP request data
+ * @returns Promise resolving to HTTP response with completion result
+ * @throws {AppError} When validation fails
+ */
 const base: HandlerFn = async (evt) => {
   // 1) Validate request body
   const { body } = validateRequest(evt, { body: CompleteSigningBody });
 
-
+  // 2) Required request token header
   const token = requireRequestToken(evt);
 
   // 3) Build actor envelope (auth-derived + transport)
@@ -32,8 +34,24 @@ const base: HandlerFn = async (evt) => {
 
   // 4) Wire dependencies
   const c = getContainer();
+  const signingCommands = makeSigningCommandsPort(
+    c.repos.envelopes,
+    c.repos.parties,
+    {
+      events: c.events.publisher,
+      ids: c.ids,
+      time: c.time,
+      signer: c.crypto.signer,
+      idempotency: c.idempotency.runner,
+      signingConfig: {
+        defaultKeyId: c.config.kms.signerKeyId,
+        allowedAlgorithms: [c.config.kms.signingAlgorithm],
+      },
+    }
+  );
 
-  const result = await executeCompleteSigning(
+  // 5) Delegate to app service
+  const result = await completeSigningApp(
     {
       envelopeId: body.envelopeId,
       signerId: body.signerId,
@@ -44,24 +62,10 @@ const base: HandlerFn = async (evt) => {
       token,
       actor,
     },
-    {
-      repos: {
-        envelopes: c.repos.envelopes,
-        parties: c.repos.parties,
-      },
-      signer: c.crypto.signer,
-      events: c.events.publisher,
-      idempotency: c.idempotency.runner,
-      ids: { ulid: c.ids.ulid },
-      time: { now: c.time.now },
-      signing: {
-        defaultKeyId: c.config.kms.signerKeyId,
-        allowedAlgorithms: [c.config.kms.signingAlgorithm] as readonly string[],
-      },
-    }
+    { signingCommands }
   );
 
-  // 5) Standard OK response
+  // 6) Standard OK response
   return ok({
     data: {
       status: "completed",

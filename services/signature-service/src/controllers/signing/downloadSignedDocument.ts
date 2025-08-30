@@ -18,7 +18,8 @@ import { actorFromCtx, requireRequestToken } from "@/middleware/auth";
 
 import { getContainer } from "@/infra/Container";
 import { DownloadSignedDocumentBody } from "@/schemas/signing/DownloadSignedDocument.schema";
-import { executeDownloadSignedDocument } from "@/use-cases/signatures/DownloadSignedDocument";
+import { downloadSignedDocumentApp } from "@/app/services/Signing/DownloadSignedDocumentApp.service";
+import { makeSigningCommandsPort } from "@/app/adapters/signing/makeSigningCommandsPort";
 
 
 const base: HandlerFn = async (evt) => {
@@ -31,25 +32,23 @@ const base: HandlerFn = async (evt) => {
   // 3) Actor from shared context
   const actor = actorFromCtx(evt);
 
-  // 4) Wire repositories and dependencies
+  // 4) Wire dependencies
   const c = getContainer();
-
-  const result = await executeDownloadSignedDocument(
+  const signingCommands = makeSigningCommandsPort(
+    c.repos.envelopes,
+    c.repos.parties,
     {
-      envelopeId: body.envelopeId,
-      token,
-      actor,
-    },
-    {
-      repos: {
-        envelopes: c.repos.envelopes,
-      },
-      // Keep key names aligned with the use-case context
-      s3: c.storage.presigner,
+      events: c.events.publisher,
+      ids: c.ids,
+      time: c.time,
+      signer: c.crypto.signer,
       idempotency: c.idempotency.runner,
-      ids: { ulid: c.ids.ulid },
-      time: { now: c.time.now },
-      config: {
+      signingConfig: {
+        defaultKeyId: c.config.kms.signerKeyId,
+        allowedAlgorithms: [c.config.kms.signingAlgorithm],
+      },
+      s3: c.storage.presigner,
+      downloadConfig: {
         signedBucket:
           process.env.SIGNED_BUCKET ||
           process.env.EVIDENCE_BUCKET ||
@@ -60,6 +59,16 @@ const base: HandlerFn = async (evt) => {
         ),
       },
     }
+  );
+
+  // 5) Delegate to app service
+  const result = await downloadSignedDocumentApp(
+    {
+      envelopeId: body.envelopeId,
+      token,
+      actor,
+    },
+    { signingCommands }
   );
 
   // 5) Standard OK response

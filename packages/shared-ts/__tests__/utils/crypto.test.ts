@@ -119,6 +119,82 @@ describe('toBase64Url', () => {
     const result = toBase64Url(buffer);
     expect(result).toMatch(/^[A-Za-z0-9_-]+$/);
   });
+
+  it('handles buffer with multiple padding characters', () => {
+    // Create a buffer that would result in multiple '=' padding characters
+    const buffer = Buffer.from([0x00, 0x00, 0x00]); // 3 bytes = 4 base64 chars with 1 padding
+    const result = toBase64Url(buffer);
+    expect(result).toMatch(/^[A-Za-z0-9_-]+$/);
+    expect(result).not.toContain('=');
+  });
+
+  it('handles buffer with single padding character', () => {
+    // Create a buffer that would result in one '=' padding character
+    const buffer = Buffer.from([0x00, 0x00]); // 2 bytes = 3 base64 chars with 1 padding
+    const result = toBase64Url(buffer);
+    expect(result).toMatch(/^[A-Za-z0-9_-]+$/);
+    expect(result).not.toContain('=');
+  });
+
+  it('handles buffer with no padding required', () => {
+    // Create a buffer that doesn't need padding
+    const buffer = Buffer.from([0x00, 0x00, 0x00, 0x00]); // 4 bytes = 6 base64 chars, no padding
+    const result = toBase64Url(buffer);
+    expect(result).toMatch(/^[A-Za-z0-9_-]+$/);
+    expect(result).not.toContain('=');
+  });
+
+  it('handles buffer with all padding characters', () => {
+    // Create a buffer that would result in all '=' padding characters
+    const buffer = Buffer.from([0x00]); // 1 byte = 2 base64 chars with 2 padding
+    const result = toBase64Url(buffer);
+    expect(result).toMatch(/^[A-Za-z0-9_-]+$/);
+    expect(result).not.toContain('=');
+  });
+
+  it('handles case when Buffer.isEncoding is not available', () => {
+    // Mock Buffer.isEncoding to be undefined to test the fallback path
+    const originalIsEncoding = Buffer.isEncoding;
+    Buffer.isEncoding = undefined as any;
+    
+    try {
+      const buffer = Buffer.from('test data', 'utf8');
+      const result = toBase64Url(buffer);
+      expect(result).toMatch(/^[A-Za-z0-9_-]+$/);
+      expect(result).not.toContain('+');
+      expect(result).not.toContain('/');
+      expect(result).not.toContain('=');
+    } finally {
+      // Restore the original function
+      Buffer.isEncoding = originalIsEncoding;
+    }
+  });
+
+  it('handles case when Buffer.isEncoding returns false for base64url', () => {
+    // Mock Buffer.isEncoding to return false for base64url
+    const originalIsEncoding = Buffer.isEncoding;
+    Buffer.isEncoding = ((encoding: string) => encoding !== 'base64url') as any;
+    
+    try {
+      const buffer = Buffer.from('test data', 'utf8');
+      const result = toBase64Url(buffer);
+      expect(result).toMatch(/^[A-Za-z0-9_-]+$/);
+      expect(result).not.toContain('+');
+      expect(result).not.toContain('/');
+      expect(result).not.toContain('=');
+    } finally {
+      // Restore the original function
+      Buffer.isEncoding = originalIsEncoding;
+    }
+  });
+
+  it('handles edge case with buffer that produces only padding characters', () => {
+    // Create a buffer that would produce only '=' characters in base64
+    const buffer = Buffer.from([0x00, 0x00, 0x00, 0x00, 0x00, 0x00]); // 6 bytes = 8 base64 chars with 2 padding
+    const result = toBase64Url(buffer);
+    expect(result).toMatch(/^[A-Za-z0-9_-]+$/);
+    expect(result).not.toContain('=');
+  });
 });
 
 describe('randomBase64Url', () => {

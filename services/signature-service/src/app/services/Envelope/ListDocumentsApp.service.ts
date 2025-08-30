@@ -7,6 +7,7 @@
 
 import type { TenantId, EnvelopeId } from "@/app/ports/shared";
 import type { DocumentsQueriesPort } from "@/app/ports/documents/DocumentsQueriesPort";
+import { badRequest } from "@/errors";
 
 /**
  * Input parameters for listing documents of an envelope
@@ -44,8 +45,12 @@ export const listDocumentsApp = async (
   input: ListDocumentsAppInput,
   deps: ListDocumentsAppDependencies
 ): Promise<ListDocumentsAppResult> => {
+  // Validate input parameters
+  if (!input.envelopeId) {
+    throw badRequest("Envelope ID is required");
+  }
+
   const page = await deps.documentsQueries.listByEnvelope({
-    tenantId: input.tenantId,
     envelopeId: input.envelopeId,
     limit: input.limit,
     cursor: input.cursor,

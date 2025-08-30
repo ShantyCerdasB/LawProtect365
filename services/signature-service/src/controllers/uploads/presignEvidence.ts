@@ -6,20 +6,54 @@
  * - call use-case
  * - map result -> HTTP response
  */
-import { apiHandler, ok } from "@lawprotect/shared-ts/http";
-import { authenticate } from "@lawprotect/shared-ts/auth";
-import { z, validate } from "@lawprotect/shared-ts/validation";
+import { wrapController, corsFromEnv } from "@/middleware/http";
+import { tenantFromCtx, actorFromCtx } from "@/middleware/auth";
+import { validateRequest } from "@lawprotect/shared-ts";
+import { PresignEvidenceBodySchema } from "@/schemas/uploads";
+import { toEnvelopeId } from "@/app/ports/shared";
+import { getContainer } from "@/infra/Container";
+import { makeUploadsCommandsPort } from "@/app/adapters/uploads/makeUploadsCommandsPort";
+import { z } from "zod";
 
-const Params = z.object({});      // adjust per-route
-const Query  = z.object({});      // adjust per-route
-const Body   = z.object({}).optional(); // adjust per-route
+const base = async (evt: any) => {
+  const { path, body } = validateRequest(evt, {
+    path: z.object({ id: z.string() }),
+    body: PresignEvidenceBodySchema,
+  });
 
-export const handler = apiHandler(async (evt) => {
-  const auth = await authenticate(evt); // principal/tenant/scopes
-  const { params, query, body } = validate(evt, { params: Params, query: Query, body: Body });
+  const tenantId = tenantFromCtx(evt);
+  const actor = actorFromCtx(evt);
+  const c = getContainer();
 
-  // TODO: call use-case via DI from infra (e.g., ctx.getUseCase("..."))
-  // const result = await useCase.execute({ ...params, ...query, ...body }, { auth });
+  const uploadsCommands = makeUploadsCommandsPort({
+    envelopesRepo: c.repos.envelopes,
+    evidenceStorage: c.storage.evidence,
+    pdfIngestor: c.storage.pdfIngestor,
+    ids: c.ids,
+  });
 
-  return ok({ status: "stub", route: evt.requestContext?.http?.path });
+  const result = await uploadsCommands.presignEvidence({
+    tenantId: tenantId as any, // TODO: Add proper type conversion
+    envelopeId: toEnvelopeId(path.id),
+    contentType: body.contentType,
+    sizeBytes: body.sizeBytes,
+    parts: body.parts,
+    sha256: body.sha256,
+    actor,
+  });
+
+  return {
+    statusCode: 201,
+    body: JSON.stringify(result),
+  };
+};
+
+export const handler = wrapController(base, {
+  auth: true,
+  observability: {
+    logger: () => console,
+    metrics: () => ({} as any),
+    tracer: () => ({} as any),
+  },
+  cors: corsFromEnv(),
 });

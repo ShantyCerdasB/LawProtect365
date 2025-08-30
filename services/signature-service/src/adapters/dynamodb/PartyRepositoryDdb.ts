@@ -167,4 +167,130 @@ export class PartyRepositoryDdb
       throw mapAwsError(err, "PartyRepositoryDdb.delete");
     }
   }
+
+  /**
+   * @description Lists parties by envelope with optional filtering.
+   * @param {object} input Input parameters for listing parties.
+   * @returns {Promise<object>} List result with parties and pagination info.
+   */
+  async listByEnvelope(input: {
+    tenantId: string;
+    envelopeId: string;
+    role?: string;
+    status?: string;
+    limit?: number;
+    cursor?: string;
+  }): Promise<{ items: Party[]; nextCursor?: string; total: number }> {
+    try {
+      const queryParams: any = {
+        TableName: this.tableName,
+        KeyConditionExpression: "pk = :pk",
+        ExpressionAttributeValues: {
+          ":pk": partyPk(input.envelopeId),
+        },
+        Limit: input.limit || 20,
+      };
+
+      // Add filters if provided
+      let filterExpressions: string[] = [];
+
+      if (input.role) {
+        filterExpressions.push("#role = :role");
+        if (!queryParams.ExpressionAttributeNames) {
+          queryParams.ExpressionAttributeNames = {};
+        }
+        queryParams.ExpressionAttributeNames["#role"] = "role";
+        queryParams.ExpressionAttributeValues[":role"] = input.role;
+      }
+
+      if (input.status) {
+        filterExpressions.push("#status = :status");
+        if (!queryParams.ExpressionAttributeNames) {
+          queryParams.ExpressionAttributeNames = {};
+        }
+        queryParams.ExpressionAttributeNames["#status"] = "status";
+        queryParams.ExpressionAttributeValues[":status"] = input.status;
+      }
+
+      if (filterExpressions.length > 0) {
+        queryParams.FilterExpression = filterExpressions.join(" AND ");
+      }
+
+      if (input.cursor) {
+        queryParams.ExclusiveStartKey = JSON.parse(input.cursor);
+      }
+
+      const result = await this.ddb.query(queryParams);
+
+      const parties = (result.Items || []).map((item) =>
+        partyItemMapper.fromDTO(item as any)
+      );
+
+      return {
+        items: parties,
+        nextCursor: result.LastEvaluatedKey
+          ? JSON.stringify(result.LastEvaluatedKey)
+          : undefined,
+        total: parties.length,
+      };
+    } catch (err) {
+      throw mapAwsError(err, "PartyRepositoryDdb.listByEnvelope");
+    }
+  }
+
+  /**
+   * @description Gets parties by email within an envelope.
+   * @param {object} input Input parameters for searching by email.
+   * @returns {Promise<object>} Search result with parties.
+   */
+  async getByEmail(input: {
+    tenantId: string;
+    envelopeId: string;
+    email: string;
+  }): Promise<{ items: Party[] }> {
+    try {
+      const result = await this.ddb.query({
+        TableName: this.tableName,
+        KeyConditionExpression: "pk = :pk",
+        FilterExpression: "#email = :email",
+        ExpressionAttributeNames: {
+          "#email": "email",
+        },
+        ExpressionAttributeValues: {
+          ":pk": partyPk(input.envelopeId),
+          ":email": input.email,
+        },
+      });
+
+      const parties = (result.Items || []).map((item) =>
+        partyItemMapper.fromDTO(item as any)
+      );
+
+      return {
+        items: parties,
+      };
+    } catch (err) {
+      throw mapAwsError(err, "PartyRepositoryDdb.getByEmail");
+    }
+  }
+
+  /**
+   * @description Updates a party entity (for compatibility with new adapters).
+   * @param {Party} party The party entity to update.
+   */
+  async updateParty(party: Party): Promise<void> {
+    await this.update(
+      { envelopeId: party.envelopeId, partyId: party.partyId },
+      party
+    );
+  }
+
+  /**
+   * @description Deletes a party by ID and envelope ID (for compatibility with new adapters).
+   * @param {string} partyId The party ID.
+   * @param {string} envelopeId The envelope ID.
+   */
+  async deleteParty(partyId: string, envelopeId: string): Promise<void> {
+    await this.delete({ envelopeId, partyId });
+  }
 }

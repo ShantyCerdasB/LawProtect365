@@ -8,6 +8,7 @@
  */
 
 import { z } from "zod";
+import { PARTY_ROLES, PARTY_STATUSES } from "../../domain/values/enums";
 
 /**
  * Path parameters for PATCH /envelopes/:envelopeId/parties/:partyId
@@ -22,9 +23,9 @@ export const PatchPartyPath = z.object({
  */
 export const PatchPartyBody = z.object({
   name: z.string().min(1, "Name is required").max(255, "Name too long").optional(),
-  role: z.enum(["signer", "viewer", "delegate"]).optional(),
+  role: z.enum(PARTY_ROLES).optional(),
   order: z.number().int().min(1, "Order must be at least 1").optional(),
-  status: z.enum(["pending", "invited", "signed", "declined"]).optional(),
+  status: z.enum(PARTY_STATUSES).optional(),
   metadata: z.record(z.unknown()).optional(),
   notificationPreferences: z.object({
     email: z.boolean(),
@@ -42,9 +43,9 @@ export const PatchPartyResponse = z.object({
   envelopeId: z.string(),
   email: z.string(),
   name: z.string(),
-  role: z.enum(["signer", "viewer", "delegate"]),
+  role: z.enum(PARTY_ROLES),
   order: z.number().optional(),
-  status: z.enum(["pending", "invited", "signed", "declined"]),
+  status: z.enum(PARTY_STATUSES),
   createdAt: z.string(),
   updatedAt: z.string(),
   metadata: z.record(z.unknown()).optional(),

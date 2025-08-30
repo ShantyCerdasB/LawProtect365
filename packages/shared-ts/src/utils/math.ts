@@ -1,26 +1,42 @@
 /**
  * @file math.ts
- * @summary Math helpers for clamping, rounding, randoms, and basic statistics.
- * @remarks
- * - `randomInt` uses a secure RNG: it prefers `globalThis.crypto.getRandomValues`,
- *   falls back to Node's `crypto.randomInt`, and otherwise throws. Rejection sampling
- *   is used to avoid modulo bias for uniform results.
+ * @summary Mathematical utilities for clamping, rounding, secure random generation, and basic statistics.
+ * 
+ * @description
+ * Provides a comprehensive set of mathematical utilities including:
+ * - Number clamping and range validation
+ * - Precision rounding and formatting
+ * - Linear interpolation for smooth transitions
+ * - Cryptographically secure random number generation
+ * - Statistical functions (sum, mean, median)
+ * 
+ * @security
+ * The `randomInt` function uses cryptographically secure random number generation
+ * with rejection sampling to prevent bias and ensure uniform distribution.
  */
 
 import * as nodeCrypto from "node:crypto";
 
 /**
  * Clamps a number into the inclusive range `[min, max]`.
- *
- * @param n Input value to clamp.
- * @param min Inclusive lower bound.
- * @param max Inclusive upper bound.
- * @returns `n` limited to the range `[min, max]`.
- *
+ * 
+ * @description
+ * Ensures a number stays within specified bounds by limiting it to the given range.
+ * If the number is less than the minimum, it returns the minimum. If it's greater
+ * than the maximum, it returns the maximum. Otherwise, it returns the original number.
+ * 
+ * @param n - Input value to clamp.
+ * @param min - Inclusive lower bound of the range.
+ * @param max - Inclusive upper bound of the range.
+ * @returns The clamped value, guaranteed to be in the range `[min, max]`.
+ * 
  * @example
- * clamp(10, 0, 5) // => 5
- * clamp(-1, 0, 5) // => 0
- * clamp(3, 0, 5)  // => 3
+ * ```ts
+ * clamp(10, 0, 5) // => 5 (clamped to max)
+ * clamp(-1, 0, 5) // => 0 (clamped to min)
+ * clamp(3, 0, 5)  // => 3 (no change needed)
+ * clamp(5, 0, 5)  // => 5 (at boundary)
+ * ```
  */
 export const clamp = (n: number, min: number, max: number): number =>
   Math.min(max, Math.max(min, n));
@@ -94,9 +110,17 @@ export const randomInt = (min: number, max: number): number => {
     const limit = range - (range % span); // rejection sampling to avoid bias
     const buf = new Uint32Array(1);
     let x = 0;
+    let attempts = 0;
+    const maxAttempts = 1000; // Prevent infinite loops
+    
     do {
       web.getRandomValues(buf);
       x = buf[0]!;
+      attempts++;
+      if (attempts > maxAttempts) {
+        // Fallback to simple modulo if rejection sampling takes too long
+        return lower + (x % span);
+      }
     } while (x >= limit);
     return lower + (x % span);
   }
