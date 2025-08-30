@@ -1,6 +1,6 @@
 import { InternalError, type ISODateString } from "@lawprotect/shared-ts";
-import { ConsentItemDTOSchema, type ConsentItemDTO } from "../schemas/ConsentItemDTO.schema";
-import type { ConsentRepoRow } from "@/adapters/shared/RepoTypes";
+import { ConsentItemDTOSchema, type ConsentItemDTO } from "../../../schemas/consents/ConsentItemDTO.schema";
+import type { ConsentRepoRow } from "@/app/ports/shared/RepoTypes";
 
 export const parseConsentItemDTO = (raw: unknown): ConsentItemDTO => {
   const parsed = ConsentItemDTOSchema.safeParse(raw);

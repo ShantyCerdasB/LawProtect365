@@ -20,4 +20,6 @@ export interface ActorContext {
   userAgent?: string;
   /** Locale preference of the actor (optional) */
   locale?: string;
+  /** Role of the actor (optional) */
+  role?: string;
 }

@@ -4,29 +4,13 @@
  * Provides methods to create, update, and delete documents with proper business rule validation.
  */
 
-import type { TenantId, EnvelopeId, DocumentId } from "../shared";
+import type { TenantId, EnvelopeId, DocumentId, ActorContext } from "../shared";
 import type { S3ObjectRef } from "../../../domain/value-objects/S3ObjectRef";
 import type { HashDigestString } from "../../../domain/value-objects/HashDigest";
 import type { FileSize } from "../../../domain/value-objects/FileSize";
 import type { ContentType } from "../../../domain/value-objects/ContentType";
 import type { DocumentLock } from "../../../domain/value-objects/DocumentLock";
-
-/**
- * @description Context information about the actor performing an operation.
- * Used for audit trails and authorization purposes.
- */
-export interface ActorContext {
-  /** User ID of the actor (optional) */
-  userId?: string;
-  /** Email address of the actor (optional) */
-  email?: string;
-  /** IP address of the actor (optional) */
-  ip?: string;
-  /** User agent string of the actor (optional) */
-  userAgent?: string;
-  /** Locale preference of the actor (optional) */
-  locale?: string;
-}
+export type { ActorContext } from "../shared";
 
 /**
  * @description Command for creating a new document within an envelope.

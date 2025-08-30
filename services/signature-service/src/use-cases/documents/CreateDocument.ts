@@ -24,18 +24,7 @@ import type { HashDigestString } from "@/domain/value-objects/HashDigest";
 import type { FileSize } from "@/domain/value-objects/FileSize";
 import type { ContentType } from "@/domain/value-objects/ContentType";
 import { assertSupportedContentType, assertDocumentSizeLimit, assertEnvelopeDraftForDocumentModification } from "@/domain/rules/Documents.rules";
-
-/**
- * @description Actor context for audit and attribution purposes.
- */
-export interface ActorContext {
-  userId?: string;
-  email?: string;
-  ip?: string;
-  userAgent?: string;
-  locale?: string;
-}
-
+import { ActorContext } from "@/app/ports/shared";
 /**
  * @description Input contract for CreateDocument use case.
  */

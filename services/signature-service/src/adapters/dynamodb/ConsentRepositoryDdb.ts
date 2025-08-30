@@ -22,7 +22,7 @@ import type { DdbClientLike } from "@lawprotect/shared-ts";
 import {
   ConsentItemDTOSchema,
   type ConsentItemDTO,
-} from "./schemas/ConsentItemDTO.schema";
+} from "../../schemas/consents/ConsentItemDTO.schema";
 import { dtoToConsentRow } from "./mappers/ConsentItemDTO.mapper";
 
 import type {
@@ -32,7 +32,7 @@ import type {
   ConsentRepoUpdateInput,
   ConsentRepoListInput,
   ConsentRepoListOutput,
-} from "@/adapters/shared/RepoTypes";
+} from "@/app/ports/shared/RepoTypes";
 
 const pk = (envelopeId: string) => `ENVELOPE#${envelopeId}`;
 const sk = (consentId: string) => `CONSENT#${consentId}`;

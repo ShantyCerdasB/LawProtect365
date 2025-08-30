@@ -11,18 +11,7 @@ import type { S3ObjectRef } from "@/domain/value-objects/S3ObjectRef";
 import type { HashDigestString } from "@/domain/value-objects/HashDigest";
 import type { FileSize } from "@/domain/value-objects/FileSize";
 import type { ContentType } from "@/domain/value-objects/ContentType";
-
-/**
- * Actor context for audit and attribution purposes
- */
-export interface ActorContext {
-  userId?: string;
-  email?: string;
-  ip?: string;
-  userAgent?: string;
-  locale?: string;
-}
-
+import type { ActorContext } from "@/app/ports/shared";
 /**
  * Input parameters for creating a document
  */

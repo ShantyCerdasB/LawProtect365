@@ -7,17 +7,7 @@
 
 import type { TenantId, UserId } from "@/app/ports/shared";
 import type { EnvelopesCommandsPort } from "@/app/ports/envelopes/EnvelopesCommandsPort";
-
-/**
- * Actor context for audit and attribution purposes
- */
-export interface ActorContext {
-  userId?: string;
-  email?: string;
-  ip?: string;
-  userAgent?: string;
-  locale?: string;
-}
+import { ActorContext } from "@/app/ports/shared";
 
 /**
  * Input parameters for creating an envelope

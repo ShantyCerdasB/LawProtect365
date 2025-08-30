@@ -5,24 +5,13 @@
  * and handles validation logic. Uses branded types for type safety.
  */
 
-import type { TenantId, EnvelopeId } from "@/app/ports/shared";
+import type { TenantId, EnvelopeId, ActorContext } from "@/app/ports/shared";
 import type { PartiesCommandsPort } from "@/app/ports/parties/PartiesCommandsPort";
 import type { Repository } from "@lawprotect/shared-ts";
 import type { Envelope } from "@/domain/entities/Envelope";
 import type { PartyRole } from "@/domain/values/enums";
 import { envelopeNotFound } from "@/errors";
 
-
-/**
- * Actor context for audit and attribution purposes
- */
-export interface ActorContext {
-  userId?: string;
-  email?: string;
-  ip?: string;
-  userAgent?: string;
-  locale?: string;
-}
 
 /**
  * Notification preferences for party

@@ -22,7 +22,7 @@ import type { DdbClientLike } from "@lawprotect/shared-ts";
 import type {
   DelegationRepoCreateInput,
   DelegationRepoRow,
-} from "@/adapters/shared/RepoTypes";
+} from "@/app/ports/shared/RepoTypes";
 
 /** Local alias mirroring domain values; used only for the stored DTO. */
 type RepoStatus = "pending" | "accepted" | "declined" | "expired";

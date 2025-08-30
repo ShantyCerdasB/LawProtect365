@@ -5,7 +5,7 @@ import type { ConsentRecord } from "@/domain/ports/consent/ConsentsPort";
 
 import type {
   ConsentRepoListInput, ConsentRepoListOutput, ConsentRepoRow,
-} from "@/adapters/shared/RepoTypes";
+} from "@/app/ports/shared/RepoTypes";
 
 import { toConsentType, toConsentStatus } from "@/app/mapper/EnumMappers";
 

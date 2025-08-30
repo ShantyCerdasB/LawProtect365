@@ -12,25 +12,11 @@ import {
   type ISODateString,
 } from "@lawprotect/shared-ts";
 import type { Repository } from "@lawprotect/shared-ts";
-
+import { ActorContext } from "@/app/ports/shared";
 import type { Envelope } from "@/domain/entities/Envelope";
 import type { EnvelopeId } from "@/domain/value-objects/Ids";
 
-/**
- * @description Actor context for audit and attribution purposes.
- */
-export interface ActorContext {
-  /** User identifier */
-  userId?: string;
-  /** User email address */
-  email?: string;
-  /** Client IP address */
-  ip?: string;
-  /** User agent string */
-  userAgent?: string;
-  /** User locale preference */
-  locale?: string;
-}
+
 
 /**
  * @description Input contract for Finalise use case.

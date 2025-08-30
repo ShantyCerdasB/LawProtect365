@@ -8,11 +8,10 @@
 import type { Party } from "../entities/Party";
 import type { Envelope } from "../entities/Envelope";
 import type { PartyId, EnvelopeId } from "../value-objects/Ids";
-import type { PartiesPort } from "../ports/parties/PartiesPort";
-import type { EnvelopesPort } from "../ports/envelopes/EnvelopesPort";
 import { PARTY_ROLES, PARTY_STATUSES } from "../values/enums";
 import { validateSequentialSequences, getNextSequence } from "../value-objects/party/PartySequence";
 import { badRequest, partyNotFound, invalidPartyState, envelopeNotFound } from "../../errors";
+import { PartiesPort } from "@/app/ports/parties/PartiesPort";
 
 /**
  * Validates that a party exists and belongs to the specified envelope.

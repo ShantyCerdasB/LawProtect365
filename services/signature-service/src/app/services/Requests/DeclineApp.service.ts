@@ -7,22 +7,7 @@
 
 import type { EnvelopeId } from "@/app/ports/shared";
 import type { RequestsCommandsPort } from "@/app/ports/requests/RequestsCommandsPort";
-
-/**
- * @description Actor context for audit and attribution purposes.
- */
-export interface ActorContext {
-  /** User identifier */
-  userId?: string;
-  /** User email address */
-  email?: string;
-  /** Client IP address */
-  ip?: string;
-  /** User agent string */
-  userAgent?: string;
-  /** User locale preference */
-  locale?: string;
-}
+import { ActorContext } from "@/app/ports/shared";
 
 /**
  * @description Input parameters for declining an envelope.

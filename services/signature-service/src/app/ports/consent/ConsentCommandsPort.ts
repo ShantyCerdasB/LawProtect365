@@ -6,22 +6,7 @@
 
 import type { ConsentId, TenantId, EnvelopeId, PartyId } from "../shared";
 import type { ConsentPatch } from "../shared/consents/types.consent";
-
-/**
- * Actor context information for consent operations
- */
-export interface ActorContext {
-  /** User ID of the actor (optional) */
-  userId?: string;
-  /** Email of the actor (optional) */
-  email?: string;
-  /** IP address of the actor (optional) */
-  ip?: string;
-  /** User agent of the actor (optional) */
-  userAgent?: string;
-  /** Locale of the actor (optional) */
-  locale?: string;
-}
+import type { ActorContext } from "../shared";
 
 /**
  * Input parameters for creating a consent

@@ -29,23 +29,7 @@ import type { Repository } from "@lawprotect/shared-ts";
 
 import type { Envelope } from "@/domain/entities/Envelope";
 import type { EnvelopeId, TenantId, UserId } from "@/domain/value-objects/Ids";
-
-/**
- * @description Minimal actor context propagated for attribution/auditing purposes.
- * Contains user and request information for audit trail tracking.
- */
-export interface ActorContext {
-  /** User identifier */
-  userId?: string;
-  /** User email address */
-  email?: string;
-  /** Client IP address */
-  ip?: string;
-  /** User agent string */
-  userAgent?: string;
-  /** User locale preference */
-  locale?: string;
-}
+import { ActorContext } from "@/app/ports/shared";
 
 /**
  * @description Input contract for CreateEnvelope use case.

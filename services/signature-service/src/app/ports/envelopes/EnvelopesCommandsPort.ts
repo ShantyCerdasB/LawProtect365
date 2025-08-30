@@ -12,24 +12,9 @@
  * Used by application services to modify envelope data.
  */
 
-import type { TenantId, UserId, EnvelopeId } from "../shared";
+import type { TenantId, UserId, EnvelopeId, ActorContext } from "../shared";
 
-/**
- * @description Context information about the actor performing an operation.
- * Used for audit trails and authorization purposes.
- */
-export interface ActorContext {
-  /** User ID of the actor (optional) */
-  userId?: string;
-  /** Email address of the actor (optional) */
-  email?: string;
-  /** IP address of the actor (optional) */
-  ip?: string;
-  /** User agent string of the actor (optional) */
-  userAgent?: string;
-  /** Locale preference of the actor (optional) */
-  locale?: string;
-}
+
 
 /**
  * @description Command for creating a new envelope.

@@ -6,15 +6,7 @@
  * authentication context and request headers.
  */
 
-/**
- * @file audit.ts
- * @summary Helpers for building audit metadata from HTTP requests.
- *
- * @description
- * Produces a normalized "actor" object for audit events using the
- * authentication context and selected request headers.
- */
-
+import { ActorContext } from "@/app/ports/shared";
 /**
  * @description Interface representing authentication-like data containing user identifiers.
  * Used as input for building audit actor information.
@@ -28,24 +20,6 @@ export interface AuthLike {
   role?: string;
 }
 
-/**
- * @description Interface representing a complete audit actor with user and request information.
- * Contains sanitized and normalized data for audit event logging.
- */
-export interface AuditActor {
-  /** User identifier */
-  userId?: string;
-  /** User email address */
-  email?: string;
-  /** Client IP address */
-  ip?: string;
-  /** User agent string */
-  userAgent?: string;
-  /** User locale preference */
-  locale?: string;
-  /** User role */
-  role?: string;
-}
 
 /**
  * @description Builds a sanitized actor descriptor for audit events.
@@ -55,7 +29,7 @@ export interface AuditActor {
  * @param {AuthLike} auth - Authentication context with user identifiers (default: empty object)
  * @returns {AuditActor} A minimal, sanitized actor payload for audit logging
  */
-export const buildAuditActor = (evt: any, auth: AuthLike = {}): AuditActor => {
+export const buildAuditActor = (evt: any, auth: AuthLike = {}): ActorContext => {
   const hdr = (name: string): string | undefined => {
     const h = evt?.headers ?? {};
     const val = h[name] ?? h[name.toLowerCase()];

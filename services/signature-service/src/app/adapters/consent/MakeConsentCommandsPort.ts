@@ -17,7 +17,7 @@ import type {
   ConsentRepoCreateInput,
   ConsentRepoKey,
   ConsentRepoUpdateInput,
-} from "../../../adapters/shared/RepoTypes";
+} from "../../ports/shared/RepoTypes";
 
 import { nowIso, asISO, asISOOpt } from "@lawprotect/shared-ts";
 

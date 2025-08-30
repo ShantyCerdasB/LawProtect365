@@ -17,7 +17,7 @@ import type {
   ConsentRepoRow,
   ConsentRepoKey,
   ConsentRepoUpdateInput,
-} from "@/adapters/shared/RepoTypes";
+} from "@/app/ports/shared/RepoTypes";
 
 import { toConsentType, toConsentStatus } from "@/app/mapper/EnumMappers";
 import { nowIso,  asISO, asISOOpt  } from "@lawprotect/shared-ts";

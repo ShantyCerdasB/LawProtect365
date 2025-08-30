@@ -6,24 +6,7 @@
  */
 
 import type { EnvelopeId, PartyId } from "../shared";
-
-/**
- * @description Context information about the actor performing an operation.
- * Used for audit trails and authorization purposes.
- */
-export interface ActorContext {
-  /** User ID of the actor (optional) */
-  userId?: string;
-  /** Email address of the actor (optional) */
-  email?: string;
-  /** IP address of the actor (optional) */
-  ip?: string;
-  /** User agent string of the actor (optional) */
-  userAgent?: string;
-  /** Locale preference of the actor (optional) */
-  locale?: string;
-}
-
+import type {  ActorContext } from "../shared";
 /**
  * @description Command for inviting parties to sign an envelope.
  */

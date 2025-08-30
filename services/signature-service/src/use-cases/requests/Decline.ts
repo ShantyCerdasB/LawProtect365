@@ -17,22 +17,7 @@ import type { Envelope } from "@/domain/entities/Envelope";
 import type { Party } from "@/domain/entities/Party";
 import type { EnvelopeId } from "@/domain/value-objects/Ids";
 import { EnvelopeLifecycle } from "@/domain/rules";
-
-/**
- * @description Actor context for audit and attribution purposes.
- */
-export interface ActorContext {
-  /** User identifier */
-  userId?: string;
-  /** User email address */
-  email?: string;
-  /** Client IP address */
-  ip?: string;
-  /** User agent string */
-  userAgent?: string;
-  /** User locale preference */
-  locale?: string;
-}
+import { ActorContext } from "@/app/ports/shared";
 
 /**
  * @description Input contract for Decline use case.

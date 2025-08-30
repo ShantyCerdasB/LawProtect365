@@ -7,22 +7,8 @@
 
 import type { EnvelopeId, PartyId } from "@/app/ports/shared";
 import type { RequestsCommandsPort } from "@/app/ports/requests/RequestsCommandsPort";
-
-/**
- * @description Actor context for audit and attribution purposes.
- */
-export interface ActorContext {
-  /** User identifier */
-  userId?: string;
-  /** User email address */
-  email?: string;
-  /** Client IP address */
-  ip?: string;
-  /** User agent string */
-  userAgent?: string;
-  /** User locale preference */
-  locale?: string;
-}
+import { ActorContext } from "@/app/ports/shared";
+import { OtpChannel } from "@/domain/values/enums";
 
 /**
  * @description Input parameters for requesting a signature.
@@ -35,7 +21,7 @@ export interface RequestSignatureAppInput {
   /** Optional custom message for the signature request */
   message?: string;
   /** Optional channel for sending the request (email, sms) */
-  channel?: "email" | "sms";
+  channel?: OtpChannel;
   /** Optional actor context for audit purposes */
   actor?: ActorContext;
 }
