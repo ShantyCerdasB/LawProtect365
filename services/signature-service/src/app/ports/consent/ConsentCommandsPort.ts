@@ -4,9 +4,9 @@
  * @description Defines the interface for write-oriented consent operations including create, update, delete, submit, and delegate
  */
 
-import type { ConsentId, TenantId, EnvelopeId, PartyId } from "../shared";
-import type { ConsentPatch } from "../shared/consents/types.consent";
-import type { ActorContext } from "../shared";
+import type { ConsentId, TenantId, EnvelopeId, PartyId, ConsentType } from "@/shared/types/domain";
+import type { ConsentPatch } from "@/shared/types/consent";
+import type { ActorContext } from "@/shared/types/ActorContext";
 
 /**
  * Input parameters for creating a consent
@@ -19,7 +19,7 @@ export interface CreateConsentCommand {
   /** The party ID this consent is for */
   partyId: PartyId;
   /** The type of consent being created */
-  consentType: string;
+  consentType: ConsentType;
   /** Additional metadata for the consent (optional) */
   metadata?: Record<string, unknown>;
   /** Expiration date for the consent (optional) */

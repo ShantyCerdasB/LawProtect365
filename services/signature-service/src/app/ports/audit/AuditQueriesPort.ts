@@ -4,45 +4,44 @@
  * @description Defines the contract for querying audit events and trails
  */
 
-import type { EnvelopeId, TenantId, PaginationCursor } from "@/domain/value-objects";
+import type { EnvelopeId, TenantId, PaginationCursor } from "../../../domain/value-objects";
+import type { AuditEvent, AuditEventId } from "../../../domain/value-objects/Audit";
+import type { CursorPage } from "@lawprotect/shared-ts";
+import type { UploadFormat } from "../../../domain/values/enums";
 
 /**
  * @description Input for getting audit trail of an envelope
  */
 export interface GetAuditTrailInput {
   /** Tenant identifier */
-  tenantId: TenantId;
+  readonly tenantId: TenantId;
   /** Envelope identifier */
-  envelopeId: EnvelopeId;
+  readonly envelopeId: EnvelopeId;
   /** Optional pagination cursor */
-  cursor?: PaginationCursor;
+  readonly cursor?: PaginationCursor;
   /** Page size limit (will be clamped server-side) */
-  limit?: number;
+  readonly limit?: number;
   /** Output format */
-  format?: "json" | "pdf";
+  readonly format?: UploadFormat;
   /** Locale for PDF generation */
-  locale?: string;
+  readonly locale?: string;
 }
 
 /**
- * @description Result for audit trail query
+ * @description Result for audit trail query using CursorPage for consistent pagination
  */
-export interface GetAuditTrailResult {
+export interface GetAuditTrailResult extends CursorPage<{
+  /** Event occurrence timestamp */
+  readonly at: string;
+  /** Actor information */
+  readonly actor: string;
+  /** Action performed */
+  readonly action: string;
+  /** Optional metadata */
+  readonly metadata?: Record<string, unknown>;
+}> {
   /** Envelope identifier */
-  envelopeId: EnvelopeId;
-  /** Array of audit entries */
-  entries: Array<{
-    /** Event occurrence timestamp */
-    at: string;
-    /** Actor information */
-    actor: string;
-    /** Action performed */
-    action: string;
-    /** Optional metadata */
-    metadata?: Record<string, any>;
-  }>;
-  /** Optional pagination cursor for next page */
-  nextCursor?: PaginationCursor;
+  readonly envelopeId: EnvelopeId;
 }
 
 /**
@@ -50,29 +49,21 @@ export interface GetAuditTrailResult {
  */
 export interface GetAuditEventInput {
   /** Audit event identifier */
-  eventId: string;
+  readonly eventId: AuditEventId;
   /** Tenant identifier for authorization */
-  tenantId: TenantId;
+  readonly tenantId: TenantId;
 }
 
 /**
- * @description Result for audit event query
+ * @description Result for audit event query with complete event data
  */
 export interface GetAuditEventResult {
-  /** Event identifier */
-  id: string;
-  /** Envelope identifier */
-  envelopeId: EnvelopeId;
-  /** Event occurrence timestamp */
-  at: string;
-  /** Actor information */
-  actor: string;
-  /** Action performed */
-  action: string;
-  /** Optional payload */
-  payload?: Record<string, any>;
-  /** Optional metadata */
-  metadata?: Record<string, any>;
+  /** Complete audit event */
+  readonly event: AuditEvent;
+  /** Formatted actor information for display */
+  readonly actorDisplay: string;
+  /** Formatted action for display */
+  readonly actionDisplay: string;
 }
 
 /**
@@ -80,14 +71,14 @@ export interface GetAuditEventResult {
  */
 export interface AuditQueriesPort {
   /**
-   * @description Get audit trail for an envelope
+   * @description Get audit trail for an envelope with consistent pagination
    * @param input - Query parameters
-   * @returns Promise resolving to audit trail
+   * @returns Promise resolving to paginated audit trail
    */
   getAuditTrail(input: GetAuditTrailInput): Promise<GetAuditTrailResult>;
 
   /**
-   * @description Get a specific audit event by ID
+   * @description Get a specific audit event by ID with complete event data
    * @param input - Query parameters
    * @returns Promise resolving to audit event or null if not found
    */

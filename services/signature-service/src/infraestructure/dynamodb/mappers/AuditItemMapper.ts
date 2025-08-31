@@ -22,112 +22,83 @@
 import type { Mapper } from "@lawprotect/shared-ts";
 import { BadRequestError, ErrorCodes } from "@lawprotect/shared-ts";
 
-import type { AuditEvent, AuditEventId } from "@/domain/value-objects/Audit";
-import type { TenantId, EnvelopeId } from "@/domain/value-objects/Ids";
+import type { AuditEvent, AuditEventId } from "../../../domain/value-objects/Audit";
+import type { TenantId, EnvelopeId } from "../../../domain/value-objects/Ids";
 
-/** Stable entity marker for audit items. */
-export const AUDIT_ENTITY = "AuditEvent" as const;
+import { AUDIT_ENTITY_TYPE } from "../../../shared/types/infrastructure/enums";
+import { DdbAuditItem, isDdbAuditItem } from "@/domain/entities";
+
 
 /* ────────────────────────────────────────────────────────────────────────── */
 /* Key builders                                                              */
 /* ────────────────────────────────────────────────────────────────────────── */
 
-/** Builds the table partition key for an audit event. */
+/**
+ * @summary Builds the table partition key for an audit event
+ * @description Builds the table partition key for an audit event.
+ * @param tenantId - Tenant identifier
+ * @returns Partition key string
+ */
 export const auditPk = (tenantId: string): string => `TENANT#${tenantId}`;
-/** Builds the table sort key for an audit event (time-ordered within envelope). */
+
+/**
+ * @summary Builds the table sort key for an audit event (time-ordered within envelope)
+ * @description Builds the table sort key for an audit event (time-ordered within envelope).
+ * @param envelopeId - Envelope identifier
+ * @param occurredAtIso - ISO timestamp
+ * @param id - Event identifier
+ * @returns Sort key string
+ */
 export const auditSk = (envelopeId: string, occurredAtIso: string, id: string): string =>
   `ENV#${envelopeId}#TS#${occurredAtIso}#ID#${id}`;
 
-/** GSI1 (by envelope) partition key. */
+/**
+ * @summary GSI1 (by envelope) partition key
+ * @description GSI1 (by envelope) partition key.
+ * @param tenantId - Tenant identifier
+ * @param envelopeId - Envelope identifier
+ * @returns GSI1 partition key string
+ */
 export const gsi1Pk = (tenantId: string, envelopeId: string): string =>
   `ENV#${tenantId}#${envelopeId}`;
-/** GSI1 (by envelope) sort key (ISO timestamp + tiebreaker id). */
+
+/**
+ * @summary GSI1 (by envelope) sort key (ISO timestamp + tiebreaker id)
+ * @description GSI1 (by envelope) sort key (ISO timestamp + tiebreaker id).
+ * @param occurredAtIso - ISO timestamp
+ * @param id - Event identifier
+ * @returns GSI1 sort key string
+ */
 export const gsi1Sk = (occurredAtIso: string, id: string): string =>
   `${occurredAtIso}#${id}`;
 
-/** GSI2 (by id) partition key. */
+/**
+ * @summary GSI2 (by id) partition key
+ * @description GSI2 (by id) partition key.
+ * @param id - Event identifier
+ * @returns GSI2 partition key string
+ */
 export const gsi2Pk = (id: string): string => `ID#${id}`;
-
-/* ────────────────────────────────────────────────────────────────────────── */
-/* Persistence DTO                                                           */
-/* ────────────────────────────────────────────────────────────────────────── */
-
-/**
- * DynamoDB persistence shape for an immutable audit event.
- * Values are plain JSON-compatible types.
- */
-export interface AuditItem {
-  pk: string;
-  sk: string;
-  type: typeof AUDIT_ENTITY;
-
-  /** Event payload */
-  id: string;
-  tenantId: string;
-  envelopeId: string;
-  occurredAt: string; // ISO-8601
-  /** Domain event type, e.g., "envelope.created" */
-  eventType: string;
-
-  actor?: Record<string, unknown>;
-  metadata?: Record<string, unknown>;
-  prevHash?: string;
-  hash?: string;
-
-  /** Indexes */
-  gsi1pk: string;
-  gsi1sk: string;
-  gsi2pk: string;
-}
-
-/* ────────────────────────────────────────────────────────────────────────── */
-/* Type guard                                                                */
-/* ────────────────────────────────────────────────────────────────────────── */
-
-/**
- * Runtime guard to ensure a raw object looks like an `AuditItem`.
- *
- * @param value Arbitrary value.
- * @returns `true` when minimal required fields are present.
- */
-export function isAuditItem(value: unknown): value is AuditItem {
-  const o = value as AuditItem;
-  return (
-    !!o &&
-    typeof o === "object" &&
-    typeof o.pk === "string" &&
-    typeof o.sk === "string" &&
-    o.type === AUDIT_ENTITY &&
-    typeof o.id === "string" &&
-    typeof o.tenantId === "string" &&
-    typeof o.envelopeId === "string" &&
-    typeof o.occurredAt === "string" &&
-    typeof o.eventType === "string" &&
-    typeof o.gsi1pk === "string" &&
-    typeof o.gsi1sk === "string" &&
-    typeof o.gsi2pk === "string"
-  );
-}
 
 /* ────────────────────────────────────────────────────────────────────────── */
 /* Mapper implementation                                                     */
 /* ────────────────────────────────────────────────────────────────────────── */
 
 /**
- * Mapper for `AuditEvent` (domain) ⇄ `AuditItem` (persistence).
- *
+ * @summary Mapper for `AuditEvent` (domain) ⇄ `DdbAuditItem` (persistence)
+ * @description Mapper for `AuditEvent` (domain) ⇄ `DdbAuditItem` (persistence).
  * Notes:
  * - Domain uses branded identifiers; persistence uses plain strings.
  * - The mapper is the boundary where casting happens.
  */
-export const auditItemMapper: Mapper<AuditEvent, AuditItem> = {
+export const auditItemMapper: Mapper<AuditEvent, DdbAuditItem> = {
   /**
-   * Maps a domain `AuditEvent` into a DynamoDB `AuditItem`.
-   *
-   * @param ev Domain audit event.
-   * @returns Persistence DTO compatible with DocumentClient.
+   * @summary Maps a domain `AuditEvent` into a DynamoDB `DdbAuditItem`
+   * @description Maps a domain `AuditEvent` into a DynamoDB `DdbAuditItem`.
+   * @param ev - Domain audit event
+   * @returns Persistence DTO compatible with DocumentClient
    */
-  toDTO(ev: AuditEvent): AuditItem {
+  toDTO(ev: AuditEvent): DdbAuditItem {
     const id = ev.id as unknown as string;
     const tenantId = ev.tenantId as unknown as string;
     const envelopeId = ev.envelopeId as unknown as string;
@@ -135,7 +106,7 @@ export const auditItemMapper: Mapper<AuditEvent, AuditItem> = {
     return {
       pk: auditPk(tenantId),
       sk: auditSk(envelopeId, ev.occurredAt, id),
-      type: AUDIT_ENTITY,
+      type: AUDIT_ENTITY_TYPE,
 
       id,
       tenantId,
@@ -155,14 +126,14 @@ export const auditItemMapper: Mapper<AuditEvent, AuditItem> = {
   },
 
   /**
-   * Maps a DynamoDB `AuditItem` back into a domain `AuditEvent`.
-   *
-   * @param dto Persistence item (already shaped as `AuditItem`).
-   * @returns Domain audit event with branded identifiers.
-   * @throws {BadRequestError} when the raw object does not match the expected shape.
+   * @summary Maps a DynamoDB `DdbAuditItem` back into a domain `AuditEvent`
+   * @description Maps a DynamoDB `DdbAuditItem` back into a domain `AuditEvent`.
+   * @param dto - Persistence item (already shaped as `DdbAuditItem`)
+   * @returns Domain audit event with branded identifiers
+   * @throws {BadRequestError} when the raw object does not match the expected shape
    */
-  fromDTO(dto: AuditItem): AuditEvent {
-    if (!isAuditItem(dto)) {
+  fromDTO(dto: DdbAuditItem): AuditEvent {
+    if (!isDdbAuditItem(dto)) {
       throw new BadRequestError(
         "Invalid persistence object for AuditEvent",
         ErrorCodes.COMMON_BAD_REQUEST,
@@ -185,19 +156,19 @@ export const auditItemMapper: Mapper<AuditEvent, AuditItem> = {
 };
 
 /**
- * Convenience helper to map from a raw DocumentClient item into `AuditEvent`
- * without forcing callers to cast to `AuditItem` first.
- *
- * @param raw Raw item as returned by the client.
- * @returns Domain audit event.
+ * @summary Convenience helper to map from a raw DocumentClient item into `AuditEvent`
+ * @description Convenience helper to map from a raw DocumentClient item into `AuditEvent`
+ * without forcing callers to cast to `DdbAuditItem` first.
+ * @param raw - Raw item as returned by the client
+ * @returns Domain audit event
  */
 export const auditItemFromRaw = (raw: Record<string, unknown>): AuditEvent => {
-  if (!isAuditItem(raw)) {
+  if (!isDdbAuditItem(raw)) {
     throw new BadRequestError(
       "Invalid persistence object for AuditEvent",
       ErrorCodes.COMMON_BAD_REQUEST,
       { received: raw }
     );
   }
-  return auditItemMapper.fromDTO(raw);
+  return auditItemMapper.fromDTO(raw as DdbAuditItem);
 };

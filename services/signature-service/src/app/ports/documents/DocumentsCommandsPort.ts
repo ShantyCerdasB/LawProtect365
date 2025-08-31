@@ -10,7 +10,7 @@ import type { HashDigestString } from "../../../domain/value-objects/HashDigest"
 import type { FileSize } from "../../../domain/value-objects/FileSize";
 import type { ContentType } from "../../../domain/value-objects/ContentType";
 import type { DocumentLock } from "../../../domain/value-objects/DocumentLock";
-export type { ActorContext } from "../shared";
+
 
 /**
  * @description Command for creating a new document within an envelope.

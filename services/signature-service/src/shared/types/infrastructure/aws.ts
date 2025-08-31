@@ -5,22 +5,26 @@
  */
 
 /**
- * @description AWS region type
+ * @summary AWS region type
+ * @description Represents an AWS region identifier.
  */
 export type AwsRegion = string;
 
 /**
- * @description AWS account ID type
+ * @summary AWS account ID type
+ * @description Represents an AWS account identifier.
  */
 export type AwsAccountId = string;
 
 /**
- * @description AWS ARN type
+ * @summary AWS ARN type
+ * @description Represents an AWS Resource Name (ARN).
  */
 export type AwsArn = string;
 
 /**
- * @description AWS service name type
+ * @summary AWS service name type
+ * @description Represents supported AWS service names.
  */
 export type AwsServiceName = 
   | "dynamodb"
@@ -34,7 +38,8 @@ export type AwsServiceName =
   | "iam";
 
 /**
- * @description AWS resource type
+ * @summary AWS resource type
+ * @description Represents AWS resource types.
  */
 export type AwsResourceType = 
   | "table"
@@ -48,54 +53,79 @@ export type AwsResourceType =
   | "log-group";
 
 /**
- * @description AWS error types
+ * @summary AWS error types
+ * @description Represents AWS error structure for error handling.
  */
 export interface AwsError {
-  name: string;
-  message: string;
-  code?: string;
-  statusCode?: number;
-  requestId?: string;
-  retryable?: boolean;
+  /** Error name */
+  readonly name: string;
+  /** Error message */
+  readonly message: string;
+  /** Error code */
+  readonly code?: string;
+  /** HTTP status code */
+  readonly statusCode?: number;
+  /** AWS request ID */
+  readonly requestId?: string;
+  /** Whether the error is retryable */
+  readonly retryable?: boolean;
 }
 
 /**
- * @description AWS pagination token
+ * @summary AWS pagination token
+ * @description Represents a pagination token for AWS API responses.
  */
 export type AwsPaginationToken = string;
 
 /**
- * @description AWS pagination result
+ * @summary AWS pagination result
+ * @description Generic pagination result structure for AWS API responses.
  */
 export interface AwsPaginationResult<T> {
-  items: T[];
-  nextToken?: AwsPaginationToken;
-  hasMore: boolean;
+  /** Array of items in the current page */
+  readonly items: T[];
+  /** Token for the next page */
+  readonly nextToken?: AwsPaginationToken;
+  /** Whether there are more items */
+  readonly hasMore: boolean;
 }
 
 /**
- * @description AWS tag structure
+ * @summary AWS tag structure
+ * @description Represents an AWS tag with key-value pair.
  */
 export interface AwsTag {
-  Key: string;
-  Value: string;
+  /** Tag key */
+  readonly Key: string;
+  /** Tag value */
+  readonly Value: string;
 }
 
 /**
- * @description AWS tags collection
+ * @summary AWS tags collection
+ * @description Represents a collection of AWS tags.
  */
-export type AwsTags = AwsTag[];
+export type AwsTags = readonly AwsTag[];
 
 /**
- * @description AWS resource metadata
+ * @summary AWS resource metadata
+ * @description Represents metadata for AWS resources.
  */
 export interface AwsResourceMetadata {
-  arn: AwsArn;
-  name: string;
-  type: AwsResourceType;
-  region: AwsRegion;
-  accountId: AwsAccountId;
-  tags?: AwsTags;
-  createdAt?: string;
-  updatedAt?: string;
+  /** AWS Resource Name */
+  readonly arn: AwsArn;
+  /** Resource name */
+  readonly name: string;
+  /** Resource type */
+  readonly type: AwsResourceType;
+  /** AWS region */
+  readonly region: AwsRegion;
+  /** AWS account ID */
+  readonly accountId: AwsAccountId;
+  /** Resource tags */
+  readonly tags?: AwsTags;
+  /** Creation timestamp */
+  readonly createdAt?: string;
+  /** Last update timestamp */
+  readonly updatedAt?: string;
 }

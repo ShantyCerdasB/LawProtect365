@@ -1,78 +1,33 @@
 /**
- * @file guards.ts
- * @summary Reusable guards for use cases (multi-tenancy, state checks, lookups).
+ * @file consent.guard.ts
+ * @summary Consent guard functions
+ * @description Guard functions for consent-related operations and validations
  */
 
-import {
-  envelopeNotFound,
-  partyNotFound,
-  inputNotFound,
-  unprocessable,
-} from "@/shared/errors";
-import { SignatureErrorCodes } from "@/shared/errors/codes";
-import type { ConsentState } from "@/domain/ports/consent/ConsentsPort";
-
-/** Accept both spellings just in case data mixes them. */
-export const isEnvelopeClosed = (status: string) =>
-  status === "completed" || status === "canceled" || status === "cancelled";
+import type { EnvelopeId, TenantId } from "@/shared/types/domain";
+import type { EnvelopesPort } from "@/app/ports/envelopes/EnvelopesQueriesPort";
 
 /**
- * Ensures the envelope exists and belongs to the tenant boundary.
- * Returns the envelope with at least { envelopeId, tenantId, status }.
+ * @summary Ensures envelope access for consent operations
+ * @description Validates that the user has access to the envelope for consent operations
+ *
+ * @param {EnvelopesPort} envelopesRepo - Envelopes repository
+ * @param {TenantId} tenantId - Tenant ID
+ * @param {EnvelopeId} envelopeId - Envelope ID
+ * @returns {Promise<void>} Promise that resolves when access is confirmed
+ * @throws {Error} When access is denied
  */
-export async function ensureEnvelopeAccess(
-  envelopes: { getById(id: string): Promise<{ envelopeId: string; tenantId: string; status: string } | null> },
-  tenantId: string,
-  envelopeId: string
-) {
-  const env = await envelopes.getById(envelopeId);
-  if (!env || env.tenantId !== tenantId) {
-    throw envelopeNotFound({ tenantId, envelopeId });
+export const ensureEnvelopeAccess = async (
+  envelopesRepo: EnvelopesPort,
+  tenantId: TenantId,
+  envelopeId: EnvelopeId
+): Promise<void> => {
+  const envelope = await envelopesRepo.getById(envelopeId);
+  if (!envelope) {
+    throw new Error(`Envelope ${envelopeId} not found`);
   }
-  return env;
-}
-
-/**
- * Throws when envelope is not mutable (completed / canceled).
- */
-export function assertEnvelopeMutable(envStatus: string, envelopeId: string) {
-  if (isEnvelopeClosed(envStatus)) {
-    throw unprocessable(
-      "Cannot update consents for envelope in completed or canceled status",
-      SignatureErrorCodes.ENVELOPE_INVALID_STATE,
-      { envelopeId }
-    );
+  
+  if (envelope.tenantId !== tenantId) {
+    throw new Error(`Access denied to envelope ${envelopeId}`);
   }
-}
-
-/**
- * Ensures the party exists and belongs to the envelope.
- * Returns a minimal shape that includes partyId (needed by callers).
- */
-export async function ensurePartyInEnvelope(
-  parties: { getById(id: string): Promise<{ partyId: string; envelopeId: string } | null> },
-  envelopeId: string,
-  partyId: string
-) {
-  const p = await parties.getById(partyId);
-  if (!p || p.envelopeId !== envelopeId) {
-    throw partyNotFound({ envelopeId, partyId });
-  }
-  return p; // { partyId, envelopeId }
-}
-
-/**
- * Ensures the consent exists and belongs to the envelope.
- * Returns the full ConsentState so callers can read status/partyId/etc.
- */
-export async function ensureConsentInEnvelope(
-  consents: { getById(envelopeId: string, consentId: string): Promise<ConsentState | null> },
-  envelopeId: string,
-  consentId: string
-): Promise<ConsentState> {
-  const c = await consents.getById(envelopeId, consentId);
-  if (!c || c.envelopeId !== envelopeId) {
-    throw inputNotFound({ consentId, envelopeId });
-  }
-  return c; // ConsentState { consentId, envelopeId, partyId, consentType, status }
-}
+};

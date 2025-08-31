@@ -1,15 +1,9 @@
 /**
  * @file DocumentRepositoryDdb.ts
- * @summary DynamoDB-backed repository for the Document aggregate.
- *
- * @description
- * Single-table pattern:
- *   - `pk = "ENVELOPE#<envelopeId>"`
- *   - `sk = "DOCUMENT#<documentId>"`
- *
- * This adapter is SDK-agnostic via {@link DdbClientLike}. Provider errors are
- * normalized with {@link mapAwsError}. The optional `query` method is asserted
- * at runtime via {@link requireQuery}.
+ * @summary DynamoDB-backed repository for the Document aggregate
+ * @description DynamoDB implementation of the Document repository using single-table design pattern.
+ * Uses envelope-scoped partitioning with direct document access via composite keys.
+ * Supports CRUD operations, existence checks, and envelope-based listing with pagination.
  */
 
 import type { Repository } from "@lawprotect/shared-ts";
@@ -19,31 +13,46 @@ import { requireQuery, mapAwsError, ConflictError, ErrorCodes, nowIso } from "@l
 import type { Document } from "../../domain/entities/Document";
 import type { DocumentId } from "../../domain/value-objects/Ids";
 import { documentItemMapper, type DocumentItem } from "./mappers/documentItemMapper";
-import { documentNotFound } from "@/shared/errors";
+import { documentNotFound } from "../../shared/errors";
 
 /**
- * Coerces a typed object into the `Record<string, unknown>` shape expected by
- * DynamoDB clients. This keeps the adapter marshalling-agnostic.
+ * @summary Coerces a typed object into the Record<string, unknown> shape expected by DynamoDB clients
+ * @description Keeps the adapter marshalling-agnostic by converting typed objects to DynamoDB format.
+ * @param v - Typed object to convert
+ * @returns DynamoDB-compatible record format
  */
 const toDdbItem = <T extends object>(v: T): Record<string, unknown> =>
   (v as unknown) as Record<string, unknown>;
 
-/** Partition key builder for envelope-scoped documents. */
+/**
+ * @summary Builds partition key for envelope-scoped documents
+ * @description Creates the partition key used for envelope-scoped document queries.
+ * @param envelopeId - Envelope identifier
+ * @returns Partition key string
+ */
 const docPk = (envelopeId: string): string => `ENVELOPE#${envelopeId}`;
 
-/** Sort key builder for document items. */
+/**
+ * @summary Builds sort key for document items
+ * @description Creates the sort key used for document identification within envelopes.
+ * @param documentId - Document identifier
+ * @returns Sort key string
+ */
 const docSk = (documentId: string): string => `DOCUMENT#${documentId}`;
 
 /**
- * DynamoDB implementation of `Repository<Document, DocumentId>`.
+ * @summary DynamoDB implementation of Document repository
+ * @description Provides CRUD operations for Document entities using DynamoDB single-table design.
+ * Supports envelope-scoped queries and direct document access via composite keys.
  */
 export class DocumentRepositoryDdb
   implements Repository<Document, DocumentId, undefined>
 {
   /**
-   * Creates a new repository instance.
-   * @param tableName DynamoDB table name.
-   * @param ddb Minimal DynamoDB client (see {@link DdbClientLike}).
+   * @summary Creates a new DocumentRepositoryDdb instance
+   * @description Initializes the repository with DynamoDB table and client configuration.
+   * @param tableName - DynamoDB table name
+   * @param ddb - Minimal DynamoDB client
    */
   constructor(
     private readonly tableName: string,
@@ -51,15 +60,12 @@ export class DocumentRepositoryDdb
   ) {}
 
   /**
-   * Loads a document by id.
-   *
-   * @remarks
-   * This lookup uses a direct `DOCUMENT#<id>` PK/SK. If your table stores
-   * documents only under `ENVELOPE#<envelopeId>`, you will need a GSI or an
-   * alternative access path.
-   *
-   * @param id Document identifier.
-   * @returns The document or `null` if not found.
+   * @summary Loads a document by its unique identifier
+   * @description Retrieves a document using direct PK/SK lookup. This method uses
+   * a direct `DOCUMENT#<id>` PK/SK pattern for efficient document retrieval.
+   * @param id - Document identifier
+   * @returns The document or null if not found
+   * @throws Errors mapped via mapAwsError
    */
   async getById(id: DocumentId): Promise<Document | null> {
     try {
@@ -76,17 +82,23 @@ export class DocumentRepositoryDdb
   }
 
   /**
-   * Checks existence of a document.
-   * @param id Document identifier.
+   * @summary Checks if a document exists in the repository
+   * @description Performs an existence check by attempting to retrieve the document.
+   * @param id - Document identifier
+   * @returns True if document exists, false otherwise
    */
   async exists(id: DocumentId): Promise<boolean> {
     return (await this.getById(id)) !== null;
-    }
+  }
 
   /**
-   * Persists a new document (idempotent create).
-   * @param entity Document to persist.
-   * @throws ConflictError when the item already exists.
+   * @summary Persists a new document with idempotent create semantics
+   * @description Creates a new document with conditional put to ensure idempotency.
+   * Uses conditional expression to prevent duplicate creation.
+   * @param entity - Document entity to persist
+   * @returns The persisted document
+   * @throws ConflictError when document already exists
+   * @throws Errors mapped via mapAwsError
    */
   async create(entity: Document): Promise<Document> {
     try {
@@ -105,10 +117,14 @@ export class DocumentRepositoryDdb
   }
 
   /**
-   * Read–modify–write update guarded by existence.
-   * @param id Document id.
-   * @param patch Mutable fields to apply.
-   * @returns Updated snapshot.
+   * @summary Updates an existing document with read-modify-write semantics
+   * @description Performs optimistic update with existence check and timestamp update.
+   * Uses conditional put to ensure document exists before modification.
+   * @param id - Document identifier
+   * @param patch - Partial document with fields to update
+   * @returns Updated document snapshot
+   * @throws DocumentNotFoundError when document doesn't exist
+   * @throws Errors mapped via mapAwsError
    */
   async update(id: DocumentId, patch: Partial<Document>): Promise<Document> {
     try {
@@ -137,8 +153,12 @@ export class DocumentRepositoryDdb
   }
 
   /**
-   * Deletes a document by id (conditional on prior existence).
-   * @param id Document id.
+   * @summary Deletes a document by identifier with existence check
+   * @description Removes a document with conditional delete to ensure it exists.
+   * Uses conditional expression to prevent deletion of non-existent documents.
+   * @param id - Document identifier
+   * @throws DocumentNotFoundError when document doesn't exist
+   * @throws Errors mapped via mapAwsError
    */
   async delete(id: DocumentId): Promise<void> {
     try {
@@ -156,12 +176,15 @@ export class DocumentRepositoryDdb
   }
 
   /**
-   * Lists documents under an envelope (forward-only pagination).
-   *
-   * @param args.envelopeId Envelope identifier (partition scope).
-   * @param args.limit Page size.
-   * @param args.cursor Opaque continuation token (stringified LastEvaluatedKey).
-   * @returns Page of documents and optional `nextCursor`.
+   * @summary Lists documents within an envelope with forward-only pagination
+   * @description Retrieves documents scoped to a specific envelope using partition key queries.
+   * Supports cursor-based pagination for efficient large result set handling.
+   * @param args - Query parameters including envelope scope and pagination
+   * @param args.envelopeId - Envelope identifier for partition scope
+   * @param args.limit - Maximum number of documents to return
+   * @param args.cursor - Opaque continuation token for pagination
+   * @returns Page of documents with optional next cursor
+   * @throws Errors mapped via mapAwsError
    */
   async listByEnvelope(args: {
     envelopeId: string;
@@ -169,7 +192,6 @@ export class DocumentRepositoryDdb
     cursor?: string;
   }): Promise<{ items: Document[]; nextCursor?: string }> {
     try {
-      // Assert presence of `query` and narrow type (fixes “possibly undefined”).
       requireQuery(this.ddb);
 
       const params: {

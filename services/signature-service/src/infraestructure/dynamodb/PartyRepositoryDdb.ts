@@ -30,12 +30,7 @@ import {
 const toDdbItem = <T extends object>(v: T): Record<string, unknown> =>
   (v as unknown) as Record<string, unknown>;
 
-/**
- * @description Composite identifier used by this repository.
- * - `envelopeId` scopes all parties.
- * - `partyId` identifies the specific party.
- */
-export type PartyKey = { envelopeId: string; partyId: string };
+import { PartyKey } from "../../shared/types/infrastructure/dynamodb";
 
 /**
  * @description DynamoDB implementation of `Repository<Party, PartyKey>`.

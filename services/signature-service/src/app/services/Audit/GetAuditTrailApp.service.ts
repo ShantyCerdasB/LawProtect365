@@ -5,46 +5,12 @@
  * and handles validation and error mapping for the audit trail workflow.
  */
 
-import type { AuditQueriesPort } from "@/app/ports/audit";
-
-/**
- * @description Input parameters for getting audit trail
- */
-export interface GetAuditTrailAppInput {
-  /** Tenant identifier */
-  tenantId: string;
-  /** Envelope identifier */
-  envelopeId: string;
-  /** Optional pagination cursor */
-  cursor?: string;
-  /** Page size limit */
-  limit?: number;
-  /** Output format */
-  format?: "json" | "pdf";
-  /** Locale for PDF generation */
-  locale?: string;
-}
-
-/**
- * @description Output result for getting audit trail
- */
-export interface GetAuditTrailAppResult {
-  /** Envelope identifier */
-  envelopeId: string;
-  /** Array of audit entries */
-  entries: Array<{
-    /** Event occurrence timestamp */
-    at: string;
-    /** Actor information */
-    actor: string;
-    /** Action performed */
-    action: string;
-    /** Optional metadata */
-    metadata?: Record<string, any>;
-  }>;
-  /** Optional pagination cursor for next page */
-  nextCursor?: string;
-}
+import type { AuditQueriesPort } from "../../ports/audit";
+import type { 
+  GetAuditTrailAppInput, 
+  GetAuditTrailAppResult 
+} from "../../../shared/types/audit/AppServiceInputs";
+import type { PaginationCursor } from "../../../domain/value-objects";
 
 /**
  * @description Application service for audit trail operations
@@ -59,18 +25,21 @@ export class GetAuditTrailAppService {
    */
   async execute(input: GetAuditTrailAppInput): Promise<GetAuditTrailAppResult> {
     const result = await this.auditQueries.getAuditTrail({
-      tenantId: input.tenantId as any, // TODO: Add proper type conversion
-      envelopeId: input.envelopeId as any, // TODO: Add proper type conversion
-      cursor: input.cursor as any, // TODO: Add proper type conversion
+      tenantId: input.tenantId,
+      envelopeId: input.envelopeId,
+      cursor: input.cursor,
       limit: input.limit,
-      format: input.format,
-      locale: input.locale,
     });
 
     return {
-      envelopeId: result.envelopeId as string,
-      entries: result.entries,
-      nextCursor: result.nextCursor as string | undefined,
+      envelopeId: result.envelopeId,
+      entries: result.items.map(item => ({
+        at: item.at,
+        actor: item.actor,
+        action: item.action,
+        metadata: item.metadata || {},
+      })),
+      nextCursor: result.meta?.nextCursor as PaginationCursor | undefined,
     };
   }
 }

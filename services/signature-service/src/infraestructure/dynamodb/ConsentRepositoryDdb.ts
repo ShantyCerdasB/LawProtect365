@@ -11,7 +11,6 @@
 
 import {
   mapAwsError,
-  ConflictError,
   nowIso,
   encodeCursor,   // opaque cursors (JsonValue)
   decodeCursor,   // opaque cursors (JsonValue)
@@ -19,11 +18,11 @@ import {
 } from "@lawprotect/shared-ts";
 import type { DdbClientLike } from "@lawprotect/shared-ts";
 
-import {
-  ConsentItemDTOSchema,
-  type ConsentItemDTO,
-} from "../../schemas/consents/ConsentItemDTO.schema";
 import { dtoToConsentRow } from "./mappers/ConsentItemDTO.mapper";
+import { CONSENT_TYPES, CONSENT_STATUSES } from "@/domain/values/enums";
+import { badRequest } from "@/shared/errors";
+import { validateConsentStatus } from "@/shared/validations/consent.validations";
+import { ConflictError } from "@lawprotect/shared-ts";
 
 import type {
   ConsentRepoRow,
@@ -32,7 +31,8 @@ import type {
   ConsentRepoUpdateInput,
   ConsentRepoListInput,
   ConsentRepoListOutput,
-} from "@/app/ports/shared/RepoTypes";
+} from "@/shared/types/consent";
+import { ConsentItemDTO, ConsentItemDTOSchema } from "@/presentation/schemas/consents/ConsentItemDTO.schema";
 
 const pk = (envelopeId: string) => `ENVELOPE#${envelopeId}`;
 const sk = (consentId: string) => `CONSENT#${consentId}`;
@@ -50,12 +50,31 @@ export class ConsentRepositoryDdb {
   constructor(private readonly tableName: string, private readonly ddb: DdbClientLike) {}
 
   /**
-   * @description Creates a new consent record in DynamoDB.
+   * @summary Creates a new consent record in DynamoDB
+   * @description Creates a new consent record with validation of enum values and conflict checking.
+   * Validates consent type and status against allowed enum values before creation.
+   * 
    * @param {ConsentRepoCreateInput} input - Consent creation parameters
    * @returns {Promise<ConsentRepoRow>} Promise resolving to the created consent record
+   * @throws {BadRequestError} When consent type or status is invalid
    * @throws {ConflictError} When consent already exists
    */
   async create(input: ConsentRepoCreateInput): Promise<ConsentRepoRow> {
+    // Validate enum values
+    if (!CONSENT_TYPES.includes(input.consentType as any)) {
+      throw badRequest(`Invalid consent type: ${input.consentType}`, "INPUT_TYPE_NOT_ALLOWED", {
+        validTypes: CONSENT_TYPES,
+        providedType: input.consentType,
+      });
+    }
+    
+    if (!CONSENT_STATUSES.includes(input.status as any)) {
+      throw badRequest(`Invalid consent status: ${input.status}`, "INPUT_TYPE_NOT_ALLOWED", {
+        validStatuses: CONSENT_STATUSES,
+        providedStatus: input.status,
+      });
+    }
+
     const now = input.createdAt ?? nowIso();
     const dto: ConsentItemDTO = {
       pk: pk(input.envelopeId),
@@ -65,8 +84,8 @@ export class ConsentRepositoryDdb {
       tenantId: input.tenantId,
       consentId: input.consentId,
       partyId: input.partyId,
-      consentType: input.consentType,
-      status: input.status,
+      consentType: input.consentType as typeof CONSENT_TYPES[number],
+      status: validateConsentStatus(input.status) as typeof CONSENT_STATUSES[number],
       createdAt: now,
       updatedAt: now,
       expiresAt: input.expiresAt,
@@ -108,12 +127,24 @@ export class ConsentRepositoryDdb {
   }
 
   /**
-   * @description Updates a consent record with the specified changes.
+   * @summary Updates a consent record with the specified changes
+   * @description Updates a consent record with validation of enum values if provided.
+   * Automatically updates the updatedAt timestamp and validates status enum if included.
+   * 
    * @param {ConsentRepoKey} keys - Consent identifier keys
    * @param {ConsentRepoUpdateInput} changes - Fields to update
    * @returns {Promise<ConsentRepoRow>} Promise resolving to the updated consent record
+   * @throws {BadRequestError} When consent status is invalid
    */
   async update(keys: ConsentRepoKey, changes: ConsentRepoUpdateInput): Promise<ConsentRepoRow> {
+    // Validate enum values if provided
+    if (typeof changes.status !== "undefined" && !CONSENT_STATUSES.includes(changes.status as any)) {
+      throw badRequest(`Invalid consent status: ${changes.status}`, "INPUT_TYPE_NOT_ALLOWED", {
+        validStatuses: CONSENT_STATUSES,
+        providedStatus: changes.status,
+      });
+    }
+
     try {
       if (!this.ddb.update) throw new Error("DDB client does not implement update()");
 
@@ -154,6 +185,14 @@ export class ConsentRepositoryDdb {
     }
   }
 
+  /**
+   * @summary Deletes a consent record from DynamoDB
+   * @description Deletes a consent record with existence checking to ensure the record exists before deletion.
+   * 
+   * @param {ConsentRepoKey} keys - Consent identifier keys
+   * @returns {Promise<void>} Promise that resolves when deletion is complete
+   * @throws {NotFoundError} When consent record doesn't exist
+   */
   async delete(keys: ConsentRepoKey): Promise<void> {
     try {
       await this.ddb.delete({
@@ -166,6 +205,14 @@ export class ConsentRepositoryDdb {
     }
   }
 
+  /**
+   * @summary Lists consent records for a specific envelope with filtering and pagination
+   * @description Queries consent records for a given envelope with optional filtering by status,
+   * consent type, and party ID. Supports pagination with cursor-based navigation.
+   * 
+   * @param {ConsentRepoListInput} input - Query parameters including envelope ID and optional filters
+   * @returns {Promise<ConsentRepoListOutput>} Promise resolving to paginated consent records
+   */
   async listByEnvelope(input: ConsentRepoListInput): Promise<ConsentRepoListOutput> {
     try {
       const names: Record<string, string> = { "#sk": "sk" };

@@ -31,29 +31,7 @@ import {
 const toDdbItem = <T extends object>(v: T): Record<string, unknown> =>
   (v as unknown) as Record<string, unknown>;
 
-/**
- * @description Composite identifier for Input rows.
- * - `envelopeId` scopes inputs.
- * - `inputId` identifies the input within the envelope.
- */
-export type InputId = { envelopeId: string; inputId: string };
-
-/**
- * @description Query parameters for listing inputs by envelope.
- */
-export interface ListInputsQuery {
-  envelopeId: string;
-  limit?: number;
-  cursor?: string;
-}
-
-/**
- * @description Result of listing inputs by envelope.
- */
-export interface ListInputsResult {
-  items: Input[];
-  nextCursor?: string;
-}
+import { InputId, ListInputsQuery, ListInputsResult } from "../../shared/types/infrastructure/dynamodb";
 
 /**
  * @description DynamoDB implementation of `Repository<Input, InputId>`.

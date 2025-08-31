@@ -99,3 +99,35 @@ export type DelegationType = (typeof DELEGATION_TYPES)[number];
 
 export const PARTY_SOURCES = ["manual", "import", "api"] as const;
 export type PartySource = (typeof PARTY_SOURCES)[number];
+
+// Audit Events
+export const AUDIT_EVENT_TYPES = [
+  "envelope.created",
+  "envelope.sent", 
+  "envelope.completed",
+  "envelope.cancelled",
+  "envelope.declined",
+  "document.attached",
+  "document.removed",
+  "party.added",
+  "party.delegated",
+  "otp.requested",
+  "otp.verified",
+  "consent.submitted",
+  "signature.submitted",
+  "upload.presigned",
+  "upload.completed"
+] as const;
+export type AuditEventType = (typeof AUDIT_EVENT_TYPES)[number];
+
+/**
+ * @summary HTTP response types for controllers
+ * @description Standard HTTP response types used by controller factories
+ */
+export const RESPONSE_TYPES = [
+  'ok',
+  'created', 
+  'noContent'
+] as const;
+
+export type ResponseType = typeof RESPONSE_TYPES[number];

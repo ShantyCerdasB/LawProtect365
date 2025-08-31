@@ -1,27 +1,34 @@
 /**
- * @file makeConsentCommandsPort.ts
- * @summary App adapter: ConsentRepository → ConsentCommandsPort (create/update/delete/submit/delegate).
- *
- * Bridges the infra repository to the app port:
- * - Combines multiple consent adapters into a single ConsentCommandsPort implementation
- * - Handles all consent command operations (create, update, delete, submit, delegate)
- * - Uses existing adapters for specific operations
+ * @file MakeConsentCommandsPort.ts
+ * @summary App adapter: ConsentRepository → ConsentCommandsPort (create/update/delete/submit/delegate)
+ * @description Bridges the infra repository to the app commands port for all consent operations.
+ * Handles ID generation, enum validation, and provides complete ConsentCommandsPort implementation.
  */
 
-import type { ConsentCommandsPort, CreateConsentCommand, CreateConsentResult, UpdateConsentResult, SubmitConsentResult, DelegateConsentCommand, DelegateConsentResult } from "../../ports/consent/ConsentCommandsPort";
-import type { ConsentPatch } from "../../ports/shared/consents/types.consent";
-import type { ConsentId, EnvelopeId, ConsentStatus } from "../../ports/shared/common/types";
-
+import type { 
+  ConsentCommandsPort, 
+  CreateConsentCommand, 
+  CreateConsentResult, 
+  UpdateConsentResult, 
+  SubmitConsentResult, 
+  DelegateConsentCommand, 
+  DelegateConsentResult 
+} from "@/app/ports/consent/ConsentCommandsPort";
+import type { ConsentPatch } from "@/shared/types/consent";
+import type { ConsentId, EnvelopeId, ConsentStatus } from "@/shared/types/domain";
 import type {
   ConsentRepoRow,
   ConsentRepoCreateInput,
   ConsentRepoKey,
   ConsentRepoUpdateInput,
-} from "../../ports/shared/RepoTypes";
-
+} from "@/shared/types/consent";
+import { validateConsentStatus } from "@/shared/validations/consent.validations";
 import { nowIso, asISO, asISOOpt } from "@lawprotect/shared-ts";
 
-/** Minimal infra repo surface required by this adapter. */
+/**
+ * @summary Minimal repository interface required by this adapter
+ * @description Defines the repository methods needed for consent command operations
+ */
 type ConsentsRepo = {
   create(input: ConsentRepoCreateInput): Promise<ConsentRepoRow>;
   getById(keys: ConsentRepoKey): Promise<ConsentRepoRow | null>;
@@ -29,15 +36,34 @@ type ConsentsRepo = {
   delete(keys: ConsentRepoKey): Promise<void>;
 };
 
+/**
+ * @summary ID generation service interface
+ * @description Service for generating unique identifiers
+ */
 type Ids = { ulid(): string };
 
+/**
+ * @summary Creates a ConsentCommandsPort implementation
+ * @description Factory function that creates a complete ConsentCommandsPort implementation
+ * by bridging the infrastructure repository to the application port interface.
+ * Handles all consent command operations with proper validation and type safety.
+ *
+ * @param {ConsentsRepo} consentsRepo - Repository implementation for consent operations
+ * @param {Ids} ids - ID generation service
+ * @returns {ConsentCommandsPort} Complete ConsentCommandsPort implementation
+ */
 export function makeConsentCommandsPort(
   consentsRepo: ConsentsRepo,
   ids: Ids
 ): ConsentCommandsPort {
   return {
     /**
-     * Creates a new consent
+     * @summary Creates a new consent
+     * @description Creates a new consent record with generated ID and initial pending status.
+     * Validates enum values and brands ISO date strings for type safety.
+     *
+     * @param {CreateConsentCommand} input - Consent creation parameters
+     * @returns {Promise<CreateConsentResult>} Promise resolving to the created consent data
      */
     async create(input: CreateConsentCommand): Promise<CreateConsentResult> {
       const row = await consentsRepo.create({
@@ -59,17 +85,24 @@ export function makeConsentCommandsPort(
     },
 
     /**
-     * Updates an existing consent
+     * @summary Updates an existing consent
+     * @description Updates a consent record with the provided changes.
+     * Validates status enum if provided and brands ISO date strings.
+     *
+     * @param {EnvelopeId} envelopeId - The envelope ID this consent belongs to
+     * @param {ConsentId} consentId - The unique identifier of the consent to update
+     * @param {ConsentPatch} patch - The data to update the consent with
+     * @returns {Promise<UpdateConsentResult>} Promise resolving to the updated consent data
      */
     async update(envelopeId: EnvelopeId, consentId: ConsentId, patch: ConsentPatch): Promise<UpdateConsentResult> {
       const changes: ConsentRepoUpdateInput = {};
       
       if (patch.status !== undefined) {
-        changes.status = patch.status as ConsentStatus;
+        changes.status = validateConsentStatus(patch.status);
       }
       
       if (patch.metadata !== undefined) {
-        changes.metadata = patch.metadata;
+        (changes as any).metadata = { ...patch.metadata };
       }
       
       if (patch.expiresAt !== undefined) {
@@ -88,16 +121,28 @@ export function makeConsentCommandsPort(
     },
 
     /**
-     * Deletes a consent
+     * @summary Deletes a consent
+     * @description Deletes a consent record from the repository.
+     *
+     * @param {EnvelopeId} envelopeId - The envelope ID this consent belongs to
+     * @param {ConsentId} consentId - The unique identifier of the consent to delete
+     * @returns {Promise<void>} Promise resolving when deletion is complete
      */
     async delete(envelopeId: EnvelopeId, consentId: ConsentId): Promise<void> {
       await consentsRepo.delete({ envelopeId, consentId });
     },
 
     /**
-     * Submits a consent
+     * @summary Submits a consent
+     * @description Submits a consent by updating its status to granted.
+     * Uses the update method internally for consistency.
+     *
+     * @param {EnvelopeId} envelopeId - The envelope ID this consent belongs to
+     * @param {ConsentId} consentId - The unique identifier of the consent to submit
+     * @param {object} actor - Actor context information (optional)
+     * @returns {Promise<SubmitConsentResult>} Promise resolving to the submitted consent data
      */
-    async submit(envelopeId: EnvelopeId, consentId: ConsentId): Promise<SubmitConsentResult> {
+    async submit(envelopeId: EnvelopeId, consentId: ConsentId, actor?: any): Promise<SubmitConsentResult> {
       const row = await consentsRepo.update(
         { envelopeId, consentId },
         { status: "granted" as ConsentStatus }
@@ -110,7 +155,12 @@ export function makeConsentCommandsPort(
     },
 
     /**
-     * Delegates a consent to another party
+     * @summary Delegates a consent to another party
+     * @description Delegates a consent to another party with delegation metadata.
+     * Currently updates the consent status to revoked as a placeholder implementation.
+     *
+     * @param {DelegateConsentCommand} input - The consent delegation parameters
+     * @returns {Promise<DelegateConsentResult>} Promise resolving to the delegated consent data
      */
     async delegate(input: DelegateConsentCommand): Promise<DelegateConsentResult> {
       // Get the current consent to find the original party

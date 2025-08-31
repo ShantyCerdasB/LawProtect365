@@ -1,3 +1,10 @@
+/**
+ * @file documentItemMapper.ts
+ * @summary Bidirectional mapper for Document ⇄ DynamoDB item
+ * @description Maps between domain Document entities and DynamoDB persistence format.
+ * Uses envelope-scoped partitioning with document-specific sort keys for single-table design.
+ */
+
 import type { Mapper } from "@lawprotect/shared-ts";
 import { BadRequestError, ErrorCodes } from "@lawprotect/shared-ts";
 
@@ -6,37 +13,59 @@ import type { DocumentId, EnvelopeId, TenantId } from "../../../domain/value-obj
 import type { AllowedContentType } from "../../../domain/values/enums";
 
 /**
- * DynamoDB representation of a Document.
- * pk = ENVELOPE#<envelopeId>
- * sk = DOCUMENT#<documentId>
+ * @summary DynamoDB persistence shape for Document entities
+ * @description DynamoDB representation of a Document using single-table design pattern.
+ * Uses envelope-scoped partitioning: pk = ENVELOPE#<envelopeId>, sk = DOCUMENT#<documentId>
  */
 export interface DocumentItem {
-  pk: string;
-  sk: string;
+  /** Partition key for envelope scope */
+  readonly pk: string;
+  /** Sort key for document identification */
+  readonly sk: string;
 
-  documentId: string;
-  envelopeId: string;
-  tenantId: string;
+  /** Document identifier */
+  readonly documentId: string;
+  /** Associated envelope identifier */
+  readonly envelopeId: string;
+  /** Tenant identifier for multi-tenancy */
+  readonly tenantId: string;
 
-  name: string;
-  status: string;
-  contentType: string;
+  /** Document display name */
+  readonly name: string;
+  /** Current document status */
+  readonly status: string;
+  /** MIME content type */
+  readonly contentType: string;
 
-  size: number;
-  digest: string;
+  /** File size in bytes */
+  readonly size: number;
+  /** Content hash for integrity */
+  readonly digest: string;
 
-  s3Bucket: string;
-  s3Key: string;
+  /** S3 bucket name */
+  readonly s3Bucket: string;
+  /** S3 object key */
+  readonly s3Key: string;
 
-  pageCount?: number;
+  /** Number of pages (optional) */
+  readonly pageCount?: number;
 
-  createdAt: string;
-  updatedAt: string;
+  /** Creation timestamp */
+  readonly createdAt: string;
+  /** Last update timestamp */
+  readonly updatedAt: string;
 
-  metadata?: Record<string, unknown>;
+  /** Additional metadata */
+  readonly metadata?: Record<string, unknown>;
 }
 
-/** Type guard básico para asegurar shape esperado del item. */
+/**
+ * @summary Runtime type guard for DocumentItem validation
+ * @description Validates that a raw object conforms to the DocumentItem interface structure.
+ * Ensures all required fields are present with correct types before mapping.
+ * @param v - Arbitrary value to validate
+ * @returns True if the value is a valid DocumentItem
+ */
 export function isDocumentItem(v: unknown): v is DocumentItem {
   if (typeof v !== "object" || v === null) return false;
   const o = v as Record<string, unknown>;
@@ -58,9 +87,19 @@ export function isDocumentItem(v: unknown): v is DocumentItem {
   );
 }
 
-/** Mapper: Domain ↔ DDB item */
+/**
+ * @summary Bidirectional mapper for Document domain entities
+ * @description Converts between domain Document entities and DynamoDB persistence format.
+ * Handles branded type casting and ensures data integrity through validation.
+ */
 export const documentItemMapper: Mapper<Document, DocumentItem> = {
-  /** Domain → DDB */
+  /**
+   * @summary Maps domain Document to DynamoDB DocumentItem
+   * @description Converts a domain Document entity to its DynamoDB persistence representation.
+   * Handles branded type casting and constructs envelope-scoped partition keys.
+   * @param entity - Domain Document entity
+   * @returns DynamoDB DocumentItem for persistence
+   */
   toDTO(entity: Document): DocumentItem {
     return {
       pk: `ENVELOPE#${entity.envelopeId}`,
@@ -89,7 +128,14 @@ export const documentItemMapper: Mapper<Document, DocumentItem> = {
     };
   },
 
-  /** DDB → Domain */
+  /**
+   * @summary Maps DynamoDB DocumentItem to domain Document
+   * @description Converts a DynamoDB DocumentItem back to its domain entity representation.
+   * Validates the persistence object and handles branded type casting.
+   * @param persisted - DynamoDB DocumentItem from persistence
+   * @returns Domain Document entity
+   * @throws BadRequestError when persistence object is invalid
+   */
   fromDTO(persisted: DocumentItem): Document {
     if (!isDocumentItem(persisted)) {
       throw new BadRequestError(

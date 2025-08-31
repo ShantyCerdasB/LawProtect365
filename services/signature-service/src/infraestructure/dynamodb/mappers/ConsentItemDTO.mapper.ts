@@ -1,42 +1,51 @@
-import { InternalError, type ISODateString } from "@lawprotect/shared-ts";
-import { ConsentItemDTOSchema, type ConsentItemDTO } from "../../../schemas/consents/ConsentItemDTO.schema";
-import type { ConsentRepoRow } from "@/app/ports/shared/RepoTypes";
+/**
+ * @file ConsentItemDTO.mapper.ts
+ * @summary Mapper functions for ConsentItemDTO data transformation
+ * @description Provides mapping functions to convert between DynamoDB DTO format and repository row format.
+ * Handles validation, parsing, and type conversion for consent item data structures.
+ */
 
+import type { ConsentRepoRow } from "@/shared/types/consent";
+import { ConsentItemDTO, ConsentItemDTOSchema } from "@/presentation/schemas/consents/ConsentItemDTO.schema";
+import { badRequest } from "@/shared/errors";
+import { asISO, asISOOpt } from "@lawprotect/shared-ts";
+
+/**
+ * @summary Parses and validates raw data as a ConsentItemDTO
+ * @description Validates the shape of raw data from DynamoDB against the ConsentItemDTO schema.
+ * Throws a BadRequestError if validation fails.
+ * 
+ * @param {unknown} raw - Raw data from DynamoDB to validate and parse
+ * @returns {ConsentItemDTO} Validated consent item DTO
+ * @throws {BadRequestError} When the raw data doesn't match the expected schema
+ */
 export const parseConsentItemDTO = (raw: unknown): ConsentItemDTO => {
   const parsed = ConsentItemDTOSchema.safeParse(raw);
   if (!parsed.success) {
-    throw new InternalError("Invalid Consent item shape from DynamoDB", "INTERNAL_ERROR", {
+    throw badRequest("Invalid Consent item shape from DynamoDB", "INPUT_TYPE_NOT_ALLOWED", {
       issues: parsed.error.issues,
     });
   }
   return parsed.data;
 };
 
-/** Brand helpers to satisfy ISODateString branded type */
-const asIsoRequired = (s: string): ISODateString => {
-  if (!Number.isFinite(Date.parse(s))) {
-    throw new InternalError("Invalid ISO date in ConsentItemDTO", "INTERNAL_ERROR", { value: s });
-  }
-  return s as unknown as ISODateString;
-};
-
-const asIsoOptional = (s?: string): ISODateString | undefined => {
-  if (typeof s === "undefined") return undefined;
-  if (!Number.isFinite(Date.parse(s))) {
-    throw new InternalError("Invalid ISO date in ConsentItemDTO", "INTERNAL_ERROR", { value: s });
-  }
-  return s as unknown as ISODateString;
-};
-
+/**
+ * @summary Converts a ConsentItemDTO to a ConsentRepoRow
+ * @description Maps a DynamoDB DTO to the repository row format, converting date strings
+ * to branded ISODateString types for type safety.
+ * 
+ * @param {ConsentItemDTO} dto - Consent item DTO from DynamoDB
+ * @returns {ConsentRepoRow} Repository row with proper branded types
+ */
 export const dtoToConsentRow = (dto: ConsentItemDTO): ConsentRepoRow => ({
   consentId: dto.consentId,
   envelopeId: dto.envelopeId,
   tenantId: dto.tenantId,
   partyId: dto.partyId,
   consentType: dto.consentType,
-  status: dto.status as ConsentRepoRow["status"],
-  createdAt: asIsoRequired(dto.createdAt),
-  updatedAt: asIsoOptional(dto.updatedAt),
-  expiresAt: asIsoOptional(dto.expiresAt),
+  status: dto.status,
+  createdAt: asISO(dto.createdAt),
+  updatedAt: asISOOpt(dto.updatedAt),
+  expiresAt: asISOOpt(dto.expiresAt),
   metadata: dto.metadata,
 });

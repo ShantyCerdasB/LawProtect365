@@ -44,7 +44,8 @@ import { InputRepositoryDdb } from "../adapters/dynamodb/InputRepositoryDdb.js";
 import { PartyRepositoryDdb } from "../adapters/dynamodb/PartyRepositoryDdb.js";
 import { GlobalPartyRepositoryDdb } from "../adapters/dynamodb/GlobalPartyRepositoryDdb.js";
 import { IdempotencyStoreDdb } from "../adapters/dynamodb/IdempotencyStoreDdb.js";
-import { AuditRepositoryDdb, ConsentRepositoryDdb } from "../adapters/dynamodb/index";
+import { AuditRepositoryDdb } from "../infraestructure/dynamodb/AuditRepositoryDdb";
+import { ConsentRepositoryDdb } from "../adapters/dynamodb/index";
 
 import { IdempotencyKeyHasher } from "../adapters/idempotency/IdempotencyKeyHasher.js";
 import { IdempotencyRunner } from "../adapters/idempotency/IdempotencyRunner.js";
@@ -62,113 +63,9 @@ import { DelegationRepositoryDdb } from "../adapters/dynamodb/DelegationReposito
 import type { Envelope } from "@/domain/entities/Envelope";
 import type { TenantId, UserId } from "@/domain/value-objects/Ids";
 import { createEnvelope } from "@/use-cases/envelopes/CreateEnvelope";
+
 import { type ISODateString, type EventEnvelope, type DomainEvent, randomToken, uuid, ulid, DdbClientLike } from "@lawprotect/shared-ts";
-
-/**
- * @description Application services exposed to controllers.
- * Provides high-level business operations for envelope management.
- *
- * @public
- */
-export interface Services {
-  /** Envelope-related business operations */
-  envelopes: {
-    /**
-     * @description Creates a new envelope with the specified parameters.
-     *
-     * @param input - Envelope creation parameters including tenant, owner, title, and actor
-     * @param opts - Optional idempotency and TTL settings
-     * @returns Promise resolving to the created envelope
-     */
-    create(
-      input: {
-        tenantId: TenantId;
-        ownerId: UserId;
-        title: string;
-        actor?: {
-          userId?: string;
-          email?: string;
-          ip?: string;
-          userAgent?: string;
-          locale?: string;
-        };
-      },
-      opts?: { idempotencyKey?: string; ttlSeconds?: number }
-    ): Promise<{ envelope: Envelope }>;
-  };
-}
-
-/**
- * @description Root DI container type.
- * Contains all infrastructure dependencies and application services.
- *
- * @public
- */
-export interface Container {
-  /** Application configuration */
-  config: SignatureServiceConfig;
-
-  aws: {
-    ddb: DynamoDBClient;
-    s3: S3Client;
-    kms: KMSClient;
-    evb: EventBridgeClient;
-    ssm: SSMClient;
-  };
-
-  repos: {
-    documents: DocumentRepositoryDdb;
-    envelopes: EnvelopeRepositoryDdb;
-    inputs: InputRepositoryDdb;
-    parties: PartyRepositoryDdb;
-    globalParties: GlobalPartyRepositoryDdb;
-    audit: AuditRepositoryDdb;
-    idempotency: IdempotencyStoreDdb;
-    consents: ConsentRepositoryDdb;
-    delegations: DelegationRepositoryDdb;
-  };
-
-  idempotency: {
-    hasher: IdempotencyKeyHasher;
-    runner: IdempotencyRunner;
-  };
-
-  rateLimit: {
-    otpStore: RateLimitStoreDdb;
-  };
-
-  storage: {
-    evidence: S3EvidenceStorage;
-    presigner: S3Presigner;
-    pdfIngestor: S3SignedPdfIngestor;
-  };
-
-  crypto: {
-    signer: KmsSigner;
-  };
-
-  events: {
-    publisher: EventBridgePublisher;
-  };
-
-  audit: {
-    log(action: string, details: any): Promise<void>;
-  };
-
-  configProvider: SsmParamConfigProvider;
-
-  services: Services;
-
-  ids: {
-    ulid(): string;
-    uuid(): string;
-    token(bytes?: number): string;
-  };
-
-  time: {
-    now(): number;
-  };
-}
+import type { Container, Services, AuditContext } from "../shared/contracts";
 
 let singleton: Container;
 
@@ -225,10 +122,10 @@ export const getContainer = (): Container => {
   const inputs = new InputRepositoryDdb(config.ddb.inputsTable, ddbLike);
   const parties = new PartyRepositoryDdb(config.ddb.partiesTable, ddbLike);
   const globalParties = new GlobalPartyRepositoryDdb(config.ddb.partiesTable, ddbLike);
-  const audit = new AuditRepositoryDdb({
-    tableName: config.ddb.auditTable || config.ddb.envelopesTable,
-    client: ddbLike,
-  });
+  const audit = new AuditRepositoryDdb(
+    config.ddb.auditTable || config.ddb.envelopesTable,
+    ddbLike
+  );
   const idempotencyStore = new IdempotencyStoreDdb(config.ddb.idempotencyTable, ddbLike);
   const consents = new ConsentRepositoryDdb(config.ddb.envelopesTable, ddbLike);
 
@@ -345,13 +242,7 @@ export const getContainer = (): Container => {
 
   const time = { now: () => Date.now() };
 
-  // Audit service
-  const auditService = {
-    log: async (action: string, details: any) => {
-      // For now, just log to console. In production, this would write to audit repository
-      console.log(`AUDIT: ${action}`, details);
-    },
-  };
+  
 
   singleton = {
     config,
@@ -362,7 +253,7 @@ export const getContainer = (): Container => {
     storage: { evidence, presigner, pdfIngestor },
     crypto: { signer },
     events: { publisher },
-    audit: auditService,
+
     configProvider,
     services,
     ids,

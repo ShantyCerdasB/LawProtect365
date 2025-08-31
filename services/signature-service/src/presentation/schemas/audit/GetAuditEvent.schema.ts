@@ -5,13 +5,14 @@
  */
 
 import { z } from "zod";
+import { AuditEventIdValidationSchema } from "../../../shared/validations/schemas/audit";
 
 /**
  * @description Path parameters for getting audit event
  */
 export const GetAuditEventPathSchema = z.object({
   /** Audit event identifier */
-  eventId: z.string(),
+  eventId: AuditEventIdValidationSchema,
 });
 
 /**

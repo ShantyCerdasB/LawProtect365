@@ -1,6 +1,9 @@
-export { GetAuditTrailAppService } from "./GetAuditTrailApp.service";
-export type { GetAuditTrailAppInput, GetAuditTrailAppResult } from "./GetAuditTrailApp.service";
+/**
+ * @file index.ts
+ * @summary Audit application services exports
+ * @description Exports all audit application services
+ */
 
-export { GetAuditEventAppService } from "./GetAuditEventApp.service";
-export type { GetAuditEventAppInput, GetAuditEventAppResult } from "./GetAuditEventApp.service";
-
+export * from "./GetAuditTrailApp.service";
+export * from "./GetAuditEventApp.service";
+export * from "./RecordAuditEventApp.service";

@@ -5,19 +5,24 @@
  */
 
 import { z } from "zod";
+import { EnvelopeIdValidationSchema } from "../../../shared/validations/schemas/audit";
+import { 
+  OptionalUploadFormatValidationSchema,
+  OptionalPaginationCursorValidationSchema 
+} from "../../../shared/validations/schemas/common";
 
 /**
  * @description Query parameters for getting audit trail
  */
 export const GetAuditTrailQuerySchema = z.object({
   /** Output format */
-  format: z.enum(["json", "pdf"]).default("json"),
+  format: OptionalUploadFormatValidationSchema,
   /** Locale for PDF generation */
   locale: z.string().optional(),
   /** Page size limit */
   limit: z.coerce.number().int().min(1).max(100).optional(),
   /** Pagination cursor */
-  cursor: z.string().optional(),
+  cursor: OptionalPaginationCursorValidationSchema,
 });
 
 /**
@@ -25,7 +30,7 @@ export const GetAuditTrailQuerySchema = z.object({
  */
 export const GetAuditTrailPathSchema = z.object({
   /** Envelope identifier */
-  id: z.string(),
+  id: EnvelopeIdValidationSchema,
 });
 
 /**

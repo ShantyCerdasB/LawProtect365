@@ -4,9 +4,9 @@
  * @description Defines the interface for read-only consent operations including listing and filtering
  */
 
-import type { ConsentId, TenantId, EnvelopeId } from "../shared";
-import type { Page } from "../shared/common/pagination";
-import type { ConsentHead } from "../shared/consents/types.consent";
+import type { ConsentId, TenantId, EnvelopeId, ConsentStatus, ConsentType, PartyId } from "@/shared/types/domain";
+import type { ConsentHead } from "@/shared/types/consent";
+import { Page } from "@lawprotect/shared-ts";
 
 /**
  * Input parameters for listing consents by envelope
@@ -21,11 +21,11 @@ export interface ListConsentsQuery {
   /** Pagination cursor for getting the next page of results (optional) */
   cursor?: string;
   /** Filter by consent status (optional) */
-  status?: string;
+  status?: ConsentStatus;
   /** Filter by consent type (optional) */
-  consentType?: string;
+  consentType?: ConsentType;
   /** Filter by party ID (optional) */
-  partyId?: string;
+  partyId?: PartyId;
 }
 
 /**

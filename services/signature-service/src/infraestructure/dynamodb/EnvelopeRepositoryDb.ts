@@ -34,7 +34,7 @@ import {
   envelopePk,
   envelopeMetaSk,
 } from "./mappers/envelopeItemMapper";
-import { envelopeNotFound } from "@/shared/errors";
+import { envelopeNotFound } from "../../shared/errors";
 
 /** @description Cursor payload used by `listByTenant` (stable ordering: createdAt + envelopeId) */
 type ListCursorPayload = { createdAt: string; envelopeId: string };
@@ -48,42 +48,12 @@ type ListCursorPayload = { createdAt: string; envelopeId: string };
 const toDdbItem = <T extends object>(v: T): Record<string, unknown> =>
   (v as unknown) as Record<string, unknown>;
 
-/** @description Minimal shape of the `query` operation required (SDK-agnostic) */
-type DdbQueryParams = {
-  TableName: string;
-  IndexName?: string;
-  KeyConditionExpression: string;
-  ExpressionAttributeNames?: Record<string, string>;
-  ExpressionAttributeValues?: Record<string, unknown>;
-  Limit?: number;
-  ScanIndexForward?: boolean;
-  ExclusiveStartKey?: Record<string, unknown>;
-};
-type DdbQueryResult = {
-  Items?: Record<string, unknown>[];
-  LastEvaluatedKey?: Record<string, unknown>;
-};
-
-/** @description DynamoDB client with `query` support */
-type DdbClientWithQuery = DdbClientLike & {
-  query(params: DdbQueryParams): Promise<DdbQueryResult>;
-};
-
-/**
- * @description Asserts at runtime (and narrows at type-level) that the provided client implements `query`.
- * Throws an error if the client doesn't support the query operation.
- *
- * @param {DdbClientLike} ddb - The DynamoDB client to check
- * @throws {Error} When the client doesn't implement query functionality
- */
-function requireQuery(ddb: DdbClientLike): asserts ddb is DdbClientWithQuery {
-  if (typeof (ddb as any)?.query !== "function") {
-    throw new Error(
-      "[EnvelopeRepositoryDdb] The provided DDB client does not implement `query(...)`. " +
-        "Use a client compatible with DocumentClient.query or provide an adapter exposing it."
-    );
-  }
-}
+import { 
+  DdbQueryParams, 
+  DdbQueryResult, 
+  DdbClientWithQuery, 
+  requireQuery 
+} from "../../shared/types/infrastructure/dynamodb";
 
 /**
  * @description DynamoDB implementation of `Repository<Envelope, EnvelopeId>`.

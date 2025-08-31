@@ -264,6 +264,8 @@ export const rateLimitEnvelopeSend = (retryAfterSeconds = 60, details?: unknown)
   return err;
 };
 
+
+
 /**
  * @description Creates a TooManyRequestsError for party invitation rate limiting (429).
  *

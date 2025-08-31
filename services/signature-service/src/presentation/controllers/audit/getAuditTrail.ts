@@ -1,54 +1,38 @@
 /**
- * NOTE:
- * This file is part of the signature-service. Controllers are thin:
- * - validate (Zod from @lawprotect/shared-ts)
- * - authenticate/authorize
- * - call use-case
- * - map result -> HTTP response
+ * @file getAuditTrail.ts
+ * @summary Controller for retrieving audit trail for an envelope
+ * @description Handles GET requests to retrieve audit trail for a specific envelope
  */
-import { wrapController, corsFromEnv } from "@/presentation/middleware/http";
-import { tenantFromCtx } from "@/presentation/middleware/auth";
-import { validateRequest } from "@lawprotect/shared-ts";
-import { GetAuditTrailQuerySchema, GetAuditTrailPathSchema } from "@/schemas/audit";
-import { toEnvelopeId } from "@/app/ports/shared";
-import { getContainer } from "@/core/Container";
+
+import { createHandler, createQueryController } from "@/shared/controllers";
+import { GetAuditTrailPathSchema, GetAuditTrailQuerySchema } from "@/presentation/schemas/audit";
+import { GetAuditTrailAppService } from "@/app/services/Audit/GetAuditTrailApp.service";
 import { makeAuditQueriesPort } from "@/app/adapters/audit/makeAuditQueriesPort";
+import { RESPONSE_TYPES } from "@/domain/values/enums";
 
-
-const base = async (evt: any) => {
-  const { path, query } = validateRequest(evt, {
-    path: GetAuditTrailPathSchema,
-    query: GetAuditTrailQuerySchema,
-  });
-
-  const tenantId = tenantFromCtx(evt);
-  const c = getContainer();
-
-  const auditQueries = makeAuditQueriesPort({
-    auditRepo: c.repos.audit,
-  });
-
-  const result = await auditQueries.getAuditTrail({
-    tenantId: tenantId as any, // TODO: Add proper type conversion
-    envelopeId: toEnvelopeId(path.id),
-    cursor: query.cursor as any, // TODO: Add proper type conversion
-    limit: query.limit,
-    format: query.format,
-    locale: query.locale,
-  });
-
-  return {
-    statusCode: 200,
-    body: JSON.stringify(result),
-  };
-};
-
-export const handler = wrapController(base, {
-  auth: true,
-  observability: {
-    logger: () => console,
-    metrics: () => ({} as any),
-    tracer: () => ({} as any),
-  },
-  cors: corsFromEnv(),
-});
+/**
+ * Lambda handler for GET /audit/trail/{envelopeId} endpoint
+ * @param evt - The Lambda event containing HTTP request data
+ * @returns Promise resolving to HTTP response with audit trail data
+ */
+export const handler = createHandler(
+  createQueryController({
+    pathSchema: GetAuditTrailPathSchema,
+    querySchema: GetAuditTrailQuerySchema,
+    appServiceClass: GetAuditTrailAppService,
+    createDependencies: (container) => makeAuditQueriesPort(container.repos.audit),
+    extractParams: (path, query) => ({
+      envelopeId: path.envelopeId,
+      limit: query?.limit,
+      cursor: query?.cursor,
+      format: query?.format,
+      locale: query?.locale,
+    }),
+    transformResult: (result) => ({
+      entries: result.entries,
+      meta: { nextCursor: result.nextCursor },
+    }),
+    responseType: RESPONSE_TYPES[0], // 'ok'
+  }),
+  { auth: true }
+);
