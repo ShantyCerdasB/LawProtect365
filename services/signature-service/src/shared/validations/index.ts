@@ -8,4 +8,4 @@
 export * from "./schemas";
 
 // Export validation functions
-export * from "./functions/consent.validations";
+export * from "./functions";

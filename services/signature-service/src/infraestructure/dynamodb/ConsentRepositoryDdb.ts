@@ -21,7 +21,7 @@ import type { DdbClientLike } from "@lawprotect/shared-ts";
 import { dtoToConsentRow } from "./mappers/ConsentItemDTO.mapper";
 import { CONSENT_TYPES, CONSENT_STATUSES } from "@/domain/values/enums";
 import { badRequest } from "@/shared/errors";
-import { validateConsentStatus } from "@/shared/validations/consent.validations";
+import { validateConsentStatus } from "@/shared/validations";
 import { ConflictError } from "@lawprotect/shared-ts";
 
 import type {
