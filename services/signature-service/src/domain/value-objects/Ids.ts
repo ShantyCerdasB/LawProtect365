@@ -26,6 +26,8 @@ export type PartyId = Brand<string, "PartyId">;
 export type InputId = Brand<string, "InputId">;
 /** @description Signature record identifier (ULID/UUID) */
 export type SignatureId = Brand<string, "SignatureId">;
+/** @description Consent identifier (ULID/UUID) */
+export type ConsentId = Brand<string, "ConsentId">;
 
 /** @description Tenant identifier (trimmed, non-empty) */
 export type TenantId = Brand<string, "TenantId">;
@@ -61,6 +63,10 @@ export const InputIdSchema = EntityIdSchema.transform(
 /** @description SignatureId validator (ULID/UUID → brand) */
 export const SignatureIdSchema = EntityIdSchema.transform(
   (v: string) => v as SignatureId
+);
+/** @description ConsentId validator (ULID/UUID → brand) */
+export const ConsentIdSchema = EntityIdSchema.transform(
+  (v: string) => v as ConsentId
 );
 
 /**

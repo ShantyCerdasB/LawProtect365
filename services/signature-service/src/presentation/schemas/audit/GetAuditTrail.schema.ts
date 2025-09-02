@@ -6,10 +6,9 @@
 
 import { z } from "zod";
 import { EnvelopeIdValidationSchema } from "../../../shared/validations/schemas/audit";
-import { 
-  OptionalUploadFormatValidationSchema,
-  OptionalPaginationCursorValidationSchema 
-} from "../../../shared/validations/schemas/common";
+import { OptionalPaginationCursorValidationSchema } from "@/shared/validations/schemas/common/PaginationCursor.schema";
+import { OptionalUploadFormatValidationSchema } from "@/shared/validations/schemas/common/UploadFormat.schema";
+
 
 /**
  * @description Query parameters for getting audit trail

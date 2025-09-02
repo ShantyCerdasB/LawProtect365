@@ -1,6 +1,7 @@
 // consents/DeleteConsent.schema.ts
 import { z, ISODateStringSchema } from "@lawprotect/shared-ts";
-import { EnvelopeConsentPath } from "@/schemas/common/consent.common";
+import { EnvelopeConsentPath } from "../common/consent.common";
+
 
 /** Path: DELETE /envelopes/:envelopeId/consents/:consentId */
 export const DeleteConsentPath = EnvelopeConsentPath;

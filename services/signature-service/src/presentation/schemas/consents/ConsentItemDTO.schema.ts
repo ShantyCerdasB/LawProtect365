@@ -6,7 +6,7 @@
  * at repository boundaries so we never trust raw DDB shapes.
  */
 
-import { CONSENT_STATUSES, CONSENT_TYPES } from "@/domain/values/enums";
+import { CONSENT_STATUSES, CONSENT_TYPES } from "../../../domain/values/enums";
 import { z } from "@lawprotect/shared-ts";
 
 export const ConsentItemDTOSchema = z.object({

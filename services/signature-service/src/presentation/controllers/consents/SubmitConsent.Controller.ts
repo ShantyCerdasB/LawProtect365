@@ -1,43 +1,36 @@
 /**
  * @file SubmitConsent.Controller.ts
- * @summary Controller for submitting a consent in an envelope
- * @description Handles POST /envelopes/:envelopeId/consents/:consentId/submit requests
+ * @summary Controller for submitting a consent
+ * @description Handles POST /envelopes/:envelopeId/consents/:consentId/submit requests using command controller factory
  */
 
-import type { HandlerFn } from "@lawprotect/shared-ts";
-import { ok, validateRequest } from "@lawprotect/shared-ts";
-import { wrapController, corsFromEnv } from "../../presentation/middleware/http";
-import { tenantFromCtx, actorFromCtx } from "../../presentation/middleware/auth";
-import { SubmitConsentPath } from "../../schemas/consents/SubmitConsent.schema";
-import { submitConsentApp } from "../../app/services/Consent/SubmitConsentApp.service";
-import { getContainer } from "../../core/Container";
-import { toTenantId, toEnvelopeId, toConsentId } from "../../app/ports/shared";
-import { makeConsentCommandsPort } from "../../app/adapters/consent/MakeConsentCommandsPort";
+import { createCommandController } from "../../../shared/controllers/commandControllerFactory";
+import { makeConsentCommandsPort } from "../../../app/adapters/consent/MakeConsentCommandsPort";
+import { ConsentCommandService } from "../../../app/services/Consent/ConsentCommandService";
+import type { SubmitConsentControllerInput } from "../../../shared/types/consent/ControllerInputs";
+import type { SubmitConsentAppResult } from "../../../shared/types/consent/AppServiceInputs";
+import { UpdateConsentPath } from "../../schemas/consents/UpdateConsent.schema";
+import type { EnvelopeId, ConsentId } from "../../../domain/value-objects/Ids";
 
-const base: HandlerFn = async (evt) => {
-  const { path } = validateRequest(evt, { path: SubmitConsentPath });
-
-  const tenantId = toTenantId(tenantFromCtx(evt));
-  const actor = actorFromCtx(evt);
-
-  const c = getContainer();
-  const consentCommands = makeConsentCommandsPort(c.repos.consents, c.ids);
-
-  const result = await submitConsentApp(
-    {
-      tenantId,
-      envelopeId: toEnvelopeId(path.envelopeId),
-      consentId: toConsentId(path.consentId),
-      actor,
-    },
-    { consentCommands }
-  );
-
-  return ok({ data: result });
-};
-
-export const handler = wrapController(base, {
-  auth: true,
-  observability: { logger: () => console, metrics: () => ({} as any), tracer: () => ({} as any) },
-  cors: corsFromEnv(),
+export const handler = createCommandController<SubmitConsentControllerInput, SubmitConsentAppResult>({
+  pathSchema: UpdateConsentPath,
+  appServiceClass: ConsentCommandService,
+  createDependencies: (c) => makeConsentCommandsPort(
+    c.repos.consents, 
+    c.repos.delegations, 
+    c.ids,
+    c.consent.party,
+    c.consent.validation,
+    c.consent.audit,
+    c.consent.events,
+    c.idempotency.runner
+  ),
+  extractParams: (path, body) => ({
+    envelopeId: path.envelopeId as EnvelopeId,
+    consentId: path.consentId as ConsentId,
+    idempotencyKey: body?.idempotencyKey,
+    ttlSeconds: body?.ttlSeconds || 300,
+  }),
+  responseType: "ok",
+  includeActor: true,
 });

@@ -4,7 +4,7 @@
  * @description Guard functions for consent-related operations and validations
  */
 
-import type { EnvelopeId, TenantId } from "@/shared/types/domain";
+import type { EnvelopeId, TenantId } from "@/domain/value-objects/Ids";
 import type { EnvelopesPort } from "@/app/ports/envelopes/EnvelopesQueriesPort";
 
 /**

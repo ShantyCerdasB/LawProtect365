@@ -5,6 +5,7 @@
  */
 
 import { ISODateString } from "@lawprotect/shared-ts";
+import type { EnvelopeId, ConsentId } from "../../../domain/value-objects/Ids";
 
 /**
  * @summary Entity with timestamp fields
@@ -50,9 +51,9 @@ export type TenantScoped = {
  */
 export type ConsentKey = {
   /** Envelope identifier */
-  readonly envelopeId: string;
+  readonly envelopeId: EnvelopeId;
   /** Consent identifier */
-  readonly consentId: string;
+  readonly consentId: ConsentId;
 };
 
 /**

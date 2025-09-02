@@ -1,46 +1,35 @@
 /**
  * @file DeleteConsent.Controller.ts
- * @summary Controller for deleting a consent from an envelope
- * @description Handles DELETE /envelopes/:envelopeId/consents/:consentId requests
+ * @summary Controller for deleting a consent
+ * @description Handles DELETE /envelopes/:envelopeId/consents/:consentId requests using command controller factory
  */
 
-import type { HandlerFn } from "@lawprotect/shared-ts";
-import { noContent, validateRequest } from "@lawprotect/shared-ts";
-import { wrapController, corsFromEnv } from "../../presentation/middleware/http";
-import { tenantFromCtx } from "../../presentation/middleware/auth";
-import { DeleteConsentPath } from "../../schemas/consents/DeleteConsent.schema";
-import { deleteConsentApp } from "../../app/services/Consent/DeleteConsentApp.service";
-import { getContainer } from "../../core/Container";
-import { toTenantId, toEnvelopeId, toConsentId } from "../../app/ports/shared";
-import { makeConsentCommandsPort } from "../../app/adapters/consent/MakeConsentCommandsPort";
+import { createCommandController } from "../../../shared/controllers/commandControllerFactory";
+import { makeConsentCommandsPort } from "../../../app/adapters/consent/MakeConsentCommandsPort";
+import { ConsentCommandService } from "../../../app/services/Consent/ConsentCommandService";
+import type { DeleteConsentControllerInput } from "../../../shared/types/consent/ControllerInputs";
+import { UpdateConsentPath } from "../../schemas/consents/UpdateConsent.schema";
+import type { EnvelopeId, ConsentId } from "../../../domain/value-objects/Ids";
 
-const base: HandlerFn = async (evt) => {
-  const { path } = validateRequest(evt, { path: DeleteConsentPath });
-  const { envelopeId, consentId } = path;
-
-  const tenantId = toTenantId(tenantFromCtx(evt));
-
-  const c = getContainer();
-  const consentCommands = makeConsentCommandsPort(c.repos.consents, c.ids);
-
-  await deleteConsentApp(
-    { 
-      tenantId, 
-      envelopeId: toEnvelopeId(envelopeId), 
-      consentId: toConsentId(consentId) 
-    },
-    { consentCommands }
-  );
-
-  return noContent();
-};
-
-export const handler = wrapController(base, {
-  auth: true,
-  observability: {
-    logger: () => console,
-    metrics: () => ({} as any),
-    tracer: () => ({} as any),
-  },
-  cors: corsFromEnv(),
+export const handler = createCommandController<DeleteConsentControllerInput, void>({
+  pathSchema: UpdateConsentPath,
+  appServiceClass: ConsentCommandService,
+  createDependencies: (c) => makeConsentCommandsPort(
+    c.repos.consents, 
+    c.repos.delegations, 
+    c.ids,
+    c.consent.party,
+    c.consent.validation,
+    c.consent.audit,
+    c.consent.events,
+    c.idempotency.runner
+  ),
+  extractParams: (path, body) => ({
+    envelopeId: path.envelopeId as EnvelopeId,
+    consentId: path.consentId as ConsentId,
+    idempotencyKey: body?.idempotencyKey,
+    ttlSeconds: body?.ttlSeconds || 300,
+  }),
+  responseType: "noContent",
+  includeActor: true,
 });

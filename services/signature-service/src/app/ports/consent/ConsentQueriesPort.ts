@@ -4,56 +4,31 @@
  * @description Defines the interface for read-only consent operations including listing and filtering
  */
 
-import type { ConsentId, TenantId, EnvelopeId, ConsentStatus, ConsentType, PartyId } from "@/shared/types/domain";
-import type { ConsentHead } from "@/shared/types/consent";
-import { Page } from "@lawprotect/shared-ts";
+import type { 
+  GetConsentAppInput, 
+  GetConsentAppResult,
+  ListConsentsAppInput,
+  ListConsentsAppResult 
+} from "../../../shared/types/consent/AppServiceInputs";
 
 /**
- * Input parameters for listing consents by envelope
- */
-export interface ListConsentsQuery {
-  /** The tenant ID that owns the consents */
-  tenantId: TenantId;
-  /** The envelope ID to filter consents by */
-  envelopeId: EnvelopeId;
-  /** Maximum number of consents to return (optional) */
-  limit?: number;
-  /** Pagination cursor for getting the next page of results (optional) */
-  cursor?: string;
-  /** Filter by consent status (optional) */
-  status?: ConsentStatus;
-  /** Filter by consent type (optional) */
-  consentType?: ConsentType;
-  /** Filter by party ID (optional) */
-  partyId?: PartyId;
-}
-
-/**
- * Result of listing consents
- */
-export interface ListConsentsResult extends Page<ConsentHead> {}
-
-/**
- * Port interface for consent query operations
- * 
- * This port defines the contract for read-only consent operations.
- * Implementations should handle the business logic for querying and
- * filtering consents without modifying them.
+ * @summary Port interface for consent query operations
+ * @description Defines the contract for read-only consent operations
  */
 export interface ConsentQueriesPort {
   /**
-   * Lists consents by envelope with optional filtering and pagination
-   * 
-   * @param query - The query parameters containing filtering and pagination options
-   * @returns Promise resolving to paginated consent list
-   */
-  listByEnvelope(query: ListConsentsQuery): Promise<ListConsentsResult>;
-
-  /**
-   * Gets a consent by its ID
-   * 
-   * @param consentId - The unique identifier of the consent to retrieve
+   * @summary Gets a consent by its ID
+   * @description Retrieves a specific consent by its unique identifier
+   * @param input - The input parameters containing tenant, envelope, and consent IDs
    * @returns Promise resolving to the consent data or null if not found
    */
-  getById(consentId: ConsentId): Promise<ConsentHead | null>;
+  getById(input: GetConsentAppInput): Promise<GetConsentAppResult | null>;
+
+  /**
+   * @summary Lists consents by envelope with optional filtering and pagination
+   * @description Retrieves consents for a specific envelope with pagination and filtering
+   * @param input - The input parameters containing filtering and pagination options
+   * @returns Promise resolving to paginated consent list
+   */
+  listByEnvelope(input: ListConsentsAppInput): Promise<ListConsentsAppResult>;
 }

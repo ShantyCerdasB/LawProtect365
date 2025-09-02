@@ -4,9 +4,9 @@
  * @description Validates and converts string values to domain enums
  */
 
-import { CONSENT_TYPES, CONSENT_STATUSES } from "@/domain/values/enums";
-import type { ConsentType, ConsentStatus } from "@/domain/values/enums";
-import { badRequest } from "@/shared/errors";
+import { CONSENT_TYPES, CONSENT_STATUSES } from "../../../../domain/values/enums";
+import type { ConsentType, ConsentStatus } from "../../../../domain/values/enums";
+import { badRequest } from "../../../../shared/errors";
 
 /**
  * @summary Validates and converts a string to ConsentType

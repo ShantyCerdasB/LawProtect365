@@ -4,144 +4,60 @@
  * @description Defines the interface for write-oriented consent operations including create, update, delete, submit, and delegate
  */
 
-import type { ConsentId, TenantId, EnvelopeId, PartyId, ConsentType } from "@/shared/types/domain";
-import type { ConsentPatch } from "@/shared/types/consent";
-import type { ActorContext } from "@/shared/types/ActorContext";
+import type { 
+  CreateConsentAppInput, 
+  CreateConsentAppResult,
+  UpdateConsentAppInput,
+  UpdateConsentAppResult,
+  DeleteConsentAppInput,
+  SubmitConsentAppInput,
+  SubmitConsentAppResult,
+  DelegateConsentAppInput,
+  DelegateConsentAppResult
+} from "../../../shared/types/consent/AppServiceInputs";
 
 /**
- * Input parameters for creating a consent
- */
-export interface CreateConsentCommand {
-  /** The tenant ID that owns the consent */
-  tenantId: TenantId;
-  /** The envelope ID this consent belongs to */
-  envelopeId: EnvelopeId;
-  /** The party ID this consent is for */
-  partyId: PartyId;
-  /** The type of consent being created */
-  consentType: ConsentType;
-  /** Additional metadata for the consent (optional) */
-  metadata?: Record<string, unknown>;
-  /** Expiration date for the consent (optional) */
-  expiresAt?: string;
-  /** Actor context information (optional) */
-  actor?: ActorContext;
-}
-
-/**
- * Result of consent creation
- */
-export interface CreateConsentResult {
-  /** The unique identifier of the created consent */
-  consentId: ConsentId;
-  /** ISO timestamp when the consent was created */
-  createdAt: string;
-}
-
-/**
- * Result of consent update
- */
-export interface UpdateConsentResult {
-  /** The unique identifier of the updated consent */
-  consentId: ConsentId;
-  /** ISO timestamp when the consent was last updated */
-  updatedAt: string;
-}
-
-/**
- * Input parameters for consent delegation
- */
-export interface DelegateConsentCommand {
-  /** The envelope ID this consent belongs to */
-  envelopeId: EnvelopeId;
-  /** The consent ID being delegated */
-  consentId: ConsentId;
-  /** Email of the delegate */
-  delegateEmail: string;
-  /** Name of the delegate */
-  delegateName: string;
-  /** Reason for delegation (optional) */
-  reason?: string;
-  /** Expiration date for the delegation (optional) */
-  expiresAt?: string;
-  /** Additional metadata for the delegation (optional) */
-  metadata?: Record<string, unknown>;
-  /** Actor context information (optional) */
-  actor?: ActorContext;
-}
-
-/**
- * Result of consent delegation
- */
-export interface DelegateConsentResult {
-  /** The unique identifier of the consent */
-  consentId: ConsentId;
-  /** The unique identifier of the delegation */
-  delegationId: string;
-  /** ISO timestamp when the consent was delegated */
-  delegatedAt: string;
-}
-
-/**
- * Result of consent submission
- */
-export interface SubmitConsentResult {
-  /** The unique identifier of the consent */
-  consentId: ConsentId;
-  /** ISO timestamp when the consent was submitted */
-  submittedAt: string;
-}
-
-/**
- * Port interface for consent command operations
- * 
- * This port defines the contract for write-oriented consent operations.
- * Implementations should handle the business logic for creating, updating,
- * deleting, submitting, and delegating consents.
+ * @summary Port interface for consent command operations
+ * @description Defines the contract for write-oriented consent operations
  */
 export interface ConsentCommandsPort {
   /**
-   * Creates a new consent
-   * 
+   * @summary Creates a new consent
+   * @description Creates a new consent record with validation
    * @param input - The consent creation parameters
    * @returns Promise resolving to the created consent data
    */
-  create(input: CreateConsentCommand): Promise<CreateConsentResult>;
+  create(input: CreateConsentAppInput): Promise<CreateConsentAppResult>;
 
   /**
-   * Updates an existing consent
-   * 
-   * @param envelopeId - The envelope ID this consent belongs to
-   * @param consentId - The unique identifier of the consent to update
-   * @param patch - The data to update the consent with
+   * @summary Updates an existing consent
+   * @description Updates an existing consent record with the specified changes
+   * @param input - The consent update parameters
    * @returns Promise resolving to the updated consent data
    */
-  update(envelopeId: EnvelopeId, consentId: ConsentId, patch: ConsentPatch): Promise<UpdateConsentResult>;
+  update(input: UpdateConsentAppInput): Promise<UpdateConsentAppResult>;
 
   /**
-   * Deletes a consent
-   * 
-   * @param envelopeId - The envelope ID this consent belongs to
-   * @param consentId - The unique identifier of the consent to delete
+   * @summary Deletes a consent
+   * @description Deletes a consent record from the repository
+   * @param input - The consent deletion parameters
    * @returns Promise resolving when deletion is complete
    */
-  delete(envelopeId: EnvelopeId, consentId: ConsentId): Promise<void>;
+  delete(input: DeleteConsentAppInput): Promise<void>;
 
   /**
-   * Submits a consent
-   * 
-   * @param envelopeId - The envelope ID this consent belongs to
-   * @param consentId - The unique identifier of the consent to submit
-   * @param actor - Actor context information (optional)
+   * @summary Submits a consent
+   * @description Submits a consent for approval or processing
+   * @param input - The consent submission parameters
    * @returns Promise resolving to the submitted consent data
    */
-  submit(envelopeId: EnvelopeId, consentId: ConsentId, actor?: ActorContext): Promise<SubmitConsentResult>;
+  submit(input: SubmitConsentAppInput): Promise<SubmitConsentAppResult>;
 
   /**
-   * Delegates a consent to another party
-   * 
+   * @summary Delegates a consent to another party
+   * @description Delegates a consent to another party for processing
    * @param input - The consent delegation parameters
    * @returns Promise resolving to the delegated consent data
    */
-  delegate(input: DelegateConsentCommand): Promise<DelegateConsentResult>;
+  delegate(input: DelegateConsentAppInput): Promise<DelegateConsentAppResult>;
 }

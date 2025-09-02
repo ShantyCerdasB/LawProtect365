@@ -11,26 +11,28 @@ import type { EventBridgeClient } from "@aws-sdk/client-eventbridge";
 import type { SSMClient } from "@aws-sdk/client-ssm";
 
 import type { SignatureServiceConfig } from "./Config";
-import type { DocumentRepositoryDdb } from "../../../../adapters/dynamodb/DocumentRepositoryDdb";
-import type { EnvelopeRepositoryDdb } from "../../../../adapters/dynamodb/EnvelopeRepositoryDb";
-import type { InputRepositoryDdb } from "../../../../adapters/dynamodb/InputRepositoryDdb";
-import type { PartyRepositoryDdb } from "../../../../adapters/dynamodb/PartyRepositoryDdb";
-import type { GlobalPartyRepositoryDdb } from "../../../../adapters/dynamodb/GlobalPartyRepositoryDdb";
-import type { IdempotencyStoreDdb } from "../../../../adapters/dynamodb/IdempotencyStoreDdb";
-import type { AuditRepositoryDdb } from "../../../../infraestructure/dynamodb/AuditRepositoryDdb";
-import type { ConsentRepositoryDdb } from "../../../../adapters/dynamodb/index";
-import type { DelegationRepositoryDdb } from "../../../../adapters/dynamodb/DelegationRepositoryDdb";
-import type { IdempotencyKeyHasher } from "../../../../adapters/idempotency/IdempotencyKeyHasher";
-import type { IdempotencyRunner } from "../../../../adapters/idempotency/IdempotencyRunner";
-import type { RateLimitStoreDdb } from "../../../../adapters/ratelimit/RateLimitStoreDdb";
-import type { S3EvidenceStorage } from "../../../../adapters/s3/S3EvidenceStorage";
-import type { S3Presigner } from "../../../../adapters/s3/S3Presigner";
-import type { S3SignedPdfIngestor } from "../../../../adapters/s3/S3SignedPdfIngestor";
-import type { KmsSigner } from "../../../../adapters/kms/KmsSigner";
-import type { EventBridgePublisher } from "../../../../adapters/eventbridge/EventBridgePublisher";
-import type { SsmParamConfigProvider } from "../../../../adapters/ssm/SsmParamConfigProvider";
+import type { DocumentRepositoryDdb } from "../../../infrastructure/dynamodb/DocumentRepositoryDdb";
+import type { EnvelopeRepositoryDdb } from "../../../infrastructure/dynamodb/EnvelopeRepositoryDb";
+import type { InputRepositoryDdb } from "../../../infrastructure/dynamodb/InputRepositoryDdb";
+import type { PartyRepositoryDdb } from "../../../infrastructure/dynamodb/PartyRepositoryDdb";
+import type { GlobalPartyRepositoryDdb } from "../../../infrastructure/dynamodb/GlobalPartyRepositoryDdb";
+import type { IdempotencyStoreDdb } from "../../../infrastructure/dynamodb/IdempotencyStoreDdb";
+import type { AuditRepositoryDdb } from "../../../infrastructure/dynamodb/AuditRepositoryDdb";
+import type { ConsentRepositoryDdb } from "../../../infrastructure/dynamodb/ConsentRepositoryDdb";
+import type { DelegationRepositoryDdb } from "../../../infrastructure/dynamodb/DelegationRepositoryDdb";
+import type { OutboxPort } from "@lawprotect/shared-ts";
+import type { IdempotencyKeyHasher } from "../../../infrastructure/idempotency/IdempotencyKeyHasher";
+import type { IdempotencyRunner } from "../../../infrastructure/idempotency/IdempotencyRunner";
+import type { RateLimitStoreDdb } from "../../../infrastructure/ratelimit/RateLimitStoreDdb";
+import type { S3EvidenceStorage } from "../../../infrastructure/s3/S3EvidenceStorage";
+import type { S3Presigner } from "../../../infrastructure/s3/S3Presigner";
+import type { S3SignedPdfIngestor } from "../../../infrastructure/s3/S3SignedPdfIngestor";
+import type { KmsSigner } from "../../../infrastructure/kms/KmsSigner";
+
+import type { SsmParamConfigProvider } from "../../../infrastructure/ssm/SsmParamConfigProvider";
 import type { Services } from "./Services";
-import type { AuditContext } from "./AuditContext";
+import type { AuditContext } from "../../../domain/entities/AuditContext";
+import type { EventPublisher } from "@lawprotect/shared-ts";
 
 /**
  * @summary Root DI container type
@@ -60,6 +62,7 @@ export interface Container {
     readonly idempotency: IdempotencyStoreDdb;
     readonly consents: ConsentRepositoryDdb;
     readonly delegations: DelegationRepositoryDdb;
+    readonly outbox: OutboxPort;
   };
 
   /** Idempotency helpers */
@@ -87,7 +90,7 @@ export interface Container {
 
   /** Event publishing */
   readonly events: {
-    readonly publisher: EventBridgePublisher;
+    readonly eventPublisher: EventPublisher;
   };
 
   /** Audit service */

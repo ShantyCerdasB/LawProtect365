@@ -1,0 +1,28 @@
+/**
+ * @file ValidationInputs.ts
+ * @summary Validation inputs types for consent module
+ * @description Defines interfaces for validation inputs used by ConsentValidationService
+ */
+
+import type { 
+  TenantId, 
+  EnvelopeId, 
+  ConsentId 
+} from "../../../domain/value-objects/Ids";
+
+/**
+ * @summary Input for consent delegation validation
+ * @description Contains the data needed to validate a consent delegation request
+ */
+export interface ConsentDelegationValidationInput {
+  /** Tenant identifier */
+  readonly tenantId: TenantId;
+  /** Envelope identifier */
+  readonly envelopeId: EnvelopeId;
+  /** Consent identifier */
+  readonly consentId: ConsentId;
+  /** Delegate email */
+  readonly delegateEmail: string;
+  /** Delegate name */
+  readonly delegateName: string;
+}

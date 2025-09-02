@@ -1,5 +1,5 @@
 // Consent
-export const CONSENT_STATUSES = ["pending","granted","revoked","denied","expired"] as const;
+export const CONSENT_STATUSES = ["pending","granted","revoked","denied","expired","delegated"] as const;
 export type ConsentStatus = (typeof CONSENT_STATUSES)[number];
 
 export const CONSENT_TYPES = ["signature","view","delegate"] as const;
@@ -99,6 +99,14 @@ export type DelegationType = (typeof DELEGATION_TYPES)[number];
 
 export const PARTY_SOURCES = ["manual", "import", "api"] as const;
 export type PartySource = (typeof PARTY_SOURCES)[number];
+
+// Rate Limiting
+export const RATE_LIMIT_ENTITY = "RateLimit" as const;
+export type RateLimitEntity = (typeof RATE_LIMIT_ENTITY)[number];
+
+// S3 ACL Types
+export const S3_ACL_TYPES = ["private", "public-read"] as const;
+export type S3AclType = (typeof S3_ACL_TYPES)[number];
 
 // Audit Events
 export const AUDIT_EVENT_TYPES = [

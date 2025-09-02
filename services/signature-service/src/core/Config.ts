@@ -9,7 +9,7 @@
 import { buildAppConfig, getEnv, getRequired, getNumber, getBoolean } from "@lawprotect/shared-ts";
 import type { AppConfig } from "@lawprotect/shared-ts";
 import type { SigningAlgorithmSpec } from "@aws-sdk/client-kms";
-import { KmsAlgorithmSchema } from "@/domain/value-objects";
+import { KmsAlgorithmSchema } from "../domain/value-objects";
 
 /**
  * @description Service-specific configuration for the signature-service.
@@ -38,6 +38,8 @@ export interface SignatureServiceConfig extends AppConfig {
     idempotencyTable: string;
     /** Table holding audit events. Defaults to envelopesTable if not provided */
     auditTable?: string;
+    /** Table holding outbox events for reliable event publishing */
+    outboxTable: string;
   };
 
   /**
@@ -102,6 +104,46 @@ export interface SignatureServiceConfig extends AppConfig {
     /** Maximum number of parts for multipart uploads */
     maxParts: number;
   };
+
+  /**
+   * @description System user configuration.
+   */
+  system: {
+    /** The ID of the system user */
+    userId: string;
+    /** The email of the system user */
+    email: string;
+    /** The name of the system user */
+    name: string;
+  };
+
+  /**
+   * @description Outbox worker configuration for reliable event processing.
+   */
+  outbox: {
+    /** Maximum number of events to process in a single batch */
+    maxBatchSize: number;
+    /** Maximum time to wait before processing a batch (milliseconds) */
+    maxWaitTimeMs: number;
+    /** Maximum number of retry attempts for failed events */
+    maxRetries: number;
+    /** Delay between retry attempts (milliseconds) */
+    retryDelayMs: number;
+    /** Whether to enable debug logging */
+    debug: boolean;
+  };
+
+  /**
+   * @description CloudWatch metrics configuration.
+   */
+  metrics: {
+    /** Whether to enable custom metrics for outbox processing */
+    enableOutboxMetrics: boolean;
+    /** CloudWatch namespace for custom metrics */
+    namespace: string;
+    /** CloudWatch region (defaults to service region) */
+    region?: string;
+  };
 }
 
 /**
@@ -143,6 +185,7 @@ export const loadConfig = (
       inputsTable: getRequired("INPUTS_TABLE"),
       partiesTable: getRequired("PARTIES_TABLE"),
       idempotencyTable: getRequired("IDEMPOTENCY_TABLE"),
+      outboxTable: getRequired("OUTBOX_TABLE"),
     },
 
     s3: {
@@ -174,6 +217,26 @@ export const loadConfig = (
         min: 5 * 1024 * 1024,
       }),
       maxParts: getNumber("UPLOAD_MAX_PARTS", 500, { min: 1, max: 10_000 }),
+    },
+
+    system: {
+      userId: getEnv("SYSTEM_USER_ID") ?? "system",
+      email: getEnv("SYSTEM_USER_EMAIL") ?? "system@lawprotect.com",
+      name: getEnv("SYSTEM_USER_NAME") ?? "System Service",
+    },
+
+    outbox: {
+      maxBatchSize: getNumber("OUTBOX_MAX_BATCH_SIZE", 10, { min: 1, max: 100 }),
+      maxWaitTimeMs: getNumber("OUTBOX_MAX_WAIT_TIME_MS", 5000, { min: 1000, max: 30000 }),
+      maxRetries: getNumber("OUTBOX_MAX_RETRIES", 3, { min: 1, max: 10 }),
+      retryDelayMs: getNumber("OUTBOX_RETRY_DELAY_MS", 1000, { min: 100, max: 10000 }),
+      debug: getBoolean("OUTBOX_DEBUG", false),
+    },
+
+    metrics: {
+      enableOutboxMetrics: getBoolean("ENABLE_OUTBOX_METRICS", true),
+      namespace: getEnv("CLOUDWATCH_NAMESPACE") ?? `${base.projectName}/${base.serviceName}`,
+      region: getEnv("CLOUDWATCH_REGION"),
     },
   };
 

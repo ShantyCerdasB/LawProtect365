@@ -5,8 +5,8 @@
  */
 
 import type { TenantId, UserId } from "@lawprotect/shared-ts";
-import type { Envelope } from "@/domain/entities/Envelope";
-import { ActorContext } from "@/domain/entities";
+import type { Envelope } from "../../../domain/entities/Envelope";
+import { ActorContext } from "../../../domain/entities";
 
 
 /**

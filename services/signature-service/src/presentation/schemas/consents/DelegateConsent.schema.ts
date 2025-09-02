@@ -1,32 +1,39 @@
-// consents/DelegateConsent.schema.ts
-import { z, ISODateStringSchema, UuidV4 } from "@lawprotect/shared-ts";
-import {
-  EnvelopeConsentPath,
-  ConsentStatus,
-  MetadataSchema,
-} from "@/schemas/common/consent.common";
-import { PartyId } from "@/schemas/common";
+/**
+ * @file DelegateConsent.schema.ts
+ * @summary Validation schemas for delegating consents
+ * @description Zod schemas for POST /envelopes/:envelopeId/consents/:consentId/delegate endpoint
+ */
 
-export const DelegateConsentPath = EnvelopeConsentPath;
+import { z } from "@lawprotect/shared-ts";
+import { EnvelopeIdValidationSchema as EnvelopeIdSchema, ConsentIdValidationSchema as ConsentIdSchema } from "../../../shared/validations/schemas/common";
 
-export const DelegateConsentBody = z.object({
-  delegatePartyId: PartyId,
-  reason: z.string().min(1, "Reason is required").max(500, "Reason too long"),
-  expiresAt: ISODateStringSchema.optional(),
-  metadata: MetadataSchema.optional(),
+/** Path: /envelopes/:envelopeId/consents/:consentId/delegate */
+export const DelegateConsentPath = z.object({ 
+  envelopeId: EnvelopeIdSchema,
+  consentId: ConsentIdSchema
 });
 
+/** Body */
+export const DelegateConsentBody = z.object({
+  delegateEmail: z.string().email(),
+  delegateName: z.string().min(1),
+  reason: z.string().optional(),
+  expiresAt: z.string().optional(),
+  metadata: z.record(z.unknown()).optional(),
+  idempotencyKey: z.string().optional(),
+  ttlSeconds: z.number().int().positive().max(3600).optional(),
+});
+
+/** Response */
 export const DelegateConsentResponse = z.object({
-  delegationId: UuidV4, // si tienes UuidV4, cámbialo aquí
-  consentId: DelegateConsentPath.shape.consentId,
-  envelopeId: DelegateConsentPath.shape.envelopeId,
-  originalPartyId: PartyId,
-  delegatePartyId: PartyId,
-  reason: z.string(),
-  status: ConsentStatus,
-  createdAt: ISODateStringSchema,
-  expiresAt: ISODateStringSchema.optional(),
-  metadata: MetadataSchema.optional(),
+  delegationId: z.string(),
+  consentId: z.string(),
+  delegateEmail: z.string(),
+  delegateName: z.string(),
+  reason: z.string().optional(),
+  expiresAt: z.string().optional(),
+  metadata: z.record(z.unknown()).optional(),
+  createdAt: z.string(),
 });
 
 export type DelegateConsentPathType = z.infer<typeof DelegateConsentPath>;

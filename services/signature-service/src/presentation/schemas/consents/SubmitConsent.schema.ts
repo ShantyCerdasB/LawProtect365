@@ -11,16 +11,15 @@ import { z } from "@lawprotect/shared-ts";
 
 // Prefer the consent.common helpers (also define EnvelopeConsentPath there).
 // If you centralize paths in Path.ts instead, swap the import accordingly.
-import {
-  EnvelopeConsentPath as _EnvelopeConsentPath,
-  MetadataSchema,
-} from "@/schemas/common/consent.common";
+
 
 // Domain VO for consent evidence: { timestamp, ip, userAgent, locale? }
 import { ConsentRecordSchema } from "@/domain/value-objects/ConsentRecord";
+import { EnvelopeConsentPath } from "../common";
+import { MetadataSchema } from "../common/consent.common";
 
 /** Path params: /envelopes/:envelopeId/consents/:consentId */
-export const SubmitConsentPath = _EnvelopeConsentPath;
+export const SubmitConsentPath = EnvelopeConsentPath;
 
 /** Request body: consent evidence + optional metadata */
 export const SubmitConsentBody = z.object({

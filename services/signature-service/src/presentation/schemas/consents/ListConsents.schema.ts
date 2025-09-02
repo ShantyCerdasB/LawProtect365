@@ -1,29 +1,45 @@
-// consents/ListConsents.schema.ts
+/**
+ * @file ListConsents.schema.ts
+ * @summary Validation schemas for listing consents
+ * @description Zod schemas for GET /envelopes/:envelopeId/consents endpoint
+ */
+
 import { z } from "@lawprotect/shared-ts";
-import {
-  EnvelopePath,
-  PaginationQuery,
-  ConsentStatus,
-  ConsentType,
-  PaginationMeta,
-  ConsentCore,
-} from "@/schemas/common/consent.common";
-import { PartyId } from "@/schemas/common";
+import { EnvelopeIdValidationSchema as EnvelopeIdSchema, PartyIdValidationSchema as PartyIdSchema } from "@/shared/validations/schemas/common";
+import { ConsentTypeValidationSchema, ConsentStatusValidationSchema } from "@/shared/validations/schemas/consent";
 
 /** Path: /envelopes/:envelopeId/consents */
-export const ListConsentsPath = EnvelopePath;
+export const ListConsentsPath = z.object({ 
+  envelopeId: EnvelopeIdSchema 
+});
 
 /** Query: paginación + filtros de dominio */
-export const ListConsentsQuery = PaginationQuery.extend({
-  status: ConsentStatus.optional(),
-  consentType: ConsentType.optional(),
-  partyId: PartyId.optional(),
+export const ListConsentsQuery = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  cursor: z.string().optional(),
+  status: ConsentStatusValidationSchema.optional(),
+  consentType: ConsentTypeValidationSchema.optional(),
+  partyId: PartyIdSchema.optional(),
 });
 
 /** Response */
 export const ListConsentsResponse = z.object({
-  consents: z.array(ConsentCore),
-  meta: PaginationMeta,
+  envelopeId: z.string(),
+  items: z.array(z.object({
+    id: z.string(),
+    partyId: z.string(),
+    type: z.string(),
+    status: z.string(),
+    createdAt: z.string(),
+    updatedAt: z.string().optional(),
+    expiresAt: z.string().optional(),
+    metadata: z.record(z.unknown()).optional(),
+  })),
+  meta: z.object({
+    limit: z.number(),
+    nextCursor: z.string().optional(),
+    total: z.number().optional(),
+  }),
 });
 
 export type ListConsentsPathType = z.infer<typeof ListConsentsPath>;

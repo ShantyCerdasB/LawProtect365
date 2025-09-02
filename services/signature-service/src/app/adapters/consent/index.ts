@@ -7,4 +7,3 @@
 
 export * from "./MakeConsentCommandsPort";
 export * from "./MakeConsentQueryPort";
-export * from "./MakeUpdateConsentPort";

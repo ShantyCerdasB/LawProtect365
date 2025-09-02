@@ -86,12 +86,8 @@ export interface SsmConfig {
 export interface UploadConfig {
   /** Minimum part size in bytes for multipart uploads */
   readonly minPartSizeBytes: number;
-  /** Maximum part size in bytes for multipart uploads */
-  readonly maxPartSizeBytes: number;
   /** Maximum number of parts allowed in a multipart upload */
   readonly maxParts: number;
-  /** Default TTL (in seconds) for upload URLs */
-  readonly uploadTtlSeconds: number;
 }
 
 /**
@@ -99,12 +95,96 @@ export interface UploadConfig {
  * @description Configuration for rate limiting and throttling.
  */
 export interface RateLimitConfig {
-  /** Maximum number of requests per minute for OTP generation */
-  readonly otpRequestsPerMinute: number;
-  /** Maximum number of requests per minute for party invitations */
-  readonly partyInviteRequestsPerMinute: number;
-  /** Maximum number of requests per minute for signature requests */
-  readonly signatureRequestRequestsPerMinute: number;
+  /** Maximum requests per time window */
+  readonly maxRequests: number;
+  /** Time window in seconds */
+  readonly timeWindowSeconds: number;
+}
+
+/**
+ * @summary System configuration
+ * @description Configuration for system-level settings.
+ */
+export interface SystemConfig {
+  /** System user ID */
+  readonly userId: string;
+  /** System user email */
+  readonly email: string;
+  /** System user name */
+  readonly name: string;
+}
+
+/**
+ * @summary Outbox configuration
+ * @description Configuration for outbox worker processing.
+ */
+export interface OutboxConfig {
+  /** Maximum batch size for processing events */
+  readonly maxBatchSize: number;
+  /** Maximum wait time before processing batch (ms) */
+  readonly maxWaitTimeMs: number;
+  /** Maximum retries */
+  readonly maxRetries: number;
+  /** Delay between retries (ms) */
+  readonly retryDelayMs: number;
+  /** Debug mode */
+  readonly debug: boolean;
+}
+
+/**
+ * @summary Metrics configuration
+ * @description Configuration for CloudWatch metrics.
+ */
+export interface MetricsConfig {
+  /** Enable outbox metrics */
+  readonly enableOutboxMetrics: boolean;
+  /** CloudWatch namespace */
+  readonly namespace: string;
+  /** CloudWatch region */
+  readonly region?: string;
+}
+
+/**
+ * @summary System configuration
+ * @description Configuration for system-level settings.
+ */
+export interface SystemConfig {
+  /** System user ID */
+  readonly userId: string;
+  /** System user email */
+  readonly email: string;
+  /** System user name */
+  readonly name: string;
+}
+
+/**
+ * @summary Outbox configuration
+ * @description Configuration for outbox worker processing.
+ */
+export interface OutboxConfig {
+  /** Maximum batch size for processing events */
+  readonly maxBatchSize: number;
+  /** Maximum wait time before processing batch (ms) */
+  readonly maxWaitTimeMs: number;
+  /** Maximum retry attempts */
+  readonly maxRetries: number;
+  /** Delay between retries (ms) */
+  readonly retryDelayMs: number;
+  /** Debug mode */
+  readonly debug: boolean;
+}
+
+/**
+ * @summary Metrics configuration
+ * @description Configuration for CloudWatch metrics.
+ */
+export interface MetricsConfig {
+  /** Enable outbox metrics */
+  readonly enableOutboxMetrics: boolean;
+  /** CloudWatch namespace */
+  readonly namespace: string;
+  /** CloudWatch region */
+  readonly region?: string;
 }
 
 /**
@@ -123,9 +203,14 @@ export interface SignatureServiceConfig {
   /** EventBridge configuration */
   readonly events: EventBridgeConfig;
   /** SSM configuration */
-  readonly ssm: SsmConfig;
-  /** Upload configuration */
-  readonly upload: UploadConfig;
-  /** Rate limiting configuration */
-  readonly rateLimit: RateLimitConfig;
+  readonly ssm?: SsmConfig;
+  /** Upload and multipart defaults. */
+  readonly uploads: UploadConfig;
+
+  /** System configuration */
+  readonly system: SystemConfig;
+  /** Outbox configuration */
+  readonly outbox: OutboxConfig;
+  /** Metrics configuration */
+  readonly metrics: MetricsConfig;
 }

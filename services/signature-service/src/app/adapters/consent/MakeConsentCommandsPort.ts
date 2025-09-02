@@ -5,42 +5,72 @@
  * Handles ID generation, enum validation, and provides complete ConsentCommandsPort implementation.
  */
 
+import type { ConsentCommandsPort } from "../../ports/consent/ConsentCommandsPort";
 import type { 
-  ConsentCommandsPort, 
-  CreateConsentCommand, 
-  CreateConsentResult, 
-  UpdateConsentResult, 
-  SubmitConsentResult, 
-  DelegateConsentCommand, 
-  DelegateConsentResult 
-} from "@/app/ports/consent/ConsentCommandsPort";
-import type { ConsentPatch } from "@/shared/types/consent";
-import type { ConsentId, EnvelopeId, ConsentStatus } from "@/shared/types/domain";
+  CreateConsentAppInput, 
+  CreateConsentAppResult,
+  UpdateConsentAppInput,
+  UpdateConsentAppResult,
+  DeleteConsentAppInput,
+  SubmitConsentAppInput,
+  SubmitConsentAppResult,
+  DelegateConsentAppInput,
+  DelegateConsentAppResult
+} from "../../../shared/types/consent/AppServiceInputs";
 import type {
   ConsentRepoRow,
-  ConsentRepoCreateInput,
-  ConsentRepoKey,
   ConsentRepoUpdateInput,
-} from "@/shared/types/consent";
-import { validateConsentStatus } from "@/shared/validations/consent.validations";
+} from "../../../shared/types/consent/ConsentTypes";
+import type { ConsentCommandRepo, Ids } from "../../../shared/types/consent/AdapterDependencies";
+import type { ConsentId, EnvelopeId, PartyId } from "../../../domain/value-objects/Ids";
+import type { ConsentStatus, ConsentType } from "../../../domain/values/enums";
 import { nowIso, asISO, asISOOpt } from "@lawprotect/shared-ts";
+import { NotFoundError } from "../../../shared/errors";
+import { mapConsentRowToResult } from "../../../shared/types/consent/ConsentTypes";
+import type { DelegationRepositoryDdb } from "../../../infrastructure/dynamodb/DelegationRepositoryDdb";
+import type { PartyConsentService } from "../../services/Consent/PartyConsentService";
+import type { ConsentValidationService } from "../../services/Consent/ConsentValidationService";
+import type { ConsentAuditService } from "../../services/Consent/ConsentAuditService";
+import type { ConsentEventService } from "../../services/Consent/ConsentEventService";
+import type { UserId } from "@lawprotect/shared-ts";
+import type { ActorContext } from "../../../domain/entities/ActorContext";
+import type { IdempotencyRunner } from "../../../infrastructure/idempotency/IdempotencyRunner";
 
 /**
- * @summary Minimal repository interface required by this adapter
- * @description Defines the repository methods needed for consent command operations
+ * @summary Maps a repository row to an update result
+ * @description Converts a repository row to the domain update result format
+ *
+ * @param {ConsentRepoRow} r - Repository row from database
+ * @returns {UpdateConsentAppResult} Domain update result record
  */
-type ConsentsRepo = {
-  create(input: ConsentRepoCreateInput): Promise<ConsentRepoRow>;
-  getById(keys: ConsentRepoKey): Promise<ConsentRepoRow | null>;
-  update(keys: ConsentRepoKey, changes: ConsentRepoUpdateInput): Promise<ConsentRepoRow>;
-  delete(keys: ConsentRepoKey): Promise<void>;
-};
+const mapRowToUpdateResult = (r: ConsentRepoRow): UpdateConsentAppResult => ({
+  id: r.consentId as ConsentId,
+  envelopeId: r.envelopeId as EnvelopeId,
+  partyId: r.partyId as PartyId,
+  type: r.consentType as ConsentType,
+  status: r.status as ConsentStatus,
+  createdAt: r.createdAt || "",
+  updatedAt: r.updatedAt || "",
+  expiresAt: r.expiresAt,
+  metadata: r.metadata,
+});
 
 /**
- * @summary ID generation service interface
- * @description Service for generating unique identifiers
+ * @summary Maps a repository row to a submit result
+ * @description Converts a repository row to the domain submit result format
+ *
+ * @param {ConsentRepoRow} r - Repository row from database
+ * @returns {SubmitConsentAppResult} Domain submit result record
  */
-type Ids = { ulid(): string };
+const mapRowToSubmitResult = (r: ConsentRepoRow): SubmitConsentAppResult => ({
+  id: r.consentId as ConsentId,
+  envelopeId: r.envelopeId as EnvelopeId,
+  partyId: r.partyId as PartyId,
+  type: r.consentType as ConsentType,
+  status: r.status as ConsentStatus,
+  submittedAt: r.updatedAt || r.createdAt || "",
+  metadata: r.metadata,
+});
 
 /**
  * @summary Creates a ConsentCommandsPort implementation
@@ -48,40 +78,179 @@ type Ids = { ulid(): string };
  * by bridging the infrastructure repository to the application port interface.
  * Handles all consent command operations with proper validation and type safety.
  *
- * @param {ConsentsRepo} consentsRepo - Repository implementation for consent operations
+ * @param {ConsentCommandRepo} consentsRepo - Repository implementation for consent operations
  * @param {Ids} ids - ID generation service
  * @returns {ConsentCommandsPort} Complete ConsentCommandsPort implementation
  */
 export function makeConsentCommandsPort(
-  consentsRepo: ConsentsRepo,
-  ids: Ids
+  consentsRepo: ConsentCommandRepo,
+  delegationsRepo: DelegationRepositoryDdb,
+  ids: Ids,
+  partyConsentService: PartyConsentService,
+  validationService: ConsentValidationService,
+  auditService: ConsentAuditService,
+  eventService: ConsentEventService,
+  idempotencyRunner: IdempotencyRunner
 ): ConsentCommandsPort {
+  // Helper function for delegation logic
+  async function performDelegation(input: DelegateConsentAppInput, actorContext?: ActorContext): Promise<DelegateConsentAppResult> {
+    // 1. VALIDATION
+    if (validationService) {
+      await validationService.validateConsentDelegation({
+        tenantId: input.tenantId,
+        envelopeId: input.envelopeId,
+        consentId: input.consentId,
+        delegateEmail: input.delegateEmail,
+        delegateName: input.delegateName
+      });
+    }
+
+    // 2. Get current consent to obtain originalPartyId
+    const currentConsent = await consentsRepo.getById({
+      envelopeId: input.envelopeId,
+      consentId: input.consentId
+    });
+    
+    if (!currentConsent) {
+      throw new NotFoundError('Consent not found', undefined, { consentId: input.consentId });
+    }
+
+    // 3. CREATE/FIND DELEGATE PARTY
+    let delegatePartyId: PartyId;
+    if (partyConsentService) {
+      delegatePartyId = await partyConsentService.findOrCreatePartyForDelegate({
+        tenantId: input.tenantId,
+        email: input.delegateEmail,
+        name: input.delegateName
+      });
+    } else {
+      // Fallback: generate a new party ID if service is not available
+      delegatePartyId = ids.ulid() as PartyId;
+    }
+
+    // 4. Create delegation record
+    const delegation = await delegationsRepo.create({
+      delegationId: ids.ulid(),
+      tenantId: input.tenantId,
+      consentId: input.consentId,
+      envelopeId: input.envelopeId,
+      originalPartyId: currentConsent.partyId,
+      delegatePartyId: delegatePartyId,
+      reason: input.reason,
+      status: "pending",
+      expiresAt: input.expiresAt ? asISOOpt(input.expiresAt) : undefined,
+      metadata: input.metadata,
+    });
+
+    // 5. Update consent status to delegated
+    await consentsRepo.update(
+      { envelopeId: input.envelopeId, consentId: input.consentId },
+      { 
+        status: "delegated" as ConsentStatus,
+        updatedAt: asISO(nowIso())
+      }
+    );
+
+    // 6. AUDIT - Use actor context if available, fallback to system context
+    if (auditService) {
+      const auditContext = {
+        tenantId: input.tenantId,
+        envelopeId: input.envelopeId,
+        actor: actorContext || { 
+          userId: "system" as UserId, 
+          email: "system@lawprotect.com" 
+        }
+      };
+      
+      await auditService.logConsentDelegation(auditContext, {
+        consentId: input.consentId,
+        originalPartyId: currentConsent.partyId as PartyId,
+        delegatePartyId: delegatePartyId as PartyId,
+        delegationId: delegation.delegationId,
+        reason: input.reason,
+        expiresAt: input.expiresAt,
+        metadata: input.metadata,
+      });
+    }
+
+    // 7. EVENTS
+    if (eventService) {
+      const consentDelegatedEvent = {
+        type: "consent.delegated" as const,
+        payload: {
+          tenantId: input.tenantId,
+          consentId: input.consentId,
+          envelopeId: input.envelopeId,
+          originalPartyId: currentConsent.partyId as PartyId,
+          delegatePartyId: delegatePartyId as PartyId,
+          delegationId: delegation.delegationId,
+          reason: input.reason,
+          expiresAt: input.expiresAt,
+          metadata: input.metadata,
+        }
+      };
+      
+      await eventService.publishConsentDelegatedEvent(consentDelegatedEvent);
+    }
+
+    return {
+      id: input.consentId,
+      envelopeId: input.envelopeId,
+      delegationId: delegation.delegationId,
+      delegateEmail: input.delegateEmail,
+      delegateName: input.delegateName,
+      delegatedAt: delegation.createdAt,
+      metadata: input.metadata,
+    };
+  }
+
   return {
     /**
      * @summary Creates a new consent
      * @description Creates a new consent record with generated ID and initial pending status.
      * Validates enum values and brands ISO date strings for type safety.
      *
-     * @param {CreateConsentCommand} input - Consent creation parameters
-     * @returns {Promise<CreateConsentResult>} Promise resolving to the created consent data
+     * @param {CreateConsentAppInput} input - Consent creation parameters
+     * @returns {Promise<CreateConsentAppResult>} Promise resolving to the created consent data
      */
-    async create(input: CreateConsentCommand): Promise<CreateConsentResult> {
+    async create(input: CreateConsentAppInput): Promise<CreateConsentAppResult> {
+      // Implement idempotency if key is provided
+      if (input.idempotencyKey) {
+        return idempotencyRunner.run(
+          input.idempotencyKey,
+          async () => {
+            const row = await consentsRepo.create({
+              consentId: ids.ulid(),
+              tenantId: input.tenantId,
+              envelopeId: input.envelopeId,
+              partyId: input.partyId,
+              consentType: input.type,
+              status: input.status,
+              metadata: input.metadata,
+              expiresAt: asISOOpt(input.expiresAt),
+              createdAt: asISO(nowIso()),
+            });
+
+            return mapConsentRowToResult(row);
+          },
+          input.ttlSeconds
+        );
+      }
+
+      // Fallback to non-idempotent creation
       const row = await consentsRepo.create({
         consentId: ids.ulid(),
         tenantId: input.tenantId,
         envelopeId: input.envelopeId,
         partyId: input.partyId,
-        consentType: input.consentType,
-        status: "pending" as ConsentStatus,
+        consentType: input.type,
+        status: input.status,
         metadata: input.metadata,
         expiresAt: asISOOpt(input.expiresAt),
         createdAt: asISO(nowIso()),
       });
 
-      return {
-        consentId: row.consentId as ConsentId,
-        createdAt: row.createdAt,
-      };
+      return mapConsentRowToResult(row);
     },
 
     /**
@@ -89,102 +258,139 @@ export function makeConsentCommandsPort(
      * @description Updates a consent record with the provided changes.
      * Validates status enum if provided and brands ISO date strings.
      *
-     * @param {EnvelopeId} envelopeId - The envelope ID this consent belongs to
-     * @param {ConsentId} consentId - The unique identifier of the consent to update
-     * @param {ConsentPatch} patch - The data to update the consent with
-     * @returns {Promise<UpdateConsentResult>} Promise resolving to the updated consent data
+     * @param {UpdateConsentAppInput} input - The consent update parameters
+     * @returns {Promise<UpdateConsentAppResult>} Promise resolving to the updated consent data
      */
-    async update(envelopeId: EnvelopeId, consentId: ConsentId, patch: ConsentPatch): Promise<UpdateConsentResult> {
-      const changes: ConsentRepoUpdateInput = {};
-      
-      if (patch.status !== undefined) {
-        changes.status = validateConsentStatus(patch.status);
-      }
-      
-      if (patch.metadata !== undefined) {
-        (changes as any).metadata = { ...patch.metadata };
-      }
-      
-      if (patch.expiresAt !== undefined) {
-        changes.expiresAt = asISOOpt(patch.expiresAt);
+    async update(input: UpdateConsentAppInput): Promise<UpdateConsentAppResult> {
+      // Implement idempotency if key is provided
+      if (input.idempotencyKey) {
+        return idempotencyRunner.run(
+          input.idempotencyKey,
+          async () => {
+            const changes: ConsentRepoUpdateInput = {
+              updatedAt: asISO(nowIso()),
+              ...(input.status !== undefined && { status: input.status }),
+              ...(input.expiresAt !== undefined && { expiresAt: asISOOpt(input.expiresAt) }),
+              ...(input.metadata !== undefined && { metadata: input.metadata }),
+            };
+
+            const row = await consentsRepo.update(
+              { envelopeId: input.envelopeId, consentId: input.consentId },
+              changes
+            );
+
+            return mapRowToUpdateResult(row);
+          },
+          input.ttlSeconds
+        );
       }
 
+      // Fallback to non-idempotent update
+      const changes: ConsentRepoUpdateInput = {
+        updatedAt: asISO(nowIso()),
+        ...(input.status !== undefined && { status: input.status }),
+        ...(input.expiresAt !== undefined && { expiresAt: asISOOpt(input.expiresAt) }),
+        ...(input.metadata !== undefined && { metadata: input.metadata }),
+      };
+
       const row = await consentsRepo.update(
-        { envelopeId, consentId },
+        { envelopeId: input.envelopeId, consentId: input.consentId },
         changes
       );
 
-      return {
-        consentId: row.consentId as ConsentId,
-        updatedAt: row.updatedAt as string,
-      };
+      return mapRowToUpdateResult(row);
     },
 
     /**
      * @summary Deletes a consent
-     * @description Deletes a consent record from the repository.
+     * @description Deletes a consent record from the repository
      *
-     * @param {EnvelopeId} envelopeId - The envelope ID this consent belongs to
-     * @param {ConsentId} consentId - The unique identifier of the consent to delete
+     * @param {DeleteConsentAppInput} input - The consent deletion parameters
      * @returns {Promise<void>} Promise resolving when deletion is complete
      */
-    async delete(envelopeId: EnvelopeId, consentId: ConsentId): Promise<void> {
-      await consentsRepo.delete({ envelopeId, consentId });
+    async delete(input: DeleteConsentAppInput): Promise<void> {
+      // Implement idempotency if key is provided
+      if (input.idempotencyKey) {
+        return idempotencyRunner.run(
+          input.idempotencyKey,
+          async () => {
+            await consentsRepo.delete({ 
+              envelopeId: input.envelopeId, 
+              consentId: input.consentId 
+            });
+          },
+          input.ttlSeconds
+        );
+      }
+
+      // Fallback to non-idempotent delete
+      await consentsRepo.delete({ 
+        envelopeId: input.envelopeId, 
+        consentId: input.consentId 
+      });
     },
 
     /**
      * @summary Submits a consent
-     * @description Submits a consent by updating its status to granted.
-     * Uses the update method internally for consistency.
+     * @description Submits a consent for approval or processing
      *
-     * @param {EnvelopeId} envelopeId - The envelope ID this consent belongs to
-     * @param {ConsentId} consentId - The unique identifier of the consent to submit
-     * @param {object} actor - Actor context information (optional)
-     * @returns {Promise<SubmitConsentResult>} Promise resolving to the submitted consent data
+     * @param {SubmitConsentAppInput} input - The consent submission parameters
+     * @returns {Promise<SubmitConsentAppResult>} Promise resolving to the submitted consent data
      */
-    async submit(envelopeId: EnvelopeId, consentId: ConsentId, actor?: any): Promise<SubmitConsentResult> {
+    async submit(input: SubmitConsentAppInput): Promise<SubmitConsentAppResult> {
+      // Implement idempotency if key is provided
+      if (input.idempotencyKey) {
+        return idempotencyRunner.run(
+          input.idempotencyKey,
+          async () => {
+            const row = await consentsRepo.update(
+              { envelopeId: input.envelopeId, consentId: input.consentId },
+              { 
+                status: "granted" as ConsentStatus,
+                updatedAt: asISO(nowIso())
+              }
+            );
+
+            return mapRowToSubmitResult(row);
+          },
+          input.ttlSeconds
+        );
+      }
+
+      // Fallback to non-idempotent submission
       const row = await consentsRepo.update(
-        { envelopeId, consentId },
-        { status: "granted" as ConsentStatus }
+        { envelopeId: input.envelopeId, consentId: input.consentId },
+        { 
+          status: "granted" as ConsentStatus,
+          updatedAt: asISO(nowIso())
+        }
       );
 
-      return {
-        consentId: row.consentId as ConsentId,
-        submittedAt: row.updatedAt as string,
-      };
+      return mapRowToSubmitResult(row);
     },
 
     /**
      * @summary Delegates a consent to another party
-     * @description Delegates a consent to another party with delegation metadata.
-     * Currently updates the consent status to revoked as a placeholder implementation.
+     * @description Delegates a consent to another party for processing
      *
-     * @param {DelegateConsentCommand} input - The consent delegation parameters
-     * @returns {Promise<DelegateConsentResult>} Promise resolving to the delegated consent data
+     * @param {DelegateConsentAppInput} input - The consent delegation parameters
+     * @param {ActorContext} [actorContext] - Optional actor context for audit purposes
+     * @returns {Promise<DelegateConsentAppResult>} Promise resolving to the delegated consent data
      */
-    async delegate(input: DelegateConsentCommand): Promise<DelegateConsentResult> {
-      // Get the current consent to find the original party
-      const currentConsent = await consentsRepo.getById({
-        envelopeId: input.envelopeId,
-        consentId: input.consentId,
-      });
-
-      if (!currentConsent) {
-        throw new Error(`Consent ${input.consentId} not found in envelope ${input.envelopeId}`);
+    async delegate(input: DelegateConsentAppInput, actorContext?: ActorContext): Promise<DelegateConsentAppResult> {
+      // Implement idempotency if key is provided
+      if (input.idempotencyKey) {
+        return idempotencyRunner.run(
+          input.idempotencyKey,
+          async () => {
+            return performDelegation(input, actorContext);
+          },
+          input.ttlSeconds
+        );
       }
 
-      // For now, we'll just update the consent status to revoked
-      // In a real implementation, you would create a delegation record
-      const updatedConsent = await consentsRepo.update(
-        { envelopeId: input.envelopeId, consentId: input.consentId },
-        { status: "revoked" as ConsentStatus }
-      );
-
-      return {
-        consentId: input.consentId,
-        delegationId: ids.ulid(), // Generate a new delegation ID
-        delegatedAt: updatedConsent.updatedAt as string,
-      };
+      // Fallback to non-idempotent delegation
+      return performDelegation(input, actorContext);
     },
   };
 }
