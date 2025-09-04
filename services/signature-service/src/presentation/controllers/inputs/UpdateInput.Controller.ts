@@ -8,7 +8,7 @@ import { createCommandController } from "../../../shared/controllers/controllerF
 import { DefaultInputsCommandService } from "../../../app/services/Inputs";
 import { PatchInputBody, EnvelopeInputPath } from "../../../presentation/schemas/inputs";
 import type { UpdateInputResult } from "../../../app/ports/inputs/InputsCommandsPort";
-import type { UpdateInputControllerInput } from "./types";
+import type { UpdateInputControllerInput } from "@/shared/types/inputs";
 
 /**
  * @description Update Input controller

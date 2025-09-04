@@ -8,7 +8,7 @@ import { createCommandController } from "../../../shared/controllers/controllerF
 import { DefaultInputsCommandService } from "../../../app/services/Inputs";
 import { CreateInputsBody, EnvelopeInputPath } from "../../../presentation/schemas/inputs";
 import type { CreateInputsResult } from "../../../app/ports/inputs/InputsCommandsPort";
-import type { CreateInputsControllerInput } from "./types";
+import type { CreateInputsControllerInput } from "@/shared/types/inputs";
 
 /**
  * @description Create Inputs controller

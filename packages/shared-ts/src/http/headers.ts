@@ -6,17 +6,33 @@
 import { AppError, ErrorCodes } from "../index.js";
 
 
+/**
+ * Converts array value to string, taking the first element
+ */
+function convertArrayValue(value: unknown[]): string {
+  return typeof value[0] === "string" ? value[0] : String(value[0]);
+}
+
+/**
+ * Converts single value to string or undefined
+ */
+function convertSingleValue(value: unknown): string | undefined {
+  if (typeof value === "string") return value;
+  if (value == null) return undefined;
+  return String(value);
+}
+
 /** Returns the header value (case-insensitive). If array, returns the first item. */
 export function getHeaders(
   headers: Record<string, unknown> | undefined,
   name: string,
 ): string | undefined {
   if (!headers) return undefined;
+  
   const want = name.toLowerCase();
   for (const [k, v] of Object.entries(headers)) {
     if (k.toLowerCase() === want) {
-      if (Array.isArray(v)) return typeof v[0] === "string" ? v[0] : String(v[0]);
-      return typeof v === "string" ? v : (v == null ? undefined : String(v));
+      return Array.isArray(v) ? convertArrayValue(v) : convertSingleValue(v);
     }
   }
   return undefined;

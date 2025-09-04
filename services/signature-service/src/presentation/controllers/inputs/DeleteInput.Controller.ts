@@ -7,12 +7,12 @@
 import { createCommandController } from "../../../shared/controllers/controllerFactory";
 import { DefaultInputsCommandService } from "../../../app/services/Inputs";
 import { EnvelopeInputPath } from "../../../presentation/schemas/inputs";
-import type { InputWithIdControllerInput } from "./types";
+import type { DeleteInputControllerInput } from "@/shared/types/inputs";
 
 /**
  * @description Delete Input controller
  */
-export const DeleteInputController = createCommandController<InputWithIdControllerInput, void>({
+export const DeleteInputController = createCommandController<DeleteInputControllerInput, void>({
   pathSchema: EnvelopeInputPath,
   appServiceClass: DefaultInputsCommandService,
   createDependencies: (c) => c.inputs.commandsPort,

@@ -8,7 +8,7 @@ import { createCommandController } from "../../../shared/controllers/controllerF
 import { DefaultInputsCommandService } from "../../../app/services/Inputs";
 import { PatchInputPositionsBody, EnvelopePath } from "../../../presentation/schemas/inputs";
 import type { UpdateInputPositionsResult } from "../../../app/ports/inputs/InputsCommandsPort";
-import type { UpdateInputPositionsControllerInput } from "./types";
+import type { UpdateInputPositionsControllerInput } from "@/shared/types/inputs";
 
 /**
  * @description Update Input Positions controller

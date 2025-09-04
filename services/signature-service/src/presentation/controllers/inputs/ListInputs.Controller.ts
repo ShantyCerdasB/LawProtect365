@@ -8,7 +8,7 @@ import { createQueryController } from "../../../shared/controllers/queryFactory"
 import { DefaultInputsQueryService } from "../../../app/services/Inputs";
 import { ListInputsQuery, EnvelopePath } from "../../../presentation/schemas/inputs";
 import type { ListInputsQuery as ListInputsQueryType, ListInputsResult } from "../../../app/ports/inputs/InputsQueriesPort";
-import type { ListInputsQueryControllerInput } from "./types";
+import type { ListInputsQueryControllerInput } from "@/shared/types/inputs";
 
 /**
  * @description List Inputs controller
