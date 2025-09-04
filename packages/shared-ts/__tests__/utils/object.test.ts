@@ -51,7 +51,7 @@ describe("isPlainObject", () => {
     expect(isPlainObject("x")).toBe(false);
     expect(isPlainObject(1)).toBe(false);
     expect(isPlainObject(true)).toBe(false);
-    class Foo {}
+    class Foo { constructor() { this.bar = 'baz'; } }
     expect(isPlainObject(new Foo())).toBe(false);
   });
 

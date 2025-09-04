@@ -9,7 +9,7 @@
 import type { Repository } from "@lawprotect/shared-ts";
 import type { Input } from "@/domain/entities/Input";
 import type { Envelope } from "@/domain/entities/Envelope";
-import type { InputId } from "@/shared/types/infrastructure/dynamodb";
+import type { InputKey } from "@/shared/types/infrastructure/dynamodb";
 import type { EnvelopeId } from "@/domain/value-objects/Ids";
 import type { 
   InputsCommandsPort, 
@@ -34,7 +34,7 @@ import { deleteInput } from "@/use-cases/inputs/DeleteInput";
  * @returns Configured InputsCommandsPort implementation
  */
 export const makeInputsCommandsPort = (
-  inputsRepo: Repository<Input, InputId>,
+  inputsRepo: Repository<Input, InputKey>,
   envelopesRepo: Repository<Envelope, EnvelopeId>,
   deps: { ids: { ulid(): string } }
 ): InputsCommandsPort => {

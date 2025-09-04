@@ -44,7 +44,7 @@ describe('observability index (barrel) re-exports', () => {
     const assertAllExportsPresent = (mod: Record<string, unknown>) => {
       for (const key of Object.keys(mod)) {
         if (key === 'default' || key === '__esModule') continue;
-        expect(Object.prototype.hasOwnProperty.call(Obs, key)).toBe(true);
+        expect(Object.hasOwn(Obs, key)).toBe(true);
       }
     };
 

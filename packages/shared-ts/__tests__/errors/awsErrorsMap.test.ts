@@ -11,8 +11,7 @@ jest.mock("../../src/aws/errors.js", () => ({
   isAwsThrottling: jest.fn(() => false),
 }));
 
-import { mapAwsError } from "../../src/errors";
-import { ErrorCodes } from "../../src/errors";
+import { mapAwsError, ErrorCodes } from "../../src/errors";
 import * as AwsErr from "../../src/aws/errors.js";
 
 const ctx = "Repo.method";

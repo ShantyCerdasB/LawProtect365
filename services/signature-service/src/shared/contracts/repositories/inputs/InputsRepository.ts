@@ -5,7 +5,7 @@
  */
 
 import type { Input } from "@/domain/entities/Input";
-import type { EnvelopeId, InputId } from "@/domain/value-objects/Ids";
+import type { EnvelopeId } from "@/domain/value-objects/Ids";
 import type { InputKey } from "@/shared/types/infrastructure/dynamodb";
 
 

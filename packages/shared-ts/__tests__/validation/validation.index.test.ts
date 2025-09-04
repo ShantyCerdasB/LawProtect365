@@ -39,7 +39,7 @@ describe("validation barrel exports", () => {
 
       for (const k of keys) {
         // The index must have the same key
-        expect(Object.prototype.hasOwnProperty.call(indexMod, k)).toBe(true);
+        expect(Object.hasOwn(indexMod, k)).toBe(true);
 
         // And it must be the exact same reference/value
         expect(indexMod[k]).toBe(mod[k]);

@@ -21,7 +21,7 @@ describe('events index (barrel) re-exports', () => {
     const assertAllExportsPresent = (mod: Record<string, unknown>) => {
       const keys = Object.keys(mod).filter((k) => k !== 'default' && k !== '__esModule');
       for (const k of keys) {
-        expect(Object.prototype.hasOwnProperty.call(Events, k)).toBe(true);
+        expect(Object.hasOwn(Events, k)).toBe(true);
       }
     };
 

@@ -16,7 +16,7 @@ import { nowIso } from "@lawprotect/shared-ts";
 import type { DdbClientLike } from "@lawprotect/shared-ts";
 import { requireQuery } from "@lawprotect/shared-ts";
 import type { Input } from "../../domain/entities/Input";
-import type { EnvelopeId, InputId } from "../../domain/value-objects/Ids";
+import type { EnvelopeId } from "../../domain/value-objects/Ids";
 import type { InputKey } from "../../shared/types/infrastructure/dynamodb";
 import {
   inputItemMapper,
@@ -184,15 +184,15 @@ export class InputRepositoryDdb implements InputsRepository {
   /**
    * @description Partially updates an Input using read–modify–write.
    * Only whitelisted fields are updated; identifiers and `createdAt` remain immutable.
-   * @param {InputId} inputId The Input ID to update.
+   * @param {InputKey} inputKey The Input composite key to update.
    * @param {Partial<Input>} patch Partial fields to apply.
    * @returns {Promise<Input>} The updated `Input`.
    * @throws {NotFoundError} When the item does not exist.
    * @throws {HttpError} Normalized provider error via `mapAwsError`.
    */
-  async update(inputId: InputId, patch: Partial<Input>): Promise<Input> {
+  async update(inputKey: InputKey, patch: Partial<Input>): Promise<Input> {
     try {
-      const current = await this.getById(inputId);
+      const current = await this.getById(inputKey);
       if (!current) throw new NotFoundError("Input not found");
 
       const next: Input = Object.freeze({
@@ -221,17 +221,17 @@ export class InputRepositoryDdb implements InputsRepository {
   }
 
   /**
-   * @description Deletes an Input by ID.
-   * @param {InputId} inputId The Input ID to delete.
+   * @description Deletes an Input by composite key.
+   * @param {InputKey} inputKey The Input composite key to delete.
    * @returns {Promise<void>} Resolves when the item is deleted.
    * @throws {NotFoundError} When the item does not exist.
    * @throws {HttpError} Normalized provider error via `mapAwsError`.
    */
-  async delete(inputId: InputId): Promise<void> {
+  async delete(inputKey: InputKey): Promise<void> {
     try {
       await this.ddb.delete({
         TableName: this.tableName,
-        Key: { pk: inputPk(inputId.envelopeId), sk: inputSk(inputId.inputId) },
+        Key: { pk: inputPk(inputKey.envelopeId), sk: inputSk(inputKey.inputId) },
         ConditionExpression:
           "attribute_exists(pk) AND attribute_exists(sk)",
       });

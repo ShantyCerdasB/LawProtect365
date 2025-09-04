@@ -328,7 +328,6 @@ export const getContainer = (): Container => {
     storage: { evidence, presigner, pdfIngestor },
     crypto: { signer },
     events: { eventPublisher },
-    cache: { store: cacheStore },
     consent: {
       validation: consentValidation,
       audit: consentAudit,

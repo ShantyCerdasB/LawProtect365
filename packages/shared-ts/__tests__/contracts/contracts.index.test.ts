@@ -5,7 +5,6 @@
 
 import * as Core from '../../src/contracts/index.js';
 import * as UseCaseMod from '../../src/contracts/UseCase.js';
-import * as ControllerMod from '../../src/contracts/index.js';
 import * as QuerySpecMod from '../../src/contracts/QuerySpec.js';
 import * as RepositoryMod from '../../src/contracts/Repository.js';
 import * as MapperMod from '../../src/contracts/Mapper.js';
@@ -15,19 +14,19 @@ import * as IdempotencyMod from '../../src/contracts/Idempotency.js';
 describe('core index (barrel) re-exports', () => {
   it('re-exports selected symbols with identity preserved', () => {
     expect(Core.asUseCase).toBe(UseCaseMod.asUseCase);
-    expect(Core.composeController).toBe(ControllerMod.composeController);
+    expect(Core.composeController).toBe(Core.composeController);
   });
 
   it('exposes named exports from all submodules', () => {
     const assertReexportPresence = (mod: Record<string, unknown>) => {
       for (const key of Object.keys(mod)) {
         if (key === 'default' || key === '__esModule') continue;
-        expect(Object.prototype.hasOwnProperty.call(Core, key)).toBe(true);
+        expect(Object.hasOwn(Core, key)).toBe(true);
       }
     };
 
     assertReexportPresence(UseCaseMod);
-    assertReexportPresence(ControllerMod);
+    // ControllerMod removed - using Core instead
     assertReexportPresence(QuerySpecMod);
     assertReexportPresence(RepositoryMod);
     assertReexportPresence(MapperMod);

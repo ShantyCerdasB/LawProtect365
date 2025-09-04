@@ -14,7 +14,7 @@ describe('generateNumericOtp', () => {
 
   it('generates OTP with length 1', () => {
     const otp = generateNumericOtp(1);
-    expect(otp).toMatch(/^\d{1}$/);
+    expect(otp).toMatch(/^\d$/);
     expect(otp.length).toBe(1);
   });
 
