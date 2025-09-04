@@ -5,5 +5,3 @@
  */
 
 export { makeRequestsCommandsPort } from "./makeRequestsCommandsPort";
-export { makeRequestsQueriesPort } from "./makeRequestsQueriesPort";
-export type { RequestsQueriesPortDependencies } from "./makeRequestsQueriesPort";

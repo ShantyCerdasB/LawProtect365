@@ -1,14 +1,13 @@
 /**
  * @file index.ts
- * @summary Request schemas barrel export.
- * @description Re-exports all request schemas for convenient importing.
+ * @summary Barrel export for requests schemas
+ * @description Exports all request validation schemas
  */
 
-export { InvitationsBody } from "./Invitations.schema";
-export { RemindersBody } from "./Reminders.schema";
-export { CancelEnvelopeBody } from "./Cancel.schema";
-export { DeclineEnvelopeBody } from "./Decline.schema";
-export { FinaliseEnvelopeBody } from "./Finalise.schema";
-export { RequestSignatureBody } from "./RequestSignature.schema";
-export { AddViewerBody } from "./AddViewer.schema";
-
+export * from "./Invitations.schema";
+export * from "./Reminders.schema";
+export * from "./Cancel.schema";
+export * from "./Decline.schema";
+export * from "./Finalise.schema";
+export * from "./RequestSignature.schema";
+export * from "./AddViewer.schema";

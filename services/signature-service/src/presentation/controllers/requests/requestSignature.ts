@@ -1,60 +1,42 @@
 ﻿/**
- * NOTE:
- * This file is part of the signature-service. Controllers are thin:
- * - validate (Zod from @lawprotect/shared-ts)
- * - authenticate/authorize
- * - call use-case
- * - map result -> HTTP response
+ * @file requestSignature.ts
+ * @summary Request signature controller
+ * @description Handles requesting a signature from a specific party
  */
-import { wrapController, corsFromEnv } from "@/presentation/middleware/http";
-import { actorFromCtx } from "@/presentation/middleware/auth";
-import { validateRequest } from "@lawprotect/shared-ts";
-import { RequestSignatureBody } from "@/schemas/requests";
-import { toEnvelopeId, toPartyId } from "@/app/ports/shared";
-import { getContainer } from "@/core/Container";
-import { makeRequestsCommandsPort } from "@/app/adapters/requests/makeRequestsCommandsPort";
-import { z } from "zod";
 
-const base = async (evt: any) => {
-  const { path, body } = validateRequest(evt, {
-    path: z.object({ id: z.string() }),
-    body: RequestSignatureBody,
-  });
+import { createCommandController } from "../../../shared/controllers/controllerFactory";
+import { makeRequestsCommandsPort } from "../../../app/adapters/requests/makeRequestsCommandsPort";
+import { DefaultRequestsCommandService } from "../../../app/services/Requests";
+import { RequestSignatureBody } from "../../../presentation/schemas/requests";
+import { EnvelopeIdPath } from "../../../presentation/schemas/common/path";
+import type { RequestSignatureControllerInput } from "../../../shared/types/requests/ControllerInputs";
+import type { RequestSignatureAppResult } from "../../../shared/types/requests/AppServiceInputs";
 
-  const actor = actorFromCtx(evt);
-  const c = getContainer();
-
-  const requestsCommands = makeRequestsCommandsPort(
+/**
+ * @description Request signature controller
+ */
+export const RequestSignatureController = createCommandController<RequestSignatureControllerInput, RequestSignatureAppResult>({
+  bodySchema: RequestSignatureBody,
+  pathSchema: EnvelopeIdPath,
+  appServiceClass: DefaultRequestsCommandService,
+  createDependencies: (c) => makeRequestsCommandsPort(
     c.repos.envelopes,
     c.repos.parties,
     c.repos.inputs,
-    {
-      ids: c.ids,
-      events: { publish: async (event: any) => { await c.events.publisher.publish(event); } },
-      audit: c.audit,
-    }
-  );
-
-  const result = await requestsCommands.requestSignature({
-    envelopeId: toEnvelopeId(path.id),
-    partyId: toPartyId(body.partyId),
+    c.requests.validationService,
+    c.requests.auditService,
+    c.requests.eventService,
+    c.requests.rateLimitService
+  ),
+  extractParams: (path, body) => ({
+    envelopeId: path.id,
+    partyId: body.partyId,
     message: body.message,
     channel: body.channel,
-    actor,
-  });
-
-  return {
-    statusCode: 201,
-    body: result,
-  };
-};
-
-export const handler = wrapController(base, {
-  auth: true,
-  observability: {
-    logger: () => console,
-    metrics: () => ({} as any),
-    tracer: () => ({} as any),
-  },
-  cors: corsFromEnv(),
+  }),
+  responseType: "created",
+  includeActor: true,
 });
+
+// Export handler for backward compatibility
+export const handler = RequestSignatureController;

@@ -143,6 +143,15 @@ export interface Container {
     readonly eventService: any;
   };
 
+  /** Requests services */
+  readonly requests: {
+    readonly commandsPort: any;
+    readonly validationService: any;
+    readonly auditService: any;
+    readonly eventService: any;
+    readonly rateLimitService: any;
+  };
+
   /** Audit service */
   readonly audit: {
     /**

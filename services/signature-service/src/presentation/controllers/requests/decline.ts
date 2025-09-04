@@ -1,58 +1,40 @@
 ﻿/**
- * NOTE:
- * This file is part of the signature-service. Controllers are thin:
- * - validate (Zod from @lawprotect/shared-ts)
- * - authenticate/authorize
- * - call use-case
- * - map result -> HTTP response
+ * @file decline.ts
+ * @summary Decline envelope controller
+ * @description Handles declining an envelope
  */
-import { wrapController, corsFromEnv } from "@/presentation/middleware/http";
-import { actorFromCtx } from "@/presentation/middleware/auth";
-import { validateRequest } from "@lawprotect/shared-ts";
-import { DeclineEnvelopeBody } from "@/schemas/requests";
-import { toEnvelopeId } from "@/app/ports/shared";
-import { getContainer } from "@/core/Container";
-import { makeRequestsCommandsPort } from "@/app/adapters/requests/makeRequestsCommandsPort";
-import { z } from "zod";
 
-const base = async (evt: any) => {
-  const { path, body } = validateRequest(evt, {
-    path: z.object({ id: z.string() }),
-    body: DeclineEnvelopeBody,
-  });
+import { createCommandController } from "../../../shared/controllers/controllerFactory";
+import { makeRequestsCommandsPort } from "../../../app/adapters/requests/makeRequestsCommandsPort";
+import { DefaultRequestsCommandService } from "../../../app/services/Requests";
+import { DeclineEnvelopeBody } from "../../../presentation/schemas/requests";
+import { EnvelopeIdPath } from "../../../presentation/schemas/common/path";
+import type { DeclineEnvelopeControllerInput } from "../../../shared/types/requests/ControllerInputs";
+import type { DeclineEnvelopeAppResult } from "../../../shared/types/requests/AppServiceInputs";
 
-  const actor = actorFromCtx(evt);
-  const c = getContainer();
-
-  const requestsCommands = makeRequestsCommandsPort(
+/**
+ * @description Decline envelope controller
+ */
+export const DeclineEnvelopeController = createCommandController<DeclineEnvelopeControllerInput, DeclineEnvelopeAppResult>({
+  bodySchema: DeclineEnvelopeBody,
+  pathSchema: EnvelopeIdPath,
+  appServiceClass: DefaultRequestsCommandService,
+  createDependencies: (c) => makeRequestsCommandsPort(
     c.repos.envelopes,
     c.repos.parties,
     c.repos.inputs,
-    {
-      ids: c.ids,
-      events: { publish: async (event: any) => { await c.events.publisher.publish(event); } },
-      audit: c.audit,
-    }
-  );
-
-  const result = await requestsCommands.declineEnvelope({
-    envelopeId: toEnvelopeId(path.id),
+    c.requests.validationService,
+    c.requests.auditService,
+    c.requests.eventService,
+    c.requests.rateLimitService
+  ),
+  extractParams: (path, body) => ({
+    envelopeId: path.id,
     reason: body.reason,
-    actor,
-  });
-
-  return {
-    statusCode: 200,
-    body: result,
-  };
-};
-
-export const handler = wrapController(base, {
-  auth: true,
-  observability: {
-    logger: () => console,
-    metrics: () => ({} as any),
-    tracer: () => ({} as any),
-  },
-  cors: corsFromEnv(),
+  }),
+  responseType: "ok",
+  includeActor: true,
 });
+
+// Export handler for backward compatibility
+export const handler = DeclineEnvelopeController;

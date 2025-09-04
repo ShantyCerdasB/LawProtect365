@@ -1,23 +1,34 @@
 /**
  * @file AddViewer.schema.ts
- * @summary Request schema for adding viewers to an envelope.
- * @description Defines the request body structure for adding viewers with read-only access to an envelope.
+ * @summary Schema for adding a viewer to an envelope
+ * @description Zod schemas for validating add viewer requests
  */
 
-import { z } from "@lawprotect/shared-ts";
+import { z } from "zod";
+import { EnvelopeIdSchema } from "../../../domain/value-objects/Ids";
 
 /**
- * @description Body payload for adding a viewer to an envelope.
- * Contains email and optional name and locale for the viewer.
+ * @description Request body schema for adding a viewer
  */
 export const AddViewerBody = z.object({
-  /** Email address of the viewer to add. */
-  email: z.string().email("Invalid email address"),
-  /** Optional name of the viewer. */
-  name: z.string().max(255, "Name must be 255 characters or less").optional(),
-  /** Optional locale preference for the viewer. */
-  locale: z.string().max(10, "Locale must be 10 characters or less").optional(),
+  email: z.string().email("Invalid email format").max(255, "Email too long"),
+  name: z.string().max(255, "Name too long").optional(),
+  locale: z.string().max(10, "Locale too long").optional(),
 });
 
+/**
+ * @description Path parameters schema for envelope operations
+ */
+export const EnvelopePath = z.object({
+  envelopeId: EnvelopeIdSchema,
+});
+
+/**
+ * @description Type for AddViewer request body
+ */
 export type AddViewerBody = z.infer<typeof AddViewerBody>;
 
+/**
+ * @description Type for envelope path parameters
+ */
+export type EnvelopePath = z.infer<typeof EnvelopePath>;

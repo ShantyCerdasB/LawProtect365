@@ -1,23 +1,34 @@
 /**
  * @file RequestSignature.schema.ts
- * @summary Request schema for requesting signatures.
- * @description Defines the request body structure for requesting signatures from specific parties.
+ * @summary Schema for requesting a signature from a party
+ * @description Zod schemas for validating request signature requests
  */
 
-import { z } from "@lawprotect/shared-ts";
+import { z } from "zod";
+import { EnvelopeIdSchema, PartyIdSchema } from "../../../domain/value-objects/Ids";
 
 /**
- * @description Body payload for requesting signatures.
- * Contains party ID and optional message and channel for signature request.
+ * @description Request body schema for requesting a signature
  */
 export const RequestSignatureBody = z.object({
-  /** The party ID to request signature from. */
-  partyId: z.string().uuid("Party ID must be a valid UUID"),
-  /** Optional custom message for the signature request. */
-  message: z.string().max(500, "Message must be 500 characters or less").optional(),
-  /** Optional channel for sending the signature request (email, sms). */
+  partyId: PartyIdSchema,
+  message: z.string().max(1000, "Message too long").optional(),
   channel: z.enum(["email", "sms"]).optional(),
 });
 
+/**
+ * @description Path parameters schema for envelope operations
+ */
+export const EnvelopePath = z.object({
+  envelopeId: EnvelopeIdSchema,
+});
+
+/**
+ * @description Type for RequestSignature request body
+ */
 export type RequestSignatureBody = z.infer<typeof RequestSignatureBody>;
 
+/**
+ * @description Type for envelope path parameters
+ */
+export type EnvelopePath = z.infer<typeof EnvelopePath>;

@@ -102,6 +102,13 @@ import { InputsEventService } from "../app/services/Inputs/InputsEventService";
 import { makeInputsCommandsPort } from "../app/adapters/inputs/makeInputsCommandsPort";
 import { makeInputsQueriesPort } from "../app/adapters/inputs/makeInputsQueriesPort";
 
+// Requests services
+import { RequestsValidationService } from "../app/services/Requests/RequestsValidationService";
+import { RequestsAuditService } from "../app/services/Requests/RequestsAuditService";
+import { RequestsEventService } from "../app/services/Requests/RequestsEventService";
+import { RequestsRateLimitService } from "../app/services/Requests/RequestsRateLimitService";
+import { makeRequestsCommandsPort } from "../app/adapters/requests/makeRequestsCommandsPort";
+
 let singleton: Container;
 
 /**
@@ -346,6 +353,22 @@ export const getContainer = (): Container => {
     inputsAudit
   );
 
+  // Requests services - instantiate with correct dependencies
+  const requestsValidation = new RequestsValidationService();
+  const requestsAudit = new RequestsAuditService(audit);
+  const requestsEvents = new RequestsEventService(outbox);
+  const requestsRateLimit = new RequestsRateLimitService(otpRateLimitStore);
+  
+  const requestsCommands = makeRequestsCommandsPort(
+    envelopes,
+    parties,
+    inputs,
+    requestsValidation,
+    requestsAudit,
+    requestsEvents,
+    requestsRateLimit
+  );
+
   singleton = {
     config,
     aws: { ddb, s3, kms, evb, ssm },
@@ -389,6 +412,13 @@ export const getContainer = (): Container => {
           validationService: inputsValidation,
           auditService: inputsAudit,
           eventService: inputsEvents,
+        },
+        requests: {
+          commandsPort: requestsCommands,
+          validationService: requestsValidation,
+          auditService: requestsAudit,
+          eventService: requestsEvents,
+          rateLimitService: requestsRateLimit,
         },
     audit: {
       log: async (action: string, details: any, context: any) => {

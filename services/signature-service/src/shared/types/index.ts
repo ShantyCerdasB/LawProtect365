@@ -26,6 +26,9 @@ export * from "./consent";
 // Inputs types
 export * from "./inputs";
 
+// Requests types
+export * from "./requests";
+
 // Audit types
 export * from "./audit";
 

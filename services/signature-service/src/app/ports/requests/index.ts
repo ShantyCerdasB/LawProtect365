@@ -20,14 +20,5 @@ export type {
   RequestSignatureResult,
   AddViewerCommand,
   AddViewerResult,
-  ActorContext,
 } from "./RequestsCommandsPort";
-
-export type {
-  RequestsQueriesPort,
-  GetInvitationStatsQuery,
-  InvitationStats,
-  GetPartyStatusQuery,
-  PartyStatus,
-} from "./RequestsQueriesPort";
 
