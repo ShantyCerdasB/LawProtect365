@@ -5,7 +5,7 @@
  */
 
 import { createQueryController } from "../../../shared/controllers/queryFactory";
-import { ListEnvelopesApp } from "../../../app/services/envelopes";
+import { EnvelopesQueryService } from "../../../app/services/envelopes";
 import { ListEnvelopesParams, ListEnvelopesQuery } from "../../../presentation/schemas/envelopes/ListEnvelopes.schema";
 import type { ListEnvelopesControllerInput } from "../../../shared/types/envelopes/ControllerInputs";
 import type { ListEnvelopesAppResult } from "../../../shared/types/envelopes/AppServiceInputs";
@@ -16,10 +16,8 @@ import type { ListEnvelopesAppResult } from "../../../shared/types/envelopes/App
 export const ListEnvelopesController = createQueryController<ListEnvelopesControllerInput, ListEnvelopesAppResult>({
   pathSchema: ListEnvelopesParams,
   querySchema: ListEnvelopesQuery,
-  appServiceClass: ListEnvelopesApp,
-  createDependencies: (c) => ({
-    envelopesQueries: c.envelopes.queriesPort,
-  }),
+  appServiceClass: EnvelopesQueryService,
+  createDependencies: (c) => c.envelopes.queriesPort,
   extractParams: (path, query) => ({
     tenantId: path.tenantId,
     limit: query.limit,

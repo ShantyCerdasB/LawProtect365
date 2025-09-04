@@ -8,11 +8,12 @@ import { createQueryController } from "../../../shared/controllers/queryFactory"
 import { DefaultInputsQueryService } from "../../../app/services/Inputs";
 import { ListInputsQuery, EnvelopePath } from "../../../presentation/schemas/inputs";
 import type { ListInputsQuery as ListInputsQueryType, ListInputsResult } from "../../../app/ports/inputs/InputsQueriesPort";
+import type { ListInputsQueryControllerInput } from "./types";
 
 /**
  * @description List Inputs controller
  */
-export const ListInputsController = createQueryController<ListInputsQueryType, ListInputsResult>({
+export const ListInputsController = createQueryController<ListInputsQueryControllerInput, ListInputsResult>({
   querySchema: ListInputsQuery,
   pathSchema: EnvelopePath,
   appServiceClass: DefaultInputsQueryService,

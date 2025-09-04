@@ -1,10 +1,17 @@
 /**
  * @file GetInput.schema.ts
- * @description Response schema for getting a single input.
- * Defines Zod schema for input retrieval response formatting.
+ * @description Query and response schemas for getting a single input.
+ * Defines Zod schemas for input retrieval query parameters and response formatting.
  */
 
 import { z } from "@lawprotect/shared-ts";
+
+/**
+ * @description Query parameters schema for getting a single input.
+ * No query parameters needed for this endpoint.
+ */
+export const GetInputQuery = z.object({});
+export type GetInputQuery = z.infer<typeof GetInputQuery>;
 
 /**
  * @description Response payload schema for a single input.
@@ -17,12 +24,10 @@ export const GetInputResponse = z.object({
   type: z.string(),
   /** Page number where the input is placed */
   page: z.number(),
-  /** Geometry of the input */
-  geometry: z.object({
+  /** Position of the input */
+  position: z.object({
     x: z.number(),
     y: z.number(),
-    w: z.number(),
-    h: z.number(),
   }),
   /** Party ID assigned to this input (optional) */
   assignedPartyId: z.string().optional(),

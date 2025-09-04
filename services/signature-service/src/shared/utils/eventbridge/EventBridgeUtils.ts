@@ -5,13 +5,14 @@
  */
 
 import { EventBridgeEntry } from "@/shared/contracts/eventbridge/EventBridgeClientPort";
+import type { EventMetadataSchema } from "@/shared/validations/schemas/eventbridge/EventMetadata.schema";
 
 
 
 /**
  * Converts EventMetadata to EventBridgeEntry format.
  */
-export function toEventBridgeEntry(metadata: EventMetadata): EventBridgeEntry {
+export function toEventBridgeEntry(metadata: EventMetadataSchema): EventBridgeEntry {
   return {
     Source: metadata.source,
     DetailType: metadata.detailType,
@@ -31,8 +32,8 @@ export function createEventMetadata(
   source: string,
   detailType: string,
   detail: Record<string, unknown>,
-  options?: Partial<EventMetadata>
-): EventMetadata {
+  options?: Partial<EventMetadataSchema>
+): EventMetadataSchema {
   return {
     source,
     detailType,
@@ -45,7 +46,7 @@ export function createEventMetadata(
 /**
  * Validates event metadata for required fields.
  */
-export function validateEventMetadata(metadata: EventMetadata): string[] {
+export function validateEventMetadata(metadata: EventMetadataSchema): string[] {
   const errors: string[] = [];
   
   if (!metadata.source || metadata.source.trim() === "") {
@@ -67,12 +68,15 @@ export function validateEventMetadata(metadata: EventMetadata): string[] {
  * Generates a unique event ID.
  */
 export function generateEventId(): string {
-  return `evt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  // Use crypto.randomUUID for secure random generation
+  const crypto = require('crypto');
+  const randomPart = crypto.randomUUID().replace(/-/g, '').substring(0, 9);
+  return `evt_${Date.now()}_${randomPart}`;
 }
 
 /**
  * Formats event for logging.
  */
-export function formatEventForLogging(metadata: EventMetadata): string {
+export function formatEventForLogging(metadata: EventMetadataSchema): string {
   return `[${metadata.source}] ${metadata.detailType} at ${metadata.time?.toISOString() || new Date().toISOString()}`;
 }

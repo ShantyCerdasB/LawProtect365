@@ -83,16 +83,30 @@ const mapRowToSubmitResult = (r: ConsentRepoRow): SubmitConsentAppResult => ({
  * @param {Ids} ids - ID generation service
  * @returns {ConsentCommandsPort} Complete ConsentCommandsPort implementation
  */
+interface ConsentCommandsPortConfig {
+  consentsRepo: ConsentCommandRepo;
+  delegationsRepo: DelegationRepositoryDdb;
+  ids: Ids;
+  globalPartiesRepo: GlobalPartiesRepository;
+  validationService: ConsentValidationService;
+  auditService: ConsentAuditService;
+  eventService: ConsentEventService;
+  idempotencyRunner: IdempotencyRunner;
+}
+
 export function makeConsentCommandsPort(
-  consentsRepo: ConsentCommandRepo,
-  delegationsRepo: DelegationRepositoryDdb,
-  ids: Ids,
-  globalPartiesRepo: GlobalPartiesRepository,
-  validationService: ConsentValidationService,
-  auditService: ConsentAuditService,
-  eventService: ConsentEventService,
-  idempotencyRunner: IdempotencyRunner
+  config: ConsentCommandsPortConfig
 ): ConsentCommandsPort {
+  const {
+    consentsRepo,
+    delegationsRepo,
+    ids,
+    globalPartiesRepo,
+    validationService,
+    auditService,
+    eventService,
+    idempotencyRunner
+  } = config;
   
   /**
    * @summary Performs the actual consent delegation logic
@@ -219,7 +233,7 @@ export function makeConsentCommandsPort(
       email: input.email
     });
 
-    if (existingParty && existingParty.party) {
+    if (existingParty?.party) {
       return existingParty.party.partyId as PartyId;
     }
 
@@ -253,7 +267,7 @@ export function makeConsentCommandsPort(
       }
     });
 
-    return newPartyId;
+    return newPartyId as PartyId;
   }
 
   return {
@@ -465,6 +479,7 @@ export function makeConsentCommandsPort(
           });
         } catch (error) {
           // If consent not found, proceed with deletion anyway
+          console.warn('Consent not found during deletion:', error);
         }
       }
 
@@ -544,6 +559,7 @@ export function makeConsentCommandsPort(
           });
         } catch (error) {
           // If consent not found, proceed with submission anyway
+          console.warn('Consent not found during submission:', error);
         }
       }
 

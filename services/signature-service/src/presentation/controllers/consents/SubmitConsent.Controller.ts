@@ -15,16 +15,16 @@ import type { EnvelopeId, ConsentId } from "../../../domain/value-objects/Ids";
 export const handler = createCommandController<SubmitConsentControllerInput, SubmitConsentAppResult>({
   pathSchema: UpdateConsentPath,
   appServiceClass: ConsentCommandService,
-  createDependencies: (c) => makeConsentCommandsPort(
-    c.repos.consents, 
-    c.repos.delegations, 
-    c.ids,
-    c.consent.party,
-    c.consent.validation,
-    c.consent.audit,
-    c.consent.events,
-    c.idempotency.runner
-  ),
+  createDependencies: (c) => makeConsentCommandsPort({
+    consentsRepo: c.repos.consents,
+    delegationsRepo: c.repos.delegations,
+    ids: c.ids,
+    globalPartiesRepo: c.consent.party,
+    validationService: c.consent.validation,
+    auditService: c.consent.audit,
+    eventService: c.consent.events,
+    idempotencyRunner: c.idempotency.runner
+  }),
   extractParams: (path, body) => ({
     envelopeId: path.envelopeId as EnvelopeId,
     consentId: path.consentId as ConsentId,

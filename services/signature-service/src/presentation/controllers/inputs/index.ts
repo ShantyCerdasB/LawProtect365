@@ -11,3 +11,4 @@ export { ListInputsController } from "./ListInputs.Controller";
 export { UpdateInputController } from "./UpdateInput.Controller";
 export { UpdateInputPositionsController } from "./UpdateInputPositions.Controller";
 export { DeleteInputController } from "./DeleteInput.Controller";
+export * from "./types";

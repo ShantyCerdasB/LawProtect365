@@ -5,7 +5,7 @@
  */
 
 import { createCommandController } from "../../../shared/controllers/controllerFactory";
-import { CreateEnvelopeApp } from "../../../app/services/envelopes";
+import { EnvelopesCommandService } from "../../../app/services/envelopes";
 import { CreateEnvelopeBody, CreateEnvelopeParams } from "../../../presentation/schemas/envelopes/CreateEnvelope.schema";
 import type { CreateEnvelopeControllerInput } from "../../../shared/types/envelopes/ControllerInputs";
 import type { CreateEnvelopeAppResult } from "../../../shared/types/envelopes/AppServiceInputs";
@@ -16,10 +16,8 @@ import type { CreateEnvelopeAppResult } from "../../../shared/types/envelopes/Ap
 export const CreateEnvelopeController = createCommandController<CreateEnvelopeControllerInput, CreateEnvelopeAppResult>({
   bodySchema: CreateEnvelopeBody,
   pathSchema: CreateEnvelopeParams,
-  appServiceClass: CreateEnvelopeApp,
-  createDependencies: (c) => ({
-    envelopesCommands: c.envelopes.commandsPort,
-  }),
+  appServiceClass: EnvelopesCommandService,
+  createDependencies: (c) => c.envelopes.commandsPort,
   extractParams: (path, body) => ({
     tenantId: path.tenantId,
     ownerId: body.ownerId,
