@@ -19,7 +19,7 @@ import {
 /** assert */
 describe("assert", () => {
   it("does not throw when condition is truthy", () => {
-    expect(() => assert(1 === 1)).not.toThrow();
+    expect(() => assert(true)).not.toThrow();
   });
 
   it("throws with the provided message when condition is falsy", () => {

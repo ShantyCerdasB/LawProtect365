@@ -7,8 +7,9 @@
  * Used by application services to modify input data.
  */
 
-import type { TenantId, EnvelopeId, ActorContext } from "../shared";
-import { InputType } from "@/domain/values/enums";
+import type { TenantId, EnvelopeId, InputId, PartyId } from "../../../domain/value-objects/Ids";
+import type { ActorContext } from "../../../domain/entities/ActorContext";
+import { InputType } from "../../../domain/values/enums";
 
 /**
  * @description Command for creating inputs in batch.
@@ -31,19 +32,15 @@ export interface CreateInputsCommand {
     x: number;
     /** Y coordinate of the input */
     y: number;
-    /** Width of the input */
-    width: number;
-    /** Height of the input */
-    height: number;
     /** Whether the input is required */
     required: boolean;
     /** Party ID assigned to this input (optional) */
-    partyId?: string;
+    partyId?: PartyId;
     /** Initial value of the input (optional) */
     value?: string;
   }>;
-  /** Context information about the actor creating the inputs (optional) */
-  actor?: ActorContext;
+  /** Context information about the actor creating the inputs */
+  actor: ActorContext;
 }
 
 /**
@@ -54,15 +51,15 @@ export interface CreateInputsResult {
   /** Array of created input data */
   items: Array<{
     /** The unique identifier of the created input */
-    inputId: string;
+    inputId: InputId;
     /** Type of the input */
     type: InputType;
     /** Page number where the input is placed */
     page: number;
-    /** Geometry of the input */
-    geometry: { x: number; y: number; w: number; h: number };
+    /** Position of the input */
+    position: { x: number; y: number };
     /** Party ID assigned to this input (optional) */
-    assignedPartyId?: string;
+    assignedPartyId?: PartyId;
     /** Whether the input is required */
     required: boolean;
   }>;
@@ -75,10 +72,12 @@ export interface CreateInputsResult {
  * Contains the input identifier and fields to update.
  */
 export interface UpdateInputCommand {
+  /** The tenant ID that owns the input */
+  tenantId: TenantId;
   /** The envelope ID that contains the input */
   envelopeId: EnvelopeId;
   /** The unique identifier of the input to update */
-  inputId: string;
+  inputId: InputId;
   /** Fields to update */
   updates: Partial<{
     /** Type of input */
@@ -89,19 +88,15 @@ export interface UpdateInputCommand {
     x: number;
     /** Y coordinate */
     y: number;
-    /** Width */
-    width: number;
-    /** Height */
-    height: number;
     /** Whether the input is required */
     required: boolean;
     /** Party ID assigned to this input */
-    partyId: string;
+    partyId: PartyId;
     /** Value of the input */
     value: string;
   }>;
-  /** Context information about the actor updating the input (optional) */
-  actor?: ActorContext;
+  /** Context information about the actor updating the input */
+  actor: ActorContext;
 }
 
 /**
@@ -110,7 +105,7 @@ export interface UpdateInputCommand {
  */
 export interface UpdateInputResult {
   /** The unique identifier of the updated input */
-  inputId: string;
+  inputId: InputId;
   /** ISO timestamp when the input was updated */
   updatedAt: string;
 }
@@ -120,25 +115,23 @@ export interface UpdateInputResult {
  * Contains array of input positions to update.
  */
 export interface UpdateInputPositionsCommand {
+  /** The tenant ID that owns the inputs */
+  tenantId: TenantId;
   /** The envelope ID that contains the inputs */
   envelopeId: EnvelopeId;
   /** Array of input positions to update */
   items: Array<{
     /** The unique identifier of the input */
-    inputId: string;
+    inputId: InputId;
     /** Page number where the input is placed */
     page: number;
     /** X coordinate of the input */
     x: number;
     /** Y coordinate of the input */
     y: number;
-    /** Width of the input */
-    width: number;
-    /** Height of the input */
-    height: number;
   }>;
-  /** Context information about the actor updating the positions (optional) */
-  actor?: ActorContext;
+  /** Context information about the actor updating the positions */
+  actor: ActorContext;
 }
 
 /**
@@ -155,12 +148,14 @@ export interface UpdateInputPositionsResult {
  * Contains the input identifier to delete.
  */
 export interface DeleteInputCommand {
+  /** The tenant ID that owns the input */
+  tenantId: TenantId;
   /** The envelope ID that contains the input */
   envelopeId: EnvelopeId;
   /** The unique identifier of the input to delete */
-  inputId: string;
-  /** Context information about the actor deleting the input (optional) */
-  actor?: ActorContext;
+  inputId: InputId;
+  /** Context information about the actor deleting the input */
+  actor: ActorContext;
 }
 
 /**

@@ -10,5 +10,10 @@ export * from "./PatchInputApp.service";
 export * from "./PatchInputPositionsApp.service";
 export * from "./DeleteInputApp.service";
 
+// ✅ NUEVOS SERVICIOS REFACTORIZADOS
+export * from "./InputsValidationService";
+export * from "./InputsAuditService";
+export * from "./InputsEventService";
+
 
 
