@@ -1,105 +1,46 @@
 /**
  * @file PartiesCommandsPort.ts
  * @summary Commands port for envelope-scoped parties
- * @description Commands port for managing Party operations within envelopes (create, update, delete, delegate).
+ * @description Commands port for managing Party operations within envelopes (create, update, delete).
  * Defines the contract for Party command operations.
  */
 
-import type { TenantId, EnvelopeId, ActorContext } from "../shared";
-import type { Party } from "@/domain/entities/Party";
-import type { PartyRole, PartyStatus, AuthMethod } from "@/domain/values/enums";
+import type { TenantId } from "../../../domain/value-objects/Ids";
+import type { ActorContext } from "../../../domain/entities/ActorContext";
+import type { PartyRow } from "../../../shared/types/parties";
+import type { 
+  CreatePartyControllerInput,
+  UpdatePartyControllerInput,
+  DeletePartyControllerInput
+} from "../../../shared/types/parties";
 
-/**
- * @description Input for creating a new Party in an envelope.
- */
-export interface CreatePartyCommand {
+// Define command types that extend controller inputs with actor context
+export interface CreatePartyCommand extends CreatePartyControllerInput {
   tenantId: TenantId;
-  envelopeId: EnvelopeId;
-  name: string;
-  email: string;
-  role: PartyRole;
-  sequence?: number;
-  phone?: string;
-  locale?: string;
-  auth?: {
-    methods: AuthMethod[];
-  };
-  globalPartyId?: string;
   actor: ActorContext;
 }
 
-/**
- * @description Result of creating a Party.
- */
+export interface UpdatePartyCommand extends UpdatePartyControllerInput {
+  tenantId: TenantId;
+  actor: ActorContext;
+}
+
+export interface DeletePartyCommand extends DeletePartyControllerInput {
+  tenantId: TenantId;
+  actor: ActorContext;
+}
+
+// Define result types that are not in shared yet
 export interface CreatePartyResult {
-  party: Party;
+  party: PartyRow;
 }
 
-/**
- * @description Input for updating a Party.
- */
-export interface UpdatePartyCommand {
-  tenantId: TenantId;
-  envelopeId: EnvelopeId;
-  partyId: string;
-  updates: {
-    name?: string;
-    email?: string;
-    role?: PartyRole;
-    sequence?: number;
-    phone?: string;
-    locale?: string;
-    auth?: {
-      methods: AuthMethod[];
-    };
-  };
-  actor: ActorContext;
-}
-
-/**
- * @description Result of updating a Party.
- */
 export interface UpdatePartyResult {
-  party: Party;
+  party: PartyRow;
 }
 
-/**
- * @description Input for deleting a Party.
- */
-export interface DeletePartyCommand {
-  tenantId: TenantId;
-  envelopeId: EnvelopeId;
-  partyId: string;
-  actor: ActorContext;
-}
-
-/**
- * @description Result of deleting a Party.
- */
 export interface DeletePartyResult {
   deleted: boolean;
-}
-
-/**
- * @description Input for delegating a Party.
- */
-export interface DelegatePartyCommand {
-  tenantId: TenantId;
-  envelopeId: EnvelopeId;
-  partyId: string;
-  delegateTo: {
-    globalPartyId?: string;
-    email?: string;
-    name?: string;
-  };
-  actor: ActorContext;
-}
-
-/**
- * @description Result of delegating a Party.
- */
-export interface DelegatePartyResult {
-  party: Party;
 }
 
 /**
@@ -120,9 +61,4 @@ export interface PartiesCommandsPort {
    * Deletes a Party from an envelope.
    */
   delete(command: DeletePartyCommand): Promise<DeletePartyResult>;
-
-  /**
-   * Delegates a Party to another person.
-   */
-  delegate(command: DelegatePartyCommand): Promise<DelegatePartyResult>;
 }

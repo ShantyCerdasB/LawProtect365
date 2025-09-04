@@ -5,7 +5,7 @@
  * Provides type-safe validation for HTTP query parameters.
  */
 
-import { z } from "@lawprotect/shared-ts/validation";
+import { z } from "@lawprotect/shared-ts";
 
 /**
  * @description Query parameters schema for listing Global Parties.

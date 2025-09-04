@@ -23,7 +23,7 @@ export const inputSk = (inputId: string): string => `INPUT#${inputId}`;
  * Persisted DynamoDB item shape for Input.
  * This is the exact structure stored in the table.
  */
-export interface DdbInputItem {
+export type DdbInputItem = {
   pk: string;
   sk: string;
   type: typeof INPUT_ENTITY;
@@ -35,13 +35,17 @@ export interface DdbInputItem {
 
   inputType: Input["type"];
   required: boolean;
-  position: Input["position"];
+  position: {
+    page: number;
+    x: number;
+    y: number;
+  };
 
   value?: string;
 
   createdAt: string; // ISO string
   updatedAt: string; // ISO string
-}
+};
 
 /**
  * Domain → DynamoDB item
@@ -85,8 +89,6 @@ export const isDdbInputItem = (v: unknown): v is DdbInputItem => {
       typeof o.position.page === "number" &&
       typeof o.position.x === "number" &&
       typeof o.position.y === "number" &&
-      typeof o.position.width === "number" &&
-      typeof o.position.height === "number" &&
       typeof o.createdAt === "string" &&
       typeof o.updatedAt === "string"
   );

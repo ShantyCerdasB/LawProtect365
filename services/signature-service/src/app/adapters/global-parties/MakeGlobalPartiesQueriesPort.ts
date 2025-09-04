@@ -5,23 +5,18 @@
  * Handles list, get by ID, and search operations for Global Parties (contacts).
  */
 
-import type { GlobalPartiesQueriesPort } from "@/app/ports/global-parties";
-import type { GlobalPartyRepository } from "@/infra/repos/GlobalPartyRepository";
+import type { GlobalPartiesQueriesPort } from "../../ports/global-parties";
 import type { 
-  ListGlobalPartiesQuery, 
-  ListGlobalPartiesResult,
-  GetGlobalPartyQuery,
-  GetGlobalPartyResult,
-  SearchGlobalPartiesByEmailQuery,
-  SearchGlobalPartiesByEmailResult
-} from "@/app/ports/global-parties";
-
-/**
- * @description Dependencies for the Global Parties Queries adapter.
- */
-export interface MakeGlobalPartiesQueriesPortDeps {
-  globalParties: GlobalPartyRepository;
-}
+  ListGlobalPartiesAppInput, 
+  ListGlobalPartiesAppResult,
+  GetGlobalPartyAppInput,
+  GetGlobalPartyAppResult,
+  SearchGlobalPartiesByEmailAppInput,
+  SearchGlobalPartiesByEmailAppResult
+} from "../../../shared/types/global-parties";
+import type { 
+  MakeGlobalPartiesQueriesPortDeps 
+} from "../../../shared/types/global-parties";
 
 /**
  * @description Creates GlobalPartiesQueriesPort implementation.
@@ -33,8 +28,7 @@ export const makeGlobalPartiesQueriesPort = (
   deps: MakeGlobalPartiesQueriesPortDeps
 ): GlobalPartiesQueriesPort => {
   return {
-    async list(query: ListGlobalPartiesQuery): Promise<ListGlobalPartiesResult> {
-      // TODO: Implement proper filtering and pagination when repository is available
+    async list(query: ListGlobalPartiesAppInput): Promise<ListGlobalPartiesAppResult> {
       const globalParties = await deps.globalParties.list({
         tenantId: query.tenantId,
         search: query.search,
@@ -46,33 +40,28 @@ export const makeGlobalPartiesQueriesPort = (
         cursor: query.cursor,
       });
 
-      return {
-        globalParties: globalParties.items,
-        nextCursor: globalParties.nextCursor,
-        total: globalParties.total,
-      };
+      return globalParties;
     },
 
-    async getById(query: GetGlobalPartyQuery): Promise<GetGlobalPartyResult> {
-      const globalParty = await deps.globalParties.getById(query.globalPartyId);
+    async getById(query: GetGlobalPartyAppInput): Promise<GetGlobalPartyAppResult> {
+      const globalParty = await deps.globalParties.getById(query.partyId);
       
       // Filter by tenant for security
       if (globalParty && globalParty.tenantId !== query.tenantId) {
-        return { globalParty: null };
+        return { party: null };
       }
 
-      return { globalParty };
+      return { party: globalParty };
     },
 
-    async searchByEmail(query: SearchGlobalPartiesByEmailQuery): Promise<SearchGlobalPartiesByEmailResult> {
-      // TODO: Implement email search when repository supports it
+    async searchByEmail(query: SearchGlobalPartiesByEmailAppInput): Promise<SearchGlobalPartiesByEmailAppResult> {
       const globalParties = await deps.globalParties.searchByEmail({
         tenantId: query.tenantId,
         email: query.email,
         limit: query.limit || 10,
       });
 
-      return { globalParties };
+      return globalParties;
     },
   };
 };

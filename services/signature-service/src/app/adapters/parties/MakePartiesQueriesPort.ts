@@ -2,40 +2,38 @@
  * @file MakePartiesQueriesPort.ts
  * @summary Adapter factory for Parties Queries Port
  * @description Creates PartiesQueriesPort implementation using DynamoDB repository.
- * Handles list, get by ID, and get by email operations for envelope-scoped Parties.
+ * Handles list, get by ID, and search by email operations for envelope-scoped Parties.
  */
 
-import type { PartiesQueriesPort } from "@/app/ports/parties";
-import type { PartyRepository } from "@/infra/repos/PartyRepository";
-import type { 
-  ListPartiesQuery, 
-  ListPartiesResult,
-  GetPartyQuery,
-  GetPartyResult,
-  GetPartiesByEmailQuery,
-  GetPartiesByEmailResult
-} from "@/app/ports/parties";
+import type { PartiesQueriesPort } from "../../ports/parties";
+import type { Repository } from "@lawprotect/shared-ts";
+import type { Party } from "../../../domain/entities/Party";
+import type { PartyKey } from "../../../shared/types/infrastructure/dynamodb";
+import { 
+  ListPartiesAppInput,
+  ListPartiesAppResult,
+  SearchPartiesByEmailAppInput,
+  SearchPartiesByEmailAppResult,
+  GetPartyAppInput,
+  GetPartyAppResult
+} from "../../../shared/types/parties";
 
-/**
- * @description Dependencies for the Parties Queries adapter.
- */
-export interface MakePartiesQueriesPortDeps {
-  parties: PartyRepository;
-}
 
 /**
  * @description Creates PartiesQueriesPort implementation.
  * 
- * @param deps - Dependencies for the adapter
+ * @param partiesRepo - Party repository implementation
+ * @param ids - ID generation service
  * @returns PartiesQueriesPort implementation
  */
-export const makePartiesQueriesPort = (
-  deps: MakePartiesQueriesPortDeps
-): PartiesQueriesPort => {
+export function makePartiesQueriesPort(
+  partiesRepo: Repository<Party, PartyKey, undefined>,
+
+): PartiesQueriesPort {
   return {
-    async list(query: ListPartiesQuery): Promise<ListPartiesResult> {
-      // TODO: Implement proper filtering and pagination when repository is available
-      const parties = await deps.parties.listByEnvelope({
+    async list(query: ListPartiesAppInput): Promise<ListPartiesAppResult> {
+      // Use the existing repository method
+      const result = await (partiesRepo as any).listByEnvelope({
         tenantId: query.tenantId,
         envelopeId: query.envelopeId,
         role: query.role,
@@ -45,35 +43,39 @@ export const makePartiesQueriesPort = (
       });
 
       return {
-        parties: parties.items,
-        nextCursor: parties.nextCursor,
-        total: parties.total,
+        parties: result.items,
+        nextCursor: result.nextCursor,
+        total: result.total,
       };
     },
 
-    async getById(query: GetPartyQuery): Promise<GetPartyResult> {
-      const party = await deps.parties.getById(query.partyId, query.envelopeId);
+    async getById(query: GetPartyAppInput): Promise<GetPartyAppResult> {
+      const party = await partiesRepo.getById({ 
+        envelopeId: query.envelopeId, 
+        partyId: query.partyId 
+      });
       
       // Filter by tenant for security
       if (party && party.tenantId !== query.tenantId) {
         return { party: null };
       }
 
-      return { party };
+      return { 
+        party: party
+      };
     },
 
-    async getByEmail(query: GetPartiesByEmailQuery): Promise<GetPartiesByEmailResult> {
-      // TODO: Implement email search when repository supports it
-      const parties = await deps.parties.getByEmail({
+    async searchByEmail(query: SearchPartiesByEmailAppInput): Promise<SearchPartiesByEmailAppResult> {
+      // Use the existing repository method
+      const result = await (partiesRepo as any).getByEmail({
         tenantId: query.tenantId,
         envelopeId: query.envelopeId,
         email: query.email,
       });
 
-      return { parties };
+      return { 
+        parties: result.items
+      };
     },
   };
-};
-
-
-
+}

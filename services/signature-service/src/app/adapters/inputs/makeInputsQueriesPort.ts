@@ -6,7 +6,7 @@
  */
 
 import type { InputsQueriesPort } from "@/app/ports/inputs/InputsQueriesPort";
-import type { InputRepositoryDdb } from "@/adapters/dynamodb/InputRepositoryDdb";
+import type { InputRepositoryDdb } from "@/infrastructure/dynamodb/InputRepositoryDdb";
 import { listInputs } from "@/use-cases/inputs/ListInputs";
 import { getInput } from "@/use-cases/inputs/GetInput";
 

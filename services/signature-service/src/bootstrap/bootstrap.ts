@@ -20,8 +20,6 @@ import { logger } from "@lawprotect/shared-ts";
 export interface App {
   /** Dependency injection container instance */
   container: Container;
-  /** Services from the container */
-  services: Container["services"];
   /** Application configuration */
   config: Container["config"];
   /** CORS configuration derived from environment */
@@ -43,7 +41,6 @@ export function initApp(): App {
   const container = getContainer();
   appSingleton = {
     container,
-    services: container.services,
     config: container.config,
     cors: corsFromEnv(),
   };

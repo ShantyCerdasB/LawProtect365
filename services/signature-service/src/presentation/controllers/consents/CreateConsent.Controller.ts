@@ -4,7 +4,7 @@
  * @description Handles POST /envelopes/:envelopeId/consents requests using command controller factory
  */
 
-import { createCommandController } from "../../../shared/controllers/commandControllerFactory";
+import { createCommandController } from "../../../shared/controllers/controllerFactory";
 import { makeConsentCommandsPort } from "../../../app/adapters/consent/MakeConsentCommandsPort";
 import { ConsentCommandService } from "../../../app/services/Consent/ConsentCommandService";
 import type { CreateConsentControllerInput } from "../../../shared/types/consent/ControllerInputs";

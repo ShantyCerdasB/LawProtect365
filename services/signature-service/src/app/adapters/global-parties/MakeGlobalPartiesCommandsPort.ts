@@ -5,9 +5,8 @@
  * Handles create, update, and delete operations for Global Parties (contacts).
  */
 
-import type { GlobalPartiesCommandsPort } from "@/app/ports/global-parties";
-import type { GlobalPartyRepository } from "@/infra/repos/GlobalPartyRepository";
-import type { EventBus } from "@/infra/events/EventBus";
+import type { GlobalPartiesCommandsPort } from "../../ports/global-parties";
+import type { GlobalPartiesRepository } from "../../../shared/contracts/repositories/global-parties/GlobalPartiesRepository";
 import type { 
   CreateGlobalPartyCommand, 
   CreateGlobalPartyResult,
@@ -15,20 +14,52 @@ import type {
   UpdateGlobalPartyResult,
   DeleteGlobalPartyCommand,
   DeleteGlobalPartyResult
-} from "@/app/ports/global-parties";
-import { GlobalParty } from "@/domain/entities/GlobalParty";
-import { GlobalPartyStatus, PartyRole, PartySource } from "@/domain/values/enums";
-import { createGlobalPartyStats } from "@/domain/value-objects/global-party/GlobalPartyStats";
-import { createGlobalPartyTags } from "@/domain/value-objects/global-party/GlobalPartyTags";
-import { generateId } from "@/domain/value-objects/Ids";
+} from "../../ports/global-parties";
+import type { 
+  GlobalPartyRow,
+} from "../../../shared/types/global-parties";
+import type { PartyId } from "../../../domain/value-objects/Ids";
+import { 
+  GLOBAL_PARTY_STATUSES, 
+  PARTY_ROLES, 
+  PARTY_SOURCES,
+  AUTH_METHODS,
+  GlobalPartyUpdatableField
+} from "../../../domain/values/enums";
+import {  nowIso } from "@lawprotect/shared-ts";
+import { NotFoundError } from "@lawprotect/shared-ts";
+import type { GlobalPartiesValidationService } from "../../../shared/types/global-parties/ServiceInterfaces";
+import type { GlobalPartiesAuditService } from "../../../shared/types/global-parties/ServiceInterfaces";
+import type { GlobalPartiesEventService } from "../../../shared/types/global-parties/ServiceInterfaces";
+
+/**
+ * @description Creates default Global Party statistics
+ */
+const createDefaultGlobalPartyStats = () => ({
+  signedCount: 0,
+  totalEnvelopes: 0,
+});
+
+/**
+ * @description Creates normalized Global Party tags
+ */
+const createNormalizedTags = (tags: string[]): string[] => {
+  const normalized = tags.map(tag => tag.trim().toLowerCase());
+  const uniqueTags = new Set(normalized);
+  return Array.from(uniqueTags);
+};
 
 /**
  * @description Dependencies for the Global Parties Commands adapter.
  */
-export interface MakeGlobalPartiesCommandsPortDeps {
-  globalParties: GlobalPartyRepository;
-  events: EventBus;
-}
+export type MakeGlobalPartiesCommandsPortDeps = {
+  globalParties: GlobalPartiesRepository;
+  ids: { ulid(): string };
+  // Optional services - PATTERN REUTILIZABLE
+  validationService?: GlobalPartiesValidationService;
+  auditService?: GlobalPartiesAuditService;
+  eventService?: GlobalPartiesEventService;
+};
 
 /**
  * @description Creates GlobalPartiesCommandsPort implementation.
@@ -41,92 +72,179 @@ export const makeGlobalPartiesCommandsPort = (
 ): GlobalPartiesCommandsPort => {
   return {
     async create(command: CreateGlobalPartyCommand): Promise<CreateGlobalPartyResult> {
-      const now = new Date().toISOString();
-      const globalPartyId = generateId();
+      // 1. VALIDATION (opcional) - PATRÓN REUTILIZABLE
+      if (deps.validationService) {
+        deps.validationService.validateCreate(command);
+      }
 
-      const globalParty: GlobalParty = {
-        id: globalPartyId,
+      const now = nowIso();
+      const globalPartyId = deps.ids.ulid();
+
+      const globalParty: GlobalPartyRow = {
+        partyId: globalPartyId as PartyId,
         tenantId: command.tenantId,
         name: command.name,
         email: command.email,
         emails: command.emails,
         phone: command.phone,
         locale: command.locale,
-        role: command.role,
-        source: command.source,
-        status: "active" as GlobalPartyStatus,
-        tags: command.tags ? createGlobalPartyTags(command.tags) : undefined,
+        role: command.role || PARTY_ROLES[0], // Default to first role
+        source: command.source || PARTY_SOURCES[0], // Default to first source
+        status: GLOBAL_PARTY_STATUSES[0], // 'active'
+        tags: command.tags ? createNormalizedTags(command.tags) : undefined,
         attributes: command.attributes,
         preferences: {
-          defaultAuth: command.preferences?.defaultAuth || "otpViaEmail",
+          defaultAuth: command.preferences?.defaultAuth ?? AUTH_METHODS[0],
           defaultLocale: command.preferences?.defaultLocale || command.locale,
         },
-        notificationPreferences: command.notificationPreferences,
-        stats: createGlobalPartyStats({}),
+        notificationPreferences: { 
+          email: command.notificationPreferences?.email ?? true, 
+          sms: command.notificationPreferences?.sms ?? false 
+        },
+        stats: createDefaultGlobalPartyStats(),
         createdAt: now,
         updatedAt: now,
       };
 
-      await deps.globalParties.create(globalParty);
+      await deps.globalParties.create({
+        partyId: globalParty.partyId,
+        tenantId: globalParty.tenantId,
+        name: globalParty.name,
+        email: globalParty.email,
+        emails: globalParty.emails,
+        phone: globalParty.phone,
+        locale: globalParty.locale,
+        role: globalParty.role,
+        source: globalParty.source,
+        status: globalParty.status,
+        tags: globalParty.tags,
+        metadata: globalParty.metadata,
+        attributes: globalParty.attributes,
+        preferences: globalParty.preferences,
+        notificationPreferences: globalParty.notificationPreferences,
+        stats: globalParty.stats,
+      });
 
-      // TODO: Emit domain events when event bus is available
-      // await deps.events.emit("GlobalPartyCreated", {
-      //   globalPartyId: globalParty.id,
-      //   tenantId: globalParty.tenantId,
-      //   actor: command.actor,
-      // });
+      // 3. AUDIT (opcional) - MISMO PATRÓN
+      if (deps.auditService) {
+        deps.auditService.logCreate(globalParty.partyId, command.tenantId, command.actor);
+      }
+
+      // 4. EVENTS (opcional) - MISMO PATRÓN
+      if (deps.eventService) {
+        deps.eventService.publishCreated(globalParty.partyId, command.tenantId, command.actor);
+      }
 
       return { globalParty };
     },
 
     async update(command: UpdateGlobalPartyCommand): Promise<UpdateGlobalPartyResult> {
-      const existing = await deps.globalParties.getById(command.globalPartyId);
-      if (!existing) {
-        throw new Error(`Global Party with ID ${command.globalPartyId} not found`);
+      // 1. VALIDATION (opcional) - PATRÓN REUTILIZABLE
+      if (deps.validationService) {
+        deps.validationService.validateUpdate(command);
       }
 
-      const now = new Date().toISOString();
-      const updatedGlobalParty: GlobalParty = {
+      const existing = await deps.globalParties.getById(command.partyId);
+      if (!existing) {
+        throw new NotFoundError(`Global Party with ID ${command.partyId} not found`);
+      }
+
+      const now = nowIso();
+      const updatedGlobalParty: GlobalPartyRow = {
         ...existing,
         ...command.updates,
-        tags: command.updates.tags ? createGlobalPartyTags(command.updates.tags) : existing.tags,
+        tags: command.updates.tags ? createNormalizedTags(command.updates.tags) : existing.tags,
+        preferences: command.updates.preferences ? {
+          defaultAuth: command.updates.preferences.defaultAuth ?? existing.preferences.defaultAuth,
+          defaultLocale: command.updates.preferences.defaultLocale ?? existing.preferences.defaultLocale,
+        } : existing.preferences,
+        notificationPreferences: command.updates.notificationPreferences ? {
+          email: command.updates.notificationPreferences.email ?? existing.notificationPreferences.email,
+          sms: command.updates.notificationPreferences.sms ?? existing.notificationPreferences.sms,
+        } : existing.notificationPreferences,
+        stats: command.updates.stats ? {
+          signedCount: command.updates.stats.signedCount ?? existing.stats.signedCount,
+          totalEnvelopes: command.updates.stats.totalEnvelopes ?? existing.stats.totalEnvelopes,
+        } : existing.stats,
         updatedAt: now,
       };
 
-      await deps.globalParties.update(updatedGlobalParty);
+      // Create compatible updates object using enums
+      const compatibleUpdates: Partial<Pick<GlobalPartyRow, 
+        GlobalPartyUpdatableField
+      >> = {
+        ...command.updates,
+        tags: command.updates.tags ? createNormalizedTags(command.updates.tags) : undefined,
+        role: command.updates.role || existing.role,
+        source: command.updates.source || existing.source,
+        status: command.updates.status || existing.status,
+        preferences: command.updates.preferences ? {
+          defaultAuth: command.updates.preferences.defaultAuth ?? existing.preferences.defaultAuth,
+          defaultLocale: command.updates.preferences.defaultLocale ?? existing.preferences.defaultLocale,
+        } : undefined,
+        notificationPreferences: command.updates.notificationPreferences ? {
+          email: command.updates.notificationPreferences.email ?? existing.notificationPreferences.email,
+          sms: command.updates.notificationPreferences.sms ?? existing.notificationPreferences.sms,
+        } : undefined,
+        stats: command.updates.stats ? {
+          signedCount: command.updates.stats.signedCount ?? existing.stats.signedCount,
+          totalEnvelopes: command.updates.stats.totalEnvelopes ?? existing.stats.totalEnvelopes,
+        } : undefined,
+      };
 
-      // TODO: Emit domain events when event bus is available
-      // await deps.events.emit("GlobalPartyUpdated", {
-      //   globalPartyId: updatedGlobalParty.id,
-      //   tenantId: updatedGlobalParty.tenantId,
-      //   actor: command.actor,
-      // });
+      await deps.globalParties.update({
+        tenantId: command.tenantId,
+        partyId: command.partyId,
+        updates: compatibleUpdates,
+      });
+
+      // 3. AUDIT (opcional) - MISMO PATRÓN
+      if (deps.auditService) {
+        deps.auditService.logUpdate(updatedGlobalParty.partyId, command.tenantId, command.actor);
+      }
+
+      // 4. EVENTS (opcional) - MISMO PATRÓN
+      if (deps.eventService) {
+        deps.eventService.publishUpdated(updatedGlobalParty.partyId, command.tenantId, command.actor);
+      }
 
       return { globalParty: updatedGlobalParty };
     },
 
     async delete(command: DeleteGlobalPartyCommand): Promise<DeleteGlobalPartyResult> {
-      const existing = await deps.globalParties.getById(command.globalPartyId);
+      // 1. VALIDATION (opcional) - PATRÓN REUTILIZABLE
+      if (deps.validationService) {
+        deps.validationService.validateDelete(command);
+      }
+
+      const existing = await deps.globalParties.getById(command.partyId);
       if (!existing) {
-        throw new Error(`Global Party with ID ${command.globalPartyId} not found`);
+        throw new NotFoundError(`Global Party with ID ${command.partyId} not found`);
       }
 
       // Soft delete by updating status
-      const now = new Date().toISOString();
-      const deletedGlobalParty: GlobalParty = {
+      const now = nowIso();
+      const deletedGlobalParty: GlobalPartyRow = {
         ...existing,
-        status: "deleted" as GlobalPartyStatus,
+        status: GLOBAL_PARTY_STATUSES[2], // 'deleted'
         updatedAt: now,
       };
 
-      await deps.globalParties.update(deletedGlobalParty);
+      await deps.globalParties.update({
+        tenantId: command.tenantId,
+        partyId: command.partyId,
+        updates: { status: GLOBAL_PARTY_STATUSES[2] }, // 'deleted'
+      });
 
-      // TODO: Emit domain events when event bus is available
-      // await deps.events.emit("GlobalPartyDeleted", {
-      //   globalPartyId: deletedGlobalParty.id,
-      //   tenantId: deletedGlobalParty.tenantId,
-      //   actor: command.actor,
-      // });
+      // 3. AUDIT (opcional) - MISMO PATRÓN
+      if (deps.auditService) {
+        deps.auditService.logDelete(deletedGlobalParty.partyId, command.tenantId, command.actor);
+      }
+
+      // 4. EVENTS (opcional) - MISMO PATRÓN
+      if (deps.eventService) {
+        deps.eventService.publishDeleted(deletedGlobalParty.partyId, command.tenantId, command.actor);
+      }
 
       return { deleted: true };
     },

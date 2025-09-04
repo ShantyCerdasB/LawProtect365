@@ -1,9 +1,9 @@
 /**
  * @file index.ts
  * @summary Barrel export for idempotency types
- * @description Exports all idempotency-related types and options
+ * @description Exports all idempotency types and interfaces
  */
 
 export * from "./IdempotencyTypes";
-export * from "./IdempotencyOptions";
+export * from "./IdempotencyKeyTypes";
 

@@ -28,20 +28,20 @@ export class ConsentCommandService {
   ): Promise<CreateConsentAppResult | UpdateConsentAppResult | void | SubmitConsentAppResult | DelegateConsentAppResult> {
     if ('type' in input && 'status' in input) {
       // CreateConsentAppInput
-      return this.consentCommands.create(input);
+      return this.consentCommands.create(input, actorContext);
     } else if ('status' in input || 'metadata' in input || 'expiresAt' in input) {
       // UpdateConsentAppInput
-      return this.consentCommands.update(input);
+      return this.consentCommands.update(input, actorContext);
     } else if ('delegateEmail' in input) {
       // DelegateConsentAppInput - Pass actor context for audit
       return this.consentCommands.delegate(input, actorContext);
     } else if ('consentId' in input && !('delegateEmail' in input)) {
       if ('envelopeId' in input && Object.keys(input).length === 3) {
         // DeleteConsentAppInput
-        return this.consentCommands.delete(input);
+        return this.consentCommands.delete(input, actorContext);
       } else {
         // SubmitConsentAppInput
-        return this.consentCommands.submit(input);
+        return this.consentCommands.submit(input, actorContext);
       }
     }
     

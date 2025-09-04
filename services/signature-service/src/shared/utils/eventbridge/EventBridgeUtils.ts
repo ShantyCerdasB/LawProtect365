@@ -4,8 +4,9 @@
  * @description Provides helper functions for common EventBridge tasks
  */
 
-import type { EventBridgeEntry } from "../../contracts/eventbridge";
-import type { EventMetadata } from "../../types/eventbridge/EventBridgeTypes";
+import { EventBridgeEntry } from "@/shared/contracts/eventbridge/EventBridgeClientPort";
+
+
 
 /**
  * Converts EventMetadata to EventBridgeEntry format.

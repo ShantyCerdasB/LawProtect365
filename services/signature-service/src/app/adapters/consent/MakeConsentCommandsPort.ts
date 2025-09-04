@@ -25,16 +25,17 @@ import type { ConsentCommandRepo, Ids } from "../../../shared/types/consent/Adap
 import type { ConsentId, EnvelopeId, PartyId } from "../../../domain/value-objects/Ids";
 import type { ConsentStatus, ConsentType } from "../../../domain/values/enums";
 import { nowIso, asISO, asISOOpt } from "@lawprotect/shared-ts";
-import { NotFoundError } from "../../../shared/errors";
 import { mapConsentRowToResult } from "../../../shared/types/consent/ConsentTypes";
 import type { DelegationRepositoryDdb } from "../../../infrastructure/dynamodb/DelegationRepositoryDdb";
-import type { PartyConsentService } from "../../services/Consent/PartyConsentService";
 import type { ConsentValidationService } from "../../services/Consent/ConsentValidationService";
 import type { ConsentAuditService } from "../../services/Consent/ConsentAuditService";
 import type { ConsentEventService } from "../../services/Consent/ConsentEventService";
-import type { UserId } from "@lawprotect/shared-ts";
+
 import type { ActorContext } from "../../../domain/entities/ActorContext";
 import type { IdempotencyRunner } from "../../../infrastructure/idempotency/IdempotencyRunner";
+import type { GlobalPartiesRepository } from "../../../shared/contracts/repositories/global-parties/GlobalPartiesRepository";
+import type { FindOrCreatePartyInput } from "../../../shared/types/global-parties";
+import { NotFoundError, BadRequestError } from "../../../shared/errors";
 
 /**
  * @summary Maps a repository row to an update result
@@ -86,15 +87,19 @@ export function makeConsentCommandsPort(
   consentsRepo: ConsentCommandRepo,
   delegationsRepo: DelegationRepositoryDdb,
   ids: Ids,
-  partyConsentService: PartyConsentService,
+  globalPartiesRepo: GlobalPartiesRepository,
   validationService: ConsentValidationService,
   auditService: ConsentAuditService,
   eventService: ConsentEventService,
   idempotencyRunner: IdempotencyRunner
 ): ConsentCommandsPort {
-  // Helper function for delegation logic
+  
+  /**
+   * @summary Performs the actual consent delegation logic
+   * @description Internal function that handles the delegation process
+   */
   async function performDelegation(input: DelegateConsentAppInput, actorContext?: ActorContext): Promise<DelegateConsentAppResult> {
-    // 1. VALIDATION
+    // 1. VALIDATION (if validation service available)
     if (validationService) {
       await validationService.validateConsentDelegation({
         tenantId: input.tenantId,
@@ -115,18 +120,12 @@ export function makeConsentCommandsPort(
       throw new NotFoundError('Consent not found', undefined, { consentId: input.consentId });
     }
 
-    // 3. CREATE/FIND DELEGATE PARTY
-    let delegatePartyId: PartyId;
-    if (partyConsentService) {
-      delegatePartyId = await partyConsentService.findOrCreatePartyForDelegate({
-        tenantId: input.tenantId,
-        email: input.delegateEmail,
-        name: input.delegateName
-      });
-    } else {
-      // Fallback: generate a new party ID if service is not available
-      delegatePartyId = ids.ulid() as PartyId;
-    }
+    // 3. FIND OR CREATE DELEGATE PARTY
+    const delegatePartyId = await findOrCreatePartyForDelegate({
+      tenantId: input.tenantId,
+      email: input.delegateEmail,
+      name: input.delegateName
+    });
 
     // 4. Create delegation record
     const delegation = await delegationsRepo.create({
@@ -152,14 +151,11 @@ export function makeConsentCommandsPort(
     );
 
     // 6. AUDIT - Use actor context if available, fallback to system context
-    if (auditService) {
+    if (auditService && actorContext) {
       const auditContext = {
         tenantId: input.tenantId,
         envelopeId: input.envelopeId,
-        actor: actorContext || { 
-          userId: "system" as UserId, 
-          email: "system@lawprotect.com" 
-        }
+        actor: actorContext
       };
       
       await auditService.logConsentDelegation(auditContext, {
@@ -204,6 +200,62 @@ export function makeConsentCommandsPort(
     };
   }
 
+  /**
+   * @summary Finds an existing party by email or creates a new one for delegation
+   * @description Searches for a party with the given email in the tenant. If not found,
+   * creates a new party record for the delegate.
+   */
+  async function findOrCreatePartyForDelegate(
+    input: FindOrCreatePartyInput
+  ): Promise<PartyId> {
+    // Validate input
+    if (!input.email?.trim() || !input.name?.trim()) {
+      throw new BadRequestError("Email and name are required for party delegation");
+    }
+
+    // First, try to find existing party by email
+    const existingParty = await globalPartiesRepo.findByEmail({
+      tenantId: input.tenantId,
+      email: input.email
+    });
+
+    if (existingParty && existingParty.party) {
+      return existingParty.party.partyId as PartyId;
+    }
+
+    // If not found, create a new party for the delegate
+    const newPartyId = ids.ulid() as PartyId;
+    
+    await globalPartiesRepo.create({
+      partyId: newPartyId,
+      tenantId: input.tenantId,
+      email: input.email,
+      name: input.name,
+      role: "signer" as any, // Default role for delegates
+      source: "manual" as any, // Default source
+      status: "active" as any, // Default status
+      preferences: {
+        defaultAuth: "otpViaEmail" as any,
+        defaultLocale: undefined,
+      },
+      notificationPreferences: {
+        email: true,
+        sms: false,
+      },
+      stats: {
+        signedCount: 0,
+        totalEnvelopes: 0,
+      },
+      metadata: {
+        createdFor: "consent-delegation",
+        originalEmail: input.email,
+        originalName: input.name
+      }
+    });
+
+    return newPartyId;
+  }
+
   return {
     /**
      * @summary Creates a new consent
@@ -211,9 +263,10 @@ export function makeConsentCommandsPort(
      * Validates enum values and brands ISO date strings for type safety.
      *
      * @param {CreateConsentAppInput} input - Consent creation parameters
+     * @param {ActorContext} [actorContext] - Optional actor context for audit purposes
      * @returns {Promise<CreateConsentAppResult>} Promise resolving to the created consent data
      */
-    async create(input: CreateConsentAppInput): Promise<CreateConsentAppResult> {
+    async create(input: CreateConsentAppInput, actorContext?: ActorContext): Promise<CreateConsentAppResult> {
       // Implement idempotency if key is provided
       if (input.idempotencyKey) {
         return idempotencyRunner.run(
@@ -231,7 +284,26 @@ export function makeConsentCommandsPort(
               createdAt: asISO(nowIso()),
             });
 
-            return mapConsentRowToResult(row);
+            const result = mapConsentRowToResult(row);
+
+            // ✅ AUDIT: Log consent creation if audit service available
+            if (auditService && actorContext) {
+              await auditService.logBusinessEvent({
+                tenantId: input.tenantId,
+                envelopeId: input.envelopeId,
+                actor: actorContext,
+              }, {
+                eventType: "consent.created",
+                consentId: result.id,
+                partyId: input.partyId,
+                consentType: input.type,
+                status: input.status,
+                metadata: input.metadata,
+                expiresAt: input.expiresAt,
+              });
+            }
+
+            return result;
           },
           input.ttlSeconds
         );
@@ -250,7 +322,26 @@ export function makeConsentCommandsPort(
         createdAt: asISO(nowIso()),
       });
 
-      return mapConsentRowToResult(row);
+      const result = mapConsentRowToResult(row);
+
+      // ✅ AUDIT: Log consent creation if audit service available
+      if (auditService && actorContext) {
+        await auditService.logBusinessEvent({
+          tenantId: input.tenantId,
+          envelopeId: input.envelopeId,
+          actor: actorContext,
+        }, {
+          eventType: "consent.created",
+          consentId: result.id,
+          partyId: input.partyId,
+          consentType: input.type,
+          status: input.status,
+          metadata: input.metadata,
+          expiresAt: input.expiresAt,
+        });
+      }
+
+      return result;
     },
 
     /**
@@ -259,9 +350,10 @@ export function makeConsentCommandsPort(
      * Validates status enum if provided and brands ISO date strings.
      *
      * @param {UpdateConsentAppInput} input - The consent update parameters
+     * @param {ActorContext} [actorContext] - Optional actor context for audit purposes
      * @returns {Promise<UpdateConsentAppResult>} Promise resolving to the updated consent data
      */
-    async update(input: UpdateConsentAppInput): Promise<UpdateConsentAppResult> {
+    async update(input: UpdateConsentAppInput, actorContext?: ActorContext): Promise<UpdateConsentAppResult> {
       // Implement idempotency if key is provided
       if (input.idempotencyKey) {
         return idempotencyRunner.run(
@@ -279,7 +371,33 @@ export function makeConsentCommandsPort(
               changes
             );
 
-            return mapRowToUpdateResult(row);
+            const result = mapRowToUpdateResult(row);
+
+            // ✅ AUDIT: Log consent update if audit service available
+            if (auditService && actorContext) {
+              await auditService.logConsentUpdate({
+                tenantId: input.tenantId,
+                envelopeId: input.envelopeId,
+                actor: actorContext,
+              }, {
+                consentId: input.consentId,
+                previousStatus: row.status,
+                newStatus: input.status || row.status,
+                reason: "manual_update",
+                metadata: {
+                  changes: {
+                    status: input.status,
+                    expiresAt: input.expiresAt,
+                    metadata: input.metadata,
+                  },
+                  previousStatus: row.status,
+                  previousExpiresAt: row.expiresAt,
+                  previousMetadata: row.metadata,
+                },
+              });
+            }
+
+            return result;
           },
           input.ttlSeconds
         );
@@ -298,7 +416,33 @@ export function makeConsentCommandsPort(
         changes
       );
 
-      return mapRowToUpdateResult(row);
+      const result = mapRowToUpdateResult(row);
+
+      // ✅ AUDIT: Log consent update if audit service available
+      if (auditService && actorContext) {
+        await auditService.logConsentUpdate({
+          tenantId: input.tenantId,
+          envelopeId: input.envelopeId,
+          actor: actorContext,
+        }, {
+          consentId: input.consentId,
+          previousStatus: row.status,
+          newStatus: input.status || row.status,
+          reason: "manual_update",
+          metadata: {
+            changes: {
+              status: input.status,
+              expiresAt: input.expiresAt,
+              metadata: input.metadata,
+            },
+            previousStatus: row.status,
+            previousExpiresAt: row.expiresAt,
+            previousMetadata: row.metadata,
+          },
+        });
+      }
+
+      return result;
     },
 
     /**
@@ -306,9 +450,24 @@ export function makeConsentCommandsPort(
      * @description Deletes a consent record from the repository
      *
      * @param {DeleteConsentAppInput} input - The consent deletion parameters
+     * @param {ActorContext} [actorContext] - Optional actor context for audit purposes
      * @returns {Promise<void>} Promise resolving when deletion is complete
      */
-    async delete(input: DeleteConsentAppInput): Promise<void> {
+    async delete(input: DeleteConsentAppInput, actorContext?: ActorContext): Promise<void> {
+      // Get consent details before deletion for audit
+      let consentDetails: ConsentRepoRow | null = null;
+      if (auditService && actorContext) {
+        try {
+          // Use the existing getById method from the repository
+          consentDetails = await consentsRepo.getById({
+            envelopeId: input.envelopeId,
+            consentId: input.consentId,
+          });
+        } catch (error) {
+          // If consent not found, proceed with deletion anyway
+        }
+      }
+
       // Implement idempotency if key is provided
       if (input.idempotencyKey) {
         return idempotencyRunner.run(
@@ -318,6 +477,24 @@ export function makeConsentCommandsPort(
               envelopeId: input.envelopeId, 
               consentId: input.consentId 
             });
+
+            // ✅ AUDIT: Log consent deletion if audit service available
+            if (auditService && actorContext && consentDetails) {
+              await auditService.logBusinessEvent({
+                tenantId: consentDetails.tenantId as any, // Cast to avoid branded type issues
+                envelopeId: input.envelopeId,
+                actor: actorContext,
+              }, {
+                eventType: "consent.deleted",
+                consentId: input.consentId,
+                partyId: consentDetails.partyId,
+                consentType: consentDetails.consentType,
+                status: consentDetails.status,
+                metadata: consentDetails.metadata,
+                expiresAt: consentDetails.expiresAt,
+                deletedAt: asISO(nowIso()),
+              });
+            }
           },
           input.ttlSeconds
         );
@@ -328,6 +505,24 @@ export function makeConsentCommandsPort(
         envelopeId: input.envelopeId, 
         consentId: input.consentId 
       });
+
+      // ✅ AUDIT: Log consent deletion if audit service available
+      if (auditService && actorContext && consentDetails) {
+        await auditService.logBusinessEvent({
+          tenantId: consentDetails.tenantId as any, // Cast to avoid branded type issues
+          envelopeId: input.envelopeId,
+          actor: actorContext,
+        }, {
+          eventType: "consent.deleted",
+          consentId: input.consentId,
+          partyId: consentDetails.partyId,
+          consentType: consentDetails.consentType,
+          status: consentDetails.status,
+          metadata: consentDetails.metadata,
+          expiresAt: consentDetails.expiresAt,
+          deletedAt: asISO(nowIso()),
+        });
+      }
     },
 
     /**
@@ -335,9 +530,23 @@ export function makeConsentCommandsPort(
      * @description Submits a consent for approval or processing
      *
      * @param {SubmitConsentAppInput} input - The consent submission parameters
+     * @param {ActorContext} [actorContext] - Optional actor context for audit purposes
      * @returns {Promise<SubmitConsentAppResult>} Promise resolving to the submitted consent data
      */
-    async submit(input: SubmitConsentAppInput): Promise<SubmitConsentAppResult> {
+    async submit(input: SubmitConsentAppInput, actorContext?: ActorContext): Promise<SubmitConsentAppResult> {
+      // Get consent details before submission for audit
+      let previousConsent: ConsentRepoRow | null = null;
+      if (auditService && actorContext) {
+        try {
+          previousConsent = await consentsRepo.getById({
+            envelopeId: input.envelopeId,
+            consentId: input.consentId,
+          });
+        } catch (error) {
+          // If consent not found, proceed with submission anyway
+        }
+      }
+
       // Implement idempotency if key is provided
       if (input.idempotencyKey) {
         return idempotencyRunner.run(
@@ -351,7 +560,29 @@ export function makeConsentCommandsPort(
               }
             );
 
-            return mapRowToSubmitResult(row);
+            const result = mapRowToSubmitResult(row);
+
+            // ✅ AUDIT: Log consent submission if audit service available
+            if (auditService && actorContext && previousConsent) {
+              await auditService.logConsentUpdate({
+                tenantId: previousConsent.tenantId as any, // Cast to avoid branded type issues
+                envelopeId: input.envelopeId,
+                actor: actorContext,
+              }, {
+                consentId: input.consentId,
+                previousStatus: previousConsent.status,
+                newStatus: "granted",
+                reason: "consent_submitted",
+                metadata: {
+                  previousStatus: previousConsent.status,
+                  previousMetadata: previousConsent.metadata,
+                  previousExpiresAt: previousConsent.expiresAt,
+                  submittedAt: result.submittedAt,
+                },
+              });
+            }
+
+            return result;
           },
           input.ttlSeconds
         );
@@ -366,7 +597,29 @@ export function makeConsentCommandsPort(
         }
       );
 
-      return mapRowToSubmitResult(row);
+      const result = mapRowToSubmitResult(row);
+
+      // ✅ AUDIT: Log consent submission if audit service available
+      if (auditService && actorContext && previousConsent) {
+        await auditService.logConsentUpdate({
+          tenantId: previousConsent.tenantId as any, // Cast to avoid branded type issues
+          envelopeId: input.envelopeId,
+          actor: actorContext,
+        }, {
+          consentId: input.consentId,
+          previousStatus: previousConsent.status,
+          newStatus: "granted",
+          reason: "consent_submitted",
+          metadata: {
+            previousStatus: previousConsent.status,
+            previousMetadata: previousConsent.metadata,
+            previousExpiresAt: previousConsent.expiresAt,
+            submittedAt: result.submittedAt,
+          },
+        });
+      }
+
+      return result;
     },
 
     /**

@@ -60,7 +60,7 @@ export const assertEnvelopeDraftForPartyModification = async (
     throw invalidPartyState("Party can only be modified when envelope is in draft state");
   }
   
-  return envelope as any; // TODO: Update when proper Envelope entity is available
+  return envelope;
 };
 
 /**

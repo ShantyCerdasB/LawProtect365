@@ -4,7 +4,6 @@
  * @description Zod schema for validating pagination cursor branded type
  */
 
-import { z } from "zod";
 import { PaginationCursorSchema } from "../../../../domain/value-objects/PaginationCursor";
 
 /**

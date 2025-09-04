@@ -1,76 +1,107 @@
 /**
  * @file EnvelopesCommandsPort.ts
- * @description Port for envelope command operations defining write operations on envelopes.
- * Provides methods to create, update, and delete envelopes with proper business rule validation.
+ * @summary Commands port for envelope operations
+ * @description Defines the interface for envelope command operations
  */
+
+import type { Envelope } from "../../../domain/entities/Envelope";
+import type { EnvelopeId, TenantId, UserId } from "../../../domain/value-objects/Ids";
+import type { EnvelopeStatus } from "../../../domain/value-objects/EnvelopeStatus";
 
 /**
- * @file EnvelopesCommandsPort.ts
- * @summary Port for envelope command operations
- * @description Defines the interface for write operations on envelopes.
- * This port provides methods to create, update, and delete envelopes.
- * Used by application services to modify envelope data.
+ * @summary Base interface for envelope operations
+ * @description Common attributes shared across envelope operations
  */
-
-import type { TenantId, UserId, EnvelopeId, ActorContext } from "../shared";
-
-
-
-/**
- * @description Command for creating a new envelope.
- * Contains all required data for envelope creation.
- */
-export interface CreateEnvelopeCommand {
-  /** The tenant ID that owns the envelope */
-  tenantId: TenantId;
-  /** The user ID of the envelope owner */
-  ownerId: UserId;
-  /** The title/name of the envelope */
-  title: string;
-  /** Context information about the actor creating the envelope (optional) */
-  actor?: ActorContext;
+interface BaseEnvelopeCommand {
+  readonly tenantId: TenantId;
+  readonly ownerId: UserId;
 }
 
 /**
- * @description Result of creating a new envelope.
- * Contains the created envelope identifier and creation timestamp.
+ * @summary Base interface for envelope updates
+ * @description Common attributes for update operations
+ */
+interface BaseEnvelopeUpdate {
+  readonly title?: string;
+  readonly status?: EnvelopeStatus;
+  readonly parties?: string[];
+  readonly documents?: string[];
+}
+
+/**
+ * @summary Input for creating an envelope
+ * @description Required data to create a new envelope
+ */
+export interface CreateEnvelopeCommand extends BaseEnvelopeCommand {
+  readonly title: string;
+  readonly status?: EnvelopeStatus;
+  readonly parties?: string[];
+  readonly documents?: string[];
+}
+
+/**
+ * @summary Result of creating an envelope
+ * @description Returns the created envelope entity
  */
 export interface CreateEnvelopeResult {
-  /** The unique identifier of the created envelope */
-  envelopeId: EnvelopeId;
-  /** ISO timestamp when the envelope was created */
-  createdAt: string;
+  readonly envelope: Envelope;
 }
 
 /**
- * @description Port interface for envelope command operations.
- * 
- * This port defines the contract for write operations on envelopes.
- * Implementations should handle data persistence and business rule validation.
+ * @summary Input for updating an envelope
+ * @description Data to update an existing envelope
+ */
+export interface UpdateEnvelopeCommand extends BaseEnvelopeCommand, BaseEnvelopeUpdate {
+  readonly envelopeId: EnvelopeId;
+}
+
+/**
+ * @summary Result of updating an envelope
+ * @description Returns the updated envelope entity
+ */
+export interface UpdateEnvelopeResult {
+  readonly envelope: Envelope;
+}
+
+/**
+ * @summary Input for deleting an envelope
+ * @description Data to delete an envelope
+ */
+export interface DeleteEnvelopeCommand extends BaseEnvelopeCommand {
+  readonly envelopeId: EnvelopeId;
+}
+
+/**
+ * @summary Result of deleting an envelope
+ * @description Confirms the deletion operation
+ */
+export interface DeleteEnvelopeResult {
+  readonly deleted: boolean;
+}
+
+/**
+ * @summary Commands port for envelope operations
+ * @description Defines all command operations for envelopes
  */
 export interface EnvelopesCommandsPort {
   /**
-   * @description Creates a new envelope.
-   *
-   * @param {CreateEnvelopeCommand} command - The envelope creation command with required data
-   * @returns {Promise<CreateEnvelopeResult>} Promise resolving to creation result with envelope ID and timestamp
+   * @summary Creates a new envelope
+   * @param command - Command data for creating an envelope
+   * @returns Promise resolving to the created envelope
    */
   create(command: CreateEnvelopeCommand): Promise<CreateEnvelopeResult>;
 
   /**
-   * @description Updates an existing envelope with partial data.
-   *
-   * @param {EnvelopeId} envelopeId - The unique identifier of the envelope to update
-   * @param {Partial<{ title: string; status: string }>} patch - Partial data containing fields to update (title and/or status)
-   * @returns {Promise<{ envelopeId: EnvelopeId; updatedAt: string }>} Promise resolving to update result with envelope ID and timestamp
+   * @summary Updates an existing envelope
+   * @param command - Command data for updating an envelope
+   * @returns Promise resolving to the updated envelope
    */
-  update(envelopeId: EnvelopeId, patch: Partial<{ title: string; status: string }>): Promise<{ envelopeId: EnvelopeId; updatedAt: string }>;
+  update(command: UpdateEnvelopeCommand): Promise<UpdateEnvelopeResult>;
 
   /**
-   * @description Deletes an envelope.
-   *
-   * @param {EnvelopeId} envelopeId - The unique identifier of the envelope to delete
-   * @returns {Promise<void>} Promise resolving when deletion is complete
+   * @summary Deletes an envelope
+   * @param command - Command data for deleting an envelope
+   * @returns Promise resolving to deletion confirmation
    */
-  delete(envelopeId: EnvelopeId): Promise<void>;
+  delete(command: DeleteEnvelopeCommand): Promise<DeleteEnvelopeResult>;
 }

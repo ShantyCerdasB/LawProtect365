@@ -1,53 +1,94 @@
 /**
  * @file EnvelopesQueriesPort.ts
- * @summary Port for envelope query operations
- * @description Defines the interface for read-only operations on envelopes.
- * This port provides methods to retrieve envelope data without modifying it.
- * Used by application services to query envelope information.
+ * @summary Queries port for envelope operations
+ * @description Defines the interface for envelope query operations
  */
 
-import type { TenantId, EnvelopeId } from "../shared";
+import type { Envelope } from "../../../domain/entities/Envelope";
+import type { EnvelopeId, TenantId } from "../../../domain/value-objects/Ids";
+import type { EnvelopeStatus } from "../../../domain/value-objects/EnvelopeStatus";
+import type { ActorContext } from "../../../domain/entities/ActorContext";
 
 /**
- * Query parameters for listing envelopes by tenant
+ * @summary Input for getting an envelope by ID
+ * @description Data to retrieve a specific envelope
+ */
+export interface GetEnvelopeQuery {
+  readonly tenantId: TenantId;
+  readonly envelopeId: EnvelopeId;
+  readonly actor?: ActorContext;
+}
+
+/**
+ * @summary Result of getting an envelope by ID
+ * @description Returns the envelope entity or null if not found
+ */
+export interface GetEnvelopeResult {
+  readonly envelope: Envelope | null;
+}
+
+/**
+ * @summary Input for listing envelopes
+ * @description Parameters for listing envelopes with optional filters
  */
 export interface ListEnvelopesQuery {
-  /** The tenant ID to filter envelopes by */
-  tenantId: TenantId;
-  /** Maximum number of envelopes to return (optional) */
-  limit?: number;
-  /** Pagination cursor for getting the next page of results (optional) */
-  cursor?: string;
+  readonly tenantId: TenantId;
+  readonly status?: EnvelopeStatus;
+  readonly limit?: number;
+  readonly cursor?: string;
+  readonly actor?: ActorContext;
 }
 
 /**
- * Result of listing envelopes with pagination support
+ * @summary Result of listing envelopes
+ * @description Returns paginated list of envelopes
  */
 export interface ListEnvelopesResult {
-  /** Array of envelope data */
-  items: any[];
-  /** Cursor for the next page of results (optional) */
-  nextCursor?: string;
+  readonly items: Envelope[];
+  readonly nextCursor?: string;
 }
 
 /**
- * Port interface for envelope query operations
- * 
- * This port defines the contract for read-only operations on envelopes.
- * Implementations should provide efficient data retrieval without side effects.
+ * @summary Input for getting envelope status
+ * @description Data to retrieve envelope status
+ */
+export interface GetEnvelopeStatusQuery {
+  readonly tenantId: TenantId;
+  readonly envelopeId: EnvelopeId;
+  readonly actor?: ActorContext;
+}
+
+/**
+ * @summary Result of getting envelope status
+ * @description Returns the envelope status
+ */
+export interface GetEnvelopeStatusResult {
+  readonly status: EnvelopeStatus | "not_found";
+}
+
+/**
+ * @summary Queries port for envelope operations
+ * @description Defines all query operations for envelopes
  */
 export interface EnvelopesQueriesPort {
   /**
-   * Retrieves a single envelope by its ID
-   * @param envelopeId - The unique identifier of the envelope
-   * @returns Promise resolving to envelope data or null if not found
+   * @summary Gets an envelope by ID
+   * @param query - Query data for getting an envelope
+   * @returns Promise resolving to the envelope or null
    */
-  getById(envelopeId: EnvelopeId): Promise<any>;
+  getById(query: GetEnvelopeQuery): Promise<GetEnvelopeResult>;
 
   /**
-   * Lists envelopes for a specific tenant with pagination support
-   * @param query - Query parameters including tenant ID and pagination options
+   * @summary Lists envelopes with optional filters
+   * @param query - Query data for listing envelopes
    * @returns Promise resolving to paginated list of envelopes
    */
-  listByTenant(query: ListEnvelopesQuery): Promise<ListEnvelopesResult>;
+  list(query: ListEnvelopesQuery): Promise<ListEnvelopesResult>;
+
+  /**
+   * @summary Gets envelope status
+   * @param query - Query data for getting envelope status
+   * @returns Promise resolving to envelope status
+   */
+  getStatus(query: GetEnvelopeStatusQuery): Promise<GetEnvelopeStatusResult>;
 }

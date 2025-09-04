@@ -1,3 +1,8 @@
-// Global party adapters (address book)
-export * from "./MakeGlobalPartiesCommandsPort";
-export * from "./MakeGlobalPartiesQueriesPort";
+/**
+ * @file index.ts
+ * @summary Barrel export for party adapters
+ * @description Exports all party adapter factories
+ */
+
+export * from "./MakePartiesCommandsPort";
+export * from "./MakePartiesQueriesPort";

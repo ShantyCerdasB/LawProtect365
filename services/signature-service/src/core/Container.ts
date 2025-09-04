@@ -37,13 +37,13 @@ import { SSMClient } from "@aws-sdk/client-ssm";
 import { loadConfig } from "./Config";
 
 import { DocumentRepositoryDdb } from "../infrastructure/dynamodb/DocumentRepositoryDdb";
-import { EnvelopeRepositoryDdb } from "../infrastructure/dynamodb/EnvelopeRepositoryDb";
 import { InputRepositoryDdb } from "../infrastructure/dynamodb/InputRepositoryDdb";
 import { PartyRepositoryDdb } from "../infrastructure/dynamodb/PartyRepositoryDdb";
-import { GlobalPartyRepositoryDdb } from "../infrastructure/dynamodb/GlobalPartyRepositoryDdb";
+
 import { IdempotencyStoreDdb } from "../infrastructure/dynamodb/IdempotencyStoreDdb";
 import { AuditRepositoryDdb } from "../infrastructure/dynamodb/AuditRepositoryDdb";
 import { ConsentRepositoryDdb } from "../infrastructure/dynamodb/index";
+import { GlobalPartiesRepositoryDdb } from "../infrastructure/dynamodb/GlobalPartiesRepositoryDdb";
 
 import { IdempotencyKeyHasher } from "../infrastructure/idempotency/IdempotencyKeyHasher";
 import { IdempotencyRunner } from "../infrastructure/idempotency/IdempotencyRunner";
@@ -59,7 +59,7 @@ import { SsmParamConfigProvider } from "../infrastructure/ssm/SsmParamConfigProv
 import { DelegationRepositoryDdb } from "../infrastructure/dynamodb/DelegationRepositoryDdb";
 
 import { randomToken, uuid, ulid, DdbClientLike, makeEventPublisher } from "@lawprotect/shared-ts";
-import type { Container, Services } from "../shared/contracts";
+import type { Container } from "../shared/contracts";
 
 import { OutboxRepositoryDdb } from "../infrastructure/dynamodb/OutboxRepositoryDdb";
 import { EventBusPortAdapter } from "../infrastructure/eventbridge/EventBusPortAdapter";
@@ -68,6 +68,32 @@ import { MetricsService } from "../shared/services";
 
 // EventBridge types
 import type { EventBridgeClientPort, PutEventsRequest, PutEventsResponse } from "../shared/contracts/eventbridge/EventBridgeClientPort";
+
+import { ConsentValidationService } from "../app/services/Consent/ConsentValidationService";
+import { ConsentAuditService } from "../app/services/Consent/ConsentAuditService";
+import { ConsentEventService } from "../app/services/Consent/ConsentEventService";
+import { makeConsentQueryPort } from "../app/adapters/consent/MakeConsentQueryPort";
+
+import { DefaultGlobalPartiesValidationService } from "../app/services/GlobalParties/GlobalPartiesValidationService";
+import { GlobalPartiesAuditService } from "../app/services/GlobalParties/GlobalPartiesAuditService";
+import { GlobalPartiesEventService } from "../app/services/GlobalParties/GlobalPartiesEventService";
+import { makeGlobalPartiesCommandsPort } from "../app/adapters/global-parties/MakeGlobalPartiesCommandsPort";
+import { makeGlobalPartiesQueriesPort } from "../app/adapters/global-parties/MakeGlobalPartiesQueriesPort";
+
+import { PartiesValidationService } from "../app/services/Parties/PartiesValidationService";
+import { PartiesAuditService } from "../app/services/Parties/PartiesAuditService";
+import { PartiesEventService } from "../app/services/Parties/PartiesEventService";
+import { PartiesRateLimitService } from "../app/services/Parties/PartiesRateLimitService";
+import { makePartiesCommandsPort } from "../app/adapters/parties/MakePartiesCommandsPort";
+import { makePartiesQueriesPort } from "../app/adapters/parties/MakePartiesQueriesPort";
+import { EnvelopeRepositoryDdb } from "@/infrastructure/dynamodb/EnvelopeRepositoryDdb";
+
+// Envelopes services
+import { EnvelopesValidationService } from "../app/services/envelopes/EnvelopesValidationService";
+import { EnvelopesAuditService } from "../app/services/envelopes/EnvelopesAuditService";
+import { EnvelopesEventService } from "../app/services/envelopes/EnvelopesEventService";
+import { makeEnvelopesCommandsPort } from "../app/adapters/envelopes/makeEnvelopesCommandsPort";
+import { makeEnvelopesQueriesPort } from "../app/adapters/envelopes/MakeEnvelopesQueriesPort";
 
 let singleton: Container;
 
@@ -123,7 +149,7 @@ export const getContainer = (): Container => {
   const envelopes = new EnvelopeRepositoryDdb(config.ddb.envelopesTable, ddbLike);
   const inputs = new InputRepositoryDdb(config.ddb.inputsTable, ddbLike);
   const parties = new PartyRepositoryDdb(config.ddb.partiesTable, ddbLike);
-  const globalParties = new GlobalPartyRepositoryDdb(config.ddb.partiesTable, ddbLike);
+  const globalParties = new GlobalPartiesRepositoryDdb(config.ddb.envelopesTable, ddbLike);
   const audit = new AuditRepositoryDdb(
     config.ddb.auditTable || config.ddb.envelopesTable,
     ddbLike
@@ -198,16 +224,6 @@ export const getContainer = (): Container => {
     defaultTtlMs: Number(process.env.SSM_DEFAULT_TTL_MS ?? 30_000),
   });
 
-  // High-level services
-  const services: Services = {
-    envelopes: {
-      async create(input, opts): Promise<{ envelope: any }> {
-        // TODO: Implement envelope creation logic
-        // For now, return a placeholder to avoid compilation errors
-        throw new Error("Envelope creation not yet implemented");
-      },
-    },
-  };
 
   const ids = {
     ulid,
@@ -240,6 +256,69 @@ export const getContainer = (): Container => {
   // Create event publisher using makeEventPublisher from shared-ts
   const eventPublisher = makeEventPublisher(eventBus, outbox);
 
+  // Consent services - instantiate with correct dependencies
+  const consentQueries = makeConsentQueryPort(consents);
+  const consentValidation = new ConsentValidationService(consentQueries);
+  const consentAudit = new ConsentAuditService(audit);
+  const consentEvents = new ConsentEventService(outbox);
+
+  // Global Parties services - instantiate with correct dependencies
+  const globalPartiesValidation = new DefaultGlobalPartiesValidationService();
+  const globalPartiesAudit = new GlobalPartiesAuditService(audit);
+  const globalPartiesEvents = new GlobalPartiesEventService(outbox);
+  
+  const globalPartiesCommands = makeGlobalPartiesCommandsPort({
+    globalParties,
+    ids,
+    validationService: globalPartiesValidation,
+    auditService: globalPartiesAudit,
+    eventService: globalPartiesEvents,
+  });
+  const globalPartiesQueries = makeGlobalPartiesQueriesPort({ globalParties });
+
+  // Parties services - instantiate with correct dependencies
+  const partiesValidation = new PartiesValidationService();
+  const partiesAudit = new PartiesAuditService(audit);
+  const partiesEvents = new PartiesEventService(outbox);
+  
+  // ✅ RATE LIMITING - Configuración por tenant
+  const partiesRateLimit = new PartiesRateLimitService(
+    otpRateLimitStore,
+    { 
+      maxPartiesPerEnvelope: 50, 
+      windowSeconds: 3600, // 1 hora
+      ttlSeconds: 7200     // 2 horas
+    }
+  );
+  
+  const partiesCommands = makePartiesCommandsPort(
+    parties,
+    ids,
+    partiesValidation,
+    partiesAudit,
+    partiesEvents,
+    // ✅ IDEMPOTENCY - PATRÓN REUTILIZABLE
+    runner,
+    // ✅ RATE LIMITING - PATRÓN REUTILIZABLE
+    partiesRateLimit
+  );
+  const partiesQueries = makePartiesQueriesPort(parties);
+
+  // Envelopes services - instantiate with correct dependencies
+  const envelopesValidation = new EnvelopesValidationService();
+  const envelopesAudit = new EnvelopesAuditService(audit);
+  const envelopesEvents = new EnvelopesEventService(outbox);
+  
+  const envelopesCommands = makeEnvelopesCommandsPort(
+    envelopes,
+    ids,
+    config as any, // Cast to resolve type mismatch between core/Config and shared/types/core/config
+    envelopesValidation,
+    envelopesAudit,
+    envelopesEvents
+  );
+  const envelopesQueries = makeEnvelopesQueriesPort(envelopes);
+
   singleton = {
     config,
     aws: { ddb, s3, kms, evb, ssm },
@@ -249,6 +328,35 @@ export const getContainer = (): Container => {
     storage: { evidence, presigner, pdfIngestor },
     crypto: { signer },
     events: { eventPublisher },
+    cache: { store: cacheStore },
+    consent: {
+      validation: consentValidation,
+      audit: consentAudit,
+      events: consentEvents,
+      party: globalParties,
+    },
+    globalParties: {
+      commandsPort: globalPartiesCommands,
+      queriesPort: globalPartiesQueries,
+      validationService: globalPartiesValidation,
+      auditService: globalPartiesAudit,
+      eventService: globalPartiesEvents,
+    },
+            parties: {
+          commandsPort: partiesCommands,
+          queriesPort: partiesQueries,
+          validationService: partiesValidation,
+          auditService: partiesAudit,
+          eventService: partiesEvents,
+          rateLimitService: partiesRateLimit,
+        },
+        envelopes: {
+          commandsPort: envelopesCommands,
+          queriesPort: envelopesQueries,
+          validationService: envelopesValidation,
+          auditService: envelopesAudit,
+          eventService: envelopesEvents,
+        },
     audit: {
       log: async (action: string, details: any, context: any) => {
         // Use the audit repository to log audit events
@@ -263,7 +371,6 @@ export const getContainer = (): Container => {
       }
     },
     configProvider,
-    services,
     ids,
     time,
   };

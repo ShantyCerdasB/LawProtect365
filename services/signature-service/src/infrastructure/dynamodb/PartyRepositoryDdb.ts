@@ -18,7 +18,8 @@ import {
   partyItemMapper,
   partyPk,
   partySk,
-} from "./mappers/partyItemMapper";
+  requireQuery,
+} from "../../shared/types/infrastructure/dynamodb";
 
 /**
  * @description Narrows a typed object into the loose `Record<string, unknown>` shape
@@ -177,6 +178,9 @@ export class PartyRepositoryDdb
     cursor?: string;
   }): Promise<{ items: Party[]; nextCursor?: string; total: number }> {
     try {
+      // Ensure client supports query operations
+      requireQuery(this.ddb);
+
       const queryParams: any = {
         TableName: this.tableName,
         KeyConditionExpression: "pk = :pk",
@@ -215,9 +219,9 @@ export class PartyRepositoryDdb
         queryParams.ExclusiveStartKey = JSON.parse(input.cursor);
       }
 
-      const result = await this.ddb.query(queryParams);
+      const result = await this.ddb.query!(queryParams);
 
-      const parties = (result.Items || []).map((item) =>
+      const parties = (result.Items ?? []).map((item) =>
         partyItemMapper.fromDTO(item as any)
       );
 
@@ -244,7 +248,10 @@ export class PartyRepositoryDdb
     email: string;
   }): Promise<{ items: Party[] }> {
     try {
-      const result = await this.ddb.query({
+      // Ensure client supports query operations
+      requireQuery(this.ddb);
+
+      const result = await this.ddb.query!({
         TableName: this.tableName,
         KeyConditionExpression: "pk = :pk",
         FilterExpression: "#email = :email",
@@ -255,9 +262,9 @@ export class PartyRepositoryDdb
           ":pk": partyPk(input.envelopeId),
           ":email": input.email,
         },
-      });
+      } as any);
 
-      const parties = (result.Items || []).map((item) =>
+      const parties = (result.Items ?? []).map((item) =>
         partyItemMapper.fromDTO(item as any)
       );
 

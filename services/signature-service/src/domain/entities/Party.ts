@@ -1,15 +1,10 @@
-/**
- * @file Party.ts
- * @summary Party domain entity for envelope participants
- * @description Party domain entity representing signers, viewers, or approvers participating in envelopes.
- * Contains party information, authentication state, and participation metadata for signature workflows.
- */
 
 /**
  * @file Party entity.
  * @description Represents a signer, viewer, or approver participating in an envelope.
  */
 
+import { EnvelopeId, PartyId, TenantId } from "../value-objects";
 import { OtpChannel, PartyRole, PartyStatus, AuthMethod } from "../values/enums";
 
 /**
@@ -46,11 +41,11 @@ export interface PartyAuth {
  */
 export interface Party {
   /** Tenant identifier */
-  tenantId: string;
+  tenantId: TenantId;
   /** Unique identifier of the party */
-  partyId: string;
+  partyId: PartyId;
   /** Envelope the party belongs to */
-  envelopeId: string;
+  envelopeId: EnvelopeId;
   /** Full name of the party */
   name: string;
   /** Email address of the party */

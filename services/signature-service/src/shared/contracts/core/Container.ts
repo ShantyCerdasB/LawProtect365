@@ -12,10 +12,9 @@ import type { SSMClient } from "@aws-sdk/client-ssm";
 
 import type { SignatureServiceConfig } from "./Config";
 import type { DocumentRepositoryDdb } from "../../../infrastructure/dynamodb/DocumentRepositoryDdb";
-import type { EnvelopeRepositoryDdb } from "../../../infrastructure/dynamodb/EnvelopeRepositoryDb";
 import type { InputRepositoryDdb } from "../../../infrastructure/dynamodb/InputRepositoryDdb";
 import type { PartyRepositoryDdb } from "../../../infrastructure/dynamodb/PartyRepositoryDdb";
-import type { GlobalPartyRepositoryDdb } from "../../../infrastructure/dynamodb/GlobalPartyRepositoryDdb";
+import type { GlobalPartiesRepositoryDdb } from "../../../infrastructure/dynamodb/GlobalPartiesRepositoryDdb";
 import type { IdempotencyStoreDdb } from "../../../infrastructure/dynamodb/IdempotencyStoreDdb";
 import type { AuditRepositoryDdb } from "../../../infrastructure/dynamodb/AuditRepositoryDdb";
 import type { ConsentRepositoryDdb } from "../../../infrastructure/dynamodb/ConsentRepositoryDdb";
@@ -30,9 +29,15 @@ import type { S3SignedPdfIngestor } from "../../../infrastructure/s3/S3SignedPdf
 import type { KmsSigner } from "../../../infrastructure/kms/KmsSigner";
 
 import type { SsmParamConfigProvider } from "../../../infrastructure/ssm/SsmParamConfigProvider";
-import type { Services } from "./Services";
 import type { AuditContext } from "../../../domain/entities/AuditContext";
 import type { EventPublisher } from "@lawprotect/shared-ts";
+
+// Consent service types
+import type { ConsentValidationService } from "../../../app/services/Consent/ConsentValidationService";
+import type { ConsentAuditService } from "../../../app/services/Consent/ConsentAuditService";
+import type { ConsentEventService } from "../../../app/services/Consent/ConsentEventService";
+import type { GlobalPartiesRepository } from "../../../shared/contracts/repositories/global-parties/GlobalPartiesRepository";
+import { EnvelopeRepositoryDdb } from "@/infrastructure/dynamodb/EnvelopeRepositoryDdb";
 
 /**
  * @summary Root DI container type
@@ -57,7 +62,7 @@ export interface Container {
     readonly envelopes: EnvelopeRepositoryDdb;
     readonly inputs: InputRepositoryDdb;
     readonly parties: PartyRepositoryDdb;
-    readonly globalParties: GlobalPartyRepositoryDdb;
+    readonly globalParties: GlobalPartiesRepositoryDdb;
     readonly audit: AuditRepositoryDdb;
     readonly idempotency: IdempotencyStoreDdb;
     readonly consents: ConsentRepositoryDdb;
@@ -93,6 +98,42 @@ export interface Container {
     readonly eventPublisher: EventPublisher;
   };
 
+  /** Consent services */
+  readonly consent: {
+    readonly validation: ConsentValidationService;
+    readonly audit: ConsentAuditService;
+    readonly events: ConsentEventService;
+    readonly party: GlobalPartiesRepository;
+  };
+
+  /** Global Parties services */
+  readonly globalParties: {
+    readonly commandsPort: any;
+    readonly queriesPort: any;
+    readonly validationService: any;
+    readonly auditService: any;
+    readonly eventService: any;
+  };
+
+  /** Parties services */
+  readonly parties: {
+    readonly commandsPort: any;
+    readonly queriesPort: any;
+    readonly validationService: any;
+    readonly auditService: any;
+    readonly eventService: any;
+    readonly rateLimitService: any;
+  };
+
+  /** Envelopes services */
+  readonly envelopes: {
+    readonly commandsPort: any;
+    readonly queriesPort: any;
+    readonly validationService: any;
+    readonly auditService: any;
+    readonly eventService: any;
+  };
+
   /** Audit service */
   readonly audit: {
     /**
@@ -107,9 +148,6 @@ export interface Container {
 
   /** Configuration provider */
   readonly configProvider: SsmParamConfigProvider;
-
-  /** High-level application services */
-  readonly services: Services;
 
   /** ID generation utilities */
   readonly ids: {

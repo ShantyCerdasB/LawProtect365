@@ -2,151 +2,260 @@
  * @file MakePartiesCommandsPort.ts
  * @summary Adapter factory for Parties Commands Port
  * @description Creates PartiesCommandsPort implementation using DynamoDB repository.
- * Handles create, update, delete, and delegate operations for envelope-scoped Parties.
+ * Handles create, update, and delete operations for envelope-scoped Parties.
  */
 
-import type { PartiesCommandsPort } from "@/app/ports/parties";
-import type { PartyRepository } from "@/infra/repos/PartyRepository";
-import type { EventBus } from "@/infra/events/EventBus";
-import type { 
+import type { PartiesCommandsPort } from "../../ports/parties";
+import type { Repository } from "@lawprotect/shared-ts";
+import type { Party } from "../../../domain/entities/Party";
+import type { PartyKey } from "../../../shared/types/infrastructure/dynamodb";
+import type { Ids } from "../../../shared/types/parties";
+import type { IdempotencyRunner } from "../../../infrastructure/idempotency/IdempotencyRunner";
+import { 
   CreatePartyCommand, 
   CreatePartyResult,
   UpdatePartyCommand,
   UpdatePartyResult,
   DeletePartyCommand,
-  DeletePartyResult,
-  DelegatePartyCommand,
-  DelegatePartyResult
-} from "@/app/ports/parties";
-import { Party } from "@/domain/entities/Party";
-import { PartyStatus, PartyRole } from "@/domain/values/enums";
-import { DEFAULT_PARTY_AUTH } from "@/domain/value-objects/party/PartyAuth";
-import { generateId } from "@/domain/value-objects/Ids";
+  DeletePartyResult
+} from "../../ports/parties";
+import { PartiesValidationService } from "../../services/Parties/PartiesValidationService";
+import { PartiesAuditService } from "../../services/Parties/PartiesAuditService";
+import { PartiesEventService } from "../../services/Parties/PartiesEventService";
+import { PartiesRateLimitService } from "../../services/Parties/PartiesRateLimitService";
+import { toPartyRow } from "../../../shared/types/parties";
+import { nowIso } from "@lawprotect/shared-ts";
 
 /**
- * @description Dependencies for the Parties Commands adapter.
- */
-export interface MakePartiesCommandsPortDeps {
-  parties: PartyRepository;
-  events: EventBus;
-}
-
-/**
- * @description Creates PartiesCommandsPort implementation.
+ * @description Creates PartiesCommandsPort implementation with optional services.
  * 
- * @param deps - Dependencies for the adapter
+ * @param partiesRepo - Party repository implementation
+ * @param ids - ID generation service
+ * @param validationService - Optional validation service
+ * @param auditService - Optional audit service
+ * @param eventService - Optional event service
+ * @param idempotencyRunner - Optional idempotency runner
+ * @param rateLimitService - Optional rate limiting service
  * @returns PartiesCommandsPort implementation
  */
-export const makePartiesCommandsPort = (
-  deps: MakePartiesCommandsPortDeps
-): PartiesCommandsPort => {
-  return {
-    async create(command: CreatePartyCommand): Promise<CreatePartyResult> {
-      const now = new Date().toISOString();
-      const partyId = generateId();
+export function makePartiesCommandsPort(
+  partiesRepo: Repository<Party, PartyKey, undefined>,
+  ids: Ids,
+  // ✅ SERVICIOS OPCIONALES - PATRÓN REUTILIZABLE
+  validationService?: PartiesValidationService,
+  auditService?: PartiesAuditService,
+  eventService?: PartiesEventService,
+  // ✅ IDEMPOTENCY - PATRÓN REUTILIZABLE
+  idempotencyRunner?: IdempotencyRunner,
+  // ✅ RATE LIMITING - PATRÓN REUTILIZABLE
+  rateLimitService?: PartiesRateLimitService
+): PartiesCommandsPort {
+  
+  // 🔍 FUNCIÓN INTERNA PARA IDEMPOTENCY
+  const createInternal = async (command: CreatePartyCommand): Promise<CreatePartyResult> => {
+    // 1. VALIDATION (opcional)
+    if (validationService) {
+      await validationService.validateCreate(command);
+    }
 
-      const party: Party = {
-        id: partyId,
+    // 1.5. RATE LIMITING (opcional) - PATRÓN REUTILIZABLE
+    if (rateLimitService) {
+      await rateLimitService.checkCreatePartyLimit(command.tenantId, command.envelopeId);
+    }
+
+    // 2. BUSINESS LOGIC
+    const now = nowIso();
+    const partyId = ids.ulid();
+
+    const party: Party = {
+      tenantId: command.tenantId,
+      partyId: partyId as any, // Cast to PartyId branded type
+      envelopeId: command.envelopeId,
+      name: command.name,
+      email: command.email,
+      role: command.role,
+      status: "pending",
+      sequence: command.sequence || 1,
+      invitedAt: now,
+      createdAt: now,
+      updatedAt: now,
+      auth: { methods: ["otpViaEmail"] },
+      otpState: undefined,
+    };
+
+    const createdParty = await partiesRepo.create(party);
+    const partyRow = toPartyRow(createdParty);
+
+    // 3. AUDIT (opcional) - MISMO PATRÓN
+    if (auditService) {
+      const auditContext = {
         tenantId: command.tenantId,
         envelopeId: command.envelopeId,
-        name: command.name,
-        email: command.email,
-        role: command.role,
-        status: "pending" as PartyStatus,
-        sequence: command.sequence || 1,
-        phone: command.phone,
-        locale: command.locale,
-        auth: command.auth || DEFAULT_PARTY_AUTH,
-        globalPartyId: command.globalPartyId,
-        createdAt: now,
-        updatedAt: now,
+        actor: command.actor
       };
+      await auditService.logCreate(auditContext, command);
+    }
 
-      await deps.parties.create(party);
+    // 4. EVENTS (opcional) - MISMO PATRÓN
+    if (eventService) {
+      await eventService.publishPartyCreatedEvent(
+        partyId as any, // Cast to PartyId
+        command.tenantId,
+        command.envelopeId,
+        command.actor
+      );
+    }
 
-      // TODO: Emit domain events when event bus is available
-      // await deps.events.emit("PartyCreated", {
-      //   partyId: party.id,
-      //   envelopeId: party.envelopeId,
-      //   tenantId: party.tenantId,
-      //   actor: command.actor,
-      // });
+    return { party: partyRow };
+  };
 
-      return { party };
+  // 🔍 FUNCIÓN INTERNA PARA IDEMPOTENCY
+  const updateInternal = async (command: UpdatePartyCommand): Promise<UpdatePartyResult> => {
+    // 1. VALIDATION (opcional)
+    if (validationService) {
+      await validationService.validateUpdate(command);
+    }
+
+    // 2. BUSINESS LOGIC
+    const existing = await partiesRepo.getById({ 
+      envelopeId: command.envelopeId, 
+      partyId: command.partyId 
+    });
+    
+    if (!existing) {
+      throw new Error(`Party with ID ${command.partyId} not found in envelope ${command.envelopeId}`);
+    }
+
+    const now = nowIso();
+    const updatedParty: Party = {
+      ...existing,
+      ...(command.name !== undefined && { name: command.name }),
+      ...(command.email !== undefined && { email: command.email }),
+      ...(command.role !== undefined && { role: command.role }),
+      ...(command.sequence !== undefined && { sequence: command.sequence }),
+      updatedAt: now,
+    };
+
+    const result = await partiesRepo.update(
+      { envelopeId: command.envelopeId, partyId: command.partyId },
+      updatedParty
+    );
+    
+    const partyRow = toPartyRow(result);
+
+    // 3. AUDIT (opcional) - MISMO PATRÓN
+    if (auditService) {
+      const auditContext = {
+        tenantId: command.tenantId,
+        envelopeId: command.envelopeId,
+        actor: command.actor
+      };
+      await auditService.logUpdate(auditContext, command);
+    }
+
+    // 4. EVENTS (opcional) - MISMO PATRÓN
+    if (eventService) {
+      const updatedFields = { 
+        name: command.name, 
+        email: command.email, 
+        role: command.role, 
+        sequence: command.sequence 
+      };
+      await eventService.publishPartyUpdatedEvent(
+        command.partyId,
+        command.tenantId,
+        command.envelopeId,
+        updatedFields,
+        command.actor
+      );
+    }
+
+    return { party: partyRow };
+  };
+
+  // 🔍 FUNCIÓN INTERNA PARA IDEMPOTENCY
+  const deleteInternal = async (command: DeletePartyCommand): Promise<DeletePartyResult> => {
+    // 1. VALIDATION (opcional)
+    if (validationService) {
+      await validationService.validateDelete(command);
+    }
+
+    // 2. BUSINESS LOGIC
+    const existing = await partiesRepo.getById({ 
+      envelopeId: command.envelopeId, 
+      partyId: command.partyId 
+    });
+    
+    if (!existing) {
+      throw new Error(`Party with ID ${command.partyId} not found in envelope ${command.envelopeId}`);
+    }
+
+    await partiesRepo.delete({ 
+      envelopeId: command.envelopeId, 
+      partyId: command.partyId 
+    });
+
+    // 3. AUDIT (opcional) - MISMO PATRÓN
+    if (auditService) {
+      const auditContext = {
+        tenantId: command.tenantId,
+        envelopeId: command.envelopeId,
+        actor: command.actor
+      };
+      await auditService.logDelete(auditContext, command);
+    }
+
+    // 4. EVENTS (opcional) - MISMO PATRÓN
+    if (eventService) {
+      await eventService.publishPartyDeletedEvent(
+        command.partyId,
+        command.tenantId,
+        command.envelopeId,
+        command.actor
+      );
+    }
+
+    return { deleted: true };
+  };
+
+  return {
+    async create(command: CreatePartyCommand): Promise<CreatePartyResult> {
+      // 🔍 IDEMPOTENCY WRAPPER - PATRÓN REUTILIZABLE
+      if (idempotencyRunner) {
+        const idempotencyKey = `create-party:${command.tenantId}:${command.envelopeId}:${command.email}`;
+        return await idempotencyRunner.run(idempotencyKey, async () => {
+          return await createInternal(command);
+        });
+      }
+      
+      // Fallback sin idempotency
+      return await createInternal(command);
     },
 
     async update(command: UpdatePartyCommand): Promise<UpdatePartyResult> {
-      const existing = await deps.parties.getById(command.partyId, command.envelopeId);
-      if (!existing) {
-        throw new Error(`Party with ID ${command.partyId} not found in envelope ${command.envelopeId}`);
+      // 🔍 IDEMPOTENCY WRAPPER - PATRÓN REUTILIZABLE
+      if (idempotencyRunner) {
+        const idempotencyKey = `update-party:${command.tenantId}:${command.envelopeId}:${command.partyId}`;
+        return await idempotencyRunner.run(idempotencyKey, async () => {
+          return await updateInternal(command);
+        });
       }
-
-      const now = new Date().toISOString();
-      const updatedParty: Party = {
-        ...existing,
-        ...command.updates,
-        updatedAt: now,
-      };
-
-      await deps.parties.updateParty(updatedParty);
-
-      // TODO: Emit domain events when event bus is available
-      // await deps.events.emit("PartyUpdated", {
-      //   partyId: updatedParty.id,
-      //   envelopeId: updatedParty.envelopeId,
-      //   tenantId: updatedParty.tenantId,
-      //   actor: command.actor,
-      // });
-
-      return { party: updatedParty };
+      
+      // Fallback sin idempotency
+      return await updateInternal(command);
     },
 
     async delete(command: DeletePartyCommand): Promise<DeletePartyResult> {
-      const existing = await deps.parties.getById(command.partyId, command.envelopeId);
-      if (!existing) {
-        throw new Error(`Party with ID ${command.partyId} not found in envelope ${command.envelopeId}`);
+      // 🔍 IDEMPOTENCY WRAPPER - PATRÓN REUTILIZABLE
+      if (idempotencyRunner) {
+        const idempotencyKey = `delete-party:${command.tenantId}:${command.envelopeId}:${command.partyId}`;
+        return await idempotencyRunner.run(idempotencyKey, async () => {
+          return await deleteInternal(command);
+        });
       }
-
-      await deps.parties.deleteParty(command.partyId, command.envelopeId);
-
-      // TODO: Emit domain events when event bus is available
-      // await deps.events.emit("PartyDeleted", {
-      //   partyId: command.partyId,
-      //   envelopeId: command.envelopeId,
-      //   tenantId: command.tenantId,
-      //   actor: command.actor,
-      // });
-
-      return { deleted: true };
-    },
-
-    async delegate(command: DelegatePartyCommand): Promise<DelegatePartyResult> {
-      const existing = await deps.parties.getById(command.partyId, command.envelopeId);
-      if (!existing) {
-        throw new Error(`Party with ID ${command.partyId} not found in envelope ${command.envelopeId}`);
-      }
-
-      const now = new Date().toISOString();
-      const delegatedParty: Party = {
-        ...existing,
-        globalPartyId: command.delegateTo.globalPartyId,
-        email: command.delegateTo.email || existing.email,
-        name: command.delegateTo.name || existing.name,
-        updatedAt: now,
-      };
-
-      await deps.parties.updateParty(delegatedParty);
-
-      // TODO: Emit domain events when event bus is available
-      // await deps.events.emit("PartyDelegated", {
-      //   partyId: delegatedParty.id,
-      //   envelopeId: delegatedParty.envelopeId,
-      //   tenantId: delegatedParty.tenantId,
-      //   delegateTo: command.delegateTo,
-      //   actor: command.actor,
-      // });
-
-      return { party: delegatedParty };
+      
+      // Fallback sin idempotency
+      return await deleteInternal(command);
     },
   };
-};
+}

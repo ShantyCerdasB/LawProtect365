@@ -1,44 +1,41 @@
 /**
  * @file ListEnvelopes.schema.ts
- * @description Query and response schemas for listing envelopes with pagination support.
- * Defines Zod schemas for envelope listing operations including query parameters and response formatting.
- */
-
-/**
- * @file ListEnvelopes.schema.ts
- * @summary Query and response schemas for listing envelopes.
+ * @summary Request/response schemas for listing envelopes
+ * @description Defines Zod schemas for envelope listing operations
  */
 
 import { z } from "@lawprotect/shared-ts";
-import { ListEnvelopesQuery } from "../common/query";
+import { 
+  TenantOnlyParams, 
+  FullEnvelopeFields, 
+  PAGINATION_LIMITS 
+} from "./common";
 
 /**
- * @description Response item schema for envelope listing.
- * Defines the structure of individual envelope items in list responses.
+ * @description Path parameters schema for listing envelopes
  */
-export const EnvelopeListItem = z.object({
-  /** Envelope identifier */
-  id: z.string(),
-  /** Envelope name/title */
-  name: z.string(),
-  /** Envelope status */
-  status: z.string(),
-  /** Creation timestamp (ISO datetime string) */
-  createdAt: z.string().datetime(),
-});
-export type EnvelopeListItem = z.infer<typeof EnvelopeListItem>;
+export const ListEnvelopesParams = TenantOnlyParams;
+export type ListEnvelopesParams = z.infer<typeof ListEnvelopesParams>;
 
 /**
- * @description Response payload schema containing a list of envelopes.
- * Includes pagination cursor for subsequent requests.
+ * @description Query parameters schema for listing envelopes
+ */
+export const ListEnvelopesQuery = z.object({
+  limit: z.coerce.number().min(PAGINATION_LIMITS.MIN_LIMIT).max(PAGINATION_LIMITS.MAX_LIMIT).default(PAGINATION_LIMITS.DEFAULT_LIMIT),
+  cursor: z.string().optional(),
+});
+
+export type ListEnvelopesQuery = z.infer<typeof ListEnvelopesQuery>;
+
+/**
+ * @description Response schema for envelope list
  */
 export const ListEnvelopesResponse = z.object({
-  /** Array of envelope items */
-  items: z.array(EnvelopeListItem),
-  /** Pagination cursor for next page (null if no more results) */
-  nextCursor: z.string().nullable(),
+  items: z.array(FullEnvelopeFields.extend({
+    partiesCount: z.number(),
+    documentsCount: z.number(),
+  })),
+  nextCursor: z.string().optional(),
 });
-export type ListEnvelopesResponse = z.infer<typeof ListEnvelopesResponse>;
 
-/** @description Query parameters schema for listing envelopes */
-export { ListEnvelopesQuery };
+export type ListEnvelopesResponse = z.infer<typeof ListEnvelopesResponse>;

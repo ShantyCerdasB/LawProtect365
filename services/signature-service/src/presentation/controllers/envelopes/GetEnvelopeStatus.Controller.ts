@@ -1,0 +1,27 @@
+/**
+ * @file GetEnvelopeStatus.Controller.ts
+ * @summary Get Envelope Status controller
+ * @description Handles retrieval of Envelope status
+ */
+
+import { createQueryController } from "../../../shared/controllers/queryFactory";
+import { GetEnvelopeStatusApp } from "../../../app/services/envelopes";
+import { GetEnvelopeStatusParams } from "../../../presentation/schemas/envelopes/GetEnvelopeStatus.schema";
+import type { GetEnvelopeStatusControllerInput } from "../../../shared/types/envelopes/ControllerInputs";
+import type { GetEnvelopeStatusAppResult } from "../../../shared/types/envelopes/AppServiceInputs";
+
+/**
+ * @description Get Envelope Status controller
+ */
+export const GetEnvelopeStatusController = createQueryController<GetEnvelopeStatusControllerInput, GetEnvelopeStatusAppResult>({
+  pathSchema: GetEnvelopeStatusParams,
+  appServiceClass: GetEnvelopeStatusApp,
+  createDependencies: (c) => ({
+    envelopesQueries: c.envelopes.queriesPort,
+  }),
+  extractParams: (path) => ({
+    tenantId: path.tenantId,
+    envelopeId: path.envelopeId,
+  }),
+  responseType: "ok"
+});

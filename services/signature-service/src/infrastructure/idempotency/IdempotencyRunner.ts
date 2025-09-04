@@ -21,9 +21,7 @@
 
 import type { IdempotencyStore } from "@lawprotect/shared-ts";
 import { ConflictError, ErrorCodes } from "@lawprotect/shared-ts";
-import type { 
-  IdempotencyRunnerOptions
-} from "../../shared/types/idempotency";
+import type { IdempotencyRunnerOptionsSchema } from "../../shared/validations/schemas/idempotency";
 
 /**
  * Idempotency orchestration facade.
@@ -34,7 +32,7 @@ export class IdempotencyRunner {
 
   constructor(
     private readonly store: IdempotencyStore,
-    opts: IdempotencyRunnerOptions = {}
+    opts: IdempotencyRunnerOptionsSchema = {}
   ) {
     this.defaultTtl = Math.max(1, Math.floor(opts.defaultTtlSeconds ?? 300));
   }

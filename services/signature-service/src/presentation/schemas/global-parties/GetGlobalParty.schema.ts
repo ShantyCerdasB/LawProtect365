@@ -5,7 +5,7 @@
  * Provides type-safe validation for HTTP path parameters.
  */
 
-import { z } from "@lawprotect/shared-ts/validation";
+import { z } from "@lawprotect/shared-ts";
 
 /**
  * @description Path parameters schema for getting a Global Party.

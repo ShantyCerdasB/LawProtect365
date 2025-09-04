@@ -7,8 +7,9 @@
  */
 
 
+import { PARTY_ROLES, PARTY_STATUSES } from "@/domain/values/enums";
 import { z } from "zod";
-import { PARTY_ROLES, PARTY_STATUSES } from "../../domain/values/enums";
+
 
 /**
  * @description Path parameters schema for POST /envelopes/:envelopeId/parties.

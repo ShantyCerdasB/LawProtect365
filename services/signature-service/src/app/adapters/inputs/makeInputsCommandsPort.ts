@@ -9,7 +9,7 @@
 import type { Repository } from "@lawprotect/shared-ts";
 import type { Input } from "@/domain/entities/Input";
 import type { Envelope } from "@/domain/entities/Envelope";
-import type { InputId } from "@/adapters/dynamodb/InputRepositoryDdb";
+import type { InputId } from "@/shared/types/infrastructure/dynamodb";
 import type { EnvelopeId } from "@/domain/value-objects/Ids";
 import type { 
   InputsCommandsPort, 

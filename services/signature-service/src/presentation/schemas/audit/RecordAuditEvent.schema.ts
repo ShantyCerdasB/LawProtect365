@@ -5,7 +5,8 @@
  */
 
 import { z } from "zod";
-import { EnvelopeIdValidationSchema, AuditEventTypeValidationSchema } from "../../../shared/validations/schemas/audit";
+import { EnvelopeIdValidationSchema } from "../../../shared/validations/schemas/common";
+import { AuditEventTypeValidationSchema } from "../../../shared/validations/schemas/audit";
 
 
 /**

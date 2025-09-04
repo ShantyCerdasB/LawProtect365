@@ -1,32 +1,25 @@
 /**
  * @file DeleteParty.schema.ts
  * @summary Zod schemas for the DeleteParty endpoint
- * 
- * @description
- * Defines input validation schemas for deleting a global party record.
- * Handles path parameters validation.
+ * @description Zod schemas for validating Party deletion requests.
+ * Provides type-safe validation for HTTP request path parameters.
  */
 
 import { z } from "zod";
 
 /**
- * Path parameters for DELETE /parties/:partyId
+ * @description Path parameters schema for deleting a party.
  */
-export const DeletePartyPath = z.object({
-  partyId: z.string().min(1, "Party ID is required"),
+export const DeletePartyParams = z.object({
+  tenantId: z.string().min(1, "Tenant ID is required").max(255, "Tenant ID too long"),
+  envelopeId: z.string().min(1, "Envelope ID is required").max(255, "Envelope ID too long"),
+  partyId: z.string().min(1, "Party ID is required").max(255, "Party ID too long"),
 });
 
 /**
- * Response schema for party deletion
+ * @description Type for DeleteParty path parameters.
  */
-export const DeletePartyResponse = z.object({
-  message: z.string(),
-  partyId: z.string(),
-  deletedAt: z.string(),
-});
-
-export type DeletePartyPathType = z.infer<typeof DeletePartyPath>;
-export type DeletePartyResponseType = z.infer<typeof DeletePartyResponse>;
+export type DeletePartyParams = z.infer<typeof DeletePartyParams>;
 
 
 

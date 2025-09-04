@@ -1,60 +1,41 @@
 /**
  * @file UpdateParty.schema.ts
- * @summary Zod schemas for the UpdateParty endpoint
- * @description Zod schemas for the UpdateParty endpoint.
- * Defines input validation schemas for updating a global party (contact).
- * Handles path parameters and request body validation for partial updates.
+ * @summary Schema for updating Parties in envelopes
+ * @description Zod schemas for validating Party update requests.
+ * Provides type-safe validation for HTTP request path parameters and body.
  */
 
 import { z } from "zod";
-import { PARTY_ROLES, PARTY_SOURCES } from "../../domain/values/enums";
-import { PersonNameSchema } from "../../domain/value-objects/PersonName";
-import { PartyPhoneSchema } from "../../domain/value-objects/party/PartyPhone";
-import { PartyMetadataSchema } from "../../domain/value-objects/party/PartyMetadata";
 
 /**
- * Path parameters for PATCH /parties/:partyId
+ * @description Path parameters schema for updating a Party.
  */
-export const UpdatePartyPath = z.object({
-  partyId: z.string().min(1, "Party ID is required"),
+export const UpdatePartyParams = z.object({
+  tenantId: z.string().min(1, "Tenant ID is required").max(255, "Tenant ID too long"),
+  envelopeId: z.string().min(1, "Envelope ID is required").max(255, "Envelope ID too long"),
+  partyId: z.string().min(1, "Party ID is required").max(255, "Party ID too long"),
 });
 
 /**
- * Request body for updating a global party (partial update)
+ * @description Request body schema for updating a Party.
  */
 export const UpdatePartyBody = z.object({
-  name: PersonNameSchema.optional(),
-  phone: PartyPhoneSchema.optional(),
-  role: z.enum(PARTY_ROLES).optional(),
-  metadata: PartyMetadataSchema.optional(),
-  notificationPreferences: z.object({
-    email: z.boolean(),
-    sms: z.boolean(),
+  name: z.string().min(1, "Name cannot be empty").max(255, "Name too long").optional(),
+  email: z.string().email("Invalid email format").max(255, "Email too long").optional(),
+  role: z.enum(["signer", "approver", "viewer"], {
+    errorMap: () => ({ message: "Role must be signer, approver, or viewer" }),
   }).optional(),
+  sequence: z.number().int().positive("Sequence must be a positive integer").optional(),
 }).refine((data) => Object.keys(data).length > 0, {
   message: "At least one field must be provided for update",
 });
 
 /**
- * Response schema for party update
+ * @description Type for UpdateParty path parameters.
  */
-export const UpdatePartyResponse = z.object({
-  partyId: z.string(),
-  email: z.string(),
-  name: z.string(),
-  phone: z.string().optional(),
-  role: z.enum(PARTY_ROLES),
-  source: z.enum(PARTY_SOURCES),
-  status: z.literal("active"),
-  createdAt: z.string(),
-  updatedAt: z.string(),
-  metadata: z.record(z.unknown()).optional(),
-  notificationPreferences: z.object({
-    email: z.boolean(),
-    sms: z.boolean(),
-  }).optional(),
-});
+export type UpdatePartyParams = z.infer<typeof UpdatePartyParams>;
 
-export type UpdatePartyPathType = z.infer<typeof UpdatePartyPath>;
-export type UpdatePartyBodyType = z.infer<typeof UpdatePartyBody>;
-export type UpdatePartyResponseType = z.infer<typeof UpdatePartyResponse>;
+/**
+ * @description Type for UpdateParty request body.
+ */
+export type UpdatePartyBody = z.infer<typeof UpdatePartyBody>;

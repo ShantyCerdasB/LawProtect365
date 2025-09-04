@@ -5,7 +5,10 @@
  * used across different DynamoDB repositories and mappers.
  */
 
-import type { DdbClientLike } from "@lawprotect/shared-ts";
+import type { DdbClientLike, TenantId, Mapper, UserId } from "@lawprotect/shared-ts";
+import { BadRequestError, ErrorCodes } from "@lawprotect/shared-ts";
+import { Envelope, Party } from "@/domain/entities";
+import { PartyId, EnvelopeId } from "@/domain/value-objects";
 
 /**
  * @summary Minimal shape of the `query` operation required (SDK-agnostic)
@@ -175,29 +178,7 @@ export interface DdbPartyItem extends DdbItemWithTenant, DdbItemWithAudit {
   };
 }
 
-/**
- * @summary DynamoDB Envelope item structure
- * @description Specific DynamoDB item structure for Envelope entities
- * in the single-table design pattern.
- */
-export interface DdbEnvelopeItem extends DdbItemWithTenant, DdbItemWithAudit {
-  /** Envelope identifier */
-  readonly envelopeId: string;
-  /** Owner user identifier */
-  readonly ownerId: string;
-  /** Envelope title */
-  readonly title: string;
-  /** Current envelope status */
-  readonly status: string;
-  /** Associated party identifiers */
-  readonly parties: string[];
-  /** Associated document identifiers */
-  readonly documents: string[];
-  /** Optional policy configuration */
-  readonly policies?: Record<string, unknown>;
-  /** Optional metadata */
-  readonly metadata?: Record<string, unknown>;
-}
+
 
 /**
  * @summary DynamoDB Document item structure
@@ -273,7 +254,7 @@ export interface PartyKey {
  * @description Composite key used by Input repositories to identify
  * specific inputs within an envelope context.
  */
-export interface InputId {
+export interface InputKey {
   /** Associated envelope identifier */
   readonly envelopeId: string;
   /** Input identifier */
@@ -369,3 +350,296 @@ export function requireUpdate(ddb: DdbClientLike): asserts ddb is DdbClientWithU
 }
 
 
+/**
+ * @summary Party ↔ DynamoDB item mapper
+ * @description Maps between Party domain entities and DynamoDB items
+ * PK = ENVELOPE#<envelopeId>
+ * SK = PARTY#<partyId>
+ */
+export const PARTY_ENTITY = "Party" as const;
+
+/** Key builders */
+export const partyPk = (envelopeId: string): string => `ENVELOPE#${envelopeId}`;
+export const partySk = (partyId: string): string => `PARTY#${partyId}`;
+
+/** Type guard mínimo sobre campos requeridos en storage */
+export const isDdbPartyItem = (v: unknown): v is DdbPartyItem => {
+  const o = v as Partial<DdbPartyItem> | null | undefined;
+  return Boolean(
+    o &&
+      typeof o.pk === "string" &&
+      typeof o.sk === "string" &&
+      o.type === PARTY_ENTITY &&
+      typeof o.tenantId === "string" &&
+      typeof o.envelopeId === "string" &&
+      typeof o.partyId === "string" &&
+      typeof o.name === "string" &&
+      typeof o.email === "string" &&
+      typeof o.role === "string" &&
+      typeof o.status === "string" &&
+      typeof o.invitedAt === "string" &&
+      typeof o.sequence === "number" &&
+      typeof o.createdAt === "string" &&
+      typeof o.updatedAt === "string"
+  );
+};
+
+/** Domain → Item (sin escribir `undefined`) */
+export const toPartyItem = (src: Party): DdbPartyItem => ({
+  pk: partyPk(src.envelopeId),
+  sk: partySk(src.partyId),
+  type: PARTY_ENTITY,
+
+  tenantId: src.tenantId,
+  envelopeId: src.envelopeId,
+  partyId: src.partyId,
+
+  name: src.name,
+  email: src.email,
+  role: src.role as string,
+  status: src.status as string,
+
+  invitedAt: src.invitedAt,
+  ...(src.signedAt !== undefined ? { signedAt: src.signedAt } : {}),
+
+  sequence: src.sequence,
+
+  createdAt: src.createdAt,
+  updatedAt: src.updatedAt,
+
+  ...(src.otpState !== undefined ? { 
+    otpState: {
+      required: src.otpState.tries < src.otpState.maxTries,
+      verified: false, // Default value
+      attempts: src.otpState.tries,
+      lastAttempt: src.otpState.createdAt
+    }
+  } : {}),
+});
+
+/** Item → Domain */
+export const fromPartyItem = (item: unknown): Party => {
+  if (!isDdbPartyItem(item)) {
+    throw new BadRequestError(
+      "Invalid persistence object for Party",
+      ErrorCodes.COMMON_BAD_REQUEST,
+      { item }
+    );
+  }
+
+
+
+  return Object.freeze<Party>({
+    tenantId: item.tenantId as TenantId,
+    partyId: item.partyId as PartyId,
+    envelopeId: item.envelopeId as EnvelopeId,
+    name: item.name,
+    email: item.email,
+    role: item.role as any, // Cast to PartyRole
+    status: item.status as any, // Cast to PartyStatus
+
+    invitedAt: item.invitedAt,
+    signedAt: item.signedAt,
+
+    sequence: item.sequence,
+
+    auth: { methods: ["otpViaEmail"] }, // Default auth
+
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+
+    otpState: item.otpState ? {
+      codeHash: "dummy", // Default value
+      channel: "email" as any, // Default value
+      expiresAt: new Date().toISOString(), // Default value
+      tries: item.otpState.attempts,
+      maxTries: 3, // Default value
+      createdAt: item.otpState.lastAttempt || new Date().toISOString()
+    } : undefined,
+  });
+};
+
+/** Mapper export */
+export const partyItemMapper: Mapper<Party, DdbPartyItem> = {
+  toDTO: toPartyItem,
+  fromDTO: fromPartyItem,
+};
+
+// ============================================================================
+// ENVELOPE ITEM MAPPER
+// ============================================================================
+
+/** @description DynamoDB entity label for Envelope rows */
+export const ENVELOPE_ENTITY = "Envelope" as const;
+/** @description Fixed sort key for Envelope meta row */
+const ENVELOPE_META = "META" as const;
+
+/**
+ * @description DynamoDB persistence shape for an `Envelope` meta row.
+ * Values are plain strings/arrays for storage compatibility.
+ */
+export interface DdbEnvelopeItem {
+  /** DynamoDB partition key */
+  pk: string;
+  /** DynamoDB sort key */
+  sk: string;
+  /** Entity type identifier */
+  type: typeof ENVELOPE_ENTITY;
+
+  /** Envelope identifier (stored as plain string for DynamoDB) */
+  envelopeId: string;
+  /** Tenant identifier (stored as plain string for DynamoDB) */
+  tenantId: string;
+  /** Owner identifier (stored as plain string for DynamoDB) */
+  ownerId: string;
+
+  /** Envelope title */
+  title: string;
+  /** Envelope status */
+  status: string;
+  /** Creation timestamp (ISO-8601) */
+  createdAt: string;
+  /** Last update timestamp (ISO-8601) */
+  updatedAt: string;
+
+  /** Array of party identifiers (stored as plain strings for DynamoDB) */
+  parties: string[];
+  /** Array of document identifiers (stored as plain strings for DynamoDB) */
+  documents: string[];
+
+  /** Optional TTL & GSI keys (presence depends on your table/index design) */
+  ttl?: number;
+  /** GSI1 partition key */
+  gsi1pk?: string;
+  /** GSI1 sort key */
+  gsi1sk?: string;
+}
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/* Key builders                                                              */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * @description Builds the partition key for an envelope.
+ *
+ * @param {string} envelopeId - The envelope identifier
+ * @returns {string} DynamoDB partition key
+ */
+export const envelopePk = (envelopeId: string): string => `ENVELOPE#${envelopeId}`;
+
+/**
+ * @description Returns the fixed meta sort key.
+ *
+ * @returns {string} Fixed meta sort key
+ */
+export const envelopeMetaSk = (): string => ENVELOPE_META;
+
+/**
+ * @description Example owner-based GSI partition key.
+ *
+ * @param {string} ownerId - The owner identifier
+ * @returns {string} GSI partition key
+ */
+export const gsi1OwnerPk = (ownerId: string): string => `OWNER#${ownerId}`;
+
+/**
+ * @description Example owner-based GSI sort key (stable, time-sortable).
+ *
+ * @param {string} updatedAtIso - ISO timestamp for sorting
+ * @returns {string} GSI sort key
+ */
+export const gsi1OwnerSk = (updatedAtIso: string): string => `ENVELOPE#${updatedAtIso}`;
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/* Type guard                                                                */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * @description Runtime guard to ensure the raw item looks like an `DdbEnvelopeItem`.
+ * Performs lightweight validation before mapping from DTO.
+ *
+ * @param {unknown} value - Arbitrary object to validate
+ * @returns {boolean} `true` if the value has the minimal required envelope shape
+ */
+export function isDdbEnvelopeItem(value: unknown): value is DdbEnvelopeItem {
+  const o = value as DdbEnvelopeItem;
+  return (
+    o !== null &&
+    typeof o === "object" &&
+    typeof o.pk === "string" &&
+    typeof o.sk === "string" &&
+    o.type === ENVELOPE_ENTITY &&
+    typeof o.envelopeId === "string" &&
+    typeof o.tenantId === "string" &&
+    typeof o.ownerId === "string" &&
+    typeof o.title === "string" &&
+    typeof o.status === "string" &&
+    typeof o.createdAt === "string" &&
+    typeof o.updatedAt === "string" &&
+    Array.isArray(o.parties) &&
+    Array.isArray(o.documents)
+  );
+}
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/* Mapper implementation                                                     */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+/** Domain → Item */
+export const toEnvelopeItem = (src: Envelope): DdbEnvelopeItem => {
+  const envelopeIdStr = src.envelopeId as unknown as string;
+  const tenantIdStr = src.tenantId as unknown as string;
+  const ownerIdStr = (src.ownerId as UserId | string) as unknown as string;
+
+  return {
+    pk: envelopePk(envelopeIdStr),
+    sk: envelopeMetaSk(),
+    type: ENVELOPE_ENTITY,
+
+    envelopeId: envelopeIdStr,
+    tenantId: tenantIdStr,
+    ownerId: ownerIdStr,
+
+    title: src.title,
+    status: src.status as string,
+    createdAt: src.createdAt,
+    updatedAt: src.updatedAt,
+
+    parties: [...(src.parties ?? [])],
+    documents: [...(src.documents ?? [])],
+
+    // Example owner-based GSI (optional; include only if your table defines it)
+    gsi1pk: gsi1OwnerPk(ownerIdStr),
+    gsi1sk: gsi1OwnerSk(src.updatedAt),
+  };
+};
+
+/** Item → Domain */
+export const fromEnvelopeItem = (item: unknown): Envelope => {
+  if (!isDdbEnvelopeItem(item)) {
+    throw new BadRequestError(
+      "Invalid persistence object for Envelope",
+      ErrorCodes.COMMON_BAD_REQUEST,
+      { item }
+    );
+  }
+
+  return Object.freeze<Envelope>({
+    envelopeId: item.envelopeId as EnvelopeId,
+    tenantId: item.tenantId as TenantId,
+    ownerId: item.ownerId as UserId,
+
+    title: item.title,
+    status: item.status as any, // Cast to EnvelopeStatus
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+    parties: [...item.parties],
+    documents: [...item.documents],
+  });
+};
+
+/** Mapper export */
+export const envelopeItemMapper: Mapper<Envelope, DdbEnvelopeItem> = {
+  toDTO: toEnvelopeItem,
+  fromDTO: fromEnvelopeItem,
+};

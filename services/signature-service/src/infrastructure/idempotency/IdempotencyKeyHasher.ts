@@ -8,8 +8,9 @@
  */
 
 import { sha256Hex } from "@lawprotect/shared-ts";
-import { stableStringify, type JsonObject } from "@lawprotect/shared-ts";
-import type { IdempotencyKeyInput, IdempotencyKeyResult } from "../../shared/types/idempotency";
+import { stableStringify } from "@lawprotect/shared-ts";
+import type { IdempotencyKeyInputSchema } from "../../shared/validations/schemas/idempotency";
+import type { IdempotencyKeyResult } from "../../shared/types/idempotency";
 
 /**
  * Derives stable hex keys from request metadata.
@@ -21,7 +22,7 @@ export class IdempotencyKeyHasher {
    * @param input Request metadata.
    * @returns Idempotency key result with branded type.
    */
-  static derive(input: IdempotencyKeyInput): IdempotencyKeyResult {
+  static derive(input: IdempotencyKeyInputSchema): IdempotencyKeyResult {
     const normalized = IdempotencyKeyHasher.normalize(input);
     const payload = stableStringify(normalized);
     const key = sha256Hex(payload);
@@ -33,7 +34,7 @@ export class IdempotencyKeyHasher {
    * Builds a compact, order-stable object used for hashing.
    * @param i Raw input.
    */
-  private static normalize(i: IdempotencyKeyInput): JsonObject {
+  private static normalize(i: IdempotencyKeyInputSchema): any {
     return {
       m: i.method.toUpperCase(),
       p: i.path,
@@ -42,6 +43,6 @@ export class IdempotencyKeyHasher {
       q: i.query ?? null,
       b: i.body ?? null,
       s: i.scope ?? ""
-    } as const;
+    };
   }
 }

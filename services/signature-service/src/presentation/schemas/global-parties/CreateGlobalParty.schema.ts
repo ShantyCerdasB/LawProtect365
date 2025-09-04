@@ -5,7 +5,7 @@
  * Provides type-safe validation for HTTP request bodies.
  */
 
-import { z } from "@lawprotect/shared-ts/validation";
+import { z } from "@lawprotect/shared-ts";
 
 /**
  * @description Request body schema for creating a Global Party.

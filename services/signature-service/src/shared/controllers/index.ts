@@ -4,6 +4,5 @@
  * @description Exports all shared controller utilities and factories
  */
 
-export * from "./createHandler";
-export * from "./queryControllerFactory";
-export * from "./commandControllerFactory";
+export * from "./controllerFactory";
+export * from "./queryFactory";

@@ -1,6 +1,6 @@
 // common/consent.common.ts
 import { z, ISODateStringSchema } from "@lawprotect/shared-ts";
-import { EnvelopeId, ConsentId, PartyId } from "@/schemas/common";
+import { EnvelopeId, ConsentId, PartyId } from "@/presentation/schemas/common";
 import { CONSENT_STATUSES, CONSENT_TYPES } from "@/domain/values/enums";
 
 /** Enums de dominio */

@@ -22,7 +22,10 @@
     "test": "turbo run test --parallel",
     "format": "turbo run format --parallel",
     "prisma:generate": "turbo run prisma:generate --parallel",
-    "clean": "turbo run clean --parallel && rimraf node_modules"
+    "clean": "turbo run clean --parallel && rimraf node_modules",
+    "analyze:unused": "node scripts/find-unused-files.js",
+    "analyze:ts": "node scripts/analyze-ts-usage.js",
+    "analyze:deps": "depcheck"
   },
   "devDependencies": {
     "@types/jest": "^29.5.12",

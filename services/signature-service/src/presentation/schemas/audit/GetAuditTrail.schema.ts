@@ -5,7 +5,7 @@
  */
 
 import { z } from "zod";
-import { EnvelopeIdValidationSchema } from "../../../shared/validations/schemas/audit";
+import { EnvelopeIdValidationSchema } from "../../../shared/validations/schemas/common";
 import { OptionalPaginationCursorValidationSchema } from "@/shared/validations/schemas/common/PaginationCursor.schema";
 import { OptionalUploadFormatValidationSchema } from "@/shared/validations/schemas/common/UploadFormat.schema";
 

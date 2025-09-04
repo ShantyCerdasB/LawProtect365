@@ -22,8 +22,39 @@ export const AUTH_METHODS = ["otpViaEmail","otpViaSms"] as const;
 export type AuthMethod = (typeof AUTH_METHODS)[number];
 
 // Envelopes
-export const ENVELOPE_STATUSES = ["draft","sent","in_progress","completed","canceled","declined","in_progress"] as const;
+export const ENVELOPE_STATUSES = ["draft","sent","in_progress","completed","canceled","declined"] as const;
 export type EnvelopeStatus = (typeof ENVELOPE_STATUSES)[number];
+
+export const ENVELOPE_TRANSITION_RULES: Record<EnvelopeStatus, readonly EnvelopeStatus[]> = {
+  draft: ["sent", "in_progress", "completed", "canceled", "declined"],
+  sent: ["in_progress", "completed", "canceled", "declined"],
+  in_progress: ["completed", "canceled", "declined"],
+  completed: [],
+  canceled: [],
+  declined: []
+} as const;
+
+export const ENVELOPE_TITLE_LIMITS = {
+  MIN_LENGTH: 1,
+  MAX_LENGTH: 255
+} as const;
+
+export const ENVELOPE_VALIDATION_RULES = {
+  MAX_PARTIES: 50,
+  MAX_DOCUMENTS: 100,
+  MAX_TITLE_LENGTH: 255,
+  MIN_TITLE_LENGTH: 1,
+  MAX_DESCRIPTION_LENGTH: 1000,
+  MIN_NAME_LENGTH: 1,
+  MAX_NAME_LENGTH: 255
+} as const;
+
+// Pagination limits
+export const PAGINATION_LIMITS = {
+  MIN_LIMIT: 1,
+  MAX_LIMIT: 100,
+  DEFAULT_LIMIT: 25
+} as const;
 
 // Documents
 export const DOCUMENT_STATUSES = ["pending","uploaded","processing","ready","error"] as const;
@@ -99,6 +130,13 @@ export type DelegationType = (typeof DELEGATION_TYPES)[number];
 
 export const PARTY_SOURCES = ["manual", "import", "api"] as const;
 export type PartySource = (typeof PARTY_SOURCES)[number];
+
+// Global Party Updatable Fields
+export const GLOBAL_PARTY_UPDATABLE_FIELDS = [
+  "name", "email", "emails", "phone", "locale", "role", "source", "status",
+  "tags", "metadata", "attributes", "preferences", "notificationPreferences", "stats"
+] as const;
+export type GlobalPartyUpdatableField = (typeof GLOBAL_PARTY_UPDATABLE_FIELDS)[number];
 
 // Rate Limiting
 export const RATE_LIMIT_ENTITY = "RateLimit" as const;

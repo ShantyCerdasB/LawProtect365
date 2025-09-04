@@ -1,9 +1,6 @@
 // Shared types and interfaces
 export * from "./types";
 
-// Shared contracts
-export * from "./contracts";
-
 // Shared utilities
 export * from "./utils";
 
