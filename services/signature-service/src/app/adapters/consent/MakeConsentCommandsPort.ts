@@ -49,7 +49,7 @@ const mapRowToUpdateResult = (r: ConsentRepoRow): UpdateConsentAppResult => ({
   envelopeId: r.envelopeId as EnvelopeId,
   partyId: r.partyId as PartyId,
   type: r.consentType as ConsentType,
-  status: r.status as ConsentStatus,
+  status: r.status,
   createdAt: r.createdAt || "",
   updatedAt: r.updatedAt || "",
   expiresAt: r.expiresAt,
@@ -68,7 +68,7 @@ const mapRowToSubmitResult = (r: ConsentRepoRow): SubmitConsentAppResult => ({
   envelopeId: r.envelopeId as EnvelopeId,
   partyId: r.partyId as PartyId,
   type: r.consentType as ConsentType,
-  status: r.status as ConsentStatus,
+  status: r.status,
   submittedAt: r.updatedAt || r.createdAt || "",
   metadata: r.metadata,
 });
@@ -175,7 +175,7 @@ export function makeConsentCommandsPort(
       await auditService.logConsentDelegation(auditContext, {
         consentId: input.consentId,
         originalPartyId: currentConsent.partyId as PartyId,
-        delegatePartyId: delegatePartyId as PartyId,
+        delegatePartyId: delegatePartyId,
         delegationId: delegation.delegationId,
         reason: input.reason,
         expiresAt: input.expiresAt,
@@ -192,7 +192,7 @@ export function makeConsentCommandsPort(
           consentId: input.consentId,
           envelopeId: input.envelopeId,
           originalPartyId: currentConsent.partyId as PartyId,
-          delegatePartyId: delegatePartyId as PartyId,
+          delegatePartyId: delegatePartyId,
           delegationId: delegation.delegationId,
           reason: input.reason,
           expiresAt: input.expiresAt,
@@ -234,7 +234,7 @@ export function makeConsentCommandsPort(
     });
 
     if (existingParty?.party) {
-      return existingParty.party.partyId as PartyId;
+      return existingParty.party.partyId
     }
 
     // If not found, create a new party for the delegate
@@ -267,7 +267,7 @@ export function makeConsentCommandsPort(
       }
     });
 
-    return newPartyId as PartyId;
+    return newPartyId
   }
 
   return {
