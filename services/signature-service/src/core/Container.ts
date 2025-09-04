@@ -95,6 +95,13 @@ import { EnvelopesEventService } from "../app/services/envelopes/EnvelopesEventS
 import { makeEnvelopesCommandsPort } from "../app/adapters/envelopes/makeEnvelopesCommandsPort";
 import { makeEnvelopesQueriesPort } from "../app/adapters/envelopes/MakeEnvelopesQueriesPort";
 
+// Inputs services
+import { InputsValidationService } from "../app/services/Inputs/InputsValidationService";
+import { InputsAuditService } from "../app/services/Inputs/InputsAuditService";
+import { InputsEventService } from "../app/services/Inputs/InputsEventService";
+import { makeInputsCommandsPort } from "../app/adapters/inputs/makeInputsCommandsPort";
+import { makeInputsQueriesPort } from "../app/adapters/inputs/makeInputsQueriesPort";
+
 let singleton: Container;
 
 /**
@@ -319,6 +326,26 @@ export const getContainer = (): Container => {
   );
   const envelopesQueries = makeEnvelopesQueriesPort(envelopes);
 
+  // Inputs services - instantiate with correct dependencies
+  const inputsValidation = new InputsValidationService();
+  const inputsAudit = new InputsAuditService(audit);
+  const inputsEvents = new InputsEventService(outbox);
+  
+  const inputsCommands = makeInputsCommandsPort(
+    inputs,
+    ids,
+    inputsValidation,
+    inputsAudit,
+    inputsEvents,
+    // ✅ IDEMPOTENCY - PATRÓN REUTILIZABLE
+    runner
+  );
+  const inputsQueries = makeInputsQueriesPort(
+    inputs,
+    inputsValidation,
+    inputsAudit
+  );
+
   singleton = {
     config,
     aws: { ddb, s3, kms, evb, ssm },
@@ -355,6 +382,13 @@ export const getContainer = (): Container => {
           validationService: envelopesValidation,
           auditService: envelopesAudit,
           eventService: envelopesEvents,
+        },
+        inputs: {
+          commandsPort: inputsCommands,
+          queriesPort: inputsQueries,
+          validationService: inputsValidation,
+          auditService: inputsAudit,
+          eventService: inputsEvents,
         },
     audit: {
       log: async (action: string, details: any, context: any) => {

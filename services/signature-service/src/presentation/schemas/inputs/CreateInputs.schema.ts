@@ -50,12 +50,10 @@ export const CreateInputsResponse = z.object({
       type: z.string(),
       /** Page number where the input is placed */
       page: z.number(),
-      /** Geometry of the input */
-      geometry: z.object({
+      /** Position of the input */
+      position: z.object({
         x: z.number(),
         y: z.number(),
-        w: z.number(),
-        h: z.number(),
       }),
       /** Party ID assigned to this input (optional) */
       assignedPartyId: z.string().optional(),
