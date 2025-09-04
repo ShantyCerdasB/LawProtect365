@@ -5,8 +5,6 @@
  */
 
 
-import type { EventMetadata } from "./EventBridgeTypes";
-
 /**
  * Standard event patterns for common operations.
  */
@@ -84,18 +82,6 @@ export interface EventPublishingConfig {
     arn: string;
     maxRetries: number;
   };
-}
-
-/**
- * Event validation result.
- */
-export interface EventValidationResult {
-  /** Whether the event is valid. */
-  valid: boolean;
-  /** Validation errors if any. */
-  errors?: string[];
-  /** Event metadata after validation. */
-  metadata?: EventMetadata;
 }
 
 /**

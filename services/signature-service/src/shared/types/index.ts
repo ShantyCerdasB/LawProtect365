@@ -13,15 +13,12 @@ export * from "./infrastructure/eventbridge";
 export * from "./infrastructure/constants";
 export * from "./infrastructure/enums";
 
-// Persistence DTOs
-export * from "./persistence/dto/envelope";
-export * from "./persistence/dto/party";
+
 
 // Common types
 export * from "./common";
 
-// Domain types
-export * from "./domain";
+
 
 // Consent types
 export * from "./consent";

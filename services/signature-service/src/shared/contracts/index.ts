@@ -7,8 +7,6 @@
 // Repository contracts
 export * from "./repositories/audit";
 
-// Operation contracts
-export * from "./operations/audit";
 
 // Controller contracts
 export * from "./controllers";

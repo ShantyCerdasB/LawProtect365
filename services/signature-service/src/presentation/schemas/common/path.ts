@@ -4,7 +4,7 @@
  */
 
 import { z } from "@lawprotect/shared-ts";
-import { UuidV4, Ulid, OpaqueId, PositiveIntSchema } from "@lawprotect/shared-ts";
+import { UuidV4, Ulid, OpaqueId } from "@lawprotect/shared-ts";
 
 /** Envelope ids can be UUIDv4 or ULID. */
 export const EnvelopeId = z.union([UuidV4, Ulid]);

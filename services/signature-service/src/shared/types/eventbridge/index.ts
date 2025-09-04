@@ -4,5 +4,5 @@
  * @description Exports all EventBridge-related types and interfaces
  */
 
-export * from "./EventBridgeTypes";
+export * from "./EventBusPortAdapterOptions";
 export * from "./EventBridgeEventTypes";

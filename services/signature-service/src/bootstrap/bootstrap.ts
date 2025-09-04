@@ -9,8 +9,9 @@
  * - Provides a stable surface for handlers/tests.
  */
 
-import { getContainer, type Container } from "@/core/Container";
+import { getContainer } from "@/core/Container";
 import { corsFromEnv } from "@/presentation/middleware/http";
+import { Container } from "@/shared/contracts/core";
 import { logger } from "@lawprotect/shared-ts";
 
 /**

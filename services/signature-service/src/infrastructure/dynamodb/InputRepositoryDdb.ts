@@ -58,6 +58,57 @@ export class InputRepositoryDdb implements InputsRepository {
   }
 
   /**
+   * @description Adds a filter condition to the query parameters
+   */
+  private addFilterCondition(
+    queryParams: any,
+    filterExpressions: string[],
+    fieldName: string,
+    value: any,
+    attributeName: string
+  ): void {
+    filterExpressions.push(`#${attributeName} = :${attributeName}`);
+    if (!queryParams.ExpressionAttributeNames) {
+      queryParams.ExpressionAttributeNames = {};
+    }
+    queryParams.ExpressionAttributeNames[`#${attributeName}`] = fieldName;
+    queryParams.ExpressionAttributeValues[`:${attributeName}`] = value;
+  }
+
+  /**
+   * @description Builds filter expressions for the query
+   */
+  private buildFilterExpressions(
+    queryParams: any,
+    params: {
+      documentId?: string;
+      partyId?: string;
+      type?: string;
+      required?: boolean;
+    }
+  ): string[] {
+    const filterExpressions: string[] = [];
+
+    if (params.documentId) {
+      this.addFilterCondition(queryParams, filterExpressions, "documentId", params.documentId, "documentId");
+    }
+
+    if (params.partyId) {
+      this.addFilterCondition(queryParams, filterExpressions, "partyId", params.partyId, "partyId");
+    }
+
+    if (params.type) {
+      this.addFilterCondition(queryParams, filterExpressions, "inputType", params.type, "inputType");
+    }
+
+    if (params.required !== undefined) {
+      this.addFilterCondition(queryParams, filterExpressions, "required", params.required, "required");
+    }
+
+    return filterExpressions;
+  }
+
+  /**
    * @description Lists inputs by envelope with pagination support and optional filtering.
    * @param {object} params Query parameters including envelopeId, limit, cursor, and filters.
    * @returns {Promise<{items: Input[]; nextCursor?: string}>} Paginated list of inputs.
@@ -83,45 +134,8 @@ export class InputRepositoryDdb implements InputsRepository {
         Limit: limit,
       };
 
-      // Add filters if provided
-      let filterExpressions: string[] = [];
-
-      if (params.documentId) {
-        filterExpressions.push("#documentId = :documentId");
-        if (!queryParams.ExpressionAttributeNames) {
-          queryParams.ExpressionAttributeNames = {};
-        }
-        queryParams.ExpressionAttributeNames["#documentId"] = "documentId";
-        queryParams.ExpressionAttributeValues[":documentId"] = params.documentId;
-      }
-
-      if (params.partyId) {
-        filterExpressions.push("#partyId = :partyId");
-        if (!queryParams.ExpressionAttributeNames) {
-          queryParams.ExpressionAttributeNames = {};
-        }
-        queryParams.ExpressionAttributeNames["#partyId"] = "partyId";
-        queryParams.ExpressionAttributeValues[":partyId"] = params.partyId;
-      }
-
-      if (params.type) {
-        filterExpressions.push("#inputType = :inputType");
-        if (!queryParams.ExpressionAttributeNames) {
-          queryParams.ExpressionAttributeNames = {};
-        }
-        queryParams.ExpressionAttributeNames["#inputType"] = "inputType";
-        queryParams.ExpressionAttributeValues[":inputType"] = params.type;
-      }
-
-      if (params.required !== undefined) {
-        filterExpressions.push("#required = :required");
-        if (!queryParams.ExpressionAttributeNames) {
-          queryParams.ExpressionAttributeNames = {};
-        }
-        queryParams.ExpressionAttributeNames["#required"] = "required";
-        queryParams.ExpressionAttributeValues[":required"] = params.required;
-      }
-
+      // Build filter expressions
+      const filterExpressions = this.buildFilterExpressions(queryParams, params);
       if (filterExpressions.length > 0) {
         queryParams.FilterExpression = filterExpressions.join(" AND ");
       }
