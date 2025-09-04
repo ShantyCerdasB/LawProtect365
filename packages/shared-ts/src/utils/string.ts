@@ -59,8 +59,12 @@ export const slugify = (s: string): string => {
 };
 
 /** Removes ASCII control characters (U+0000–U+001F, U+007F). */
-export const stripControlChars = (s: string): string =>
-  s.replace(/[\u0000-\u001F\u007F]/g, "");
+export const stripControlChars = (s: string): string => {
+  return s.split('').filter(char => {
+    const code = char.charCodeAt(0);
+    return !(code >= 0 && code <= 31) && code !== 127;
+  }).join('');
+};
 
 /** Left-pads a string to the given length using the provided character. */
 export const leftPad = (s: string, len: number, ch = " "): string =>

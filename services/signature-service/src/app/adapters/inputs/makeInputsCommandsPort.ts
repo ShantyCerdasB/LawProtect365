@@ -25,7 +25,8 @@ import type {
 import { InputsValidationService } from "../../services/Inputs/InputsValidationService";
 import { InputsAuditService } from "../../services/Inputs/InputsAuditService";
 import { InputsEventService } from "../../services/Inputs/InputsEventService";
-import { nowIso, NotFoundError } from "@lawprotect/shared-ts";
+import { nowIso } from "@lawprotect/shared-ts";
+import { inputNotFound } from "../../../shared/errors";
 
 /**
  * Creates an InputsCommandsPort implementation
@@ -133,7 +134,7 @@ export const makeInputsCommandsPort = (
     });
     
     if (!existing) {
-      throw new Error(`Input with ID ${command.inputId} not found in envelope ${command.envelopeId}`);
+      throw inputNotFound({ inputId: command.inputId, envelopeId: command.envelopeId });
     }
 
     const now = nowIso();
@@ -270,7 +271,7 @@ export const makeInputsCommandsPort = (
     });
     
     if (!existing) {
-      throw new Error(`Input with ID ${command.inputId} not found in envelope ${command.envelopeId}`);
+      throw inputNotFound({ inputId: command.inputId, envelopeId: command.envelopeId });
     }
 
     await inputsRepo.delete({ 

@@ -10,6 +10,10 @@ import type {
   UpdateInputPositionsCommand,
   DeleteInputCommand
 } from "../../ports/inputs/InputsCommandsPort";
+import type {
+  GetInputQuery,
+  ListInputsQuery
+} from "../../ports/inputs/InputsQueriesPort";
 import { BadRequestError, ErrorCodes } from "@lawprotect/shared-ts";
 
 /**
@@ -225,6 +229,96 @@ export class InputsValidationService {
         "Input ID is required",
         ErrorCodes.COMMON_BAD_REQUEST,
         { command }
+      );
+    }
+  }
+
+  /**
+   * @summary Validates get input by ID query
+   * @description Ensures required fields are present for query
+   */
+  async validateGetById(query: GetInputQuery): Promise<void> {
+    if (!query.tenantId || query.tenantId.trim().length === 0) {
+      throw new BadRequestError(
+        "Tenant ID is required",
+        ErrorCodes.COMMON_BAD_REQUEST,
+        { query }
+      );
+    }
+
+    if (!query.envelopeId || query.envelopeId.trim().length === 0) {
+      throw new BadRequestError(
+        "Envelope ID is required",
+        ErrorCodes.COMMON_BAD_REQUEST,
+        { query }
+      );
+    }
+
+    if (!query.inputId || query.inputId.trim().length === 0) {
+      throw new BadRequestError(
+        "Input ID is required",
+        ErrorCodes.COMMON_BAD_REQUEST,
+        { query }
+      );
+    }
+  }
+
+  /**
+   * @summary Validates list inputs by envelope query
+   * @description Ensures required fields are present and pagination limits are valid
+   */
+  async validateListByEnvelope(query: ListInputsQuery): Promise<void> {
+    if (!query.tenantId || query.tenantId.trim().length === 0) {
+      throw new BadRequestError(
+        "Tenant ID is required",
+        ErrorCodes.COMMON_BAD_REQUEST,
+        { query }
+      );
+    }
+
+    if (!query.envelopeId || query.envelopeId.trim().length === 0) {
+      throw new BadRequestError(
+        "Envelope ID is required",
+        ErrorCodes.COMMON_BAD_REQUEST,
+        { query }
+      );
+    }
+
+    // Validate pagination limits
+    if (query.limit !== undefined) {
+      if (query.limit < 1 || query.limit > 100 || !Number.isInteger(query.limit)) {
+        throw new BadRequestError(
+          "Limit must be an integer between 1 and 100",
+          ErrorCodes.COMMON_BAD_REQUEST,
+          { query }
+        );
+      }
+    }
+
+    // Validate cursor format if provided
+    if (query.cursor !== undefined && (!query.cursor || query.cursor.trim().length === 0)) {
+      throw new BadRequestError(
+        "Cursor cannot be empty if provided",
+        ErrorCodes.COMMON_BAD_REQUEST,
+        { query }
+      );
+    }
+
+    // Validate document ID if provided
+    if (query.documentId !== undefined && (!query.documentId || query.documentId.trim().length === 0)) {
+      throw new BadRequestError(
+        "Document ID cannot be empty if provided",
+        ErrorCodes.COMMON_BAD_REQUEST,
+        { query }
+      );
+    }
+
+    // Validate party ID if provided
+    if (query.partyId !== undefined && (!query.partyId || query.partyId.trim().length === 0)) {
+      throw new BadRequestError(
+        "Party ID cannot be empty if provided",
+        ErrorCodes.COMMON_BAD_REQUEST,
+        { query }
       );
     }
   }

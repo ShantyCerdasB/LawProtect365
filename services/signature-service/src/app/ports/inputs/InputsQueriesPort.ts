@@ -6,8 +6,9 @@
  * Used by application services to query input information.
  */
 
-import type { TenantId, EnvelopeId } from "../shared";
-import { InputType } from "@/domain/values/enums";
+import type { TenantId, EnvelopeId, InputId, PartyId } from "../../../domain/value-objects/Ids";
+import type { ActorContext } from "../../../domain/entities/ActorContext";
+import { InputType } from "../../../domain/values/enums";
 
 /**
  * Query parameters for getting a single input by ID
@@ -18,7 +19,9 @@ export interface GetInputQuery {
   /** The envelope ID that contains the input */
   envelopeId: EnvelopeId;
   /** The unique identifier of the input */
-  inputId: string;
+  inputId: InputId;
+  /** Actor context for audit logging (optional) */
+  actor?: ActorContext;
 }
 
 /**
@@ -33,6 +36,16 @@ export interface ListInputsQuery {
   limit?: number;
   /** Pagination cursor for getting the next page of results (optional) */
   cursor?: string;
+  /** Document ID to filter inputs by (optional) */
+  documentId?: string;
+  /** Party ID to filter inputs by (optional) */
+  partyId?: PartyId;
+  /** Input type to filter by (optional) */
+  type?: InputType;
+  /** Whether to filter by required status (optional) */
+  required?: boolean;
+  /** Actor context for audit logging (optional) */
+  actor?: ActorContext;
 }
 
 /**
@@ -42,15 +55,15 @@ export interface ListInputsResult {
   /** Array of input data */
   items: Array<{
     /** The unique identifier of the input */
-    inputId: string;
+    inputId: InputId;
     /** Type of the input */
     type: InputType;
     /** Page number where the input is placed */
     page: number;
-    /** Geometry of the input */
-    geometry: { x: number; y: number; w: number; h: number };
+    /** Position of the input */
+    position: { x: number; y: number };
     /** Party ID assigned to this input (optional) */
-    assignedPartyId?: string;
+    assignedPartyId?: PartyId;
     /** Whether the input is required */
     required: boolean;
     /** Current value of the input (optional) */
@@ -76,7 +89,7 @@ export interface InputsQueriesPort {
    * @param query - Query parameters including tenant ID, envelope ID, and input ID
    * @returns Promise resolving to input data or null if not found
    */
-  getById(query: GetInputQuery): Promise<any>;
+  getById(query: GetInputQuery): Promise<ListInputsResult["items"][number] | null>;
 
   /**
    * Lists inputs for a specific envelope with pagination support
