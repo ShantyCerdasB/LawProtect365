@@ -1,6 +1,6 @@
-﻿/**
- * @file cancel.ts
- * @summary Cancel envelope controller
+/**
+ * @file CancelEnvelope.Controller.ts
+ * @summary Cancel Envelope controller
  * @description Handles canceling an envelope
  */
 
@@ -13,7 +13,7 @@ import type { CancelEnvelopeControllerInput } from "../../../shared/types/reques
 import type { CancelEnvelopeAppResult } from "../../../shared/types/requests/AppServiceInputs";
 
 /**
- * @description Cancel envelope controller
+ * @description Cancel Envelope controller
  */
 export const CancelEnvelopeController = createCommandController<CancelEnvelopeControllerInput, CancelEnvelopeAppResult>({
   bodySchema: CancelEnvelopeBody,
@@ -26,7 +26,9 @@ export const CancelEnvelopeController = createCommandController<CancelEnvelopeCo
     c.requests.validationService,
     c.requests.auditService,
     c.requests.eventService,
-    c.requests.rateLimitService
+    c.requests.rateLimitService,
+    c.ids,
+    c.storage.presigner
   ),
   extractParams: (path, body) => ({
     envelopeId: path.id,

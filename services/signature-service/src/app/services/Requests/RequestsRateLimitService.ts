@@ -4,15 +4,17 @@
  * @description Provides rate limiting for request operations to prevent spam
  */
 
-import type { RateLimitStore } from "@lawprotect/shared-ts";
-import type { EnvelopeId, PartyId } from "@/domain/value-objects/Ids";
-import type { ActorContext } from "@/domain/entities/ActorContext";
+
+import type { EnvelopeId, PartyId } from "../../../domain/value-objects/Ids";
+import type { ActorContext } from "../../../domain/entities/ActorContext";
+import type { RateLimitStore } from "../../../shared/contracts/ratelimit";
+import type { RequestsRateLimitService } from "../../../shared/types/requests/ServiceInterfaces";
 
 /**
  * @summary Rate limiting service for requests operations
  * @description Prevents spam by limiting the frequency of request operations
  */
-export class RequestsRateLimitService {
+export class DefaultRequestsRateLimitService implements RequestsRateLimitService {
   constructor(private readonly rateLimitStore: RateLimitStore) {}
 
   /**
@@ -21,10 +23,13 @@ export class RequestsRateLimitService {
    */
   async checkInviteLimit(envelopeId: EnvelopeId, actor: ActorContext): Promise<void> {
     const key = `invite:${envelopeId}:${actor.userId}`;
-    const limit = 5;
-    const window = 24 * 60 * 60; // 24 hours in seconds
+    const window = {
+      maxRequests: 5,
+      windowSeconds: 24 * 60 * 60, // 24 hours in seconds
+      ttlSeconds: 24 * 60 * 60, // 24 hours in seconds
+    };
     
-    await this.rateLimitStore.checkLimit(key, limit, window);
+    await this.rateLimitStore.incrementAndCheck(key, window);
   }
 
   /**
@@ -33,10 +38,13 @@ export class RequestsRateLimitService {
    */
   async checkRemindLimit(envelopeId: EnvelopeId, partyId: PartyId, actor: ActorContext): Promise<void> {
     const key = `remind:${envelopeId}:${partyId}:${actor.userId}`;
-    const limit = 3;
-    const window = 24 * 60 * 60; // 24 hours in seconds
+    const window = {
+      maxRequests: 3,
+      windowSeconds: 24 * 60 * 60, // 24 hours in seconds
+      ttlSeconds: 24 * 60 * 60, // 24 hours in seconds
+    };
     
-    await this.rateLimitStore.checkLimit(key, limit, window);
+    await this.rateLimitStore.incrementAndCheck(key, window);
   }
 
   /**
@@ -45,10 +53,13 @@ export class RequestsRateLimitService {
    */
   async checkRequestSignatureLimit(envelopeId: EnvelopeId, partyId: PartyId, actor: ActorContext): Promise<void> {
     const key = `request_signature:${envelopeId}:${partyId}:${actor.userId}`;
-    const limit = 10;
-    const window = 24 * 60 * 60; // 24 hours in seconds
+    const window = {
+      maxRequests: 10,
+      windowSeconds: 24 * 60 * 60, // 24 hours in seconds
+      ttlSeconds: 24 * 60 * 60, // 24 hours in seconds
+    };
     
-    await this.rateLimitStore.checkLimit(key, limit, window);
+    await this.rateLimitStore.incrementAndCheck(key, window);
   }
 
   /**
@@ -57,10 +68,13 @@ export class RequestsRateLimitService {
    */
   async checkAddViewerLimit(envelopeId: EnvelopeId, actor: ActorContext): Promise<void> {
     const key = `add_viewer:${envelopeId}:${actor.userId}`;
-    const limit = 20;
-    const window = 24 * 60 * 60; // 24 hours in seconds
+    const window = {
+      maxRequests: 20,
+      windowSeconds: 24 * 60 * 60, // 24 hours in seconds
+      ttlSeconds: 24 * 60 * 60, // 24 hours in seconds
+    };
     
-    await this.rateLimitStore.checkLimit(key, limit, window);
+    await this.rateLimitStore.incrementAndCheck(key, window);
   }
 
   /**
@@ -69,10 +83,13 @@ export class RequestsRateLimitService {
    */
   async checkCancelLimit(envelopeId: EnvelopeId, actor: ActorContext): Promise<void> {
     const key = `cancel:${envelopeId}:${actor.userId}`;
-    const limit = 5;
-    const window = 24 * 60 * 60; // 24 hours in seconds
+    const window = {
+      maxRequests: 5,
+      windowSeconds: 24 * 60 * 60, // 24 hours in seconds
+      ttlSeconds: 24 * 60 * 60, // 24 hours in seconds
+    };
     
-    await this.rateLimitStore.checkLimit(key, limit, window);
+    await this.rateLimitStore.incrementAndCheck(key, window);
   }
 
   /**
@@ -81,10 +98,13 @@ export class RequestsRateLimitService {
    */
   async checkDeclineLimit(envelopeId: EnvelopeId, actor: ActorContext): Promise<void> {
     const key = `decline:${envelopeId}:${actor.userId}`;
-    const limit = 5;
-    const window = 24 * 60 * 60; // 24 hours in seconds
+    const window = {
+      maxRequests: 5,
+      windowSeconds: 24 * 60 * 60, // 24 hours in seconds
+      ttlSeconds: 24 * 60 * 60, // 24 hours in seconds
+    };
     
-    await this.rateLimitStore.checkLimit(key, limit, window);
+    await this.rateLimitStore.incrementAndCheck(key, window);
   }
 
   /**
@@ -93,9 +113,12 @@ export class RequestsRateLimitService {
    */
   async checkFinaliseLimit(envelopeId: EnvelopeId, actor: ActorContext): Promise<void> {
     const key = `finalise:${envelopeId}:${actor.userId}`;
-    const limit = 3;
-    const window = 24 * 60 * 60; // 24 hours in seconds
+    const window = {
+      maxRequests: 3,
+      windowSeconds: 24 * 60 * 60, // 24 hours in seconds
+      ttlSeconds: 24 * 60 * 60, // 24 hours in seconds
+    };
     
-    await this.rateLimitStore.checkLimit(key, limit, window);
+    await this.rateLimitStore.incrementAndCheck(key, window);
   }
 }

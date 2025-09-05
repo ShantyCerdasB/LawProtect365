@@ -1,22 +1,22 @@
-﻿/**
- * @file invite.ts
- * @summary Invite parties controller
- * @description Handles inviting parties to sign an envelope
+/**
+ * @file RemindParties.Controller.ts
+ * @summary Remind Parties controller
+ * @description Handles sending reminders to parties for envelope signing
  */
 
 import { createCommandController } from "../../../shared/controllers/controllerFactory";
 import { makeRequestsCommandsPort } from "../../../app/adapters/requests/makeRequestsCommandsPort";
 import { DefaultRequestsCommandService } from "../../../app/services/Requests";
-import { InvitationsBody } from "../../../presentation/schemas/requests";
+import { RemindersBody } from "../../../presentation/schemas/requests";
 import { EnvelopeIdPath } from "../../../presentation/schemas/common/path";
-import type { InvitePartiesControllerInput } from "../../../shared/types/requests/ControllerInputs";
-import type { InvitePartiesAppResult } from "../../../shared/types/requests/AppServiceInputs";
+import type { RemindPartiesControllerInput } from "../../../shared/types/requests/ControllerInputs";
+import type { RemindPartiesAppResult } from "../../../shared/types/requests/AppServiceInputs";
 
 /**
- * @description Invite parties controller
+ * @description Remind Parties controller
  */
-export const InvitePartiesController = createCommandController<InvitePartiesControllerInput, InvitePartiesAppResult>({
-  bodySchema: InvitationsBody,
+export const RemindPartiesController = createCommandController<RemindPartiesControllerInput, RemindPartiesAppResult>({
+  bodySchema: RemindersBody,
   pathSchema: EnvelopeIdPath,
   appServiceClass: DefaultRequestsCommandService,
   createDependencies: (c) => makeRequestsCommandsPort(
@@ -26,15 +26,18 @@ export const InvitePartiesController = createCommandController<InvitePartiesCont
     c.requests.validationService,
     c.requests.auditService,
     c.requests.eventService,
-    c.requests.rateLimitService
+    c.requests.rateLimitService,
+    c.ids,
+    c.storage.presigner
   ),
   extractParams: (path, body) => ({
     envelopeId: path.id,
     partyIds: body.partyIds,
+    message: body.message,
   }),
   responseType: "ok",
   includeActor: true,
 });
 
 // Export handler for backward compatibility
-export const handler = InvitePartiesController;
+export const handler = RemindPartiesController;

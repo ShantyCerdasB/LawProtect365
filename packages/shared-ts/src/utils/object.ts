@@ -18,7 +18,7 @@ export const omit = <T extends object, K extends keyof T>(obj: T, keys: K[]): Om
 
 /** Returns true when value is a plain object. */
 export const isPlainObject = (v: unknown): v is Record<string, unknown> =>
-  typeof v === "object" && v !== null && (v as object).constructor === Object;
+  typeof v === "object" && v !== null && v.constructor === Object;
 
 /** Deep merges two values with object/object strategy and array replace. */
 export const deepMerge = <T>(a: T, b: Partial<T>): T => {

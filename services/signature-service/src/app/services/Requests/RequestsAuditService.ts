@@ -6,101 +6,134 @@
 
 import { BaseAuditService } from "../../../shared/services/BaseAuditService";
 import type { AuditContext } from "../../../domain/entities/AuditContext";
+import type { RequestsAuditService } from "../../../shared/types/requests/ServiceInterfaces";
+import type { PartyId, EnvelopeId, TenantId } from "../../../domain/value-objects/Ids";
+import type { ActorContext } from "../../../domain/entities/ActorContext";
+import { nowIso } from "@lawprotect/shared-ts";
 
 /**
  * @summary Audit service for requests operations
  * @description Extends BaseAuditService to provide request-specific audit logging
  */
-export class RequestsAuditService extends BaseAuditService {
+export class DefaultRequestsAuditService extends BaseAuditService implements RequestsAuditService {
+  
+  /**
+   * @summary Logs a business event for audit purposes
+   * @description Implementation of the abstract method from BaseAuditService
+   * @param context - Audit context containing tenant, envelope, and actor information
+   * @param details - Module-specific audit details
+   */
+  async logBusinessEvent(
+    context: AuditContext, 
+    details: Record<string, unknown>
+  ): Promise<void> {
+    if (!context.envelopeId) {
+      // For Requests, we always need an envelope context
+      return;
+    }
+
+    await this.auditRepo.record({
+      tenantId: context.tenantId,
+      envelopeId: context.envelopeId as EnvelopeId,
+      type: details.eventType as string,
+      occurredAt: nowIso(),
+      actor: context.actor,
+      metadata: details,
+    });
+  }
   
   /**
    * @summary Log invite parties operation
    */
-  async logInviteParties(
-    context: AuditContext, 
-    details: { envelopeId: string; partyIds: string[]; invited: string[]; alreadyPending: string[]; skipped: string[]; statusChanged: boolean }
-  ): Promise<void> {
-    await this.logBusinessEvent(context, {
-      action: "invite_parties",
-      ...details
+  async logInviteParties(partyIds: PartyId[], envelopeId: EnvelopeId, tenantId: TenantId, actor: ActorContext): Promise<void> {
+    await this.logBusinessEvent({
+      tenantId,
+      envelopeId,
+      actor,
+    }, {
+      eventType: "requests.invite_parties",
+      partyIds,
     });
   }
 
   /**
    * @summary Log remind parties operation
    */
-  async logRemindParties(
-    context: AuditContext, 
-    details: { envelopeId: string; partyIds?: string[]; reminded: string[]; skipped: string[]; message?: string }
-  ): Promise<void> {
-    await this.logBusinessEvent(context, {
-      action: "remind_parties",
-      ...details
+  async logRemindParties(partyIds: PartyId[], envelopeId: EnvelopeId, tenantId: TenantId, actor: ActorContext): Promise<void> {
+    await this.logBusinessEvent({
+      tenantId,
+      envelopeId,
+      actor,
+    }, {
+      eventType: "requests.remind_parties",
+      partyIds,
     });
   }
 
   /**
    * @summary Log cancel envelope operation
    */
-  async logCancelEnvelope(
-    context: AuditContext, 
-    details: { envelopeId: string; reason?: string; previousStatus: string; newStatus: string }
-  ): Promise<void> {
-    await this.logBusinessEvent(context, {
-      action: "cancel_envelope",
-      ...details
+  async logCancelEnvelope(envelopeId: EnvelopeId, tenantId: TenantId, actor: ActorContext): Promise<void> {
+    await this.logBusinessEvent({
+      tenantId,
+      envelopeId,
+      actor,
+    }, {
+      eventType: "requests.cancel_envelope",
     });
   }
 
   /**
    * @summary Log decline envelope operation
    */
-  async logDeclineEnvelope(
-    context: AuditContext, 
-    details: { envelopeId: string; reason?: string; previousStatus: string; newStatus: string }
-  ): Promise<void> {
-    await this.logBusinessEvent(context, {
-      action: "decline_envelope",
-      ...details
+  async logDeclineEnvelope(envelopeId: EnvelopeId, tenantId: TenantId, actor: ActorContext): Promise<void> {
+    await this.logBusinessEvent({
+      tenantId,
+      envelopeId,
+      actor,
+    }, {
+      eventType: "requests.decline_envelope",
     });
   }
 
   /**
    * @summary Log finalise envelope operation
    */
-  async logFinaliseEnvelope(
-    context: AuditContext, 
-    details: { envelopeId: string; previousStatus: string; newStatus: string; finalisedAt: string }
-  ): Promise<void> {
-    await this.logBusinessEvent(context, {
-      action: "finalise_envelope",
-      ...details
+  async logFinaliseEnvelope(envelopeId: EnvelopeId, tenantId: TenantId, actor: ActorContext): Promise<void> {
+    await this.logBusinessEvent({
+      tenantId,
+      envelopeId,
+      actor,
+    }, {
+      eventType: "requests.finalise_envelope",
     });
   }
 
   /**
    * @summary Log request signature operation
    */
-  async logRequestSignature(
-    context: AuditContext, 
-    details: { envelopeId: string; partyIds: string[]; requested: string[]; skipped: string[]; message?: string }
-  ): Promise<void> {
-    await this.logBusinessEvent(context, {
-      action: "request_signature",
-      ...details
+  async logRequestSignature(partyId: PartyId, envelopeId: EnvelopeId, tenantId: TenantId, actor: ActorContext): Promise<void> {
+    await this.logBusinessEvent({
+      tenantId,
+      envelopeId,
+      actor,
+    }, {
+      eventType: "requests.request_signature",
+      partyId,
     });
   }
 
   /**
    * @summary Log add viewer operation
    */
-  async logAddViewer(
-    context: AuditContext, 
-    details: { envelopeId: string; partyId: string; addedAt: string; message?: string }
-  ): Promise<void> {
-    await this.logBusinessEvent(context, {
-      action: "add_viewer",
-      ...details
+  async logAddViewer(partyId: PartyId, envelopeId: EnvelopeId, tenantId: TenantId, actor: ActorContext): Promise<void> {
+    await this.logBusinessEvent({
+      tenantId,
+      envelopeId,
+      actor,
+    }, {
+      eventType: "requests.add_viewer",
+      partyId,
     });
   }
 }

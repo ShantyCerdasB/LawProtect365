@@ -39,8 +39,7 @@ export const randomToken = (bytes = 32): string => {
 
   // Replace '+' -> '-', '/' -> '_' without regex.
   let out = "";
-  for (let i = 0; i < base64.length; i++) {
-    const ch = base64[i]!;
+  for (const ch of base64) {
     if (ch === "+") out += "-";
     else if (ch === "/") out += "_";
     else out += ch;

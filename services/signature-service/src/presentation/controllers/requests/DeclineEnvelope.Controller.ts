@@ -1,22 +1,22 @@
-﻿/**
- * @file addViewer.ts
- * @summary Add viewer controller
- * @description Handles adding a viewer to an envelope
+/**
+ * @file DeclineEnvelope.Controller.ts
+ * @summary Decline Envelope controller
+ * @description Handles declining an envelope
  */
 
 import { createCommandController } from "../../../shared/controllers/controllerFactory";
 import { makeRequestsCommandsPort } from "../../../app/adapters/requests/makeRequestsCommandsPort";
 import { DefaultRequestsCommandService } from "../../../app/services/Requests";
-import { AddViewerBody } from "../../../presentation/schemas/requests";
+import { DeclineEnvelopeBody } from "../../../presentation/schemas/requests";
 import { EnvelopeIdPath } from "../../../presentation/schemas/common/path";
-import type { AddViewerControllerInput } from "../../../shared/types/requests/ControllerInputs";
-import type { AddViewerAppResult } from "../../../shared/types/requests/AppServiceInputs";
+import type { DeclineEnvelopeControllerInput } from "../../../shared/types/requests/ControllerInputs";
+import type { DeclineEnvelopeAppResult } from "../../../shared/types/requests/AppServiceInputs";
 
 /**
- * @description Add viewer controller
+ * @description Decline Envelope controller
  */
-export const AddViewerController = createCommandController<AddViewerControllerInput, AddViewerAppResult>({
-  bodySchema: AddViewerBody,
+export const DeclineEnvelopeController = createCommandController<DeclineEnvelopeControllerInput, DeclineEnvelopeAppResult>({
+  bodySchema: DeclineEnvelopeBody,
   pathSchema: EnvelopeIdPath,
   appServiceClass: DefaultRequestsCommandService,
   createDependencies: (c) => makeRequestsCommandsPort(
@@ -26,17 +26,17 @@ export const AddViewerController = createCommandController<AddViewerControllerIn
     c.requests.validationService,
     c.requests.auditService,
     c.requests.eventService,
-    c.requests.rateLimitService
+    c.requests.rateLimitService,
+    c.ids,
+    c.storage.presigner
   ),
   extractParams: (path, body) => ({
     envelopeId: path.id,
-    email: body.email,
-    name: body.name,
-    locale: body.locale,
+    reason: body.reason,
   }),
-  responseType: "created",
+  responseType: "ok",
   includeActor: true,
 });
 
 // Export handler for backward compatibility
-export const handler = AddViewerController;
+export const handler = DeclineEnvelopeController;

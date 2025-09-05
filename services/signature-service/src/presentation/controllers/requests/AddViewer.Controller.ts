@@ -1,22 +1,22 @@
-﻿/**
- * @file requestSignature.ts
- * @summary Request signature controller
- * @description Handles requesting a signature from a specific party
+/**
+ * @file AddViewer.Controller.ts
+ * @summary Add Viewer controller
+ * @description Handles adding a viewer to an envelope
  */
 
 import { createCommandController } from "../../../shared/controllers/controllerFactory";
 import { makeRequestsCommandsPort } from "../../../app/adapters/requests/makeRequestsCommandsPort";
 import { DefaultRequestsCommandService } from "../../../app/services/Requests";
-import { RequestSignatureBody } from "../../../presentation/schemas/requests";
+import { AddViewerBody } from "../../../presentation/schemas/requests";
 import { EnvelopeIdPath } from "../../../presentation/schemas/common/path";
-import type { RequestSignatureControllerInput } from "../../../shared/types/requests/ControllerInputs";
-import type { RequestSignatureAppResult } from "../../../shared/types/requests/AppServiceInputs";
+import type { AddViewerControllerInput } from "../../../shared/types/requests/ControllerInputs";
+import type { AddViewerAppResult } from "../../../shared/types/requests/AppServiceInputs";
 
 /**
- * @description Request signature controller
+ * @description Add Viewer controller
  */
-export const RequestSignatureController = createCommandController<RequestSignatureControllerInput, RequestSignatureAppResult>({
-  bodySchema: RequestSignatureBody,
+export const AddViewerController = createCommandController<AddViewerControllerInput, AddViewerAppResult>({
+  bodySchema: AddViewerBody,
   pathSchema: EnvelopeIdPath,
   appServiceClass: DefaultRequestsCommandService,
   createDependencies: (c) => makeRequestsCommandsPort(
@@ -26,17 +26,19 @@ export const RequestSignatureController = createCommandController<RequestSignatu
     c.requests.validationService,
     c.requests.auditService,
     c.requests.eventService,
-    c.requests.rateLimitService
+    c.requests.rateLimitService,
+    c.ids,
+    c.storage.presigner
   ),
   extractParams: (path, body) => ({
     envelopeId: path.id,
-    partyId: body.partyId,
-    message: body.message,
-    channel: body.channel,
+    email: body.email,
+    name: body.name,
+    locale: body.locale,
   }),
   responseType: "created",
   includeActor: true,
 });
 
 // Export handler for backward compatibility
-export const handler = RequestSignatureController;
+export const handler = AddViewerController;

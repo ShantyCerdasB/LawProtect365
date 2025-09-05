@@ -51,8 +51,8 @@ describe("isPlainObject", () => {
     expect(isPlainObject("x")).toBe(false);
     expect(isPlainObject(1)).toBe(false);
     expect(isPlainObject(true)).toBe(false);
-    class Foo { constructor() { this.bar = 'baz'; } }
-    expect(isPlainObject(new Foo())).toBe(false);
+    const createFoo = () => ({ bar: 'baz' });
+    expect(isPlainObject(createFoo())).toBe(false);
   });
 
   it("treats Object.create(null) as non-plain with this implementation", () => {

@@ -48,17 +48,17 @@ export const validateRequest = <
   query: InferOr<SQ, Record<string, never>>;
   body: InferOr<SB, undefined>;
 } => {
-  const path = (schemas.path
+  const path = schemas.path
     ? validatePath(evt, schemas.path)
-    : ({} as Record<string, never>)) as InferOr<SP, Record<string, never>>;
+    : ({} as Record<string, never>);
 
-  const query = (schemas.query
+  const query = schemas.query
     ? validateQuery(evt, schemas.query)
-    : ({} as Record<string, never>)) as InferOr<SQ, Record<string, never>>;
+    : ({} as Record<string, never>);
 
-  const body = (schemas.body
+  const body = schemas.body
     ? validateJsonBody(evt, schemas.body)
-    : (undefined as undefined)) as InferOr<SB, undefined>;
+    : undefined;
 
   return { path, query, body };
 };

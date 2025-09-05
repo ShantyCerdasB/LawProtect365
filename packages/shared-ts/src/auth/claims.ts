@@ -26,12 +26,7 @@ export const toJwtClaims = (payload: JWTPayload): JwtClaims => {
     (payload as any)["custom:tenantId"] ??
     (payload as any)["https://claims.example.com/tenant_id"];
 
-  let aud: string | string[] | undefined;
-  if (typeof payload.aud === "string") {
-    aud = payload.aud;
-  } else if (Array.isArray(payload.aud)) {
-    aud = payload.aud;
-  }
+  const aud = payload.aud;
 
   return {
     sub: String(payload.sub ?? ""),

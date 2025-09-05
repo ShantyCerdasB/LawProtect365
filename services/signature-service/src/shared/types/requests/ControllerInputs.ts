@@ -99,9 +99,11 @@ export interface FinaliseEnvelopeControllerInput extends BaseRequestControllerIn
 
 /**
  * @summary Input for requesting signature (controller level)
- * @description Parameters for requesting signature from parties, tenantId and actor are injected by factory
+ * @description Parameters for requesting signature from a specific party, tenantId and actor are injected by factory
  */
-export interface RequestSignatureControllerInput extends RequestWithPartiesControllerInput {
+export interface RequestSignatureControllerInput extends BaseRequestControllerInput {
+  /** The party ID to request signature from */
+  readonly partyId: PartyId;
   /** Optional custom message for the signature request */
   readonly message?: string;
 }
@@ -115,8 +117,10 @@ export interface RequestSignatureControllerInput extends RequestWithPartiesContr
  * @description Parameters for adding a viewer to an envelope, tenantId and actor are injected by factory
  */
 export interface AddViewerControllerInput extends BaseRequestControllerInput {
-  /** Party ID to add as viewer */
-  readonly partyId: PartyId;
-  /** Optional custom message */
-  readonly message?: string;
+  /** Email address of the viewer */
+  readonly email: string;
+  /** Optional name of the viewer */
+  readonly name?: string;
+  /** Optional locale preference for the viewer */
+  readonly locale?: string;
 }

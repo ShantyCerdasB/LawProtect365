@@ -1,8 +1,6 @@
 import type { ISODateString } from "./common.js";
 import type { TenantId, UserId } from "./brand.js";
 
-/** Event name (domain-specific string). */
-export type EventName = string;
 
 /**
  * Metadata carried by domain and integration events.
@@ -28,7 +26,7 @@ export interface EventMeta {
  * Generic event envelope used for message buses and audit logs.
  */
 export interface EventEnvelope<TPayload = unknown> {
-  name: EventName;
+  name: string;
   meta: EventMeta;
   data: TPayload;
 }

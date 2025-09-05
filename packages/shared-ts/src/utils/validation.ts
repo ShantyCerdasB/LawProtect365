@@ -105,7 +105,7 @@ const isAllPrintableNoSpace = (s: string): boolean => {
  */
 const isValidLocal = (local: string): boolean => {
   if (!isLengthWithin(local, 1, 64)) return false;
-  if (local[0] === "." || local[local.length - 1] === ".") return false;
+  if (local.startsWith(".") || local.endsWith(".")) return false;
   if (local.includes("..")) return false;
   return true;
 };
@@ -138,7 +138,7 @@ const isValidDomain = (domain: string): boolean => {
  */
 const isValidDomainLabel = (label: string): boolean => {
   if (label.length === 0) return false;
-  if (label[0] === "-" || label[label.length - 1] === "-") return false;
+  if (label.startsWith("-") || label.endsWith("-")) return false;
   for (let i = 0; i < label.length; i++) {
     const cc = label.charCodeAt(i);
     const isDigit = cc >= 48 && cc <= 57;

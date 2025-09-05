@@ -1,7 +1,7 @@
-﻿/**
- * @file finalise.ts
- * @summary Finalise envelope controller
- * @description Handles finalizing an envelope
+/**
+ * @file FinaliseEnvelope.Controller.ts
+ * @summary Finalise Envelope controller
+ * @description Handles finalizing an envelope and generating artifacts
  */
 
 import { createCommandController } from "../../../shared/controllers/controllerFactory";
@@ -13,7 +13,7 @@ import type { FinaliseEnvelopeControllerInput } from "../../../shared/types/requ
 import type { FinaliseEnvelopeAppResult } from "../../../shared/types/requests/AppServiceInputs";
 
 /**
- * @description Finalise envelope controller
+ * @description Finalise Envelope controller
  */
 export const FinaliseEnvelopeController = createCommandController<FinaliseEnvelopeControllerInput, FinaliseEnvelopeAppResult>({
   bodySchema: FinaliseEnvelopeBody,
@@ -26,11 +26,12 @@ export const FinaliseEnvelopeController = createCommandController<FinaliseEnvelo
     c.requests.validationService,
     c.requests.auditService,
     c.requests.eventService,
-    c.requests.rateLimitService
+    c.requests.rateLimitService,
+    c.ids,
+    c.storage.presigner
   ),
   extractParams: (path, body) => ({
     envelopeId: path.id,
-    message: body.message,
   }),
   responseType: "ok",
   includeActor: true,

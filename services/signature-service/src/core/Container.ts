@@ -103,10 +103,10 @@ import { makeInputsCommandsPort } from "../app/adapters/inputs/makeInputsCommand
 import { makeInputsQueriesPort } from "../app/adapters/inputs/makeInputsQueriesPort";
 
 // Requests services
-import { RequestsValidationService } from "../app/services/Requests/RequestsValidationService";
-import { RequestsAuditService } from "../app/services/Requests/RequestsAuditService";
-import { RequestsEventService } from "../app/services/Requests/RequestsEventService";
-import { RequestsRateLimitService } from "../app/services/Requests/RequestsRateLimitService";
+import { DefaultRequestsValidationService } from "../app/services/Requests/RequestsValidationService";
+import { DefaultRequestsAuditService } from "../app/services/Requests/RequestsAuditService";
+import { DefaultRequestsEventService } from "../app/services/Requests/RequestsEventService";
+import { DefaultRequestsRateLimitService } from "../app/services/Requests/RequestsRateLimitService";
 import { makeRequestsCommandsPort } from "../app/adapters/requests/makeRequestsCommandsPort";
 
 let singleton: Container;
@@ -354,10 +354,10 @@ export const getContainer = (): Container => {
   );
 
   // Requests services - instantiate with correct dependencies
-  const requestsValidation = new RequestsValidationService();
-  const requestsAudit = new RequestsAuditService(audit);
-  const requestsEvents = new RequestsEventService(outbox);
-  const requestsRateLimit = new RequestsRateLimitService(otpRateLimitStore);
+  const requestsValidation = new DefaultRequestsValidationService();
+  const requestsAudit = new DefaultRequestsAuditService(audit);
+  const requestsEvents = new DefaultRequestsEventService(outbox);
+  const requestsRateLimit = new DefaultRequestsRateLimitService(otpRateLimitStore);
   
   const requestsCommands = makeRequestsCommandsPort(
     envelopes,
@@ -366,7 +366,10 @@ export const getContainer = (): Container => {
     requestsValidation,
     requestsAudit,
     requestsEvents,
-    requestsRateLimit
+    requestsRateLimit,
+    // ✅ SERVICIOS DE INFRAESTRUCTURA - PATRÓN REUTILIZABLE
+    ids,
+    presigner
   );
 
   singleton = {

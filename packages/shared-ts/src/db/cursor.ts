@@ -38,7 +38,7 @@ export const toJsonValue = (v: unknown): JsonValue => {
   const t = typeof v;
 
   if (t === "string" || t === "boolean") return v as JsonValue;
-  if (t === "number") return Number.isFinite(v as number) ? (v as number) : String(v) as JsonValue;
+  if (t === "number") return Number.isFinite(v as number) ? (v as number) : (v as number).toString() as JsonValue;
   if (t === "bigint") return (v as bigint).toString();
 
   // Node Buffer → base64url
@@ -62,7 +62,9 @@ export const toJsonValue = (v: unknown): JsonValue => {
   }
 
   // Fallback: stringify symbols/functions/undefined
-  return String(v) as JsonValue;
+  if (typeof v === "symbol") return v.toString() as JsonValue;
+  if (typeof v === "function") return "[Function]" as JsonValue;
+  return "[object Object]" as JsonValue;
 };
 
 /**

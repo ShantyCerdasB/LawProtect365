@@ -2,7 +2,7 @@
  * Environment variable helpers for required/optional retrieval and parsing.
  */
 
-const has = (k: string): boolean => Object.prototype.hasOwnProperty.call(process.env, k);
+const has = (k: string): boolean => Object.hasOwn(process.env, k);
 
 /** Returns raw env var or undefined when missing. */
 export const getEnv = (key: string): string | undefined => process.env[key];

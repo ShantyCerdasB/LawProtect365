@@ -18,11 +18,17 @@ export const buildAppConfig = (overrides?: Partial<AppConfig>): AppConfig => {
   const logLevel = (base.LOG_LEVEL as LogLevel) ?? "info";
 
   const flags = loadFeatureFlags();
-  const corsAllowedOrigins: string[] | "*" = process.env.CORS_ALLOWED_ORIGINS
-    ? process.env.CORS_ALLOWED_ORIGINS === "*"
-      ? "*"
-      : process.env.CORS_ALLOWED_ORIGINS.split(",").map((s) => s.trim()).filter(Boolean)
-    : "*";
+  
+  let corsAllowedOrigins: string[] | "*";
+  if (process.env.CORS_ALLOWED_ORIGINS) {
+    if (process.env.CORS_ALLOWED_ORIGINS === "*") {
+      corsAllowedOrigins = "*";
+    } else {
+      corsAllowedOrigins = process.env.CORS_ALLOWED_ORIGINS.split(",").map((s) => s.trim()).filter(Boolean);
+    }
+  } else {
+    corsAllowedOrigins = "*";
+  }
 
   const rateLimit = defaultRateLimit(env);
 

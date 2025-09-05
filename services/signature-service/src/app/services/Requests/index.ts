@@ -5,7 +5,7 @@
  */
 
 export { DefaultRequestsCommandService } from "./RequestsCommandService";
-export { RequestsValidationService } from "./RequestsValidationService";
-export { RequestsAuditService } from "./RequestsAuditService";
-export { RequestsEventService } from "./RequestsEventService";
-export { RequestsRateLimitService } from "./RequestsRateLimitService";
+export { DefaultRequestsValidationService } from "./RequestsValidationService";
+export { DefaultRequestsAuditService } from "./RequestsAuditService";
+export { DefaultRequestsEventService } from "./RequestsEventService";
+export { DefaultRequestsRateLimitService } from "./RequestsRateLimitService";

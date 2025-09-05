@@ -30,7 +30,7 @@ describe("validation barrel exports", () => {
       ["requests",      "../../src/validation/requests.js"],
     ] as const;
 
-    for (const [name, path] of submodules) {
+    for (const [, path] of submodules) {
       const mod: AnyRecord = await import(path);
       const keys = publicKeys(mod);
 

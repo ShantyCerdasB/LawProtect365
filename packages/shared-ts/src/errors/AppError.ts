@@ -5,7 +5,7 @@ import { ErrorCode } from "./codes.js";
  * Carries a stable code, HTTP status, and optional details safe for clients.
  * Extend this class for common HTTP categories or domain-specific errors.
  */
-export class AppError<C extends string = ErrorCode | string> extends Error {
+export class AppError<C extends string = ErrorCode> extends Error {
   /** Stable machine-readable code (e.g., AUTH_UNAUTHORIZED, DOCS_TEMPLATE_NOT_FOUND). */
   public readonly code: C;
 

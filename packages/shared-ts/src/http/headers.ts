@@ -19,7 +19,12 @@ function convertArrayValue(value: unknown[]): string {
 function convertSingleValue(value: unknown): string | undefined {
   if (typeof value === "string") return value;
   if (value == null) return undefined;
-  return String(value);
+  if (typeof value === "number") return value.toString();
+  if (typeof value === "boolean") return value.toString();
+  if (typeof value === "bigint") return value.toString();
+  if (typeof value === "symbol") return value.toString();
+  if (typeof value === "function") return "[Function]";
+  return "[object Object]";
 }
 
 /** Returns the header value (case-insensitive). If array, returns the first item. */

@@ -37,7 +37,10 @@ export const groupBy = <T, K extends string | number | symbol>(
 ): Record<K, T[]> => {
   return arr.reduce((acc, item) => {
     const k = key(item);
-    (acc[k] ||= []).push(item);
+    if (!acc[k]) {
+      acc[k] = [];
+    }
+    acc[k].push(item);
     return acc;
   }, {} as Record<K, T[]>);
 };

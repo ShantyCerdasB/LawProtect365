@@ -16,16 +16,19 @@ export interface AwsErrorShape {
  */
 export const extractAwsError = (err: unknown): AwsErrorShape => {
   const any = err as any;
+  
+  let statusCode: number | undefined;
+  if (typeof any?.$metadata?.httpStatusCode === "number") {
+    statusCode = any.$metadata.httpStatusCode;
+  } else if (typeof any?.statusCode === "number") {
+    statusCode = any.statusCode;
+  }
+  
   return {
     name: typeof any?.name === "string" ? any.name : undefined,
     code: typeof any?.code === "string" ? any.code : undefined,
     message: typeof any?.message === "string" ? any.message : undefined,
-    statusCode:
-      typeof any?.$metadata?.httpStatusCode === "number"
-        ? any.$metadata.httpStatusCode
-        : typeof any?.statusCode === "number"
-          ? any.statusCode
-          : undefined
+    statusCode
   };
 };
 
