@@ -22,7 +22,14 @@
  * duplication and reduces controller complexity.
  */
 
-import type { HandlerFn } from "@lawprotect/shared-ts";
+import type { 
+  HandlerFn,
+  BeforeMiddleware,
+  AfterMiddleware,
+  CorsConfig,
+  JwtVerifyOptions,
+  ObservabilityFactories,
+} from "@lawprotect/shared-ts";
 import {
   compose,
   apiHandler,
@@ -31,11 +38,6 @@ import {
   withRequestContext as withReqIds,
   withObservability,
   withControllerLogging,
-  type BeforeMiddleware,
-  type AfterMiddleware,
-  type CorsConfig,
-  type JwtVerifyOptions,
-  type ObservabilityFactories,
   getEnv,
 } from "@lawprotect/shared-ts";
 

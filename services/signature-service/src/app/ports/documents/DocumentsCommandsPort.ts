@@ -1,10 +1,10 @@
 /**
  * @file DocumentsCommandsPort.ts
  * @description Port for document command operations defining write operations on documents.
- * Provides methods to create, update, and delete documents with proper business rule validation.
+ * Provides methods to create, update, delete, and upload documents with proper business rule validation.
  */
 
-import type { TenantId, EnvelopeId, DocumentId, ActorContext } from "../shared";
+import type { TenantId, EnvelopeId, DocumentId, ActorContext, IpAddress } from "../shared";
 import type { S3ObjectRef } from "../../../domain/value-objects/S3ObjectRef";
 import type { ContentType } from "../../../domain/value-objects/ContentType";
 import type { DocumentLock } from "../../../domain/value-objects/DocumentLock";
@@ -30,8 +30,8 @@ export interface CreateDocumentCommand {
   s3Ref: S3ObjectRef;
   /** Optional number of pages in the document */
   pageCount?: number;
-  /** Context information about the actor creating the document (optional) */
-  actor?: ActorContext;
+  /** Context information about the actor creating the document */
+  actor: ActorContext;
 }
 
 /**
@@ -45,6 +45,44 @@ export interface CreateDocumentResult {
 }
 
 /**
+ * @description Command for uploading a new document (original document upload).
+ */
+export interface UploadDocumentCommand {
+  /** The tenant ID that owns the document */
+  tenantId: TenantId;
+  /** The envelope ID the document belongs to */
+  envelopeId: EnvelopeId;
+  /** The name of the document */
+  name: string;
+  /** The MIME type of the document */
+  contentType: ContentType;
+  /** The size of the document in bytes */
+  size: number;
+  /** The SHA-256 hash digest of the document */
+  digest: string;
+  /** Optional number of pages in the document */
+  pageCount?: number;
+  /** Context information about the actor uploading the document */
+  actor: ActorContext;
+}
+
+/**
+ * @description Result of uploading a new document.
+ */
+export interface UploadDocumentResult {
+  /** The unique identifier of the uploaded document */
+  documentId: DocumentId;
+  /** ISO timestamp when the document was uploaded */
+  uploadedAt: string;
+  /** Presigned URL for uploading the document to S3 */
+  uploadUrl: string;
+  /** S3 object key where the document will be stored */
+  objectKey: string;
+  /** Expiration time for the upload URL */
+  expiresAt: string;
+}
+
+/**
  * @description Command for updating document metadata.
  */
 export interface UpdateDocumentCommand {
@@ -54,6 +92,8 @@ export interface UpdateDocumentCommand {
   name?: string;
   /** Optional metadata to update */
   metadata?: Record<string, unknown>;
+  /** Context information about the actor updating the document */
+  actor: ActorContext;
 }
 
 /**

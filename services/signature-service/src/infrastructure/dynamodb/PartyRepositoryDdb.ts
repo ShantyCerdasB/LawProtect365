@@ -17,6 +17,7 @@ import {
   partyPk,
   partySk,
   requireQuery,
+  PartyKey,
 } from "../../shared/types/infrastructure/dynamodb";
 
 /**
@@ -28,8 +29,6 @@ import {
  */
 const toDdbItem = <T extends object>(v: T): Record<string, unknown> =>
   (v as unknown) as Record<string, unknown>;
-
-import { PartyKey } from "../../shared/types/infrastructure/dynamodb";
 
 /**
  * @description DynamoDB implementation of `Repository<Party, PartyKey>`.

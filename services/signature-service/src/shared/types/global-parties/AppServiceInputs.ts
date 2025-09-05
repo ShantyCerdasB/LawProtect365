@@ -5,7 +5,7 @@
  */
 
 import type { TenantId, PartyId } from "../../../domain/value-objects/Ids";
-import type { GlobalPartyCommon, GlobalPartyPatch, GlobalPartyExtended } from "./GlobalPartiesTypes";
+import type { GlobalPartyCommon, GlobalPartyPatch, GlobalPartyRow } from "./GlobalPartiesTypes";
 
 /**
  * @summary Input for getting global party app service

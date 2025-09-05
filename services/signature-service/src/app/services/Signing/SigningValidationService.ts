@@ -4,19 +4,19 @@
  * @description Handles validation for Signing operations using domain rules and Zod schemas
  */
 
-import { UnprocessableEntityError } from "@lawprotect/shared-ts";
 import type { 
   SigningValidationService,
   CompleteSigningControllerInput,
   DeclineSigningControllerInput,
+  PrepareSigningControllerInput,
+  SigningConsentControllerInput,
   PresignUploadControllerInput,
   DownloadSignedDocumentControllerInput
 } from "../../../shared/types/signing";
 import { HashDigestSchema } from "../../../domain/value-objects/HashDigest";
 import { KmsAlgorithmSchema } from "../../../domain/value-objects/Kms";
-import { OtpChannelSchema } from "../../../domain/value-objects/Otp";
 import { assertKmsAlgorithmAllowed } from "../../../domain/rules/Signing.rules";
-import { badRequest } from "../../../shared/errors";
+import { badRequest, unprocessable, signatureHashMismatch, kmsPermissionDenied } from "../../../shared/errors";
 
 /**
  * @description Default implementation of SigningValidationService
@@ -43,7 +43,7 @@ export class DefaultSigningValidationService implements SigningValidationService
     try {
       HashDigestSchema.parse(input.digest);
     } catch (error) {
-      throw new UnprocessableEntityError("Invalid digest format", "SIGNATURE_HASH_MISMATCH", { digest: input.digest });
+      throw signatureHashMismatch({ digest: input.digest, originalError: error });
     }
 
     // Validate KMS algorithm using domain value object
@@ -52,7 +52,7 @@ export class DefaultSigningValidationService implements SigningValidationService
       // Use domain rule to check if algorithm is allowed
       assertKmsAlgorithmAllowed(algorithm, [algorithm]); // Allow the provided algorithm
     } catch (error) {
-      throw new UnprocessableEntityError("Invalid KMS algorithm", "KMS_PERMISSION_DENIED", { algorithm: input.algorithm });
+      throw kmsPermissionDenied({ algorithm: input.algorithm, originalError: error });
     }
   }
 
@@ -71,7 +71,7 @@ export class DefaultSigningValidationService implements SigningValidationService
     }
   }
 
-  validateRequestOtp(input: RequestOtpControllerInput): void {
+  validatePrepareSigning(input: PrepareSigningControllerInput): void {
     if (!input.envelopeId?.trim()) {
       throw badRequest("Envelope ID is required", "ENVELOPE_NOT_FOUND");
     }
@@ -80,17 +80,10 @@ export class DefaultSigningValidationService implements SigningValidationService
     }
     if (!input.token?.trim()) {
       throw badRequest("Request token is required", "REQUEST_TOKEN_INVALID");
-    }
-
-    // Validate OTP channel using domain value object
-    try {
-      OtpChannelSchema.parse(input.delivery);
-    } catch (error) {
-      throw new UnprocessableEntityError("Invalid OTP delivery channel", "OTP_INVALID", { delivery: input.delivery });
     }
   }
 
-  validateVerifyOtp(input: VerifyOtpControllerInput): void {
+  validateSigningConsent(input: SigningConsentControllerInput): void {
     if (!input.envelopeId?.trim()) {
       throw badRequest("Envelope ID is required", "ENVELOPE_NOT_FOUND");
     }
@@ -100,13 +93,11 @@ export class DefaultSigningValidationService implements SigningValidationService
     if (!input.token?.trim()) {
       throw badRequest("Request token is required", "REQUEST_TOKEN_INVALID");
     }
-    if (!input.code?.trim()) {
-      throw badRequest("OTP code is required", "OTP_INVALID");
+    if (typeof input.consentGiven !== "boolean") {
+      throw badRequest("Consent given must be a boolean value");
     }
-
-    // Validate OTP code format (4-10 characters)
-    if (input.code.length < 4 || input.code.length > 10) {
-      throw new UnprocessableEntityError("OTP code must be between 4 and 10 characters", "OTP_INVALID", { code: input.code });
+    if (!input.consentText?.trim()) {
+      throw badRequest("Consent text is required");
     }
   }
 
@@ -126,13 +117,13 @@ export class DefaultSigningValidationService implements SigningValidationService
 
     // Validate filename (basic validation)
     if (input.filename.includes("..") || input.filename.includes("/") || input.filename.includes("\\")) {
-      throw new UnprocessableEntityError("Invalid filename", "EVIDENCE_UPLOAD_INCOMPLETE", { filename: input.filename });
+      throw unprocessable("Invalid filename", "EVIDENCE_UPLOAD_INCOMPLETE", { filename: input.filename });
     }
 
     // Validate content type (basic validation)
     const allowedContentTypes = ["application/pdf", "image/png", "image/jpeg", "image/gif", "image/webp", "image/svg+xml"];
     if (!allowedContentTypes.includes(input.contentType)) {
-      throw new UnprocessableEntityError("Unsupported content type", "EVIDENCE_UPLOAD_INCOMPLETE", { contentType: input.contentType });
+      throw unprocessable("Unsupported content type", "EVIDENCE_UPLOAD_INCOMPLETE", { contentType: input.contentType });
     }
   }
 

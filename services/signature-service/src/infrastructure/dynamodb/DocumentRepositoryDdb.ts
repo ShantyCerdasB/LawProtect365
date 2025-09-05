@@ -155,37 +155,19 @@ export class DocumentRepositoryDdb implements DocumentsRepository {
   }
 
   /**
-   * @summary Updates an existing document with read-modify-write semantics
+   * @summary Updates an existing document by unique identifier
    * @description Performs optimistic update with existence check and timestamp update.
-   * Uses conditional put to ensure document exists before modification.
-   * @param id - Document identifier
-   * @param patch - Partial document with fields to update
-   * @returns Updated document snapshot
-   * @throws DocumentNotFoundError when document doesn't exist
-   * @throws Errors mapped via mapAwsError
-   */
-  async update(_id: DocumentId, _patch: Partial<Document>): Promise<Document> {
-    // This method requires envelopeId for single-table design
-    // Consider implementing updateByEnvelopeAndId(envelopeId, documentId, patch) instead
-    throw new Error(
-      "DocumentRepositoryDdb.update requires envelopeId for single-table design. " +
-      "Use updateByEnvelopeAndId(envelopeId, documentId, patch) instead."
-    );
-  }
-
-  /**
-   * @summary Updates an existing document by envelope and document identifiers
-   * @description Performs optimistic update with existence check and timestamp update.
-   * @param envelopeId - Envelope identifier
+   * Uses GSI to find the document, then updates using envelope-scoped key.
    * @param documentId - Document identifier
    * @param patch - Partial document with fields to update
    * @returns Updated document snapshot
    * @throws DocumentNotFoundError when document doesn't exist
    * @throws Errors mapped via mapAwsError
    */
-  async updateByEnvelopeAndId(envelopeId: string, documentId: DocumentId, patch: Partial<Document>): Promise<Document> {
+  async update(documentId: DocumentId, patch: Partial<Document>): Promise<Document> {
     try {
-      const current = await this.getByEnvelopeAndId(envelopeId, documentId);
+      // First, get the document to obtain envelopeId
+      const current = await this.getById(documentId);
       if (!current) throw documentNotFound({ id: documentId });
 
       const next: Document = Object.freeze({
@@ -205,41 +187,66 @@ export class DocumentRepositoryDdb implements DocumentsRepository {
       if (String(err?.name) === "ConditionalCheckFailedException") {
         throw documentNotFound({ id: documentId });
       }
-      throw mapAwsError(err, "DocumentRepositoryDdb.updateByEnvelopeAndId");
+      throw mapAwsError(err, "DocumentRepositoryDdb.update");
     }
   }
 
   /**
-   * @summary Deletes a document by identifier with existence check
-   * @description Removes a document with conditional delete to ensure it exists.
-   * Uses conditional expression to prevent deletion of non-existent documents.
-   * @param id - Document identifier
+   * @summary Updates an existing document by composite key
+   * @description Performs optimistic update with existence check and timestamp update.
+   * @param documentKey - The Document composite key
+   * @param patch - Partial document with fields to update
+   * @returns Updated document snapshot
    * @throws DocumentNotFoundError when document doesn't exist
    * @throws Errors mapped via mapAwsError
    */
-  async delete(_id: DocumentId): Promise<void> {
-    // This method requires envelopeId for single-table design
-    // Consider implementing deleteByEnvelopeAndId(envelopeId, documentId) instead
-    throw new Error(
-      "DocumentRepositoryDdb.delete requires envelopeId for single-table design. " +
-      "Use deleteByEnvelopeAndId(envelopeId, documentId) instead."
-    );
+  async updateByKey(documentKey: DocumentKey, patch: Partial<Document>): Promise<Document> {
+    try {
+      const current = await this.getByKey(documentKey);
+      if (!current) throw documentNotFound({ id: documentKey.documentId });
+
+      const next: Document = Object.freeze({
+        ...current,
+        ...patch,
+        updatedAt: nowIso(),
+      });
+
+      await this.ddb.put({
+        TableName: this.tableName,
+        Item: toDdbItem(documentItemMapper.toDTO(next)),
+        ConditionExpression: "attribute_exists(pk) AND attribute_exists(sk)",
+      });
+
+      return next;
+    } catch (err: any) {
+      if (String(err?.name) === "ConditionalCheckFailedException") {
+        throw documentNotFound({ id: documentKey.documentId });
+      }
+      throw mapAwsError(err, "DocumentRepositoryDdb.updateByKey");
+    }
   }
 
   /**
-   * @summary Deletes a document by envelope and document identifiers
+   * @summary Deletes a document by unique identifier
    * @description Removes a document with conditional delete to ensure it exists.
-   * @param envelopeId - Envelope identifier
+   * Uses GSI to find the document, then deletes using envelope-scoped key.
    * @param documentId - Document identifier
    * @throws DocumentNotFoundError when document doesn't exist
    * @throws Errors mapped via mapAwsError
    */
-  async deleteByEnvelopeAndId(envelopeId: string, documentId: DocumentId): Promise<void> {
+  async delete(documentId: DocumentId): Promise<void> {
     try {
+      // First, get the document to obtain envelopeId
+      const document = await this.getById(documentId);
+      if (!document) {
+        throw documentNotFound({ id: documentId });
+      }
+
+      // Now delete using the envelope-scoped key
       await this.ddb.delete({
         TableName: this.tableName,
         Key: { 
-          pk: documentPk(envelopeId), 
+          pk: documentPk(document.envelopeId), 
           sk: documentSk(String(documentId)) 
         },
         ConditionExpression: "attribute_exists(pk) AND attribute_exists(sk)",
@@ -248,7 +255,32 @@ export class DocumentRepositoryDdb implements DocumentsRepository {
       if (String(err?.name) === "ConditionalCheckFailedException") {
         throw documentNotFound({ id: documentId });
       }
-      throw mapAwsError(err, "DocumentRepositoryDdb.deleteByEnvelopeAndId");
+      throw mapAwsError(err, "DocumentRepositoryDdb.delete");
+    }
+  }
+
+  /**
+   * @summary Deletes a document by composite key
+   * @description Removes a document with conditional delete to ensure it exists.
+   * @param documentKey - The Document composite key
+   * @throws DocumentNotFoundError when document doesn't exist
+   * @throws Errors mapped via mapAwsError
+   */
+  async deleteByKey(documentKey: DocumentKey): Promise<void> {
+    try {
+      await this.ddb.delete({
+        TableName: this.tableName,
+        Key: { 
+          pk: documentPk(documentKey.envelopeId), 
+          sk: documentSk(String(documentKey.documentId)) 
+        },
+        ConditionExpression: "attribute_exists(pk) AND attribute_exists(sk)",
+      });
+    } catch (err: any) {
+      if (String(err?.name) === "ConditionalCheckFailedException") {
+        throw documentNotFound({ id: documentKey.documentId });
+      }
+      throw mapAwsError(err, "DocumentRepositoryDdb.deleteByKey");
     }
   }
 
@@ -256,22 +288,22 @@ export class DocumentRepositoryDdb implements DocumentsRepository {
    * @summary Lists documents within an envelope with forward-only pagination
    * @description Retrieves documents scoped to a specific envelope using partition key queries.
    * Supports cursor-based pagination for efficient large result set handling.
-   * @param args - Query parameters including envelope scope and pagination
-   * @param args.envelopeId - Envelope identifier for partition scope
-   * @param args.limit - Maximum number of documents to return
-   * @param args.cursor - Opaque continuation token for pagination
+   * @param params - Query parameters including envelope scope and pagination
+   * @param params.envelopeId - Envelope identifier for partition scope
+   * @param params.limit - Maximum number of documents to return
+   * @param params.cursor - Opaque continuation token for pagination
    * @returns Page of documents with optional next cursor
    * @throws Errors mapped via mapAwsError
    */
-  async listByEnvelope(args: {
-    envelopeId: string;
-    limit: number;
+  async listByEnvelope(params: {
+    envelopeId: EnvelopeId;
+    limit?: number;
     cursor?: string;
   }): Promise<{ items: Document[]; nextCursor?: string }> {
     try {
       requireQuery(this.ddb);
 
-      const params: {
+      const queryParams: {
         TableName: string;
         KeyConditionExpression: string;
         ExpressionAttributeValues: Record<string, unknown>;
@@ -280,12 +312,12 @@ export class DocumentRepositoryDdb implements DocumentsRepository {
       } = {
         TableName: this.tableName,
         KeyConditionExpression: "pk = :pk",
-        ExpressionAttributeValues: { ":pk": documentPk(args.envelopeId) },
-        Limit: args.limit,
-        ...(args.cursor ? { ExclusiveStartKey: JSON.parse(args.cursor) as Record<string, unknown> } : {}),
+        ExpressionAttributeValues: { ":pk": documentPk(params.envelopeId) },
+        Limit: params.limit || 50,
+        ...(params.cursor ? { ExclusiveStartKey: JSON.parse(params.cursor) as Record<string, unknown> } : {}),
       };
 
-      const result = await this.ddb.query(params);
+      const result = await this.ddb.query(queryParams);
 
       const items = (result.Items ?? []).map((raw) =>
         documentItemMapper.fromDTO(raw as unknown as DdbDocumentItem)
