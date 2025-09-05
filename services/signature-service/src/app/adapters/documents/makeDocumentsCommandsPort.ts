@@ -1,41 +1,48 @@
 /**
- * @file makeDocumentsCommandsPort.adapter.ts
+ * @file makeDocumentsCommandsPort.ts
  * @summary Factory for DocumentsCommandsPort
  * @description Creates and configures the DocumentsCommandsPort implementation,
- * adapting between the app service layer and use cases. Handles dependency injection
- * and type conversions for document command operations.
+ * adapting between the app service layer and the documents repository.
+ * Handles dependency injection and business logic for document command operations.
  */
 
-import type { Repository } from "@lawprotect/shared-ts";
 import type { Document } from "@/domain/entities/Document";
 import type { DocumentId } from "@/domain/value-objects/Ids";
 import type { 
   DocumentsCommandsPort, 
   CreateDocumentCommand, 
   CreateDocumentResult, 
+  UploadDocumentCommand,
+  UploadDocumentResult,
   UpdateDocumentCommand, 
   UpdateDocumentResult,
   UpdateDocumentBinaryCommand
-} from "@/app/ports/documents/DocumentsCommandsPort";
+} from "../../ports/documents/DocumentsCommandsPort";
 import type { DocumentLock } from "@/domain/value-objects/DocumentLock";
-import { createDocument } from "@/use-cases/documents/CreateDocument";
-import { patchDocument } from "@/use-cases/documents/PatchDocument";
-import { deleteDocument } from "@/use-cases/documents/DeleteDocument";
-import { toDocumentId } from "@/app/ports/shared";
+import type { DocumentsRepository } from "@/shared/contracts/repositories/documents/DocumentsRepository";
 import { documentNotFound } from "@/shared/errors";
+import { nowIso } from "@lawprotect/shared-ts";
+
+/**
+ * Dependencies for the DocumentsCommandsPort
+ */
+interface Dependencies {
+  /** Documents repository for data persistence */
+  documentsRepo: DocumentsRepository;
+  /** ID generator for creating new document IDs */
+  ids: { ulid(): string };
+  /** S3 service for presigned URLs */
+  s3Service?: {
+    createPresignedUploadUrl(bucket: string, key: string, contentType: string): Promise<{ url: string; expiresAt: string }>;
+  };
+}
 
 /**
  * Creates a DocumentsCommandsPort implementation
- * @param documentsRepo - The document repository for data persistence
- * @param envelopesRepo - The envelope repository for validation
- * @param deps - Dependencies including ID generators
+ * @param deps - Dependencies including repository and services
  * @returns Configured DocumentsCommandsPort implementation
  */
-export const makeDocumentsCommandsPort = (
-  documentsRepo: Repository<Document, DocumentId>,
-  envelopesRepo: Repository<any, string>,
-  deps: { ids: { ulid(): string } }
-): DocumentsCommandsPort => {
+export const makeDocumentsCommandsPort = (deps: Dependencies): DocumentsCommandsPort => {
   return {
     /**
      * Creates a new document
@@ -43,30 +50,89 @@ export const makeDocumentsCommandsPort = (
      * @returns Promise resolving to creation result
      */
     async create(command: CreateDocumentCommand): Promise<CreateDocumentResult> {
-      const result = await createDocument(
-        {
-          tenantId: command.tenantId,
-          envelopeId: command.envelopeId,
-          name: command.name,
-          contentType: command.contentType,
-          size: command.size,
-          digest: command.digest,
-          s3Ref: command.s3Ref,
-          pageCount: command.pageCount,
-          actor: command.actor,
+      const documentId = deps.ids.ulid() as DocumentId;
+      const now = nowIso();
+
+      const document: Document = {
+        documentId,
+        envelopeId: command.envelopeId,
+        tenantId: command.tenantId,
+        name: command.name,
+        status: "ready",
+        contentType: command.contentType,
+        size: command.size,
+        digest: command.digest,
+        s3Ref: command.s3Ref,
+        pageCount: command.pageCount,
+        createdAt: now,
+        updatedAt: now,
+        metadata: {
+          createdBy: command.actor.userId,
+          createdByIp: command.actor.ip,
         },
-        {
-          repos: { 
-            documents: documentsRepo,
-            envelopes: envelopesRepo,
-          },
-          ids: deps.ids,
-        }
-      );
+      };
+
+      await deps.documentsRepo.create(document);
 
       return {
-        documentId: result.document.documentId,
-        createdAt: result.document.createdAt,
+        documentId,
+        createdAt: now,
+      };
+    },
+
+    /**
+     * Uploads a new document (original document upload with presigned URL)
+     * @param command - The document upload command
+     * @returns Promise resolving to upload result with presigned URL
+     */
+    async upload(command: UploadDocumentCommand): Promise<UploadDocumentResult> {
+      if (!deps.s3Service) {
+        throw new Error("S3 service not available for document upload");
+      }
+
+      const documentId = deps.ids.ulid() as DocumentId;
+      const now = nowIso();
+      const objectKey = `documents/${command.envelopeId}/${documentId}`;
+
+      // Create presigned upload URL
+      const { url: uploadUrl, expiresAt } = await deps.s3Service.createPresignedUploadUrl(
+        "documents-bucket", // This should come from config
+        objectKey,
+        command.contentType
+      );
+
+      // Create document record
+      const document: Document = {
+        documentId,
+        envelopeId: command.envelopeId,
+        tenantId: command.tenantId,
+        name: command.name,
+        status: "pending",
+        contentType: command.contentType,
+        size: command.size,
+        digest: command.digest,
+        s3Ref: {
+          bucket: "documents-bucket",
+          key: objectKey,
+        },
+        pageCount: command.pageCount,
+        createdAt: now,
+        updatedAt: now,
+        metadata: {
+          uploadedBy: command.actor.userId,
+          uploadedByIp: command.actor.ip,
+          uploadStatus: "pending",
+        },
+      };
+
+      await deps.documentsRepo.create(document);
+
+      return {
+        documentId,
+        uploadedAt: now,
+        uploadUrl,
+        objectKey,
+        expiresAt,
       };
     },
 
@@ -76,23 +142,54 @@ export const makeDocumentsCommandsPort = (
      * @returns Promise resolving to update result
      */
     async update(command: UpdateDocumentCommand): Promise<UpdateDocumentResult> {
-      const result = await patchDocument(
-        { 
-          documentId: command.documentId,
-          name: command.name,
-          metadata: command.metadata,
+      const document = await deps.documentsRepo.getById(command.documentId);
+      if (!document) {
+        throw documentNotFound({ id: command.documentId });
+      }
+
+      const updatedDocument = await deps.documentsRepo.update(command.documentId, {
+        name: command.name,
+        metadata: {
+          ...document.metadata,
+          ...command.metadata,
+          updatedBy: command.actor.userId,
+          updatedByIp: command.actor.ip,
         },
-        { 
-          repos: { 
-            documents: documentsRepo,
-            envelopes: envelopesRepo,
-          } 
-        }
-      );
+      });
 
       return {
-        documentId: result.document.documentId,
-        updatedAt: result.document.updatedAt,
+        documentId: updatedDocument.documentId,
+        updatedAt: updatedDocument.updatedAt,
+      };
+    },
+
+    /**
+     * Updates document binary and metadata
+     * @param command - The document binary update command
+     * @returns Promise resolving to update result
+     */
+    async updateBinary(command: UpdateDocumentBinaryCommand): Promise<UpdateDocumentResult> {
+      const document = await deps.documentsRepo.getById(command.documentId);
+      if (!document) {
+        throw documentNotFound({ id: command.documentId });
+      }
+
+      const updatedDocument = await deps.documentsRepo.update(command.documentId, {
+        contentType: command.contentType,
+        size: command.size,
+        digest: command.digest,
+        s3Ref: command.s3Ref,
+        pageCount: command.pageCount,
+        metadata: {
+          ...document.metadata,
+          updatedBy: command.actor.userId,
+          updatedByIp: command.actor.ip,
+        },
+      });
+
+      return {
+        documentId: updatedDocument.documentId,
+        updatedAt: updatedDocument.updatedAt,
       };
     },
 
@@ -102,55 +199,12 @@ export const makeDocumentsCommandsPort = (
      * @returns Promise resolving when deletion is complete
      */
     async delete(documentId: DocumentId): Promise<void> {
-      await deleteDocument(
-        { documentId },
-        { 
-          repos: { 
-            documents: documentsRepo,
-            envelopes: envelopesRepo,
-          } 
-        }
-      );
-    },
+      const document = await deps.documentsRepo.getById(documentId);
+      if (!document) {
+        throw documentNotFound({ id: documentId });
+      }
 
-    /**
-     * Gets a document by ID
-     * @param documentId - The document ID to retrieve
-     * @returns Promise resolving to the document or null if not found
-     */
-    async getById(documentId: DocumentId): Promise<any> {
-      return await documentsRepo.getById(documentId);
-    },
-
-    /**
-     * Updates document binary and metadata
-     * @param command - The document binary update command
-     * @returns Promise resolving to update result
-     */
-    async updateBinary(command: UpdateDocumentBinaryCommand): Promise<UpdateDocumentResult> {
-      const result = await patchDocument(
-        { 
-          documentId: command.documentId,
-          metadata: {
-            contentType: command.contentType,
-            size: command.size,
-            digest: command.digest,
-            s3Ref: command.s3Ref,
-            pageCount: command.pageCount,
-          },
-        },
-        { 
-          repos: { 
-            documents: documentsRepo,
-            envelopes: envelopesRepo,
-          } 
-        }
-      );
-
-      return {
-        documentId: result.document.documentId,
-        updatedAt: result.document.updatedAt,
-      };
+      await deps.documentsRepo.delete(documentId);
     },
 
     /**
@@ -159,10 +213,10 @@ export const makeDocumentsCommandsPort = (
      * @returns Promise resolving when lock creation is complete
      */
     async createLock(lock: DocumentLock): Promise<void> {
-      const documentId = toDocumentId(lock.documentId);
-      const document = await documentsRepo.getById(documentId);
+      const documentId = lock.documentId as DocumentId;
+      const document = await deps.documentsRepo.getById(documentId);
       if (!document) {
-        throw documentNotFound(lock.documentId);
+        throw documentNotFound({ id: documentId });
       }
 
       const currentLocks = Array.isArray(document.metadata?.locks) ? document.metadata.locks : [];
@@ -171,22 +225,7 @@ export const makeDocumentsCommandsPort = (
         locks: [...currentLocks, lock],
       };
 
-      await documentsRepo.update(documentId, { metadata: updatedMetadata });
-    },
-
-    /**
-     * Lists all locks for a document
-     * @param documentId - The document ID to list locks for
-     * @returns Promise resolving to array of document locks
-     */
-    async listLocks(documentId: DocumentId): Promise<DocumentLock[]> {
-      const document = await documentsRepo.getById(documentId);
-      if (!document) {
-        return [];
-      }
-
-      const locks = document.metadata?.locks;
-      return Array.isArray(locks) ? locks : [];
+      await deps.documentsRepo.update(documentId, { metadata: updatedMetadata });
     },
   };
 };

@@ -6,8 +6,9 @@
  * Used by application services to query document information.
  */
 
-import type { EnvelopeId, DocumentId } from "../shared";
+import type { EnvelopeId, DocumentId } from "../../../domain/value-objects/Ids";
 import type { DocumentLock } from "../../../domain/value-objects/DocumentLock";
+import type { Document } from "../../../domain/entities/Document";
 
 /**
  * Query parameters for listing documents by envelope
@@ -26,7 +27,7 @@ export interface ListDocumentsQuery {
  */
 export interface ListDocumentsResult {
   /** Array of document data */
-  items: any[];
+  items: Document[];
   /** Cursor for the next page of results (optional) */
   nextCursor?: string;
 }
@@ -43,7 +44,7 @@ export interface DocumentsQueriesPort {
    * @param documentId - The unique identifier of the document
    * @returns Promise resolving to document data or null if not found
    */
-  getById(documentId: DocumentId): Promise<any>;
+  getById(documentId: DocumentId): Promise<Document | null>;
 
   /**
    * Lists documents for a specific envelope with pagination support

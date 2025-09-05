@@ -4,45 +4,8 @@
  * @description Defines comprehensive event structures and patterns
  */
 
-
-/**
- * Standard event patterns for common operations.
- */
-export const EVENT_PATTERNS = {
-  CONSENT: {
-    CREATED: "Consent.Created",
-    UPDATED: "Consent.Updated",
-    DELETED: "Consent.Deleted",
-    DELEGATED: "Consent.Delegated",
-    REVOKED: "Consent.Revoked",
-  },
-  ENVELOPE: {
-    CREATED: "Envelope.Created",
-    SENT: "Envelope.Sent",
-    SIGNED: "Envelope.Signed",
-    COMPLETED: "Envelope.Completed",
-    CANCELLED: "Envelope.Cancelled",
-  },
-  PARTY: {
-    CREATED: "Party.Created",
-    UPDATED: "Party.Updated",
-    VERIFIED: "Party.Verified",
-  },
-  AUDIT: {
-    EVENT_RECORDED: "Audit.EventRecorded",
-    ACCESS_ATTEMPTED: "Audit.AccessAttempted",
-  },
-} as const;
-
-/**
- * Event source constants.
- */
-export const EVENT_SOURCES = {
-  SIGNATURE_SERVICE: "signature-service",
-  CONSENT_SERVICE: "consent-service",
-  PARTY_SERVICE: "party-service",
-  AUDIT_SERVICE: "audit-service",
-} as const;
+// Re-export constants from domain enums
+export { EVENT_PATTERNS, EVENT_SOURCES } from "../../../domain/values/enums";
 
 /**
  * Event routing configuration.

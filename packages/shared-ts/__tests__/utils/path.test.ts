@@ -18,6 +18,14 @@ import {
   isSubpath,
   split,
 } from "../../src/utils/path.js";
+import {
+  runDirnameTests,
+  runBasenameTests,
+  commonDirnameTestCases,
+  commonBasenameTestCases,
+  pathSpecificDirnameTestCases,
+  pathSpecificBasenameTestCases,
+} from "./test-helpers.js";
 
 describe("utils/path", () => {
   describe("toPosix()", () => {
@@ -46,18 +54,17 @@ describe("utils/path", () => {
   });
 
   describe("dirname()", () => {
-    it("returns parent directory (POSIX)", () => {
-      expect(dirname("a/b/c.txt")).toBe("a/b");
-      expect(dirname("a\\b\\c.txt")).toBe("a/b");
-    });
+    runDirnameTests(dirname, [
+      ...commonDirnameTestCases,
+      ...pathSpecificDirnameTestCases,
+    ]);
   });
 
   describe("basename()", () => {
-    it("returns last segment", () => {
-      expect(basename("a/b/c.txt")).toBe("c.txt");
-      expect(basename("a/b/")).toBe("b");
-      expect(basename("a\\b\\")).toBe("b");
-    });
+    runBasenameTests(basename, [
+      ...commonBasenameTestCases,
+      ...pathSpecificBasenameTestCases,
+    ]);
   });
 
   describe("extname()", () => {

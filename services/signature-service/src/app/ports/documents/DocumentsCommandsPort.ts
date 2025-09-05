@@ -4,7 +4,8 @@
  * Provides methods to create, update, delete, and upload documents with proper business rule validation.
  */
 
-import type { TenantId, EnvelopeId, DocumentId, ActorContext, IpAddress } from "../shared";
+import type { TenantId, EnvelopeId, DocumentId } from "../../../domain/value-objects/Ids";
+import type { ActorContext } from "../../../domain/entities/ActorContext";
 import type { S3ObjectRef } from "../../../domain/value-objects/S3ObjectRef";
 import type { ContentType } from "../../../domain/value-objects/ContentType";
 import type { DocumentLock } from "../../../domain/value-objects/DocumentLock";
@@ -112,6 +113,8 @@ export interface UpdateDocumentBinaryCommand {
   s3Ref: S3ObjectRef;
   /** Optional number of pages in the document */
   pageCount?: number;
+  /** Context information about the actor updating the document */
+  actor: ActorContext;
 }
 
 /**
@@ -140,6 +143,14 @@ export interface DocumentsCommandsPort {
   create(command: CreateDocumentCommand): Promise<CreateDocumentResult>;
 
   /**
+   * @description Uploads a new document (original document upload with presigned URL).
+   *
+   * @param {UploadDocumentCommand} command - The document upload command
+   * @returns {Promise<UploadDocumentResult>} Promise resolving to upload result with presigned URL
+   */
+  upload(command: UploadDocumentCommand): Promise<UploadDocumentResult>;
+
+  /**
    * @description Updates an existing document with partial data.
    *
    * @param {UpdateDocumentCommand} command - The document update command
@@ -164,26 +175,10 @@ export interface DocumentsCommandsPort {
   delete(documentId: DocumentId): Promise<void>;
 
   /**
-   * @description Gets a document by ID.
-   *
-   * @param {DocumentId} documentId - The unique identifier of the document
-   * @returns {Promise<any>} Promise resolving to the document or null if not found
-   */
-  getById(documentId: DocumentId): Promise<any>;
-
-  /**
    * @description Creates a document lock.
    *
    * @param {DocumentLock} lock - The document lock to create
    * @returns {Promise<void>} Promise resolving when lock creation is complete
    */
   createLock(lock: DocumentLock): Promise<void>;
-
-  /**
-   * @description Lists all locks for a document.
-   *
-   * @param {DocumentId} documentId - The unique identifier of the document
-   * @returns {Promise<DocumentLock[]>} Promise resolving to array of document locks
-   */
-  listLocks(documentId: DocumentId): Promise<DocumentLock[]>;
 }

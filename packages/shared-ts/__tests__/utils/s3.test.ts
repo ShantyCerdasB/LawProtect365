@@ -18,6 +18,14 @@ import {
   toHttpUrl,
   guessContentType,
 } from "../../src/utils/s3.js";
+import {
+  runDirnameTests,
+  runBasenameTests,
+  commonDirnameTestCases,
+  commonBasenameTestCases,
+  s3SpecificDirnameTestCases,
+  s3SpecificBasenameTestCases,
+} from "./test-helpers.js";
 
 describe("utils/s3", () => {
   // ── parse/format/isS3Uri ─────────────────────────────────────────────────────
@@ -80,21 +88,17 @@ describe("utils/s3", () => {
   });
 
   describe("dirname()", () => {
-    it("returns directory portion or empty string", () => {
-      expect(dirname("a/b/c.txt")).toBe("a/b");
-      expect(dirname("single")).toBe("");
-      // idx === 0 yields empty per implementation
-      expect(dirname("/leading")).toBe("");
-    });
+    runDirnameTests(dirname, [
+      ...commonDirnameTestCases,
+      ...s3SpecificDirnameTestCases,
+    ]);
   });
 
   describe("basename()", () => {
-    it("returns last segment", () => {
-      expect(basename("a/b/c.txt")).toBe("c.txt");
-      expect(basename("name")).toBe("name");
-      // trailing slash yields empty string per implementation
-      expect(basename("a/b/")).toBe("");
-    });
+    runBasenameTests(basename, [
+      ...commonBasenameTestCases,
+      ...s3SpecificBasenameTestCases,
+    ]);
   });
 
   describe("ensurePrefix()", () => {
