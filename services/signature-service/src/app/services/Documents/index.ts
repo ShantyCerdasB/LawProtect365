@@ -5,6 +5,7 @@
  */
 
 export { DefaultDocumentsCommandService } from "./DocumentsCommandService";
+export { DefaultDocumentsQueryService } from "./DocumentsQueryService";
 export { DefaultDocumentsValidationService } from "./DocumentsValidationService";
 export { DefaultDocumentsEventService } from "./DocumentsEventService";
 export { DefaultDocumentsAuditService } from "./DocumentsAuditService";
@@ -13,6 +14,7 @@ export { DefaultDocumentsS3Service } from "./DocumentsS3Service";
 
 // Export interfaces
 export type { DocumentsCommandService } from "./DocumentsCommandService";
+export type { DocumentsQueryService } from "./DocumentsQueryService";
 export type { DocumentsValidationService } from "./DocumentsValidationService";
 export type { DocumentsEventService } from "./DocumentsEventService";
 export type { DocumentsAuditService } from "./DocumentsAuditService";

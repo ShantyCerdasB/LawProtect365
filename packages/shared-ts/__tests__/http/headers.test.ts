@@ -70,6 +70,35 @@ describe('getHeaders', () => {
     expect(getHeaders(headers, 'x-zero')).toBe('0');
     expect(getHeaders(headers, 'x-empty')).toBe('');
   });
+
+  it('converts boolean values to string', () => {
+    const headers = { 'X-Bool-True': true, 'X-Bool-False': false };
+    expect(getHeaders(headers, 'x-bool-true')).toBe('true');
+    expect(getHeaders(headers, 'x-bool-false')).toBe('false');
+  });
+
+  it('converts bigint values to string', () => {
+    const headers = { 'X-BigInt': BigInt(123456789) };
+    expect(getHeaders(headers, 'x-bigint')).toBe('123456789');
+  });
+
+  it('converts symbol values to string', () => {
+    const sym = Symbol('test');
+    const headers = { 'X-Symbol': sym };
+    expect(getHeaders(headers, 'x-symbol')).toBe('Symbol(test)');
+  });
+
+  it('converts function values to string', () => {
+    const fn = () => 'test';
+    const headers = { 'X-Function': fn };
+    expect(getHeaders(headers, 'x-function')).toBe('[Function]');
+  });
+
+  it('converts object values to string', () => {
+    const obj = { key: 'value' };
+    const headers = { 'X-Object': obj };
+    expect(getHeaders(headers, 'x-object')).toBe('[object Object]');
+  });
 });
 
 describe('extractHeaderToken', () => {

@@ -227,5 +227,22 @@ export const makeDocumentsCommandsPort = (deps: Dependencies): DocumentsCommands
 
       await deps.documentsRepo.update(documentId, { metadata: updatedMetadata });
     },
+
+    async deleteLock(documentId: DocumentId, lockId: string): Promise<void> {
+      const document = await deps.documentsRepo.getById(documentId);
+      if (!document) {
+        throw new Error(`Document not found: ${documentId}`);
+      }
+
+      const currentLocks = Array.isArray(document.metadata?.locks) ? document.metadata.locks : [];
+      const updatedLocks = currentLocks.filter((lock: any) => lock.lockId !== lockId);
+      
+      const updatedMetadata = {
+        ...document.metadata,
+        locks: updatedLocks,
+      };
+
+      await deps.documentsRepo.update(documentId, { metadata: updatedMetadata });
+    },
   };
 };

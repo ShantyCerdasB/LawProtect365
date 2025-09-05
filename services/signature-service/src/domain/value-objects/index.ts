@@ -18,4 +18,3 @@ export * from "./PaginationCursor";
 export * from "./ObjectVersion";
 export * from "./FileSize";
 export * from "./Reason";
-export * from "./Upload";

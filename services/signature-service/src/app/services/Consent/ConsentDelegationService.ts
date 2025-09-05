@@ -96,7 +96,7 @@ export class ConsentDelegationService {
       tenantId: input.tenantId,
       consentId: input.consentId,
       envelopeId: input.envelopeId,
-      originalPartyId: currentConsent.partyId,
+      originalPartyId: currentConsent.partyId as PartyId,
       delegatePartyId: delegatePartyId,
       reason: input.reason,
       status: "pending",

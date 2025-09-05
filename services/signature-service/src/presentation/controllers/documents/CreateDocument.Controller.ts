@@ -1,21 +1,29 @@
 /**
  * @file CreateDocument.Controller.ts
- * @summary Controller for creating new documents within envelopes
- * @description Handles POST /envelopes/:envelopeId/documents endpoint using createCommandController pattern
+ * @summary Create Document controller
+ * @description Handles document creation within envelopes
  */
 
-import { createCommandController } from "@/presentation/controllerFactory";
-import { CreateDocumentBody } from "@/presentation/schemas/documents/CreateDocument.schema";
-import { EnvelopeIdPath } from "@/presentation/schemas/common/path";
-import type { CreateDocumentCommand } from "@/app/ports/documents/DocumentsCommandsPort";
+import { createCommandController } from "../../../shared/controllers/controllerFactory";
+import { makeDocumentsCommandsPort } from "../../../app/adapters/documents/makeDocumentsCommandsPort";
+import { DefaultDocumentsCommandService } from "../../../app/services/Documents";
+import { CreateDocumentBody } from "../../../presentation/schemas/documents/CreateDocument.schema";
+import { EnvelopeIdPath } from "../../../presentation/schemas/common/path";
+import type { CreateDocumentCommand } from "../../../app/ports/documents/DocumentsCommandsPort";
+import type { CreateDocumentResult } from "../../../app/ports/documents/DocumentsCommandsPort";
 
-export const CreateDocumentController = createCommandController({
-  method: "POST",
-  path: "/envelopes/:id/documents",
-  
+/**
+ * @description Create Document controller
+ */
+export const CreateDocumentController = createCommandController<CreateDocumentCommand, CreateDocumentResult>({
   bodySchema: CreateDocumentBody,
   pathSchema: EnvelopeIdPath,
-  
+  appServiceClass: DefaultDocumentsCommandService,
+  createDependencies: (c) => makeDocumentsCommandsPort({
+    documentsRepo: c.repos.documents,
+    ids: c.ids,
+    s3Service: c.services.documentsS3,
+  }),
   extractParams: (path, body) => ({
     tenantId: path.tenantId,
     envelopeId: path.id,
@@ -33,14 +41,9 @@ export const CreateDocumentController = createCommandController({
       role: path.actor?.role,
     },
   }),
-
-  commandPort: "documentsCommands",
-  commandMethod: "create",
-  
-  responseMapper: (result) => ({
-    data: {
-      id: result.documentId,
-      createdAt: result.createdAt,
-    },
-  }),
+  responseType: "created",
+  includeActor: true,
 });
+
+// Export handler for backward compatibility
+export const handler = CreateDocumentController;

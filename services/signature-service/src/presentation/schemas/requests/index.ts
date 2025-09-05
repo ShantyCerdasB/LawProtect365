@@ -10,4 +10,3 @@ export * from "./Cancel.schema";
 export * from "./Decline.schema";
 export * from "./Finalise.schema";
 export * from "./RequestSignature.schema";
-export * from "./AddViewer.schema";

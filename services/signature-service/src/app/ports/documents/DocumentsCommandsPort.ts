@@ -181,4 +181,13 @@ export interface DocumentsCommandsPort {
    * @returns {Promise<void>} Promise resolving when lock creation is complete
    */
   createLock(lock: DocumentLock): Promise<void>;
+
+  /**
+   * @description Deletes a document lock.
+   *
+   * @param {DocumentId} documentId - The document ID
+   * @param {string} lockId - The lock ID to delete
+   * @returns {Promise<void>} Promise resolving when lock deletion is complete
+   */
+  deleteLock(documentId: DocumentId, lockId: string): Promise<void>;
 }

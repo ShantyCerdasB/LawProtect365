@@ -1,21 +1,29 @@
 /**
  * @file UploadDocument.Controller.ts
- * @summary Controller for uploading new documents (original document upload)
- * @description Handles POST /envelopes/:envelopeId/documents/upload endpoint using createCommandController pattern
+ * @summary Upload Document controller
+ * @description Handles document upload with presigned URLs
  */
 
-import { createCommandController } from "@/presentation/controllerFactory";
-import { UploadDocumentBody } from "@/presentation/schemas/documents/UploadDocument.schema";
-import { EnvelopeIdPath } from "@/presentation/schemas/common/path";
-import type { UploadDocumentCommand } from "@/app/ports/documents/DocumentsCommandsPort";
+import { createCommandController } from "../../../shared/controllers/controllerFactory";
+import { makeDocumentsCommandsPort } from "../../../app/adapters/documents/makeDocumentsCommandsPort";
+import { DefaultDocumentsCommandService } from "../../../app/services/Documents";
+import { UploadDocumentBody } from "../../../presentation/schemas/documents/UploadDocument.schema";
+import { EnvelopeIdPath } from "../../../presentation/schemas/common/path";
+import type { UploadDocumentCommand } from "../../../app/ports/documents/DocumentsCommandsPort";
+import type { UploadDocumentResult } from "../../../app/ports/documents/DocumentsCommandsPort";
 
-export const UploadDocumentController = createCommandController({
-  method: "POST",
-  path: "/envelopes/:id/documents/upload",
-  
+/**
+ * @description Upload Document controller
+ */
+export const UploadDocumentController = createCommandController<UploadDocumentCommand, UploadDocumentResult>({
   bodySchema: UploadDocumentBody,
   pathSchema: EnvelopeIdPath,
-  
+  appServiceClass: DefaultDocumentsCommandService,
+  createDependencies: (c) => makeDocumentsCommandsPort({
+    documentsRepo: c.repos.documents,
+    ids: c.ids,
+    s3Service: c.services.documentsS3,
+  }),
   extractParams: (path, body) => ({
     tenantId: path.tenantId,
     envelopeId: path.id,
@@ -24,6 +32,7 @@ export const UploadDocumentController = createCommandController({
     size: body.size,
     digest: body.digest,
     pageCount: body.pageCount,
+    ipAddress: body.ipAddress,
     actor: {
       userId: path.actor?.userId,
       email: path.actor?.email,
@@ -32,17 +41,9 @@ export const UploadDocumentController = createCommandController({
       role: path.actor?.role,
     },
   }),
-
-  commandPort: "documentsCommands",
-  commandMethod: "upload",
-  
-  responseMapper: (result) => ({
-    data: {
-      id: result.documentId,
-      uploadedAt: result.uploadedAt,
-      uploadUrl: result.uploadUrl,
-      objectKey: result.objectKey,
-      expiresAt: result.expiresAt,
-    },
-  }),
+  responseType: "created",
+  includeActor: true,
 });
+
+// Export handler for backward compatibility
+export const handler = UploadDocumentController;

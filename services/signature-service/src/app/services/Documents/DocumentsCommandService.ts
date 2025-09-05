@@ -62,6 +62,14 @@ export interface DocumentsCommandService {
    * @returns Promise resolving when lock creation is complete
    */
   createLock(lock: DocumentLock): Promise<void>;
+
+  /**
+   * Deletes a document lock
+   * @param documentId - The document ID
+   * @param lockId - The lock ID to delete
+   * @returns Promise resolving when lock deletion is complete
+   */
+  deleteLock(documentId: DocumentId, lockId: string): Promise<void>;
 }
 
 /**
@@ -92,5 +100,9 @@ export class DefaultDocumentsCommandService implements DocumentsCommandService {
 
   async createLock(lock: DocumentLock): Promise<void> {
     return this.commandsPort.createLock(lock);
+  }
+
+  async deleteLock(documentId: DocumentId, lockId: string): Promise<void> {
+    return this.commandsPort.deleteLock(documentId, lockId);
   }
 }

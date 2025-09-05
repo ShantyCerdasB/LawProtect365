@@ -12,4 +12,4 @@ export * as Evidence          from "./Evidence.rules";
 export * as Idempotency       from "./Idempotency.rules";
 export * as Multitenancy      from "./Multitenancy.rules";
 export * as RateLimits        from "./RateLimits.rules";
-export * as Upload            from "./Upload.rules";
+

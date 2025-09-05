@@ -69,7 +69,6 @@ export class DefaultDocumentsS3Service implements DocumentsS3Service {
       putObjectUrl(bucket: string, key: string, contentType: string, expiresIn?: number): Promise<string>;
       getObjectUrl(bucket: string, key: string, expiresIn?: number): Promise<string>;
     },
-    private readonly documentsBucket: string = "documents-bucket"
   ) {}
 
   /**
