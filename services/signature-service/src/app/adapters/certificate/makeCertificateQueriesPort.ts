@@ -9,8 +9,7 @@ import type { AuditRepository } from "../../../shared/contracts/repositories/aud
 import type { Repository } from "@lawprotect/shared-ts";
 import type { EnvelopeId } from "../../../domain/value-objects/Ids";
 import type { Envelope } from "../../../domain/entities/Envelope";
-import type { CertificateValidationService, CertificateAuditService } from "../../../shared/types/certificate/ServiceInterfaces";
-import type { AuditContext } from "../../../domain/entities/AuditContext";
+import type { CertificateValidationService } from "../../../shared/types/certificate/ServiceInterfaces";
 
 /**
  * @summary Creates a CertificateQueriesPort implementation with production-ready features

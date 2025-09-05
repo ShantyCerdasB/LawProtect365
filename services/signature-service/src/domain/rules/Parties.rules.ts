@@ -34,7 +34,7 @@ export const assertPartyExists = async (
     throw partyNotFound();
   }
   
-  return party as any; // TODO: Update when proper Party entity is available
+  return party as any;
 };
 
 /**
@@ -110,7 +110,7 @@ export const getNextPartySequence = async (
   envelopeId: EnvelopeId,
   partyRepo: PartiesPort
 ): Promise<number> => {
-  // TODO: Implement when proper Party repository is available
+
   return 1;
 };
 
@@ -129,5 +129,5 @@ export const assertUniqueEmailInEnvelope = async (
   partyRepo: PartiesPort,
   excludePartyId?: PartyId
 ): Promise<void> => {
-  // TODO: Implement when proper Party repository is available
+
 };

@@ -99,20 +99,3 @@ export type DelegationRepoCreateInput = Omit<
   readonly createdAt?: ISODateString;
 };
 
-/**
- * @summary Maps a delegation repository row to domain result
- * @description Converts a repository row to the domain delegation result format
- *
- * @param {DelegationRepoRow} r - Repository row from database
- * @returns {ConsentDelegation} Domain delegation result record
- */
-export const mapDelegationRowToResult = (r: DelegationRepoRow): ConsentDelegation => ({
-  delegationId: r.delegationId,
-  consentId: r.consentId as ConsentId,
-  delegateEmail: "", // TODO: Get from party service
-  delegateName: "", // TODO: Get from party service
-  reason: r.reason,
-  expiresAt: r.expiresAt,
-  metadata: r.metadata,
-  createdAt: r.createdAt,
-});

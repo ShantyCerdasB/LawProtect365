@@ -33,7 +33,7 @@ const base = async (evt: any) => {
   });
 
   const result = await uploadsCommands.completeEvidence({
-    tenantId: tenantId as any, // TODO: Add proper type conversion
+    tenantId: tenantId as any, 
     envelopeId: toEnvelopeId(path.id),
     uploadId: body.uploadId,
     bucket: body.bucket,

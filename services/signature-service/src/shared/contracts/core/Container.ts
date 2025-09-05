@@ -156,7 +156,6 @@ export interface Container {
   readonly certificate: {
     readonly queriesPort: any;
     readonly validationService: any;
-    readonly auditService: any;
   };
 
   /** Audit service */

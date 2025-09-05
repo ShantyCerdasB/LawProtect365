@@ -5,5 +5,4 @@
  */
 
 export { DefaultCertificateValidationService } from "./CertificateValidationService";
-export { DefaultCertificateAuditService } from "./CertificateAuditService";
 export { DefaultCertificateQueryService } from "./CertificateQueryService";

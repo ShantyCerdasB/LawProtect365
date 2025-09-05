@@ -33,7 +33,7 @@ const base = async (evt: any) => {
   });
 
   const result = await uploadsCommands.presignEvidence({
-    tenantId: tenantId as any, // TODO: Add proper type conversion
+    tenantId: tenantId as any, 
     envelopeId: toEnvelopeId(path.id),
     contentType: body.contentType,
     sizeBytes: body.sizeBytes,

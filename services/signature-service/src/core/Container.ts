@@ -110,7 +110,7 @@ import { DefaultRequestsRateLimitService } from "../app/services/Requests/Reques
 import { makeRequestsCommandsPort } from "../app/adapters/requests/makeRequestsCommandsPort";
 
 // Certificate services
-import { DefaultCertificateValidationService, DefaultCertificateAuditService } from "../app/services/Certificate";
+import { DefaultCertificateValidationService } from "../app/services/Certificate";
 import { makeCertificateQueriesPort } from "../app/adapters/certificate/makeCertificateQueriesPort";
 
 let singleton: Container;
@@ -378,7 +378,6 @@ export const getContainer = (): Container => {
 
   // Certificate services - instantiate with correct dependencies
   const certificateValidation = new DefaultCertificateValidationService();
-  const certificateAudit = new DefaultCertificateAuditService(audit);
   
   const certificateQueries = makeCertificateQueriesPort(
     audit,
@@ -440,7 +439,6 @@ export const getContainer = (): Container => {
         certificate: {
           queriesPort: certificateQueries,
           validationService: certificateValidation,
-          auditService: certificateAudit,
         },
     audit: {
       log: async (action: string, details: any, context: any) => {

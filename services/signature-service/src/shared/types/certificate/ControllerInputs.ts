@@ -5,7 +5,6 @@
  */
 
 import type { EnvelopeId, TenantId } from "../../../domain/value-objects/Ids";
-import type { ActorContext } from "../../../domain/entities/ActorContext";
 
 // ============================================================================
 // BASE TYPES
@@ -26,7 +25,7 @@ export interface BaseCertificateControllerInput {
 
 /**
  * @summary Input for getting certificate (controller level)
- * @description Parameters for retrieving certificate and audit trail, tenantId and actor are injected by factory
+ * @description Parameters for retrieving certificate and audit trail, tenantId is injected by factory
  */
 export interface GetCertificateControllerInput extends BaseCertificateControllerInput {
   /** Envelope identifier */
@@ -35,6 +34,4 @@ export interface GetCertificateControllerInput extends BaseCertificateController
   readonly limit: number;
   /** Optional cursor for pagination */
   readonly cursor?: string;
-  /** Actor context for audit logging */
-  readonly actor?: ActorContext;
 }

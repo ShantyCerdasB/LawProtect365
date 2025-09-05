@@ -9,4 +9,3 @@ variable "env" {
   description = "Deployment environment (dev, staging, prod)"
   type        = string
 }
-# TODO: add other variables this service needs (e.g. code_bucket, lambda_exec_role_arn, networking outputs…)

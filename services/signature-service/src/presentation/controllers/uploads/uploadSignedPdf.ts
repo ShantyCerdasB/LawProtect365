@@ -33,7 +33,7 @@ const base = async (evt: any) => {
   });
 
   const result = await uploadsCommands.uploadSignedPdf({
-    tenantId: tenantId as any, // TODO: Add proper type conversion
+    tenantId: tenantId as any, 
     envelopeId: toEnvelopeId(path.id),
     contentLength: body.contentLength,
     sha256: body.sha256,

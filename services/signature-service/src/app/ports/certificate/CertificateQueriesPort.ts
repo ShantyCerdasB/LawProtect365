@@ -6,7 +6,6 @@
 
 import type { EnvelopeId, TenantId } from "../../../domain/value-objects/Ids";
 import type { AuditEvent } from "../../../domain/value-objects/Audit";
-import type { ActorContext } from "../../../domain/entities/ActorContext";
 
 // ============================================================================
 // QUERY TYPES
@@ -25,8 +24,6 @@ export interface GetCertificateQuery {
   readonly limit: number;
   /** Optional cursor for pagination */
   readonly cursor?: string;
-  /** Actor context for audit logging */
-  readonly actor?: ActorContext;
 }
 
 /**
