@@ -235,6 +235,80 @@ export class DefaultSigningEventService extends BaseEventService implements Sign
   }
 
   /**
+   * @summary Publishes a signing prepared domain event
+   * @description Publishes a signing preparation event using the outbox pattern
+   * @param envelopeId - Envelope identifier
+   * @param partyId - Party identifier
+   * @param tenantId - Tenant identifier
+   * @param actor - Actor context for audit purposes
+   * @param traceId - Optional trace ID for observability
+   */
+  async publishSigningPrepared(
+    envelopeId: EnvelopeId,
+    partyId: PartyId,
+    tenantId: TenantId,
+    actor: ActorContext,
+    traceId?: string
+  ): Promise<void> {
+    const domainEvent: DomainEvent = makeEvent(
+      "signing.prepared",
+      {
+        envelopeId,
+        partyId,
+        tenantId,
+        actor: {
+          userId: actor.userId,
+          email: actor.email,
+          ip: actor.ip,
+          userAgent: actor.userAgent,
+          role: actor.role,
+        },
+        occurredAt: new Date().toISOString(),
+      },
+      traceId ? { "x-trace-id": traceId } : undefined
+    );
+    
+    await this.publishDomainEvent(domainEvent, traceId);
+  }
+
+  /**
+   * @summary Publishes a signing consent recorded domain event
+   * @description Publishes a signing consent recorded event using the outbox pattern
+   * @param envelopeId - Envelope identifier
+   * @param partyId - Party identifier
+   * @param tenantId - Tenant identifier
+   * @param actor - Actor context for audit purposes
+   * @param traceId - Optional trace ID for observability
+   */
+  async publishSigningConsentRecorded(
+    envelopeId: EnvelopeId,
+    partyId: PartyId,
+    tenantId: TenantId,
+    actor: ActorContext,
+    traceId?: string
+  ): Promise<void> {
+    const domainEvent: DomainEvent = makeEvent(
+      "signing.consent_recorded",
+      {
+        envelopeId,
+        partyId,
+        tenantId,
+        actor: {
+          userId: actor.userId,
+          email: actor.email,
+          ip: actor.ip,
+          userAgent: actor.userAgent,
+          role: actor.role,
+        },
+        occurredAt: new Date().toISOString(),
+      },
+      traceId ? { "x-trace-id": traceId } : undefined
+    );
+    
+    await this.publishDomainEvent(domainEvent, traceId);
+  }
+
+  /**
    * @summary Publishes a module-specific domain event
    * @description Implementation of the abstract method from BaseEventService
    * @param event - Module-specific domain event

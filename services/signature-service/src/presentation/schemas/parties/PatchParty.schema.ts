@@ -7,8 +7,8 @@
  * Handles path parameters and request body validation for partial updates.
  */
 
-import { z } from "zod";
-import { PARTY_ROLES, PARTY_STATUSES } from "../../domain/values/enums";
+import { z } from "@lawprotect/shared-ts";
+import { PARTY_ROLES, PARTY_STATUSES } from "../../../domain/values/enums";
 
 /**
  * Path parameters for PATCH /envelopes/:envelopeId/parties/:partyId

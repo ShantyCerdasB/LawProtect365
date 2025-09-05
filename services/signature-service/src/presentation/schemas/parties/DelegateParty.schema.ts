@@ -7,11 +7,11 @@
  * Handles path parameters and request body validation.
  */
 
-import { z } from "zod";
-import { DELEGATION_STATUSES, DELEGATION_TYPES } from "../../domain/values/enums";
-import { EmailSchema } from "../../domain/value-objects/Email";
-import { PersonNameSchema } from "../../domain/value-objects/PersonName";
-import { PartyMetadataSchema } from "../../domain/value-objects/party/PartyMetadata";
+import { z } from "@lawprotect/shared-ts";
+import { DELEGATION_STATUSES, DELEGATION_TYPES } from "../../../domain/values/enums";
+import { EmailSchema } from "../../../domain/value-objects/Email";
+import { PersonNameSchema } from "../../../domain/value-objects/PersonName";
+import { PartyMetadataSchema } from "../../../domain/value-objects/party/PartyMetadata";
 
 /**
  * Path parameters for POST /parties/:partyId/delegate

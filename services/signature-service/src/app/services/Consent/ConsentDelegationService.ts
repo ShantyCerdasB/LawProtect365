@@ -126,7 +126,7 @@ export class ConsentDelegationService {
       
       await this.auditService.logConsentDelegation(auditContext, {
         consentId: input.consentId,
-        originalPartyId: currentConsent.partyId,
+        originalPartyId: currentConsent.partyId as PartyId,
         delegatePartyId: delegatePartyId,
         delegationId: delegation.delegationId,
         reason: input.reason,
@@ -143,7 +143,7 @@ export class ConsentDelegationService {
           tenantId: input.tenantId,
           consentId: input.consentId,
           envelopeId: input.envelopeId,
-          originalPartyId: currentConsent.partyId,
+          originalPartyId: currentConsent.partyId as PartyId,
           delegatePartyId: delegatePartyId,
           delegationId: delegation.delegationId,
           reason: input.reason,

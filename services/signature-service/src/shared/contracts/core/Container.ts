@@ -10,7 +10,7 @@ import type { KMSClient } from "@aws-sdk/client-kms";
 import type { EventBridgeClient } from "@aws-sdk/client-eventbridge";
 import type { SSMClient } from "@aws-sdk/client-ssm";
 
-import type { SignatureServiceConfig } from "./Config";
+import type { SignatureServiceConfig } from "../../../core/Config";
 import type { DocumentRepositoryDdb } from "../../../infrastructure/dynamodb/DocumentRepositoryDdb";
 import type { InputRepositoryDdb } from "../../../infrastructure/dynamodb/InputRepositoryDdb";
 import type { PartyRepositoryDdb } from "../../../infrastructure/dynamodb/PartyRepositoryDdb";

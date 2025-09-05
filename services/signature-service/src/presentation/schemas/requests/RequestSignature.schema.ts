@@ -4,7 +4,7 @@
  * @description Zod schemas for validating request signature requests
  */
 
-import { z } from "zod";
+import { z } from "@lawprotect/shared-ts";
 import { EnvelopeIdSchema, PartyIdSchema } from "../../../domain/value-objects/Ids";
 
 /**

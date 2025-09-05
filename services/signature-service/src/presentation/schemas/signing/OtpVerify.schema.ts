@@ -4,7 +4,7 @@
  */
 
 import { z } from "@lawprotect/shared-ts";
-import { EnvelopeId, PartyId } from "@/schemas/common/path";
+import { EnvelopeId, PartyId } from "../common/path";
 
 /** Body payload for verifying an OTP (6 numeric digits). */
 export const OtpVerifyBody = z.object({

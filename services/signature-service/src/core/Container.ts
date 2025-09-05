@@ -63,7 +63,6 @@ import type { Container } from "../shared/contracts";
 
 import { OutboxRepositoryDdb } from "../infrastructure/dynamodb/OutboxRepositoryDdb";
 import { EventBusPortAdapter } from "../infrastructure/eventbridge/EventBusPortAdapter";
-import { OutboxProcessor } from "../infrastructure/workers/OutboxProcessor";
 import { MetricsService } from "../shared/services";
 
 // EventBridge types

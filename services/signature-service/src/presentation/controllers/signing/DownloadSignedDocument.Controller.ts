@@ -43,7 +43,7 @@ export const DownloadSignedDocumentController = createCommandController<Download
       },
     }
   ),
-  extractParams: (path, body) => ({
+  extractParams: (path, _body) => ({
     tenantId: path.tenantId,
     envelopeId: path.id,
     token: "", // Will be injected by factory

@@ -122,3 +122,8 @@ export type GlobalPartyPatch = {
   readonly stats?: Partial<GlobalPartyStats>;
 };
 
+/**
+ * @summary Alias for GlobalPartyExtended - used in repository and adapter layers
+ */
+export type GlobalPartyRow = GlobalPartyExtended;
+

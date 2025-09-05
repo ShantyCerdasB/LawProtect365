@@ -4,6 +4,7 @@
  * @description Exports all request validation schemas
  */
 
+export * from "./AddViewer.schema";
 export * from "./Invitations.schema";
 export * from "./Reminders.schema";
 export * from "./Cancel.schema";

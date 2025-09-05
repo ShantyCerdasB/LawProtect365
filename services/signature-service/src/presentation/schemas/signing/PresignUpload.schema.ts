@@ -5,7 +5,7 @@
  */
 
 import { z } from "@lawprotect/shared-ts";
-import { EnvelopeId } from "@/schemas/common/path";
+import { EnvelopeId } from "../common/path";
 
 /** Body payload requesting a pre-signed upload URL. */
 export const PresignUploadBody = z.object({

@@ -8,9 +8,9 @@ import { createQueryController } from "../../../shared/controllers/queryFactory"
 import { makeDocumentsQueriesPort } from "../../../app/adapters/documents/makeDocumentsQueriesPort";
 import { DefaultDocumentsQueryService } from "../../../app/services/Documents";
 import { z } from "@lawprotect/shared-ts";
-import type { DocumentId } from "../../../domain/value-objects/Ids";
 import type { Document } from "../../../domain/entities/Document";
-import { toDocumentId } from "../../../domain/value-objects/Ids";
+import type { DocumentId } from "../../../domain/value-objects/Ids";
+import { DocumentIdSchema } from "../../../domain/value-objects/Ids";
 
 /**
  * @description Path parameter schema for document page retrieval
@@ -33,13 +33,13 @@ const DocumentPageQuery = z.object({
 /**
  * @description Get Document Page controller
  */
-export const GetDocumentPageController = createQueryController<DocumentId, Document | null>({
+export const GetDocumentPageController = createQueryController<{ documentId: DocumentId }, Document | null>({
   pathSchema: EnvelopeDocPagePath,
   querySchema: DocumentPageQuery,
   appServiceClass: DefaultDocumentsQueryService,
   createDependencies: (c) => makeDocumentsQueriesPort(c.repos.documents),
   extractParams: (path) => ({
-    documentId: toDocumentId(path.docId),
+    documentId: DocumentIdSchema.parse(path.docId),
   }),
   responseType: "ok"
 });

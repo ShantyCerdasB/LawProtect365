@@ -4,7 +4,7 @@
  * @description Zod schemas for validating add viewer requests
  */
 
-import { z } from "zod";
+import { z } from "@lawprotect/shared-ts";
 import { EnvelopeIdSchema } from "../../../domain/value-objects/Ids";
 
 /**
@@ -17,9 +17,9 @@ export const AddViewerBody = z.object({
 });
 
 /**
- * @description Path parameters schema for envelope operations
+ * @description Path parameters schema for add viewer operations
  */
-export const EnvelopePath = z.object({
+export const AddViewerPath = z.object({
   envelopeId: EnvelopeIdSchema,
 });
 
@@ -29,6 +29,6 @@ export const EnvelopePath = z.object({
 export type AddViewerBody = z.infer<typeof AddViewerBody>;
 
 /**
- * @description Type for envelope path parameters
+ * @description Type for add viewer path parameters
  */
-export type EnvelopePath = z.infer<typeof EnvelopePath>;
+export type AddViewerPath = z.infer<typeof AddViewerPath>;

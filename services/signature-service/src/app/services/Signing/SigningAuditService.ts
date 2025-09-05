@@ -186,4 +186,54 @@ export class DefaultSigningAuditService extends BaseAuditService implements Sign
       envelopeId,
     });
   }
+
+  /**
+   * @summary Logs a signing preparation event for audit purposes
+   * @description Records signing preparation in the audit trail
+   * @param envelopeId - Envelope identifier
+   * @param partyId - Party identifier
+   * @param tenantId - Tenant identifier
+   * @param actor - Actor context for audit purposes
+   */
+  async logSigningPrepared(
+    envelopeId: EnvelopeId,
+    partyId: PartyId,
+    tenantId: TenantId,
+    actor: ActorContext
+  ): Promise<void> {
+    await this.logBusinessEvent({
+      tenantId,
+      actor,
+      envelopeId,
+    }, {
+      eventType: "signing.prepared",
+      envelopeId,
+      partyId,
+    });
+  }
+
+  /**
+   * @summary Logs a signing consent recorded event for audit purposes
+   * @description Records signing consent in the audit trail
+   * @param envelopeId - Envelope identifier
+   * @param partyId - Party identifier
+   * @param tenantId - Tenant identifier
+   * @param actor - Actor context for audit purposes
+   */
+  async logSigningConsentRecorded(
+    envelopeId: EnvelopeId,
+    partyId: PartyId,
+    tenantId: TenantId,
+    actor: ActorContext
+  ): Promise<void> {
+    await this.logBusinessEvent({
+      tenantId,
+      actor,
+      envelopeId,
+    }, {
+      eventType: "signing.consent_recorded",
+      envelopeId,
+      partyId,
+    });
+  }
 }

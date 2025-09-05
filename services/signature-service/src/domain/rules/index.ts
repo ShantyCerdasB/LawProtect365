@@ -1,5 +1,4 @@
 export * as EnvelopeLifecycle from "./EnvelopeLifecycle.rules";
-export * as Parties           from "./Parties.rules";
 export * as Documents         from "./Documents.rules";
 export * as Inputs            from "./Inputs.rules";
 export * as Flow              from "./Flow.rules";

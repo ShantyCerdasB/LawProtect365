@@ -11,7 +11,8 @@ export type {
   GlobalPartyNotificationPreferences,
   GlobalPartyCommon,
   GlobalPartyExtended,
-  GlobalPartyPatch
+  GlobalPartyPatch,
+  GlobalPartyRow
 } from "./GlobalPartiesTypes";
 
 // App service types
