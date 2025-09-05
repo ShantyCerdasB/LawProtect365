@@ -89,7 +89,16 @@ describe("utils/s3", () => {
 
   describe("dirname()", () => {
     runDirnameTests(dirname, [
-      ...commonDirnameTestCases,
+      {
+        input: "a/b/c.txt",
+        expected: "a/b",
+        description: "returns directory portion for nested path"
+      },
+      {
+        input: "single",
+        expected: "",
+        description: "returns empty string for single segment (S3 behavior)"
+      },
       ...s3SpecificDirnameTestCases,
     ]);
   });

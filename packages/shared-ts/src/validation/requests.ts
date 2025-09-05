@@ -50,15 +50,15 @@ export const validateRequest = <
 } => {
   const path = schemas.path
     ? validatePath(evt, schemas.path)
-    : ({} as Record<string, never>);
+    : ({} as InferOr<SP, Record<string, never>>);
 
   const query = schemas.query
     ? validateQuery(evt, schemas.query)
-    : ({} as Record<string, never>);
+    : ({} as InferOr<SQ, Record<string, never>>);
 
   const body = schemas.body
     ? validateJsonBody(evt, schemas.body)
-    : undefined;
+    : (undefined as InferOr<SB, undefined>);
 
   return { path, query, body };
 };

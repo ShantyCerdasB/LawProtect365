@@ -52,7 +52,7 @@ describe("isPlainObject", () => {
     expect(isPlainObject(1)).toBe(false);
     expect(isPlainObject(true)).toBe(false);
     const createFoo = () => ({ bar: 'baz' });
-    expect(isPlainObject(createFoo())).toBe(false);
+    expect(isPlainObject(createFoo())).toBe(true); // Object literals are plain objects
   });
 
   it("treats Object.create(null) as non-plain with this implementation", () => {

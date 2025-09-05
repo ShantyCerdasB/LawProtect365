@@ -173,7 +173,7 @@ export class GlobalPartiesRepositoryDdb implements GlobalPartiesRepository {
         Limit: 1,
       });
 
-      if (!result.Items || result.Items.length === 0) {
+      if (!result.Items?.length) {
         return null;
       }
 
@@ -487,7 +487,7 @@ export class GlobalPartiesRepositoryDdb implements GlobalPartiesRepository {
         Limit: 1,
       });
 
-      if (!result.Items || result.Items.length === 0) {
+      if (!result.Items?.length) {
         return null;
       }
 

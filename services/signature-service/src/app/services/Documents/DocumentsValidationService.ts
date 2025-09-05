@@ -10,9 +10,8 @@ import type {
   UpdateDocumentCommand,
   UpdateDocumentBinaryCommand
 } from "../../ports/documents/DocumentsCommandsPort";
-import type { DocumentId, EnvelopeId, TenantId } from "../../../domain/value-objects/Ids";
 import type { DocumentLock } from "../../../domain/value-objects/DocumentLock";
-import { badRequest, documentNotFound } from "../../../shared/errors";
+import { badRequest } from "../../../shared/errors";
 import { ErrorCodes } from "@lawprotect/shared-ts";
 import { ALLOWED_CONTENT_TYPES, FILE_SIZE_LIMITS } from "../../../domain/values/enums";
 
@@ -101,11 +100,11 @@ export class DefaultDocumentsValidationService implements DocumentsValidationSer
       );
     }
 
-    if (command.size > FILE_SIZE_LIMITS.DOCUMENT_MAX_SIZE) {
+    if (command.size > FILE_SIZE_LIMITS.PDF) {
       throw badRequest(
-        `Document size exceeds maximum allowed size of ${FILE_SIZE_LIMITS.DOCUMENT_MAX_SIZE} bytes`,
+        `Document size exceeds maximum allowed size of ${FILE_SIZE_LIMITS.PDF} bytes`,
         ErrorCodes.COMMON_BAD_REQUEST,
-        { field: "size", value: command.size, maxSize: FILE_SIZE_LIMITS.DOCUMENT_MAX_SIZE }
+        { field: "size", value: command.size, maxSize: FILE_SIZE_LIMITS.PDF }
       );
     }
 
@@ -128,7 +127,7 @@ export class DefaultDocumentsValidationService implements DocumentsValidationSer
     }
 
     // Validate actor context
-    if (!command.actor || !command.actor.userId) {
+    if (!command.actor?.userId) {
       throw badRequest(
         "Actor context with userId is required",
         ErrorCodes.COMMON_BAD_REQUEST,
@@ -182,7 +181,7 @@ export class DefaultDocumentsValidationService implements DocumentsValidationSer
     }
 
     // Validate actor context
-    if (!command.actor || !command.actor.userId) {
+    if (!command.actor?.userId) {
       throw badRequest(
         "Actor context with userId is required",
         ErrorCodes.COMMON_BAD_REQUEST,
@@ -224,11 +223,11 @@ export class DefaultDocumentsValidationService implements DocumentsValidationSer
       );
     }
 
-    if (command.size > FILE_SIZE_LIMITS.DOCUMENT_MAX_SIZE) {
+    if (command.size > FILE_SIZE_LIMITS.PDF) {
       throw badRequest(
-        `Document size exceeds maximum allowed size of ${FILE_SIZE_LIMITS.DOCUMENT_MAX_SIZE} bytes`,
+        `Document size exceeds maximum allowed size of ${FILE_SIZE_LIMITS.PDF} bytes`,
         ErrorCodes.COMMON_BAD_REQUEST,
-        { field: "size", value: command.size, maxSize: FILE_SIZE_LIMITS.DOCUMENT_MAX_SIZE }
+        { field: "size", value: command.size, maxSize: FILE_SIZE_LIMITS.PDF }
       );
     }
 
@@ -251,7 +250,7 @@ export class DefaultDocumentsValidationService implements DocumentsValidationSer
     }
 
     // Validate actor context
-    if (!command.actor || !command.actor.userId) {
+    if (!command.actor?.userId) {
       throw badRequest(
         "Actor context with userId is required",
         ErrorCodes.COMMON_BAD_REQUEST,

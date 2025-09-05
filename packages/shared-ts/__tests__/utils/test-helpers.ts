@@ -34,8 +34,8 @@ export const commonDirnameTestCases: DirnameTestCase[] = [
   },
   {
     input: "single",
-    expected: "",
-    description: "returns empty string for single segment"
+    expected: ".",
+    description: "returns current directory for single segment"
   }
 ];
 

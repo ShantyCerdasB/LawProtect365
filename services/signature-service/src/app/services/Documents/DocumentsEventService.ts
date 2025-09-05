@@ -291,4 +291,17 @@ export class DefaultDocumentsEventService extends BaseEventService implements Do
     
     await this.publishDomainEvent(domainEvent, traceId);
   }
+
+  /**
+   * @summary Publishes a module-specific domain event
+   * @description Implementation of the abstract method from BaseEventService
+   * @param event - Domain event to publish
+   * @param traceId - Optional trace ID for observability
+   */
+  async publishModuleEvent(
+    event: DomainEvent,
+    traceId?: string
+  ): Promise<void> {
+    await this.publishDomainEvent(event, traceId);
+  }
 }

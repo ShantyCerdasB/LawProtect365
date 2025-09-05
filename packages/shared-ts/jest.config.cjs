@@ -1,32 +1,23 @@
 /**
  * @file jest.config.cjs
- * @summary Jest setup for TypeScript units and coverage in this package.
- * @details
- * - Transforms .ts/.tsx via ts-jest.
- * - Collects coverage for all source files.
- * - Resolves TS path aliases and `.js`-suffixed imports (ESM-friendly in TS).
+ * @summary Jest setup for TypeScript units and coverage in shared-ts package.
+ * @description
+ * Extends the base Jest configuration from the monorepo root and adds
+ * package-specific module name mappings for local aliases.
  */
+
+const baseConfig = require('../../jest.base.cjs');
 
 /** @type {import('jest').Config} */
 module.exports = {
-  preset: 'ts-jest',
-  testEnvironment: 'node',
+  ...baseConfig,
 
-  /** Package root so relative globs resolve as expected. */
+  /** Package root for glob resolution */
   roots: ['<rootDir>'],
 
-  /** Transform TS for tests and files included only by coverage. */
-  transform: { '^.+\\.tsx?$': ['ts-jest', { tsconfig: 'tsconfig.jest.json' }] },
-
-  /** Include every .ts under src for coverage, even if not imported by tests. */
-  collectCoverageFrom: ['<rootDir>/src/**/*.ts', '!<rootDir>/src/**/*.d.ts'],
-  coverageDirectory: '<rootDir>/coverage',
-  coverageReporters: ['text', 'lcov', 'html'],
-  coveragePathIgnorePatterns: ['/node_modules/', '/dist/', '/__tests__/'],
-
   /**
-   * Path aliases and ESM-style `.js` imports inside TS.
-   * Order matters: place the `.js` variants BEFORE the base aliases.
+   * Override base moduleNameMapper with package-specific aliases.
+   * The shared-ts package has its own internal aliases that point to its own src.
    */
   moduleNameMapper: {
     // strip .js on relative imports (./foo.js -> ./foo)
@@ -84,12 +75,4 @@ module.exports = {
     '^@storage/(.*)\\.js$': '<rootDir>/src/storage/$1',
     '^@storage/(.*)$': '<rootDir>/src/storage/$1',
   },
-
-  /** Test file globs. */
-  testMatch: ['<rootDir>/__tests__/**/*.test.ts'],
-
-  /** Useful defaults for Node services. */
-  clearMocks: true,
-  restoreMocks: true,
-  moduleFileExtensions: ['ts', 'tsx', 'js', 'json'],
 };

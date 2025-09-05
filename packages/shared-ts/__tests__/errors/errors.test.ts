@@ -24,7 +24,7 @@ import { AppError } from '../../src/errors/AppError.js';
 import { ErrorCodes, type ErrorCode } from '../../src/errors/codes.js';
 
 const expectDefault = (
-  err: AppError,
+  err: AppError<any>,
   {
     name,
     status,

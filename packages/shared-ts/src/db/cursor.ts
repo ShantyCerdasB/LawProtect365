@@ -64,6 +64,7 @@ export const toJsonValue = (v: unknown): JsonValue => {
   // Fallback: stringify symbols/functions/undefined
   if (typeof v === "symbol") return v.toString() as JsonValue;
   if (typeof v === "function") return "[Function]" as JsonValue;
+  if (v === undefined) return "undefined" as JsonValue;
   return "[object Object]" as JsonValue;
 };
 

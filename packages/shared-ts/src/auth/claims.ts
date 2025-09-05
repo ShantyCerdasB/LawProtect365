@@ -26,12 +26,10 @@ export const toJwtClaims = (payload: JWTPayload): JwtClaims => {
     (payload as any)["custom:tenantId"] ??
     (payload as any)["https://claims.example.com/tenant_id"];
 
-  const aud = payload.aud;
-
   return {
     sub: String(payload.sub ?? ""),
     iss: String(payload.iss ?? ""),
-    aud,
+    aud: typeof payload.aud === "string" || Array.isArray(payload.aud) ? payload.aud : undefined,
     exp: typeof payload.exp === "number" ? payload.exp : undefined,
     iat: typeof payload.iat === "number" ? payload.iat : undefined,
     jti: typeof payload.jti === "string" ? payload.jti : undefined,
