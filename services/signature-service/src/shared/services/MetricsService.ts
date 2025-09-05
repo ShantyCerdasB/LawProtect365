@@ -5,7 +5,6 @@
  */
 
 import { CloudWatchClient, PutMetricDataCommand, type PutMetricDataCommandInput } from "@aws-sdk/client-cloudwatch";
-import { mapAwsError } from "@lawprotect/shared-ts";
 
 /**
  * Configuration for the metrics service.

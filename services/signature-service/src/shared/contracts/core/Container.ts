@@ -19,7 +19,7 @@ import type { IdempotencyStoreDdb } from "../../../infrastructure/dynamodb/Idemp
 import type { AuditRepositoryDdb } from "../../../infrastructure/dynamodb/AuditRepositoryDdb";
 import type { ConsentRepositoryDdb } from "../../../infrastructure/dynamodb/ConsentRepositoryDdb";
 import type { DelegationRepositoryDdb } from "../../../infrastructure/dynamodb/DelegationRepositoryDdb";
-import type { OutboxPort } from "@lawprotect/shared-ts";
+import type { OutboxPort, EventPublisher } from "@lawprotect/shared-ts";
 import type { IdempotencyKeyHasher } from "../../../infrastructure/idempotency/IdempotencyKeyHasher";
 import type { IdempotencyRunner } from "../../../infrastructure/idempotency/IdempotencyRunner";
 import type { RateLimitStoreDdb } from "../../../infrastructure/ratelimit/RateLimitStoreDdb";
@@ -30,7 +30,6 @@ import type { KmsSigner } from "../../../infrastructure/kms/KmsSigner";
 
 import type { SsmParamConfigProvider } from "../../../infrastructure/ssm/SsmParamConfigProvider";
 import type { AuditContext } from "../../../domain/entities/AuditContext";
-import type { EventPublisher } from "@lawprotect/shared-ts";
 
 // Consent service types
 import type { ConsentValidationService } from "../../../app/services/Consent/ConsentValidationService";

@@ -495,7 +495,7 @@ export class GlobalPartiesRepositoryDdb implements GlobalPartiesRepository {
       try {
         const validatedDto = GlobalPartyItemDTOSchema.parse(result.Items[0]);
         const row = dtoToGlobalPartyRow(validatedDto);
-        return { party: row as GlobalPartyRow };
+        return { party: row };
       } catch (error) {
         // Skip invalid items
         console.warn(`Skipping invalid global party item:`, error);

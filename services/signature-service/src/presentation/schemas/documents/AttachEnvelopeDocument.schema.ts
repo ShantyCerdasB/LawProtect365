@@ -3,8 +3,7 @@
  * @summary Request schema for attaching a document to an envelope.
  */
 
-import { z } from "@lawprotect/shared-ts";
-import { UuidV4 } from "@lawprotect/shared-ts";
+import { z, UuidV4 } from "@lawprotect/shared-ts";
 
 /** Body payload for attaching a document. */
 export const AttachEnvelopeDocumentBody = z.object({

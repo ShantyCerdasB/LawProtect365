@@ -14,6 +14,7 @@ import type { EnvelopeId } from "@/domain/value-objects/Ids";
 import { IpAddressSchema } from "@/domain/value-objects/Ids";
 import { IdempotencyRunner, KmsSigner } from "@/infrastructure";
 import type { EventBusPortAdapter } from "@/infrastructure/eventbridge/EventBusPortAdapter";
+import type { SigningRateLimitService, SigningS3Service } from "@/shared/types/signing/ServiceInterfaces";
 
 /**
  * Creates a SigningCommandsPort implementation
@@ -29,14 +30,14 @@ export const makeSigningCommandsPort = (
     events: EventBusPortAdapter;
     ids: { ulid(): string };
     time: { now(): number };
-    rateLimit?: any;
+    rateLimit?: SigningRateLimitService;
     signer: KmsSigner;
     idempotency: IdempotencyRunner;
     signingConfig?: {
       defaultKeyId: string;
       allowedAlgorithms?: readonly string[];
     };
-    s3Service?: any;
+    s3Service?: SigningS3Service;
     uploadConfig?: {
       uploadBucket: string;
       uploadTtlSeconds: number;
@@ -290,11 +291,15 @@ export const makeSigningCommandsPort = (
       }
 
       // Use SigningS3Service to create presigned upload URL
-      const s3Result = await deps.s3Service?.presignUpload({
-        envelopeId: command.envelopeId,
-        filename: command.filename,
-        contentType: command.contentType,
-      });
+      if (!deps.s3Service) {
+        throw new Error("S3 service not available");
+      }
+      
+      const s3Result = await deps.s3Service.createPresignedUploadUrl(
+        command.envelopeId,
+        command.filename,
+        command.contentType
+      );
 
       return {
         uploadUrl: s3Result.uploadUrl,
@@ -338,10 +343,13 @@ export const makeSigningCommandsPort = (
       }
 
       // Use SigningS3Service to create presigned download URL
-      const s3Result = await deps.s3Service?.presignDownload({
-        envelopeId: command.envelopeId,
-        filename: "signed-document.pdf",
-      });
+      if (!deps.s3Service) {
+        throw new Error("S3 service not available");
+      }
+      
+      const s3Result = await deps.s3Service.createPresignedDownloadUrl(
+        command.envelopeId
+      );
 
       return {
         downloadUrl: s3Result.downloadUrl,

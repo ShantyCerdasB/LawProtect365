@@ -3,8 +3,7 @@
  * @summary Request schema for user consent during the signing process.
  */
 
-import { z } from "@lawprotect/shared-ts";
-import { UuidV4 } from "@lawprotect/shared-ts";
+import { z, UuidV4 } from "@lawprotect/shared-ts";
 
 /** Body payload for signing consent. */
 export const ConsentBody = z.object({

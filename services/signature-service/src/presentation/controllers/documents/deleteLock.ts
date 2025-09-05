@@ -5,14 +5,13 @@
  */
 
 import type { HandlerFn } from "@lawprotect/shared-ts";
-import { noContent, validateRequest } from "@lawprotect/shared-ts";
+import { noContent, validateRequest, z } from "@lawprotect/shared-ts";
 import { wrapController, corsFromEnv } from "@/presentation/middleware/http";
 import {  actorFromCtx } from "@/presentation/middleware/auth";
 import { getContainer } from "@/core/Container";
 import { toDocumentId, toUserId } from "@/app/ports/shared";
 import { deleteDocumentLockApp } from "@/app/services/Documents/DeleteDocumentLockApp.service";
 import { makeDocumentsCommandsPort } from "@/app/adapters/documents/makeDocumentsCommandsPort";
-import { z } from "@lawprotect/shared-ts";
 
 /**
  * @description Path parameter schema for document lock deletion.

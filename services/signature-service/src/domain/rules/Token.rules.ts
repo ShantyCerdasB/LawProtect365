@@ -1,5 +1,4 @@
-import { AppError } from "@lawprotect/shared-ts";
-import { ErrorCodes } from "@lawprotect/shared-ts";
+import { AppError, ErrorCodes } from "@lawprotect/shared-ts";
 import { RequestTokenSchema, type RequestTokenScope } from "../value-objects/RequestToken";
 
 /**

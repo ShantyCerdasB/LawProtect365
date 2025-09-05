@@ -4,8 +4,15 @@
  * @description Simple wrapper service for envelope query operations
  */
 
-import type { EnvelopesQueriesPort } from "../../ports/envelopes/EnvelopesQueriesPort";
-import type { GetEnvelopeQuery, GetEnvelopeResult, ListEnvelopesQuery, ListEnvelopesResult, GetEnvelopeStatusQuery, GetEnvelopeStatusResult } from "../../ports/envelopes/EnvelopesQueriesPort";
+import type { 
+  EnvelopesQueriesPort,
+  GetEnvelopeQuery, 
+  GetEnvelopeResult, 
+  ListEnvelopesQuery, 
+  ListEnvelopesResult, 
+  GetEnvelopeStatusQuery, 
+  GetEnvelopeStatusResult 
+} from "../../ports/envelopes/EnvelopesQueriesPort";
 
 /**
  * @summary Query service for envelope operations

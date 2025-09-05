@@ -3,8 +3,7 @@
  * @summary Request/response schemas for creating inputs in batch.
  */
 
-import { z } from "@lawprotect/shared-ts";
-import { UuidV4 } from "@lawprotect/shared-ts";
+import { z, UuidV4 } from "@lawprotect/shared-ts";
 import { INPUT_VALUES } from "@/domain/values/enums";
 
 /**

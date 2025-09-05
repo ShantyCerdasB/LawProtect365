@@ -9,8 +9,7 @@
  * @summary Path parameter schemas for envelope and input operations.
  */
 
-import { z } from "@lawprotect/shared-ts";
-import { UuidV4 } from "@lawprotect/shared-ts";
+import { z, UuidV4 } from "@lawprotect/shared-ts";
 
 /**
  * @description Path parameters schema for envelope operations.

@@ -9,10 +9,8 @@
  * Errors are normalized to shared HttpErrors via `mapAwsError`.
  */
 
-import type { Repository } from "@lawprotect/shared-ts";
-import { ConflictError, NotFoundError } from "@lawprotect/shared-ts";
-import { mapAwsError } from "@lawprotect/shared-ts";
-import type { DdbClientLike } from "@lawprotect/shared-ts";
+import type { Repository, DdbClientLike } from "@lawprotect/shared-ts";
+import { ConflictError, NotFoundError, mapAwsError } from "@lawprotect/shared-ts";
 import type { Party } from "../../domain/entities/Party";
 import {
   partyItemMapper,

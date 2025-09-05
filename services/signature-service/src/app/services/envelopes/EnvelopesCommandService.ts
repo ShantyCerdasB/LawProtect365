@@ -4,8 +4,15 @@
  * @description Simple wrapper service for envelope command operations
  */
 
-import type { EnvelopesCommandsPort } from "../../ports/envelopes/EnvelopesCommandsPort";
-import type { CreateEnvelopeCommand, CreateEnvelopeResult, UpdateEnvelopeCommand, UpdateEnvelopeResult, DeleteEnvelopeCommand, DeleteEnvelopeResult } from "../../ports/envelopes/EnvelopesCommandsPort";
+import type { 
+  EnvelopesCommandsPort,
+  CreateEnvelopeCommand, 
+  CreateEnvelopeResult, 
+  UpdateEnvelopeCommand, 
+  UpdateEnvelopeResult, 
+  DeleteEnvelopeCommand, 
+  DeleteEnvelopeResult 
+} from "../../ports/envelopes/EnvelopesCommandsPort";
 
 /**
  * @summary Command service for envelope operations

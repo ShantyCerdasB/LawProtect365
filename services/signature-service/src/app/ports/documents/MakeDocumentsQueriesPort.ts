@@ -7,7 +7,6 @@
 import type { DocumentsQueriesPort, ListDocumentsQuery, ListDocumentsResult } from "./DocumentsQueriesPort";
 import type { DocumentHead } from "@/app/ports/shared/documents/documents";
 import type { TenantId, EnvelopeId, Page, PageOpts, DocumentId } from "@/app/ports/shared";
-import type { AllowedContentType } from "@/domain/values/enums";
 import type { DocumentLock } from "@/domain/value-objects/DocumentLock";
 import type { Document } from "@/domain/entities/Document";
 

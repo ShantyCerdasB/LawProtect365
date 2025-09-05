@@ -3,8 +3,7 @@
  * @summary Request/response schemas for downloading signed documents.
  */
 
-import { z } from "@lawprotect/shared-ts";
-import { UuidV4 } from "@lawprotect/shared-ts";
+import { z, UuidV4 } from "@lawprotect/shared-ts";
 
 /** Body payload for downloading a signed document. */
 export const DownloadSignedDocumentBody = z.object({

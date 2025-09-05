@@ -5,14 +5,13 @@
  */
 
 import type { HandlerFn } from "@lawprotect/shared-ts";
-import { ok, validateRequest } from "@lawprotect/shared-ts";
+import { ok, validateRequest, z } from "@lawprotect/shared-ts";
 import { wrapController, corsFromEnv } from "@/presentation/middleware/http";
 import { getContainer } from "@/core/Container";
 import { EnvelopeDocPagePath } from "@/schemas/common/path";
 import { toEnvelopeId, toDocumentId } from "@/app/ports/shared";
 import { getDocumentPageApp } from "@/app/services/Documents/GetDocumentPageApp.service";
 import { makeDocumentsQueriesPort } from "@/app/adapters/documents/MakeDocumentsQueriesPort";
-import { z } from "@lawprotect/shared-ts";
 
 /**
  * @description Base handler function for getting document page preview.

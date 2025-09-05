@@ -6,8 +6,7 @@
  * Supports CRUD operations, existence checks, and envelope-based listing with pagination.
  */
 
-import type { Repository } from "@lawprotect/shared-ts";
-import type { DdbClientLike } from "@lawprotect/shared-ts";
+import type { Repository, DdbClientLike } from "@lawprotect/shared-ts";
 import { requireQuery, mapAwsError, ConflictError, ErrorCodes, nowIso } from "@lawprotect/shared-ts";
 
 import type { Document } from "../../domain/entities/Document";

@@ -18,7 +18,7 @@
  *  - Employs a runtime/type guard to ensure `update` is present when needed.
  */
 
-import type { IdempotencyStore } from "@lawprotect/shared-ts";
+import type { IdempotencyStore, DdbClientLike } from "@lawprotect/shared-ts";
 import { 
   ConflictError, 
   NotFoundError, 
@@ -27,7 +27,6 @@ import {
   nowIso, 
   requireUpdate 
 } from "@lawprotect/shared-ts";
-import type { DdbClientLike } from "@lawprotect/shared-ts";
 import type { DdbIdempotencyItem } from "../../shared/types/idempotency";
 import { 
   isDdbIdempotencyItem,

@@ -1,6 +1,5 @@
 import { HASH_ALGORITHM, KMS_ALGORITHMS } from "@/domain/values/enums";
-import { z } from "@lawprotect/shared-ts";
-import { UuidV4 } from "@lawprotect/shared-ts";
+import { z, UuidV4 } from "@lawprotect/shared-ts";
 
 /** Body payload for completing signing. */
 export const CompleteSigningBody = z

@@ -5,7 +5,7 @@
  */
 
 import type { EnvelopeId, PartyId, TenantId } from "../../../domain/value-objects/Ids";
-import type { HashAlgorithm, KmsAlgorithm, OtpChannel } from "../../../domain/values/enums";
+import type { HashAlgorithm, KmsAlgorithm } from "../../../domain/values/enums";
 
 // ============================================================================
 // BASE TYPES

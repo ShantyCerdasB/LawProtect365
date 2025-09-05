@@ -1,5 +1,4 @@
-import { AppError } from "@lawprotect/shared-ts";
-import { ErrorCodes } from "@lawprotect/shared-ts";
+import { AppError, ErrorCodes } from "@lawprotect/shared-ts";
 import { ReasonSchema } from "../value-objects/Reason";
 import { EnvelopeStatus } from "../values/enums";
 

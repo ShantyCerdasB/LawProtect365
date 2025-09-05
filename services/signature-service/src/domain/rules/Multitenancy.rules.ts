@@ -1,5 +1,4 @@
-import { AppError } from "@lawprotect/shared-ts";
-import { ErrorCodes } from "@lawprotect/shared-ts";
+import { AppError, ErrorCodes } from "@lawprotect/shared-ts";
 
 /**
  * Ensures the mutation tenant matches the caller tenant context.

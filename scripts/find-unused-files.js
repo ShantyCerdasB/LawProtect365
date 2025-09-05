@@ -86,7 +86,6 @@ function extractImports(filePath) {
 function isFileImported(filePath, allFiles) {
   const relativePath = path.relative(SRC_DIR, filePath);
   const fileName = path.basename(filePath, path.extname(filePath));
-  const dirName = path.dirname(relativePath);
   
   // Posibles rutas de importación
   const possiblePaths = [

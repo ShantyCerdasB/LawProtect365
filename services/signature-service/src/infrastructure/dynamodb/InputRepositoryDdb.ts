@@ -10,11 +10,8 @@
  */
 
 import type { InputsRepository } from "../../shared/contracts/repositories/inputs/InputsRepository";
-import { ConflictError, NotFoundError } from "@lawprotect/shared-ts";
-import { mapAwsError } from "@lawprotect/shared-ts";
-import { nowIso } from "@lawprotect/shared-ts";
+import { ConflictError, NotFoundError, mapAwsError, nowIso, requireQuery } from "@lawprotect/shared-ts";
 import type { DdbClientLike } from "@lawprotect/shared-ts";
-import { requireQuery } from "@lawprotect/shared-ts";
 import type { Input } from "../../domain/entities/Input";
 import type { EnvelopeId } from "../../domain/value-objects/Ids";
 import type { InputKey } from "../../shared/types/infrastructure/dynamodb";

@@ -420,7 +420,7 @@ export const getContainer = (): Container => {
       events: eventBus,
       ids,
       time,
-      rateLimit: otpRateLimitStore,
+      rateLimit: signingRateLimit,
       signer,
       idempotency: runner,
       signingConfig: {
@@ -435,6 +435,7 @@ export const getContainer = (): Container => {
         signedBucket: config.s3.signedBucket,
         downloadTtlSeconds: config.s3.presignTtlSeconds,
       },
+      s3Service: signingS3,
     }
   );
 

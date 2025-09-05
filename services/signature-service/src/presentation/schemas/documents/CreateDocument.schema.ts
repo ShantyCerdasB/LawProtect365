@@ -4,8 +4,7 @@
  * Defines Zod schemas for document creation payload validation and response formatting.
  */
 
-import { z } from "@lawprotect/shared-ts";
-import { UuidV4 } from "@lawprotect/shared-ts";
+import { z, UuidV4 } from "@lawprotect/shared-ts";
 import { ALLOWED_CONTENT_TYPES } from "@/domain/values/enums";
 
 /**

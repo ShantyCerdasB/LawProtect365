@@ -4,8 +4,7 @@
  * @description Defines Zod schemas for envelope creation payload validation and response formatting.
  */
 
-import { z } from "@lawprotect/shared-ts";
-import { UuidV4 } from "@lawprotect/shared-ts";
+import { z, UuidV4 } from "@lawprotect/shared-ts";
 import { 
   TenantOnlyParams, 
   EnvelopeNameFields, 

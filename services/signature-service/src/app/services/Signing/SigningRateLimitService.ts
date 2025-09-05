@@ -18,19 +18,19 @@ export class DefaultSigningRateLimitService implements SigningRateLimitService {
   constructor(private readonly rateLimitStore: RateLimitStore) {}
 
   /**
-   * @summary Checks and enforces OTP request rate limits
-   * @description Enforces rate limits for OTP requests per party per envelope
+   * @summary Checks and enforces signing preparation rate limits
+   * @description Enforces rate limits for signing preparation requests per party per envelope
    * @param envelopeId - Envelope identifier
    * @param partyId - Party identifier
    * @param tenantId - Tenant identifier
    * @throws {TooManyRequestsError} When rate limit is exceeded
    */
-  async checkOtpRateLimit(
+  async checkPrepareSigningRateLimit(
     envelopeId: EnvelopeId,
     partyId: PartyId,
     tenantId: TenantId
   ): Promise<void> {
-    const rateLimitKey = `otp:${tenantId}:${envelopeId}:${partyId}`;
+    const rateLimitKey = `prepare:${tenantId}:${envelopeId}:${partyId}`;
     
     try {
       await this.rateLimitStore.incrementAndCheck(rateLimitKey, {
@@ -41,7 +41,7 @@ export class DefaultSigningRateLimitService implements SigningRateLimitService {
     } catch (error) {
       if (error instanceof TooManyRequestsError) {
         throw new TooManyRequestsError(
-          "OTP request rate limit exceeded",
+          "Signing preparation rate limit exceeded",
           SignatureErrorCodes.RATE_LIMIT_PARTY_INVITE,
           {
             envelopeId,

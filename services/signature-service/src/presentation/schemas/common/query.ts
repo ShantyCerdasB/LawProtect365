@@ -4,9 +4,7 @@
  */
 
 import { ENVELOPE_STATUSES } from "@/domain/values/enums";
-import { z } from "@lawprotect/shared-ts";
-import { ISODateStringSchema } from "@lawprotect/shared-ts";
-import { paginationQuerySchema } from "@lawprotect/shared-ts";
+import { z, ISODateStringSchema, paginationQuerySchema } from "@lawprotect/shared-ts";
 
 /**
  * Standard pagination (?limit, ?cursor).

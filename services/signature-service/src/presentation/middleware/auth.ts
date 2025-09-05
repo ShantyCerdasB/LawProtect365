@@ -13,8 +13,7 @@
  */
 
 import type { ApiEvent } from "@lawprotect/shared-ts";
-import { requireAuth } from "@lawprotect/shared-ts";
-import { getHeaders, requireHeaderToken } from "@lawprotect/shared-ts";
+import { requireAuth, getHeaders, requireHeaderToken } from "@lawprotect/shared-ts";
 
 /** Default tenant fallback used when auth context doesn't carry a tenant id. */
 const DEFAULT_TENANT = "default-tenant";

@@ -42,9 +42,7 @@
  */
 
 import type { S3Port } from "@lawprotect/shared-ts";
-import { toHttpUrl } from "@lawprotect/shared-ts";
-import { requireRegion, isValidRegion } from "@lawprotect/shared-ts";
-import { BadRequestError, ErrorCodes } from "@lawprotect/shared-ts";
+import { toHttpUrl, requireRegion, isValidRegion, BadRequestError, ErrorCodes } from "@lawprotect/shared-ts";
 import { S3_ACL_TYPES } from "../../domain/values/enums";
 import type { 
   SignedPdfIngestInput, 

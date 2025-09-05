@@ -5,6 +5,7 @@
  */
 
 import type { 
+  SigningCommandsPort,
   CompleteSigningCommand,
   CompleteSigningResult,
   DeclineSigningCommand,
@@ -18,7 +19,6 @@ import type {
   DownloadSignedDocumentCommand,
   DownloadSignedDocumentResult
 } from "../../ports/signing/SigningCommandsPort";
-import type { SigningCommandsPort } from "../../ports/signing/SigningCommandsPort";
 import type { SigningCommandService } from "../../../shared/types/signing/ServiceInterfaces";
 
 /**

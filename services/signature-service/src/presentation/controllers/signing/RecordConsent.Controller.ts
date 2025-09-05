@@ -48,6 +48,8 @@ export const RecordConsentController = createCommandController<SigningConsentCon
     tenantId: path.tenantId,
     envelopeId: path.id,
     signerId: body.signerId,
+    consentGiven: body.consentGiven,
+    consentText: body.consentText,
     token: "", // Will be injected by factory
   }),
   responseType: "ok",
