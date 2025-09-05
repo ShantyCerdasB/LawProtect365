@@ -4,8 +4,8 @@
  * @description Wrapper service for Input query operations
  */
 
-import type { InputsQueriesPort } from "../../ports/inputs/InputsQueriesPort";
 import type { 
+  InputsQueriesPort,
   GetInputQuery,
   ListInputsQuery,
   ListInputsResult

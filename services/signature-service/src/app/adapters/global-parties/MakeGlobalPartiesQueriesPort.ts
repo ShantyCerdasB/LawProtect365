@@ -12,10 +12,8 @@ import type {
   GetGlobalPartyAppInput,
   GetGlobalPartyAppResult,
   SearchGlobalPartiesByEmailAppInput,
-  SearchGlobalPartiesByEmailAppResult
-} from "../../../shared/types/global-parties";
-import type { 
-  MakeGlobalPartiesQueriesPortDeps 
+  SearchGlobalPartiesByEmailAppResult,
+  MakeGlobalPartiesQueriesPortDeps
 } from "../../../shared/types/global-parties";
 
 /**

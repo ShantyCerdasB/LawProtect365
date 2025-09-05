@@ -5,8 +5,8 @@
  */
 
 import { BadRequestError, UnprocessableEntityError } from "@lawprotect/shared-ts";
-import type { GlobalPartiesValidationService } from "../../../shared/types/global-parties";
 import type { 
+  GlobalPartiesValidationService,
   CreateGlobalPartyControllerInput,
   UpdateGlobalPartyControllerInput,
   DeleteGlobalPartyControllerInput,

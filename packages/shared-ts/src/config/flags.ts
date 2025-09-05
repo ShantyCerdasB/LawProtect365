@@ -11,9 +11,9 @@
 export const loadFeatureFlags = (prefix = "FF_"): Record<string, boolean> => {
   const flags: Record<string, boolean> = {};
   for (const [k, v] of Object.entries(process.env)) {
-    if (!k.startsWith(prefix) || v == null) continue;
+    if (!k.startsWith(prefix) || v == null || typeof v !== "string") continue;
     const name = k.slice(prefix.length);
-    const val = typeof v === "string" ? v.toLowerCase() : String(v).toLowerCase();
+    const val = v.toLowerCase();
     flags[name] = ["1", "true", "yes", "on"].includes(val);
   }
   return flags;

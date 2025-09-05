@@ -152,6 +152,13 @@ export interface Container {
     readonly rateLimitService: any;
   };
 
+  /** Certificate services */
+  readonly certificate: {
+    readonly queriesPort: any;
+    readonly validationService: any;
+    readonly auditService: any;
+  };
+
   /** Audit service */
   readonly audit: {
     /**

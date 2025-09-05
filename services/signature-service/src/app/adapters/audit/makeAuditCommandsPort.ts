@@ -32,7 +32,7 @@ export const makeAuditCommandsPort = (
       // Validate event type
       try {
         Rules.Audit.assertEventType(input.type);
-      } catch (error) {
+      } catch {
         throw new BadRequestError(
           `Invalid audit event type: ${input.type}`,
           "AUDIT_INVALID_EVENT_TYPE"
@@ -43,7 +43,7 @@ export const makeAuditCommandsPort = (
       if (input.actor) {
         try {
           Rules.Audit.assertActorShape(input.actor);
-        } catch (error) {
+        } catch {
           throw new BadRequestError(
             "Invalid audit actor information",
             "AUDIT_INVALID_ACTOR"
@@ -55,7 +55,7 @@ export const makeAuditCommandsPort = (
       if (input.metadata) {
         try {
           Rules.Audit.assertMetadataSerializable(input.metadata);
-        } catch (error) {
+        } catch {
           throw new BadRequestError(
             "Invalid audit metadata",
             "AUDIT_INVALID_METADATA"

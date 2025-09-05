@@ -27,8 +27,7 @@ import type { Envelope } from "../../../domain/entities/Envelope";
 import type { Party } from "../../../domain/entities/Party";
 import type { Input } from "../../../domain/entities/Input";
 import type { EnvelopeId, PartyId } from "../../../domain/value-objects/Ids";
-import type { PartyKey } from "../../../shared/types/infrastructure/dynamodb";
-import type { InputKey } from "../../../shared/types/infrastructure/dynamodb";
+import type { PartyKey, InputKey } from "../../../shared/types/infrastructure/dynamodb";
 import { DefaultRequestsValidationService } from "../../services/Requests/RequestsValidationService";
 import { DefaultRequestsAuditService } from "../../services/Requests/RequestsAuditService";
 import { DefaultRequestsEventService } from "../../services/Requests/RequestsEventService";
@@ -152,9 +151,9 @@ export function makeRequestsCommandsPort(
           assertLifecycleTransition(envelope.status, "sent");
           await envelopesRepo.update(command.envelopeId, { status: "sent" });
           statusChanged = true;
-        } catch (error) {
+        } catch {
           // Si no se puede cambiar el estado, continuar sin error
-          console.warn("Could not transition envelope to sent status:", error);
+          console.warn("Could not transition envelope to sent status");
         }
       }
 
@@ -295,7 +294,7 @@ export function makeRequestsCommandsPort(
       // 2. Validar transición de estado
       try {
         assertLifecycleTransition(envelope.status, "canceled");
-      } catch (error) {
+      } catch {
         throw new ConflictError(
           `Cannot cancel envelope in ${envelope.status} state`,
           ErrorCodes.COMMON_CONFLICT,
@@ -361,7 +360,7 @@ export function makeRequestsCommandsPort(
       // 2. Validar transición de estado
       try {
         assertLifecycleTransition(envelope.status, "declined");
-      } catch (error) {
+      } catch {
         throw new ConflictError(
           `Cannot decline envelope in ${envelope.status} state`,
           ErrorCodes.COMMON_CONFLICT,

@@ -126,8 +126,8 @@ export class ConsentDelegationService {
       
       await this.auditService.logConsentDelegation(auditContext, {
         consentId: input.consentId,
-        originalPartyId: currentConsent.partyId as PartyId,
-        delegatePartyId: delegatePartyId as PartyId,
+        originalPartyId: currentConsent.partyId,
+        delegatePartyId: delegatePartyId,
         delegationId: delegation.delegationId,
         reason: input.reason,
         expiresAt: input.expiresAt,
@@ -143,8 +143,8 @@ export class ConsentDelegationService {
           tenantId: input.tenantId,
           consentId: input.consentId,
           envelopeId: input.envelopeId,
-          originalPartyId: currentConsent.partyId as PartyId,
-          delegatePartyId: delegatePartyId as PartyId,
+          originalPartyId: currentConsent.partyId,
+          delegatePartyId: delegatePartyId,
           delegationId: delegation.delegationId,
           reason: input.reason,
           expiresAt: input.expiresAt,
@@ -191,7 +191,7 @@ export class ConsentDelegationService {
     });
 
     if (existingParty && existingParty.party) {
-      return existingParty.party.partyId as PartyId;
+      return existingParty.party.partyId;
     }
 
     // If not found, create a new party for the delegate

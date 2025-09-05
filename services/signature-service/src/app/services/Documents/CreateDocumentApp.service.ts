@@ -5,13 +5,12 @@
  * and handles validation logic. Uses branded types for type safety.
  */
 
-import type { TenantId, EnvelopeId } from "@/app/ports/shared";
+import type { TenantId, EnvelopeId, ActorContext } from "@/app/ports/shared";
 import type { DocumentsCommandsPort } from "@/app/ports/documents/DocumentsCommandsPort";
 import type { S3ObjectRef } from "@/domain/value-objects/S3ObjectRef";
 import type { HashDigestString } from "@/domain/value-objects/HashDigest";
 import type { FileSize } from "@/domain/value-objects/FileSize";
 import type { ContentType } from "@/domain/value-objects/ContentType";
-import type { ActorContext } from "@/app/ports/shared";
 /**
  * Input parameters for creating a document
  */

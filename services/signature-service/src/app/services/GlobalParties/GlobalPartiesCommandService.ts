@@ -4,8 +4,8 @@
  * @description Wrapper service for Global Party command operations
  */
 
-import type { GlobalPartiesCommandsPort } from "../../ports/global-parties";
 import type { 
+  GlobalPartiesCommandsPort,
   CreateGlobalPartyCommand,
   CreateGlobalPartyResult,
   UpdateGlobalPartyCommand,

@@ -7,8 +7,8 @@
 
 import type { TenantId } from "../../../domain/value-objects/Ids";
 import type { ActorContext } from "../../../domain/entities/ActorContext";
-import type { PartyRow } from "../../../shared/types/parties";
 import type { 
+  PartyRow,
   CreatePartyControllerInput,
   UpdatePartyControllerInput,
   DeletePartyControllerInput

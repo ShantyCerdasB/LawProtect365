@@ -56,7 +56,7 @@ async function main() {
     ? modPath
     : "./" + modPath);
 
-  const handler = (mod as any).handler as (
+  const handler = mod.handler as (
     evt: APIGatewayProxyEventV2,
     ctx: Context,
     cb: () => void

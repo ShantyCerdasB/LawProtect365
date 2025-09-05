@@ -4,8 +4,8 @@
  * @description Wrapper service for Input command operations
  */
 
-import type { InputsCommandsPort } from "../../ports/inputs/InputsCommandsPort";
 import type { 
+  InputsCommandsPort,
   CreateInputsCommand,
   CreateInputsResult,
   UpdateInputCommand,

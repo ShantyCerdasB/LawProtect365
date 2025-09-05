@@ -20,7 +20,7 @@ type RepoRow = {
   name?: string;
   title?: string;
 
-  contentType?: AllowedContentType | string;
+  contentType?: string;
   createdAt?: string | Date | number;
 };
 

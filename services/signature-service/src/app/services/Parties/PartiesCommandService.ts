@@ -4,8 +4,8 @@
  * @description Wrapper service for Party command operations
  */
 
-import type { PartiesCommandsPort } from "../../ports/parties";
 import type { 
+  PartiesCommandsPort,
   CreatePartyCommand,
   CreatePartyResult,
   UpdatePartyCommand,

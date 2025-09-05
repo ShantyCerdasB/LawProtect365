@@ -70,7 +70,8 @@ export const putDocumentApp = async (
   }
 
   // Validate digest format (should be SHA-256)
-  if (!input.digest.match(/^[A-Fa-f0-9]{64}$/)) {
+  const digestRegex = /^[A-Fa-f0-9]{64}$/;
+  if (!digestRegex.exec(input.digest)) {
     throw badRequest(`Invalid SHA-256 digest format: ${input.digest}`, "INPUT_TYPE_NOT_ALLOWED");
   }
 

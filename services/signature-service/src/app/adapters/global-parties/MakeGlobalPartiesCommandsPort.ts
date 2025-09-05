@@ -5,9 +5,8 @@
  * Handles create, update, and delete operations for Global Parties (contacts).
  */
 
-import type { GlobalPartiesCommandsPort } from "../../ports/global-parties";
-import type { GlobalPartiesRepository } from "../../../shared/contracts/repositories/global-parties/GlobalPartiesRepository";
 import type { 
+  GlobalPartiesCommandsPort,
   CreateGlobalPartyCommand, 
   CreateGlobalPartyResult,
   UpdateGlobalPartyCommand,
@@ -15,6 +14,7 @@ import type {
   DeleteGlobalPartyCommand,
   DeleteGlobalPartyResult
 } from "../../ports/global-parties";
+import type { GlobalPartiesRepository } from "../../../shared/contracts/repositories/global-parties/GlobalPartiesRepository";
 import type { 
   GlobalPartyRow,
 } from "../../../shared/types/global-parties";
@@ -26,11 +26,12 @@ import {
   AUTH_METHODS,
   GlobalPartyUpdatableField
 } from "../../../domain/values/enums";
-import {  nowIso } from "@lawprotect/shared-ts";
-import { NotFoundError } from "@lawprotect/shared-ts";
-import type { GlobalPartiesValidationService } from "../../../shared/types/global-parties/ServiceInterfaces";
-import type { GlobalPartiesAuditService } from "../../../shared/types/global-parties/ServiceInterfaces";
-import type { GlobalPartiesEventService } from "../../../shared/types/global-parties/ServiceInterfaces";
+import { nowIso, NotFoundError } from "@lawprotect/shared-ts";
+import type { 
+  GlobalPartiesValidationService,
+  GlobalPartiesAuditService,
+  GlobalPartiesEventService
+} from "../../../shared/types/global-parties/ServiceInterfaces";
 
 /**
  * @description Creates default Global Party statistics

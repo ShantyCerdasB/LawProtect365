@@ -109,6 +109,10 @@ import { DefaultRequestsEventService } from "../app/services/Requests/RequestsEv
 import { DefaultRequestsRateLimitService } from "../app/services/Requests/RequestsRateLimitService";
 import { makeRequestsCommandsPort } from "../app/adapters/requests/makeRequestsCommandsPort";
 
+// Certificate services
+import { DefaultCertificateValidationService, DefaultCertificateAuditService } from "../app/services/Certificate";
+import { makeCertificateQueriesPort } from "../app/adapters/certificate/makeCertificateQueriesPort";
+
 let singleton: Container;
 
 /**
@@ -372,6 +376,16 @@ export const getContainer = (): Container => {
     presigner
   );
 
+  // Certificate services - instantiate with correct dependencies
+  const certificateValidation = new DefaultCertificateValidationService();
+  const certificateAudit = new DefaultCertificateAuditService(audit);
+  
+  const certificateQueries = makeCertificateQueriesPort(
+    audit,
+    envelopes,
+    certificateValidation
+  );
+
   singleton = {
     config,
     aws: { ddb, s3, kms, evb, ssm },
@@ -422,6 +436,11 @@ export const getContainer = (): Container => {
           auditService: requestsAudit,
           eventService: requestsEvents,
           rateLimitService: requestsRateLimit,
+        },
+        certificate: {
+          queriesPort: certificateQueries,
+          validationService: certificateValidation,
+          auditService: certificateAudit,
         },
     audit: {
       log: async (action: string, details: any, context: any) => {

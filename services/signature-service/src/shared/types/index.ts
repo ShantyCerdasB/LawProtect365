@@ -28,6 +28,7 @@ export * from "./inputs";
 
 // Requests types
 export * from "./requests";
+export * from "./certificate";
 
 // Audit types
 export * from "./audit";
