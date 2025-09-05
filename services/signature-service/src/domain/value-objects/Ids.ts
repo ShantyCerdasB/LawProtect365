@@ -33,6 +33,8 @@ export type ConsentId = Brand<string, "ConsentId">;
 export type TenantId = Brand<string, "TenantId">;
 /** @description User identifier (trimmed, non-empty) */
 export type UserId = Brand<string, "UserId">;
+/** @description IP address (IPv4 or IPv6) */
+export type IpAddress = Brand<string, "IpAddress">;
 
 /* ────────────────────────────────────────────────────────────────────────────
  * Schemas
@@ -84,4 +86,9 @@ export const TenantIdSchema = TrimmedString.pipe(z.string().min(1)).transform(
  */
 export const UserIdSchema = TrimmedString.pipe(z.string().min(1)).transform(
   (v: string) => v as UserId
+);
+
+/** @description IpAddress validator (IPv4/IPv6 → brand) */
+export const IpAddressSchema = z.string().ip().transform(
+  (v: string) => v as IpAddress
 );

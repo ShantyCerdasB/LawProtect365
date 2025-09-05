@@ -36,6 +36,147 @@ import { nowIso, NotFoundError, ConflictError, BadRequestError, ErrorCodes } fro
 import { assertLifecycleTransition } from "../../../domain/rules/EnvelopeLifecycle.rules";
 import type { S3Presigner } from "../../../infrastructure/s3/S3Presigner";
 
+// Helper function types
+type ValidationService = DefaultRequestsValidationService;
+type AuditService = DefaultRequestsAuditService;
+type EventService = DefaultRequestsEventService;
+type RateLimitService = DefaultRequestsRateLimitService;
+
+/**
+ * Helper function to validate and get envelope
+ */
+async function validateAndGetEnvelope(
+  envelopesRepo: Repository<Envelope, EnvelopeId, undefined>,
+  envelopeId: EnvelopeId
+): Promise<Envelope> {
+  const envelope = await envelopesRepo.getById(envelopeId);
+  if (!envelope) {
+    throw new NotFoundError(
+      "Envelope not found",
+      ErrorCodes.COMMON_NOT_FOUND,
+      { envelopeId }
+    );
+  }
+  return envelope;
+}
+
+/**
+ * Helper function to execute common service operations
+ */
+async function executeCommonServices(
+  validationService: ValidationService | undefined,
+  rateLimitService: RateLimitService | undefined,
+  _auditService: AuditService | undefined,
+  _eventService: EventService | undefined,
+  command: any,
+  operation: string
+): Promise<void> {
+  // Basic validation
+  if (validationService && command.actor) {
+    (validationService as any)[`validate${operation}`](command);
+  }
+
+  // Input-specific validations
+  if (validationService) {
+    await executeInputValidations(validationService, command, operation);
+  }
+
+  // Rate limiting
+  if (rateLimitService && command.actor) {
+    const rateLimitMethod = `check${operation}Limit`;
+    if (typeof (rateLimitService as any)[rateLimitMethod] === 'function') {
+      await (rateLimitService as any)[rateLimitMethod](command.envelopeId, command.actor);
+    }
+  }
+}
+
+/**
+ * Helper function to execute input-specific validations
+ */
+async function executeInputValidations(
+  validationService: ValidationService,
+  command: any,
+  operation: string
+): Promise<void> {
+  switch (operation) {
+    case "InviteParties":
+      await (validationService as any).validateEnvelopeHasInputs(command.envelopeId);
+      break;
+    case "FinaliseEnvelope":
+      await (validationService as any).validateRequiredInputsComplete(command.envelopeId);
+      break;
+    case "RequestSignature":
+      await (validationService as any).validatePartyHasAssignedInputs(command.envelopeId, command.partyId);
+      break;
+    // Add more cases as needed
+  }
+}
+
+/**
+ * Helper function to publish audit and events
+ */
+async function publishAuditAndEvents(
+  auditService: AuditService | undefined,
+  eventService: EventService | undefined,
+  command: any,
+  result: any,
+  operation: string
+): Promise<void> {
+  // Audit logging
+  if (auditService && command.actor) {
+    const auditMethod = `log${operation}`;
+    if (typeof (auditService as any)[auditMethod] === 'function') {
+      await (auditService as any)[auditMethod](
+        result,
+        command.envelopeId,
+        command.tenantId,
+        command.actor
+      );
+    }
+  }
+
+  // Event publishing
+  if (eventService && command.actor) {
+    const eventMethod = `publish${operation}`;
+    if (typeof (eventService as any)[eventMethod] === 'function') {
+      await (eventService as any)[eventMethod](
+        result,
+        command.envelopeId,
+        command.tenantId,
+        command.actor
+      );
+    }
+  }
+}
+
+/**
+ * Helper function to create a new party
+ */
+async function createNewParty(
+  partyId: PartyId,
+  command: InvitePartiesCommand,
+  partiesRepo: Repository<Party, PartyKey, undefined>
+): Promise<void> {
+  const now = nowIso();
+  const newParty: Party = {
+    tenantId: command.tenantId,
+    partyId,
+    envelopeId: command.envelopeId,
+    name: `Party ${partyId}`,
+    email: `party-${partyId}@example.com`,
+    role: "signer",
+    status: "pending",
+    sequence: 1,
+    invitedAt: now,
+    createdAt: now,
+    updatedAt: now,
+    auth: { methods: ["otpViaEmail"] },
+    otpState: undefined,
+  };
+
+  await partiesRepo.create(newParty);
+}
+
 /**
  * @description Creates RequestsCommandsPort implementation with optional services.
  * 
@@ -51,7 +192,7 @@ import type { S3Presigner } from "../../../infrastructure/s3/S3Presigner";
 export function makeRequestsCommandsPort(
   envelopesRepo: Repository<Envelope, EnvelopeId, undefined>,
   partiesRepo: Repository<Party, PartyKey, undefined>,
-  inputsRepo: Repository<Input, InputKey, undefined>,
+  _inputsRepo: Repository<Input, InputKey, undefined>,
   // ✅ SERVICIOS OPCIONALES - PATRÓN REUTILIZABLE
   validationService?: DefaultRequestsValidationService,
   auditService?: DefaultRequestsAuditService,
@@ -62,32 +203,16 @@ export function makeRequestsCommandsPort(
   s3Presigner?: S3Presigner
 ): RequestsCommandsPort {
   
-  // Suppress unused parameter warning - inputsRepo will be used for input-related operations
-  void inputsRepo;
+  // Note: _inputsRepo parameter is reserved for future input-related operations
   
   return {
     async inviteParties(command: InvitePartiesCommand): Promise<InvitePartiesResult> {
-      // ✅ VALIDATION - PATRÓN REUTILIZABLE
-      if (validationService) {
-        validationService.validateInviteParties(command);
-      }
+      // Execute common services (validation and rate limiting)
+      await executeCommonServices(validationService, rateLimitService, auditService, eventService, command, "InviteParties");
 
-      // ✅ RATE LIMITING - PATRÓN REUTILIZABLE
-      if (rateLimitService && command.actor) {
-        await rateLimitService.checkInviteLimit(command.envelopeId, command.actor);
-      }
-
-      // 1. Obtener envelope y validar estado
-      const envelope = await envelopesRepo.getById(command.envelopeId);
-      if (!envelope) {
-        throw new NotFoundError(
-          "Envelope not found",
-          ErrorCodes.COMMON_NOT_FOUND,
-          { envelopeId: command.envelopeId }
-        );
-      }
-
-      // 2. Validar que el envelope esté en draft para invitaciones
+      // Get and validate envelope
+      const envelope = await validateAndGetEnvelope(envelopesRepo, command.envelopeId);
+      
       if (envelope.status !== "draft") {
         throw new ConflictError(
           "Envelope must be in draft state to invite parties",
@@ -96,7 +221,7 @@ export function makeRequestsCommandsPort(
         );
       }
 
-      // 3. Procesar cada party
+      // Process each party
       const invited: PartyId[] = [];
       const alreadyPending: PartyId[] = [];
       const skipped: PartyId[] = [];
@@ -112,7 +237,6 @@ export function makeRequestsCommandsPort(
             skipped.push(partyId);
           }
         } else {
-          // Crear nuevo party
           if (!ids) {
             throw new BadRequestError(
               "ID generation service not available",
@@ -121,30 +245,12 @@ export function makeRequestsCommandsPort(
           }
 
           const newPartyId = ids.ulid() as PartyId;
-          const now = nowIso();
-          
-          const newParty: Party = {
-            tenantId: command.tenantId,
-            partyId: newPartyId,
-            envelopeId: command.envelopeId,
-            name: `Party ${newPartyId}`,
-            email: `party-${newPartyId}@example.com`,
-            role: "signer",
-            status: "pending",
-            sequence: 1,
-            invitedAt: now,
-            createdAt: now,
-            updatedAt: now,
-            auth: { methods: ["otpViaEmail"] },
-            otpState: undefined,
-          };
-
-          await partiesRepo.create(newParty);
+          await createNewParty(newPartyId, command, partiesRepo);
           invited.push(newPartyId);
         }
       }
 
-      // 4. Cambiar estado del envelope a "sent" si hay invitaciones exitosas
+      // Update envelope status if needed
       let statusChanged = false;
       if (invited.length > 0 && envelope.status === "draft") {
         try {
@@ -152,7 +258,6 @@ export function makeRequestsCommandsPort(
           await envelopesRepo.update(command.envelopeId, { status: "sent" });
           statusChanged = true;
         } catch {
-          // Si no se puede cambiar el estado, continuar sin error
           console.warn("Could not transition envelope to sent status");
         }
       }
@@ -164,53 +269,19 @@ export function makeRequestsCommandsPort(
         statusChanged
       };
 
-      // ✅ AUDIT LOGGING - PATRÓN REUTILIZABLE
-      if (auditService && command.actor) {
-        await auditService.logInviteParties(
-          result.invited,
-          command.envelopeId,
-          command.tenantId,
-          command.actor
-        );
-      }
-
-      // ✅ EVENT PUBLISHING - PATRÓN REUTILIZABLE
-      if (eventService && command.actor) {
-        await eventService.publishInviteParties(
-          result.invited,
-          command.envelopeId,
-          command.tenantId,
-          command.actor
-        );
-      }
+      // Publish audit and events
+      await publishAuditAndEvents(auditService, eventService, command, result.invited, "InviteParties");
 
       return result;
     },
 
     async remindParties(command: RemindPartiesCommand): Promise<RemindPartiesResult> {
-      // ✅ VALIDATION - PATRÓN REUTILIZABLE
-      if (validationService) {
-        validationService.validateRemindParties(command);
-      }
+      // Execute common services (validation and rate limiting)
+      await executeCommonServices(validationService, rateLimitService, auditService, eventService, command, "RemindParties");
 
-      // ✅ RATE LIMITING - PATRÓN REUTILIZABLE
-      if (rateLimitService && command.actor && command.partyIds) {
-        for (const partyId of command.partyIds) {
-          await rateLimitService.checkRemindLimit(command.envelopeId, partyId, command.actor);
-        }
-      }
-
-      // 1. Verificar que el envelope existe
-      const envelope = await envelopesRepo.getById(command.envelopeId);
-      if (!envelope) {
-        throw new NotFoundError(
-          "Envelope not found",
-          ErrorCodes.COMMON_NOT_FOUND,
-          { envelopeId: command.envelopeId }
-        );
-      }
-
-      // 2. Validar que el envelope esté en estado válido para recordatorios
+      // Get and validate envelope
+      const envelope = await validateAndGetEnvelope(envelopesRepo, command.envelopeId);
+      
       if (envelope.status !== "sent" && envelope.status !== "in_progress") {
         throw new ConflictError(
           `Cannot send reminders for envelope in ${envelope.status} state`,
@@ -219,7 +290,7 @@ export function makeRequestsCommandsPort(
         );
       }
 
-      // 3. Procesar cada party
+      // Process each party
       const reminded: PartyId[] = [];
       const skipped: PartyId[] = [];
 
@@ -233,7 +304,6 @@ export function makeRequestsCommandsPort(
             continue;
           }
 
-          // Solo enviar recordatorios a parties en estado "pending" o "invited"
           if (party.status === "pending" || party.status === "invited") {
             reminded.push(partyId);
           } else {
@@ -247,51 +317,20 @@ export function makeRequestsCommandsPort(
         skipped
       };
 
-      // ✅ AUDIT LOGGING - PATRÓN REUTILIZABLE
-      if (auditService && command.actor) {
-        await auditService.logRemindParties(
-          result.reminded,
-          command.envelopeId,
-          command.tenantId,
-          command.actor
-        );
-      }
-
-      // ✅ EVENT PUBLISHING - PATRÓN REUTILIZABLE
-      if (eventService && command.actor) {
-        await eventService.publishRemindParties(
-          result.reminded,
-          command.envelopeId,
-          command.tenantId,
-          command.actor
-        );
-      }
+      // Publish audit and events
+      await publishAuditAndEvents(auditService, eventService, command, result.reminded, "RemindParties");
 
       return result;
     },
 
     async cancelEnvelope(command: CancelEnvelopeCommand): Promise<CancelEnvelopeResult> {
-      // ✅ VALIDATION - PATRÓN REUTILIZABLE
-      if (validationService) {
-        validationService.validateCancelEnvelope(command);
-      }
+      // Execute common services (validation and rate limiting)
+      await executeCommonServices(validationService, rateLimitService, auditService, eventService, command, "CancelEnvelope");
 
-      // ✅ RATE LIMITING - PATRÓN REUTILIZABLE
-      if (rateLimitService && command.actor) {
-        await rateLimitService.checkCancelLimit(command.envelopeId, command.actor);
-      }
-
-      // 1. Obtener envelope actual
-      const envelope = await envelopesRepo.getById(command.envelopeId);
-      if (!envelope) {
-        throw new NotFoundError(
-          "Envelope not found",
-          ErrorCodes.COMMON_NOT_FOUND,
-          { envelopeId: command.envelopeId }
-        );
-      }
-
-      // 2. Validar transición de estado
+      // Get and validate envelope
+      const envelope = await validateAndGetEnvelope(envelopesRepo, command.envelopeId);
+      
+      // Validate state transition
       try {
         assertLifecycleTransition(envelope.status, "canceled");
       } catch {
@@ -302,7 +341,7 @@ export function makeRequestsCommandsPort(
         );
       }
 
-      // 3. Actualizar estado del envelope
+      // Update envelope status
       const now = nowIso();
       await envelopesRepo.update(command.envelopeId, { 
         status: "canceled",
@@ -315,49 +354,20 @@ export function makeRequestsCommandsPort(
         canceledAt: now
       };
 
-      // ✅ AUDIT LOGGING - PATRÓN REUTILIZABLE
-      if (auditService && command.actor) {
-        await auditService.logCancelEnvelope(
-          command.envelopeId,
-          command.tenantId,
-          command.actor
-        );
-      }
-
-      // ✅ EVENT PUBLISHING - PATRÓN REUTILIZABLE
-      if (eventService && command.actor) {
-        await eventService.publishCancelEnvelope(
-          command.envelopeId,
-          command.tenantId,
-          command.actor
-        );
-      }
+      // Publish audit and events
+      await publishAuditAndEvents(auditService, eventService, command, result, "CancelEnvelope");
 
       return result;
     },
 
     async declineEnvelope(command: DeclineEnvelopeCommand): Promise<DeclineEnvelopeResult> {
-      // ✅ VALIDATION - PATRÓN REUTILIZABLE
-      if (validationService) {
-        validationService.validateDeclineEnvelope(command);
-      }
+      // Execute common services (validation and rate limiting)
+      await executeCommonServices(validationService, rateLimitService, auditService, eventService, command, "DeclineEnvelope");
 
-      // ✅ RATE LIMITING - PATRÓN REUTILIZABLE
-      if (rateLimitService && command.actor) {
-        await rateLimitService.checkDeclineLimit(command.envelopeId, command.actor);
-      }
-
-      // 1. Obtener envelope actual
-      const envelope = await envelopesRepo.getById(command.envelopeId);
-      if (!envelope) {
-        throw new NotFoundError(
-          "Envelope not found",
-          ErrorCodes.COMMON_NOT_FOUND,
-          { envelopeId: command.envelopeId }
-        );
-      }
-
-      // 2. Validar transición de estado
+      // Get and validate envelope
+      const envelope = await validateAndGetEnvelope(envelopesRepo, command.envelopeId);
+      
+      // Validate state transition
       try {
         assertLifecycleTransition(envelope.status, "declined");
       } catch {
@@ -368,7 +378,7 @@ export function makeRequestsCommandsPort(
         );
       }
 
-      // 3. Actualizar estado del envelope
+      // Update envelope status
       const now = nowIso();
       await envelopesRepo.update(command.envelopeId, { 
         status: "declined",
@@ -381,49 +391,19 @@ export function makeRequestsCommandsPort(
         declinedAt: now
       };
 
-      // ✅ AUDIT LOGGING - PATRÓN REUTILIZABLE
-      if (auditService && command.actor) {
-        await auditService.logDeclineEnvelope(
-          command.envelopeId,
-          command.tenantId,
-          command.actor
-        );
-      }
-
-      // ✅ EVENT PUBLISHING - PATRÓN REUTILIZABLE
-      if (eventService && command.actor) {
-        await eventService.publishDeclineEnvelope(
-          command.envelopeId,
-          command.tenantId,
-          command.actor
-        );
-      }
+      // Publish audit and events
+      await publishAuditAndEvents(auditService, eventService, command, result, "DeclineEnvelope");
 
       return result;
     },
 
     async finaliseEnvelope(command: FinaliseEnvelopeCommand): Promise<FinaliseEnvelopeResult> {
-      // ✅ VALIDATION - PATRÓN REUTILIZABLE
-      if (validationService) {
-        validationService.validateFinaliseEnvelope(command);
-      }
+      // Execute common services (validation and rate limiting)
+      await executeCommonServices(validationService, rateLimitService, auditService, eventService, command, "FinaliseEnvelope");
 
-      // ✅ RATE LIMITING - PATRÓN REUTILIZABLE
-      if (rateLimitService && command.actor) {
-        await rateLimitService.checkFinaliseLimit(command.envelopeId, command.actor);
-      }
-
-      // 1. Obtener envelope actual
-      const envelope = await envelopesRepo.getById(command.envelopeId);
-      if (!envelope) {
-        throw new NotFoundError(
-          "Envelope not found",
-          ErrorCodes.COMMON_NOT_FOUND,
-          { envelopeId: command.envelopeId }
-        );
-      }
-
-      // 2. Validar que el envelope esté en estado "completed"
+      // Get and validate envelope
+      const envelope = await validateAndGetEnvelope(envelopesRepo, command.envelopeId);
+      
       if (envelope.status !== "completed") {
         throw new ConflictError(
           `Cannot finalize envelope in ${envelope.status} state. Must be completed.`,
@@ -432,10 +412,10 @@ export function makeRequestsCommandsPort(
         );
       }
 
-      // 3. Generar artifacts (PDFs, certificados, etc.)
+      // Generate artifacts (PDFs, certificates, etc.)
       const artifactIds: string[] = [];
       if (s3Presigner && ids) {
-        // Generar PDF final del envelope
+        // Generate final envelope PDF
         const pdfArtifactId = ids.ulid();
         await s3Presigner.getObjectUrl({
           bucket: "envelope-artifacts",
@@ -446,7 +426,7 @@ export function makeRequestsCommandsPort(
         });
         artifactIds.push(pdfArtifactId);
 
-        // Generar certificado de finalización
+        // Generate completion certificate
         const certArtifactId = ids.ulid();
         await s3Presigner.getObjectUrl({
           bucket: "envelope-artifacts",
@@ -458,7 +438,7 @@ export function makeRequestsCommandsPort(
         artifactIds.push(certArtifactId);
       }
 
-      // 4. Actualizar estado del envelope a "finalized"
+      // Update envelope status to "finalized"
       const now = nowIso();
       await envelopesRepo.update(command.envelopeId, { 
         status: "finalized" as any,
@@ -471,39 +451,17 @@ export function makeRequestsCommandsPort(
         finalizedAt: now
       };
 
-      // ✅ AUDIT LOGGING - PATRÓN REUTILIZABLE
-      if (auditService && command.actor) {
-        await auditService.logFinaliseEnvelope(
-          command.envelopeId,
-          command.tenantId,
-          command.actor
-        );
-      }
-
-      // ✅ EVENT PUBLISHING - PATRÓN REUTILIZABLE
-      if (eventService && command.actor) {
-        await eventService.publishFinaliseEnvelope(
-          command.envelopeId,
-          command.tenantId,
-          command.actor
-        );
-      }
+      // Publish audit and events
+      await publishAuditAndEvents(auditService, eventService, command, result, "FinaliseEnvelope");
 
       return result;
     },
 
     async requestSignature(command: RequestSignatureCommand): Promise<RequestSignatureResult> {
-      // ✅ VALIDATION - PATRÓN REUTILIZABLE
-      if (validationService) {
-        validationService.validateRequestSignature(command);
-      }
+      // Execute common services (validation and rate limiting)
+      await executeCommonServices(validationService, rateLimitService, auditService, eventService, command, "RequestSignature");
 
-      // ✅ RATE LIMITING - PATRÓN REUTILIZABLE
-      if (rateLimitService && command.actor) {
-        await rateLimitService.checkRequestSignatureLimit(command.envelopeId, command.partyId, command.actor);
-      }
-
-      // 1. Obtener party
+      // Get and validate party
       const partyKey = { envelopeId: command.envelopeId, partyId: command.partyId };
       const party = await partiesRepo.getById(partyKey);
       if (!party) {
@@ -514,7 +472,6 @@ export function makeRequestsCommandsPort(
         );
       }
 
-      // 2. Validar estado del party
       if (party.status !== "pending" && party.status !== "invited") {
         throw new ConflictError(
           `Cannot request signature from party in ${party.status} state`,
@@ -523,12 +480,11 @@ export function makeRequestsCommandsPort(
         );
       }
 
-      // 3. Generar URL de firma
+      // Generate signing URL
       let signingUrl = "";
       let expiresAt = "";
       
       if (s3Presigner) {
-        // Generar URL de firma usando S3Presigner
         const expiresInSeconds = 7 * 24 * 60 * 60; // 7 days
         signingUrl = await s3Presigner.getObjectUrl({
           bucket: "signing-documents",
@@ -539,12 +495,12 @@ export function makeRequestsCommandsPort(
         });
         expiresAt = new Date(Date.now() + expiresInSeconds * 1000).toISOString();
       } else {
-        // Fallback URL si no hay S3Presigner
+        // Fallback URL if no S3Presigner
         signingUrl = `https://sign.example.com/sign/${command.envelopeId}/${command.partyId}`;
         expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
       }
 
-      // 4. Actualizar estado del party a "invited" si está en "pending"
+      // Update party status if needed
       let statusChanged = false;
       if (party.status === "pending") {
         await partiesRepo.update(partyKey, { 
@@ -561,51 +517,20 @@ export function makeRequestsCommandsPort(
         statusChanged
       };
 
-      // ✅ AUDIT LOGGING - PATRÓN REUTILIZABLE
-      if (auditService && command.actor) {
-        await auditService.logRequestSignature(
-          command.partyId,
-          command.envelopeId,
-          command.tenantId,
-          command.actor
-        );
-      }
-
-      // ✅ EVENT PUBLISHING - PATRÓN REUTILIZABLE
-      if (eventService && command.actor) {
-        await eventService.publishRequestSignature(
-          command.partyId,
-          command.envelopeId,
-          command.tenantId,
-          command.actor
-        );
-      }
+      // Publish audit and events
+      await publishAuditAndEvents(auditService, eventService, command, result, "RequestSignature");
 
       return result;
     },
 
     async addViewer(command: AddViewerCommand): Promise<AddViewerResult> {
-      // ✅ VALIDATION - PATRÓN REUTILIZABLE
-      if (validationService) {
-        validationService.validateAddViewer(command);
-      }
+      // Execute common services (validation and rate limiting)
+      await executeCommonServices(validationService, rateLimitService, auditService, eventService, command, "AddViewer");
 
-      // ✅ RATE LIMITING - PATRÓN REUTILIZABLE
-      if (rateLimitService && command.actor) {
-        await rateLimitService.checkAddViewerLimit(command.envelopeId, command.actor);
-      }
+      // Verify envelope exists
+      await validateAndGetEnvelope(envelopesRepo, command.envelopeId);
 
-      // 1. Verificar que el envelope existe
-      const envelope = await envelopesRepo.getById(command.envelopeId);
-      if (!envelope) {
-        throw new NotFoundError(
-          "Envelope not found",
-          ErrorCodes.COMMON_NOT_FOUND,
-          { envelopeId: command.envelopeId }
-        );
-      }
-
-      // 2. Generar PartyId único
+      // Generate unique PartyId
       if (!ids) {
         throw new BadRequestError(
           "ID generation service not available",
@@ -616,7 +541,7 @@ export function makeRequestsCommandsPort(
       const partyId = ids.ulid() as PartyId;
       const now = nowIso();
 
-      // 3. Crear party con role "viewer"
+      // Create party with "viewer" role
       const newParty: Party = {
         tenantId: command.tenantId,
         partyId,
@@ -642,25 +567,8 @@ export function makeRequestsCommandsPort(
         addedAt: now
       };
 
-      // ✅ AUDIT LOGGING - PATRÓN REUTILIZABLE
-      if (auditService && command.actor) {
-        await auditService.logAddViewer(
-          result.partyId,
-          command.envelopeId,
-          command.tenantId,
-          command.actor
-        );
-      }
-
-      // ✅ EVENT PUBLISHING - PATRÓN REUTILIZABLE
-      if (eventService && command.actor) {
-        await eventService.publishAddViewer(
-          result.partyId,
-          command.envelopeId,
-          command.tenantId,
-          command.actor
-        );
-      }
+      // Publish audit and events
+      await publishAuditAndEvents(auditService, eventService, command, result, "AddViewer");
 
       return result;
     }

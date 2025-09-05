@@ -6,24 +6,23 @@
  * and other signing-related operations with proper business rule validation.
  */
 
-import { HashAlgorithm, KmsAlgorithm, OtpChannel } from "@/domain/values/enums";
+import { HashAlgorithm, KmsAlgorithm } from "@/domain/values/enums";
 import type { EventEnvelope } from "@lawprotect/shared-ts";
+import type { EnvelopeId, PartyId, IpAddress } from "@/domain/value-objects/Ids";
 
 /**
- * Input for OTP verification operation
+ * Input for signing consent operation (replaces OTP verification)
  */
-export interface VerifyOtpCommand {
+export interface SigningConsentCommand {
   /** The envelope ID */
-  envelopeId: string;
+  envelopeId: EnvelopeId;
   /** The signer/party ID */
-  signerId: string;
-  /** The OTP code to verify */
-  code: string;
+  signerId: PartyId;
   /** The request token for authentication */
   token: string;
   /** Actor context information */
   actor: {
-    ip?: string;
+    ip?: IpAddress;
     userAgent?: string;
     email?: string;
     userId?: string;
@@ -31,32 +30,30 @@ export interface VerifyOtpCommand {
 }
 
 /**
- * Result of OTP verification
+ * Result of signing consent
  */
-export interface VerifyOtpResult {
-  /** Whether the OTP was verified successfully */
-  verified: boolean;
-  /** Timestamp when verification occurred */
-  verifiedAt: string;
-  /** Event envelope for the verification */
+export interface SigningConsentResult {
+  /** Whether the consent was recorded successfully */
+  consented: boolean;
+  /** Timestamp when consent was given */
+  consentedAt: string;
+  /** Event envelope for the consent */
   event: EventEnvelope;
 }
 
 /**
- * Input for OTP request operation
+ * Input for signing preparation operation (replaces OTP request)
  */
-export interface RequestOtpCommand {
+export interface PrepareSigningCommand {
   /** The envelope ID */
-  envelopeId: string;
+  envelopeId: EnvelopeId;
   /** The signer/party ID */
-  signerId: string;
-  /** The delivery channel (sms or email) */
-  delivery: OtpChannel  
+  signerId: PartyId;
   /** The request token for authentication */
   token: string;
   /** Actor context information */
   actor: {
-    ip?: string;
+    ip?: IpAddress;
     userAgent?: string;
     email?: string;
     userId?: string;
@@ -64,16 +61,14 @@ export interface RequestOtpCommand {
 }
 
 /**
- * Result of OTP request
+ * Result of signing preparation
  */
-export interface RequestOtpResult {
-  /** The delivery channel used */
-  channel:OtpChannel
-  /** When the OTP expires */
-  expiresAt: string;
-  /** Cooldown period in seconds */
-  cooldownSeconds: number;
-  /** Event envelope for the request */
+export interface PrepareSigningResult {
+  /** Whether preparation was successful */
+  prepared: boolean;
+  /** Timestamp when preparation occurred */
+  preparedAt: string;
+  /** Event envelope for the preparation */
   event: EventEnvelope;
 }
 
@@ -82,9 +77,9 @@ export interface RequestOtpResult {
  */
 export interface CompleteSigningCommand {
   /** The envelope ID */
-  envelopeId: string;
+  envelopeId: EnvelopeId;
   /** The signer/party ID */
-  signerId: string;
+  signerId: PartyId;
   /** The request token for authentication */
   token: string;
   /** Precomputed digest to sign (base64url, no padding) */
@@ -93,14 +88,12 @@ export interface CompleteSigningCommand {
     value: string;
   };
   /** KMS signing algorithm to use (must be allowed by policy) */
-  algorithm: KmsAlgorithm
+  algorithm: KmsAlgorithm;
   /** Optional override for the KMS key id */
   keyId?: string;
-  /** Optional OTP provided by the signer (when MFA is enabled) */
-  otpCode?: string;
   /** Actor context information */
   actor: {
-    ip?: string;
+    ip?: IpAddress;
     userAgent?: string;
     email?: string;
     userId?: string;
@@ -112,16 +105,16 @@ export interface CompleteSigningCommand {
  */
 export interface DeclineSigningCommand {
   /** The envelope ID */
-  envelopeId: string;
+  envelopeId: EnvelopeId;
   /** The signer/party ID */
-  signerId: string;
+  signerId: PartyId;
   /** The reason for declining */
   reason: string;
   /** The request token for authentication */
   token: string;
   /** Actor context information */
   actor: {
-    ip?: string;
+    ip?: IpAddress;
     userAgent?: string;
     email?: string;
     userId?: string;
@@ -133,7 +126,7 @@ export interface DeclineSigningCommand {
  */
 export interface PresignUploadCommand {
   /** The envelope ID */
-  envelopeId: string;
+  envelopeId: EnvelopeId;
   /** The filename to upload */
   filename: string;
   /** The content type of the file */
@@ -142,7 +135,7 @@ export interface PresignUploadCommand {
   token: string;
   /** Actor context information */
   actor: {
-    ip?: string;
+    ip?: IpAddress;
     userAgent?: string;
     email?: string;
     userId?: string;
@@ -154,12 +147,12 @@ export interface PresignUploadCommand {
  */
 export interface DownloadSignedDocumentCommand {
   /** The envelope ID */
-  envelopeId: string;
+  envelopeId: EnvelopeId;
   /** The request token for authentication */
   token: string;
   /** Actor context information */
   actor: {
-    ip?: string;
+    ip?: IpAddress;
     userAgent?: string;
     email?: string;
     userId?: string;
@@ -234,18 +227,18 @@ export interface DownloadSignedDocumentResult {
  */
 export interface SigningCommandsPort {
   /**
-   * Verifies an OTP code for a signer
-   * @param command - The OTP verification command
-   * @returns Promise resolving to verification result
+   * Records signing consent for a signer
+   * @param command - The signing consent command
+   * @returns Promise resolving to consent result
    */
-  verifyOtp(command: VerifyOtpCommand): Promise<VerifyOtpResult>;
+  recordSigningConsent(command: SigningConsentCommand): Promise<SigningConsentResult>;
 
   /**
-   * Requests an OTP code for a signer
-   * @param command - The OTP request command
-   * @returns Promise resolving to request result
+   * Prepares signing process for a signer
+   * @param command - The signing preparation command
+   * @returns Promise resolving to preparation result
    */
-  requestOtp(command: RequestOtpCommand): Promise<RequestOtpResult>;
+  prepareSigning(command: PrepareSigningCommand): Promise<PrepareSigningResult>;
 
   /**
    * Completes the signing process for a signer

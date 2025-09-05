@@ -7,19 +7,13 @@
  */
 
 import type { Repository, ISODateString } from "@lawprotect/shared-ts";
-import type { SigningCommandsPort, VerifyOtpCommand, VerifyOtpResult, RequestOtpCommand, RequestOtpResult, CompleteSigningCommand, CompleteSigningResult, DeclineSigningCommand, DeclineSigningResult, PresignUploadCommand, PresignUploadResult, DownloadSignedDocumentCommand, DownloadSignedDocumentResult } from "@/app/ports/signing/SigningCommandsPort";
+import type { SigningCommandsPort, SigningConsentCommand, SigningConsentResult, PrepareSigningCommand, PrepareSigningResult, CompleteSigningCommand, CompleteSigningResult, DeclineSigningCommand, DeclineSigningResult, PresignUploadCommand, PresignUploadResult, DownloadSignedDocumentCommand, DownloadSignedDocumentResult } from "@/app/ports/signing/SigningCommandsPort";
 import type { Envelope } from "@/domain/entities/Envelope";
 import type { Party } from "@/domain/entities/Party";
 import type { EnvelopeId } from "@/domain/value-objects/Ids";
-import type { EventBridgePublisher } from "@/adapters/eventbridge/EventBridgePublisher";
-import type { IdempotencyRunner } from "@/adapters/idempotency/IdempotencyRunner";
-import type { KmsSigner } from "@/adapters/kms/KmsSigner";
-import { executeVerifyOtp } from "@/use-cases/signatures/VerifyOtp";
-import { executeRequestOtp } from "@/use-cases/signatures/RequestOtp";
-import { executeCompleteSigning } from "@/use-cases/signatures/CompleteSigning";
-import { executeDeclineSigning } from "@/use-cases/signatures/DeclineSigning";
-import { executePresignUpload } from "@/use-cases/signatures/PresignUpload";
-import { executeDownloadSignedDocument } from "@/use-cases/signatures/DownloadSignedDocument";
+import { IpAddressSchema } from "@/domain/value-objects/Ids";
+import { IdempotencyRunner, KmsSigner } from "@/infrastructure";
+import type { EventBusPortAdapter } from "@/infrastructure/eventbridge/EventBusPortAdapter";
 
 /**
  * Creates a SigningCommandsPort implementation
@@ -29,10 +23,10 @@ import { executeDownloadSignedDocument } from "@/use-cases/signatures/DownloadSi
  * @returns Configured SigningCommandsPort implementation
  */
 export const makeSigningCommandsPort = (
-  envelopesRepo: Repository<Envelope, EnvelopeId>,
-  partiesRepo: Repository<Party, { envelopeId: string; partyId: string }>,
+  _envelopesRepo: Repository<Envelope, EnvelopeId>,
+  _partiesRepo: Repository<Party, { envelopeId: string; partyId: string }>,
   deps: {
-    events: EventBridgePublisher;
+    events: EventBusPortAdapter;
     ids: { ulid(): string };
     time: { now(): number };
     rateLimit?: any;
@@ -42,7 +36,7 @@ export const makeSigningCommandsPort = (
       defaultKeyId: string;
       allowedAlgorithms?: readonly string[];
     };
-    s3?: any;
+    s3Service?: any;
     uploadConfig?: {
       uploadBucket: string;
       uploadTtlSeconds: number;
@@ -55,44 +49,48 @@ export const makeSigningCommandsPort = (
 ): SigningCommandsPort => {
   return {
     /**
-     * Verifies an OTP code for a signer
-     * @param command - The OTP verification command
-     * @returns Promise resolving to verification result
+     * Records signing consent for a signer
+     * @param command - The signing consent command
+     * @returns Promise resolving to consent result
      */
-    async verifyOtp(command: VerifyOtpCommand): Promise<VerifyOtpResult> {
-      const result = await executeVerifyOtp(
-        {
-          envelopeId: command.envelopeId,
-          signerId: command.signerId,
-          code: command.code,
-          token: command.token,
-          actor: command.actor,
-        },
-        {
-          repos: {
-            envelopes: envelopesRepo,
-            parties: partiesRepo,
-          },
-          events: deps.events,
-          ids: deps.ids,
-          time: deps.time,
-        }
-      );
+    async recordSigningConsent(command: SigningConsentCommand): Promise<SigningConsentResult> {
+      // Validate IP address if provided
+      if (command.actor.ip) {
+        IpAddressSchema.parse(command.actor.ip);
+      }
+
+      // Get and validate envelope
+      const envelope = await _envelopesRepo.getById(command.envelopeId);
+      if (!envelope) {
+        throw new Error(`Envelope not found: ${command.envelopeId}`);
+      }
+
+      // Get and validate party
+      const party = await _partiesRepo.getById({ 
+        envelopeId: command.envelopeId, 
+        partyId: command.signerId 
+      });
+      if (!party) {
+        throw new Error(`Party not found: ${command.signerId}`);
+      }
+
+      const consentedAt = new Date().toISOString();
 
       return {
-        verified: true,
-        verifiedAt: result.verifiedAt,
+        consented: true,
+        consentedAt: consentedAt,
         event: {
-          name: "otp.verified",
-          meta: { id: deps.ids.ulid(), ts: result.verifiedAt, source: "signature-service" },
+          name: "signing.consent.recorded",
+          meta: { id: deps.ids.ulid(), ts: consentedAt as ISODateString, source: "signature-service" },
           data: {
             envelopeId: command.envelopeId,
             partyId: command.signerId,
-            verifiedAt: result.verifiedAt,
+            consentedAt: consentedAt,
             metadata: {
               ip: command.actor?.ip,
               userAgent: command.actor?.userAgent,
-              locale: "en-US",
+              email: command.actor?.email,
+              userId: command.actor?.userId,
             },
           },
         },
@@ -100,47 +98,48 @@ export const makeSigningCommandsPort = (
     },
 
     /**
-     * Requests an OTP code for a signer
-     * @param command - The OTP request command
-     * @returns Promise resolving to request result
+     * Prepares signing process for a signer
+     * @param command - The signing preparation command
+     * @returns Promise resolving to preparation result
      */
-    async requestOtp(command: RequestOtpCommand): Promise<RequestOtpResult> {
-      const result = await executeRequestOtp(
-        {
-          envelopeId: command.envelopeId,
-          signerId: command.signerId,
-          delivery: command.delivery,
-          token: command.token,
-          actor: command.actor,
-        },
-        {
-          repos: {
-            envelopes: envelopesRepo,
-            parties: partiesRepo,
-          },
-          events: deps.events,
-          ids: deps.ids,
-          time: deps.time,
-          rateLimit: deps.rateLimit || null,
-        }
-      );
+    async prepareSigning(command: PrepareSigningCommand): Promise<PrepareSigningResult> {
+      // Validate IP address if provided
+      if (command.actor.ip) {
+        IpAddressSchema.parse(command.actor.ip);
+      }
+
+      // Get and validate envelope
+      const envelope = await _envelopesRepo.getById(command.envelopeId);
+      if (!envelope) {
+        throw new Error(`Envelope not found: ${command.envelopeId}`);
+      }
+
+      // Get and validate party
+      const party = await _partiesRepo.getById({ 
+        envelopeId: command.envelopeId, 
+        partyId: command.signerId 
+      });
+      if (!party) {
+        throw new Error(`Party not found: ${command.signerId}`);
+      }
+
+      const preparedAt = new Date().toISOString();
 
       return {
-        channel: result.channel,
-        expiresAt: result.expiresAt,
-        cooldownSeconds: result.cooldownSeconds,
+        prepared: true,
+        preparedAt: preparedAt,
         event: {
-          name: "otp.requested",
-          meta: { id: deps.ids.ulid(), ts: result.expiresAt, source: "signature-service" },
+          name: "signing.prepared",
+          meta: { id: deps.ids.ulid(), ts: preparedAt as ISODateString, source: "signature-service" },
           data: {
             envelopeId: command.envelopeId,
             partyId: command.signerId,
-            channel: result.channel,
-            expiresAt: result.expiresAt,
+            preparedAt: preparedAt,
             metadata: {
               ip: command.actor?.ip,
               userAgent: command.actor?.userAgent,
-              locale: "en-US",
+              email: command.actor?.email,
+              userId: command.actor?.userId,
             },
           },
         },
@@ -153,54 +152,63 @@ export const makeSigningCommandsPort = (
      * @returns Promise resolving to completion result
      */
     async completeSigning(command: CompleteSigningCommand): Promise<CompleteSigningResult> {
-      const result = await executeCompleteSigning(
-        {
-          envelopeId: command.envelopeId,
-          signerId: command.signerId,
-          digest: command.digest,
-          algorithm: command.algorithm,
-          keyId: command.keyId,
-          otpCode: command.otpCode,
-          token: command.token,
-          actor: command.actor,
-        },
-        {
-          repos: {
-            envelopes: envelopesRepo,
-            parties: partiesRepo,
-          },
-          signer: deps.signer,
-          events: deps.events,
-          idempotency: deps.idempotency,
-          ids: deps.ids,
-          time: deps.time,
-          signing: {
-            defaultKeyId: deps.signingConfig?.defaultKeyId || "",
-            allowedAlgorithms: deps.signingConfig?.allowedAlgorithms || [],
-          },
-        }
-      );
+      // Validate IP address if provided
+      if (command.actor.ip) {
+        IpAddressSchema.parse(command.actor.ip);
+      }
+
+      // Get and validate envelope
+      const envelope = await _envelopesRepo.getById(command.envelopeId);
+      if (!envelope) {
+        throw new Error(`Envelope not found: ${command.envelopeId}`);
+      }
+
+      // Get and validate party
+      const party = await _partiesRepo.getById({ 
+        envelopeId: command.envelopeId, 
+        partyId: command.signerId 
+      });
+      if (!party) {
+        throw new Error(`Party not found: ${command.signerId}`);
+      }
+
+      // Use KMS to sign the digest
+      const signResult = await deps.signer.sign({
+        message: Buffer.from(command.digest.value, 'hex'),
+        signingAlgorithm: command.algorithm,
+        keyId: command.keyId || deps.signingConfig?.defaultKeyId || 'default-key',
+      });
+
+      const signature = Buffer.from(signResult.signature).toString('base64');
+      const completedAt = new Date().toISOString();
+
+      // Update envelope status to completed
+      await _envelopesRepo.update(command.envelopeId, {
+        status: "completed" as any,
+        updatedAt: completedAt as ISODateString,
+      });
 
       return {
         completed: true,
-        completedAt: result.completedAt,
-        signature: result.signature,
-        keyId: result.keyId,
-        algorithm: result.algorithm,
+        completedAt: completedAt,
+        signature: signature,
+        keyId: command.keyId || deps.signingConfig?.defaultKeyId || 'default-key',
+        algorithm: command.algorithm,
         event: {
           name: "signing.completed",
-          meta: { id: deps.ids.ulid(), ts: result.completedAt as ISODateString, source: "signature-service" },
+          meta: { id: deps.ids.ulid(), ts: completedAt as ISODateString, source: "signature-service" },
           data: {
             envelopeId: command.envelopeId,
             partyId: command.signerId,
-            completedAt: result.completedAt,
-            signature: result.signature,
-            keyId: result.keyId,
-            algorithm: result.algorithm,
+            completedAt: completedAt,
+            signature: signature,
+            keyId: command.keyId || deps.signingConfig?.defaultKeyId || 'default-key',
+            algorithm: command.algorithm,
             metadata: {
               ip: command.actor?.ip,
               userAgent: command.actor?.userAgent,
-              locale: "en-US",
+              email: command.actor?.email,
+              userId: command.actor?.userId,
             },
           },
         },
@@ -213,42 +221,51 @@ export const makeSigningCommandsPort = (
      * @returns Promise resolving to decline result
      */
     async declineSigning(command: DeclineSigningCommand): Promise<DeclineSigningResult> {
-      const result = await executeDeclineSigning(
-        {
-          envelopeId: command.envelopeId,
-          signerId: command.signerId,
-          reason: command.reason,
-          token: command.token,
-          actor: command.actor,
-        },
-        {
-          repos: {
-            envelopes: envelopesRepo,
-            parties: partiesRepo,
-          },
-          events: deps.events,
-          idempotency: deps.idempotency,
-          ids: deps.ids,
-          time: deps.time,
-        }
-      );
+      // Validate IP address if provided
+      if (command.actor.ip) {
+        IpAddressSchema.parse(command.actor.ip);
+      }
+
+      // Get and validate envelope
+      const envelope = await _envelopesRepo.getById(command.envelopeId);
+      if (!envelope) {
+        throw new Error(`Envelope not found: ${command.envelopeId}`);
+      }
+
+      // Get and validate party
+      const party = await _partiesRepo.getById({ 
+        envelopeId: command.envelopeId, 
+        partyId: command.signerId 
+      });
+      if (!party) {
+        throw new Error(`Party not found: ${command.signerId}`);
+      }
+
+      const declinedAt = new Date().toISOString();
+
+      // Update envelope status to declined
+      await _envelopesRepo.update(command.envelopeId, {
+        status: "declined" as any,
+        updatedAt: declinedAt as ISODateString,
+      });
 
       return {
         declined: true,
-        declinedAt: result.declinedAt,
-        reason: result.reason,
+        declinedAt: declinedAt,
+        reason: command.reason,
         event: {
           name: "signing.declined",
-          meta: { id: deps.ids.ulid(), ts: result.declinedAt as ISODateString, source: "signature-service" },
+          meta: { id: deps.ids.ulid(), ts: declinedAt as ISODateString, source: "signature-service" },
           data: {
             envelopeId: command.envelopeId,
             partyId: command.signerId,
-            declinedAt: result.declinedAt,
-            reason: result.reason,
+            declinedAt: declinedAt,
+            reason: command.reason,
             metadata: {
               ip: command.actor?.ip,
               userAgent: command.actor?.userAgent,
-              locale: "en-US",
+              email: command.actor?.email,
+              userId: command.actor?.userId,
             },
           },
         },
@@ -261,46 +278,42 @@ export const makeSigningCommandsPort = (
      * @returns Promise resolving to presign result
      */
     async presignUpload(command: PresignUploadCommand): Promise<PresignUploadResult> {
-      const result = await executePresignUpload(
-        {
-          envelopeId: command.envelopeId,
-          filename: command.filename,
-          contentType: command.contentType,
-          token: command.token,
-          actor: command.actor,
-        },
-        {
-          repos: {
-            envelopes: envelopesRepo,
-          },
-          s3: deps.s3,
-          idempotency: deps.idempotency,
-          ids: deps.ids,
-          time: deps.time,
-          config: deps.uploadConfig || {
-            uploadBucket: "lawprotect-uploads",
-            uploadTtlSeconds: 900,
-          },
-        }
-      );
+      // Validate IP address if provided
+      if (command.actor.ip) {
+        IpAddressSchema.parse(command.actor.ip);
+      }
+
+      // Get and validate envelope
+      const envelope = await _envelopesRepo.getById(command.envelopeId);
+      if (!envelope) {
+        throw new Error(`Envelope not found: ${command.envelopeId}`);
+      }
+
+      // Use SigningS3Service to create presigned upload URL
+      const s3Result = await deps.s3Service?.presignUpload({
+        envelopeId: command.envelopeId,
+        filename: command.filename,
+        contentType: command.contentType,
+      });
 
       return {
-        uploadUrl: result.uploadUrl,
-        objectKey: result.objectKey,
-        expiresAt: result.expiresAt,
+        uploadUrl: s3Result.uploadUrl,
+        objectKey: s3Result.objectKey,
+        expiresAt: s3Result.expiresAt,
         event: {
           name: "signing.presign_upload",
-          meta: { id: deps.ids.ulid(), ts: result.expiresAt as ISODateString, source: "signature-service" },
+          meta: { id: deps.ids.ulid(), ts: s3Result.expiresAt as ISODateString, source: "signature-service" },
           data: {
             envelopeId: command.envelopeId,
             filename: command.filename,
             contentType: command.contentType,
-            objectKey: result.objectKey,
-            expiresAt: result.expiresAt,
+            objectKey: s3Result.objectKey,
+            expiresAt: s3Result.expiresAt,
             metadata: {
               ip: command.actor?.ip,
               userAgent: command.actor?.userAgent,
-              locale: "en-US",
+              email: command.actor?.email,
+              userId: command.actor?.userId,
             },
           },
         },
@@ -313,43 +326,40 @@ export const makeSigningCommandsPort = (
      * @returns Promise resolving to download result
      */
     async downloadSignedDocument(command: DownloadSignedDocumentCommand): Promise<DownloadSignedDocumentResult> {
-      const result = await executeDownloadSignedDocument(
-        {
-          envelopeId: command.envelopeId,
-          token: command.token,
-          actor: command.actor,
-        },
-        {
-          repos: {
-            envelopes: envelopesRepo,
-          },
-          s3: deps.s3,
-          idempotency: deps.idempotency,
-          ids: deps.ids,
-          time: deps.time,
-          config: deps.downloadConfig || {
-            signedBucket: "lawprotect-signed",
-            downloadTtlSeconds: 900,
-          },
-        }
-      );
+      // Validate IP address if provided
+      if (command.actor.ip) {
+        IpAddressSchema.parse(command.actor.ip);
+      }
+
+      // Get and validate envelope
+      const envelope = await _envelopesRepo.getById(command.envelopeId);
+      if (!envelope) {
+        throw new Error(`Envelope not found: ${command.envelopeId}`);
+      }
+
+      // Use SigningS3Service to create presigned download URL
+      const s3Result = await deps.s3Service?.presignDownload({
+        envelopeId: command.envelopeId,
+        filename: "signed-document.pdf",
+      });
 
       return {
-        downloadUrl: result.downloadUrl,
-        objectKey: "", // Not available from use case
-        expiresAt: result.expiresAt,
+        downloadUrl: s3Result.downloadUrl,
+        objectKey: s3Result.objectKey,
+        expiresAt: s3Result.expiresAt,
         event: {
           name: "signing.download_signed_document",
-          meta: { id: deps.ids.ulid(), ts: result.expiresAt as ISODateString, source: "signature-service" },
+          meta: { id: deps.ids.ulid(), ts: s3Result.expiresAt as ISODateString, source: "signature-service" },
           data: {
             envelopeId: command.envelopeId,
-            filename: result.filename,
-            contentType: result.contentType,
-            expiresAt: result.expiresAt,
+            filename: "signed-document.pdf",
+            contentType: "application/pdf",
+            expiresAt: s3Result.expiresAt,
             metadata: {
               ip: command.actor?.ip,
               userAgent: command.actor?.userAgent,
-              locale: "en-US",
+              email: command.actor?.email,
+              userId: command.actor?.userId,
             },
           },
         },

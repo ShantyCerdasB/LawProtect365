@@ -158,6 +158,23 @@ export interface Container {
     readonly validationService: any;
   };
 
+  /** Signing services */
+  readonly signing: {
+    readonly commandsPort: any;
+    readonly command: any;
+    readonly validationService: any;
+    readonly eventService: any;
+    readonly auditService: any;
+    readonly rateLimitService: any;
+    readonly s3Service: any;
+  };
+
+  /** Signatures services */
+  readonly signatures: {
+    readonly commandsPort: any;
+    readonly command: any;
+  };
+
   /** Audit service */
   readonly audit: {
     /**

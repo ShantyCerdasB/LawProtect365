@@ -108,9 +108,24 @@ import { DefaultRequestsAuditService } from "../app/services/Requests/RequestsAu
 import { DefaultRequestsEventService } from "../app/services/Requests/RequestsEventService";
 import { DefaultRequestsRateLimitService } from "../app/services/Requests/RequestsRateLimitService";
 import { makeRequestsCommandsPort } from "../app/adapters/requests/makeRequestsCommandsPort";
+import { makeSigningCommandsPort } from "../app/adapters/signing/makeSigningCommandsPort";
+import { makeSignaturesCommandsPort } from "../app/adapters/signatures/makeSignaturesCommandsPort";
 
 // Certificate services
 import { DefaultCertificateValidationService } from "../app/services/Certificate";
+
+// Signing services
+import { 
+  DefaultSigningValidationService,
+  DefaultSigningCommandService,
+  DefaultSigningEventService,
+  DefaultSigningAuditService,
+  DefaultSigningRateLimitService,
+  DefaultSigningS3Service
+} from "../app/services/Signing";
+
+// Signatures services
+import { DefaultSignaturesCommandService } from "../app/services/Signatures";
 import { makeCertificateQueriesPort } from "../app/adapters/certificate/makeCertificateQueriesPort";
 
 let singleton: Container;
@@ -358,7 +373,7 @@ export const getContainer = (): Container => {
   );
 
   // Requests services - instantiate with correct dependencies
-  const requestsValidation = new DefaultRequestsValidationService();
+  const requestsValidation = new DefaultRequestsValidationService(inputs);
   const requestsAudit = new DefaultRequestsAuditService(audit);
   const requestsEvents = new DefaultRequestsEventService(outbox);
   const requestsRateLimit = new DefaultRequestsRateLimitService(otpRateLimitStore);
@@ -384,6 +399,57 @@ export const getContainer = (): Container => {
     envelopes,
     certificateValidation
   );
+
+  // Signing services - instantiate with correct dependencies
+  const signingValidation = new DefaultSigningValidationService();
+  const signingEvent = new DefaultSigningEventService(outbox);
+  const signingAudit = new DefaultSigningAuditService(audit);
+  const signingRateLimit = new DefaultSigningRateLimitService(otpRateLimitStore);
+  const signingS3 = new DefaultSigningS3Service(
+    presigner,
+    config.s3.evidenceBucket,
+    config.s3.signedBucket,
+    config.s3.presignTtlSeconds,
+    config.s3.presignTtlSeconds
+  );
+
+  const signingCommands = makeSigningCommandsPort(
+    envelopes,
+    parties,
+    {
+      events: eventBus,
+      ids,
+      time,
+      rateLimit: otpRateLimitStore,
+      signer,
+      idempotency: runner,
+      signingConfig: {
+        defaultKeyId: config.kms.signerKeyId,
+        allowedAlgorithms: [config.kms.signingAlgorithm],
+      },
+      uploadConfig: {
+        uploadBucket: config.s3.evidenceBucket,
+        uploadTtlSeconds: config.s3.presignTtlSeconds,
+      },
+      downloadConfig: {
+        signedBucket: config.s3.signedBucket,
+        downloadTtlSeconds: config.s3.presignTtlSeconds,
+      },
+    }
+  );
+
+  const signingCommand = new DefaultSigningCommandService(signingCommands);
+
+  // Signatures services - instantiate with correct dependencies
+  const signaturesCommands = makeSignaturesCommandsPort(
+    signer,
+    {
+      defaultKeyId: config.kms.signerKeyId,
+      allowedAlgorithms: [config.kms.signingAlgorithm],
+    }
+  );
+
+  const signaturesCommand = new DefaultSignaturesCommandService(signaturesCommands);
 
   singleton = {
     config,
@@ -439,6 +505,19 @@ export const getContainer = (): Container => {
         certificate: {
           queriesPort: certificateQueries,
           validationService: certificateValidation,
+        },
+        signing: {
+          commandsPort: signingCommands,
+          command: signingCommand,
+          validationService: signingValidation,
+          eventService: signingEvent,
+          auditService: signingAudit,
+          rateLimitService: signingRateLimit,
+          s3Service: signingS3,
+        },
+        signatures: {
+          commandsPort: signaturesCommands,
+          command: signaturesCommand,
         },
     audit: {
       log: async (action: string, details: any, context: any) => {
