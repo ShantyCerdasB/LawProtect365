@@ -5,7 +5,7 @@
  */
 
 import type { TenantId, PartyId } from "../../../domain/value-objects/Ids";
-import type { GlobalPartyHead, GlobalPartyPatch, GlobalPartyRow } from "./GlobalPartiesTypes";
+import type { GlobalPartyCommon, GlobalPartyPatch, GlobalPartyExtended } from "./GlobalPartiesTypes";
 
 /**
  * @summary Input for getting global party app service
@@ -136,7 +136,7 @@ export interface ListGlobalPartiesAppInput {
  */
 export interface ListGlobalPartiesAppResult {
   /** List of global parties */
-  readonly parties: GlobalPartyHead[];
+  readonly parties: GlobalPartyCommon[];
   /** Next page cursor */
   readonly nextCursor?: string;
   /** Total count */
@@ -160,7 +160,7 @@ export interface SearchGlobalPartiesByEmailAppInput {
  */
 export interface SearchGlobalPartiesByEmailAppResult {
   /** List of matching global parties */
-  readonly parties: GlobalPartyHead[];
+  readonly parties: GlobalPartyCommon[];
 }
 
 /**

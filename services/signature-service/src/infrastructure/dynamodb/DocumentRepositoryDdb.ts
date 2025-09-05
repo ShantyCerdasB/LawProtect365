@@ -2,17 +2,23 @@
  * @file DocumentRepositoryDdb.ts
  * @summary DynamoDB-backed repository for the Document aggregate
  * @description DynamoDB implementation of the Document repository using single-table design pattern.
- * Uses envelope-scoped partitioning with direct document access via composite keys.
+ * Uses envelope-scoped partitioning with GSI support for efficient document lookup.
  * Supports CRUD operations, existence checks, and envelope-based listing with pagination.
  */
 
-import type { Repository, DdbClientLike } from "@lawprotect/shared-ts";
+import type { DdbClientLike } from "@lawprotect/shared-ts";
 import { requireQuery, mapAwsError, ConflictError, ErrorCodes, nowIso } from "@lawprotect/shared-ts";
 
 import type { Document } from "../../domain/entities/Document";
-import type { DocumentId } from "../../domain/value-objects/Ids";
-import { documentItemMapper, type DocumentItem } from "./mappers/documentItemMapper";
-import { documentNotFound } from "../../shared/errors";
+import type { DocumentId, EnvelopeId } from "../../domain/value-objects/Ids";
+import { 
+  documentItemMapper, 
+  documentPk, 
+  documentSk,
+  type DdbDocumentItem 
+} from "../../shared/types/infrastructure/DocumentDdbTypes";
+import { documentNotFound, badRequest } from "../../shared/errors";
+import type { DocumentsRepository, DocumentKey } from "../../shared/contracts/repositories/documents/DocumentsRepository";
 
 /**
  * @summary Coerces a typed object into the Record<string, unknown> shape expected by DynamoDB clients
@@ -24,29 +30,11 @@ const toDdbItem = <T extends object>(v: T): Record<string, unknown> =>
   (v as unknown) as Record<string, unknown>;
 
 /**
- * @summary Builds partition key for envelope-scoped documents
- * @description Creates the partition key used for envelope-scoped document queries.
- * @param envelopeId - Envelope identifier
- * @returns Partition key string
- */
-const docPk = (envelopeId: string): string => `ENVELOPE#${envelopeId}`;
-
-/**
- * @summary Builds sort key for document items
- * @description Creates the sort key used for document identification within envelopes.
- * @param documentId - Document identifier
- * @returns Sort key string
- */
-const docSk = (documentId: string): string => `DOCUMENT#${documentId}`;
-
-/**
  * @summary DynamoDB implementation of Document repository
  * @description Provides CRUD operations for Document entities using DynamoDB single-table design.
- * Supports envelope-scoped queries and direct document access via composite keys.
+ * Supports envelope-scoped queries, GSI-based document lookup, and composite key operations.
  */
-export class DocumentRepositoryDdb
-  implements Repository<Document, DocumentId, undefined>
-{
+export class DocumentRepositoryDdb implements DocumentsRepository {
   /**
    * @summary Creates a new DocumentRepositoryDdb instance
    * @description Initializes the repository with DynamoDB table and client configuration.
@@ -59,35 +47,86 @@ export class DocumentRepositoryDdb
   ) {}
 
   /**
-   * @summary Loads a document by its unique identifier
-   * @description Retrieves a document using direct PK/SK lookup. This method uses
-   * a direct `DOCUMENT#<id>` PK/SK pattern for efficient document retrieval.
-   * @param id - Document identifier
+   * @summary Loads a document by its unique identifier using GSI
+   * @description Retrieves a document using GSI1 for efficient document lookup by documentId.
+   * Falls back to error message if GSI is not available.
+   * @param documentId - Document identifier
    * @returns The document or null if not found
    * @throws Errors mapped via mapAwsError
    */
-  async getById(id: DocumentId): Promise<Document | null> {
+  async getById(documentId: DocumentId): Promise<Document | null> {
     try {
-      const res = await this.ddb.get({
+      requireQuery(this.ddb);
+      const result = await this.ddb.query({
         TableName: this.tableName,
-        Key: { pk: `DOCUMENT#${id}`, sk: docSk(String(id)) },
+        IndexName: "GSI1", // GSI on documentId
+        KeyConditionExpression: "gsi1pk = :gsi1pk",
+        ExpressionAttributeValues: {
+          ":gsi1pk": `DOCUMENT#${documentId}`,
+        },
+        Limit: 1,
       });
-      return res.Item
-        ? documentItemMapper.fromDTO(res.Item as unknown as DocumentItem)
-        : null;
-    } catch (err) {
+
+      if (!result.Items || result.Items.length === 0) {
+        return null;
+      }
+
+      return documentItemMapper.fromDTO(result.Items[0] as unknown as DdbDocumentItem);
+    } catch (err: any) {
+      // If GSI doesn't exist, provide helpful error message
+      if (String(err?.name) === "ValidationException" && String(err?.message).includes("GSI1")) {
+        throw badRequest(
+          "GSI1 not available for document lookup. Use getByKey(envelopeId, documentId) instead.",
+          ErrorCodes.COMMON_BAD_REQUEST,
+          { documentId, suggestion: "Use getByKey method with envelopeId" }
+        );
+      }
       throw mapAwsError(err, "DocumentRepositoryDdb.getById");
     }
   }
 
   /**
-   * @summary Checks if a document exists in the repository
-   * @description Performs an existence check by attempting to retrieve the document.
-   * @param id - Document identifier
+   * @summary Loads a document by composite key (envelope-scoped)
+   * @description Retrieves a document using envelope-scoped PK/SK lookup.
+   * @param documentKey - The Document composite key (envelopeId + documentId)
+   * @returns The document or null if not found
+   * @throws Errors mapped via mapAwsError
+   */
+  async getByKey(documentKey: DocumentKey): Promise<Document | null> {
+    try {
+      const res = await this.ddb.get({
+        TableName: this.tableName,
+        Key: { 
+          pk: documentPk(documentKey.envelopeId), 
+          sk: documentSk(String(documentKey.documentId)) 
+        },
+      });
+      return res.Item
+        ? documentItemMapper.fromDTO(res.Item as unknown as DdbDocumentItem)
+        : null;
+    } catch (err) {
+      throw mapAwsError(err, "DocumentRepositoryDdb.getByKey");
+    }
+  }
+
+  /**
+   * @summary Checks if a document exists by unique identifier
+   * @description Performs an existence check using GSI lookup.
+   * @param documentId - Document identifier
    * @returns True if document exists, false otherwise
    */
-  async exists(id: DocumentId): Promise<boolean> {
-    return (await this.getById(id)) !== null;
+  async exists(documentId: DocumentId): Promise<boolean> {
+    return (await this.getById(documentId)) !== null;
+  }
+
+  /**
+   * @summary Checks if a document exists by composite key
+   * @description Performs an existence check using envelope-scoped lookup.
+   * @param documentKey - The Document composite key
+   * @returns True if document exists, false otherwise
+   */
+  async existsByKey(documentKey: DocumentKey): Promise<boolean> {
+    return (await this.getByKey(documentKey)) !== null;
   }
 
   /**
@@ -125,10 +164,29 @@ export class DocumentRepositoryDdb
    * @throws DocumentNotFoundError when document doesn't exist
    * @throws Errors mapped via mapAwsError
    */
-  async update(id: DocumentId, patch: Partial<Document>): Promise<Document> {
+  async update(_id: DocumentId, _patch: Partial<Document>): Promise<Document> {
+    // This method requires envelopeId for single-table design
+    // Consider implementing updateByEnvelopeAndId(envelopeId, documentId, patch) instead
+    throw new Error(
+      "DocumentRepositoryDdb.update requires envelopeId for single-table design. " +
+      "Use updateByEnvelopeAndId(envelopeId, documentId, patch) instead."
+    );
+  }
+
+  /**
+   * @summary Updates an existing document by envelope and document identifiers
+   * @description Performs optimistic update with existence check and timestamp update.
+   * @param envelopeId - Envelope identifier
+   * @param documentId - Document identifier
+   * @param patch - Partial document with fields to update
+   * @returns Updated document snapshot
+   * @throws DocumentNotFoundError when document doesn't exist
+   * @throws Errors mapped via mapAwsError
+   */
+  async updateByEnvelopeAndId(envelopeId: string, documentId: DocumentId, patch: Partial<Document>): Promise<Document> {
     try {
-      const current = await this.getById(id);
-      if (!current) throw documentNotFound({ id });
+      const current = await this.getByEnvelopeAndId(envelopeId, documentId);
+      if (!current) throw documentNotFound({ id: documentId });
 
       const next: Document = Object.freeze({
         ...current,
@@ -145,9 +203,9 @@ export class DocumentRepositoryDdb
       return next;
     } catch (err: any) {
       if (String(err?.name) === "ConditionalCheckFailedException") {
-        throw documentNotFound({ id });
+        throw documentNotFound({ id: documentId });
       }
-      throw mapAwsError(err, "DocumentRepositoryDdb.update");
+      throw mapAwsError(err, "DocumentRepositoryDdb.updateByEnvelopeAndId");
     }
   }
 
@@ -159,18 +217,38 @@ export class DocumentRepositoryDdb
    * @throws DocumentNotFoundError when document doesn't exist
    * @throws Errors mapped via mapAwsError
    */
-  async delete(id: DocumentId): Promise<void> {
+  async delete(_id: DocumentId): Promise<void> {
+    // This method requires envelopeId for single-table design
+    // Consider implementing deleteByEnvelopeAndId(envelopeId, documentId) instead
+    throw new Error(
+      "DocumentRepositoryDdb.delete requires envelopeId for single-table design. " +
+      "Use deleteByEnvelopeAndId(envelopeId, documentId) instead."
+    );
+  }
+
+  /**
+   * @summary Deletes a document by envelope and document identifiers
+   * @description Removes a document with conditional delete to ensure it exists.
+   * @param envelopeId - Envelope identifier
+   * @param documentId - Document identifier
+   * @throws DocumentNotFoundError when document doesn't exist
+   * @throws Errors mapped via mapAwsError
+   */
+  async deleteByEnvelopeAndId(envelopeId: string, documentId: DocumentId): Promise<void> {
     try {
       await this.ddb.delete({
         TableName: this.tableName,
-        Key: { pk: `DOCUMENT#${id}`, sk: docSk(String(id)) },
+        Key: { 
+          pk: documentPk(envelopeId), 
+          sk: documentSk(String(documentId)) 
+        },
         ConditionExpression: "attribute_exists(pk) AND attribute_exists(sk)",
       });
     } catch (err: any) {
       if (String(err?.name) === "ConditionalCheckFailedException") {
-        throw documentNotFound({ id });
+        throw documentNotFound({ id: documentId });
       }
-      throw mapAwsError(err, "DocumentRepositoryDdb.delete");
+      throw mapAwsError(err, "DocumentRepositoryDdb.deleteByEnvelopeAndId");
     }
   }
 
@@ -202,7 +280,7 @@ export class DocumentRepositoryDdb
       } = {
         TableName: this.tableName,
         KeyConditionExpression: "pk = :pk",
-        ExpressionAttributeValues: { ":pk": docPk(args.envelopeId) },
+        ExpressionAttributeValues: { ":pk": documentPk(args.envelopeId) },
         Limit: args.limit,
         ...(args.cursor ? { ExclusiveStartKey: JSON.parse(args.cursor) as Record<string, unknown> } : {}),
       };
@@ -210,7 +288,7 @@ export class DocumentRepositoryDdb
       const result = await this.ddb.query(params);
 
       const items = (result.Items ?? []).map((raw) =>
-        documentItemMapper.fromDTO(raw as unknown as DocumentItem)
+        documentItemMapper.fromDTO(raw as unknown as DdbDocumentItem)
       );
 
       return {
@@ -224,3 +302,4 @@ export class DocumentRepositoryDdb
     }
   }
 }
+

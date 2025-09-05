@@ -267,7 +267,7 @@ export const getContainer = (): Container => {
   const time = { now: () => Date.now() };
 
   // Metrics service for CloudWatch custom metrics
-  const metricsService = new MetricsService({
+  new MetricsService({
     namespace: config.metrics.namespace,
     region: config.metrics.region,
     enabled: config.metrics.enableOutboxMetrics,
@@ -378,18 +378,23 @@ export const getContainer = (): Container => {
   const requestsEvents = new DefaultRequestsEventService(outbox);
   const requestsRateLimit = new DefaultRequestsRateLimitService(otpRateLimitStore);
   
-  const requestsCommands = makeRequestsCommandsPort(
-    envelopes,
-    parties,
-    inputs,
-    requestsValidation,
-    requestsAudit,
-    requestsEvents,
-    requestsRateLimit,
-    // ✅ SERVICIOS DE INFRAESTRUCTURA - PATRÓN REUTILIZABLE
-    ids,
-    presigner
-  );
+  const requestsCommands = makeRequestsCommandsPort({
+    repositories: {
+      envelopes,
+      parties,
+      inputs
+    },
+    services: {
+      validation: requestsValidation,
+      audit: requestsAudit,
+      event: requestsEvents,
+      rateLimit: requestsRateLimit
+    },
+    infrastructure: {
+      ids,
+      s3Presigner: presigner
+    }
+  });
 
   // Certificate services - instantiate with correct dependencies
   const certificateValidation = new DefaultCertificateValidationService();

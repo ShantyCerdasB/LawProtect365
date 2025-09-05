@@ -2,9 +2,9 @@
  * @file signature.ts
  * @summary Signature-specific mixins.
  */
-import type { ActorInfo, EnvelopeScoped } from "@/use-cases/shared/types/types";
 import type { KmsAlgorithmType } from "@/domain/value-objects";
 import { HashAlgorithm } from "@/domain/values/enums";
+import { ActorInfo, EnvelopeScoped } from "../common/use-case-inputs";
 
 /** Actor público (añade locale). */
 export type WithActorPublic = { actor?: ActorInfo & { locale?: string } };

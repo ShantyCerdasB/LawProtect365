@@ -6,8 +6,6 @@
 
 import type { TenantId, EnvelopeId, DocumentId, ActorContext } from "../shared";
 import type { S3ObjectRef } from "../../../domain/value-objects/S3ObjectRef";
-import type { HashDigestString } from "../../../domain/value-objects/HashDigest";
-import type { FileSize } from "../../../domain/value-objects/FileSize";
 import type { ContentType } from "../../../domain/value-objects/ContentType";
 import type { DocumentLock } from "../../../domain/value-objects/DocumentLock";
 
@@ -25,9 +23,9 @@ export interface CreateDocumentCommand {
   /** The MIME type of the document */
   contentType: ContentType;
   /** The size of the document in bytes */
-  size: FileSize;
+  size: number;
   /** The SHA-256 hash digest of the document */
-  digest: HashDigestString;
+  digest: string;
   /** The S3 storage reference */
   s3Ref: S3ObjectRef;
   /** Optional number of pages in the document */
@@ -67,9 +65,9 @@ export interface UpdateDocumentBinaryCommand {
   /** The MIME type of the document */
   contentType: ContentType;
   /** The size of the document in bytes */
-  size: FileSize;
+  size: number;
   /** The SHA-256 hash digest of the document */
-  digest: HashDigestString;
+  digest: string;
   /** The S3 storage reference */
   s3Ref: S3ObjectRef;
   /** Optional number of pages in the document */

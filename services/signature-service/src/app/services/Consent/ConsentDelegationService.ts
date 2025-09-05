@@ -190,7 +190,7 @@ export class ConsentDelegationService {
       email: input.email
     });
 
-    if (existingParty && existingParty.party) {
+    if (existingParty?.party) {
       return existingParty.party.partyId;
     }
 

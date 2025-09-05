@@ -29,5 +29,3 @@ export type WithPagination = {
 /** ── NEW: reusable composites used by SubmitConsent ──────────────────────── */
 export type TenantEnvelopeConsentInput = TenantScoped & EnvelopeScoped & ConsentScoped;
 
-/** Alias semántico (tu WithMetadata ya es opcional) */
-export type WithMetadataOptional = WithMetadata;

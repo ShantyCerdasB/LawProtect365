@@ -8,8 +8,6 @@
 import type { ActorContext, DocumentId } from "@/app/ports/shared";
 import type { DocumentsCommandsPort } from "@/app/ports/documents/DocumentsCommandsPort";
 import type { S3ObjectRef } from "@/domain/value-objects/S3ObjectRef";
-import type { HashDigestString } from "@/domain/value-objects/HashDigest";
-import type { FileSize } from "@/domain/value-objects/FileSize";
 import type { ContentType } from "@/domain/value-objects/ContentType";
 import { documentNotFound, badRequest } from "@/shared/errors";
 
@@ -19,8 +17,8 @@ import { documentNotFound, badRequest } from "@/shared/errors";
 export interface PutDocumentAppInput {
   documentId: DocumentId;
   contentType: ContentType;
-  size: FileSize;
-  digest: HashDigestString;
+  size: number;
+  digest: string;
   s3Ref: S3ObjectRef;
   pageCount?: number;
   actor?: ActorContext;

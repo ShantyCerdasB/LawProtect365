@@ -4,23 +4,6 @@
  * @description Shared types for AWS services and operations used across the application
  */
 
-/**
- * @summary AWS region type
- * @description Represents an AWS region identifier.
- */
-export type AwsRegion = string;
-
-/**
- * @summary AWS account ID type
- * @description Represents an AWS account identifier.
- */
-export type AwsAccountId = string;
-
-/**
- * @summary AWS ARN type
- * @description Represents an AWS Resource Name (ARN).
- */
-export type AwsArn = string;
 
 /**
  * @summary AWS service name type
@@ -71,11 +54,6 @@ export interface AwsError {
   readonly retryable?: boolean;
 }
 
-/**
- * @summary AWS pagination token
- * @description Represents a pagination token for AWS API responses.
- */
-export type AwsPaginationToken = string;
 
 /**
  * @summary AWS pagination result
@@ -85,7 +63,7 @@ export interface AwsPaginationResult<T> {
   /** Array of items in the current page */
   readonly items: T[];
   /** Token for the next page */
-  readonly nextToken?: AwsPaginationToken;
+  readonly nextToken?: string;
   /** Whether there are more items */
   readonly hasMore: boolean;
 }
@@ -113,15 +91,15 @@ export type AwsTags = readonly AwsTag[];
  */
 export interface AwsResourceMetadata {
   /** AWS Resource Name */
-  readonly arn: AwsArn;
+  readonly arn: string;
   /** Resource name */
   readonly name: string;
   /** Resource type */
   readonly type: AwsResourceType;
   /** AWS region */
-  readonly region: AwsRegion;
+  readonly region: string;
   /** AWS account ID */
-  readonly accountId: AwsAccountId;
+  readonly accountId: string;
   /** Resource tags */
   readonly tags?: AwsTags;
   /** Creation timestamp */

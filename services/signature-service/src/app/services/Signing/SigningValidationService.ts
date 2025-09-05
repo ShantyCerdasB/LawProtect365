@@ -9,8 +9,6 @@ import type {
   SigningValidationService,
   CompleteSigningControllerInput,
   DeclineSigningControllerInput,
-  RequestOtpControllerInput,
-  VerifyOtpControllerInput,
   PresignUploadControllerInput,
   DownloadSignedDocumentControllerInput
 } from "../../../shared/types/signing";

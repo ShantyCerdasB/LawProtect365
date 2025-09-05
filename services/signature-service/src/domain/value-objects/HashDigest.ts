@@ -45,7 +45,3 @@ export const HashDigestSchema = z.object({
   value: TrimmedString.pipe(z.string().regex(Base64UrlNoPad, "Expected base64url")),
 });
 
-/**
- * @description Simple hash digest type for string values.
- */
-export type HashDigestString = string;

@@ -178,30 +178,170 @@ async function createNewParty(
 }
 
 /**
+ * Helper function to process party invitations
+ */
+async function processPartyInvitations(
+  command: InvitePartiesCommand,
+  partiesRepo: Repository<Party, PartyKey, undefined>,
+  ids?: { ulid(): string }
+): Promise<{ invited: PartyId[]; alreadyPending: PartyId[]; skipped: PartyId[] }> {
+  const invited: PartyId[] = [];
+  const alreadyPending: PartyId[] = [];
+  const skipped: PartyId[] = [];
+
+  for (const partyId of command.partyIds) {
+    const partyKey = { envelopeId: command.envelopeId, partyId };
+    const existingParty = await partiesRepo.getById(partyKey);
+    
+    if (existingParty) {
+      if (existingParty.status === "pending" || existingParty.status === "invited") {
+        alreadyPending.push(partyId);
+      } else {
+        skipped.push(partyId);
+      }
+    } else {
+      if (!ids) {
+        throw new BadRequestError(
+          "ID generation service not available",
+          ErrorCodes.COMMON_BAD_REQUEST
+        );
+      }
+
+      const newPartyId = ids.ulid() as PartyId;
+      await createNewParty(newPartyId, command, partiesRepo);
+      invited.push(newPartyId);
+    }
+  }
+
+  return { invited, alreadyPending, skipped };
+}
+
+/**
+ * Helper function to update envelope status if needed
+ */
+async function updateEnvelopeStatusIfNeeded(
+  envelope: Envelope,
+  invitedCount: number,
+  envelopeId: EnvelopeId,
+  envelopesRepo: Repository<Envelope, EnvelopeId, undefined>
+): Promise<boolean> {
+  if (invitedCount > 0 && envelope.status === "draft") {
+    try {
+      assertLifecycleTransition(envelope.status, "sent");
+      await envelopesRepo.update(envelopeId, { status: "sent" });
+      return true;
+    } catch {
+      console.warn("Could not transition envelope to sent status");
+    }
+  }
+  return false;
+}
+
+/**
+ * Helper function to generate artifacts for finalized envelope
+ */
+async function generateArtifacts(
+  envelopeId: EnvelopeId,
+  s3Presigner?: S3Presigner,
+  ids?: { ulid(): string }
+): Promise<string[]> {
+  const artifactIds: string[] = [];
+  
+  if (!s3Presigner || !ids) {
+    return artifactIds;
+  }
+
+  // Generate final envelope PDF
+  const pdfArtifactId = ids.ulid();
+  await s3Presigner.getObjectUrl({
+    bucket: "envelope-artifacts",
+    key: `envelopes/${envelopeId}/final-${pdfArtifactId}.pdf`,
+    expiresInSeconds: 7 * 24 * 60 * 60, // 7 days
+    responseContentType: "application/pdf",
+    responseContentDisposition: `attachment; filename="envelope-${envelopeId}.pdf"`
+  });
+  artifactIds.push(pdfArtifactId);
+
+  // Generate completion certificate
+  const certArtifactId = ids.ulid();
+  await s3Presigner.getObjectUrl({
+    bucket: "envelope-artifacts",
+    key: `envelopes/${envelopeId}/certificate-${certArtifactId}.pdf`,
+    expiresInSeconds: 7 * 24 * 60 * 60, // 7 days
+    responseContentType: "application/pdf",
+    responseContentDisposition: `attachment; filename="certificate-${envelopeId}.pdf"`
+  });
+  artifactIds.push(certArtifactId);
+
+  return artifactIds;
+}
+
+/**
+ * Helper function to generate signing URL
+ */
+async function generateSigningUrl(
+  envelopeId: EnvelopeId,
+  partyId: PartyId,
+  s3Presigner?: S3Presigner
+): Promise<{ signingUrl: string; expiresAt: string }> {
+  const expiresInSeconds = 7 * 24 * 60 * 60; // 7 days
+  
+  if (s3Presigner) {
+    const signingUrl = await s3Presigner.getObjectUrl({
+      bucket: "signing-documents",
+      key: `envelopes/${envelopeId}/signing-${partyId}.pdf`,
+      expiresInSeconds,
+      responseContentType: "application/pdf",
+      responseContentDisposition: `inline; filename="document-to-sign.pdf"`
+    });
+    const expiresAt = new Date(Date.now() + expiresInSeconds * 1000).toISOString();
+    return { signingUrl, expiresAt };
+  } else {
+    // Fallback URL if no S3Presigner
+    const signingUrl = `https://sign.example.com/sign/${envelopeId}/${partyId}`;
+    const expiresAt = new Date(Date.now() + expiresInSeconds * 1000).toISOString();
+    return { signingUrl, expiresAt };
+  }
+}
+
+/**
+ * Configuration interface for RequestsCommandsPort
+ */
+interface RequestsCommandsPortConfig {
+  repositories: {
+    envelopes: Repository<Envelope, EnvelopeId, undefined>;
+    parties: Repository<Party, PartyKey, undefined>;
+    inputs: Repository<Input, InputKey, undefined>;
+  };
+  services?: {
+    validation?: DefaultRequestsValidationService;
+    audit?: DefaultRequestsAuditService;
+    event?: DefaultRequestsEventService;
+    rateLimit?: DefaultRequestsRateLimitService;
+  };
+  infrastructure?: {
+    ids?: { ulid(): string };
+    s3Presigner?: S3Presigner;
+  };
+}
+
+/**
  * @description Creates RequestsCommandsPort implementation with optional services.
  * 
- * @param envelopesRepo - Envelope repository implementation
- * @param partiesRepo - Party repository implementation
- * @param inputsRepo - Input repository implementation
- * @param validationService - Optional validation service
- * @param auditService - Optional audit service
- * @param eventService - Optional event service
- * @param rateLimitService - Optional rate limiting service
+ * @param config - Configuration object containing repositories, services, and infrastructure
  * @returns RequestsCommandsPort implementation
  */
-export function makeRequestsCommandsPort(
-  envelopesRepo: Repository<Envelope, EnvelopeId, undefined>,
-  partiesRepo: Repository<Party, PartyKey, undefined>,
-  _inputsRepo: Repository<Input, InputKey, undefined>,
-  // ✅ SERVICIOS OPCIONALES - PATRÓN REUTILIZABLE
-  validationService?: DefaultRequestsValidationService,
-  auditService?: DefaultRequestsAuditService,
-  eventService?: DefaultRequestsEventService,
-  rateLimitService?: DefaultRequestsRateLimitService,
-  // ✅ SERVICIOS DE INFRAESTRUCTURA - PATRÓN REUTILIZABLE
-  ids?: { ulid(): string },
-  s3Presigner?: S3Presigner
-): RequestsCommandsPort {
+export function makeRequestsCommandsPort(config: RequestsCommandsPortConfig): RequestsCommandsPort {
+  const {
+    repositories: { envelopes: envelopesRepo, parties: partiesRepo, inputs: _inputsRepo },
+    services: { 
+      validation: validationService, 
+      audit: auditService, 
+      event: eventService, 
+      rateLimit: rateLimitService 
+    } = {},
+    infrastructure: { ids, s3Presigner } = {}
+  } = config;
   
   // Note: _inputsRepo parameter is reserved for future input-related operations
   
@@ -221,46 +361,11 @@ export function makeRequestsCommandsPort(
         );
       }
 
-      // Process each party
-      const invited: PartyId[] = [];
-      const alreadyPending: PartyId[] = [];
-      const skipped: PartyId[] = [];
-
-      for (const partyId of command.partyIds) {
-        const partyKey = { envelopeId: command.envelopeId, partyId };
-        const existingParty = await partiesRepo.getById(partyKey);
-        
-        if (existingParty) {
-          if (existingParty.status === "pending" || existingParty.status === "invited") {
-            alreadyPending.push(partyId);
-          } else {
-            skipped.push(partyId);
-          }
-        } else {
-          if (!ids) {
-            throw new BadRequestError(
-              "ID generation service not available",
-              ErrorCodes.COMMON_BAD_REQUEST
-            );
-          }
-
-          const newPartyId = ids.ulid() as PartyId;
-          await createNewParty(newPartyId, command, partiesRepo);
-          invited.push(newPartyId);
-        }
-      }
+      // Process party invitations
+      const { invited, alreadyPending, skipped } = await processPartyInvitations(command, partiesRepo, ids);
 
       // Update envelope status if needed
-      let statusChanged = false;
-      if (invited.length > 0 && envelope.status === "draft") {
-        try {
-          assertLifecycleTransition(envelope.status, "sent");
-          await envelopesRepo.update(command.envelopeId, { status: "sent" });
-          statusChanged = true;
-        } catch {
-          console.warn("Could not transition envelope to sent status");
-        }
-      }
+      const statusChanged = await updateEnvelopeStatusIfNeeded(envelope, invited.length, command.envelopeId, envelopesRepo);
 
       const result: InvitePartiesResult = {
         invited,
@@ -413,30 +518,7 @@ export function makeRequestsCommandsPort(
       }
 
       // Generate artifacts (PDFs, certificates, etc.)
-      const artifactIds: string[] = [];
-      if (s3Presigner && ids) {
-        // Generate final envelope PDF
-        const pdfArtifactId = ids.ulid();
-        await s3Presigner.getObjectUrl({
-          bucket: "envelope-artifacts",
-          key: `envelopes/${command.envelopeId}/final-${pdfArtifactId}.pdf`,
-          expiresInSeconds: 7 * 24 * 60 * 60, // 7 days
-          responseContentType: "application/pdf",
-          responseContentDisposition: `attachment; filename="envelope-${command.envelopeId}.pdf"`
-        });
-        artifactIds.push(pdfArtifactId);
-
-        // Generate completion certificate
-        const certArtifactId = ids.ulid();
-        await s3Presigner.getObjectUrl({
-          bucket: "envelope-artifacts",
-          key: `envelopes/${command.envelopeId}/certificate-${certArtifactId}.pdf`,
-          expiresInSeconds: 7 * 24 * 60 * 60, // 7 days
-          responseContentType: "application/pdf",
-          responseContentDisposition: `attachment; filename="certificate-${command.envelopeId}.pdf"`
-        });
-        artifactIds.push(certArtifactId);
-      }
+      const artifactIds = await generateArtifacts(command.envelopeId, s3Presigner, ids);
 
       // Update envelope status to "finalized"
       const now = nowIso();
@@ -481,24 +563,7 @@ export function makeRequestsCommandsPort(
       }
 
       // Generate signing URL
-      let signingUrl = "";
-      let expiresAt = "";
-      
-      if (s3Presigner) {
-        const expiresInSeconds = 7 * 24 * 60 * 60; // 7 days
-        signingUrl = await s3Presigner.getObjectUrl({
-          bucket: "signing-documents",
-          key: `envelopes/${command.envelopeId}/signing-${command.partyId}.pdf`,
-          expiresInSeconds,
-          responseContentType: "application/pdf",
-          responseContentDisposition: `inline; filename="document-to-sign.pdf"`
-        });
-        expiresAt = new Date(Date.now() + expiresInSeconds * 1000).toISOString();
-      } else {
-        // Fallback URL if no S3Presigner
-        signingUrl = `https://sign.example.com/sign/${command.envelopeId}/${command.partyId}`;
-        expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-      }
+      const { signingUrl, expiresAt } = await generateSigningUrl(command.envelopeId, command.partyId, s3Presigner);
 
       // Update party status if needed
       let statusChanged = false;

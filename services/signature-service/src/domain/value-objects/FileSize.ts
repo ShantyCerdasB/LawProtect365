@@ -19,4 +19,3 @@ import { z } from "@lawprotect/shared-ts";
 export const FileSizeSchema = (min = 1, max = 50 * 1024 * 1024) =>
   z.number().int().min(min).max(max);
 
-export type FileSize = number;

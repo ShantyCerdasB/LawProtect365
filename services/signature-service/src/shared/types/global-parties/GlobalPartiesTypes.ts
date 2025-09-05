@@ -63,10 +63,6 @@ export type GlobalPartyCommon = {
   readonly updatedAt: string;
 };
 
-/**
- * @summary Minimal global party head used across app flows
- */
-export type GlobalPartyHead = GlobalPartyCommon;
 
 /**
  * @summary Extended global party with additional fields
@@ -126,7 +122,3 @@ export type GlobalPartyPatch = {
   readonly stats?: Partial<GlobalPartyStats>;
 };
 
-/**
- * @summary Global party row type for domain operations
- */
-export type GlobalPartyRow = GlobalPartyExtended;

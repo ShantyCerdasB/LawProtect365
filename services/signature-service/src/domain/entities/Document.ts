@@ -11,8 +11,6 @@
 import type { DocumentId, EnvelopeId, TenantId } from "../value-objects/Ids";
 import type { DocumentStatus } from "../value-objects/DocumentStatus";
 import type { S3ObjectRef } from "../value-objects/S3ObjectRef";
-import type { HashDigestString } from "../value-objects/HashDigest";
-import type { FileSize } from "../value-objects/FileSize";
 import type { ContentType } from "../value-objects/ContentType";
 
 /**
@@ -38,10 +36,10 @@ export interface Document {
   contentType: ContentType;
 
   /** Size of the document in bytes. */
-  size: FileSize;
+  size: number;
 
   /** SHA-256 hash digest of the document content. */
-  digest: HashDigestString;
+  digest: string;
 
   /** S3 storage reference. */
   s3Ref: S3ObjectRef;

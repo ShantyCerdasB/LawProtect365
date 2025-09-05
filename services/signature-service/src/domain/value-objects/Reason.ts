@@ -12,4 +12,3 @@ import { TrimmedString } from "@lawprotect/shared-ts";
  * Uses trimmed string validation for consistent reason handling.
  */
 export const ReasonSchema = TrimmedString; 
-export type Reason = string;

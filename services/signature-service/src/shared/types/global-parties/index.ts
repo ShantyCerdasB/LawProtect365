@@ -10,10 +10,8 @@ export type {
   GlobalPartyStats,
   GlobalPartyNotificationPreferences,
   GlobalPartyCommon,
-  GlobalPartyHead,
   GlobalPartyExtended,
-  GlobalPartyPatch,
-  GlobalPartyRow
+  GlobalPartyPatch
 } from "./GlobalPartiesTypes";
 
 // App service types

@@ -25,7 +25,21 @@ import type {
  */
 export class DefaultRequestsValidationService implements RequestsValidationService {
   
-  constructor(private inputsRepo?: InputsRepository) {}
+  constructor(private readonly inputsRepo?: InputsRepository) {}
+
+  /**
+   * Helper function to validate envelope operations (cancel/decline)
+   */
+  private validateEnvelopeOperation(input: { envelopeId: string; reason?: string }): void {
+    if (!input.envelopeId || input.envelopeId.trim().length === 0) {
+      throw new BadRequestError("Envelope ID is required", ErrorCodes.COMMON_BAD_REQUEST, { input });
+    }
+    
+    // Validate reason length if provided
+    if (input.reason && input.reason.length > 500) {
+      throw new BadRequestError("Reason cannot exceed 500 characters", ErrorCodes.COMMON_BAD_REQUEST, { input });
+    }
+  }
   
   /**
    * @summary Validate invite parties command
@@ -74,28 +88,14 @@ export class DefaultRequestsValidationService implements RequestsValidationServi
    * @summary Validate cancel envelope command
    */
   validateCancelEnvelope(input: CancelEnvelopeCommand): void {
-    if (!input.envelopeId || input.envelopeId.trim().length === 0) {
-      throw new BadRequestError("Envelope ID is required", ErrorCodes.COMMON_BAD_REQUEST, { input });
-    }
-    
-    // Validate reason length if provided
-    if (input.reason && input.reason.length > 500) {
-      throw new BadRequestError("Reason cannot exceed 500 characters", ErrorCodes.COMMON_BAD_REQUEST, { input });
-    }
+    this.validateEnvelopeOperation(input);
   }
 
   /**
    * @summary Validate decline envelope command
    */
   validateDeclineEnvelope(input: DeclineEnvelopeCommand): void {
-    if (!input.envelopeId || input.envelopeId.trim().length === 0) {
-      throw new BadRequestError("Envelope ID is required", ErrorCodes.COMMON_BAD_REQUEST, { input });
-    }
-    
-    // Validate reason length if provided
-    if (input.reason && input.reason.length > 500) {
-      throw new BadRequestError("Reason cannot exceed 500 characters", ErrorCodes.COMMON_BAD_REQUEST, { input });
-    }
+    this.validateEnvelopeOperation(input);
   }
 
   /**

@@ -23,6 +23,22 @@ type RepoRow = {
   createdAt?: string | Date | number;
 };
 
+/**
+ * Helper function to format createdAt field from various types to ISO string
+ */
+function formatCreatedAt(createdAt: string | Date | number | undefined): string {
+  if (typeof createdAt === "string") {
+    return createdAt;
+  }
+  if (createdAt instanceof Date) {
+    return createdAt.toISOString();
+  }
+  if (typeof createdAt === "number") {
+    return new Date(createdAt).toISOString();
+  }
+  return "";
+}
+
 type RepoListInput  = { tenantId: TenantId; envelopeId: EnvelopeId } & PageOpts;
 type RepoListOutput = Page<RepoRow>;
 
@@ -66,14 +82,7 @@ export const makeDocumentsQueriesPort = (repo: unknown): DocumentsQueriesPort =>
       id: row.id ?? row.documentId ?? row.docId ?? "",
       name: row.name ?? row.title ?? "",
       contentType: (row.contentType ?? "") as string,
-      createdAt:
-        typeof row.createdAt === "string"
-          ? row.createdAt
-          : row.createdAt instanceof Date
-            ? row.createdAt.toISOString()
-            : typeof row.createdAt === "number"
-              ? new Date(row.createdAt).toISOString()
-              : "",
+      createdAt: formatCreatedAt(row.createdAt),
     }));
 
     return { items, nextCursor: page.nextCursor };

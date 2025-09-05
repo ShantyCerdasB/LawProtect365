@@ -19,18 +19,24 @@ export const FinaliseEnvelopeController = createCommandController<FinaliseEnvelo
   bodySchema: FinaliseEnvelopeBody,
   pathSchema: EnvelopeIdPath,
   appServiceClass: DefaultRequestsCommandService,
-  createDependencies: (c) => makeRequestsCommandsPort(
-    c.repos.envelopes,
-    c.repos.parties,
-    c.repos.inputs,
-    c.requests.validationService,
-    c.requests.auditService,
-    c.requests.eventService,
-    c.requests.rateLimitService,
-    c.ids,
-    c.storage.presigner
-  ),
-  extractParams: (path, body) => ({
+  createDependencies: (c) => makeRequestsCommandsPort({
+    repositories: {
+      envelopes: c.repos.envelopes,
+      parties: c.repos.parties,
+      inputs: c.repos.inputs
+    },
+    services: {
+      validation: c.requests.validationService,
+      audit: c.requests.auditService,
+      event: c.requests.eventService,
+      rateLimit: c.requests.rateLimitService
+    },
+    infrastructure: {
+      ids: c.ids,
+      s3Presigner: c.storage.presigner
+    }
+  }),
+  extractParams: (path, _body) => ({
     envelopeId: path.id,
   }),
   responseType: "ok",

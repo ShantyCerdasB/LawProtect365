@@ -28,8 +28,7 @@ import { GLOBAL_PARTY_STATUSES, PARTY_ROLES, PARTY_SOURCES, AUTH_METHODS } from 
 import { GlobalPartyItemDTOSchema } from "../../presentation/schemas/global-parties/GlobalPartyItemDTO.schema";
 
 import type {
-  GlobalPartyRow,
-  GlobalPartyHead,
+  GlobalPartyExtended,
 } from "../../shared/types/global-parties/GlobalPartiesTypes";
 import type { GlobalPartiesRepository } from "../../shared/contracts/repositories/global-parties/GlobalPartiesRepository";
 import type {
@@ -387,7 +386,7 @@ export class GlobalPartiesRepositoryDdb implements GlobalPartiesRepository {
     try {
       requireQuery(this.ddb);
       const result = await this.ddb.query(queryParams);
-      const parties: GlobalPartyHead[] = [];
+      const parties: GlobalPartyCommon[] = [];
 
       if (result.Items) {
         for (const item of result.Items) {
@@ -442,7 +441,7 @@ export class GlobalPartiesRepositoryDdb implements GlobalPartiesRepository {
         Limit: input.limit || 10,
       });
 
-      const parties: GlobalPartyHead[] = [];
+      const parties: GlobalPartyCommon[] = [];
 
       if (result.Items) {
         for (const item of result.Items) {
