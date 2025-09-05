@@ -8,7 +8,6 @@ export * from "./Page";
 export * from "./Geometry";
 export * from "./InputType";
 export * from "./Party";
-export * from "./Otp";
 export * from "./RequestToken";
 export * from "./ConsentRecord";
 export * from "./Audit";

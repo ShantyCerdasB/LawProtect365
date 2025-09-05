@@ -142,6 +142,17 @@ export interface Container {
     readonly eventService: any;
   };
 
+  /** Documents services */
+  readonly documents: {
+    readonly commandsPort: any;
+    readonly queriesPort: any;
+    readonly validationService: any;
+    readonly auditService: any;
+    readonly eventService: any;
+    readonly rateLimitService: any;
+    // readonly s3Service: any; // TODO: Fix type compatibility
+  };
+
   /** Requests services */
   readonly requests: {
     readonly commandsPort: any;

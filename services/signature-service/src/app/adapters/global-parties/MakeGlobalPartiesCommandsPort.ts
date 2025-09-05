@@ -145,7 +145,7 @@ export const makeGlobalPartiesCommandsPort = (
         deps.validationService.validateUpdate(command);
       }
 
-      const existing = await deps.globalParties.getById(command.partyId);
+      const existing = await deps.globalParties.getById(command.tenantId, command.partyId);
       if (!existing) {
         throw new NotFoundError(`Global Party with ID ${command.partyId} not found`);
       }
@@ -218,7 +218,7 @@ export const makeGlobalPartiesCommandsPort = (
         deps.validationService.validateDelete(command);
       }
 
-      const existing = await deps.globalParties.getById(command.partyId);
+      const existing = await deps.globalParties.getById(command.tenantId, command.partyId);
       if (!existing) {
         throw new NotFoundError(`Global Party with ID ${command.partyId} not found`);
       }

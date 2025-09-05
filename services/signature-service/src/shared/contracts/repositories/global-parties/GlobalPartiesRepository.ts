@@ -33,7 +33,7 @@ export interface GlobalPartiesRepository {
   /**
    * Gets a Global Party by ID
    */
-  getById(partyId: string): Promise<GlobalPartyRow | null>;
+  getById(tenantId: string, partyId: string): Promise<GlobalPartyRow | null>;
 
   /**
    * Lists Global Parties with optional filters

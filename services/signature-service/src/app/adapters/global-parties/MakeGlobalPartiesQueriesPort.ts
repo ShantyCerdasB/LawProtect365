@@ -42,7 +42,7 @@ export const makeGlobalPartiesQueriesPort = (
     },
 
     async getById(query: GetGlobalPartyAppInput): Promise<GetGlobalPartyAppResult> {
-      const globalParty = await deps.globalParties.getById(query.partyId);
+      const globalParty = await deps.globalParties.getById(query.tenantId, query.partyId);
       
       // Filter by tenant for security
       if (globalParty && globalParty.tenantId !== query.tenantId) {

@@ -147,43 +147,30 @@ export class GlobalPartiesRepositoryDdb implements GlobalPartiesRepository {
 
   /**
    * @summary Retrieves a global party by ID
-   * @description Retrieves a global party record by party ID.
-   * NOTE: This method requires tenantId but the contract doesn't provide it.
-   * For now, we'll implement a basic version that searches across all tenants.
+   * @description Retrieves a global party record by tenant ID and party ID.
    * 
+   * @param {string} tenantId - Tenant identifier
    * @param {string} partyId - Party identifier
    * @returns {Promise<GlobalPartyRow | null>} Promise resolving to the global party record or null if not found
    */
-  async getById(partyId: string): Promise<GlobalPartyRow | null> {
-    // This method needs tenantId, but the contract doesn't provide it
-    // For production, we should either:
-    // 1. Change the contract to include tenantId
-    // 2. Implement a global search (expensive)
-    // 3. Use a different approach
-    
-    // For now, we'll implement a basic search - but this is NOT optimal for production
+  async getById(tenantId: string, partyId: string): Promise<GlobalPartyRow | null> {
     try {
-      requireQuery(this.ddb);
-      const result = await this.ddb.query({
+      const result = await this.ddb.get({
         TableName: this.tableName,
-        IndexName: "GSI1", // Assuming there's a GSI on SK
-        KeyConditionExpression: "sk = :sk",
-        ExpressionAttributeValues: {
-          ":sk": sk(partyId),
+        Key: {
+          pk: pk(tenantId),
+          sk: sk(partyId),
         },
-        Limit: 1,
       });
 
-      if (!result.Items?.length) {
+      if (!result.Item) {
         return null;
       }
 
-      const validatedDto = GlobalPartyItemDTOSchema.parse(result.Items[0]);
+      const validatedDto = GlobalPartyItemDTOSchema.parse(result.Item);
       return dtoToGlobalPartyRow(validatedDto);
     } catch (error) {
-      // If GSI doesn't exist, we can't implement this method properly
-      console.warn("getById called without tenantId - this method needs contract adjustment for production");
-      return null;
+      throw mapAwsError(error, "Failed to get global party by ID");
     }
   }
 

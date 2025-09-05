@@ -94,6 +94,14 @@ import { EnvelopesEventService } from "../app/services/envelopes/EnvelopesEventS
 import { makeEnvelopesCommandsPort } from "../app/adapters/envelopes/makeEnvelopesCommandsPort";
 import { makeEnvelopesQueriesPort } from "../app/adapters/envelopes/MakeEnvelopesQueriesPort";
 
+// Documents services
+import { DefaultDocumentsValidationService } from "../app/services/Documents/DocumentsValidationService";
+import { DefaultDocumentsAuditService } from "../app/services/Documents/DocumentsAuditService";
+import { DefaultDocumentsEventService } from "../app/services/Documents/DocumentsEventService";
+import { DefaultDocumentsRateLimitService } from "../app/services/Documents/DocumentsRateLimitService";
+import { makeDocumentsCommandsPort } from "../app/adapters/documents/makeDocumentsCommandsPort";
+import { makeDocumentsQueriesPort } from "../app/adapters/documents/makeDocumentsQueriesPort";
+
 // Inputs services
 import { InputsValidationService } from "../app/services/Inputs/InputsValidationService";
 import { InputsAuditService } from "../app/services/Inputs/InputsAuditService";
@@ -371,6 +379,20 @@ export const getContainer = (): Container => {
     inputsAudit
   );
 
+  // Documents services - instantiate with correct dependencies
+  const documentsValidation = new DefaultDocumentsValidationService();
+  const documentsAudit = new DefaultDocumentsAuditService(audit);
+  const documentsEvents = new DefaultDocumentsEventService(outbox);
+  const documentsRateLimit = new DefaultDocumentsRateLimitService(otpRateLimitStore);
+  // const documentsS3 = new DefaultDocumentsS3Service(presigner); // TODO: Fix type compatibility
+  
+  const documentsCommands = makeDocumentsCommandsPort({
+    documentsRepo: documents,
+    ids,
+    // s3Service: documentsS3, // TODO: Fix type compatibility
+  });
+  const documentsQueries = makeDocumentsQueriesPort(documents);
+
   // Requests services - instantiate with correct dependencies
   const requestsValidation = new DefaultRequestsValidationService(inputs);
   const requestsAudit = new DefaultRequestsAuditService(audit);
@@ -499,6 +521,15 @@ export const getContainer = (): Container => {
           validationService: inputsValidation,
           auditService: inputsAudit,
           eventService: inputsEvents,
+        },
+        documents: {
+          commandsPort: documentsCommands,
+          queriesPort: documentsQueries,
+          validationService: documentsValidation,
+          auditService: documentsAudit,
+          eventService: documentsEvents,
+          rateLimitService: documentsRateLimit,
+          // s3Service: documentsS3, // TODO: Fix type compatibility
         },
         requests: {
           commandsPort: requestsCommands,
