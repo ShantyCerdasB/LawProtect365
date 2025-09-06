@@ -4,5 +4,6 @@
  * @description Exports all outbox type definitions
  */
 
+export * from "./OutboxDTO";
 export * from "./OutboxRepositoryTypes";
 export * from "./OutboxWorkerTypes"; 

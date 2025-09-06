@@ -8,4 +8,3 @@ export * from "./AdapterDependencies";
 export * from "./AppServiceInputs";
 export * from "./ControllerInputs";
 export * from "./PartiesTypes";
-export * from "./GlobalPartiesTypes";

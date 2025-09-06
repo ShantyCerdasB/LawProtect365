@@ -160,10 +160,16 @@ export class DefaultDocumentsS3Service implements DocumentsS3Service {
 
     // Check for invalid characters (grouped for explicit precedence)
     const invalidChars = /[<>:"|?*]/;
-    // Check for control characters separately
-    const hasControlChars = /[\x00-\x1f\x7f]/.test(key);
-    if (invalidChars.test(key) || hasControlChars) {
+    if (invalidChars.test(key)) {
       return false;
+    }
+    
+    // Check for control characters using character codes
+    for (let i = 0; i < key.length; i++) {
+      const charCode = key.charCodeAt(i);
+      if (charCode < 32 || charCode === 127) {
+        return false;
+      }
     }
 
     return true;
