@@ -29,6 +29,39 @@ export const decodeCursor = <T = unknown>(cursor?: string): T | undefined => {
 };
 
 /**
+ * Handles primitive type conversion to JSON value
+ */
+const handlePrimitiveType = (v: unknown, t: string): JsonValue | null => {
+  if (t === "string" || t === "boolean") return v as JsonValue;
+  if (t === "number") return Number.isFinite(v as number) ? (v as number) : (v as number).toString() as JsonValue;
+  if (t === "bigint") return (v as bigint).toString();
+  return null;
+};
+
+/**
+ * Handles special object types (Buffer, Date)
+ */
+const handleSpecialObjects = (v: unknown): JsonValue | null => {
+  // Node Buffer → base64url
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+  if (typeof Buffer !== "undefined" && Buffer.isBuffer?.(v)) {
+    return toBase64Url(v as Buffer);
+  }
+  if (v instanceof Date) return v.toISOString();
+  return null;
+};
+
+/**
+ * Handles fallback cases for symbols, functions, and undefined
+ */
+const handleFallbackTypes = (v: unknown): JsonValue => {
+  if (typeof v === "symbol") return v.toString() as JsonValue;
+  if (typeof v === "function") return "[Function]" as JsonValue;
+  if (v === undefined) return "undefined" as JsonValue;
+  return "[object Object]" as JsonValue;
+};
+
+/**
  * Coerces arbitrary input into a JSON value suitable for cursors.
  * Converts common non-JSON types (Date, Buffer, bigint) into strings.
  * @param v Arbitrary value.
@@ -37,17 +70,11 @@ export const toJsonValue = (v: unknown): JsonValue => {
   if (v === null) return null;
   const t = typeof v;
 
-  if (t === "string" || t === "boolean") return v as JsonValue;
-  if (t === "number") return Number.isFinite(v as number) ? (v as number) : (v as number).toString() as JsonValue;
-  if (t === "bigint") return (v as bigint).toString();
+  const primitiveResult = handlePrimitiveType(v, t);
+  if (primitiveResult !== null) return primitiveResult;
 
-  // Node Buffer → base64url
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-  if (typeof Buffer !== "undefined" && Buffer.isBuffer?.(v)) {
-    return toBase64Url(v as Buffer);
-  }
-
-  if (v instanceof Date) return v.toISOString();
+  const specialResult = handleSpecialObjects(v);
+  if (specialResult !== null) return specialResult;
 
   if (Array.isArray(v)) {
     return v.map((x) => toJsonValue(x)) as JsonValue;
@@ -61,11 +88,7 @@ export const toJsonValue = (v: unknown): JsonValue => {
     return out as JsonValue;
   }
 
-  // Fallback: stringify symbols/functions/undefined
-  if (typeof v === "symbol") return v.toString() as JsonValue;
-  if (typeof v === "function") return "[Function]" as JsonValue;
-  if (v === undefined) return "undefined" as JsonValue;
-  return "[object Object]" as JsonValue;
+  return handleFallbackTypes(v);
 };
 
 /**

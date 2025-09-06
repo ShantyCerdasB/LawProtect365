@@ -21,7 +21,6 @@ import {
 import {
   runDirnameTests,
   runBasenameTests,
-  commonDirnameTestCases,
   commonBasenameTestCases,
   s3SpecificDirnameTestCases,
   s3SpecificBasenameTestCases,
@@ -159,8 +158,8 @@ describe("utils/s3", () => {
       expect(isValidKey("x".repeat(1025))).toBe(false);
 
       // Control chars (e.g., NUL and DEL)
-      expect(isValidKey("ok\u0000no")).toBe(false);
-      expect(isValidKey("ok\u007Fno")).toBe(false);
+      expect(isValidKey("ok" + String.fromCharCode(0) + "no")).toBe(false);
+      expect(isValidKey("ok" + String.fromCharCode(127) + "no")).toBe(false);
     });
   });
 
