@@ -9,8 +9,7 @@ import { makeDocumentsCommandsPort } from "../../../app/adapters/documents/makeD
 import { DefaultDocumentsCommandService } from "../../../app/services/Documents";
 import { UploadDocumentBody } from "../../../presentation/schemas/documents/UploadDocument.schema";
 import { EnvelopeIdPath } from "../../../presentation/schemas/common/path";
-import type { UploadDocumentCommand } from "../../../app/ports/documents/DocumentsCommandsPort";
-import type { UploadDocumentResult } from "../../../app/ports/documents/DocumentsCommandsPort";
+import type { UploadDocumentCommand, UploadDocumentResult } from "../../../app/ports/documents/DocumentsCommandsPort";
 
 /**
  * @description Upload Document controller

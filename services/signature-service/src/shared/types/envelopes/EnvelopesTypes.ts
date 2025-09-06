@@ -21,5 +21,5 @@ export type EnvelopeListCursorPayload = {
  */
 export const toEnvelopeCursor = (envelope: { createdAt: string; envelopeId: EnvelopeId }): EnvelopeListCursorPayload => ({
   createdAt: envelope.createdAt,
-  envelopeId: envelope.envelopeId  as EnvelopeId,
+  envelopeId: envelope.envelopeId as EnvelopeId,
 });

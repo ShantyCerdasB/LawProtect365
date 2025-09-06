@@ -23,12 +23,12 @@ import {
 } from "@lawprotect/shared-ts";
 import type { DdbClientLike } from "@lawprotect/shared-ts";
 
-import { dtoToGlobalPartyRow, globalPartyRowToDto } from "./mappers/GlobalPartyItemDTO.mapper";
+import { dtoToGlobalPartyExtended, globalPartyRowToDto } from "./mappers/GlobalPartyItemDTO.mapper";
 import { GLOBAL_PARTY_STATUSES, PARTY_ROLES, PARTY_SOURCES, AUTH_METHODS } from "../../domain/values/enums";
 import { GlobalPartyItemDTOSchema } from "../../presentation/schemas/global-parties/GlobalPartyItemDTO.schema";
 
 import type {
-  GlobalPartyRow,
+  GlobalPartyExtended,
   GlobalPartyCommon,
 } from "../../shared/types/global-parties/GlobalPartiesTypes";
 import type { GlobalPartiesRepository } from "../../shared/contracts/repositories/global-parties/GlobalPartiesRepository";
@@ -98,7 +98,7 @@ export class GlobalPartiesRepositoryDdb implements GlobalPartiesRepository {
     }
 
     const now = nowIso();
-    const party: GlobalPartyRow = {
+    const party: GlobalPartyExtended = {
       partyId: input.partyId as any,
       tenantId: input.tenantId as any,
       name: input.name,
@@ -151,9 +151,9 @@ export class GlobalPartiesRepositoryDdb implements GlobalPartiesRepository {
    * 
    * @param {string} tenantId - Tenant identifier
    * @param {string} partyId - Party identifier
-   * @returns {Promise<GlobalPartyRow | null>} Promise resolving to the global party record or null if not found
+   * @returns {Promise<GlobalPartyExtended | null>} Promise resolving to the global party record or null if not found
    */
-  async getById(tenantId: string, partyId: string): Promise<GlobalPartyRow | null> {
+  async getById(tenantId: string, partyId: string): Promise<GlobalPartyExtended | null> {
     try {
       const result = await this.ddb.get({
         TableName: this.tableName,
@@ -168,7 +168,7 @@ export class GlobalPartiesRepositoryDdb implements GlobalPartiesRepository {
       }
 
       const validatedDto = GlobalPartyItemDTOSchema.parse(result.Item);
-      return dtoToGlobalPartyRow(validatedDto);
+      return dtoToGlobalPartyExtended(validatedDto);
     } catch (error) {
       throw mapAwsError(error, "Failed to get global party by ID");
     }
@@ -268,10 +268,10 @@ export class GlobalPartiesRepositoryDdb implements GlobalPartiesRepository {
    * 
    * @param {string} tenantId - Tenant identifier
    * @param {string} partyId - Party identifier
-   * @returns {Promise<GlobalPartyRow>} Promise resolving to the deleted global party record
+   * @returns {Promise<GlobalPartyExtended>} Promise resolving to the deleted global party record
    * @throws {NotFoundError} When global party is not found
    */
-  async delete(tenantId: string, partyId: string): Promise<GlobalPartyRow> {
+  async delete(tenantId: string, partyId: string): Promise<GlobalPartyExtended> {
     try {
       // First get the item to return it - we need to implement a proper getById with tenantId
       // For now, we'll do a direct query to get the item
@@ -291,7 +291,7 @@ export class GlobalPartiesRepositoryDdb implements GlobalPartiesRepository {
       }
 
       const validatedDto = GlobalPartyItemDTOSchema.parse(result.Item);
-      const existingItem = dtoToGlobalPartyRow(validatedDto);
+      const existingItem = dtoToGlobalPartyExtended(validatedDto);
 
       await this.ddb.delete({
         TableName: this.tableName,
@@ -380,7 +380,7 @@ export class GlobalPartiesRepositoryDdb implements GlobalPartiesRepository {
         for (const item of result.Items) {
           try {
             const validatedDto = GlobalPartyItemDTOSchema.parse(item);
-            const row = dtoToGlobalPartyRow(validatedDto);
+            const row = dtoToGlobalPartyExtended(validatedDto);
             parties.push(row);
           } catch (error) {
             // Skip invalid items
@@ -435,7 +435,7 @@ export class GlobalPartiesRepositoryDdb implements GlobalPartiesRepository {
         for (const item of result.Items) {
           try {
             const validatedDto = GlobalPartyItemDTOSchema.parse(item);
-            const row = dtoToGlobalPartyRow(validatedDto);
+            const row = dtoToGlobalPartyExtended(validatedDto);
             parties.push(row);
           } catch (error) {
             // Skip invalid items
@@ -481,7 +481,7 @@ export class GlobalPartiesRepositoryDdb implements GlobalPartiesRepository {
 
       try {
         const validatedDto = GlobalPartyItemDTOSchema.parse(result.Items[0]);
-        const row = dtoToGlobalPartyRow(validatedDto);
+        const row = dtoToGlobalPartyExtended(validatedDto);
         return { party: row };
       } catch (error) {
         // Skip invalid items
@@ -514,7 +514,7 @@ export class GlobalPartiesRepositoryDdb implements GlobalPartiesRepository {
       email: input.email,
     });
     
-    if (findResult && findResult.party) {
+    if (findResult?.party) {
       return findResult.party.partyId as string;
     }
 

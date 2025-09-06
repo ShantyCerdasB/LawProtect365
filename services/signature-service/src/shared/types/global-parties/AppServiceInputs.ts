@@ -5,7 +5,7 @@
  */
 
 import type { TenantId, PartyId } from "../../../domain/value-objects/Ids";
-import type { GlobalPartyCommon, GlobalPartyPatch, GlobalPartyRow } from "./GlobalPartiesTypes";
+import type { GlobalPartyCommon, GlobalPartyPatch, GlobalPartyExtended } from "./GlobalPartiesTypes";
 
 /**
  * @summary Input for getting global party app service
@@ -22,7 +22,7 @@ export interface GetGlobalPartyAppInput {
  */
 export interface GetGlobalPartyAppResult {
   /** Global party data */
-  readonly party: GlobalPartyRow | null;
+  readonly party: GlobalPartyExtended | null;
 }
 
 /**
@@ -44,11 +44,11 @@ export interface CreateGlobalPartyAppInput {
   /** Party locale preference */
   readonly locale?: string;
   /** Party role */
-  readonly role: GlobalPartyRow['role'];
+  readonly role: GlobalPartyExtended['role'];
   /** Party source */
-  readonly source: GlobalPartyRow['source'];
+  readonly source: GlobalPartyExtended['source'];
   /** Party status */
-  readonly status: GlobalPartyRow['status'];
+  readonly status: GlobalPartyExtended['status'];
   /** Party tags */
   readonly tags?: string[];
   /** Party metadata */
@@ -56,11 +56,11 @@ export interface CreateGlobalPartyAppInput {
   /** Party attributes */
   readonly attributes?: Record<string, unknown>;
   /** Party preferences */
-  readonly preferences: GlobalPartyRow['preferences'];
+  readonly preferences: GlobalPartyExtended['preferences'];
   /** Party notification preferences */
-  readonly notificationPreferences: GlobalPartyRow['notificationPreferences'];
+  readonly notificationPreferences: GlobalPartyExtended['notificationPreferences'];
   /** Party statistics */
-  readonly stats: GlobalPartyRow['stats'];
+  readonly stats: GlobalPartyExtended['stats'];
 }
 
 /**
@@ -68,7 +68,7 @@ export interface CreateGlobalPartyAppInput {
  */
 export interface CreateGlobalPartyAppResult {
   /** Created global party data */
-  readonly party: GlobalPartyRow;
+  readonly party: GlobalPartyExtended;
 }
 
 /**
@@ -88,7 +88,7 @@ export interface UpdateGlobalPartyAppInput {
  */
 export interface UpdateGlobalPartyAppResult {
   /** Updated global party data */
-  readonly party: GlobalPartyRow;
+  readonly party: GlobalPartyExtended;
 }
 
 /**
@@ -106,7 +106,7 @@ export interface DeleteGlobalPartyAppInput {
  */
 export interface DeleteGlobalPartyAppResult {
   /** Deleted global party data */
-  readonly party: GlobalPartyRow;
+  readonly party: GlobalPartyExtended;
 }
 
 /**
@@ -120,11 +120,11 @@ export interface ListGlobalPartiesAppInput {
   /** Filter by tags */
   readonly tags?: string[];
   /** Filter by role */
-  readonly role?: GlobalPartyRow['role'];
+  readonly role?: GlobalPartyExtended['role'];
   /** Filter by source */
-  readonly source?: GlobalPartyRow['source'];
+  readonly source?: GlobalPartyExtended['source'];
   /** Filter by status */
-  readonly status?: GlobalPartyRow['status'];
+  readonly status?: GlobalPartyExtended['status'];
   /** Maximum number of results */
   readonly limit?: number;
   /** Pagination cursor */
@@ -178,5 +178,5 @@ export interface FindGlobalPartyByEmailAppInput {
  */
 export interface FindGlobalPartyByEmailAppResult {
   /** Found global party data */
-  readonly party: GlobalPartyRow | null;
+  readonly party: GlobalPartyExtended | null;
 }

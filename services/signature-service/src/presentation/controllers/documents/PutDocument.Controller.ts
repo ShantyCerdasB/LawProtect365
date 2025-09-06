@@ -10,8 +10,7 @@ import { DefaultDocumentsCommandService } from "../../../app/services/Documents"
 import { DocumentIdPath } from "../../../presentation/schemas/common/path";
 import { z } from "@lawprotect/shared-ts";
 import { ALLOWED_CONTENT_TYPES } from "../../../domain/values/enums";
-import type { UpdateDocumentBinaryCommand } from "../../../app/ports/documents/DocumentsCommandsPort";
-import type { UpdateDocumentResult } from "../../../app/ports/documents/DocumentsCommandsPort";
+import type { UpdateDocumentBinaryCommand, UpdateDocumentResult } from "../../../app/ports/documents/DocumentsCommandsPort";
 
 /**
  * @description Body payload schema for updating document binary

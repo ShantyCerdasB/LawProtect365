@@ -16,7 +16,7 @@ import type {
 } from "../../ports/global-parties";
 import type { GlobalPartiesRepository } from "../../../shared/contracts/repositories/global-parties/GlobalPartiesRepository";
 import type { 
-  GlobalPartyRow,
+  GlobalPartyExtended,
 } from "../../../shared/types/global-parties";
 import type { PartyId } from "../../../domain/value-objects/Ids";
 import { 
@@ -81,7 +81,7 @@ export const makeGlobalPartiesCommandsPort = (
       const now = nowIso();
       const globalPartyId = deps.ids.ulid();
 
-      const globalParty: GlobalPartyRow = {
+      const globalParty: GlobalPartyExtended = {
         partyId: globalPartyId as PartyId,
         tenantId: command.tenantId,
         name: command.name,
@@ -151,7 +151,7 @@ export const makeGlobalPartiesCommandsPort = (
       }
 
       const now = nowIso();
-      const updatedGlobalParty: GlobalPartyRow = {
+      const updatedGlobalParty: GlobalPartyExtended = {
         ...existing,
         ...command.updates,
         tags: command.updates.tags ? createNormalizedTags(command.updates.tags) : existing.tags,
@@ -171,7 +171,7 @@ export const makeGlobalPartiesCommandsPort = (
       };
 
       // Create compatible updates object using enums
-      const compatibleUpdates: Partial<Pick<GlobalPartyRow, 
+      const compatibleUpdates: Partial<Pick<GlobalPartyExtended, 
         GlobalPartyUpdatableField
       >> = {
         ...command.updates,
@@ -225,7 +225,7 @@ export const makeGlobalPartiesCommandsPort = (
 
       // Soft delete by updating status
       const now = nowIso();
-      const deletedGlobalParty: GlobalPartyRow = {
+      const deletedGlobalParty: GlobalPartyExtended = {
         ...existing,
         status: GLOBAL_PARTY_STATUSES[2], // 'deleted'
         updatedAt: now,

@@ -9,8 +9,7 @@ import { makeDocumentsCommandsPort } from "../../../app/adapters/documents/makeD
 import { DefaultDocumentsCommandService } from "../../../app/services/Documents";
 import { CreateDocumentBody } from "../../../presentation/schemas/documents/CreateDocument.schema";
 import { EnvelopeIdPath } from "../../../presentation/schemas/common/path";
-import type { CreateDocumentCommand } from "../../../app/ports/documents/DocumentsCommandsPort";
-import type { CreateDocumentResult } from "../../../app/ports/documents/DocumentsCommandsPort";
+import type { CreateDocumentCommand, CreateDocumentResult } from "../../../app/ports/documents/DocumentsCommandsPort";
 
 /**
  * @description Create Document controller

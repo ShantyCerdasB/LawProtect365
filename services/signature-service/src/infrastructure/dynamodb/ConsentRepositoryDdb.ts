@@ -85,7 +85,7 @@ export class ConsentRepositoryDdb {
       consentId: input.consentId,
       partyId: input.partyId,
       consentType: input.consentType as typeof CONSENT_TYPES[number],
-      status: validateConsentStatus(input.status) as typeof CONSENT_STATUSES[number],
+      status: validateConsentStatus(input.status),
       createdAt: now,
       updatedAt: now,
       expiresAt: input.expiresAt,

@@ -34,7 +34,7 @@ export const CreateDocumentLockController = createCommandController<{ documentId
   extractParams: (path, body) => ({
     documentId: path.id,
     lock: {
-      lockId: `lock-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      lockId: `lock-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
       documentId: path.id,
       ownerId: path.actor?.userId || "",
       ownerEmail: path.actor?.email || "",

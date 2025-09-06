@@ -8,7 +8,7 @@
 import type { TenantId } from "../../../domain/value-objects/Ids";
 import type { ActorContext } from "../../../domain/entities/ActorContext";
 import type { 
-  GlobalPartyRow,
+  GlobalPartyExtended,
   CreateGlobalPartyControllerInput,
   UpdateGlobalPartyControllerInput,
   DeleteGlobalPartyControllerInput
@@ -32,11 +32,11 @@ export interface DeleteGlobalPartyCommand extends DeleteGlobalPartyControllerInp
 
 // Define result types that are not in shared yet
 export interface CreateGlobalPartyResult {
-  globalParty: GlobalPartyRow;
+  globalParty: GlobalPartyExtended;
 }
 
 export interface UpdateGlobalPartyResult {
-  globalParty: GlobalPartyRow;
+  globalParty: GlobalPartyExtended;
 }
 
 export interface DeleteGlobalPartyResult {

@@ -158,8 +158,8 @@ export class DefaultDocumentsS3Service implements DocumentsS3Service {
       return false;
     }
 
-    // Check for invalid characters
-    const invalidChars = /[<>:"|?*\x00-\x1f\x7f]/;
+    // Check for invalid characters (grouped for explicit precedence)
+    const invalidChars = /[<>:"|?*[\x00-\x1f\x7f]]/;
     if (invalidChars.test(key)) {
       return false;
     }

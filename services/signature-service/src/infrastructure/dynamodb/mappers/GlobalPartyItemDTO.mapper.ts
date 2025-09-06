@@ -5,14 +5,14 @@
  */
 
 import type { GlobalPartyItemDTO } from "../../../presentation/schemas/global-parties/GlobalPartyItemDTO.schema";
-import type { GlobalPartyRow } from "../../../shared/types/global-parties/GlobalPartiesTypes";
+import type { GlobalPartyExtended } from "../../../shared/types/global-parties/GlobalPartiesTypes";
 
 /**
  * @summary Maps DynamoDB DTO to domain row
  * @param dto - DynamoDB item DTO
  * @returns Domain row object
  */
-export function dtoToGlobalPartyRow(dto: GlobalPartyItemDTO): GlobalPartyRow {
+export function dtoToGlobalPartyExtended(dto: GlobalPartyItemDTO): GlobalPartyExtended {
   return {
     partyId: dto.partyId as any, // Cast to PartyId branded type
     tenantId: dto.tenantId as any, // Cast to TenantId branded type
@@ -53,7 +53,7 @@ export function dtoToGlobalPartyRow(dto: GlobalPartyItemDTO): GlobalPartyRow {
  * @returns DynamoDB item DTO
  */
 export function globalPartyRowToDto(
-  row: GlobalPartyRow,
+  row: GlobalPartyExtended,
   pk: string,
   sk: string
 ): GlobalPartyItemDTO {

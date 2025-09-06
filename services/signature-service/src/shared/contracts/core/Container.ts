@@ -150,7 +150,7 @@ export interface Container {
     readonly auditService: any;
     readonly eventService: any;
     readonly rateLimitService: any;
-    // readonly s3Service: any; // TODO: Fix type compatibility
+    readonly s3Service: any;
   };
 
   /** Requests services */
@@ -211,4 +211,6 @@ export interface Container {
   readonly time: {
     readonly now: () => number;
   };
+  /** Metrics service */
+  readonly metricsService: any;
 }

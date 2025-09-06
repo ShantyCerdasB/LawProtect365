@@ -5,7 +5,7 @@
  */
 
 import type { 
-  GlobalPartyRow,
+  GlobalPartyExtended,
   CreateGlobalPartyAppInput,
   UpdateGlobalPartyAppInput,
   FindGlobalPartyByEmailAppInput,
@@ -33,7 +33,7 @@ export interface GlobalPartiesRepository {
   /**
    * Gets a Global Party by ID
    */
-  getById(tenantId: string, partyId: string): Promise<GlobalPartyRow | null>;
+  getById(tenantId: string, partyId: string): Promise<GlobalPartyExtended | null>;
 
   /**
    * Lists Global Parties with optional filters

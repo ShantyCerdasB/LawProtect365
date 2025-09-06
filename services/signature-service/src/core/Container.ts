@@ -99,6 +99,7 @@ import { DefaultDocumentsValidationService } from "../app/services/Documents/Doc
 import { DefaultDocumentsAuditService } from "../app/services/Documents/DocumentsAuditService";
 import { DefaultDocumentsEventService } from "../app/services/Documents/DocumentsEventService";
 import { DefaultDocumentsRateLimitService } from "../app/services/Documents/DocumentsRateLimitService";
+import { DefaultDocumentsS3Service } from "../app/services/Documents/DocumentsS3Service";
 import { makeDocumentsCommandsPort } from "../app/adapters/documents/makeDocumentsCommandsPort";
 import { makeDocumentsQueriesPort } from "../app/adapters/documents/makeDocumentsQueriesPort";
 
@@ -274,7 +275,7 @@ export const getContainer = (): Container => {
   const time = { now: () => Date.now() };
 
   // Metrics service for CloudWatch custom metrics
-  new MetricsService({
+  const metricsService = new MetricsService({
     namespace: config.metrics.namespace,
     region: config.metrics.region,
     enabled: config.metrics.enableOutboxMetrics,
@@ -384,12 +385,32 @@ export const getContainer = (): Container => {
   const documentsAudit = new DefaultDocumentsAuditService(audit);
   const documentsEvents = new DefaultDocumentsEventService(outbox);
   const documentsRateLimit = new DefaultDocumentsRateLimitService(otpRateLimitStore);
-  // const documentsS3 = new DefaultDocumentsS3Service(presigner); // TODO: Fix type compatibility
+  
+  // Create S3 adapter for DocumentsS3Service
+  const documentsS3Adapter = {
+    putObjectUrl: async (bucket: string, key: string, contentType: string, expiresIn?: number) => {
+      return await presigner.putObjectUrl({
+        bucket,
+        key,
+        contentType,
+        expiresInSeconds: expiresIn,
+      });
+    },
+    getObjectUrl: async (bucket: string, key: string, expiresIn?: number) => {
+      return await presigner.getObjectUrl({
+        bucket,
+        key,
+        expiresInSeconds: expiresIn,
+      });
+    },
+  };
+  
+  const documentsS3 = new DefaultDocumentsS3Service(documentsS3Adapter);
   
   const documentsCommands = makeDocumentsCommandsPort({
     documentsRepo: documents,
     ids,
-    // s3Service: documentsS3, // TODO: Fix type compatibility
+    s3Service: documentsS3,
   });
   const documentsQueries = makeDocumentsQueriesPort(documents);
 
@@ -529,7 +550,7 @@ export const getContainer = (): Container => {
           auditService: documentsAudit,
           eventService: documentsEvents,
           rateLimitService: documentsRateLimit,
-          // s3Service: documentsS3, // TODO: Fix type compatibility
+          s3Service: documentsS3,
         },
         requests: {
           commandsPort: requestsCommands,
@@ -571,6 +592,7 @@ export const getContainer = (): Container => {
     configProvider,
     ids,
     time,
+    metricsService,
   };
 
   return singleton;

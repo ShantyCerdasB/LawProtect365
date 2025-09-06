@@ -9,8 +9,7 @@ import { makeDocumentsCommandsPort } from "../../../app/adapters/documents/makeD
 import { DefaultDocumentsCommandService } from "../../../app/services/Documents";
 import { DocumentIdPath } from "../../../presentation/schemas/common/path";
 import { z } from "@lawprotect/shared-ts";
-import type { UpdateDocumentCommand } from "../../../app/ports/documents/DocumentsCommandsPort";
-import type { UpdateDocumentResult } from "../../../app/ports/documents/DocumentsCommandsPort";
+import type { UpdateDocumentCommand, UpdateDocumentResult } from "../../../app/ports/documents/DocumentsCommandsPort";
 
 /**
  * @description Body payload schema for patching a document
