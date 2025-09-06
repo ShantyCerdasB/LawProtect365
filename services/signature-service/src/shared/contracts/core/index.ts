@@ -6,5 +6,4 @@
 
 export * from "./Config";
 export * from "./Container";
-export * from "./Services";
 // AuditContext moved to src/domain/entities/

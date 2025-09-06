@@ -126,7 +126,7 @@ export class DefaultDocumentsS3Service implements DocumentsS3Service {
     const sanitizedFileName = fileName
       .replace(/[^a-zA-Z0-9._-]/g, '_')
       .replace(/_{2,}/g, '_')
-      .replace(/^_|_$/g, '');
+      .replace(/(^_|_$)/g, '');
 
     return `documents/${tenantId}/${envelopeId}/${documentId}/${sanitizedFileName}`;
   }
@@ -159,8 +159,10 @@ export class DefaultDocumentsS3Service implements DocumentsS3Service {
     }
 
     // Check for invalid characters (grouped for explicit precedence)
-    const invalidChars = /[<>:"|?*\x00-\x1f\x7f]/;
-    if (invalidChars.test(key)) {
+    const invalidChars = /[<>:"|?*]/;
+    // Check for control characters separately
+    const hasControlChars = /[\x00-\x1f\x7f]/.test(key);
+    if (invalidChars.test(key) || hasControlChars) {
       return false;
     }
 
