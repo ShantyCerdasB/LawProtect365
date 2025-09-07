@@ -21,8 +21,8 @@ import type {
   ConsentRepoRow,
 } from "../../../shared/types/consent/ConsentTypes";
 import type { ConsentCommandRepo, Ids } from "../../../shared/types/consent/AdapterDependencies";
-import type { ConsentId, EnvelopeId, PartyId } from "../../../domain/value-objects/Ids";
-import type { ConsentStatus, ConsentType } from "../../../domain/values/enums";
+import type { PartyId } from "../../../domain/value-objects/Ids";
+import type { ConsentStatus } from "../../../domain/values/enums";
 import { nowIso, asISO, asISOOpt } from "@lawprotect/shared-ts";
 import type { DelegationRepositoryDdb } from "../../../infrastructure/dynamodb/DelegationRepositoryDdb";
 import type { ConsentValidationService } from "../../services/Consent/ConsentValidationService";
@@ -30,29 +30,13 @@ import type { ConsentAuditService } from "../../services/Consent/ConsentAuditSer
 import type { ConsentEventService } from "../../services/Consent/ConsentEventService";
 
 import type { ActorContext } from "../../../domain/entities/ActorContext";
-import { createConsentWithAudit, logConsentDeletionAudit, updateConsentWithAudit } from "./ConsentHelpers";
+import { createConsentWithAudit, logConsentDeletionAudit, updateConsentWithAudit, submitConsentWithAudit } from "./ConsentHelpers";
 import type { IdempotencyRunner } from "../../../infrastructure/idempotency/IdempotencyRunner";
 import type { GlobalPartiesRepository } from "../../../shared/contracts/repositories/global-parties/GlobalPartiesRepository";
 import type { FindOrCreatePartyInput } from "../../../shared/types/global-parties";
 import { NotFoundError, BadRequestError } from "../../../shared/errors";
 
 
-/**
- * @summary Maps a repository row to a submit result
- * @description Converts a repository row to the domain submit result format
- *
- * @param {ConsentRepoRow} r - Repository row from database
- * @returns {SubmitConsentAppResult} Domain submit result record
- */
-const mapRowToSubmitResult = (r: ConsentRepoRow): SubmitConsentAppResult => ({
-  id: r.consentId as ConsentId,
-  envelopeId: r.envelopeId as EnvelopeId,
-  partyId: r.partyId as PartyId,
-  type: r.consentType as ConsentType,
-  status: r.status,
-  submittedAt: r.updatedAt || r.createdAt || "",
-  metadata: r.metadata,
-});
 
 /**
  * @summary Creates a ConsentCommandsPort implementation
@@ -417,74 +401,26 @@ export function makeConsentCommandsPort(
         return idempotencyRunner.run(
           input.idempotencyKey,
           async () => {
-            const row = await consentsRepo.update(
-              { envelopeId: input.envelopeId, consentId: input.consentId },
-              { 
-                status: "granted" as ConsentStatus,
-                updatedAt: asISO(nowIso())
-              }
+            return await submitConsentWithAudit(
+              consentsRepo,
+              auditService,
+              input,
+              actorContext,
+              previousConsent
             );
-
-            const result = mapRowToSubmitResult(row);
-
-            // ✅ AUDIT: Log consent submission if audit service available
-            if (auditService && actorContext && previousConsent) {
-              await auditService.logConsentUpdate({
-                tenantId: previousConsent.tenantId as any, // Cast to avoid branded type issues
-                envelopeId: input.envelopeId,
-                actor: actorContext,
-              }, {
-                consentId: input.consentId,
-                previousStatus: previousConsent.status,
-                newStatus: "granted",
-                reason: "consent_submitted",
-                metadata: {
-                  previousStatus: previousConsent.status,
-                  previousMetadata: previousConsent.metadata,
-                  previousExpiresAt: previousConsent.expiresAt,
-                  submittedAt: result.submittedAt,
-                },
-              });
-            }
-
-            return result;
           },
           input.ttlSeconds
         );
       }
 
       // Fallback to non-idempotent submission
-      const row = await consentsRepo.update(
-        { envelopeId: input.envelopeId, consentId: input.consentId },
-        { 
-          status: "granted" as ConsentStatus,
-          updatedAt: asISO(nowIso())
-        }
+      return await submitConsentWithAudit(
+        consentsRepo,
+        auditService,
+        input,
+        actorContext,
+        previousConsent
       );
-
-      const result = mapRowToSubmitResult(row);
-
-      // ✅ AUDIT: Log consent submission if audit service available
-      if (auditService && actorContext && previousConsent) {
-        await auditService.logConsentUpdate({
-          tenantId: previousConsent.tenantId as any, // Cast to avoid branded type issues
-          envelopeId: input.envelopeId,
-          actor: actorContext,
-        }, {
-          consentId: input.consentId,
-          previousStatus: previousConsent.status,
-          newStatus: "granted",
-          reason: "consent_submitted",
-          metadata: {
-            previousStatus: previousConsent.status,
-            previousMetadata: previousConsent.metadata,
-            previousExpiresAt: previousConsent.expiresAt,
-            submittedAt: result.submittedAt,
-          },
-        });
-      }
-
-      return result;
     },
 
     /**

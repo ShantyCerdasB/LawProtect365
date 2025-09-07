@@ -115,6 +115,58 @@ async function executeInputValidations(
 }
 
 /**
+ * Helper function to execute cancel/decline common operations
+ */
+async function executeCancelDeclineOperations(
+  command: CancelEnvelopeCommand | DeclineEnvelopeCommand,
+  targetStatus: "canceled" | "declined",
+  envelopesRepo: Repository<Envelope, EnvelopeId>,
+  auditService: AuditService | undefined,
+  eventService: EventService | undefined
+): Promise<{ envelopeId: EnvelopeId; status: string; timestamp: string }> {
+  // Get and validate envelope
+  const envelope = await validateAndGetEnvelope(envelopesRepo, command.envelopeId);
+  
+  // Validate cancel/decline preconditions using domain rules
+  assertCancelDeclineAllowed(envelope.status);
+  
+  // Validate reason if provided
+  if (command.reason) {
+    assertReasonValid(command.reason);
+  }
+  
+  // Validate state transition
+  try {
+    assertLifecycleTransition(envelope.status, targetStatus);
+  } catch {
+    throw new ConflictError(
+      `Cannot ${targetStatus === "canceled" ? "cancel" : "decline"} envelope in ${envelope.status} state`,
+      ErrorCodes.COMMON_CONFLICT,
+      { envelopeId: command.envelopeId, currentStatus: envelope.status }
+    );
+  }
+
+  // Update envelope status
+  const now = nowIso();
+  await envelopesRepo.update(command.envelopeId, { 
+    status: targetStatus,
+    updatedAt: now
+  });
+
+  const result = {
+    envelopeId: command.envelopeId,
+    status: targetStatus,
+    [`${targetStatus}At`]: now,
+    timestamp: now
+  };
+
+  // Publish audit and events
+  await publishAuditAndEvents(auditService, eventService, command, result, targetStatus === "canceled" ? "CancelEnvelope" : "DeclineEnvelope");
+
+  return result;
+}
+
+/**
  * Helper function to publish audit and events
  */
 async function publishAuditAndEvents(
@@ -486,90 +538,20 @@ export function makeRequestsCommandsPort(config: RequestsCommandsPortConfig): Re
       // Execute common services (validation and rate limiting)
       await executeCommonServices(validationService, rateLimitService, auditService, eventService, command, "CancelEnvelope");
 
-      // Get and validate envelope
-      const envelope = await validateAndGetEnvelope(envelopesRepo, command.envelopeId);
-      
-      // Validate cancel/decline preconditions using domain rules
-      assertCancelDeclineAllowed(envelope.status);
-      
-      // Validate reason if provided
-      if (command.reason) {
-        assertReasonValid(command.reason);
-      }
-      
-      // Validate state transition
-      try {
-        assertLifecycleTransition(envelope.status, "canceled");
-      } catch {
-        throw new ConflictError(
-          `Cannot cancel envelope in ${envelope.status} state`,
-          ErrorCodes.COMMON_CONFLICT,
-          { envelopeId: command.envelopeId, currentStatus: envelope.status }
-        );
-      }
+      // Execute cancel operations using helper
+      const result = await executeCancelDeclineOperations(command, "canceled", envelopesRepo, auditService, eventService);
 
-      // Update envelope status
-      const now = nowIso();
-      await envelopesRepo.update(command.envelopeId, { 
-        status: "canceled",
-        updatedAt: now
-      });
-
-      const result: CancelEnvelopeResult = {
-        envelopeId: command.envelopeId,
-        status: "canceled",
-        canceledAt: now
-      };
-
-      // Publish audit and events
-      await publishAuditAndEvents(auditService, eventService, command, result, "CancelEnvelope");
-
-      return result;
+      return result as unknown as CancelEnvelopeResult;
     },
 
     async declineEnvelope(command: DeclineEnvelopeCommand): Promise<DeclineEnvelopeResult> {
       // Execute common services (validation and rate limiting)
       await executeCommonServices(validationService, rateLimitService, auditService, eventService, command, "DeclineEnvelope");
 
-      // Get and validate envelope
-      const envelope = await validateAndGetEnvelope(envelopesRepo, command.envelopeId);
-      
-      // Validate cancel/decline preconditions using domain rules
-      assertCancelDeclineAllowed(envelope.status);
-      
-      // Validate reason if provided
-      if (command.reason) {
-        assertReasonValid(command.reason);
-      }
-      
-      // Validate state transition
-      try {
-        assertLifecycleTransition(envelope.status, "declined");
-      } catch {
-        throw new ConflictError(
-          `Cannot decline envelope in ${envelope.status} state`,
-          ErrorCodes.COMMON_CONFLICT,
-          { envelopeId: command.envelopeId, currentStatus: envelope.status }
-        );
-      }
+      // Execute decline operations using helper
+      const result = await executeCancelDeclineOperations(command, "declined", envelopesRepo, auditService, eventService);
 
-      // Update envelope status
-      const now = nowIso();
-      await envelopesRepo.update(command.envelopeId, { 
-        status: "declined",
-        updatedAt: now
-      });
-
-      const result: DeclineEnvelopeResult = {
-        envelopeId: command.envelopeId,
-        status: "declined",
-        declinedAt: now
-      };
-
-      // Publish audit and events
-      await publishAuditAndEvents(auditService, eventService, command, result, "DeclineEnvelope");
-
-      return result;
+      return result as unknown as DeclineEnvelopeResult;
     },
 
     async finaliseEnvelope(command: FinaliseEnvelopeCommand): Promise<FinaliseEnvelopeResult> {

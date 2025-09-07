@@ -4,7 +4,7 @@
  * @description Handles validation for Global Party operations using Zod schemas
  */
 
-import { BadRequestError, UnprocessableEntityError } from "@lawprotect/shared-ts";
+import { BadRequestError, UnprocessableEntityError, isEmail } from "@lawprotect/shared-ts";
 import type { 
   GlobalPartiesValidationService,
   CreateGlobalPartyControllerInput,
@@ -33,8 +33,8 @@ export class DefaultGlobalPartiesValidationService implements GlobalPartiesValid
       );
     }
 
-    // Basic email format validation - using simple validation to prevent ReDoS
-    if (!this.isValidEmailFormat(input.email)) {
+    // Basic email format validation using shared validation
+    if (!isEmail(input.email)) {
       throw new UnprocessableEntityError(
         "Invalid email format",
         "GLOBAL_PARTY_INVALID_EMAIL_FORMAT"
@@ -99,31 +99,4 @@ export class DefaultGlobalPartiesValidationService implements GlobalPartiesValid
     }
   }
 
-  /**
-   * @summary Validates email format without using regex to prevent ReDoS attacks
-   * @description Simple email validation that checks basic structure without complex regex
-   */
-  private isValidEmailFormat(email: string): boolean {
-    if (!email || typeof email !== 'string') return false;
-    
-    const trimmedEmail = email.trim();
-    if (trimmedEmail.length === 0 || trimmedEmail.length > 254) return false;
-    
-    const atIndex = trimmedEmail.indexOf('@');
-    if (atIndex <= 0 || atIndex === trimmedEmail.length - 1) return false;
-    
-    const localPart = trimmedEmail.substring(0, atIndex);
-    const domainPart = trimmedEmail.substring(atIndex + 1);
-    
-    // Check local part
-    if (localPart.length === 0 || localPart.length > 64) return false;
-    if (localPart.includes(' ') || localPart.includes('@')) return false;
-    
-    // Check domain part
-    if (domainPart.length === 0 || domainPart.length > 253) return false;
-    if (!domainPart.includes('.')) return false;
-    if (domainPart.includes(' ')) return false;
-    
-    return true;
-  }
 }

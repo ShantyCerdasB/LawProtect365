@@ -27,6 +27,79 @@ import {
  */
 export class InputsValidationService {
   /**
+   * @summary Validates common base fields (tenantId, envelopeId)
+   * @description Helper method to validate common fields across all operations
+   */
+  private validateBaseFields(tenantId: string, envelopeId: string, context: any): void {
+    if (!tenantId || tenantId.trim().length === 0) {
+      throw new BadRequestError(
+        "Tenant ID is required",
+        ErrorCodes.COMMON_BAD_REQUEST,
+        context
+      );
+    }
+    if (!envelopeId || envelopeId.trim().length === 0) {
+      throw new BadRequestError(
+        "Envelope ID is required",
+        ErrorCodes.COMMON_BAD_REQUEST,
+        context
+      );
+    }
+  }
+
+  /**
+   * @summary Validates input ID field
+   * @description Helper method to validate input ID field
+   */
+  private validateInputId(inputId: string, context: any): void {
+    if (!inputId || inputId.trim().length === 0) {
+      throw new BadRequestError(
+        "Input ID is required",
+        ErrorCodes.COMMON_BAD_REQUEST,
+        context
+      );
+    }
+  }
+
+  /**
+   * @summary Validates coordinate values
+   * @description Helper method to validate x, y coordinates
+   */
+  private validateCoordinates(x: number, y: number, context: any, index?: number): void {
+    const prefix = index !== undefined ? `for item at index ${index}` : '';
+    
+    if (x < 0 || !Number.isFinite(x)) {
+      throw new BadRequestError(
+        `X coordinate must be a non-negative number ${prefix}`,
+        ErrorCodes.COMMON_BAD_REQUEST,
+        context
+      );
+    }
+    if (y < 0 || !Number.isFinite(y)) {
+      throw new BadRequestError(
+        `Y coordinate must be a non-negative number ${prefix}`,
+        ErrorCodes.COMMON_BAD_REQUEST,
+        context
+      );
+    }
+  }
+
+  /**
+   * @summary Validates page number
+   * @description Helper method to validate page number
+   */
+  private validatePageNumber(page: number, context: any, index?: number): void {
+    const prefix = index !== undefined ? `for item at index ${index}` : '';
+    
+    if (page < 1 || !Number.isInteger(page)) {
+      throw new BadRequestError(
+        `Page number must be a positive integer ${prefix}`,
+        ErrorCodes.COMMON_BAD_REQUEST,
+        context
+      );
+    }
+  }
+  /**
    * @summary Validates input creation command
    * @description Ensures all required fields are present and valid
    */
@@ -75,29 +148,8 @@ export class InputsValidationService {
    * @description Ensures at least one field is provided for update
    */
   async validateUpdate(command: UpdateInputCommand): Promise<void> {
-    if (!command.tenantId || command.tenantId.trim().length === 0) {
-      throw new BadRequestError(
-        "Tenant ID is required",
-        ErrorCodes.COMMON_BAD_REQUEST,
-        { command }
-      );
-    }
-
-    if (!command.envelopeId || command.envelopeId.trim().length === 0) {
-      throw new BadRequestError(
-        "Envelope ID is required",
-        ErrorCodes.COMMON_BAD_REQUEST,
-        { command }
-      );
-    }
-
-    if (!command.inputId || command.inputId.trim().length === 0) {
-      throw new BadRequestError(
-        "Input ID is required",
-        ErrorCodes.COMMON_BAD_REQUEST,
-        { command }
-      );
-    }
+    this.validateBaseFields(command.tenantId, command.envelopeId, { command });
+    this.validateInputId(command.inputId, { command });
 
     const hasUpdates = command.updates.type !== undefined ||
                       command.updates.page !== undefined ||
@@ -116,28 +168,16 @@ export class InputsValidationService {
     }
 
     // Validate individual fields if provided
-    if (command.updates.page !== undefined && (command.updates.page < 1 || !Number.isInteger(command.updates.page))) {
-      throw new BadRequestError(
-        "Page number must be a positive integer",
-        ErrorCodes.COMMON_BAD_REQUEST,
-        { command }
-      );
+    if (command.updates.page !== undefined) {
+      this.validatePageNumber(command.updates.page, { command });
     }
 
-    if (command.updates.x !== undefined && (command.updates.x < 0 || !Number.isFinite(command.updates.x))) {
-      throw new BadRequestError(
-        "X coordinate must be a non-negative number",
-        ErrorCodes.COMMON_BAD_REQUEST,
-        { command }
-      );
-    }
-
-    if (command.updates.y !== undefined && (command.updates.y < 0 || !Number.isFinite(command.updates.y))) {
-      throw new BadRequestError(
-        "Y coordinate must be a non-negative number",
-        ErrorCodes.COMMON_BAD_REQUEST,
-        { command }
-      );
+    if (command.updates.x !== undefined && command.updates.y !== undefined) {
+      this.validateCoordinates(command.updates.x, command.updates.y, { command });
+    } else if (command.updates.x !== undefined) {
+      this.validateCoordinates(command.updates.x, 0, { command });
+    } else if (command.updates.y !== undefined) {
+      this.validateCoordinates(0, command.updates.y, { command });
     }
   }
 
@@ -146,21 +186,7 @@ export class InputsValidationService {
    * @description Ensures all positions are valid
    */
   async validateUpdatePositions(command: UpdateInputPositionsCommand): Promise<void> {
-    if (!command.tenantId || command.tenantId.trim().length === 0) {
-      throw new BadRequestError(
-        "Tenant ID is required",
-        ErrorCodes.COMMON_BAD_REQUEST,
-        { command }
-      );
-    }
-
-    if (!command.envelopeId || command.envelopeId.trim().length === 0) {
-      throw new BadRequestError(
-        "Envelope ID is required",
-        ErrorCodes.COMMON_BAD_REQUEST,
-        { command }
-      );
-    }
+    this.validateBaseFields(command.tenantId, command.envelopeId, { command });
 
     if (!command.items || command.items.length === 0) {
       throw new BadRequestError(
@@ -182,29 +208,8 @@ export class InputsValidationService {
         );
       }
 
-      if (item.page < 1 || !Number.isInteger(item.page)) {
-        throw new BadRequestError(
-          `Page number must be a positive integer for item at index ${i}`,
-          ErrorCodes.COMMON_BAD_REQUEST,
-          { command, index: i }
-        );
-      }
-
-      if (item.x < 0 || !Number.isFinite(item.x)) {
-        throw new BadRequestError(
-          `X coordinate must be a non-negative number for item at index ${i}`,
-          ErrorCodes.COMMON_BAD_REQUEST,
-          { command, index: i }
-        );
-      }
-
-      if (item.y < 0 || !Number.isFinite(item.y)) {
-        throw new BadRequestError(
-          `Y coordinate must be a non-negative number for item at index ${i}`,
-          ErrorCodes.COMMON_BAD_REQUEST,
-          { command, index: i }
-        );
-      }
+      this.validatePageNumber(item.page, { command, index: i }, i);
+      this.validateCoordinates(item.x, item.y, { command, index: i }, i);
     }
   }
 
@@ -213,29 +218,8 @@ export class InputsValidationService {
    * @description Ensures required fields are present
    */
   async validateDelete(command: DeleteInputCommand): Promise<void> {
-    if (!command.tenantId || command.tenantId.trim().length === 0) {
-      throw new BadRequestError(
-        "Tenant ID is required",
-        ErrorCodes.COMMON_BAD_REQUEST,
-        { command }
-      );
-    }
-
-    if (!command.envelopeId || command.envelopeId.trim().length === 0) {
-      throw new BadRequestError(
-        "Envelope ID is required",
-        ErrorCodes.COMMON_BAD_REQUEST,
-        { command }
-      );
-    }
-
-    if (!command.inputId || command.inputId.trim().length === 0) {
-      throw new BadRequestError(
-        "Input ID is required",
-        ErrorCodes.COMMON_BAD_REQUEST,
-        { command }
-      );
-    }
+    this.validateBaseFields(command.tenantId, command.envelopeId, { command });
+    this.validateInputId(command.inputId, { command });
   }
 
   /**
@@ -243,29 +227,8 @@ export class InputsValidationService {
    * @description Ensures required fields are present for query
    */
   async validateGetById(query: GetInputQuery): Promise<void> {
-    if (!query.tenantId || query.tenantId.trim().length === 0) {
-      throw new BadRequestError(
-        "Tenant ID is required",
-        ErrorCodes.COMMON_BAD_REQUEST,
-        { query }
-      );
-    }
-
-    if (!query.envelopeId || query.envelopeId.trim().length === 0) {
-      throw new BadRequestError(
-        "Envelope ID is required",
-        ErrorCodes.COMMON_BAD_REQUEST,
-        { query }
-      );
-    }
-
-    if (!query.inputId || query.inputId.trim().length === 0) {
-      throw new BadRequestError(
-        "Input ID is required",
-        ErrorCodes.COMMON_BAD_REQUEST,
-        { query }
-      );
-    }
+    this.validateBaseFields(query.tenantId, query.envelopeId, { query });
+    this.validateInputId(query.inputId, { query });
   }
 
   /**
@@ -273,21 +236,7 @@ export class InputsValidationService {
    * @description Ensures required fields are present and pagination limits are valid
    */
   async validateListByEnvelope(query: ListInputsQuery): Promise<void> {
-    if (!query.tenantId || query.tenantId.trim().length === 0) {
-      throw new BadRequestError(
-        "Tenant ID is required",
-        ErrorCodes.COMMON_BAD_REQUEST,
-        { query }
-      );
-    }
-
-    if (!query.envelopeId || query.envelopeId.trim().length === 0) {
-      throw new BadRequestError(
-        "Envelope ID is required",
-        ErrorCodes.COMMON_BAD_REQUEST,
-        { query }
-      );
-    }
+    this.validateBaseFields(query.tenantId, query.envelopeId, { query });
 
     // Validate pagination limits
     if (query.limit !== undefined) {
@@ -375,29 +324,8 @@ export class InputsValidationService {
       );
     }
 
-    if (input.page < 1 || !Number.isInteger(input.page)) {
-      throw new BadRequestError(
-        `Page number must be a positive integer for input at index ${index}`,
-        ErrorCodes.COMMON_BAD_REQUEST,
-        { input, index }
-      );
-    }
-
-    if (input.x < 0 || !Number.isFinite(input.x)) {
-      throw new BadRequestError(
-        `X coordinate must be a non-negative number for input at index ${index}`,
-        ErrorCodes.COMMON_BAD_REQUEST,
-        { input, index }
-      );
-    }
-
-    if (input.y < 0 || !Number.isFinite(input.y)) {
-      throw new BadRequestError(
-        `Y coordinate must be a non-negative number for input at index ${index}`,
-        ErrorCodes.COMMON_BAD_REQUEST,
-        { input, index }
-      );
-    }
+    this.validatePageNumber(input.page, { input, index }, index);
+    this.validateCoordinates(input.x, input.y, { input, index }, index);
 
     if (typeof input.required !== "boolean") {
       throw new BadRequestError(

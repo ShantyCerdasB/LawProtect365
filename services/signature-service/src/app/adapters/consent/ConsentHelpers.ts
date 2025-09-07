@@ -214,3 +214,74 @@ function mapRowToUpdateResult(row: any): any {
     updatedAt: row.updatedAt,
   };
 }
+
+/**
+ * @summary Centralized consent submission with audit logging
+ * @description Handles consent submission and audit logging in a reusable way
+ * 
+ * @param consentsRepo - Consent repository
+ * @param auditService - Audit service (optional)
+ * @param input - Submit consent input
+ * @param actorContext - Actor context (optional)
+ * @param previousConsent - Previous consent state (optional)
+ * @returns Submit consent result
+ */
+export async function submitConsentWithAudit(
+  consentsRepo: any,
+  auditService: any,
+  input: any,
+  actorContext?: any,
+  previousConsent?: any
+): Promise<any> {
+  const row = await consentsRepo.update(
+    { envelopeId: input.envelopeId, consentId: input.consentId },
+    { 
+      status: "granted" as any,
+      updatedAt: asISO(nowIso())
+    }
+  );
+
+  const result = mapRowToSubmitResult(row);
+
+  // ✅ AUDIT: Log consent submission if audit service available
+  if (auditService && actorContext && previousConsent) {
+    await auditService.logConsentUpdate({
+      tenantId: previousConsent.tenantId as any, // Cast to avoid branded type issues
+      envelopeId: input.envelopeId,
+      actor: actorContext,
+    }, {
+      consentId: input.consentId,
+      previousStatus: previousConsent.status,
+      newStatus: "granted",
+      reason: "consent_submitted",
+      metadata: {
+        previousStatus: previousConsent.status,
+        previousMetadata: previousConsent.metadata,
+        previousExpiresAt: previousConsent.expiresAt,
+        submittedAt: result.submittedAt,
+      },
+    });
+  }
+
+  return result;
+}
+
+/**
+ * @summary Centralized mapping function for consent submit results
+ * @description Maps consent row to submit result format
+ * 
+ * @param row - Consent row from repository
+ * @returns Mapped consent submit result
+ */
+function mapRowToSubmitResult(row: any): any {
+  return {
+    id: row.consentId,
+    envelopeId: row.envelopeId,
+    partyId: row.partyId,
+    type: row.consentType,
+    status: row.status,
+    metadata: row.metadata,
+    expiresAt: row.expiresAt,
+    submittedAt: row.updatedAt,
+  };
+}
