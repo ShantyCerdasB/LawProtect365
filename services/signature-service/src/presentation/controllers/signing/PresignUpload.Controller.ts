@@ -4,8 +4,7 @@
  * @description Handles presigned upload URL requests
  */
 
-import { createCommandController } from "../../../shared/controllers/controllerFactory";
-import { makeSigningCommandsPort } from "../../../app/adapters/signing/makeSigningCommandsPort";
+import { createCommandController, createSigningDependenciesWithS3 } from "../../../shared/controllers/controllerFactory";
 import { DefaultSigningCommandService } from "../../../app/services/Signing";
 import { PresignUploadBody } from "../../../presentation/schemas/signing/PresignUpload.schema";
 import { EnvelopeIdPath } from "../../../presentation/schemas/common/path";
@@ -19,30 +18,7 @@ export const PresignUploadController = createCommandController<PresignUploadCont
   bodySchema: PresignUploadBody,
   pathSchema: EnvelopeIdPath,
   appServiceClass: DefaultSigningCommandService,
-  createDependencies: (c) => makeSigningCommandsPort(
-    c.repos.envelopes,
-    c.repos.parties,
-    {
-      events: c.events.publisher,
-      ids: c.ids,
-      time: c.time,
-      rateLimit: c.rateLimitStore,
-      signer: c.crypto.signer,
-      idempotency: c.idempotency.runner,
-      signingConfig: {
-        defaultKeyId: c.config.kms.signerKeyId,
-        allowedAlgorithms: [c.config.kms.signingAlgorithm],
-      },
-      uploadConfig: {
-        uploadBucket: c.config.s3.evidenceBucket,
-        uploadTtlSeconds: c.config.s3.presignTtlSeconds,
-      },
-      downloadConfig: {
-        signedBucket: c.config.s3.signedBucket,
-        downloadTtlSeconds: c.config.s3.presignTtlSeconds,
-      },
-    }
-  ),
+  createDependencies: createSigningDependenciesWithS3,
   extractParams: (path, body) => ({
     tenantId: path.tenantId,
     envelopeId: path.id,

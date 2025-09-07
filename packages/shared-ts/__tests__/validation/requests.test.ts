@@ -91,51 +91,52 @@ describe("validateRequest()", () => {
     expect(out.body).toBeUndefined();
   });
 
-  it("bubbles path validation errors (400)", () => {
-    const schemas = {
-      path: z.object({ id: z.string().uuid() }),
-    };
+  // Helper function to test validation errors
+  const testValidationError = (
+    testName: string,
+    schemas: any,
+    eventOverrides: any,
+    expectedCode: string,
+    expectedStatus: number,
+    expectedMessagePattern: RegExp
+  ) => {
+    it(testName, () => {
+      const evt = mkEvt(eventOverrides);
+      expect(() => validateRequest(evt as any, schemas)).toThrow(MockAppError);
+      try {
+        validateRequest(evt as any, schemas);
+      } catch (err: any) {
+        expect(err.code).toBe(expectedCode);
+        expect(err.httpStatus).toBe(expectedStatus);
+        expect(String(err.message)).toMatch(expectedMessagePattern);
+      }
+    });
+  };
 
-    const evt = mkEvt({ pathParameters: { id: "not-a-uuid" } });
-    expect(() => validateRequest(evt as any, schemas)).toThrow(MockAppError);
-    try {
-      validateRequest(evt as any, schemas);
-    } catch (err: any) {
-      expect(err.code).toBe("COMMON_BAD_REQUEST");
-      expect(err.httpStatus).toBe(400);
-      expect(String(err.message)).toMatch(/Invalid path parameters/i);
-    }
-  });
+  testValidationError(
+    "bubbles path validation errors (400)",
+    { path: z.object({ id: z.string().uuid() }) },
+    { pathParameters: { id: "not-a-uuid" } },
+    "COMMON_BAD_REQUEST",
+    400,
+    /Invalid path parameters/i
+  );
 
-  it("bubbles query validation errors (400)", () => {
-    const schemas = {
-      query: z.object({ page: z.string().regex(/^\d+$/) }),
-    };
+  testValidationError(
+    "bubbles query validation errors (400)",
+    { query: z.object({ page: z.string().regex(/^\d+$/) }) },
+    { queryStringParameters: { page: "abc" } },
+    "COMMON_BAD_REQUEST",
+    400,
+    /Invalid query parameters/i
+  );
 
-    const evt = mkEvt({ queryStringParameters: { page: "abc" } });
-    expect(() => validateRequest(evt as any, schemas)).toThrow(MockAppError);
-    try {
-      validateRequest(evt as any, schemas);
-    } catch (err: any) {
-      expect(err.code).toBe("COMMON_BAD_REQUEST");
-      expect(err.httpStatus).toBe(400);
-      expect(String(err.message)).toMatch(/Invalid query parameters/i);
-    }
-  });
-
-  it("bubbles body validation errors (422)", () => {
-    const schemas = {
-      body: z.object({ name: z.string().min(1) }),
-    };
-
-    const evt = mkEvt({ body: JSON.stringify({ name: "" }) }); // invalid per schema
-    expect(() => validateRequest(evt as any, schemas)).toThrow(MockAppError);
-    try {
-      validateRequest(evt as any, schemas);
-    } catch (err: any) {
-      expect(err.code).toBe("COMMON_UNPROCESSABLE_ENTITY");
-      expect(err.httpStatus).toBe(422);
-      expect(String(err.message)).toMatch(/Unprocessable Entity/i);
-    }
-  });
+  testValidationError(
+    "bubbles body validation errors (422)",
+    { body: z.object({ name: z.string().min(1) }) },
+    { body: JSON.stringify({ name: "" }) },
+    "COMMON_UNPROCESSABLE_ENTITY",
+    422,
+    /Unprocessable Entity/i
+  );
 });

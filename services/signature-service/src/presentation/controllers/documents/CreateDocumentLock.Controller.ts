@@ -10,6 +10,7 @@ import { DefaultDocumentsCommandService } from "../../../app/services/Documents"
 import { DocumentIdPath } from "../../../presentation/schemas/common/path";
 import { z } from "@lawprotect/shared-ts";
 import type { DocumentLock } from "../../../domain/value-objects/DocumentLock";
+import { randomBytes } from "crypto";
 
 /**
  * @description Body payload schema for creating a document lock
@@ -34,7 +35,7 @@ export const CreateDocumentLockController = createCommandController<{ documentId
   extractParams: (path, body) => ({
     documentId: path.id,
     lock: {
-      lockId: `lock-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+      lockId: `lock-${Date.now()}-${randomBytes(8).toString('hex')}`,
       documentId: path.id,
       ownerId: path.actor?.userId || "",
       ownerEmail: path.actor?.email || "",

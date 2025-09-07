@@ -119,6 +119,63 @@ export function createConsentAuditContext(
 }
 
 /**
+ * @summary Updates a consent record with audit logging
+ * @description Centralized consent update logic with optional audit logging
+ * 
+ * @param consentsRepo - Consent repository
+ * @param auditService - Optional audit service
+ * @param input - Consent update input
+ * @param actorContext - Optional actor context for audit
+ * @returns Promise resolving to the updated consent result
+ */
+export async function updateConsentWithAudit(
+  consentsRepo: ConsentCommandRepo,
+  auditService: ConsentAuditService | undefined,
+  input: any,
+  actorContext?: ActorContext
+): Promise<any> {
+  const changes: any = {
+    updatedAt: asISO(nowIso()),
+    ...(input.status !== undefined && { status: input.status }),
+    ...(input.expiresAt !== undefined && { expiresAt: asISOOpt(input.expiresAt) }),
+    ...(input.metadata !== undefined && { metadata: input.metadata }),
+  };
+
+  const row = await consentsRepo.update(
+    { envelopeId: input.envelopeId, consentId: input.consentId },
+    changes
+  );
+
+  const result = mapRowToUpdateResult(row);
+
+  // ✅ AUDIT: Log consent update if audit service available
+  if (auditService && actorContext) {
+    await auditService.logConsentUpdate({
+      tenantId: input.tenantId,
+      envelopeId: input.envelopeId,
+      actor: actorContext,
+    }, {
+      consentId: input.consentId,
+      previousStatus: row.status,
+      newStatus: input.status || row.status,
+      reason: "manual_update",
+      metadata: {
+        changes: {
+          status: input.status,
+          expiresAt: input.expiresAt,
+          metadata: input.metadata,
+        },
+        previousStatus: row.status,
+        previousExpiresAt: row.expiresAt,
+        previousMetadata: row.metadata,
+      },
+    });
+  }
+
+  return result;
+}
+
+/**
  * @summary Maps consent row to result format
  * @description Centralized mapping function for consent results
  * 
@@ -135,5 +192,25 @@ function mapConsentRowToResult(row: any): CreateConsentAppResult {
     metadata: row.metadata,
     expiresAt: row.expiresAt,
     createdAt: row.createdAt,
+  };
+}
+
+/**
+ * @summary Maps consent row to update result format
+ * @description Centralized mapping function for consent update results
+ * 
+ * @param row - Consent row from repository
+ * @returns Mapped consent update result
+ */
+function mapRowToUpdateResult(row: any): any {
+  return {
+    id: row.consentId,
+    envelopeId: row.envelopeId,
+    partyId: row.partyId,
+    type: row.consentType,
+    status: row.status,
+    metadata: row.metadata,
+    expiresAt: row.expiresAt,
+    updatedAt: row.updatedAt,
   };
 }

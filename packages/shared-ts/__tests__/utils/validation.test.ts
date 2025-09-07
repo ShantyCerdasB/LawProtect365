@@ -79,34 +79,43 @@ describe("isEmail", () => {
     expect(isEmail("local.part@sub.example-domain.com")).toBe(true);
   });
 
-  it("rejects addresses without exactly one @ or with empty parts", () => {
-    expect(isEmail("ab.co")).toBe(false);         // no @
-    expect(isEmail("@example.com")).toBe(false);  // empty local
-    expect(isEmail("a@")).toBe(false);            // empty domain
-    expect(isEmail("a@@b.com")).toBe(false);      // multiple @
-  });
+  // Helper function to test invalid email cases
+  const testInvalidEmails = (testName: string, invalidEmails: string[]) => {
+    it(testName, () => {
+      invalidEmails.forEach(email => {
+        expect(isEmail(email)).toBe(false);
+      });
+    });
+  };
 
-  it("rejects invalid local part shapes", () => {
-    expect(isEmail(".a@example.com")).toBe(false);     // leading dot
-    expect(isEmail("a.@example.com")).toBe(false);     // trailing dot
-    expect(isEmail("a..b@example.com")).toBe(false);   // double dot
-  });
+  testInvalidEmails("rejects addresses without exactly one @ or with empty parts", [
+    "ab.co",         // no @
+    "@example.com",  // empty local
+    "a@",            // empty domain
+    "a@@b.com"       // multiple @
+  ]);
 
-  it("enforces domain structure and label rules", () => {
-    expect(isEmail("a@b")).toBe(false);                // no dot in domain
-    expect(isEmail("a@.example.com")).toBe(false);     // dot at start
-    expect(isEmail("a@example.com.")).toBe(false);     // dot at end
-    expect(isEmail("a@exa..mple.com")).toBe(false);    // double dot
-    expect(isEmail("a@-example.com")).toBe(false);     // label starts with hyphen
-    expect(isEmail("a@example-.com")).toBe(false);     // label ends with hyphen
-    expect(isEmail("a@exa_mple.com")).toBe(false);     // underscore not allowed in label
-  });
+  testInvalidEmails("rejects invalid local part shapes", [
+    ".a@example.com",     // leading dot
+    "a.@example.com",     // trailing dot
+    "a..b@example.com"    // double dot
+  ]);
 
-  it("rejects whitespace or control characters anywhere", () => {
-    expect(isEmail("a@exa mple.com")).toBe(false);
-    expect(isEmail("a@\nexample.com")).toBe(false);
-    expect(isEmail(" a@example.com")).toBe(false);
-  });
+  testInvalidEmails("enforces domain structure and label rules", [
+    "a@b",                // no dot in domain
+    "a@.example.com",     // dot at start
+    "a@example.com.",     // dot at end
+    "a@exa..mple.com",    // double dot
+    "a@-example.com",     // label starts with hyphen
+    "a@example-.com",     // label ends with hyphen
+    "a@exa_mple.com"      // underscore not allowed in label
+  ]);
+
+  testInvalidEmails("rejects whitespace or control characters anywhere", [
+    "a@exa mple.com",
+    "a@\nexample.com",
+    " a@example.com"
+  ]);
 
   it("honors length limits for local, domain, and overall", () => {
     const local64 = "l".repeat(64);

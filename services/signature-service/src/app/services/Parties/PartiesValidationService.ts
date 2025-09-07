@@ -101,8 +101,7 @@ export class PartiesValidationService {
         );
       }
 
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(input.email)) {
+      if (!this.isValidEmailFormat(input.email)) {
         throw new BadRequestError(
           "Invalid email format",
           ErrorCodes.COMMON_BAD_REQUEST,

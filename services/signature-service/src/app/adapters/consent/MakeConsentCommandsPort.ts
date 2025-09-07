@@ -19,7 +19,6 @@ import type {
 } from "../../../shared/types/consent/AppServiceInputs";
 import type {
   ConsentRepoRow,
-  ConsentRepoUpdateInput,
 } from "../../../shared/types/consent/ConsentTypes";
 import type { ConsentCommandRepo, Ids } from "../../../shared/types/consent/AdapterDependencies";
 import type { ConsentId, EnvelopeId, PartyId } from "../../../domain/value-objects/Ids";
@@ -31,30 +30,12 @@ import type { ConsentAuditService } from "../../services/Consent/ConsentAuditSer
 import type { ConsentEventService } from "../../services/Consent/ConsentEventService";
 
 import type { ActorContext } from "../../../domain/entities/ActorContext";
-import { createConsentWithAudit, logConsentDeletionAudit } from "./ConsentHelpers";
+import { createConsentWithAudit, logConsentDeletionAudit, updateConsentWithAudit } from "./ConsentHelpers";
 import type { IdempotencyRunner } from "../../../infrastructure/idempotency/IdempotencyRunner";
 import type { GlobalPartiesRepository } from "../../../shared/contracts/repositories/global-parties/GlobalPartiesRepository";
 import type { FindOrCreatePartyInput } from "../../../shared/types/global-parties";
 import { NotFoundError, BadRequestError } from "../../../shared/errors";
 
-/**
- * @summary Maps a repository row to an update result
- * @description Converts a repository row to the domain update result format
- *
- * @param {ConsentRepoRow} r - Repository row from database
- * @returns {UpdateConsentAppResult} Domain update result record
- */
-const mapRowToUpdateResult = (r: ConsentRepoRow): UpdateConsentAppResult => ({
-  id: r.consentId as ConsentId,
-  envelopeId: r.envelopeId as EnvelopeId,
-  partyId: r.partyId as PartyId,
-  type: r.consentType as ConsentType,
-  status: r.status,
-  createdAt: r.createdAt || "",
-  updatedAt: r.updatedAt || "",
-  expiresAt: r.expiresAt,
-  metadata: r.metadata,
-});
 
 /**
  * @summary Maps a repository row to a submit result
@@ -323,90 +304,24 @@ export function makeConsentCommandsPort(
         return idempotencyRunner.run(
           input.idempotencyKey,
           async () => {
-            const changes: ConsentRepoUpdateInput = {
-              updatedAt: asISO(nowIso()),
-              ...(input.status !== undefined && { status: input.status }),
-              ...(input.expiresAt !== undefined && { expiresAt: asISOOpt(input.expiresAt) }),
-              ...(input.metadata !== undefined && { metadata: input.metadata }),
-            };
-
-            const row = await consentsRepo.update(
-              { envelopeId: input.envelopeId, consentId: input.consentId },
-              changes
+            return await updateConsentWithAudit(
+              consentsRepo,
+              auditService,
+              input,
+              actorContext
             );
-
-            const result = mapRowToUpdateResult(row);
-
-            // ✅ AUDIT: Log consent update if audit service available
-            if (auditService && actorContext) {
-              await auditService.logConsentUpdate({
-                tenantId: input.tenantId,
-                envelopeId: input.envelopeId,
-                actor: actorContext,
-              }, {
-                consentId: input.consentId,
-                previousStatus: row.status,
-                newStatus: input.status || row.status,
-                reason: "manual_update",
-                metadata: {
-                  changes: {
-                    status: input.status,
-                    expiresAt: input.expiresAt,
-                    metadata: input.metadata,
-                  },
-                  previousStatus: row.status,
-                  previousExpiresAt: row.expiresAt,
-                  previousMetadata: row.metadata,
-                },
-              });
-            }
-
-            return result;
           },
           input.ttlSeconds
         );
       }
 
       // Fallback to non-idempotent update
-      const changes: ConsentRepoUpdateInput = {
-        updatedAt: asISO(nowIso()),
-        ...(input.status !== undefined && { status: input.status }),
-        ...(input.expiresAt !== undefined && { expiresAt: asISOOpt(input.expiresAt) }),
-        ...(input.metadata !== undefined && { metadata: input.metadata }),
-      };
-
-      const row = await consentsRepo.update(
-        { envelopeId: input.envelopeId, consentId: input.consentId },
-        changes
+      return await updateConsentWithAudit(
+        consentsRepo,
+        auditService,
+        input,
+        actorContext
       );
-
-      const result = mapRowToUpdateResult(row);
-
-      // ✅ AUDIT: Log consent update if audit service available
-      if (auditService && actorContext) {
-        await auditService.logConsentUpdate({
-          tenantId: input.tenantId,
-          envelopeId: input.envelopeId,
-          actor: actorContext,
-        }, {
-          consentId: input.consentId,
-          previousStatus: row.status,
-          newStatus: input.status || row.status,
-          reason: "manual_update",
-          metadata: {
-            changes: {
-              status: input.status,
-              expiresAt: input.expiresAt,
-              metadata: input.metadata,
-            },
-            previousStatus: row.status,
-            previousExpiresAt: row.expiresAt,
-            previousMetadata: row.metadata,
-          },
-        });
-      }
-
-      return result;
     },
 
     /**

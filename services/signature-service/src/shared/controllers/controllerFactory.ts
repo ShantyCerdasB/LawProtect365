@@ -11,6 +11,7 @@ import { getContainer } from "../../core/Container";
 import type { CommandControllerConfig } from "../contracts/controllers";
 import { RESPONSE_TYPES } from "../../domain/values/enums";
 import type { Container } from "../contracts";
+import { makeSigningCommandsPort } from "../../app/adapters/signing/makeSigningCommandsPort";
 
 /**
  * @summary Creates a command controller (POST/PUT/PATCH/DELETE operations)
@@ -129,6 +130,37 @@ export const createConsentDependencies = (c: Container) => ({
   eventService: c.consent.events,
   idempotencyRunner: c.idempotency.runner
 });
+
+/**
+ * @summary Creates signing command dependencies with S3 service
+ * @description Helper function to create standardized signing command dependencies with S3 service
+ * @param c - Container instance
+ * @returns Signing command dependencies configuration with S3 service
+ */
+export const createSigningDependenciesWithS3 = (c: Container) => makeSigningCommandsPort(
+  c.repos.envelopes,
+  c.repos.parties,
+  {
+    events: c.signing.commandsPort,
+    ids: c.ids,
+    time: c.time,
+    rateLimit: c.signing.rateLimitService,
+    signer: c.crypto.signer,
+    idempotency: c.idempotency.runner,
+    signingConfig: {
+      defaultKeyId: c.config.kms.signerKeyId,
+      allowedAlgorithms: [c.config.kms.signingAlgorithm],
+    },
+    uploadConfig: {
+      uploadBucket: c.config.s3.evidenceBucket,
+      uploadTtlSeconds: c.config.s3.presignTtlSeconds,
+    },
+    downloadConfig: {
+      signedBucket: c.config.s3.signedBucket,
+      downloadTtlSeconds: c.config.s3.presignTtlSeconds,
+    },
+  }
+);
 
 /**
  * @summary Creates standardized envelope path extraction

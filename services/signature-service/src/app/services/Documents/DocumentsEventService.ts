@@ -7,7 +7,6 @@
 
 import { BaseEventService } from "../../../shared/services/BaseEventService";
 import type { DomainEvent } from "@lawprotect/shared-ts";
-import { makeEvent } from "@lawprotect/shared-ts";
 import type { DocumentId, EnvelopeId, TenantId } from "../../../domain/value-objects/Ids";
 import type { ActorContext } from "../../../domain/entities/ActorContext";
 
@@ -120,25 +119,12 @@ export class DefaultDocumentsEventService extends BaseEventService implements Do
     actor: ActorContext,
     traceId?: string
   ): Promise<void> {
-    const domainEvent: DomainEvent = makeEvent(
+    await this.publishStandardizedEvent(
       "document.created",
-      {
-        documentId,
-        envelopeId,
-        tenantId,
-        actor: {
-          userId: actor.userId,
-          email: actor.email,
-          ip: actor.ip,
-          userAgent: actor.userAgent,
-          role: actor.role,
-        },
-        occurredAt: new Date().toISOString(),
-      },
-      traceId ? { "x-trace-id": traceId } : undefined
+      { documentId, envelopeId, tenantId },
+      actor,
+      traceId
     );
-    
-    await this.publishDomainEvent(domainEvent, traceId);
   }
 
   /**
@@ -157,25 +143,12 @@ export class DefaultDocumentsEventService extends BaseEventService implements Do
     actor: ActorContext,
     traceId?: string
   ): Promise<void> {
-    const domainEvent: DomainEvent = makeEvent(
+    await this.publishStandardizedEvent(
       "document.uploaded",
-      {
-        documentId,
-        envelopeId,
-        tenantId,
-        actor: {
-          userId: actor.userId,
-          email: actor.email,
-          ip: actor.ip,
-          userAgent: actor.userAgent,
-          role: actor.role,
-        },
-        occurredAt: new Date().toISOString(),
-      },
-      traceId ? { "x-trace-id": traceId } : undefined
+      { documentId, envelopeId, tenantId },
+      actor,
+      traceId
     );
-    
-    await this.publishDomainEvent(domainEvent, traceId);
   }
 
   /**
@@ -194,25 +167,12 @@ export class DefaultDocumentsEventService extends BaseEventService implements Do
     actor: ActorContext,
     traceId?: string
   ): Promise<void> {
-    const domainEvent: DomainEvent = makeEvent(
+    await this.publishStandardizedEvent(
       "document.updated",
-      {
-        documentId,
-        envelopeId,
-        tenantId,
-        actor: {
-          userId: actor.userId,
-          email: actor.email,
-          ip: actor.ip,
-          userAgent: actor.userAgent,
-          role: actor.role,
-        },
-        occurredAt: new Date().toISOString(),
-      },
-      traceId ? { "x-trace-id": traceId } : undefined
+      { documentId, envelopeId, tenantId },
+      actor,
+      traceId
     );
-    
-    await this.publishDomainEvent(domainEvent, traceId);
   }
 
   /**
@@ -231,25 +191,12 @@ export class DefaultDocumentsEventService extends BaseEventService implements Do
     actor: ActorContext,
     traceId?: string
   ): Promise<void> {
-    const domainEvent: DomainEvent = makeEvent(
+    await this.publishStandardizedEvent(
       "document.deleted",
-      {
-        documentId,
-        envelopeId,
-        tenantId,
-        actor: {
-          userId: actor.userId,
-          email: actor.email,
-          ip: actor.ip,
-          userAgent: actor.userAgent,
-          role: actor.role,
-        },
-        occurredAt: new Date().toISOString(),
-      },
-      traceId ? { "x-trace-id": traceId } : undefined
+      { documentId, envelopeId, tenantId },
+      actor,
+      traceId
     );
-    
-    await this.publishDomainEvent(domainEvent, traceId);
   }
 
   /**
