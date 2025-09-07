@@ -7,7 +7,6 @@
 
 import { BaseEventService } from "../../../shared/services/BaseEventService";
 import type { DomainEvent } from "@lawprotect/shared-ts";
-import { makeEvent } from "@lawprotect/shared-ts";
 import type { TenantId, PartyId } from "../../../domain/value-objects/Ids";
 import type { ActorContext } from "../../../domain/entities/ActorContext";
 
@@ -31,24 +30,12 @@ export class GlobalPartiesEventService extends BaseEventService {
     actor: ActorContext,
     traceId?: string
   ): Promise<void> {
-    const domainEvent: DomainEvent = makeEvent(
+    await this.publishStandardizedEvent(
       "global_party.created",
-      {
-        partyId,
-        tenantId,
-        actor: {
-          userId: actor.userId,
-          email: actor.email,
-          ip: actor.ip,
-          userAgent: actor.userAgent,
-          role: actor.role,
-        },
-        occurredAt: new Date().toISOString(),
-      },
-      traceId ? { "x-trace-id": traceId } : undefined
+      { partyId, tenantId },
+      actor,
+      traceId
     );
-    
-    await this.publishDomainEvent(domainEvent, traceId);
   }
 
   /**
@@ -67,25 +54,12 @@ export class GlobalPartiesEventService extends BaseEventService {
     actor: ActorContext,
     traceId?: string
   ): Promise<void> {
-    const domainEvent: DomainEvent = makeEvent(
+    await this.publishStandardizedEvent(
       "global_party.updated",
-      {
-        partyId,
-        tenantId,
-        updatedFields,
-        actor: {
-          userId: actor.userId,
-          email: actor.email,
-          ip: actor.ip,
-          userAgent: actor.userAgent,
-          role: actor.role,
-        },
-        occurredAt: new Date().toISOString(),
-      },
-      traceId ? { "x-trace-id": traceId } : undefined
+      { partyId, tenantId, updatedFields },
+      actor,
+      traceId
     );
-    
-    await this.publishDomainEvent(domainEvent, traceId);
   }
 
   /**
@@ -102,24 +76,12 @@ export class GlobalPartiesEventService extends BaseEventService {
     actor: ActorContext,
     traceId?: string
   ): Promise<void> {
-    const domainEvent: DomainEvent = makeEvent(
+    await this.publishStandardizedEvent(
       "global_party.deleted",
-      {
-        partyId,
-        tenantId,
-        actor: {
-          userId: actor.userId,
-          email: actor.email,
-          ip: actor.ip,
-          userAgent: actor.userAgent,
-          role: actor.role,
-        },
-        occurredAt: new Date().toISOString(),
-      },
-      traceId ? { "x-trace-id": traceId } : undefined
+      { partyId, tenantId },
+      actor,
+      traceId
     );
-    
-    await this.publishDomainEvent(domainEvent, traceId);
   }
 
   /**

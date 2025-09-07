@@ -53,6 +53,33 @@ export const createController = <TInput, TOutput>(
 };
 
 /**
+ * @summary Creates base signing configuration
+ * @description Helper function to create the base signing configuration shared across all signing operations
+ * @param c - Container instance
+ * @returns Base signing configuration
+ */
+const createBaseSigningConfig = (c: Container) => ({
+  events: c.signing.commandsPort,
+  ids: c.ids,
+  time: c.time,
+  rateLimit: c.signing.rateLimitService,
+  signer: c.crypto.signer,
+  idempotency: c.idempotency.runner,
+  signingConfig: {
+    defaultKeyId: c.config.kms.signerKeyId,
+    allowedAlgorithms: [c.config.kms.signingAlgorithm],
+  },
+  uploadConfig: {
+    uploadBucket: c.config.s3.evidenceBucket,
+    uploadTtlSeconds: c.config.s3.presignTtlSeconds,
+  },
+  downloadConfig: {
+    signedBucket: c.config.s3.signedBucket,
+    downloadTtlSeconds: c.config.s3.presignTtlSeconds,
+  },
+});
+
+/**
  * @summary Creates signing command dependencies configuration
  * @description Helper function to create standardized signing command dependencies
  * @param c - Container instance
@@ -60,32 +87,8 @@ export const createController = <TInput, TOutput>(
  * @returns Signing command dependencies configuration
  */
 export const createSigningDependencies = (c: Container, includeS3Service = false) => {
-  const baseConfig = {
-    events: c.signing.commandsPort, // Use the correct event adapter
-    ids: c.ids,
-    time: c.time,
-    rateLimit: c.signing.rateLimitService,
-    signer: c.crypto.signer,
-    idempotency: c.idempotency.runner,
-    signingConfig: {
-      defaultKeyId: c.config.kms.signerKeyId,
-      allowedAlgorithms: [c.config.kms.signingAlgorithm],
-    },
-    uploadConfig: {
-      uploadBucket: c.config.s3.evidenceBucket,
-      uploadTtlSeconds: c.config.s3.presignTtlSeconds,
-    },
-    downloadConfig: {
-      signedBucket: c.config.s3.signedBucket,
-      downloadTtlSeconds: c.config.s3.presignTtlSeconds,
-    },
-  };
-
-  if (includeS3Service) {
-    return { ...baseConfig, s3Service: c.signing.s3Service };
-  }
-
-  return baseConfig;
+  const baseConfig = createBaseSigningConfig(c);
+  return includeS3Service ? { ...baseConfig, s3Service: c.signing.s3Service } : baseConfig;
 };
 
 /**
@@ -140,26 +143,7 @@ export const createConsentDependencies = (c: Container) => ({
 export const createSigningDependenciesWithS3 = (c: Container) => makeSigningCommandsPort(
   c.repos.envelopes,
   c.repos.parties,
-  {
-    events: c.signing.commandsPort,
-    ids: c.ids,
-    time: c.time,
-    rateLimit: c.signing.rateLimitService,
-    signer: c.crypto.signer,
-    idempotency: c.idempotency.runner,
-    signingConfig: {
-      defaultKeyId: c.config.kms.signerKeyId,
-      allowedAlgorithms: [c.config.kms.signingAlgorithm],
-    },
-    uploadConfig: {
-      uploadBucket: c.config.s3.evidenceBucket,
-      uploadTtlSeconds: c.config.s3.presignTtlSeconds,
-    },
-    downloadConfig: {
-      signedBucket: c.config.s3.signedBucket,
-      downloadTtlSeconds: c.config.s3.presignTtlSeconds,
-    },
-  }
+  createBaseSigningConfig(c)
 );
 
 /**
