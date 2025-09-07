@@ -109,6 +109,50 @@ export interface DocumentsValidationService {
  */
 export class DefaultDocumentsValidationService implements DocumentsValidationService {
   /**
+   * @summary Validates common document binary fields
+   * @description Helper method to validate content type, size, digest, page count, and actor context
+   */
+  private validateDocumentBinaryFields(command: { 
+    contentType: string; 
+    size: number; 
+    digest?: string; 
+    pageCount?: number; 
+    actor?: { userId?: any } 
+  }): void {
+    // Validate content type using domain rules
+    assertSupportedContentType(command.contentType);
+    
+    // Validate file size using domain rules
+    assertDocumentSizeLimit(command.size, FILE_SIZE_LIMITS.PDF);
+    
+    // Validate digest
+    if (!command.digest || command.digest.length !== 64) {
+      throw badRequest(
+        "Document digest must be a valid SHA-256 hash (64 characters)",
+        ErrorCodes.COMMON_BAD_REQUEST,
+        { field: "digest", value: command.digest, expectedLength: 64 }
+      );
+    }
+    
+    // Validate page count if provided
+    if (command.pageCount !== undefined && command.pageCount <= 0) {
+      throw badRequest(
+        "Page count must be greater than 0",
+        ErrorCodes.COMMON_BAD_REQUEST,
+        { field: "pageCount", value: command.pageCount }
+      );
+    }
+    
+    // Validate actor context
+    if (!command.actor?.userId) {
+      throw badRequest(
+        "Actor context with userId is required",
+        ErrorCodes.COMMON_BAD_REQUEST,
+        { field: "actor", value: command.actor }
+      );
+    }
+  }
+  /**
    * Validates a create document command
    * @param command - The create document command to validate
    * @throws {BadRequestError} When validation fails
@@ -131,38 +175,8 @@ export class DefaultDocumentsValidationService implements DocumentsValidationSer
       );
     }
 
-    // Validate content type using domain rules
-    assertSupportedContentType(command.contentType);
-
-    // Validate file size using domain rules
-    assertDocumentSizeLimit(command.size, FILE_SIZE_LIMITS.PDF);
-
-    // Validate digest
-    if (!command.digest || command.digest.length !== 64) {
-      throw badRequest(
-        "Document digest must be a valid SHA-256 hash (64 characters)",
-        ErrorCodes.COMMON_BAD_REQUEST,
-        { field: "digest", value: command.digest, expectedLength: 64 }
-      );
-    }
-
-    // Validate page count if provided
-    if (command.pageCount !== undefined && command.pageCount <= 0) {
-      throw badRequest(
-        "Page count must be greater than 0",
-        ErrorCodes.COMMON_BAD_REQUEST,
-        { field: "pageCount", value: command.pageCount }
-      );
-    }
-
-    // Validate actor context
-    if (!command.actor?.userId) {
-      throw badRequest(
-        "Actor context with userId is required",
-        ErrorCodes.COMMON_BAD_REQUEST,
-        { field: "actor", value: command.actor }
-      );
-    }
+    // Validate binary fields using helper
+    this.validateDocumentBinaryFields(command);
   }
 
   /**
@@ -234,38 +248,8 @@ export class DefaultDocumentsValidationService implements DocumentsValidationSer
       );
     }
 
-    // Validate content type using domain rules
-    assertSupportedContentType(command.contentType);
-
-    // Validate file size using domain rules
-    assertDocumentSizeLimit(command.size, FILE_SIZE_LIMITS.PDF);
-
-    // Validate digest
-    if (!command.digest || command.digest.length !== 64) {
-      throw badRequest(
-        "Document digest must be a valid SHA-256 hash (64 characters)",
-        ErrorCodes.COMMON_BAD_REQUEST,
-        { field: "digest", value: command.digest, expectedLength: 64 }
-      );
-    }
-
-    // Validate page count if provided
-    if (command.pageCount !== undefined && command.pageCount <= 0) {
-      throw badRequest(
-        "Page count must be greater than 0",
-        ErrorCodes.COMMON_BAD_REQUEST,
-        { field: "pageCount", value: command.pageCount }
-      );
-    }
-
-    // Validate actor context
-    if (!command.actor?.userId) {
-      throw badRequest(
-        "Actor context with userId is required",
-        ErrorCodes.COMMON_BAD_REQUEST,
-        { field: "actor", value: command.actor }
-      );
-    }
+    // Validate binary fields using helper
+    this.validateDocumentBinaryFields(command);
   }
 
   /**
