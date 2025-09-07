@@ -11,9 +11,20 @@ import type {
   UpdateDocumentBinaryCommand
 } from "../../ports/documents/DocumentsCommandsPort";
 import type { DocumentLock } from "../../../domain/value-objects/DocumentLock";
+import type { DocumentId, EnvelopeId } from "../../../domain/value-objects/Ids";
+import type { EnvelopeStatus } from "../../../domain/value-objects/EnvelopeStatus";
+import type { DocumentStatus } from "../../../domain/value-objects/DocumentStatus";
 import { badRequest } from "../../../shared/errors";
 import { ErrorCodes } from "@lawprotect/shared-ts";
-import { ALLOWED_CONTENT_TYPES, FILE_SIZE_LIMITS } from "../../../domain/values/enums";
+import { FILE_SIZE_LIMITS } from "../../../domain/values/enums";
+import { 
+  assertSupportedContentType, 
+  assertDocumentSizeLimit,
+  assertDocumentMutable,
+  assertDocumentBelongsToEnvelope,
+  assertEnvelopeDraftForDocumentModification,
+  assertDocumentLockDeletable
+} from "../../../domain/rules/Documents.rules";
 
 /**
  * @description Service interface for Documents validation operations
@@ -53,6 +64,44 @@ export interface DocumentsValidationService {
    * @throws {BadRequestError} When validation fails
    */
   validateDocumentLock(lock: DocumentLock): void;
+
+  /**
+   * Validates document status transition
+   * @param from - Current document status
+   * @param to - Target document status
+   * @throws {ConflictError} When transition is not allowed
+   */
+  validateDocumentStatusTransition(from: DocumentStatus, to: DocumentStatus): void;
+
+  /**
+   * Validates document is mutable
+   * @param document - Document to validate
+   * @throws {ConflictError} When document is not mutable
+   */
+  validateDocumentMutable(document: { status: DocumentStatus; documentId: DocumentId }): void;
+
+  /**
+   * Validates document belongs to envelope
+   * @param document - Document to validate
+   * @param envelopeId - Expected envelope ID
+   * @throws {BadRequestError} When document doesn't belong to envelope
+   */
+  validateDocumentBelongsToEnvelope(document: { envelopeId: EnvelopeId; documentId: DocumentId }, envelopeId: EnvelopeId): void;
+
+  /**
+   * Validates envelope is in draft for document modification
+   * @param envelope - Envelope to validate
+   * @throws {ConflictError} When envelope is not in draft
+   */
+  validateEnvelopeDraftForDocumentModification(envelope: { status: EnvelopeStatus; envelopeId: EnvelopeId }): void;
+
+  /**
+   * Validates document lock can be deleted by user
+   * @param lock - Document lock to validate
+   * @param ownerId - User ID attempting to delete
+   * @throws {BadRequestError} When lock cannot be deleted
+   */
+  validateDocumentLockDeletable(lock: { lockId: string; ownerId: string; expiresAt: string }, ownerId: string): void;
 }
 
 /**
@@ -82,31 +131,11 @@ export class DefaultDocumentsValidationService implements DocumentsValidationSer
       );
     }
 
-    // Validate content type
-    if (!ALLOWED_CONTENT_TYPES.includes(command.contentType)) {
-      throw badRequest(
-        `Content type '${command.contentType}' is not allowed`,
-        ErrorCodes.COMMON_BAD_REQUEST,
-        { field: "contentType", value: command.contentType, allowedTypes: ALLOWED_CONTENT_TYPES }
-      );
-    }
+    // Validate content type using domain rules
+    assertSupportedContentType(command.contentType);
 
-    // Validate file size
-    if (command.size <= 0) {
-      throw badRequest(
-        "Document size must be greater than 0",
-        ErrorCodes.COMMON_BAD_REQUEST,
-        { field: "size", value: command.size }
-      );
-    }
-
-    if (command.size > FILE_SIZE_LIMITS.PDF) {
-      throw badRequest(
-        `Document size exceeds maximum allowed size of ${FILE_SIZE_LIMITS.PDF} bytes`,
-        ErrorCodes.COMMON_BAD_REQUEST,
-        { field: "size", value: command.size, maxSize: FILE_SIZE_LIMITS.PDF }
-      );
-    }
+    // Validate file size using domain rules
+    assertDocumentSizeLimit(command.size, FILE_SIZE_LIMITS.PDF);
 
     // Validate digest
     if (!command.digest || command.digest.length !== 64) {
@@ -205,31 +234,11 @@ export class DefaultDocumentsValidationService implements DocumentsValidationSer
       );
     }
 
-    // Validate content type
-    if (!ALLOWED_CONTENT_TYPES.includes(command.contentType)) {
-      throw badRequest(
-        `Content type '${command.contentType}' is not allowed`,
-        ErrorCodes.COMMON_BAD_REQUEST,
-        { field: "contentType", value: command.contentType, allowedTypes: ALLOWED_CONTENT_TYPES }
-      );
-    }
+    // Validate content type using domain rules
+    assertSupportedContentType(command.contentType);
 
-    // Validate file size
-    if (command.size <= 0) {
-      throw badRequest(
-        "Document size must be greater than 0",
-        ErrorCodes.COMMON_BAD_REQUEST,
-        { field: "size", value: command.size }
-      );
-    }
-
-    if (command.size > FILE_SIZE_LIMITS.PDF) {
-      throw badRequest(
-        `Document size exceeds maximum allowed size of ${FILE_SIZE_LIMITS.PDF} bytes`,
-        ErrorCodes.COMMON_BAD_REQUEST,
-        { field: "size", value: command.size, maxSize: FILE_SIZE_LIMITS.PDF }
-      );
-    }
+    // Validate file size using domain rules
+    assertDocumentSizeLimit(command.size, FILE_SIZE_LIMITS.PDF);
 
     // Validate digest
     if (!command.digest || command.digest.length !== 64) {
@@ -299,5 +308,55 @@ export class DefaultDocumentsValidationService implements DocumentsValidationSer
         { field: "expiresAt", value: lock.expiresAt, currentTime: now.toISOString() }
       );
     }
+  }
+
+  /**
+   * Validates document status transition
+   * @param from - Current document status
+   * @param to - Target document status
+   * @throws {ConflictError} When transition is not allowed
+   */
+  validateDocumentStatusTransition(from: DocumentStatus, to: DocumentStatus): void {
+    // Import the rule function dynamically to avoid circular dependencies
+    const { assertDocumentStatusTransition } = require("../../../domain/rules/Documents.rules");
+    assertDocumentStatusTransition(from, to);
+  }
+
+  /**
+   * Validates document is mutable
+   * @param document - Document to validate
+   * @throws {ConflictError} When document is not mutable
+   */
+  validateDocumentMutable(document: { status: DocumentStatus; documentId: DocumentId }): void {
+    assertDocumentMutable(document);
+  }
+
+  /**
+   * Validates document belongs to envelope
+   * @param document - Document to validate
+   * @param envelopeId - Expected envelope ID
+   * @throws {BadRequestError} When document doesn't belong to envelope
+   */
+  validateDocumentBelongsToEnvelope(document: { envelopeId: EnvelopeId; documentId: DocumentId }, envelopeId: EnvelopeId): void {
+    assertDocumentBelongsToEnvelope(document, envelopeId);
+  }
+
+  /**
+   * Validates envelope is in draft for document modification
+   * @param envelope - Envelope to validate
+   * @throws {ConflictError} When envelope is not in draft
+   */
+  validateEnvelopeDraftForDocumentModification(envelope: { status: EnvelopeStatus; envelopeId: EnvelopeId }): void {
+    assertEnvelopeDraftForDocumentModification(envelope);
+  }
+
+  /**
+   * Validates document lock can be deleted by user
+   * @param lock - Document lock to validate
+   * @param ownerId - User ID attempting to delete
+   * @throws {BadRequestError} When lock cannot be deleted
+   */
+  validateDocumentLockDeletable(lock: { lockId: string; ownerId: string; expiresAt: string }, ownerId: string): void {
+    assertDocumentLockDeletable(lock, ownerId);
   }
 }

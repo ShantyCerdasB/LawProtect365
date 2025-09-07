@@ -33,7 +33,9 @@ import { DefaultRequestsAuditService } from "../../services/Requests/RequestsAud
 import { DefaultRequestsEventService } from "../../services/Requests/RequestsEventService";
 import { DefaultRequestsRateLimitService } from "../../services/Requests/RequestsRateLimitService";
 import { nowIso, NotFoundError, ConflictError, BadRequestError, ErrorCodes } from "@lawprotect/shared-ts";
-import { assertLifecycleTransition } from "../../../domain/rules/EnvelopeLifecycle.rules";
+import { assertLifecycleTransition, assertDraft } from "../../../domain/rules/EnvelopeLifecycle.rules";
+import { assertReadyToSend, assertInvitePolicy } from "../../../domain/rules/Flow.rules";
+import { assertCancelDeclineAllowed, assertReasonValid } from "../../../domain/rules/CancelDecline.rules";
 import type { S3Presigner } from "../../../infrastructure/s3/S3Presigner";
 
 // Helper function types
@@ -217,16 +219,64 @@ async function processPartyInvitations(
 }
 
 /**
+ * Helper function to get party invitation statistics
+ */
+async function getPartyInvitationStats(
+  envelopeId: EnvelopeId,
+  partiesRepo: Repository<Party, PartyKey, undefined>
+): Promise<{ lastSentAt?: number; sentToday: number }> {
+  // Use query method to get parties by envelope
+  const parties = partiesRepo.query ? await partiesRepo.query({ 
+    where: { envelopeId } 
+  }) : [];
+  
+  // Calculate stats from parties
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  
+  let lastSentAt: number | undefined;
+  let sentToday = 0;
+  
+  for (const party of parties) {
+    if (party.invitedAt) {
+      const invitedDate = new Date(party.invitedAt);
+      const invitedTimestamp = invitedDate.getTime();
+      if (invitedDate >= today) {
+        sentToday++;
+      }
+      if (!lastSentAt || invitedTimestamp > lastSentAt) {
+        lastSentAt = invitedTimestamp;
+      }
+    }
+  }
+  
+  return { lastSentAt, sentToday };
+}
+
+/**
  * Helper function to update envelope status if needed
  */
 async function updateEnvelopeStatusIfNeeded(
   envelope: Envelope,
   invitedCount: number,
   envelopeId: EnvelopeId,
-  envelopesRepo: Repository<Envelope, EnvelopeId, undefined>
+  envelopesRepo: Repository<Envelope, EnvelopeId, undefined>,
+  partiesRepo?: Repository<Party, PartyKey, undefined>,
+  inputsRepo?: Repository<Input, InputKey, undefined>
 ): Promise<boolean> {
   if (invitedCount > 0 && envelope.status === "draft") {
     try {
+      // Validate envelope is ready to send using domain rules
+      if (partiesRepo && inputsRepo) {
+        const parties = partiesRepo.query ? await partiesRepo.query({ 
+          where: { envelopeId } 
+        }) : [];
+        const inputs = inputsRepo.query ? await inputsRepo.query({ 
+          where: { envelopeId } 
+        }) : [];
+        assertReadyToSend(parties, inputs);
+      }
+      
       assertLifecycleTransition(envelope.status, "sent");
       await envelopesRepo.update(envelopeId, { status: "sent" });
       return true;
@@ -353,19 +403,23 @@ export function makeRequestsCommandsPort(config: RequestsCommandsPortConfig): Re
       // Get and validate envelope
       const envelope = await validateAndGetEnvelope(envelopesRepo, command.envelopeId);
       
-      if (envelope.status !== "draft") {
-        throw new ConflictError(
-          "Envelope must be in draft state to invite parties",
-          ErrorCodes.COMMON_CONFLICT,
-          { envelopeId: command.envelopeId, currentStatus: envelope.status }
-        );
-      }
+      // Validate envelope is in draft state using domain rules
+      assertDraft(envelope);
+
+      // Validate invite policy using domain rules
+      const partyStats = await getPartyInvitationStats(command.envelopeId, partiesRepo);
+      assertInvitePolicy({
+        lastSentAt: partyStats.lastSentAt,
+        sentToday: partyStats.sentToday,
+        minCooldownMs: 60000, // 1 minute
+        dailyLimit: 10
+      });
 
       // Process party invitations
       const { invited, alreadyPending, skipped } = await processPartyInvitations(command, partiesRepo, ids);
 
       // Update envelope status if needed
-      const statusChanged = await updateEnvelopeStatusIfNeeded(envelope, invited.length, command.envelopeId, envelopesRepo);
+      const statusChanged = await updateEnvelopeStatusIfNeeded(envelope, invited.length, command.envelopeId, envelopesRepo, partiesRepo, _inputsRepo);
 
       const result: InvitePartiesResult = {
         invited,
@@ -435,6 +489,14 @@ export function makeRequestsCommandsPort(config: RequestsCommandsPortConfig): Re
       // Get and validate envelope
       const envelope = await validateAndGetEnvelope(envelopesRepo, command.envelopeId);
       
+      // Validate cancel/decline preconditions using domain rules
+      assertCancelDeclineAllowed(envelope.status);
+      
+      // Validate reason if provided
+      if (command.reason) {
+        assertReasonValid(command.reason);
+      }
+      
       // Validate state transition
       try {
         assertLifecycleTransition(envelope.status, "canceled");
@@ -471,6 +533,14 @@ export function makeRequestsCommandsPort(config: RequestsCommandsPortConfig): Re
 
       // Get and validate envelope
       const envelope = await validateAndGetEnvelope(envelopesRepo, command.envelopeId);
+      
+      // Validate cancel/decline preconditions using domain rules
+      assertCancelDeclineAllowed(envelope.status);
+      
+      // Validate reason if provided
+      if (command.reason) {
+        assertReasonValid(command.reason);
+      }
       
       // Validate state transition
       try {

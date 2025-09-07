@@ -15,6 +15,11 @@ import type {
   ListInputsQuery
 } from "../../ports/inputs/InputsQueriesPort";
 import { BadRequestError, ErrorCodes } from "@lawprotect/shared-ts";
+import { 
+  assertInputReferences, 
+  assertInputGeometry, 
+  assertNoIllegalOverlap 
+} from "../../../domain/rules/Inputs.rules";
 
 /**
  * @summary Validation service for Input operations
@@ -321,6 +326,40 @@ export class InputsValidationService {
         { query }
       );
     }
+  }
+
+  /**
+   * @summary Validates input references to documents and parties
+   * @description Ensures all input references are valid
+   */
+  validateInputReferences(
+    inputs: readonly any[],
+    documentIds: ReadonlySet<string>,
+    partyIds: ReadonlySet<string>
+  ): void {
+    assertInputReferences(inputs, documentIds, partyIds);
+  }
+
+  /**
+   * @summary Validates input geometry within page bounds
+   * @description Ensures inputs are within page dimensions
+   */
+  validateInputGeometry(
+    inputs: readonly any[],
+    pageSize: { width: number; height: number }
+  ): void {
+    assertInputGeometry(inputs, pageSize);
+  }
+
+  /**
+   * @summary Validates no illegal overlap between inputs
+   * @description Ensures inputs don't overlap when strict mode is enabled
+   */
+  validateNoIllegalOverlap(
+    inputs: readonly any[],
+    strict: boolean = false
+  ): void {
+    assertNoIllegalOverlap(inputs, strict);
   }
 
   /**

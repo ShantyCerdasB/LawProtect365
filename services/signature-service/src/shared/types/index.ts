@@ -37,5 +37,4 @@ export * from "./audit";
 
 // Validation schemas moved to src/shared/validations/
 
-// Core types
-export * from "./core/config";
+// Core types - moved to shared/contracts/core/Config.ts

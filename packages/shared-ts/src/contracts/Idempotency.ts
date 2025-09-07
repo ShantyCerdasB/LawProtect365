@@ -1,4 +1,22 @@
 /**
+ * Idempotency record with metadata.
+ */
+export interface IdempotencyRecord {
+  /** Idempotency key. */
+  key: string;
+  /** Current state. */
+  state: "pending" | "completed";
+  /** Expiration timestamp in ISO format. */
+  expiresAt: string;
+  /** Result snapshot when completed (optional). */
+  result?: unknown;
+  /** Creation timestamp. */
+  createdAt: string;
+  /** Last update timestamp. */
+  updatedAt: string;
+}
+
+/**
  * Store for idempotency records.
  * Implementations persist execution state keyed by an idempotency key.
  */
@@ -9,6 +27,13 @@ export interface IdempotencyStore {
    * @returns State string or null when not tracked.
    */
   get(key: string): Promise<"pending" | "completed" | null>;
+
+  /**
+   * Retrieves the full record for a key.
+   * @param key Idempotency key.
+   * @returns Full record or null when not found.
+   */
+  getRecord(key: string): Promise<IdempotencyRecord | null>;
 
   /**
    * Marks a key as pending with a TTL.

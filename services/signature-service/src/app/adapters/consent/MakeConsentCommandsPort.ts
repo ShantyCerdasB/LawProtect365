@@ -25,13 +25,13 @@ import type { ConsentCommandRepo, Ids } from "../../../shared/types/consent/Adap
 import type { ConsentId, EnvelopeId, PartyId } from "../../../domain/value-objects/Ids";
 import type { ConsentStatus, ConsentType } from "../../../domain/values/enums";
 import { nowIso, asISO, asISOOpt } from "@lawprotect/shared-ts";
-import { mapConsentRowToResult } from "../../../shared/types/consent/ConsentTypes";
 import type { DelegationRepositoryDdb } from "../../../infrastructure/dynamodb/DelegationRepositoryDdb";
 import type { ConsentValidationService } from "../../services/Consent/ConsentValidationService";
 import type { ConsentAuditService } from "../../services/Consent/ConsentAuditService";
 import type { ConsentEventService } from "../../services/Consent/ConsentEventService";
 
 import type { ActorContext } from "../../../domain/entities/ActorContext";
+import { createConsentWithAudit, logConsentDeletionAudit } from "./ConsentHelpers";
 import type { IdempotencyRunner } from "../../../infrastructure/idempotency/IdempotencyRunner";
 import type { GlobalPartiesRepository } from "../../../shared/contracts/repositories/global-parties/GlobalPartiesRepository";
 import type { FindOrCreatePartyInput } from "../../../shared/types/global-parties";
@@ -286,76 +286,26 @@ export function makeConsentCommandsPort(
         return idempotencyRunner.run(
           input.idempotencyKey,
           async () => {
-            const row = await consentsRepo.create({
-              consentId: ids.ulid(),
-              tenantId: input.tenantId,
-              envelopeId: input.envelopeId,
-              partyId: input.partyId,
-              consentType: input.type,
-              status: input.status,
-              metadata: input.metadata,
-              expiresAt: asISOOpt(input.expiresAt),
-              createdAt: asISO(nowIso()),
-            });
-
-            const result = mapConsentRowToResult(row);
-
-            // ✅ AUDIT: Log consent creation if audit service available
-            if (auditService && actorContext) {
-              await auditService.logBusinessEvent({
-                tenantId: input.tenantId,
-                envelopeId: input.envelopeId,
-                actor: actorContext,
-              }, {
-                eventType: "consent.created",
-                consentId: result.id,
-                partyId: input.partyId,
-                consentType: input.type,
-                status: input.status,
-                metadata: input.metadata,
-                expiresAt: input.expiresAt,
-              });
-            }
-
-            return result;
+            return await createConsentWithAudit(
+              consentsRepo,
+              auditService,
+              ids,
+              input,
+              actorContext
+            );
           },
           input.ttlSeconds
         );
       }
 
       // Fallback to non-idempotent creation
-      const row = await consentsRepo.create({
-        consentId: ids.ulid(),
-        tenantId: input.tenantId,
-        envelopeId: input.envelopeId,
-        partyId: input.partyId,
-        consentType: input.type,
-        status: input.status,
-        metadata: input.metadata,
-        expiresAt: asISOOpt(input.expiresAt),
-        createdAt: asISO(nowIso()),
-      });
-
-      const result = mapConsentRowToResult(row);
-
-      // ✅ AUDIT: Log consent creation if audit service available
-      if (auditService && actorContext) {
-        await auditService.logBusinessEvent({
-          tenantId: input.tenantId,
-          envelopeId: input.envelopeId,
-          actor: actorContext,
-        }, {
-          eventType: "consent.created",
-          consentId: result.id,
-          partyId: input.partyId,
-          consentType: input.type,
-          status: input.status,
-          metadata: input.metadata,
-          expiresAt: input.expiresAt,
-        });
-      }
-
-      return result;
+      return await createConsentWithAudit(
+        consentsRepo,
+        auditService,
+        ids,
+        input,
+        actorContext
+      );
     },
 
     /**
@@ -494,21 +444,13 @@ export function makeConsentCommandsPort(
             });
 
             // ✅ AUDIT: Log consent deletion if audit service available
-            if (auditService && actorContext && consentDetails) {
-              await auditService.logBusinessEvent({
-                tenantId: consentDetails.tenantId as any, // Cast to avoid branded type issues
-                envelopeId: input.envelopeId,
-                actor: actorContext,
-              }, {
-                eventType: "consent.deleted",
-                consentId: input.consentId,
-                partyId: consentDetails.partyId,
-                consentType: consentDetails.consentType,
-                status: consentDetails.status,
-                metadata: consentDetails.metadata,
-                expiresAt: consentDetails.expiresAt,
-                deletedAt: asISO(nowIso()),
-              });
+            if (consentDetails) {
+              await logConsentDeletionAudit(
+                auditService,
+                input,
+                consentDetails,
+                actorContext
+              );
             }
           },
           input.ttlSeconds
@@ -522,21 +464,13 @@ export function makeConsentCommandsPort(
       });
 
       // ✅ AUDIT: Log consent deletion if audit service available
-      if (auditService && actorContext && consentDetails) {
-        await auditService.logBusinessEvent({
-          tenantId: consentDetails.tenantId as any, // Cast to avoid branded type issues
-          envelopeId: input.envelopeId,
-          actor: actorContext,
-        }, {
-          eventType: "consent.deleted",
-          consentId: input.consentId,
-          partyId: consentDetails.partyId,
-          consentType: consentDetails.consentType,
-          status: consentDetails.status,
-          metadata: consentDetails.metadata,
-          expiresAt: consentDetails.expiresAt,
-          deletedAt: asISO(nowIso()),
-        });
+      if (consentDetails) {
+        await logConsentDeletionAudit(
+          auditService,
+          input,
+          consentDetails,
+          actorContext
+        );
       }
     },
 

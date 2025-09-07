@@ -7,7 +7,6 @@
 
 import { BaseEventService } from "../../../shared/services/BaseEventService";
 import type { DomainEvent } from "@lawprotect/shared-ts";
-import { makeEvent } from "@lawprotect/shared-ts";
 import type { EnvelopeId, PartyId, TenantId } from "../../../domain/value-objects/Ids";
 import type { ActorContext } from "../../../domain/entities/ActorContext";
 import type { SigningEventService } from "../../../shared/types/signing";
@@ -34,25 +33,12 @@ export class DefaultSigningEventService extends BaseEventService implements Sign
     actor: ActorContext,
     traceId?: string
   ): Promise<void> {
-    const domainEvent: DomainEvent = makeEvent(
+    await this.publishStandardizedEvent(
       "signing.completed",
-      {
-        envelopeId,
-        partyId,
-        tenantId,
-        actor: {
-          userId: actor.userId,
-          email: actor.email,
-          ip: actor.ip,
-          userAgent: actor.userAgent,
-          role: actor.role,
-        },
-        occurredAt: new Date().toISOString(),
-      },
-      traceId ? { "x-trace-id": traceId } : undefined
+      { envelopeId, partyId, tenantId },
+      actor,
+      traceId
     );
-    
-    await this.publishDomainEvent(domainEvent, traceId);
   }
 
   /**
@@ -71,25 +57,12 @@ export class DefaultSigningEventService extends BaseEventService implements Sign
     actor: ActorContext,
     traceId?: string
   ): Promise<void> {
-    const domainEvent: DomainEvent = makeEvent(
+    await this.publishStandardizedEvent(
       "signing.declined",
-      {
-        envelopeId,
-        partyId,
-        tenantId,
-        actor: {
-          userId: actor.userId,
-          email: actor.email,
-          ip: actor.ip,
-          userAgent: actor.userAgent,
-          role: actor.role,
-        },
-        occurredAt: new Date().toISOString(),
-      },
-      traceId ? { "x-trace-id": traceId } : undefined
+      { envelopeId, partyId, tenantId },
+      actor,
+      traceId
     );
-    
-    await this.publishDomainEvent(domainEvent, traceId);
   }
 
   /**
@@ -108,25 +81,12 @@ export class DefaultSigningEventService extends BaseEventService implements Sign
     actor: ActorContext,
     traceId?: string
   ): Promise<void> {
-    const domainEvent: DomainEvent = makeEvent(
+    await this.publishStandardizedEvent(
       "otp.requested",
-      {
-        envelopeId,
-        partyId,
-        tenantId,
-        actor: {
-          userId: actor.userId,
-          email: actor.email,
-          ip: actor.ip,
-          userAgent: actor.userAgent,
-          role: actor.role,
-        },
-        occurredAt: new Date().toISOString(),
-      },
-      traceId ? { "x-trace-id": traceId } : undefined
+      { envelopeId, partyId, tenantId },
+      actor,
+      traceId
     );
-    
-    await this.publishDomainEvent(domainEvent, traceId);
   }
 
   /**
@@ -145,25 +105,12 @@ export class DefaultSigningEventService extends BaseEventService implements Sign
     actor: ActorContext,
     traceId?: string
   ): Promise<void> {
-    const domainEvent: DomainEvent = makeEvent(
+    await this.publishStandardizedEvent(
       "otp.verified",
-      {
-        envelopeId,
-        partyId,
-        tenantId,
-        actor: {
-          userId: actor.userId,
-          email: actor.email,
-          ip: actor.ip,
-          userAgent: actor.userAgent,
-          role: actor.role,
-        },
-        occurredAt: new Date().toISOString(),
-      },
-      traceId ? { "x-trace-id": traceId } : undefined
+      { envelopeId, partyId, tenantId },
+      actor,
+      traceId
     );
-    
-    await this.publishDomainEvent(domainEvent, traceId);
   }
 
   /**
@@ -180,24 +127,12 @@ export class DefaultSigningEventService extends BaseEventService implements Sign
     actor: ActorContext,
     traceId?: string
   ): Promise<void> {
-    const domainEvent: DomainEvent = makeEvent(
+    await this.publishStandardizedEvent(
       "signing.presign_upload",
-      {
-        envelopeId,
-        tenantId,
-        actor: {
-          userId: actor.userId,
-          email: actor.email,
-          ip: actor.ip,
-          userAgent: actor.userAgent,
-          role: actor.role,
-        },
-        occurredAt: new Date().toISOString(),
-      },
-      traceId ? { "x-trace-id": traceId } : undefined
+      { envelopeId, tenantId },
+      actor,
+      traceId
     );
-    
-    await this.publishDomainEvent(domainEvent, traceId);
   }
 
   /**
@@ -214,24 +149,12 @@ export class DefaultSigningEventService extends BaseEventService implements Sign
     actor: ActorContext,
     traceId?: string
   ): Promise<void> {
-    const domainEvent: DomainEvent = makeEvent(
+    await this.publishStandardizedEvent(
       "signing.download_signed_document",
-      {
-        envelopeId,
-        tenantId,
-        actor: {
-          userId: actor.userId,
-          email: actor.email,
-          ip: actor.ip,
-          userAgent: actor.userAgent,
-          role: actor.role,
-        },
-        occurredAt: new Date().toISOString(),
-      },
-      traceId ? { "x-trace-id": traceId } : undefined
+      { envelopeId, tenantId },
+      actor,
+      traceId
     );
-    
-    await this.publishDomainEvent(domainEvent, traceId);
   }
 
   /**
@@ -250,25 +173,12 @@ export class DefaultSigningEventService extends BaseEventService implements Sign
     actor: ActorContext,
     traceId?: string
   ): Promise<void> {
-    const domainEvent: DomainEvent = makeEvent(
+    await this.publishStandardizedEvent(
       "signing.prepared",
-      {
-        envelopeId,
-        partyId,
-        tenantId,
-        actor: {
-          userId: actor.userId,
-          email: actor.email,
-          ip: actor.ip,
-          userAgent: actor.userAgent,
-          role: actor.role,
-        },
-        occurredAt: new Date().toISOString(),
-      },
-      traceId ? { "x-trace-id": traceId } : undefined
+      { envelopeId, partyId, tenantId },
+      actor,
+      traceId
     );
-    
-    await this.publishDomainEvent(domainEvent, traceId);
   }
 
   /**
@@ -287,25 +197,12 @@ export class DefaultSigningEventService extends BaseEventService implements Sign
     actor: ActorContext,
     traceId?: string
   ): Promise<void> {
-    const domainEvent: DomainEvent = makeEvent(
+    await this.publishStandardizedEvent(
       "signing.consent_recorded",
-      {
-        envelopeId,
-        partyId,
-        tenantId,
-        actor: {
-          userId: actor.userId,
-          email: actor.email,
-          ip: actor.ip,
-          userAgent: actor.userAgent,
-          role: actor.role,
-        },
-        occurredAt: new Date().toISOString(),
-      },
-      traceId ? { "x-trace-id": traceId } : undefined
+      { envelopeId, partyId, tenantId },
+      actor,
+      traceId
     );
-    
-    await this.publishDomainEvent(domainEvent, traceId);
   }
 
   /**

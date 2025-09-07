@@ -16,13 +16,13 @@ import type {
   DelegateConsentAppInput, 
   DelegateConsentAppResult 
 } from "../../../shared/types/consent/AppServiceInputs";
-import type { FindOrCreatePartyInput } from "../../../shared/types/global-parties";
-import type {  PartyId } from "../../../domain/value-objects/Ids";
+import type { PartyId, TenantId } from "../../../domain/value-objects/Ids";
 import type { ConsentStatus } from "../../../domain/values/enums";
 import type { ActorContext } from "../../../domain/entities/ActorContext";
-import type { UserId } from "@lawprotect/shared-ts";
 import { nowIso, asISO, asISOOpt } from "@lawprotect/shared-ts";
-import { NotFoundError, BadRequestError } from "../../../shared/errors";
+import { NotFoundError } from "../../../shared/errors";
+import { findOrCreatePartyForDelegation } from "./ConsentPartyHelpers";
+import { createConsentAuditContext } from "../../adapters/consent/ConsentHelpers";
 
 /**
  * @summary Service for handling consent delegation business logic
@@ -84,11 +84,15 @@ export class ConsentDelegationService {
     }
 
     // 3. FIND OR CREATE DELEGATE PARTY
-    const delegatePartyId = await this.findOrCreatePartyForDelegate({
-      tenantId: input.tenantId,
-      email: input.delegateEmail,
-      name: input.delegateName
-    });
+    const delegatePartyId = await findOrCreatePartyForDelegation(
+      this.globalPartiesRepo,
+      this.ids,
+      {
+        tenantId: input.tenantId,
+        email: input.delegateEmail,
+        name: input.delegateName
+      }
+    );
 
     // 4. Create delegation record
     const delegation = await this.delegationsRepo.create({
@@ -115,16 +119,13 @@ export class ConsentDelegationService {
 
     // 6. AUDIT - Use actor context if available, fallback to system context
     if (this.auditService) {
-      const auditContext = {
-        tenantId: input.tenantId,
-        envelopeId: input.envelopeId,
-        actor: actorContext || { 
-          userId: "system" as UserId, 
-          email: "system@lawprotect.com" 
-        }
-      };
+      const auditContext = createConsentAuditContext(
+        input.tenantId as TenantId,
+        input.envelopeId,
+        actorContext
+      );
       
-      await this.auditService.logConsentDelegation(auditContext, {
+      await this.auditService.logConsentDelegation(auditContext as any, {
         consentId: input.consentId,
         originalPartyId: currentConsent.partyId as PartyId,
         delegatePartyId: delegatePartyId,
@@ -166,64 +167,4 @@ export class ConsentDelegationService {
     };
   }
 
-  /**
-   * @summary Finds an existing party by email or creates a new one for delegation
-   * @description Searches for a party with the given email in the tenant. If not found,
-   * creates a new party record for the delegate.
-   * 
-   * @param input - Contains tenantId, email, and name for party lookup/creation
-   * @returns Promise resolving to the party ID (existing or newly created)
-   * 
-   * @throws BadRequestError if email or name are invalid
-   */
-  private async findOrCreatePartyForDelegate(
-    input: FindOrCreatePartyInput
-  ): Promise<PartyId> {
-    // Validate input
-    if (!input.email?.trim() || !input.name?.trim()) {
-      throw new BadRequestError("Email and name are required for party delegation");
-    }
-
-    // First, try to find existing party by email
-    const existingParty = await this.globalPartiesRepo.findByEmail({
-      tenantId: input.tenantId,
-      email: input.email
-    });
-
-    if (existingParty?.party) {
-      return existingParty.party.partyId;
-    }
-
-    // If not found, create a new party for the delegate
-    const newPartyId = this.ids.ulid() as PartyId;
-    
-    await this.globalPartiesRepo.create({
-      partyId: newPartyId,
-      tenantId: input.tenantId,
-      email: input.email,
-      name: input.name,
-      role: "signer" as any, // Default role for delegates
-      source: "manual" as any, // Default source
-      status: "active" as any, // Default status
-      preferences: {
-        defaultAuth: "otpViaEmail" as any,
-        defaultLocale: undefined,
-      },
-      notificationPreferences: {
-        email: true,
-        sms: false,
-      },
-      stats: {
-        signedCount: 0,
-        totalEnvelopes: 0,
-      },
-      metadata: {
-        createdFor: "consent-delegation",
-        originalEmail: input.email,
-        originalName: input.name
-      }
-    });
-
-    return newPartyId;
-  }
 }

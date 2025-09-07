@@ -1,7 +1,7 @@
 /**
  * @file Config.ts
  * @summary Core configuration contracts
- * @description Shared contracts for application configuration and settings
+ * @description Consolidated configuration contracts for the signature service
  */
 
 import type { SigningAlgorithmSpec } from "@aws-sdk/client-kms";
@@ -86,8 +86,12 @@ export interface SsmConfig {
 export interface UploadConfig {
   /** Minimum part size in bytes for multipart uploads */
   readonly minPartSizeBytes: number;
+  /** Maximum part size in bytes for multipart uploads */
+  readonly maxPartSizeBytes: number;
   /** Maximum number of parts allowed in a multipart upload */
   readonly maxParts: number;
+  /** Default TTL (in seconds) for upload URLs */
+  readonly uploadTtlSeconds: number;
 }
 
 /**
@@ -95,53 +99,27 @@ export interface UploadConfig {
  * @description Configuration for rate limiting and throttling.
  */
 export interface RateLimitConfig {
-  /** Maximum requests per time window */
+  /** Whether rate limiting is enabled */
+  readonly enabled: boolean;
+  /** Default rate limit window in seconds */
+  readonly windowSeconds: number;
+  /** Default maximum requests per window */
   readonly maxRequests: number;
-  /** Time window in seconds */
-  readonly timeWindowSeconds: number;
+  /** Rate limit table name */
+  readonly tableName: string;
 }
 
 /**
- * @summary System configuration
- * @description Configuration for system-level settings.
+ * @summary Idempotency configuration
+ * @description Configuration for idempotency and deduplication.
  */
-export interface SystemConfig {
-  /** System user ID */
-  readonly userId: string;
-  /** System user email */
-  readonly email: string;
-  /** System user name */
-  readonly name: string;
-}
-
-/**
- * @summary Outbox configuration
- * @description Configuration for outbox worker processing.
- */
-export interface OutboxConfig {
-  /** Maximum batch size for processing events */
-  readonly maxBatchSize: number;
-  /** Maximum wait time before processing batch (ms) */
-  readonly maxWaitTimeMs: number;
-  /** Maximum retries */
-  readonly maxRetries: number;
-  /** Delay between retries (ms) */
-  readonly retryDelayMs: number;
-  /** Debug mode */
-  readonly debug: boolean;
-}
-
-/**
- * @summary Metrics configuration
- * @description Configuration for CloudWatch metrics.
- */
-export interface MetricsConfig {
-  /** Enable outbox metrics */
-  readonly enableOutboxMetrics: boolean;
-  /** CloudWatch namespace */
-  readonly namespace: string;
-  /** CloudWatch region */
-  readonly region?: string;
+export interface IdempotencyConfig {
+  /** Whether idempotency is enabled */
+  readonly enabled: boolean;
+  /** Default TTL (in seconds) for idempotency keys */
+  readonly ttlSeconds: number;
+  /** Idempotency table name */
+  readonly tableName: string;
 }
 
 /**
@@ -194,6 +172,17 @@ export interface MetricsConfig {
 export interface SignatureServiceConfig {
   /** AWS region for all services */
   readonly region: string;
+  /** Environment name */
+  readonly environment: string;
+  /** Service name */
+  readonly serviceName: string;
+  /** Project name */
+  readonly projectName: string;
+  /** Whether debug mode is enabled */
+  readonly debug: boolean;
+  /** Log level */
+  readonly logLevel: string;
+  
   /** DynamoDB configuration */
   readonly ddb: DynamoDBConfig;
   /** S3 configuration */
@@ -204,9 +193,13 @@ export interface SignatureServiceConfig {
   readonly events: EventBridgeConfig;
   /** SSM configuration */
   readonly ssm?: SsmConfig;
-  /** Upload and multipart defaults. */
+  /** Upload and multipart defaults */
   readonly uploads: UploadConfig;
-
+  /** Rate limiting configuration */
+  readonly rateLimit: RateLimitConfig;
+  /** Idempotency configuration */
+  readonly idempotency: IdempotencyConfig;
+  
   /** System configuration */
   readonly system: SystemConfig;
   /** Outbox configuration */

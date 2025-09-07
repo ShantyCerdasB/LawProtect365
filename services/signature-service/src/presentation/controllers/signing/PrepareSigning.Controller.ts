@@ -4,7 +4,7 @@
  * @description Handles signing preparation operations
  */
 
-import { createCommandController } from "../../../shared/controllers/controllerFactory";
+import { createCommandController, createSigningDependencies, extractEnvelopeParams } from "../../../shared/controllers/controllerFactory";
 import { makeSigningCommandsPort } from "../../../app/adapters/signing/makeSigningCommandsPort";
 import { DefaultSigningCommandService } from "../../../app/services/Signing";
 import { PrepareSigningBody } from "../../../presentation/schemas/signing/PrepareSigning.schema";
@@ -22,31 +22,10 @@ export const PrepareSigningController = createCommandController<PrepareSigningCo
   createDependencies: (c) => makeSigningCommandsPort(
     c.repos.envelopes,
     c.repos.parties,
-    {
-      events: c.events.publisher,
-      ids: c.ids,
-      time: c.time,
-      rateLimit: c.rateLimitStore,
-      signer: c.crypto.signer,
-      idempotency: c.idempotency.runner,
-      s3Service: c.services.signingS3,
-      signingConfig: {
-        defaultKeyId: c.config.kms.signerKeyId,
-        allowedAlgorithms: [c.config.kms.signingAlgorithm],
-      },
-      uploadConfig: {
-        uploadBucket: c.config.s3.evidenceBucket,
-        uploadTtlSeconds: c.config.s3.presignTtlSeconds,
-      },
-      downloadConfig: {
-        signedBucket: c.config.s3.signedBucket,
-        downloadTtlSeconds: c.config.s3.presignTtlSeconds,
-      },
-    }
+    createSigningDependencies(c, true) // Include S3 service
   ),
   extractParams: (path, body) => ({
-    tenantId: path.tenantId,
-    envelopeId: path.id,
+    ...extractEnvelopeParams(path, body),
     signerId: body.signerId,
     token: "", // Will be injected by factory
   }),

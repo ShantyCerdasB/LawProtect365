@@ -6,6 +6,7 @@
 
 import type { DocumentId, EnvelopeId, TenantId } from "../../../domain/value-objects/Ids";
 import type { ContentType } from "../../../domain/value-objects/ContentType";
+import { assertPresignPolicy } from "../../../domain/rules/Evidence.rules";
 
 /**
  * @description Service interface for Documents S3 operations
@@ -16,12 +17,14 @@ export interface DocumentsS3Service {
    * @param bucket - S3 bucket name
    * @param key - S3 object key
    * @param contentType - Document content type
+   * @param fileSize - File size in bytes (optional, for validation)
    * @returns Promise resolving to presigned upload URL and expiration
    */
   createPresignedUploadUrl(
     bucket: string,
     key: string,
-    contentType: ContentType
+    contentType: ContentType,
+    fileSize?: number
   ): Promise<{ url: string; expiresAt: string }>;
 
   /**
@@ -76,13 +79,20 @@ export class DefaultDocumentsS3Service implements DocumentsS3Service {
    * @param bucket - S3 bucket name
    * @param key - S3 object key
    * @param contentType - Document content type
+   * @param fileSize - File size in bytes (optional, for validation)
    * @returns Promise resolving to presigned upload URL and expiration
    */
   async createPresignedUploadUrl(
     bucket: string,
     key: string,
-    contentType: ContentType
+    contentType: ContentType,
+    fileSize?: number
   ): Promise<{ url: string; expiresAt: string }> {
+    // Validate presign policy using domain rules
+    if (fileSize) {
+      assertPresignPolicy(contentType, fileSize, 50 * 1024 * 1024); // 50MB max
+    }
+
     const expiresIn = 3600; // 1 hour
     const url = await this.s3Presigner.putObjectUrl(bucket, key, contentType, expiresIn);
     const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();

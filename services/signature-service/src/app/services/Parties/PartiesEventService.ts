@@ -110,25 +110,12 @@ export class PartiesEventService extends BaseEventService {
     actor: ActorContext,
     traceId?: string
   ): Promise<void> {
-    const domainEvent: DomainEvent = makeEvent(
+    await this.publishStandardizedEvent(
       "party.deleted",
-      {
-        partyId,
-        tenantId,
-        envelopeId,
-        actor: {
-          userId: actor.userId,
-          email: actor.email,
-          ip: actor.ip,
-          userAgent: actor.userAgent,
-          role: actor.role,
-        },
-        occurredAt: new Date().toISOString(),
-      },
-      traceId ? { "x-trace-id": traceId } : undefined
+      { partyId, tenantId, envelopeId },
+      actor,
+      traceId
     );
-    
-    await this.publishDomainEvent(domainEvent, traceId);
   }
 
   /**

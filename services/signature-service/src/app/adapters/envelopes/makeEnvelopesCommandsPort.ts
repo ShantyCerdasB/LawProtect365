@@ -10,7 +10,7 @@ import type { EnvelopesRepository } from "../../../shared/contracts/repositories
 import type { EnvelopesValidationService } from "../../services/envelopes/EnvelopesValidationService";
 import type { EnvelopesAuditService } from "../../services/envelopes/EnvelopesAuditService";
 import type { EnvelopesEventService } from "../../services/envelopes/EnvelopesEventService";
-import type { SignatureServiceConfig } from "../../../shared/types/core/config";
+import type { SignatureServiceConfig } from "../../../shared/contracts/core/Config";
 import type { EnvelopeStatus } from "../../../domain/value-objects/EnvelopeStatus";
 import { nowIso } from "@lawprotect/shared-ts";
 import { 

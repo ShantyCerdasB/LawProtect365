@@ -22,6 +22,7 @@
 import type { IdempotencyStore } from "@lawprotect/shared-ts";
 import { ConflictError, ErrorCodes } from "@lawprotect/shared-ts";
 import type { IdempotencyRunnerOptionsSchema } from "../../shared/validations/schemas/idempotency";
+import { assertIdempotencyFresh } from "../../domain/rules/Idempotency.rules";
 
 /**
  * Idempotency orchestration facade.
@@ -64,6 +65,12 @@ export class IdempotencyRunner {
         "Idempotent request has already been processed",
         ErrorCodes.COMMON_CONFLICT
       );
+    }
+
+    // Validate idempotency record freshness using domain rules
+    const record = await this.store.getRecord(key);
+    if (record) {
+      assertIdempotencyFresh({ key: record.key, expiresAt: record.expiresAt });
     }
 
     // Attempt to create the pending marker (single-writer via condition in the store)

@@ -4,8 +4,7 @@ export * from "./types";
 // Shared utilities
 export * from "./utils";
 
-// Shared guards
-export * from "./guards";
+// Shared guards - removed (no longer exists)
 
 // Shared errors
 export * from "./errors";

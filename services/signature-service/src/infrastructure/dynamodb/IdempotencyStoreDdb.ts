@@ -83,6 +83,42 @@ export class IdempotencyStoreDdb implements IdempotencyStore {
   }
 
   /**
+   * Retrieves the full record for an idempotency key.
+   *
+   * @param key Idempotency key.
+   * @returns Full record or null when not found.
+   * @throws Normalized HttpError via `mapAwsError`.
+   */
+  async getRecord(key: string): Promise<import("@lawprotect/shared-ts").IdempotencyRecord | null> {
+    try {
+      const res = await this.ddb.get({
+        TableName: this.tableName,
+        Key: { pk: idempotencyPk(key), sk: idempotencySk() },
+        ConsistentRead: true,
+      });
+
+      if (!res.Item) return null;
+      if (!isDdbIdempotencyItem(res.Item)) return null;
+
+      // Convert TTL to expiresAt ISO string
+      const expiresAt = res.Item.ttl 
+        ? new Date(res.Item.ttl * 1000).toISOString()
+        : new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // Default 24h if no TTL
+
+      return {
+        key: res.Item.idempotencyKey,
+        state: res.Item.state,
+        expiresAt,
+        result: res.Item.resultJson ? JSON.parse(res.Item.resultJson) : undefined,
+        createdAt: res.Item.createdAt,
+        updatedAt: res.Item.updatedAt,
+      };
+    } catch (err) {
+      throw mapAwsError(err, "IdempotencyStoreDdb.getRecord");
+    }
+  }
+
+  /**
    * Marks a key as `pending` with a TTL.
    *
    * @param key Idempotency key.

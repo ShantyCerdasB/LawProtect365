@@ -6,7 +6,9 @@
  */
 
 import type { OutboxPort, DomainEvent } from "@lawprotect/shared-ts";
+import { makeEvent } from "@lawprotect/shared-ts";
 import type { OutboxRepoCreateInput } from "../types/outbox/OutboxRepositoryTypes";
+import type { ActorContext } from "../../domain/entities/ActorContext";
 
 /**
  * @summary Maps a domain event to outbox input format
@@ -25,6 +27,29 @@ const mapDomainEventToOutboxInput = (
   occurredAt: event.occurredAt,
   traceId,
 });
+
+/**
+ * @summary Creates a standardized actor object from ActorContext
+ * @description Extracts and formats actor information for domain events
+ * @param actor - Actor context containing user information
+ * @returns Standardized actor object for events
+ */
+const createEventActor = (actor: ActorContext) => ({
+  userId: actor.userId,
+  email: actor.email,
+  ip: actor.ip,
+  userAgent: actor.userAgent,
+  role: actor.role,
+});
+
+/**
+ * @summary Creates trace headers for domain events
+ * @description Formats trace ID into headers object for event metadata
+ * @param traceId - Optional trace ID for observability
+ * @returns Headers object with trace ID or undefined
+ */
+const createTraceHeaders = (traceId?: string) => 
+  traceId ? { "x-trace-id": traceId } : undefined;
 
 /**
  * @summary Base abstract class for domain event publishing services
@@ -51,6 +76,50 @@ export abstract class BaseEventService {
        payload: outboxInput.payload,
        occurredAt: typeof outboxInput.occurredAt === 'string' ? outboxInput.occurredAt : outboxInput.occurredAt.toISOString(),
      }, outboxInput.traceId);
+  }
+
+  /**
+   * @summary Creates a domain event with standardized actor and metadata
+   * @description Helper method to create domain events with consistent actor formatting
+   * @param eventType - Type of the domain event
+   * @param payload - Event-specific payload data
+   * @param actor - Actor context for audit purposes
+   * @param traceId - Optional trace ID for observability
+   * @returns Domain event ready for publishing
+   */
+  protected createDomainEvent(
+    eventType: string,
+    payload: Record<string, unknown>,
+    actor: ActorContext,
+    traceId?: string
+  ): DomainEvent {
+    return makeEvent(
+      eventType,
+      {
+        ...payload,
+        actor: createEventActor(actor),
+        occurredAt: new Date().toISOString(),
+      },
+      createTraceHeaders(traceId)
+    );
+  }
+
+  /**
+   * @summary Publishes a domain event with standardized actor and metadata
+   * @description Convenience method that creates and publishes a domain event in one call
+   * @param eventType - Type of the domain event
+   * @param payload - Event-specific payload data
+   * @param actor - Actor context for audit purposes
+   * @param traceId - Optional trace ID for observability
+   */
+  protected async publishStandardizedEvent(
+    eventType: string,
+    payload: Record<string, unknown>,
+    actor: ActorContext,
+    traceId?: string
+  ): Promise<void> {
+    const domainEvent = this.createDomainEvent(eventType, payload, actor, traceId);
+    await this.publishDomainEvent(domainEvent, traceId);
   }
 
   /**
