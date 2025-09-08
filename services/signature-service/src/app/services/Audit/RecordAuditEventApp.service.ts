@@ -10,7 +10,7 @@ import type {
   RecordAuditEventAppInput, 
   RecordAuditEventAppResult 
 } from "../../../shared/types/audit/AppServiceInputs";
-import { formatActor } from "../../../shared/utils/Audit";
+import { formatActor } from "@lawprotect/shared-ts";
 
 /**
  * @description Application service for audit event recording operations

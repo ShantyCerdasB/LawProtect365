@@ -39,3 +39,6 @@ export * from "./validation.js";
 export * from "./crypto.js";
 export * from "./math.js";
 export * from "./security.js";
+export * from "./audit.js";
+export * from "./idempotency.js";
+export * from "./eventbridge.js";

@@ -7,7 +7,7 @@
  */
 
 import type { DdbClientLike } from "@lawprotect/shared-ts";
-import { requireQuery, mapAwsError, ConflictError, ErrorCodes, nowIso } from "@lawprotect/shared-ts";
+import { requireQuery, mapAwsError, ConflictError, ErrorCodes, nowIso, toDdbItem } from "@lawprotect/shared-ts";
 
 import type { Document } from "../../domain/entities/Document";
 import type { DocumentId, EnvelopeId } from "../../domain/value-objects/Ids";
@@ -26,8 +26,6 @@ import type { DocumentsRepository, DocumentKey } from "../../shared/contracts/re
  * @param v - Typed object to convert
  * @returns DynamoDB-compatible record format
  */
-const toDdbItem = <T extends object>(v: T): Record<string, unknown> =>
-  (v as unknown) as Record<string, unknown>;
 
 /**
  * @summary DynamoDB implementation of Document repository

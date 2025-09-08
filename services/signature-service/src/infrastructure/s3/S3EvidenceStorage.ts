@@ -51,7 +51,7 @@ import {
 
 import type { S3Port, S3PutObjectInput, S3GetObjectOutput } from "@lawprotect/shared-ts";
 import { shouldRetry, isAwsRetryable, mapAwsError } from "@lawprotect/shared-ts";
-import { sleep } from "../../shared/utils/common";
+import { sleep } from "@lawprotect/shared-ts";
 import type { S3EvidenceStorageOptions, HeadResult } from "../../shared/types/s3";
 
 /**

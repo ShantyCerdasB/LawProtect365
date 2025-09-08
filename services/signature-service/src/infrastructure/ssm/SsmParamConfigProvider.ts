@@ -18,7 +18,7 @@ import {
 
 import type { SsmPort } from "@lawprotect/shared-ts";
 import { mapAwsError, shouldRetry, isAwsRetryable, parseJson, getEnv, getNumber } from "@lawprotect/shared-ts";
-import { sleep } from "../../shared/utils/common";
+import { sleep } from "@lawprotect/shared-ts";
 import type { SsmParamConfigProviderOptions, CacheEntry } from "../../shared/types/ssm";
 
 /**

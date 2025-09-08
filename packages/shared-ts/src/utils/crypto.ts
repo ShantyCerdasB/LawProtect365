@@ -126,7 +126,7 @@ export const timingSafeEqual = (a: string, b: string): boolean => {
 };
 
 /**
- * Re-exports Node’s `createHash` function.
+ * Re-exports Node's `createHash` function.
  *
  * @example
  * ```ts
@@ -134,3 +134,41 @@ export const timingSafeEqual = (a: string, b: string): boolean => {
  * ```
  */
 export const createHash = crypto.createHash;
+
+/**
+ * @description Converts a base64url string (without padding) into a byte array.
+ * Handles the conversion from base64url format (URL-safe base64) to binary data.
+ *
+ * @param {string} base64url - Base64url text without padding
+ * @returns {Uint8Array} Byte array representation of the base64url data
+ */
+export function base64urlToBytes(base64url: string): Uint8Array {
+  const padded = base64url + "=".repeat((4 - (base64url.length % 4)) % 4);
+  const base64 = padded.replace(/-/g, "+").replace(/_/g, "/");
+  return Buffer.from(base64, "base64");
+}
+
+/**
+ * Chooses KMS `MessageType` automatically.
+ *
+ * Heuristic:
+ * - If the algorithm contains SHA_256/384/512 and the message length equals the digest size (32/48/64),
+ *   treat input as a precomputed digest (`DIGEST`); otherwise use `RAW`.
+ *
+ * @param message - The message to analyze
+ * @param signingAlgorithm - The signing algorithm to use
+ * @returns "RAW" or "DIGEST" based on the heuristic
+ */
+export function pickMessageType(
+  message: Uint8Array,
+  signingAlgorithm?: string
+): "RAW" | "DIGEST" {
+  const algo = String(signingAlgorithm ?? "").toUpperCase();
+  const len = message.byteLength;
+
+  if (algo.includes("SHA_256") && len === 32) return "DIGEST";
+  if (algo.includes("SHA_384") && len === 48) return "DIGEST";
+  if (algo.includes("SHA_512") && len === 64) return "DIGEST";
+
+  return "RAW";
+}

@@ -1,10 +1,10 @@
 /**
- * @file idempotencyUtils.ts
- * @summary Idempotency utility functions
- * @description Utility functions for idempotency operations
+ * @file idempotency.ts
+ * @summary Idempotency utility functions for DynamoDB operations
+ * @description Utility functions for idempotency operations, TTL calculations, and DynamoDB item formatting
  */
 
-import { stableStringify } from "@lawprotect/shared-ts";
+import { stableStringify } from "./json.js";
 
 /**
  * @description Converts a relative TTL in seconds to epoch seconds.
@@ -36,4 +36,3 @@ export const stringifyResult = (result: unknown): string => {
     return stableStringify({ ok: false, reason: "non-serializable-result" });
   }
 };
-

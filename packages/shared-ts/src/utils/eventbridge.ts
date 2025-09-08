@@ -1,13 +1,36 @@
 /**
- * @file EventBridgeUtils.ts
+ * @file eventbridge.ts
  * @summary Utility functions for EventBridge operations
- * @description Provides helper functions for common EventBridge tasks
+ * @description Provides helper functions for common EventBridge tasks across microservices
  */
 
-import { EventBridgeEntry } from "@/shared/contracts/eventbridge/EventBridgeClientPort";
-import type { EventMetadataSchema } from "@/shared/validations/schemas/eventbridge/EventMetadata.schema";
+/**
+ * @description Generic EventBridge entry interface
+ */
+export interface EventBridgeEntry {
+  Source: string;
+  DetailType: string;
+  Detail: string;
+  EventBusName?: string;
+  Time?: Date;
+  Region?: string;
+  Resources?: string[];
+  TraceHeader?: string;
+}
 
-
+/**
+ * @description Generic event metadata schema interface
+ */
+export interface EventMetadataSchema {
+  source: string;
+  detailType: string;
+  detail: Record<string, unknown>;
+  eventBusName?: string;
+  time?: Date;
+  region?: string;
+  resources?: string[];
+  traceHeader?: string;
+}
 
 /**
  * Converts EventMetadata to EventBridgeEntry format.

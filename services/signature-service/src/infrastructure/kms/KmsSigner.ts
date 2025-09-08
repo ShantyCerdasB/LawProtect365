@@ -43,8 +43,8 @@ import {
 } from "@lawprotect/shared-ts";
 
 import type { KmsSignerOptions } from "../../shared/types/kms";
-import { pickMessageType } from "../../shared/utils/kms";
-import { sleep } from "../../shared/utils/common";
+import { pickMessageType } from "@lawprotect/shared-ts";
+import { sleep } from "@lawprotect/shared-ts";
 
 /**
  * AWS KMS adapter that fulfills the shared `KmsPort`.

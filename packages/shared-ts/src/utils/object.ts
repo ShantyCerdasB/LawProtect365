@@ -1,5 +1,5 @@
 /**
- * Object utilities for picking, omitting, deep merging and path access.
+ * Object utilities for picking, omitting, deep merging, path access and JSON conversion.
  */
 
 /** Creates a shallow clone containing only selected keys. */
@@ -52,3 +52,16 @@ export const setPath = (obj: any, path: string, value: unknown): any => {
   cur[parts[parts.length - 1]] = value;
   return obj;
 };
+
+import type { JsonObject } from "../types/common.js";
+
+/**
+ * @description Produces a shallow JSON object by removing keys with `undefined` values.
+ * This helps satisfy strict `JsonObject` constraints for stable serialization.
+ *
+ * @param {Record<string, unknown>} src - Arbitrary record-like value to convert
+ * @returns {JsonObject} A `JsonObject` without `undefined` values
+ */
+export function toJsonObject(src: Record<string, unknown>): JsonObject {
+  return Object.fromEntries(Object.entries(src).filter(([, v]) => v !== undefined)) as JsonObject;
+}

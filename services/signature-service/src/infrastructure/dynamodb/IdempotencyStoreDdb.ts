@@ -37,7 +37,7 @@ import {
   toTtl, 
   toDdbItem, 
   stringifyResult 
-} from "../../shared/utils/idempotency/idempotencyUtils";
+} from "@lawprotect/shared-ts";
 
 /**
  * DynamoDB implementation of `IdempotencyStore`.

@@ -39,7 +39,7 @@ import {
   gsi1Sk,
   gsi2Pk,
 } from "./mappers/AuditItemMapper";
-import { toJsonObject } from "../../shared/utils";
+import { toJsonObject } from "@lawprotect/shared-ts";
 import { DEFAULT_ENTITY_INDEX, DEFAULT_ID_INDEX } from "../../shared/types/infrastructure/constants";
 import { AUDIT_ENTITY_TYPE } from "../../shared/types/infrastructure/enums";
 

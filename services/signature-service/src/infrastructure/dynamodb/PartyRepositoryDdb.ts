@@ -10,7 +10,7 @@
  */
 
 import type { Repository, DdbClientLike } from "@lawprotect/shared-ts";
-import { ConflictError, NotFoundError, mapAwsError } from "@lawprotect/shared-ts";
+import { ConflictError, NotFoundError, mapAwsError, toDdbItem } from "@lawprotect/shared-ts";
 import type { Party } from "../../domain/entities/Party";
 import {
   partyItemMapper,
@@ -27,8 +27,6 @@ import {
  * @param {T} v Source object.
  * @returns {Record<string, unknown>} A `Record<string, unknown>` view of the source object.
  */
-const toDdbItem = <T extends object>(v: T): Record<string, unknown> =>
-  (v as unknown) as Record<string, unknown>;
 
 /**
  * @description DynamoDB implementation of `Repository<Party, PartyKey>`.

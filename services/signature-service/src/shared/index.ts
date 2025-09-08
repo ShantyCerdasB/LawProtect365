@@ -1,8 +1,6 @@
 // Shared types and interfaces
 export * from "./types";
 
-// Shared utilities
-export * from "./utils";
 
 // Shared guards - removed (no longer exists)
 
