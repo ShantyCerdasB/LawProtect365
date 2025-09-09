@@ -42,15 +42,10 @@ export interface SignHashResult {
  */
 export interface SignaturesCommandsPort {
   /**
-   * Signs a hash digest using KMS
+   * @summary Signs a hash digest using KMS
+   * @description Signs a hash digest using KMS with proper algorithm validation
    * @param command - The hash signing command
    * @returns Promise resolving to signing result
    */
   signHash(command: SignHashCommand): Promise<SignHashResult>;
-}
-
-
-
-
-
-
+};

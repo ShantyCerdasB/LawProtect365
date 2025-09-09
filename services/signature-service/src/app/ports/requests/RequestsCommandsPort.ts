@@ -5,7 +5,7 @@
  * This port provides methods to handle invitation, reminder, cancellation, and other request operations.
  */
 
-import type { EnvelopeId, PartyId, TenantId } from "@/domain/value-objects/ids";
+import type { EnvelopeId, PartyId, TenantId } from "../../../domain/value-objects/ids";
 import type { ActorContext } from "@lawprotect/shared-ts";
 /**
  * @description Command for inviting parties to sign an envelope.
@@ -209,64 +209,58 @@ export interface AddViewerResult {
  */
 export interface RequestsCommandsPort {
   /**
-   * @description Invites parties to sign an envelope.
-   *
-   * @param {InvitePartiesCommand} command - The invitation command with required data
-   * @returns {Promise<InvitePartiesResult>} Promise resolving to invitation result
+   * @summary Invites parties to sign an envelope
+   * @description Invites parties to sign an envelope with validation and rate limiting
+   * @param command - The invitation command with required data
+   * @returns Promise resolving to invitation result
    */
   inviteParties(command: InvitePartiesCommand): Promise<InvitePartiesResult>;
 
   /**
-   * @description Sends reminders to parties for an envelope.
-   *
-   * @param {RemindPartiesCommand} command - The reminder command with required data
-   * @returns {Promise<RemindPartiesResult>} Promise resolving to reminder result
+   * @summary Sends reminders to parties for an envelope
+   * @description Sends reminders to parties for an envelope with rate limiting
+   * @param command - The reminder command with required data
+   * @returns Promise resolving to reminder result
    */
   remindParties(command: RemindPartiesCommand): Promise<RemindPartiesResult>;
 
   /**
-   * @description Cancels an envelope.
-   *
-   * @param {CancelEnvelopeCommand} command - The cancellation command with required data
-   * @returns {Promise<CancelEnvelopeResult>} Promise resolving to cancellation result
+   * @summary Cancels an envelope
+   * @description Cancels an envelope with proper status updates
+   * @param command - The cancellation command with required data
+   * @returns Promise resolving to cancellation result
    */
   cancelEnvelope(command: CancelEnvelopeCommand): Promise<CancelEnvelopeResult>;
 
   /**
-   * @description Declines an envelope.
-   *
-   * @param {DeclineEnvelopeCommand} command - The decline command with required data
-   * @returns {Promise<DeclineEnvelopeResult>} Promise resolving to decline result
+   * @summary Declines an envelope
+   * @description Declines an envelope with proper status updates
+   * @param command - The decline command with required data
+   * @returns Promise resolving to decline result
    */
   declineEnvelope(command: DeclineEnvelopeCommand): Promise<DeclineEnvelopeResult>;
 
   /**
-   * @description Finalizes a completed envelope.
-   *
-   * @param {FinaliseEnvelopeCommand} command - The finalization command with required data
-   * @returns {Promise<FinaliseEnvelopeResult>} Promise resolving to finalization result
+   * @summary Finalizes a completed envelope
+   * @description Finalizes a completed envelope and generates artifacts
+   * @param command - The finalization command with required data
+   * @returns Promise resolving to finalization result
    */
   finaliseEnvelope(command: FinaliseEnvelopeCommand): Promise<FinaliseEnvelopeResult>;
 
   /**
-   * @description Requests a signature from a specific party.
-   *
-   * @param {RequestSignatureCommand} command - The signature request command with required data
-   * @returns {Promise<RequestSignatureResult>} Promise resolving to signature request result
+   * @summary Requests a signature from a specific party
+   * @description Requests a signature from a specific party with URL generation
+   * @param command - The signature request command with required data
+   * @returns Promise resolving to signature request result
    */
   requestSignature(command: RequestSignatureCommand): Promise<RequestSignatureResult>;
 
   /**
-   * @description Adds a viewer to an envelope.
-   *
-   * @param {AddViewerCommand} command - The add viewer command with required data
-   * @returns {Promise<AddViewerResult>} Promise resolving to add viewer result
+   * @summary Adds a viewer to an envelope
+   * @description Adds a viewer to an envelope with proper party creation
+   * @param command - The add viewer command with required data
+   * @returns Promise resolving to add viewer result
    */
   addViewer(command: AddViewerCommand): Promise<AddViewerResult>;
-}
-
-
-
-
-
-
+};

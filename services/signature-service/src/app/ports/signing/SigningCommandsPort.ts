@@ -6,9 +6,9 @@
  * and other signing-related operations with proper business rule validation.
  */
 
-import { HashAlgorithm, KmsAlgorithm } from "@/domain/values/enums";
+import { HashAlgorithm, KmsAlgorithm } from "../../../domain/values/enums";
 import type { EventEnvelope } from "@lawprotect/shared-ts";
-import type { EnvelopeId, PartyId, IpAddress } from"@/domain/value-objects/index";
+import type { EnvelopeId, PartyId, IpAddress } from "../../../domain/value-objects/index";
 
 /**
  * Input for signing consent operation (replaces OTP verification)
@@ -227,50 +227,50 @@ export interface DownloadSignedDocumentResult {
  */
 export interface SigningCommandsPort {
   /**
-   * Records signing consent for a signer
+   * @summary Records signing consent for a signer
+   * @description Records signing consent for a signer with proper validation
    * @param command - The signing consent command
    * @returns Promise resolving to consent result
    */
   recordSigningConsent(command: SigningConsentCommand): Promise<SigningConsentResult>;
 
   /**
-   * Prepares signing process for a signer
+   * @summary Prepares signing process for a signer
+   * @description Prepares signing process for a signer with proper validation
    * @param command - The signing preparation command
    * @returns Promise resolving to preparation result
    */
   prepareSigning(command: PrepareSigningCommand): Promise<PrepareSigningResult>;
 
   /**
-   * Completes the signing process for a signer
+   * @summary Completes the signing process for a signer
+   * @description Completes the signing process for a signer with KMS operations
    * @param command - The signing completion command
    * @returns Promise resolving to completion result
    */
   completeSigning(command: CompleteSigningCommand): Promise<CompleteSigningResult>;
 
   /**
-   * Declines the signing process for a signer
+   * @summary Declines the signing process for a signer
+   * @description Declines the signing process for a signer with proper status updates
    * @param command - The signing decline command
    * @returns Promise resolving to decline result
    */
   declineSigning(command: DeclineSigningCommand): Promise<DeclineSigningResult>;
 
   /**
-   * Creates a presigned URL for file upload
+   * @summary Creates a presigned URL for file upload
+   * @description Creates a presigned URL for file upload with proper validation
    * @param command - The presign upload command
    * @returns Promise resolving to presign result
    */
   presignUpload(command: PresignUploadCommand): Promise<PresignUploadResult>;
 
   /**
-   * Creates a presigned URL for downloading a signed document
+   * @summary Creates a presigned URL for downloading a signed document
+   * @description Creates a presigned URL for downloading a signed document
    * @param command - The download signed document command
    * @returns Promise resolving to download result
    */
   downloadSignedDocument(command: DownloadSignedDocumentCommand): Promise<DownloadSignedDocumentResult>;
-}
-
-
-
-
-
-
+};

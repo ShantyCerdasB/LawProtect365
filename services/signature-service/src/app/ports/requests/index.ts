@@ -4,27 +4,7 @@
  * @description Re-exports all request ports for convenient importing.
  */
 
-export type {
-  RequestsCommandsPort,
-  InvitePartiesCommand,
-  InvitePartiesResult,
-  RemindPartiesCommand,
-  RemindPartiesResult,
-  CancelEnvelopeCommand,
-  CancelEnvelopeResult,
-  DeclineEnvelopeCommand,
-  DeclineEnvelopeResult,
-  FinaliseEnvelopeCommand,
-  FinaliseEnvelopeResult,
-  RequestSignatureCommand,
-  RequestSignatureResult,
-  AddViewerCommand,
-  AddViewerResult,
-} from "./RequestsCommandsPort";
-
-
-
-
+export * from "./RequestsCommandsPort";
 
 
 
