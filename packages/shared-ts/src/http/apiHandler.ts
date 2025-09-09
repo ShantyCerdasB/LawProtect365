@@ -5,7 +5,7 @@ import type {
   ApiEvent,
   Headers
 } from "./httpTypes.js";
-import { mapError } from "@errors/mapError.js";
+import { mapError } from "../errors/mapError.js";
 import { buildCorsHeaders, isPreflight, preflightResponse } from "./cors.js";
 import { CorsConfig } from "../types/corsConfig.js";
 

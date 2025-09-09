@@ -40,6 +40,22 @@ module.exports = {
   moduleNameMapper: {
     "^(\\.{1,2}/.*)\\.js$": "$1",
 
+    // Shared-ts internal aliases (for @/ imports within shared-ts package) - MUST come first
+    "^@/index\\.js$": "<rootDir>/../../packages/shared-ts/src/index.ts",
+    "^@/validation/z\\.js$": "<rootDir>/../../packages/shared-ts/src/validation/z.ts",
+    "^@/(.*)\\.js$": "<rootDir>/../../packages/shared-ts/src/$1.ts",
+    "^@/(.*)$": "<rootDir>/../../packages/shared-ts/src/$1",
+    
+    // Additional shared-ts internal aliases for specific modules
+    "^@utils/(.*)\\.js$": "<rootDir>/../../packages/shared-ts/src/utils/$1.ts",
+    "^@utils/(.*)$": "<rootDir>/../../packages/shared-ts/src/utils/$1",
+    "^@http/(.*)\\.js$": "<rootDir>/../../packages/shared-ts/src/http/$1.ts",
+    "^@http/(.*)$": "<rootDir>/../../packages/shared-ts/src/http/$1",
+    "^@errors/(.*)\\.js$": "<rootDir>/../../packages/shared-ts/src/errors/$1.ts",
+    "^@errors/(.*)$": "<rootDir>/../../packages/shared-ts/src/errors/$1",
+    "^@app/(.*)\\.js$": "<rootDir>/../../packages/shared-ts/src/app/$1.ts",
+    "^@app/(.*)$": "<rootDir>/../../packages/shared-ts/src/app/$1",
+    
     "^@lawprotect/shared-ts$": "<rootDir>/../../packages/shared-ts/src/index.ts",
     "^@lawprotect/shared-ts/(.*)$": "<rootDir>/../../packages/shared-ts/src/$1",
     "^@http/(.*)\\.js$": "<rootDir>/../../packages/shared-ts/src/http/$1",

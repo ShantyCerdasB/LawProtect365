@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { AppError } from "@errors/AppError.js";
-import { ErrorCodes } from "@errors/codes.js";
+import { AppError } from "../errors/AppError.js";
+import { ErrorCodes } from "../errors/codes.js";
 
 /**
  * Environment loader using Zod schemas.

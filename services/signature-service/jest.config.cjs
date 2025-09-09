@@ -15,6 +15,9 @@ module.exports = {
   /** Package root for glob resolution */
   roots: ["<rootDir>"],
 
+  /** Setup files to run before tests */
+  setupFilesAfterEnv: ["<rootDir>/__tests__/setup.ts"],
+
   /**
    * Extend base moduleNameMapper with service-specific aliases.
    * Uses @/ as base alias for all service directories.

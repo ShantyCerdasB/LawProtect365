@@ -1,4 +1,4 @@
-import type { AppContext } from "@app/AppContext.js";
+import type { AppContext } from "..\..\AppContext.js";
 
 /**
  * Async operation signature used by decorators.

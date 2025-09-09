@@ -83,6 +83,7 @@ export interface DocumentsCommandService {
 export class DefaultDocumentsCommandService implements DocumentsCommandService {
   constructor(private readonly commandsPort: DocumentsCommandsPort) {}
 
+
   async create(command: CreateDocumentCommand): Promise<CreateDocumentResult> {
     // Apply generic rules
     assertTenantBoundary(command.tenantId, command.tenantId);

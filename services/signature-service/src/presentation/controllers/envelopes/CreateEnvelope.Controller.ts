@@ -26,6 +26,7 @@ export const CreateEnvelopeController = createCommandController<CreateEnvelopeCo
   }),
   responseType: "created",
   includeActor: true,
+  methodName: "create",
 });
 
 

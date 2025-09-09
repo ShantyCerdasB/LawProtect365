@@ -34,7 +34,8 @@ export const createController = <TInput, TOutput>(
     const appService = new config.appServiceClass(dependencies);
     
     const params = config.extractParams(validated.path, validated.body);
-    const result = await appService.execute({ tenantId, actor, ...params });
+    const methodName = config.methodName || 'execute';
+    const result = await appService[methodName]({ tenantId, actor, ...params });
     
     const responseData = config.transformResult ? config.transformResult(result) : result;
     

@@ -1,6 +1,6 @@
-import type { HandlerFn, ApiEvent } from "@http/httpTypes.js";
-import { mapError } from "@errors/mapError.js";
-import { ErrorCodes } from "@errors/codes.js";
+import type { HandlerFn, ApiEvent } from "../http/httpTypes.js";
+import { mapError } from "../errors/mapError.js";
+import { ErrorCodes } from "../errors/codes.js";
 import type { JwtVerifyOptions } from "../types/auth.js";
 import { bearerFromAuthHeader, verifyJwt } from "./jwtVerifier.js";
 

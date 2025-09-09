@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { PaginationParams } from "../types/pagination.js";
-import type { ApiEvent } from "@http/httpTypes.js";
+import type { ApiEvent } from "../http/httpTypes.js";
 
 /**
  * Schema builder for standard pagination query (?limit, ?cursor).

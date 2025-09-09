@@ -1,7 +1,7 @@
 import { createRemoteJWKSet, jwtVerify, type JWTPayload, type JWSHeaderParameters } from "jose";
 import { toJwtClaims } from "./claims.js";
 import type { JwtVerifyOptions, JwtVerificationResult } from "../types/auth.js";
-import { getEnv, getNumber } from "@utils/env.js";
+import { getEnv, getNumber } from "../utils/env.js";
 
 /**
  * Extracts a bearer token from an Authorization header value.

@@ -1,5 +1,5 @@
 import type { BeforeMiddleware } from "./middleware.js";
-import type { AppContext, LoggerLike, MetricsLike, TracerLike } from "@app/AppContext.js";
+import type { AppContext, LoggerLike, MetricsLike, TracerLike } from "../app/AppContext.js";
 
 /**
  * Factories to create per-request logger/metrics/tracer instances.

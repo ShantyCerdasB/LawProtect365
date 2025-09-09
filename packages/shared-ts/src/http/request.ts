@@ -1,5 +1,5 @@
 import type { ApiEvent } from "./httpTypes.js";
-import { BadRequestError } from "@errors/errors.js";
+import { BadRequestError } from "../errors/errors.js";
 
 /**
  * Reads a header value case-insensitively.

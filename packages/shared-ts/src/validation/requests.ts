@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { ApiEvent } from "@http/httpTypes.js";
+import type { ApiEvent } from "../http/httpTypes.js";
 import { validateJsonBody, validatePath, validateQuery } from "./http.js";
 
 /**

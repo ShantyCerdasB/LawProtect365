@@ -64,6 +64,8 @@ export interface CommandControllerConfig<TInput = any, TOutput = any> {
   responseType: "ok" | "created" | "noContent" | "json" | "text" | "binary" | "stream";
   /** Whether to include actor context */
   includeActor?: boolean;
+  /** Method name to call on the service (defaults to 'execute') */
+  methodName?: string;
   
   /** Additional "before" middlewares to run prior to the handler */
   before?: BeforeMiddleware[];

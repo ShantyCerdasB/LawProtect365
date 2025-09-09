@@ -15,7 +15,7 @@
 
     // Mapea el paquete compartido y sus aliases internos
     "paths": {
-      "@/*": ["src/*"],
+      "@/*": ["src/*"]
     }
   },
 

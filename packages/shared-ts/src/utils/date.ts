@@ -3,8 +3,8 @@
  * All helpers are timezone-agnostic unless explicitly named with UTC.
  */
 
-import { ISODateString } from "@/index.js";
-import { z } from "@/validation/z.js";
+import { ISODateString } from "../index.js";
+import { z } from "../validation/z.js";
 
 /** Returns current time as ISO-8601 string. */
 export const nowIso = (): string => new Date().toISOString();

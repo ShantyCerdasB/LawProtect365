@@ -1,7 +1,7 @@
 import { z } from "zod";
-import type { ApiEvent } from "@http/httpTypes.js";
-import { AppError } from "@errors/AppError.js";
-import { ErrorCodes } from "@errors/codes.js";
+import type { ApiEvent } from "../http/httpTypes.js";
+import { AppError } from "../errors/AppError.js";
+import { ErrorCodes } from "../errors/codes.js";
 
 /**
  * HTTP request validation helpers for path parameters, query string, and JSON body.

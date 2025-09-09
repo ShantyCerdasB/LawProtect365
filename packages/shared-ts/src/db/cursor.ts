@@ -1,5 +1,5 @@
-import { stableStringify, parseJson } from "@utils/json.js";
-import { toBase64Url } from "@utils/crypto.js";
+import { stableStringify, parseJson } from "../utils/json.js";
+import { toBase64Url } from "../utils/crypto.js";
 import type { JsonValue } from "../types/common.js";
 
 /**

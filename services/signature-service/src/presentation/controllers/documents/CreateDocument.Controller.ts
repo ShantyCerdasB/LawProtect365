@@ -23,6 +23,7 @@ export const CreateDocumentController = createCommandController<CreateDocumentCo
   extractParams: extractDocumentCreateParams,
   responseType: "created",
   includeActor: true,
+  methodName: "create",
 });
 
 // Export handler for backward compatibility

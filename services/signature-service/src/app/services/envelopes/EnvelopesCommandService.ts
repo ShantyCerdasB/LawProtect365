@@ -23,6 +23,7 @@ import { assertTenantBoundary } from "@lawprotect/shared-ts";
 export class EnvelopesCommandService {
   constructor(private readonly commandsPort: EnvelopesCommandsPort) {}
 
+
   /**
    * @summary Creates a new envelope
    * @param command - Command data for creating an envelope

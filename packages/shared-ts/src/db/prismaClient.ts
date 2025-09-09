@@ -1,5 +1,5 @@
 import { PrismaClient, Prisma } from "@prisma/client";
-import { getEnv, getNumber } from "@utils/env.js";
+import { getEnv, getNumber } from "../utils/env.js";
 
 /**
  * Prisma client singleton for Lambda and local environments.
