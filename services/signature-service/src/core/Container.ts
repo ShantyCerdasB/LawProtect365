@@ -122,6 +122,9 @@ import { makeSignaturesCommandsPort } from "../app/adapters/signatures/makeSigna
 // Certificate services
 import { DefaultCertificateValidationService } from "../app/services/Certificate";
 
+// Audit services
+import { makeAuditCommandsPort, makeAuditQueriesPort } from "../app/adapters/audit";
+
 // Signing services
 import { 
   DefaultSigningValidationService,
@@ -417,6 +420,10 @@ export const getContainer = (): Container => {
     envelopesRepo: envelopes,
     ids,
     s3Service: documentsS3,
+    s3Config: {
+      evidenceBucket: config.s3.evidenceBucket,
+      signedBucket: config.s3.signedBucket,
+    },
   });
   const documentsQueries = makeDocumentsQueriesPort(documents);
 
@@ -452,6 +459,13 @@ export const getContainer = (): Container => {
     envelopes,
     certificateValidation
   );
+
+  // Audit services - instantiate with correct dependencies
+  const auditCommands = makeAuditCommandsPort({ auditRepo: audit });
+  const auditQueries = makeAuditQueriesPort({ 
+    auditRepo: audit,
+    defaultPageSize: config.audit?.defaultPageSize ?? 50
+  });
 
   // Signing services - instantiate with correct dependencies
   const signingValidation = new DefaultSigningValidationService();
@@ -583,19 +597,21 @@ export const getContainer = (): Container => {
           commandsPort: signaturesCommands,
           command: signaturesCommand,
         },
-    audit: {
-      log: async (action: string, details: any, context: any) => {
-        // Use the audit repository to log audit events
-        await audit.record({
-          type: action,
-          metadata: details,
-          actor: context,
-          occurredAt: new Date().toISOString(),
-          tenantId: context?.tenantId || "default",
-          envelopeId: context?.envelopeId || "system",
-        });
-      }
-    },
+        audit: {
+          commandsPort: auditCommands,
+          queriesPort: auditQueries,
+          log: async (action: string, details: any, context: any) => {
+            // Use the audit repository to log audit events
+            await audit.record({
+              type: action,
+              metadata: details,
+              actor: context,
+              occurredAt: new Date().toISOString(),
+              tenantId: context?.tenantId || "default",
+              envelopeId: context?.envelopeId || "system",
+            });
+          }
+        },
     configProvider,
     ids,
     time,

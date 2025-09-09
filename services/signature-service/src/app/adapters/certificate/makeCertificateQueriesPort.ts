@@ -10,6 +10,9 @@ import type { Repository } from "@lawprotect/shared-ts";
 import type { EnvelopeId } from "@/domain/value-objects/ids";
 import type { Envelope } from "../../../domain/entities/Envelope";
 import type { CertificateValidationService } from "../../../domain/types/certificate/ServiceInterfaces";
+import type { AuditEvent } from "../../../domain/value-objects/audit";
+import type { PaginationCursor } from "../../../domain/value-objects/common";
+import { PAGINATION_LIMITS } from "../../../domain/values/enums";
 
 /**
  * @summary Creates a CertificateQueriesPort implementation with production-ready features
@@ -46,8 +49,8 @@ export function makeCertificateQueriesPort(
       const auditPage = await auditRepo.listByEnvelope({
         tenantId: query.tenantId,
         envelopeId: query.envelopeId,
-        limit: query.limit,
-        cursor: query.cursor as any, // Type assertion for cursor compatibility
+        limit: query.limit ?? PAGINATION_LIMITS.DEFAULT_LIMIT,
+        cursor: query.cursor as PaginationCursor | undefined, // Type assertion for cursor compatibility
       });
 
       // 4. VALIDATE HASH CHAIN
@@ -72,7 +75,7 @@ export function makeCertificateQueriesPort(
  * @param events - Array of audit events to validate
  * @returns True if the hash chain is valid, false otherwise
  */
-function validateHashChain(events: any[]): boolean {
+export function validateHashChain(events: AuditEvent[]): boolean {
   if (events.length === 0) {
     return true;
   }
@@ -106,9 +109,3 @@ function validateHashChain(events: any[]): boolean {
 
   return true;
 }
-
-
-
-
-
-

@@ -10,6 +10,7 @@ import type { DocumentId } from "@/domain/value-objects/ids";
 import type { DocumentLock } from "@lawprotect/shared-ts";
 import type { Document } from "@/domain/entities/Document";
 import type { DocumentsRepository } from "@/domain/contracts/repositories/documents/DocumentsRepository";
+import { PAGINATION_LIMITS } from "@/domain/values/enums";
 
 /**
  * Creates a DocumentsQueriesPort implementation
@@ -34,7 +35,7 @@ export const makeDocumentsQueriesPort = (documentsRepo: DocumentsRepository): Do
   async listByEnvelope(query: ListDocumentsQuery): Promise<ListDocumentsResult> {
     const result = await documentsRepo.listByEnvelope({
       envelopeId: query.envelopeId,
-      limit: query.limit,
+      limit: query.limit ?? PAGINATION_LIMITS.DEFAULT_LIMIT,
       cursor: query.cursor,
     });
 
@@ -59,9 +60,3 @@ export const makeDocumentsQueriesPort = (documentsRepo: DocumentsRepository): Do
     return Array.isArray(locks) ? locks : [];
   },
 });
-
-
-
-
-
-

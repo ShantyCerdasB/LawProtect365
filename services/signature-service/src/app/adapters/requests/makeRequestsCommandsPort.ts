@@ -23,11 +23,13 @@ import type {
   AddViewerResult,
 } from "../../ports/requests/RequestsCommandsPort";
 import type { Repository, S3Presigner } from "@lawprotect/shared-ts";
-import { nowIso, NotFoundError, ConflictError, BadRequestError, ErrorCodes } from "@lawprotect/shared-ts";
+import { nowIso, NotFoundError, ConflictError, BadRequestError, ErrorCodes, assertTenantBoundary } from "@lawprotect/shared-ts";
+import { PARTY_DEFAULTS, ENVELOPE_STATUSES, PARTY_ROLES, PARTY_STATUSES, REQUEST_DEFAULTS, S3_BUCKETS, REQUEST_TIMEOUTS } from "../../../domain/values/enums";
 import type { Envelope } from "../../../domain/entities/Envelope";
 import type { Party } from "../../../domain/entities/Party";
 import type { Input } from "../../../domain/entities/Input";
-import type { EnvelopeId, PartyId } from "@/domain/value-objects/ids";
+import type { EnvelopeId, PartyId } from "../../../domain/value-objects/ids";
+import type { PartyStatus, PartyRole, EnvelopeStatus } from "../../../domain/values/enums";
 import type { PartyKey, InputKey } from "../../../domain/types/infrastructure/dynamodb";
 import { DefaultRequestsValidationService } from "../../services/Requests/RequestsValidationService";
 import { DefaultRequestsAuditService } from "../../services/Requests/RequestsAuditService";
@@ -44,7 +46,11 @@ type EventService = DefaultRequestsEventService;
 type RateLimitService = DefaultRequestsRateLimitService;
 
 /**
- * Helper function to validate and get envelope
+ * Validates envelope existence and returns the envelope entity
+ * @param envelopesRepo - Repository for envelope operations
+ * @param envelopeId - Unique identifier for the envelope
+ * @returns Promise resolving to the envelope entity
+ * @throws NotFoundError if envelope does not exist
  */
 async function validateAndGetEnvelope(
   envelopesRepo: Repository<Envelope, EnvelopeId, undefined>,
@@ -62,7 +68,14 @@ async function validateAndGetEnvelope(
 }
 
 /**
- * Helper function to execute common service operations
+ * Executes common service operations including validation and rate limiting
+ * @param validationService - Optional validation service
+ * @param rateLimitService - Optional rate limiting service
+ * @param _auditService - Optional audit service (unused in this function)
+ * @param _eventService - Optional event service (unused in this function)
+ * @param command - Command object containing operation data
+ * @param operation - Name of the operation being performed
+ * @returns Promise that resolves when all operations complete
  */
 async function executeCommonServices(
   validationService: ValidationService | undefined,
@@ -92,7 +105,11 @@ async function executeCommonServices(
 }
 
 /**
- * Helper function to execute input-specific validations
+ * Executes input-specific validations based on the operation type
+ * @param validationService - Validation service instance
+ * @param command - Command object containing validation data
+ * @param operation - Type of operation to validate
+ * @returns Promise that resolves when validation completes
  */
 async function executeInputValidations(
   validationService: ValidationService,
@@ -114,7 +131,14 @@ async function executeInputValidations(
 }
 
 /**
- * Helper function to execute cancel/decline common operations
+ * Executes common operations for cancel and decline envelope operations
+ * @param command - Cancel or decline command object
+ * @param targetStatus - Target status to transition to ("canceled" or "declined")
+ * @param envelopesRepo - Repository for envelope operations
+ * @param auditService - Optional audit service for logging
+ * @param eventService - Optional event service for publishing events
+ * @returns Promise resolving to operation result with envelope ID, status, and timestamp
+ * @throws ConflictError if transition is not allowed
  */
 async function executeCancelDeclineOperations(
   command: CancelEnvelopeCommand | DeclineEnvelopeCommand,
@@ -157,7 +181,7 @@ async function executeCancelDeclineOperations(
     status: targetStatus,
     [`${targetStatus}At`]: now,
     timestamp: now
-  };
+  } as any;
 
   // Publish audit and events
   await publishAuditAndEvents(auditService, eventService, command, result, targetStatus === "canceled" ? "CancelEnvelope" : "DeclineEnvelope");
@@ -166,7 +190,13 @@ async function executeCancelDeclineOperations(
 }
 
 /**
- * Helper function to publish audit and events
+ * Publishes audit logs and events for completed operations
+ * @param auditService - Optional audit service for logging operations
+ * @param eventService - Optional event service for publishing domain events
+ * @param command - Command object containing operation context
+ * @param result - Result data to be logged or published
+ * @param operation - Name of the operation for method resolution
+ * @returns Promise that resolves when all publishing operations complete
  */
 async function publishAuditAndEvents(
   auditService: AuditService | undefined,
@@ -203,7 +233,11 @@ async function publishAuditAndEvents(
 }
 
 /**
- * Helper function to create a new party
+ * Creates a new party entity with default values
+ * @param partyId - Unique identifier for the new party
+ * @param command - Invite parties command containing tenant and envelope context
+ * @param partiesRepo - Repository for party persistence operations
+ * @returns Promise that resolves when party is created
  */
 async function createNewParty(
   partyId: PartyId,
@@ -217,13 +251,13 @@ async function createNewParty(
     envelopeId: command.envelopeId,
     name: `Party ${partyId}`,
     email: `party-${partyId}@example.com`,
-    role: "signer",
-    status: "pending",
-    sequence: 1,
+    role: PARTY_ROLES[0] as PartyRole,
+    status: PARTY_DEFAULTS.DEFAULT_STATUS as PartyStatus,
+    sequence: PARTY_DEFAULTS.DEFAULT_SEQUENCE,
     invitedAt: now,
     createdAt: now,
     updatedAt: now,
-    auth: { methods: ["otpViaEmail"] },
+    auth: { methods: [...PARTY_DEFAULTS.DEFAULT_AUTH_METHODS] },
     otpState: undefined,
   };
 
@@ -231,7 +265,11 @@ async function createNewParty(
 }
 
 /**
- * Helper function to process party invitations
+ * Processes party invitations by checking existing parties and creating new ones
+ * @param command - Invite parties command containing party IDs and context
+ * @param partiesRepo - Repository for party operations
+ * @param ids - Optional ID generation service
+ * @returns Promise resolving to invitation results with invited, already pending, and skipped party IDs
  */
 async function processPartyInvitations(
   command: InvitePartiesCommand,
@@ -247,7 +285,7 @@ async function processPartyInvitations(
     const existingParty = await partiesRepo.getById(partyKey);
     
     if (existingParty) {
-      if (existingParty.status === "pending" || existingParty.status === "invited") {
+      if (existingParty.status === PARTY_STATUSES[0] || existingParty.status === "invited") {
         alreadyPending.push(partyId);
       } else {
         skipped.push(partyId);
@@ -270,7 +308,10 @@ async function processPartyInvitations(
 }
 
 /**
- * Helper function to get party invitation statistics
+ * Retrieves party invitation statistics for rate limiting and policy validation
+ * @param envelopeId - Unique identifier for the envelope
+ * @param partiesRepo - Repository for party operations
+ * @returns Promise resolving to invitation statistics including last sent time and daily count
  */
 async function getPartyInvitationStats(
   envelopeId: EnvelopeId,
@@ -305,7 +346,14 @@ async function getPartyInvitationStats(
 }
 
 /**
- * Helper function to update envelope status if needed
+ * Updates envelope status to "sent" if conditions are met and validation passes
+ * @param envelope - Current envelope entity
+ * @param invitedCount - Number of parties that were successfully invited
+ * @param envelopeId - Unique identifier for the envelope
+ * @param envelopesRepo - Repository for envelope operations
+ * @param partiesRepo - Optional repository for party operations
+ * @param inputsRepo - Optional repository for input operations
+ * @returns Promise resolving to boolean indicating if status was changed
  */
 async function updateEnvelopeStatusIfNeeded(
   envelope: Envelope,
@@ -315,7 +363,7 @@ async function updateEnvelopeStatusIfNeeded(
   partiesRepo?: Repository<Party, PartyKey, undefined>,
   inputsRepo?: Repository<Input, InputKey, undefined>
 ): Promise<boolean> {
-  if (invitedCount > 0 && envelope.status === "draft") {
+  if (invitedCount > 0 && envelope.status === ENVELOPE_STATUSES[0]) {
     try {
       // Validate envelope is ready to send using domain rules
       if (partiesRepo && inputsRepo) {
@@ -328,8 +376,8 @@ async function updateEnvelopeStatusIfNeeded(
         assertReadyToSend(parties, inputs);
       }
       
-      assertLifecycleTransition(envelope.status, "sent");
-      await envelopesRepo.update(envelopeId, { status: "sent" });
+      assertLifecycleTransition(envelope.status, ENVELOPE_STATUSES[1]);
+      await envelopesRepo.update(envelopeId, { status: ENVELOPE_STATUSES[1] });
       return true;
     } catch {
       console.warn("Could not transition envelope to sent status");
@@ -339,7 +387,11 @@ async function updateEnvelopeStatusIfNeeded(
 }
 
 /**
- * Helper function to generate artifacts for finalized envelope
+ * Generates artifacts (PDFs, certificates) for finalized envelopes
+ * @param envelopeId - Unique identifier for the envelope
+ * @param s3Presigner - Optional S3 presigner for generating signed URLs
+ * @param ids - Optional ID generation service for artifact IDs
+ * @returns Promise resolving to array of generated artifact IDs
  */
 async function generateArtifacts(
   envelopeId: EnvelopeId,
@@ -355,9 +407,9 @@ async function generateArtifacts(
   // Generate final envelope PDF
   const pdfArtifactId = ids.ulid();
   await s3Presigner.getObjectUrl({
-    bucket: "envelope-artifacts",
+    bucket: S3_BUCKETS.ENVELOPE_ARTIFACTS,
     key: `envelopes/${envelopeId}/final-${pdfArtifactId}.pdf`,
-    expiresInSeconds: 7 * 24 * 60 * 60, // 7 days
+    expiresInSeconds: REQUEST_TIMEOUTS.URL_EXPIRATION_SECONDS,
     responseContentType: "application/pdf",
     responseContentDisposition: `attachment; filename="envelope-${envelopeId}.pdf"`
   });
@@ -366,9 +418,9 @@ async function generateArtifacts(
   // Generate completion certificate
   const certArtifactId = ids.ulid();
   await s3Presigner.getObjectUrl({
-    bucket: "envelope-artifacts",
+    bucket: S3_BUCKETS.ENVELOPE_ARTIFACTS,
     key: `envelopes/${envelopeId}/certificate-${certArtifactId}.pdf`,
-    expiresInSeconds: 7 * 24 * 60 * 60, // 7 days
+    expiresInSeconds: REQUEST_TIMEOUTS.URL_EXPIRATION_SECONDS,
     responseContentType: "application/pdf",
     responseContentDisposition: `attachment; filename="certificate-${envelopeId}.pdf"`
   });
@@ -378,18 +430,22 @@ async function generateArtifacts(
 }
 
 /**
- * Helper function to generate signing URL
+ * Generates a presigned URL for document signing
+ * @param envelopeId - Unique identifier for the envelope
+ * @param partyId - Unique identifier for the party
+ * @param s3Presigner - Optional S3 presigner for generating signed URLs
+ * @returns Promise resolving to signing URL and expiration timestamp
  */
 async function generateSigningUrl(
   envelopeId: EnvelopeId,
   partyId: PartyId,
   s3Presigner?: S3Presigner
 ): Promise<{ signingUrl: string; expiresAt: string }> {
-  const expiresInSeconds = 7 * 24 * 60 * 60; // 7 days
+  const expiresInSeconds = REQUEST_TIMEOUTS.SIGNING_URL_EXPIRATION_SECONDS;
   
   if (s3Presigner) {
     const signingUrl = await s3Presigner.getObjectUrl({
-      bucket: "signing-documents",
+      bucket: S3_BUCKETS.SIGNING_DOCUMENTS,
       key: `envelopes/${envelopeId}/signing-${partyId}.pdf`,
       expiresInSeconds,
       responseContentType: "application/pdf",
@@ -406,7 +462,8 @@ async function generateSigningUrl(
 }
 
 /**
- * Configuration interface for RequestsCommandsPort
+ * Configuration interface for RequestsCommandsPort implementation
+ * @interface RequestsCommandsPortConfig
  */
 interface RequestsCommandsPortConfig {
   repositories: {
@@ -427,10 +484,9 @@ interface RequestsCommandsPortConfig {
 }
 
 /**
- * @description Creates RequestsCommandsPort implementation with optional services.
- * 
+ * Creates RequestsCommandsPort implementation with optional services for request operations
  * @param config - Configuration object containing repositories, services, and infrastructure
- * @returns RequestsCommandsPort implementation
+ * @returns Configured RequestsCommandsPort implementation
  */
 export function makeRequestsCommandsPort(config: RequestsCommandsPortConfig): RequestsCommandsPort {
   const {
@@ -448,6 +504,9 @@ export function makeRequestsCommandsPort(config: RequestsCommandsPortConfig): Re
   
   return {
     async inviteParties(command: InvitePartiesCommand): Promise<InvitePartiesResult> {
+      // Apply generic rules
+      assertTenantBoundary(command.tenantId, command.tenantId);
+      
       // Execute common services (validation and rate limiting)
       await executeCommonServices(validationService, rateLimitService, auditService, eventService, command, "InviteParties");
 
@@ -462,8 +521,8 @@ export function makeRequestsCommandsPort(config: RequestsCommandsPortConfig): Re
       assertInvitePolicy({
         lastSentAt: partyStats.lastSentAt,
         sentToday: partyStats.sentToday,
-        minCooldownMs: 60000, // 1 minute
-        dailyLimit: 10
+        minCooldownMs: REQUEST_DEFAULTS.INVITE_COOLDOWN_MS,
+        dailyLimit: REQUEST_DEFAULTS.INVITE_DAILY_LIMIT
       });
 
       // Process party invitations
@@ -486,13 +545,16 @@ export function makeRequestsCommandsPort(config: RequestsCommandsPortConfig): Re
     },
 
     async remindParties(command: RemindPartiesCommand): Promise<RemindPartiesResult> {
+      // Apply generic rules
+      assertTenantBoundary(command.tenantId, command.tenantId);
+      
       // Execute common services (validation and rate limiting)
       await executeCommonServices(validationService, rateLimitService, auditService, eventService, command, "RemindParties");
 
       // Get and validate envelope
       const envelope = await validateAndGetEnvelope(envelopesRepo, command.envelopeId);
       
-      if (envelope.status !== "sent" && envelope.status !== "in_progress") {
+      if (envelope.status !== ENVELOPE_STATUSES[1] && envelope.status !== ENVELOPE_STATUSES[2]) {
         throw new ConflictError(
           `Cannot send reminders for envelope in ${envelope.status} state`,
           ErrorCodes.COMMON_CONFLICT,
@@ -514,7 +576,7 @@ export function makeRequestsCommandsPort(config: RequestsCommandsPortConfig): Re
             continue;
           }
 
-          if (party.status === "pending" || party.status === "invited") {
+          if (party.status === PARTY_STATUSES[0] || party.status === "invited") {
             reminded.push(partyId);
           } else {
             skipped.push(partyId);
@@ -534,33 +596,42 @@ export function makeRequestsCommandsPort(config: RequestsCommandsPortConfig): Re
     },
 
     async cancelEnvelope(command: CancelEnvelopeCommand): Promise<CancelEnvelopeResult> {
+      // Apply generic rules
+      assertTenantBoundary(command.tenantId, command.tenantId);
+      
       // Execute common services (validation and rate limiting)
       await executeCommonServices(validationService, rateLimitService, auditService, eventService, command, "CancelEnvelope");
 
       // Execute cancel operations using helper
-      const result = await executeCancelDeclineOperations(command, "canceled", envelopesRepo, auditService, eventService);
+      const result = await executeCancelDeclineOperations(command, ENVELOPE_STATUSES[4], envelopesRepo, auditService, eventService);
 
       return result as unknown as CancelEnvelopeResult;
     },
 
     async declineEnvelope(command: DeclineEnvelopeCommand): Promise<DeclineEnvelopeResult> {
+      // Apply generic rules
+      assertTenantBoundary(command.tenantId, command.tenantId);
+      
       // Execute common services (validation and rate limiting)
       await executeCommonServices(validationService, rateLimitService, auditService, eventService, command, "DeclineEnvelope");
 
       // Execute decline operations using helper
-      const result = await executeCancelDeclineOperations(command, "declined", envelopesRepo, auditService, eventService);
+      const result = await executeCancelDeclineOperations(command, ENVELOPE_STATUSES[5], envelopesRepo, auditService, eventService);
 
       return result as unknown as DeclineEnvelopeResult;
     },
 
     async finaliseEnvelope(command: FinaliseEnvelopeCommand): Promise<FinaliseEnvelopeResult> {
+      // Apply generic rules
+      assertTenantBoundary(command.tenantId, command.tenantId);
+      
       // Execute common services (validation and rate limiting)
       await executeCommonServices(validationService, rateLimitService, auditService, eventService, command, "FinaliseEnvelope");
 
       // Get and validate envelope
       const envelope = await validateAndGetEnvelope(envelopesRepo, command.envelopeId);
       
-      if (envelope.status !== "completed") {
+      if (envelope.status !== ENVELOPE_STATUSES[3]) {
         throw new ConflictError(
           `Cannot finalize envelope in ${envelope.status} state. Must be completed.`,
           ErrorCodes.COMMON_CONFLICT,
@@ -574,7 +645,7 @@ export function makeRequestsCommandsPort(config: RequestsCommandsPortConfig): Re
       // Update envelope status to "finalized"
       const now = nowIso();
       await envelopesRepo.update(command.envelopeId, { 
-        status: "finalized" as any,
+        status: "finalized" as EnvelopeStatus,
         updatedAt: now
       });
 
@@ -591,6 +662,9 @@ export function makeRequestsCommandsPort(config: RequestsCommandsPortConfig): Re
     },
 
     async requestSignature(command: RequestSignatureCommand): Promise<RequestSignatureResult> {
+      // Apply generic rules
+      assertTenantBoundary(command.tenantId, command.tenantId);
+      
       // Execute common services (validation and rate limiting)
       await executeCommonServices(validationService, rateLimitService, auditService, eventService, command, "RequestSignature");
 
@@ -605,7 +679,7 @@ export function makeRequestsCommandsPort(config: RequestsCommandsPortConfig): Re
         );
       }
 
-      if (party.status !== "pending" && party.status !== "invited") {
+      if (party.status !== PARTY_STATUSES[0] && party.status !== "invited") {
         throw new ConflictError(
           `Cannot request signature from party in ${party.status} state`,
           ErrorCodes.COMMON_CONFLICT,
@@ -618,9 +692,9 @@ export function makeRequestsCommandsPort(config: RequestsCommandsPortConfig): Re
 
       // Update party status if needed
       let statusChanged = false;
-      if (party.status === "pending") {
+      if (party.status === PARTY_STATUSES[0]) {
         await partiesRepo.update(partyKey, { 
-          status: "invited",
+          status: "invited" as PartyStatus,
           updatedAt: nowIso()
         });
         statusChanged = true;
@@ -640,6 +714,9 @@ export function makeRequestsCommandsPort(config: RequestsCommandsPortConfig): Re
     },
 
     async addViewer(command: AddViewerCommand): Promise<AddViewerResult> {
+      // Apply generic rules
+      assertTenantBoundary(command.tenantId, command.tenantId);
+      
       // Execute common services (validation and rate limiting)
       await executeCommonServices(validationService, rateLimitService, auditService, eventService, command, "AddViewer");
 
@@ -664,13 +741,13 @@ export function makeRequestsCommandsPort(config: RequestsCommandsPortConfig): Re
         envelopeId: command.envelopeId,
         name: command.name || `Viewer ${partyId}`,
         email: command.email,
-        role: "viewer",
-        status: "active",
-        sequence: 0, // Viewers don't have sequence
+        role: PARTY_ROLES[2] as PartyRole,
+        status: "active" as PartyStatus,
+        sequence: REQUEST_DEFAULTS.VIEWER_SEQUENCE,
         invitedAt: now,
         createdAt: now,
         updatedAt: now,
-        auth: { methods: ["otpViaEmail"] },
+        auth: { methods: [...PARTY_DEFAULTS.DEFAULT_AUTH_METHODS] },
         otpState: undefined,
         locale: command.locale,
       };

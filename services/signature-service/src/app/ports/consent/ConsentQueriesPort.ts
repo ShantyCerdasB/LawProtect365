@@ -31,10 +31,4 @@ export interface ConsentQueriesPort {
    * @returns Promise resolving to paginated consent list
    */
   listByEnvelope(input: ListConsentsAppInput): Promise<ListConsentsAppResult>;
-}
-
-
-
-
-
-
+};

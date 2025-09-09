@@ -131,6 +131,30 @@ export type DelegationType = (typeof DELEGATION_TYPES)[number];
 export const PARTY_SOURCES = ["manual", "import", "api"] as const;
 export type PartySource = (typeof PARTY_SOURCES)[number];
 
+// Consent Defaults
+export const CONSENT_DEFAULTS = {
+  DEFAULT_ROLE: "signer" as const,
+  DEFAULT_SOURCE: "manual" as const,
+  DEFAULT_STATUS: "active" as const,
+  DEFAULT_AUTH_METHOD: "otpViaEmail" as const,
+  DEFAULT_LOCALE: undefined,
+} as const;
+
+// Consent Validation
+export const CONSENT_VALIDATION = {
+  MAX_METADATA_SIZE: 10000,
+  MAX_REASON_LENGTH: 1000,
+  MAX_DELEGATE_NAME_LENGTH: 255,
+  MAX_DELEGATE_EMAIL_LENGTH: 255,
+} as const;
+
+// Consent Delegation Defaults
+export const CONSENT_DELEGATION_DEFAULTS = {
+  DEFAULT_EXPIRATION_HOURS: 24,
+  MAX_EXPIRATION_DAYS: 30,
+  MIN_EXPIRATION_HOURS: 1,
+} as const;
+
 // Global Party Updatable Fields
 export const GLOBAL_PARTY_UPDATABLE_FIELDS = [
   "name", "email", "emails", "phone", "locale", "role", "source", "status",
@@ -233,6 +257,63 @@ export const DEFAULT_RETRY_CONFIG = {
 export const DEFAULT_BATCH_CONFIG = {
   maxSize: 10,
   maxDelayMs: 5000,
+} as const;
+
+// Input Defaults
+export const INPUT_DEFAULTS = {
+  DEFAULT_PAGE_SIZE: { width: 612, height: 792 }, // Default letter size (8.5" x 11" at 72 DPI)
+  DEFAULT_SEQUENCE: 1,
+  DEFAULT_REQUIRED: false,
+} as const;
+
+// Party Defaults
+export const PARTY_DEFAULTS = {
+  DEFAULT_STATUS: "pending" as const,
+  DEFAULT_AUTH_METHODS: ["otpViaEmail"] as const,
+  DEFAULT_SEQUENCE: 1,
+  DEFAULT_COOLDOWN_MS: 30000, // 30 seconds
+} as const;
+
+// Party Rate Limiting
+export const PARTY_RATE_LIMITS = {
+  MIN_COOLDOWN_MS: 30000, // 30 seconds
+  DAILY_LIMIT: 50,
+  HOURLY_LIMIT: 10,
+} as const;
+
+// Request Defaults
+export const REQUEST_DEFAULTS = {
+  INVITE_COOLDOWN_MS: 60000, // 1 minute
+  INVITE_DAILY_LIMIT: 10,
+  URL_EXPIRATION_DAYS: 7,
+  VIEWER_SEQUENCE: 0,
+} as const;
+
+// S3 Configuration
+export const S3_BUCKETS = {
+  ENVELOPE_ARTIFACTS: "envelope-artifacts",
+  SIGNING_DOCUMENTS: "signing-documents",
+} as const;
+
+// Request Timeouts
+export const REQUEST_TIMEOUTS = {
+  URL_EXPIRATION_SECONDS: 7 * 24 * 60 * 60, // 7 days
+  SIGNING_URL_EXPIRATION_SECONDS: 7 * 24 * 60 * 60, // 7 days
+} as const;
+
+// Signing Defaults
+export const SIGNING_DEFAULTS = {
+  DEFAULT_KEY_ID: "default-key",
+  DEFAULT_FILE_SIZE_MB: 10,
+  DEFAULT_FILENAME: "signed-document.pdf",
+  DEFAULT_CONTENT_TYPE: "application/pdf",
+  EVENT_SOURCE: "signature-service",
+} as const;
+
+// Signing File Limits
+export const SIGNING_FILE_LIMITS = {
+  MAX_FILE_SIZE_BYTES: 10 * 1024 * 1024, // 10MB
+  MAX_FILE_SIZE_MB: 10,
 } as const;
 
 

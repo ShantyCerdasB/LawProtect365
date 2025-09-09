@@ -15,6 +15,8 @@ import type { EnvelopeStatus } from "@/domain/value-objects/index";
 import type { PartyRepositoryDdb } from "../../../infrastructure/dynamodb/PartyRepositoryDdb";
 import type { InputRepositoryDdb } from "../../../infrastructure/dynamodb/InputRepositoryDdb";
 import { nowIso, assertTenantBoundary } from "@lawprotect/shared-ts";
+import { ENVELOPE_STATUSES } from "@/domain/values/enums";
+import type { EnvelopeId, UserId } from "@/domain/value-objects/ids";
 import { 
   BadRequestError, 
   NotFoundError, 
@@ -60,8 +62,8 @@ export function makeEnvelopesCommandsPort(
   } = config;
     // Helper function to get system actor details
   const getSystemActor = () => ({
-    userId: "system" as any,
-    email: process.env.SYSTEM_EMAIL || "system@envelope.service"
+    userId: _config.system.userId as UserId,
+    email: _config.system.email
   });
 
   // Helper methods for update function to reduce cognitive complexity
@@ -199,7 +201,7 @@ export function makeEnvelopesCommandsPort(
       }
 
       // 2. BUSINESS LOGIC
-      const envelopeId = ids.ulid() as any;
+      const envelopeId = ids.ulid() as EnvelopeId;
       const now = nowIso();
       
       const envelope = {
@@ -207,7 +209,7 @@ export function makeEnvelopesCommandsPort(
         tenantId: command.tenantId,
         ownerId: command.ownerId,
         title: command.title,
-        status: "draft" as EnvelopeStatus,
+        status: ENVELOPE_STATUSES[0] as EnvelopeStatus, // "draft"
         createdAt: now,
         updatedAt: now,
         parties: [],
@@ -342,9 +344,3 @@ export function makeEnvelopesCommandsPort(
     },
   };
 }
-
-
-
-
-
-

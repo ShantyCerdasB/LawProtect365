@@ -4,7 +4,7 @@
  * Provides methods to create, update, delete, and upload documents with proper business rule validation.
  */
 
-import type { TenantId, EnvelopeId, DocumentId } from "@/domain/value-objects/ids";
+import type { TenantId, EnvelopeId, DocumentId } from "../../../domain/value-objects/ids";
 import type { ActorContext, DocumentLock } from "@lawprotect/shared-ts";
 import type { S3ObjectRef } from "../../../domain/value-objects/storage";
 import type { ContentType } from "../../../domain/value-objects/document";
@@ -134,65 +134,60 @@ export interface UpdateDocumentResult {
  */
 export interface DocumentsCommandsPort {
   /**
-   * @description Creates a new document within an envelope.
-   *
-   * @param {CreateDocumentCommand} command - The document creation command with required data
-   * @returns {Promise<CreateDocumentResult>} Promise resolving to creation result with document ID and timestamp
+   * @summary Creates a new document within an envelope
+   * @description Creates a new document within an envelope with proper validation
+   * @param command - The document creation command with required data
+   * @returns Promise resolving to creation result with document ID and timestamp
    */
   create(command: CreateDocumentCommand): Promise<CreateDocumentResult>;
 
   /**
-   * @description Uploads a new document (original document upload with presigned URL).
-   *
-   * @param {UploadDocumentCommand} command - The document upload command
-   * @returns {Promise<UploadDocumentResult>} Promise resolving to upload result with presigned URL
+   * @summary Uploads a new document with presigned URL
+   * @description Uploads a new document (original document upload with presigned URL)
+   * @param command - The document upload command
+   * @returns Promise resolving to upload result with presigned URL
    */
   upload(command: UploadDocumentCommand): Promise<UploadDocumentResult>;
 
   /**
-   * @description Updates an existing document with partial data.
-   *
-   * @param {UpdateDocumentCommand} command - The document update command
-   * @returns {Promise<UpdateDocumentResult>} Promise resolving to update result with document ID and timestamp
+   * @summary Updates an existing document with partial data
+   * @description Updates an existing document with partial data
+   * @param command - The document update command
+   * @returns Promise resolving to update result with document ID and timestamp
    */
   update(command: UpdateDocumentCommand): Promise<UpdateDocumentResult>;
 
   /**
-   * @description Updates an existing document's binary and metadata.
-   *
-   * @param {UpdateDocumentBinaryCommand} command - The document binary update command
-   * @returns {Promise<UpdateDocumentResult>} Promise resolving to update result with document ID and timestamp
+   * @summary Updates an existing document's binary and metadata
+   * @description Updates an existing document's binary and metadata
+   * @param command - The document binary update command
+   * @returns Promise resolving to update result with document ID and timestamp
    */
   updateBinary(command: UpdateDocumentBinaryCommand): Promise<UpdateDocumentResult>;
 
   /**
-   * @description Deletes a document.
-   *
-   * @param {DocumentId} documentId - The unique identifier of the document to delete
-   * @returns {Promise<void>} Promise resolving when deletion is complete
+   * @summary Deletes a document
+   * @description Deletes a document from the repository
+   * @param documentId - The unique identifier of the document to delete
+   * @returns Promise resolving when deletion is complete
    */
   delete(documentId: DocumentId): Promise<void>;
 
   /**
-   * @description Creates a document lock.
-   *
-   * @param {DocumentLock} lock - The document lock to create
-   * @returns {Promise<void>} Promise resolving when lock creation is complete
+   * @summary Creates a document lock
+   * @description Creates a document lock to prevent concurrent modifications
+   * @param lock - The document lock to create
+   * @returns Promise resolving when lock creation is complete
    */
   createLock(lock: DocumentLock): Promise<void>;
 
   /**
-   * @description Deletes a document lock.
-   *
-   * @param {DocumentId} documentId - The document ID
-   * @param {string} lockId - The lock ID to delete
-   * @returns {Promise<void>} Promise resolving when lock deletion is complete
+   * @summary Deletes a document lock
+   * @description Deletes a document lock to allow modifications
+   * @param documentId - The document ID
+   * @param lockId - The lock ID to delete
+   * @param actorUserId - The user ID of the actor performing the action
+   * @returns Promise resolving when lock deletion is complete
    */
   deleteLock(documentId: DocumentId, lockId: string, actorUserId: string): Promise<void>;
-}
-
-
-
-
-
-
+};

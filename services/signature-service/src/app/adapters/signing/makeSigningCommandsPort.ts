@@ -7,23 +7,25 @@
  */
 
 import type { Repository, ISODateString } from "@lawprotect/shared-ts";
-import type { SigningCommandsPort, SigningConsentCommand, SigningConsentResult, PrepareSigningCommand, PrepareSigningResult, CompleteSigningCommand, CompleteSigningResult, DeclineSigningCommand, DeclineSigningResult, PresignUploadCommand, PresignUploadResult, DownloadSignedDocumentCommand, DownloadSignedDocumentResult } from "@/app/ports/signing/SigningCommandsPort";
-import type { Envelope } from "@/domain/entities/Envelope";
-import type { EnvelopeId } from "@/domain/value-objects/ids";
+import type { SigningCommandsPort, SigningConsentCommand, SigningConsentResult, PrepareSigningCommand, PrepareSigningResult, CompleteSigningCommand, CompleteSigningResult, DeclineSigningCommand, DeclineSigningResult, PresignUploadCommand, PresignUploadResult, DownloadSignedDocumentCommand, DownloadSignedDocumentResult } from "../../ports/signing/SigningCommandsPort";
+import type { Envelope } from "../../../domain/entities/Envelope";
+import type { EnvelopeId } from "../../../domain/value-objects/ids";
 import { IdempotencyRunner, KmsSigner, EventBusPortAdapter, NotFoundError, ErrorCodes } from "@lawprotect/shared-ts";
-import { badRequest, partyNotFound } from "@/shared/errors";
+import { badRequest, partyNotFound } from "../../../shared/errors";
 import { assertKmsAlgorithmAllowed, assertCompletionAllowed, assertPdfDigestMatches } from "../../../domain/rules/Signing.rules";
 import { assertDownloadAllowed } from "../../../domain/rules/Download.rules";
 import { assertCancelDeclineAllowed, assertReasonValid } from "../../../domain/rules/CancelDecline.rules";
 import { assertPresignPolicy, buildEvidencePath } from "../../../domain/rules/Evidence.rules";
 import { validateSigningOperation } from "./SigningValidationHelpers";
-import type { SigningRateLimitService, SigningS3Service } from "@/domain/types/signing/ServiceInterfaces";
+import type { SigningRateLimitService, SigningS3Service } from "../../../domain/types/signing/ServiceInterfaces";
+import { PARTY_ROLES, ENVELOPE_STATUSES, SIGNING_DEFAULTS, SIGNING_FILE_LIMITS } from "../../../domain/values/enums";
 
 /**
- * Creates a SigningCommandsPort implementation
- * @param envelopesRepo - The envelope repository for data persistence
- * @param partiesRepo - The parties repository for data persistence
- * @param deps - Dependencies including ID generators, time, and events
+ * Creates a SigningCommandsPort implementation for document signing operations
+ * @param _envelopesRepo - The envelope repository for data persistence
+ * @param _partiesRepo - The parties repository for data persistence
+ * @param _documentsRepo - The documents repository for digest validation
+ * @param deps - Dependencies including ID generators, time, events, and services
  * @returns Configured SigningCommandsPort implementation
  */
 export const makeSigningCommandsPort = (
@@ -55,8 +57,8 @@ export const makeSigningCommandsPort = (
   return {
     /**
      * Records signing consent for a signer
-     * @param command - The signing consent command
-     * @returns Promise resolving to consent result
+     * @param command - The signing consent command containing envelope ID, signer ID, and actor context
+     * @returns Promise resolving to consent result with event data
      */
     async recordSigningConsent(command: SigningConsentCommand): Promise<SigningConsentResult> {
       
@@ -75,7 +77,7 @@ export const makeSigningCommandsPort = (
         consentedAt: consentedAt,
         event: {
           name: "signing.consent.recorded",
-          meta: { id: deps.ids.ulid(), ts: consentedAt as ISODateString, source: "signature-service" },
+          meta: { id: deps.ids.ulid(), ts: consentedAt as ISODateString, source: SIGNING_DEFAULTS.EVENT_SOURCE },
           data: {
             envelopeId: command.envelopeId,
             partyId: command.signerId,
@@ -93,8 +95,8 @@ export const makeSigningCommandsPort = (
 
     /**
      * Prepares signing process for a signer
-     * @param command - The signing preparation command
-     * @returns Promise resolving to preparation result
+     * @param command - The signing preparation command containing envelope ID, signer ID, and actor context
+     * @returns Promise resolving to preparation result with event data
      */
     async prepareSigning(command: PrepareSigningCommand): Promise<PrepareSigningResult> {
       
@@ -113,7 +115,7 @@ export const makeSigningCommandsPort = (
         preparedAt: preparedAt,
         event: {
           name: "signing.prepared",
-          meta: { id: deps.ids.ulid(), ts: preparedAt as ISODateString, source: "signature-service" },
+          meta: { id: deps.ids.ulid(), ts: preparedAt as ISODateString, source: SIGNING_DEFAULTS.EVENT_SOURCE },
           data: {
             envelopeId: command.envelopeId,
             partyId: command.signerId,
@@ -131,8 +133,8 @@ export const makeSigningCommandsPort = (
 
     /**
      * Completes the signing process for a signer
-     * @param command - The signing completion command
-     * @returns Promise resolving to completion result
+     * @param command - The signing completion command containing digest, algorithm, and signing context
+     * @returns Promise resolving to completion result with signature and event data
      */
     async completeSigning(command: CompleteSigningCommand): Promise<CompleteSigningResult> {
       
@@ -173,8 +175,8 @@ export const makeSigningCommandsPort = (
         tenantId: envelope.tenantId, 
         envelopeId: command.envelopeId 
       });
-      const requiredSigners = parties.items.filter((p: any) => p.role === "signer").length;
-      const signedCount = parties.items.filter((p: any) => p.role === "signer" && p.status === "signed").length;
+      const requiredSigners = parties.items.filter((p: any) => p.role === PARTY_ROLES[0]).length;
+      const signedCount = parties.items.filter((p: any) => p.role === PARTY_ROLES[0] && p.status === "signed").length;
       
       const signingStats = {
         requiredSigners,
@@ -195,7 +197,7 @@ export const makeSigningCommandsPort = (
       const signResult = await deps.signer.sign({
         message: Buffer.from(command.digest.value, 'hex'),
         signingAlgorithm: command.algorithm,
-        keyId: command.keyId || deps.signingConfig?.defaultKeyId || 'default-key',
+        keyId: command.keyId || deps.signingConfig?.defaultKeyId || SIGNING_DEFAULTS.DEFAULT_KEY_ID,
       });
 
       const signature = Buffer.from(signResult.signature).toString('base64');
@@ -203,7 +205,7 @@ export const makeSigningCommandsPort = (
 
       // Update envelope status to completed
       await _envelopesRepo.update(command.envelopeId, {
-        status: "completed" as any,
+        status: ENVELOPE_STATUSES[3] as any,
         updatedAt: completedAt as ISODateString,
       });
 
@@ -211,17 +213,17 @@ export const makeSigningCommandsPort = (
         completed: true,
         completedAt: completedAt,
         signature: signature,
-        keyId: command.keyId || deps.signingConfig?.defaultKeyId || 'default-key',
+        keyId: command.keyId || deps.signingConfig?.defaultKeyId || SIGNING_DEFAULTS.DEFAULT_KEY_ID,
         algorithm: command.algorithm,
         event: {
           name: "signing.completed",
-          meta: { id: deps.ids.ulid(), ts: completedAt as ISODateString, source: "signature-service" },
+          meta: { id: deps.ids.ulid(), ts: completedAt as ISODateString, source: SIGNING_DEFAULTS.EVENT_SOURCE },
           data: {
             envelopeId: command.envelopeId,
             partyId: command.signerId,
             completedAt: completedAt,
             signature: signature,
-            keyId: command.keyId || deps.signingConfig?.defaultKeyId || 'default-key',
+            keyId: command.keyId || deps.signingConfig?.defaultKeyId || SIGNING_DEFAULTS.DEFAULT_KEY_ID,
             algorithm: command.algorithm,
             metadata: {
               ip: command.actor?.ip,
@@ -236,8 +238,8 @@ export const makeSigningCommandsPort = (
 
     /**
      * Declines the signing process for a signer
-     * @param command - The signing decline command
-     * @returns Promise resolving to decline result
+     * @param command - The signing decline command containing envelope ID, signer ID, reason, and actor context
+     * @returns Promise resolving to decline result with event data
      */
     async declineSigning(command: DeclineSigningCommand): Promise<DeclineSigningResult> {
       
@@ -265,7 +267,7 @@ export const makeSigningCommandsPort = (
 
       // Update envelope status to declined
       await _envelopesRepo.update(command.envelopeId, {
-        status: "declined" as any,
+        status: ENVELOPE_STATUSES[5] as any,
         updatedAt: declinedAt as ISODateString,
       });
 
@@ -275,7 +277,7 @@ export const makeSigningCommandsPort = (
         reason: command.reason,
         event: {
           name: "signing.declined",
-          meta: { id: deps.ids.ulid(), ts: declinedAt as ISODateString, source: "signature-service" },
+          meta: { id: deps.ids.ulid(), ts: declinedAt as ISODateString, source: SIGNING_DEFAULTS.EVENT_SOURCE },
           data: {
             envelopeId: command.envelopeId,
             partyId: command.signerId,
@@ -294,8 +296,8 @@ export const makeSigningCommandsPort = (
 
     /**
      * Creates a presigned URL for file upload
-     * @param command - The presign upload command
-     * @returns Promise resolving to presign result
+     * @param command - The presign upload command containing envelope ID, filename, content type, and actor context
+     * @returns Promise resolving to presign result with upload URL and event data
      */
     async presignUpload(command: PresignUploadCommand): Promise<PresignUploadResult> {
       
@@ -307,8 +309,7 @@ export const makeSigningCommandsPort = (
       );
       
       // Apply domain-specific rules for evidence integrity
-      const maxFileSize = 10 * 1024 * 1024; // 10MB default
-      assertPresignPolicy(command.contentType, 0, maxFileSize); // fileSize not available in command
+      assertPresignPolicy(command.contentType, 0, SIGNING_FILE_LIMITS.MAX_FILE_SIZE_BYTES);
       
       // Build evidence path using domain rules (for future use)
       buildEvidencePath({
@@ -334,7 +335,7 @@ export const makeSigningCommandsPort = (
         expiresAt: s3Result.expiresAt,
         event: {
           name: "signing.presign_upload",
-          meta: { id: deps.ids.ulid(), ts: s3Result.expiresAt as ISODateString, source: "signature-service" },
+          meta: { id: deps.ids.ulid(), ts: s3Result.expiresAt as ISODateString, source: SIGNING_DEFAULTS.EVENT_SOURCE },
           data: {
             envelopeId: command.envelopeId,
             filename: command.filename,
@@ -354,8 +355,8 @@ export const makeSigningCommandsPort = (
 
     /**
      * Creates a presigned URL for downloading a signed document
-     * @param command - The download signed document command
-     * @returns Promise resolving to download result
+     * @param command - The download signed document command containing envelope ID and actor context
+     * @returns Promise resolving to download result with download URL and event data
      */
     async downloadSignedDocument(command: DownloadSignedDocumentCommand): Promise<DownloadSignedDocumentResult> {
       
@@ -384,11 +385,11 @@ export const makeSigningCommandsPort = (
         expiresAt: s3Result.expiresAt,
         event: {
           name: "signing.download_signed_document",
-          meta: { id: deps.ids.ulid(), ts: s3Result.expiresAt as ISODateString, source: "signature-service" },
+          meta: { id: deps.ids.ulid(), ts: s3Result.expiresAt as ISODateString, source: SIGNING_DEFAULTS.EVENT_SOURCE },
           data: {
             envelopeId: command.envelopeId,
-            filename: "signed-document.pdf",
-            contentType: "application/pdf",
+            filename: SIGNING_DEFAULTS.DEFAULT_FILENAME,
+            contentType: SIGNING_DEFAULTS.DEFAULT_CONTENT_TYPE,
             expiresAt: s3Result.expiresAt,
             metadata: {
               ip: command.actor?.ip,
@@ -402,9 +403,3 @@ export const makeSigningCommandsPort = (
     },
   };
 };
-
-
-
-
-
-

@@ -4,13 +4,18 @@
  * @description Provides reusable validation patterns for signing operations
  */
 
-import { IpAddressSchema } from "@/domain/value-objects/ids";
+import { IpAddressSchema } from "../../../domain/value-objects/ids";
 import { envelopeNotFound, partyNotFound } from "../../../shared/errors";
+import type { EnvelopeId, PartyId } from "../../../domain/value-objects/ids";
+import type { Envelope } from "../../../domain/entities/Envelope";
+import type { Party } from "../../../domain/entities/Party";
 
 /**
  * Validates actor IP address if provided
+ * @param actor - Actor object containing optional IP address
+ * @throws Validation error if IP address format is invalid
  */
-export function validateActorIp(actor: any): void {
+export function validateActorIp(actor: { ip?: string } | undefined): void {
   if (actor?.ip) {
     IpAddressSchema.parse(actor.ip);
   }
@@ -18,8 +23,12 @@ export function validateActorIp(actor: any): void {
 
 /**
  * Validates envelope exists and returns it
+ * @param envelopesRepo - Repository for envelope operations
+ * @param envelopeId - Unique identifier for the envelope
+ * @returns Promise resolving to the envelope entity
+ * @throws NotFoundError if envelope does not exist
  */
-export async function validateEnvelope(envelopesRepo: any, envelopeId: string) {
+export async function validateEnvelope(envelopesRepo: { getById(id: EnvelopeId): Promise<Envelope | null> }, envelopeId: EnvelopeId): Promise<Envelope> {
   const envelope = await envelopesRepo.getById(envelopeId);
   if (!envelope) {
     throw envelopeNotFound({ envelopeId });
@@ -29,8 +38,13 @@ export async function validateEnvelope(envelopesRepo: any, envelopeId: string) {
 
 /**
  * Validates party exists and returns it
+ * @param partiesRepo - Repository for party operations
+ * @param envelopeId - Unique identifier for the envelope
+ * @param partyId - Unique identifier for the party
+ * @returns Promise resolving to the party entity
+ * @throws NotFoundError if party does not exist
  */
-export async function validateParty(partiesRepo: any, envelopeId: string, partyId: string) {
+export async function validateParty(partiesRepo: { getById(key: { envelopeId: EnvelopeId; partyId: PartyId }): Promise<Party | null> }, envelopeId: EnvelopeId, partyId: PartyId): Promise<Party> {
   const party = await partiesRepo.getById({ 
     envelopeId, 
     partyId 
@@ -43,13 +57,18 @@ export async function validateParty(partiesRepo: any, envelopeId: string, partyI
 
 /**
  * Common validation for signing operations
+ * @param command - Command object containing envelope ID and actor context
+ * @param envelopesRepo - Repository for envelope operations
+ * @param partiesRepo - Repository for party operations
+ * @param signerId - Optional signer ID for party validation
+ * @returns Promise resolving to validation result with envelope and optional party
  */
 export async function validateSigningOperation(
-  command: any,
-  envelopesRepo: any,
-  partiesRepo: any,
-  signerId?: string
-) {
+  command: { envelopeId: EnvelopeId; actor?: { ip?: string } },
+  envelopesRepo: { getById(id: EnvelopeId): Promise<Envelope | null> },
+  partiesRepo: { getById(key: { envelopeId: EnvelopeId; partyId: PartyId }): Promise<Party | null> },
+  signerId?: PartyId
+): Promise<{ envelope: Envelope; party: Party | null }> {
   // Validate IP address if provided
   validateActorIp(command.actor);
 

@@ -14,6 +14,7 @@ import type {
 } from "../../../domain/types/consent/AppServiceInputs";
 import type { ConsentQueryRepo } from "../../../domain/types/consent/AdapterDependencies";
 import { mapConsentRowToResult, mapConsentRowToListItem } from "../../../domain/types/consent/ConsentTypes";
+import { PAGINATION_LIMITS } from "../../../domain/values/enums";
 
 /**
  * @summary Creates a ConsentQueriesPort implementation
@@ -57,7 +58,7 @@ export const makeConsentQueryPort = (repo: ConsentQueryRepo): ConsentQueriesPort
     const out = await repo.listByEnvelope({
       tenantId: input.tenantId,
       envelopeId: input.envelopeId,
-      limit: input.limit || 50,
+      limit: input.limit ?? PAGINATION_LIMITS.DEFAULT_LIMIT,
       cursor: input.cursor,
       status: input.status,
       consentType: input.type,
@@ -75,9 +76,3 @@ export const makeConsentQueryPort = (repo: ConsentQueryRepo): ConsentQueriesPort
     };
   },
 });
-
-
-
-
-
-

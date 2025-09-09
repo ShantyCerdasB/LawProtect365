@@ -15,6 +15,8 @@ import type {
   SearchGlobalPartiesByEmailAppResult,
   MakeGlobalPartiesQueriesPortDeps
 } from "../../../domain/types/global-parties";
+import { PAGINATION_LIMITS } from "@/domain/values/enums";
+import { assertTenantBoundary } from "@lawprotect/shared-ts";
 
 /**
  * @description Creates GlobalPartiesQueriesPort implementation.
@@ -27,6 +29,9 @@ export const makeGlobalPartiesQueriesPort = (
 ): GlobalPartiesQueriesPort => {
   return {
     async list(query: ListGlobalPartiesAppInput): Promise<ListGlobalPartiesAppResult> {
+      // Apply generic rules
+      assertTenantBoundary(query.tenantId, query.tenantId);
+      
       const globalParties = await deps.globalParties.list({
         tenantId: query.tenantId,
         search: query.search,
@@ -34,7 +39,7 @@ export const makeGlobalPartiesQueriesPort = (
         role: query.role,
         source: query.source,
         status: query.status,
-        limit: query.limit || 20,
+        limit: query.limit ?? PAGINATION_LIMITS.DEFAULT_LIMIT,
         cursor: query.cursor,
       });
 
@@ -42,6 +47,9 @@ export const makeGlobalPartiesQueriesPort = (
     },
 
     async getById(query: GetGlobalPartyAppInput): Promise<GetGlobalPartyAppResult> {
+      // Apply generic rules
+      assertTenantBoundary(query.tenantId, query.tenantId);
+      
       const globalParty = await deps.globalParties.getById(query.tenantId, query.partyId);
       
       // Filter by tenant for security
@@ -53,22 +61,16 @@ export const makeGlobalPartiesQueriesPort = (
     },
 
     async searchByEmail(query: SearchGlobalPartiesByEmailAppInput): Promise<SearchGlobalPartiesByEmailAppResult> {
+      // Apply generic rules
+      assertTenantBoundary(query.tenantId, query.tenantId);
+      
       const globalParties = await deps.globalParties.searchByEmail({
         tenantId: query.tenantId,
         email: query.email,
-        limit: query.limit || 10,
+        limit: query.limit ?? PAGINATION_LIMITS.DEFAULT_LIMIT,
       });
 
       return globalParties;
     },
   };
 };
-
-
-
-
-
-
-
-
-

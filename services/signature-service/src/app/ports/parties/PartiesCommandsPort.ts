@@ -5,7 +5,7 @@
  * Defines the contract for Party command operations.
  */
 
-import type { TenantId } from "@/domain/value-objects/ids";
+import type { TenantId } from "../../../domain/value-objects/ids";
 import type { ActorContext } from "@lawprotect/shared-ts";
 import type { 
   PartyRow,
@@ -44,27 +44,31 @@ export interface DeletePartyResult {
 }
 
 /**
- * @description Commands port for Party operations.
+ * @summary Commands port for Party operations
+ * @description Defines the contract for Party command operations including create, update, and delete
  */
 export interface PartiesCommandsPort {
   /**
-   * Creates a new Party in an envelope.
+   * @summary Creates a new Party in an envelope
+   * @description Creates a new Party in an envelope with validation and persistence
+   * @param command - The Party creation command
+   * @returns Promise resolving to the created Party
    */
   create(command: CreatePartyCommand): Promise<CreatePartyResult>;
 
   /**
-   * Updates an existing Party.
+   * @summary Updates an existing Party
+   * @description Updates an existing Party with the specified changes
+   * @param command - The Party update command
+   * @returns Promise resolving to the updated Party
    */
   update(command: UpdatePartyCommand): Promise<UpdatePartyResult>;
 
   /**
-   * Deletes a Party from an envelope.
+   * @summary Deletes a Party from an envelope
+   * @description Deletes a Party from an envelope
+   * @param command - The Party deletion command
+   * @returns Promise resolving to deletion confirmation
    */
   delete(command: DeletePartyCommand): Promise<DeletePartyResult>;
-}
-
-
-
-
-
-
+};

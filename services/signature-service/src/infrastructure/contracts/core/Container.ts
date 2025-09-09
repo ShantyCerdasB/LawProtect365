@@ -178,6 +178,10 @@ export interface Container {
 
   /** Audit service */
   readonly audit: {
+    /** Audit commands port */
+    readonly commandsPort: any;
+    /** Audit queries port */
+    readonly queriesPort: any;
     /**
      * @summary Log an audit event with context
      * @description Logs an audit event with the provided context information

@@ -6,7 +6,7 @@
  * Used by application services to query document information.
  */
 
-import type { EnvelopeId, DocumentId } from "@/domain/value-objects/ids";
+import type { EnvelopeId, DocumentId } from "../../../domain/value-objects/ids";
 import type { DocumentLock } from "@lawprotect/shared-ts";
 import type { Document } from "../../../domain/entities/Document";
 
@@ -40,29 +40,26 @@ export interface ListDocumentsResult {
  */
 export interface DocumentsQueriesPort {
   /**
-   * Retrieves a single document by its ID
+   * @summary Retrieves a single document by its ID
+   * @description Retrieves a single document by its ID
    * @param documentId - The unique identifier of the document
    * @returns Promise resolving to document data or null if not found
    */
   getById(documentId: DocumentId): Promise<Document | null>;
 
   /**
-   * Lists documents for a specific envelope with pagination support
+   * @summary Lists documents for a specific envelope with pagination support
+   * @description Lists documents for a specific envelope with pagination support
    * @param query - Query parameters including envelope ID and pagination options
    * @returns Promise resolving to paginated list of documents
    */
   listByEnvelope(query: ListDocumentsQuery): Promise<ListDocumentsResult>;
 
   /**
-   * Lists all locks for a document
+   * @summary Lists all locks for a document
+   * @description Lists all locks for a document
    * @param documentId - The unique identifier of the document
    * @returns Promise resolving to array of document locks
    */
   listLocks(documentId: DocumentId): Promise<DocumentLock[]>;
-}
-
-
-
-
-
-
+};

@@ -28,6 +28,7 @@ import { InputsValidationService } from "../../services/Inputs/InputsValidationS
 import { InputsAuditService } from "../../services/Inputs/InputsAuditService";
 import { InputsEventService } from "../../services/Inputs/InputsEventService";
 import { nowIso, assertTenantBoundary } from "@lawprotect/shared-ts";
+import { INPUT_DEFAULTS } from "../../../domain/values/enums";
 import { inputNotFound } from "../../../shared/errors";
 import { 
   assertInputReferences, 
@@ -87,7 +88,7 @@ export const makeInputsCommandsPort = (
     const partyIds = parties.items.map(p => p.partyId);
     
     // Use default page size for validation
-    const pageSize = { width: 612, height: 792 }; // Default letter size (8.5" x 11" at 72 DPI)
+    const pageSize = INPUT_DEFAULTS.DEFAULT_PAGE_SIZE;
     
     // Get envelope configuration for strict mode
     const envelope = await envelopesRepo.getById(command.envelopeId);
@@ -95,7 +96,7 @@ export const makeInputsCommandsPort = (
     
     // Convert command inputs to Input entities for validation
     const inputsForValidation: Input[] = command.inputs.map((input, index) => ({
-      inputId: `temp-${index}` as any, // Temporary ID for validation
+      inputId: `temp-${index}` as InputId, // Temporary ID for validation
       envelopeId: command.envelopeId,
       documentId: command.documentId,
       type: input.type,
@@ -423,9 +424,3 @@ export const makeInputsCommandsPort = (
     },
   };
 };
-
-
-
-
-
-

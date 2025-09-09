@@ -6,7 +6,7 @@
  * Used by application services to query input information.
  */
 
-import type { TenantId, EnvelopeId, InputId, PartyId } from "@/domain/value-objects/ids";
+import type { TenantId, EnvelopeId, InputId, PartyId } from "../../../domain/value-objects/ids";
 import type { ActorContext } from "@lawprotect/shared-ts";
 import { InputType } from "../../../domain/values/enums";
 
@@ -85,22 +85,18 @@ export interface ListInputsResult {
  */
 export interface InputsQueriesPort {
   /**
-   * Retrieves a single input by its ID
+   * @summary Retrieves a single input by its ID
+   * @description Retrieves a single input by its ID with proper validation
    * @param query - Query parameters including tenant ID, envelope ID, and input ID
    * @returns Promise resolving to input data or null if not found
    */
   getById(query: GetInputQuery): Promise<ListInputsResult["items"][number] | null>;
 
   /**
-   * Lists inputs for a specific envelope with pagination support
+   * @summary Lists inputs for a specific envelope with pagination support
+   * @description Lists inputs for a specific envelope with pagination support and filtering
    * @param query - Query parameters including tenant ID, envelope ID, and pagination options
    * @returns Promise resolving to paginated list of inputs
    */
   listByEnvelope(query: ListInputsQuery): Promise<ListInputsResult>;
-}
-
-
-
-
-
-
+};

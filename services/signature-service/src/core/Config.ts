@@ -144,6 +144,16 @@ export interface SignatureServiceConfig extends AppConfig {
     /** CloudWatch region (defaults to service region) */
     region?: string;
   };
+
+  /**
+   * @description Audit configuration.
+   */
+  audit: {
+    /** Default page size for audit queries */
+    defaultPageSize: number;
+    /** Maximum page size for audit queries */
+    maxPageSize: number;
+  };
 }
 
 /**
@@ -237,6 +247,11 @@ export const loadConfig = (
       enableOutboxMetrics: getBoolean("ENABLE_OUTBOX_METRICS", true),
       namespace: getEnv("CLOUDWATCH_NAMESPACE") ?? `${base.projectName}/${base.serviceName}`,
       region: getEnv("CLOUDWATCH_REGION"),
+    },
+
+    audit: {
+      defaultPageSize: getNumber("AUDIT_DEFAULT_PAGE_SIZE", 50, { min: 1, max: 100 }),
+      maxPageSize: getNumber("AUDIT_MAX_PAGE_SIZE", 100, { min: 1, max: 1000 }),
     },
   };
 

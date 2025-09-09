@@ -8,6 +8,8 @@
 
 import type { Document } from "@/domain/entities/Document";
 import type { DocumentId } from "@/domain/value-objects/index";
+import type { DocumentStatus } from "@/domain/values/enums";
+import { DOCUMENT_STATUSES } from "@/domain/values/enums";
 import type { 
   DocumentsCommandsPort, 
   CreateDocumentCommand, 
@@ -46,6 +48,11 @@ interface Dependencies {
   s3Service?: {
     createPresignedUploadUrl(bucket: string, key: string, contentType: string): Promise<{ url: string; expiresAt: string }>;
   };
+  /** S3 configuration */
+  s3Config: {
+    evidenceBucket: string;
+    signedBucket: string;
+  };
 }
 
 /**
@@ -83,7 +90,7 @@ export const makeDocumentsCommandsPort = (deps: Dependencies): DocumentsCommands
         envelopeId: command.envelopeId,
         tenantId: command.tenantId,
         name: command.name,
-        status: "ready",
+        status: DOCUMENT_STATUSES[3] as DocumentStatus, // "ready"
         contentType: command.contentType,
         size: command.size,
         digest: command.digest,
@@ -135,7 +142,7 @@ export const makeDocumentsCommandsPort = (deps: Dependencies): DocumentsCommands
 
       // Create presigned upload URL
       const { url: uploadUrl, expiresAt } = await deps.s3Service.createPresignedUploadUrl(
-        "documents-bucket", // This should come from config
+        deps.s3Config.evidenceBucket,
         objectKey,
         command.contentType
       );
@@ -146,12 +153,12 @@ export const makeDocumentsCommandsPort = (deps: Dependencies): DocumentsCommands
         envelopeId: command.envelopeId,
         tenantId: command.tenantId,
         name: command.name,
-        status: "pending",
+        status: DOCUMENT_STATUSES[0] as DocumentStatus, // "pending"
         contentType: command.contentType,
         size: command.size,
         digest: command.digest,
         s3Ref: {
-          bucket: "documents-bucket",
+          bucket: deps.s3Config.evidenceBucket,
           key: objectKey,
         },
         pageCount: command.pageCount,
@@ -233,7 +240,7 @@ export const makeDocumentsCommandsPort = (deps: Dependencies): DocumentsCommands
       // Apply domain-specific rules
       assertDocumentBelongsToEnvelope(document, document.envelopeId);
       assertEnvelopeDraftForDocumentModification(envelope);
-      assertDocumentStatusTransition(document.status, "uploaded"); // Transition to uploaded when binary is updated
+      assertDocumentStatusTransition(document.status, DOCUMENT_STATUSES[1] as DocumentStatus); // Transition to uploaded when binary is updated
       assertSupportedContentType(command.contentType);
       assertDocumentSizeLimit(command.size);
       assertDocumentMutable(document);
@@ -315,9 +322,3 @@ export const makeDocumentsCommandsPort = (deps: Dependencies): DocumentsCommands
     },
   };
 };
-
-
-
-
-
-

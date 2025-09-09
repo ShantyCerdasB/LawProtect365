@@ -22,7 +22,8 @@ import type {
 } from "../../../domain/types/consent/ConsentTypes";
 import type { ConsentCommandRepo, Ids } from "../../../domain/types/consent/AdapterDependencies";
 import type { PartyId } from "@/domain/value-objects/ids";
-import type { ConsentStatus } from "../../../domain/values/enums";
+import type { ConsentStatus, PartyRole, PartySource, GlobalPartyStatus, AuthMethod } from "../../../domain/values/enums";
+import { CONSENT_DEFAULTS } from "../../../domain/values/enums";
 import { nowIso, asISO, asISOOpt, type ActorContext, type IdempotencyRunner, assertTenantBoundary } from "@lawprotect/shared-ts";
 import type { DelegationRepositoryDdb } from "../../../infrastructure/dynamodb/DelegationRepositoryDdb";
 import type { ConsentValidationService } from "../../services/Consent/ConsentValidationService";
@@ -207,12 +208,12 @@ export function makeConsentCommandsPort(
       tenantId: input.tenantId,
       email: input.email,
       name: input.name,
-      role: "signer" as any, // Default role for delegates
-      source: "manual" as any, // Default source
-      status: "active" as any, // Default status
+      role: CONSENT_DEFAULTS.DEFAULT_ROLE as PartyRole,
+      source: CONSENT_DEFAULTS.DEFAULT_SOURCE as PartySource,
+      status: CONSENT_DEFAULTS.DEFAULT_STATUS as GlobalPartyStatus,
       preferences: {
-        defaultAuth: "otpViaEmail" as any,
-        defaultLocale: undefined,
+        defaultAuth: CONSENT_DEFAULTS.DEFAULT_AUTH_METHOD as AuthMethod,
+        defaultLocale: CONSENT_DEFAULTS.DEFAULT_LOCALE,
       },
       notificationPreferences: {
         email: true,
@@ -425,7 +426,7 @@ export function makeConsentCommandsPort(
               auditService,
               input,
               actorContext,
-              previousConsent
+              previousConsent || undefined
             );
           },
           input.ttlSeconds
@@ -438,7 +439,7 @@ export function makeConsentCommandsPort(
         auditService,
         input,
         actorContext,
-        previousConsent
+        previousConsent || undefined
       );
     },
 
@@ -475,9 +476,3 @@ export function makeConsentCommandsPort(
     },
   };
 }
-
-
-
-
-
-

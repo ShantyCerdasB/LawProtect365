@@ -26,7 +26,7 @@ import {
   AUTH_METHODS,
   GlobalPartyUpdatableField
 } from "../../../domain/values/enums";
-import { nowIso, NotFoundError } from "@lawprotect/shared-ts";
+import { nowIso, NotFoundError, assertTenantBoundary } from "@lawprotect/shared-ts";
 import type { 
   GlobalPartiesValidationService,
   GlobalPartiesAuditService,
@@ -73,6 +73,9 @@ export const makeGlobalPartiesCommandsPort = (
 ): GlobalPartiesCommandsPort => {
   return {
     async create(command: CreateGlobalPartyCommand): Promise<CreateGlobalPartyResult> {
+      // Apply generic rules
+      assertTenantBoundary(command.tenantId, command.tenantId);
+      
       // 1. VALIDATION (opcional) - PATRÓN REUTILIZABLE
       if (deps.validationService) {
         deps.validationService.validateCreate(command);
@@ -140,6 +143,9 @@ export const makeGlobalPartiesCommandsPort = (
     },
 
     async update(command: UpdateGlobalPartyCommand): Promise<UpdateGlobalPartyResult> {
+      // Apply generic rules
+      assertTenantBoundary(command.tenantId, command.tenantId);
+      
       // 1. VALIDATION (opcional) - PATRÓN REUTILIZABLE
       if (deps.validationService) {
         deps.validationService.validateUpdate(command);
@@ -213,6 +219,9 @@ export const makeGlobalPartiesCommandsPort = (
     },
 
     async delete(command: DeleteGlobalPartyCommand): Promise<DeleteGlobalPartyResult> {
+      // Apply generic rules
+      assertTenantBoundary(command.tenantId, command.tenantId);
+      
       // 1. VALIDATION (opcional) - PATRÓN REUTILIZABLE
       if (deps.validationService) {
         deps.validationService.validateDelete(command);
@@ -251,9 +260,3 @@ export const makeGlobalPartiesCommandsPort = (
     },
   };
 };
-
-
-
-
-
-

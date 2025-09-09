@@ -66,10 +66,4 @@ export interface ConsentCommandsPort {
    * @returns Promise resolving to the delegated consent data
    */
   delegate(input: DelegateConsentAppInput, actorContext?: ActorContext): Promise<DelegateConsentAppResult>;
-}
-
-
-
-
-
-
+};

@@ -6,15 +6,15 @@
  * and type conversions for signature command operations.
  */
 
-import type { SignaturesCommandsPort, SignHashCommand, SignHashResult } from "@/app/ports/signatures/SignaturesCommandsPort";
+import type { SignaturesCommandsPort, SignHashCommand, SignHashResult } from "../../ports/signatures/SignaturesCommandsPort";
 import type { KmsSigner } from "@lawprotect/shared-ts";
 import { assertKmsAlgorithmAllowed } from "../../../domain/rules/Signing.rules";
-import { HashDigestSchema, KmsAlgorithmSchema } from "@/domain/value-objects/index";
+import { HashDigestSchema, KmsAlgorithmSchema } from "../../../domain/value-objects/index";
 
 /**
- * Creates a SignaturesCommandsPort implementation
- * @param signer - KMS signer for cryptographic operations
- * @param config - Signing configuration
+ * Creates a SignaturesCommandsPort implementation for cryptographic signature operations
+ * @param signer - KMS signer service for cryptographic operations
+ * @param config - Signing configuration containing default key ID and allowed algorithms
  * @returns Configured SignaturesCommandsPort implementation
  */
 export const makeSignaturesCommandsPort = (
@@ -26,9 +26,9 @@ export const makeSignaturesCommandsPort = (
 ): SignaturesCommandsPort => {
   return {
     /**
-     * Signs a hash digest using KMS
-     * @param command - The hash signing command
-     * @returns Promise resolving to signing result
+     * Signs a hash digest using KMS cryptographic service
+     * @param command - The hash signing command containing digest, algorithm, and optional key ID
+     * @returns Promise resolving to signing result with signature, algorithm, and key ID
      */
     async signHash(command: SignHashCommand): Promise<SignHashResult> {
       // Validate digest using domain value object
@@ -58,9 +58,3 @@ export const makeSignaturesCommandsPort = (
     },
   };
 };
-
-
-
-
-
-

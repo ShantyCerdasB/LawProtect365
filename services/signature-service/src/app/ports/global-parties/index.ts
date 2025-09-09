@@ -7,11 +7,3 @@
 export * from "./GlobalPartiesCommandsPort";
 export * from "./GlobalPartiesQueriesPort";
 
-
-
-
-
-
-
-
-

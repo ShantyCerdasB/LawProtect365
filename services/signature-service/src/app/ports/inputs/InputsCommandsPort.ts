@@ -1,4 +1,3 @@
-
 /**
  * @file InputsCommandsPort.ts
  * @summary Port for input command operations
@@ -7,7 +6,7 @@
  * Used by application services to modify input data.
  */
 
-import type { TenantId, EnvelopeId, InputId, PartyId } from "@/domain/value-objects/ids";
+import type { TenantId, EnvelopeId, InputId, PartyId } from "../../../domain/value-objects/ids";
 import type { ActorContext } from "@lawprotect/shared-ts";
 import { InputType } from "../../../domain/values/enums";
 
@@ -166,40 +165,34 @@ export interface DeleteInputCommand {
  */
 export interface InputsCommandsPort {
   /**
-   * @description Creates inputs in batch.
-   *
-   * @param {CreateInputsCommand} command - The input creation command with required data
-   * @returns {Promise<CreateInputsResult>} Promise resolving to creation result with input data and count
+   * @summary Creates inputs in batch
+   * @description Creates multiple inputs in a single operation with validation
+   * @param command - The input creation command with required data
+   * @returns Promise resolving to creation result with input data and count
    */
   create(command: CreateInputsCommand): Promise<CreateInputsResult>;
 
   /**
-   * @description Updates an existing input with partial data.
-   *
-   * @param {UpdateInputCommand} command - The input update command with identifier and fields to update
-   * @returns {Promise<UpdateInputResult>} Promise resolving to update result with input ID and timestamp
+   * @summary Updates an existing input with partial data
+   * @description Updates an existing input with partial data
+   * @param command - The input update command with identifier and fields to update
+   * @returns Promise resolving to update result with input ID and timestamp
    */
   update(command: UpdateInputCommand): Promise<UpdateInputResult>;
 
   /**
-   * @description Updates input positions in batch.
-   *
-   * @param {UpdateInputPositionsCommand} command - The position update command with array of positions
-   * @returns {Promise<UpdateInputPositionsResult>} Promise resolving to update result with count
+   * @summary Updates input positions in batch
+   * @description Updates input positions in batch for efficient bulk operations
+   * @param command - The position update command with array of positions
+   * @returns Promise resolving to update result with count
    */
   updatePositions(command: UpdateInputPositionsCommand): Promise<UpdateInputPositionsResult>;
 
   /**
-   * @description Deletes an input.
-   *
-   * @param {DeleteInputCommand} command - The input deletion command with identifier
-   * @returns {Promise<void>} Promise resolving when deletion is complete
+   * @summary Deletes an input
+   * @description Deletes an input from the repository
+   * @param command - The input deletion command with identifier
+   * @returns Promise resolving when deletion is complete
    */
   delete(command: DeleteInputCommand): Promise<void>;
-}
-
-
-
-
-
-
+};

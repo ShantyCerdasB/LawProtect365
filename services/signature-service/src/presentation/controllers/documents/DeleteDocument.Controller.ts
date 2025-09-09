@@ -21,6 +21,10 @@ export const DeleteDocumentController = createCommandController<{ documentId: Do
     envelopesRepo: c.repos.envelopes,
     ids: c.ids,
     s3Service: c.services.documentsS3,
+    s3Config: {
+      evidenceBucket: c.config.s3.evidenceBucket,
+      signedBucket: c.config.s3.signedBucket,
+    },
   }),
   extractParams: (path: any) => ({
     documentId: path.id,

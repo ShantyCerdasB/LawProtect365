@@ -6,9 +6,12 @@
 
 import type { ConsentCommandRepo } from "../../../domain/types/consent/AdapterDependencies";
 import type { ConsentAuditService } from "../../services/Consent/ConsentAuditService";
-import type { CreateConsentAppInput, CreateConsentAppResult } from "../../../domain/types/consent/AppServiceInputs";
-import type { ActorContext, UserId } from "@lawprotect/shared-ts";
+import type { CreateConsentAppInput, CreateConsentAppResult, UpdateConsentAppInput, UpdateConsentAppResult, SubmitConsentAppInput, SubmitConsentAppResult } from "../../../domain/types/consent/AppServiceInputs";
+import type { ActorContext } from "@lawprotect/shared-ts";
 import { nowIso, asISO, asISOOpt } from "@lawprotect/shared-ts";
+import type { ConsentRepoRow } from "../../../domain/types/consent/ConsentTypes";
+import type { ConsentId, EnvelopeId, PartyId, TenantId } from "../../../domain/value-objects/ids";
+import type { ConsentType } from "../../../domain/values/enums";
 
 /**
  * @summary Creates a consent record with audit logging
@@ -74,12 +77,12 @@ export async function createConsentWithAudit(
 export async function logConsentDeletionAudit(
   auditService: ConsentAuditService | undefined,
   input: { envelopeId: string; consentId: string },
-  consentDetails: { tenantId: string; partyId: string; consentType: string; status: string; metadata?: any },
+  consentDetails: ConsentRepoRow,
   actorContext?: ActorContext
 ): Promise<void> {
   if (auditService && actorContext && consentDetails) {
     await auditService.logBusinessEvent({
-      tenantId: consentDetails.tenantId as any, // Cast to avoid branded type issues
+      tenantId: consentDetails.tenantId as TenantId,
       envelopeId: input.envelopeId,
       actor: actorContext,
     }, {
@@ -105,14 +108,15 @@ export async function logConsentDeletionAudit(
 export function createConsentAuditContext(
   tenantId: string,
   envelopeId: string,
-  actorContext?: ActorContext
+  actorContext?: ActorContext,
+  systemConfig?: { userId: string; email: string; name: string }
 ) {
   return {
     tenantId,
     envelopeId,
-    actor: actorContext || { 
-      userId: "system" as UserId, 
-      email: "system@lawprotect.com" 
+    actor: actorContext || {
+      userId: systemConfig?.userId || "system",
+      email: systemConfig?.email || "system@lawprotect.com"
     }
   };
 }
@@ -130,9 +134,9 @@ export function createConsentAuditContext(
 export async function updateConsentWithAudit(
   consentsRepo: ConsentCommandRepo,
   auditService: ConsentAuditService | undefined,
-  input: any,
+  input: UpdateConsentAppInput,
   actorContext?: ActorContext
-): Promise<any> {
+): Promise<UpdateConsentAppResult> {
   const changes: any = {
     updatedAt: asISO(nowIso()),
     ...(input.status !== undefined && { status: input.status }),
@@ -145,7 +149,7 @@ export async function updateConsentWithAudit(
     changes
   );
 
-  const result = mapRowToUpdateResult(row);
+  const result = mapConsentRowToUpdateResult(row);
 
   // ✅ AUDIT: Log consent update if audit service available
   if (auditService && actorContext) {
@@ -181,12 +185,12 @@ export async function updateConsentWithAudit(
  * @param row - Consent row from repository
  * @returns Mapped consent result
  */
-function mapConsentRowToResult(row: any): CreateConsentAppResult {
+function mapConsentRowToResult(row: ConsentRepoRow): CreateConsentAppResult {
   return {
-    id: row.consentId,
-    envelopeId: row.envelopeId,
-    partyId: row.partyId,
-    type: row.consentType,
+    id: row.consentId as ConsentId,
+    envelopeId: row.envelopeId as EnvelopeId,
+    partyId: row.partyId as PartyId,
+    type: row.consentType as ConsentType,
     status: row.status,
     metadata: row.metadata,
     expiresAt: row.expiresAt,
@@ -201,16 +205,17 @@ function mapConsentRowToResult(row: any): CreateConsentAppResult {
  * @param row - Consent row from repository
  * @returns Mapped consent update result
  */
-function mapRowToUpdateResult(row: any): any {
+function mapConsentRowToUpdateResult(row: ConsentRepoRow): UpdateConsentAppResult {
   return {
-    id: row.consentId,
-    envelopeId: row.envelopeId,
-    partyId: row.partyId,
-    type: row.consentType,
+    id: row.consentId as ConsentId,
+    envelopeId: row.envelopeId as EnvelopeId,
+    partyId: row.partyId as PartyId,
+    type: row.consentType as ConsentType,
     status: row.status,
     metadata: row.metadata,
     expiresAt: row.expiresAt,
-    updatedAt: row.updatedAt,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt || nowIso(),
   };
 }
 
@@ -226,12 +231,12 @@ function mapRowToUpdateResult(row: any): any {
  * @returns Submit consent result
  */
 export async function submitConsentWithAudit(
-  consentsRepo: any,
-  auditService: any,
-  input: any,
-  actorContext?: any,
-  previousConsent?: any
-): Promise<any> {
+  consentsRepo: ConsentCommandRepo,
+  auditService: ConsentAuditService | undefined,
+  input: SubmitConsentAppInput,
+  actorContext?: ActorContext,
+  previousConsent?: ConsentRepoRow
+): Promise<SubmitConsentAppResult> {
   const row = await consentsRepo.update(
     { envelopeId: input.envelopeId, consentId: input.consentId },
     { 
@@ -240,12 +245,12 @@ export async function submitConsentWithAudit(
     }
   );
 
-  const result = mapRowToSubmitResult(row);
+  const result = mapConsentRowToSubmitResult(row);
 
   // ✅ AUDIT: Log consent submission if audit service available
   if (auditService && actorContext && previousConsent) {
     await auditService.logConsentUpdate({
-      tenantId: previousConsent.tenantId as any, // Cast to avoid branded type issues
+      tenantId: previousConsent.tenantId as TenantId,
       envelopeId: input.envelopeId,
       actor: actorContext,
     }, {
@@ -272,21 +277,14 @@ export async function submitConsentWithAudit(
  * @param row - Consent row from repository
  * @returns Mapped consent submit result
  */
-function mapRowToSubmitResult(row: any): any {
+function mapConsentRowToSubmitResult(row: ConsentRepoRow): SubmitConsentAppResult {
   return {
-    id: row.consentId,
-    envelopeId: row.envelopeId,
-    partyId: row.partyId,
-    type: row.consentType,
+    id: row.consentId as ConsentId,
+    envelopeId: row.envelopeId as EnvelopeId,
+    partyId: row.partyId as PartyId,
+    type: row.consentType as ConsentType,
     status: row.status,
     metadata: row.metadata,
-    expiresAt: row.expiresAt,
-    submittedAt: row.updatedAt,
+    submittedAt: row.updatedAt || nowIso(),
   };
 }
-
-
-
-
-
-

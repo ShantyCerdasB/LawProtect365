@@ -10,6 +10,8 @@ import type { Repository, IdempotencyRunner } from "@lawprotect/shared-ts";
 import type { Party } from "../../../domain/entities/Party";
 import type { PartyKey } from "../../../domain/types/infrastructure/dynamodb";
 import type { Ids } from "../../../domain/types/parties";
+import type { PartyId } from "../../../domain/value-objects/ids";
+import type { PartyStatus } from "../../../domain/values/enums";
 import { 
   CreatePartyCommand, 
   CreatePartyResult,
@@ -24,6 +26,7 @@ import { PartiesEventService } from "../../services/Parties/PartiesEventService"
 import { PartiesRateLimitService } from "../../services/Parties/PartiesRateLimitService";
 import { toPartyRow } from "../../../domain/types/parties";
 import { nowIso, assertTenantBoundary } from "@lawprotect/shared-ts";
+import { PARTY_DEFAULTS, PARTY_RATE_LIMITS } from "../../../domain/values/enums";
 import { partyNotFound } from "@/shared/errors";
 import { assertInvitePolicy } from "../../../domain/rules/Flow.rules";
 
@@ -67,7 +70,7 @@ export function makePartiesCommandsPort(
       const inviteStats = {
         lastSentAt: Date.now() - (usage.resetInSeconds * 1000), // Calculate from reset time
         sentToday: usage.currentUsage,
-        minCooldownMs: 30000, // 30 seconds cooldown from config
+        minCooldownMs: PARTY_RATE_LIMITS.MIN_COOLDOWN_MS,
         dailyLimit: usage.maxRequests
       };
       assertInvitePolicy(inviteStats);
@@ -89,17 +92,17 @@ export function makePartiesCommandsPort(
 
     const party: Party = {
       tenantId: command.tenantId,
-      partyId: partyId as any, // Cast to PartyId branded type
+      partyId: partyId as PartyId,
       envelopeId: command.envelopeId,
       name: command.name,
       email: command.email,
       role: command.role,
-      status: "pending",
-      sequence: command.sequence || 1,
+      status: PARTY_DEFAULTS.DEFAULT_STATUS as PartyStatus,
+      sequence: command.sequence || PARTY_DEFAULTS.DEFAULT_SEQUENCE,
       invitedAt: now,
       createdAt: now,
       updatedAt: now,
-      auth: { methods: ["otpViaEmail"] },
+      auth: { methods: [...PARTY_DEFAULTS.DEFAULT_AUTH_METHODS] },
       otpState: undefined,
     };
 
@@ -119,7 +122,7 @@ export function makePartiesCommandsPort(
     // 4. EVENTS (opcional) - MISMO PATRÓN
     if (eventService) {
       await eventService.publishPartyCreatedEvent(
-        partyId as any, // Cast to PartyId
+        partyId as PartyId,
         command.tenantId,
         command.envelopeId,
         command.actor

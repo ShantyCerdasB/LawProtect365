@@ -11,7 +11,7 @@ import type {
 } from "../../ports/audit/AuditCommandsPort";
 import type { AuditCommandsPortDependencies } from "../../../domain/types/audit";
 import type { AuditEventType } from "../../../domain/values/enums";
-import { assertTenantBoundary } from "@lawprotect/shared-ts";
+import { assertTenantBoundary, nowIso } from "@lawprotect/shared-ts";
 
 /**
  * @description Creates an implementation of AuditCommandsPort
@@ -35,7 +35,7 @@ export const makeAuditCommandsPort = (
       // Note: Audit event validation would need proper integration
 
       // Create audit event candidate
-      const occurredAt = new Date().toISOString();
+      const occurredAt = nowIso();
       const candidate = {
         tenantId: input.tenantId,
         envelopeId: input.envelopeId,
@@ -54,15 +54,9 @@ export const makeAuditCommandsPort = (
         envelopeId: savedEvent.envelopeId,
         occurredAt: savedEvent.occurredAt,
         type: savedEvent.type as AuditEventType, // Cast since it was validated when saved
-        actor: savedEvent.actor as any,
+        actor: savedEvent.actor as any, // Type assertion needed due to branded types mismatch
         metadata: savedEvent.metadata,
       };
     },
   };
 };
-
-
-
-
-
-

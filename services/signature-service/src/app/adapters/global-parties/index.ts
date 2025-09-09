@@ -6,10 +6,3 @@
 
 export * from "./MakeGlobalPartiesCommandsPort";
 export * from "./MakeGlobalPartiesQueriesPort";
-
-
-
-
-
-
-

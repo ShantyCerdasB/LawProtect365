@@ -5,7 +5,7 @@
  * Defines the contract for Global Party command operations.
  */
 
-import type { TenantId } from "@/domain/value-objects/ids";
+import type { TenantId } from "../../../domain/value-objects/ids";
 import type { ActorContext } from "@lawprotect/shared-ts";
 import type { 
   GlobalPartyExtended,
@@ -44,30 +44,31 @@ export interface DeleteGlobalPartyResult {
 }
 
 /**
- * @description Commands port for Global Party operations.
+ * @summary Commands port for Global Party operations
+ * @description Defines the contract for Global Party command operations including create, update, and delete
  */
 export interface GlobalPartiesCommandsPort {
   /**
-   * Creates a new Global Party (contact).
+   * @summary Creates a new Global Party (contact)
+   * @description Creates a new Global Party with validation and persistence
+   * @param command - The Global Party creation command
+   * @returns Promise resolving to the created Global Party
    */
   create(command: CreateGlobalPartyCommand): Promise<CreateGlobalPartyResult>;
 
   /**
-   * Updates an existing Global Party.
+   * @summary Updates an existing Global Party
+   * @description Updates an existing Global Party with the specified changes
+   * @param command - The Global Party update command
+   * @returns Promise resolving to the updated Global Party
    */
   update(command: UpdateGlobalPartyCommand): Promise<UpdateGlobalPartyResult>;
 
   /**
-   * Deletes a Global Party (soft delete).
+   * @summary Deletes a Global Party (soft delete)
+   * @description Performs a soft delete of a Global Party
+   * @param command - The Global Party deletion command
+   * @returns Promise resolving to deletion confirmation
    */
   delete(command: DeleteGlobalPartyCommand): Promise<DeleteGlobalPartyResult>;
-}
-
-
-
-
-
-
-
-
-
+};

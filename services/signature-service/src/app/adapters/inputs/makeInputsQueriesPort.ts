@@ -6,12 +6,13 @@
  */
 
 import type { Input } from "../../../domain/entities/Input";
-import type { InputId, PartyId } from "@/domain/value-objects/ids";
+import type { InputId, PartyId } from "../../../domain/value-objects/ids";
 import type { InputsQueriesPort } from "../../ports/inputs/InputsQueriesPort";
 import type { InputsRepository } from "../../../domain/contracts/repositories/inputs/InputsRepository";
 import type { InputsValidationService } from "../../services/Inputs/InputsValidationService";
 import type { InputsAuditService } from "../../services/Inputs/InputsAuditService";
 import type { AuditContext } from "@lawprotect/shared-ts";
+import { assertTenantBoundary } from "@lawprotect/shared-ts";
 
 /**
  * Creates an InputsQueriesPort implementation with production-ready features
@@ -32,6 +33,9 @@ export const makeInputsQueriesPort = (
    * @description Retrieves an input with tenant-based security filtering and audit logging
    */
   async getById(query) {
+    // Apply generic rules
+    assertTenantBoundary(query.tenantId, query.tenantId);
+    
     // 1. VALIDATION (opcional)
     if (validationService) {
       await validationService.validateGetById(query);
@@ -84,6 +88,9 @@ export const makeInputsQueriesPort = (
    * @description Retrieves inputs with tenant-based security filtering, audit logging, and pagination
    */
   async listByEnvelope(query) {
+    // Apply generic rules
+    assertTenantBoundary(query.tenantId, query.tenantId);
+    
     // 1. VALIDATION (opcional)
     if (validationService) {
       await validationService.validateListByEnvelope(query);
@@ -141,9 +148,3 @@ export const makeInputsQueriesPort = (
     };
   },
 });
-
-
-
-
-
-

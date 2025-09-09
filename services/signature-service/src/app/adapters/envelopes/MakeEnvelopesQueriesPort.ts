@@ -11,6 +11,7 @@ import type { EnvelopesValidationService } from "../../services/envelopes/Envelo
 import type { EnvelopesAuditService } from "../../services/envelopes/EnvelopesAuditService";
 import type { EnvelopesEventService } from "../../services/envelopes/EnvelopesEventService";
 import type { AuditContext } from "@lawprotect/shared-ts";
+import { PAGINATION_LIMITS } from "@/domain/values/enums";
 
 /**
  * Creates an EnvelopesQueriesPort implementation with optional services
@@ -84,7 +85,7 @@ export function makeEnvelopesQueriesPort(
       // 2. BUSINESS LOGIC
       const result = await envelopesRepo.listByTenant({
         tenantId: query.tenantId,
-        limit: query.limit ?? 25,
+        limit: query.limit ?? PAGINATION_LIMITS.DEFAULT_LIMIT,
         cursor: query.cursor,
       });
 
@@ -169,9 +170,3 @@ export function makeEnvelopesQueriesPort(
     },
   };
 }
-
-
-
-
-
-

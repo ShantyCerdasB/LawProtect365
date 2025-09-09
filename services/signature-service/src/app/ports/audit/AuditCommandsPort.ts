@@ -4,8 +4,8 @@
  * @description Defines the contract for audit event recording operations
  */
 
-import type { TenantId, EnvelopeId } from "@/domain/value-objects/ids";
-import type { AuditEventId } from "@/domain/value-objects/audit";
+import type { TenantId, EnvelopeId } from "../../../domain/value-objects/ids";
+import type { AuditEventId } from "../../../domain/value-objects/audit";
 import type { AuditEventType } from "../../../domain/values/enums";
 import type { AuditActor } from "@lawprotect/shared-ts";
 
@@ -57,10 +57,4 @@ export interface AuditCommandsPort {
    * @returns Promise resolving to the recorded audit event
    */
   recordAuditEvent(input: RecordAuditEventInput): Promise<RecordAuditEventResult>;
-}
-
-
-
-
-
-
+};

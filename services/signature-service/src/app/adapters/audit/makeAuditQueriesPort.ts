@@ -12,6 +12,7 @@ import type {
   GetAuditEventResult
 } from "../../ports/audit";
 import type { AuditQueriesPortDependencies } from "../../../domain/types/audit";
+import { SYSTEM_ACTOR, AUDIT_PAGINATION_DEFAULTS } from "@lawprotect/shared-ts";
 
 /**
  * @description Creates an implementation of AuditQueriesPort
@@ -19,7 +20,9 @@ import type { AuditQueriesPortDependencies } from "../../../domain/types/audit";
  * @returns AuditQueriesPort implementation
  */
 export const makeAuditQueriesPort = (
-  deps: AuditQueriesPortDependencies
+  deps: AuditQueriesPortDependencies & {
+    defaultPageSize?: number;
+  }
 ): AuditQueriesPort => {
   return {
     /**
@@ -32,13 +35,13 @@ export const makeAuditQueriesPort = (
         tenantId: input.tenantId,
         envelopeId: input.envelopeId,
         cursor: input.cursor,
-        limit: input.limit ?? 50,
+        limit: input.limit ?? deps.defaultPageSize ?? AUDIT_PAGINATION_DEFAULTS.DEFAULT_LIMIT,
       });
 
       // Transform audit events to the expected format using CursorPage structure
       const items = result.items.map((event) => ({
         at: event.occurredAt,
-        actor: event.actor?.email || event.actor?.userId || "system",
+        actor: event.actor?.email || event.actor?.userId || SYSTEM_ACTOR,
         action: event.type,
         metadata: event.metadata,
       }));
@@ -71,15 +74,9 @@ export const makeAuditQueriesPort = (
 
       return {
         event,
-        actorDisplay: event.actor?.email || event.actor?.userId || "system",
+        actorDisplay: event.actor?.email || event.actor?.userId || SYSTEM_ACTOR,
         actionDisplay: event.type,
       };
     },
   };
 };
-
-
-
-
-
-

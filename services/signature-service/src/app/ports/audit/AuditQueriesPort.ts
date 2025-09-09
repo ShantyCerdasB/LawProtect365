@@ -5,7 +5,7 @@
  */
 
 import type { EnvelopeId, TenantId, PaginationCursor } from "../../../domain/value-objects";
-import type { AuditEvent, AuditEventId } from "@/domain/value-objects/audit";
+import type { AuditEvent, AuditEventId } from "../../../domain/value-objects/audit";
 import type { CursorPage } from "@lawprotect/shared-ts";
 import type { UploadFormat } from "../../../domain/values/enums";
 
@@ -83,10 +83,4 @@ export interface AuditQueriesPort {
    * @returns Promise resolving to audit event or null if not found
    */
   getAuditEvent(input: GetAuditEventInput): Promise<GetAuditEventResult | null>;
-}
-
-
-
-
-
-
+};
