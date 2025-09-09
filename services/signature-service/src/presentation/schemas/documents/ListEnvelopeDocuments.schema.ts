@@ -19,3 +19,9 @@ export const ListEnvelopeDocumentsResponse = z.object({
   items: z.array(EnvelopeDocumentItem),
 });
 export type ListEnvelopeDocumentsResponse = z.infer<typeof ListEnvelopeDocumentsResponse>;
+
+
+
+
+
+

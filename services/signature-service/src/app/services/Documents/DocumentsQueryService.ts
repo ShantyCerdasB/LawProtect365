@@ -9,9 +9,9 @@ import type {
   ListDocumentsQuery,
   ListDocumentsResult
 } from "../../ports/documents/DocumentsQueriesPort";
-import type { DocumentId } from "../../../domain/value-objects/Ids";
+import type { DocumentId } from "@/domain/value-objects/ids";
 import type { Document } from "../../../domain/entities/Document";
-import type { DocumentLock } from "../../../domain/value-objects/DocumentLock";
+import type { DocumentLock } from "@lawprotect/shared-ts";
 
 /**
  * @description Service interface for Documents query operations
@@ -57,3 +57,9 @@ export class DefaultDocumentsQueryService implements DocumentsQueryService {
     return this.queriesPort.listLocks(documentId);
   }
 }
+
+
+
+
+
+

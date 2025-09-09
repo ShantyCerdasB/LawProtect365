@@ -5,8 +5,8 @@
  */
 
 import { z } from "zod";
-import { EnvelopeIdValidationSchema } from "../../../shared/validations/schemas/common";
-import { AuditEventTypeValidationSchema } from "../../../shared/validations/schemas/audit";
+import { EnvelopeIdValidationSchema } from "@/domain/value-objects/ids";
+import { AuditEventTypeValidationSchema } from "@/domain/value-objects/audit";
 
 
 /**
@@ -34,3 +34,9 @@ export const RecordAuditEventBodySchema = z.object({
  * @description Type for body parameters
  */
 export type RecordAuditEventBody = z.infer<typeof RecordAuditEventBodySchema>;
+
+
+
+
+
+

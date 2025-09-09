@@ -5,11 +5,11 @@
  * Extends BaseEventService to provide Signing-specific event publishing functionality.
  */
 
-import { BaseEventService } from "../../../shared/services/BaseEventService";
+import { BaseEventService } from "../../../domain/services/BaseEventService";
 import type { DomainEvent } from "@lawprotect/shared-ts";
-import type { EnvelopeId, PartyId, TenantId } from "../../../domain/value-objects/Ids";
-import type { ActorContext } from "../../../domain/entities/ActorContext";
-import type { SigningEventService } from "../../../shared/types/signing";
+import type { EnvelopeId, PartyId, TenantId } from "@/domain/value-objects/ids";
+import type { ActorContext } from "@lawprotect/shared-ts";
+import type { SigningEventService } from "../../../domain/types/signing";
 
 /**
  * @summary Event service for Signing domain events
@@ -218,3 +218,9 @@ export class DefaultSigningEventService extends BaseEventService implements Sign
     await this.publishDomainEvent(event, traceId);
   }
 }
+
+
+
+
+
+

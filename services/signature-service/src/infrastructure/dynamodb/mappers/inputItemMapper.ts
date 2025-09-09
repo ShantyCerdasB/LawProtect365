@@ -14,4 +14,10 @@ export {
   toInputItem,
   fromInputItem,
   inputItemMapper,
-} from "../../../shared/types/infrastructure/InputDdbTypes";
+} from "../../../domain/types/infrastructure/InputDdbTypes";
+
+
+
+
+
+

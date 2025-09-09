@@ -4,14 +4,15 @@
  * @description Validates envelope state transitions and business rules
  */
 
-import type { EnvelopeId, TenantId, UserId } from "../../../domain/value-objects/Ids";
-import type { EnvelopeStatus } from "../../../domain/value-objects/EnvelopeStatus";
+import type { EnvelopeId, TenantId, UserId } from "@/domain/value-objects/ids";
+import type { EnvelopeStatus } from "@/domain/value-objects/index";
 import { 
   ENVELOPE_STATUSES, 
   ENVELOPE_TRANSITION_RULES, 
   ENVELOPE_TITLE_LIMITS, 
   ENVELOPE_VALIDATION_RULES 
 } from "../../../domain/values/enums";
+import { badRequest } from "@/shared/errors";
 
 /**
  * @summary Validates envelope state transitions
@@ -138,7 +139,7 @@ export class EnvelopesValidationService {
    */
   async validateGetById(query: { tenantId: TenantId; envelopeId: EnvelopeId }): Promise<void> {
     if (!query.tenantId || !query.envelopeId) {
-      throw new Error("TenantId and EnvelopeId are required for getById operation");
+      throw badRequest("TenantId and EnvelopeId are required for getById operation");
     }
   }
 
@@ -149,10 +150,10 @@ export class EnvelopesValidationService {
    */
   async validateList(query: { tenantId: TenantId; limit?: number; cursor?: string }): Promise<void> {
     if (!query.tenantId) {
-      throw new Error("TenantId is required for list operation");
+      throw badRequest("TenantId is required for list operation");
     }
     if (query.limit && (query.limit < 1 || query.limit > 100)) {
-      throw new Error("Limit must be between 1 and 100");
+      throw badRequest("Limit must be between 1 and 100");
     }
   }
 
@@ -163,7 +164,13 @@ export class EnvelopesValidationService {
    */
   async validateGetStatus(query: { tenantId: TenantId; envelopeId: EnvelopeId }): Promise<void> {
     if (!query.tenantId || !query.envelopeId) {
-      throw new Error("TenantId and EnvelopeId are required for getStatus operation");
+      throw badRequest("TenantId and EnvelopeId are required for getStatus operation");
     }
   }
 }
+
+
+
+
+
+

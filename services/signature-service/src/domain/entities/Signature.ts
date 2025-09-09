@@ -35,3 +35,9 @@ export interface Signature {
   /** Signature timestamp (ISO8601) */
   signedAt: string;
 }
+
+
+
+
+
+

@@ -87,3 +87,9 @@ export type SigningTokenPath = z.infer<typeof SigningTokenPath>;
 /** /documents/{id}/certificate */
 export const StandaloneDocumentIdPath = z.object({ id: DocumentId });
 export type StandaloneDocumentIdPath = z.infer<typeof StandaloneDocumentIdPath>;
+
+
+
+
+
+

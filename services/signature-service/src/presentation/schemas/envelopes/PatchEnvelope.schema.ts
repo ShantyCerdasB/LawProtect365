@@ -10,3 +10,9 @@ import { EnvelopeNameFields, EnvelopeStatusFields } from "./common";
 /** Body payload for partially updating an envelope. */
 export const PatchEnvelopeBody = EnvelopeNameFields.merge(EnvelopeStatusFields);
 export type PatchEnvelopeBody = z.infer<typeof PatchEnvelopeBody>;
+
+
+
+
+
+

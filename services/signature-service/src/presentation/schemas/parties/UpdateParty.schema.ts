@@ -39,3 +39,9 @@ export type UpdatePartyParams = z.infer<typeof UpdatePartyParams>;
  * @description Type for UpdateParty request body.
  */
 export type UpdatePartyBody = z.infer<typeof UpdatePartyBody>;
+
+
+
+
+
+

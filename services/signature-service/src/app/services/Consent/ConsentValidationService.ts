@@ -6,7 +6,7 @@
  */
 
 import type { ConsentQueriesPort } from "../../../app/ports/consent/ConsentQueriesPort";
-import type { ConsentDelegationValidationInput } from "../../../shared/types/consent/ValidationInputs";
+import type { ConsentDelegationValidationInput } from "../../../domain/types/consent/ValidationInputs";
 import { ConsentStatus } from "../../../domain/values/enums";
 import { BadRequestError, NotFoundError } from "../../../shared/errors";
 
@@ -60,3 +60,9 @@ export class ConsentValidationService {
     }
   }
 }
+
+
+
+
+
+

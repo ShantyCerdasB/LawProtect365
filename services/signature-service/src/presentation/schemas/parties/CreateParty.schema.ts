@@ -44,3 +44,9 @@ export type CreatePartyParams = z.infer<typeof CreatePartyParams>;
  * @description Type for CreateParty request body.
  */
 export type CreatePartyBody = z.infer<typeof CreatePartyBody>;
+
+
+
+
+
+

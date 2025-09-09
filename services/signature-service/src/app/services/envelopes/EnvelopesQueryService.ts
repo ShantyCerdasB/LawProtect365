@@ -48,3 +48,9 @@ export class EnvelopesQueryService {
     return this.queriesPort.getStatus(query);
   }
 }
+
+
+
+
+
+

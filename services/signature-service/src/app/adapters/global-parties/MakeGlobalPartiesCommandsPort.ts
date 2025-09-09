@@ -14,11 +14,11 @@ import type {
   DeleteGlobalPartyCommand,
   DeleteGlobalPartyResult
 } from "../../ports/global-parties";
-import type { GlobalPartiesRepository } from "../../../shared/contracts/repositories/global-parties/GlobalPartiesRepository";
+import type { GlobalPartiesRepository } from "../../../domain/contracts/repositories/global-parties/GlobalPartiesRepository";
 import type { 
   GlobalPartyExtended,
-} from "../../../shared/types/global-parties";
-import type { PartyId } from "../../../domain/value-objects/Ids";
+} from "../../../domain/types/global-parties";
+import type { PartyId } from "@/domain/value-objects/ids";
 import { 
   GLOBAL_PARTY_STATUSES, 
   PARTY_ROLES, 
@@ -31,7 +31,7 @@ import type {
   GlobalPartiesValidationService,
   GlobalPartiesAuditService,
   GlobalPartiesEventService
-} from "../../../shared/types/global-parties/ServiceInterfaces";
+} from "../../../domain/types/global-parties/ServiceInterfaces";
 
 /**
  * @description Creates default Global Party statistics
@@ -251,3 +251,9 @@ export const makeGlobalPartiesCommandsPort = (
     },
   };
 };
+
+
+
+
+
+

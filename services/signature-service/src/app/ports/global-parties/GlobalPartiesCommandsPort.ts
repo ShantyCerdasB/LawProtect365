@@ -5,14 +5,14 @@
  * Defines the contract for Global Party command operations.
  */
 
-import type { TenantId } from "../../../domain/value-objects/Ids";
-import type { ActorContext } from "../../../domain/entities/ActorContext";
+import type { TenantId } from "@/domain/value-objects/ids";
+import type { ActorContext } from "@lawprotect/shared-ts";
 import type { 
   GlobalPartyExtended,
   CreateGlobalPartyControllerInput,
   UpdateGlobalPartyControllerInput,
   DeleteGlobalPartyControllerInput
-} from "../../../shared/types/global-parties";
+} from "../../../domain/types/global-parties";
 
 // Define command types that extend controller inputs with actor context
 export interface CreateGlobalPartyCommand extends CreateGlobalPartyControllerInput {
@@ -62,6 +62,12 @@ export interface GlobalPartiesCommandsPort {
    */
   delete(command: DeleteGlobalPartyCommand): Promise<DeleteGlobalPartyResult>;
 }
+
+
+
+
+
+
 
 
 

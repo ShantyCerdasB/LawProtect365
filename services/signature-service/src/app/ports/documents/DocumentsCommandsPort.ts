@@ -4,11 +4,11 @@
  * Provides methods to create, update, delete, and upload documents with proper business rule validation.
  */
 
-import type { TenantId, EnvelopeId, DocumentId } from "../../../domain/value-objects/Ids";
-import type { ActorContext } from "../../../domain/entities/ActorContext";
-import type { S3ObjectRef } from "../../../domain/value-objects/S3ObjectRef";
-import type { ContentType } from "../../../domain/value-objects/ContentType";
-import type { DocumentLock } from "../../../domain/value-objects/DocumentLock";
+import type { TenantId, EnvelopeId, DocumentId } from "@/domain/value-objects/ids";
+import type { ActorContext } from "@lawprotect/shared-ts";
+import type { S3ObjectRef } from "../../../domain/value-objects/storage";
+import type { ContentType } from "../../../domain/value-objects/document";
+import type { DocumentLock } from "@lawprotect/shared-ts";
 
 
 /**
@@ -189,5 +189,11 @@ export interface DocumentsCommandsPort {
    * @param {string} lockId - The lock ID to delete
    * @returns {Promise<void>} Promise resolving when lock deletion is complete
    */
-  deleteLock(documentId: DocumentId, lockId: string): Promise<void>;
+  deleteLock(documentId: DocumentId, lockId: string, actorUserId: string): Promise<void>;
 }
+
+
+
+
+
+

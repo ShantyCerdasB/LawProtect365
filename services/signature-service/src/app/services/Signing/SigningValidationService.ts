@@ -12,9 +12,9 @@ import type {
   SigningConsentControllerInput,
   PresignUploadControllerInput,
   DownloadSignedDocumentControllerInput
-} from "../../../shared/types/signing";
-import { HashDigestSchema } from "../../../domain/value-objects/HashDigest";
-import { KmsAlgorithmSchema } from "../../../domain/value-objects/Kms";
+} from "../../../domain/types/signing";
+import { HashDigestSchema } from "@/domain/value-objects/index";
+import { KmsAlgorithmSchema } from "@/domain/value-objects/index";
 import { assertKmsAlgorithmAllowed } from "../../../domain/rules/Signing.rules";
 import { badRequest, unprocessable, signatureHashMismatch, kmsPermissionDenied } from "../../../shared/errors";
 
@@ -136,3 +136,9 @@ export class DefaultSigningValidationService implements SigningValidationService
     }
   }
 }
+
+
+
+
+
+

@@ -31,12 +31,13 @@ export const PutDocumentController = createCommandController<UpdateDocumentBinar
   bodySchema: PutDocumentBody,
   pathSchema: DocumentIdPath,
   appServiceClass: DefaultDocumentsCommandService,
-  createDependencies: (c) => makeDocumentsCommandsPort({
+  createDependencies: (c: any) => makeDocumentsCommandsPort({
     documentsRepo: c.repos.documents,
+    envelopesRepo: c.repos.envelopes,
     ids: c.ids,
     s3Service: c.services.documentsS3,
   }),
-  extractParams: (path, body) => ({
+  extractParams: (path: any, body: any) => ({
     documentId: path.id,
     contentType: body.contentType,
     size: body.size,
@@ -57,3 +58,11 @@ export const PutDocumentController = createCommandController<UpdateDocumentBinar
 
 // Export handler for backward compatibility
 export const handler = PutDocumentController;
+
+
+
+
+
+
+
+

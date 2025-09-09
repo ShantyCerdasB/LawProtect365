@@ -14,7 +14,7 @@ import { z } from "@lawprotect/shared-ts";
 
 
 // Domain VO for consent evidence: { timestamp, ip, userAgent, locale? }
-import { ConsentRecordSchema } from "@/domain/value-objects/ConsentRecord";
+import { ConsentRecordSchema } from "@/domain/value-objects/consent/ConsentRecord";
 import { EnvelopeConsentPath } from "../common";
 import { MetadataSchema } from "../common/consent.common";
 
@@ -31,3 +31,9 @@ export const SubmitConsentBody = z.object({
 
 export type SubmitConsentPathInput = z.infer<typeof SubmitConsentPath>;
 export type SubmitConsentBodyInput = z.infer<typeof SubmitConsentBody>;
+
+
+
+
+
+

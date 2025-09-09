@@ -9,7 +9,7 @@ import type { AuditQueriesPort } from "../../ports/audit";
 import type { 
   GetAuditTrailAppInput, 
   GetAuditTrailAppResult 
-} from "../../../shared/types/audit/AppServiceInputs";
+} from "../../../domain/types/audit/AppServiceInputs";
 import type { PaginationCursor } from "../../../domain/value-objects";
 
 /**
@@ -43,3 +43,9 @@ export class GetAuditTrailAppService {
     };
   }
 }
+
+
+
+
+
+

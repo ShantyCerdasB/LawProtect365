@@ -19,3 +19,9 @@ export const DeleteGlobalPartyParams = z.object({
  */
 export type DeleteGlobalPartyParams = z.infer<typeof DeleteGlobalPartyParams>;
 
+
+
+
+
+
+

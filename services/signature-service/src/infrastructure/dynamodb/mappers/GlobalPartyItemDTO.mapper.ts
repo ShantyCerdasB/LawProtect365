@@ -5,7 +5,7 @@
  */
 
 import type { GlobalPartyItemDTO } from "../../../presentation/schemas/global-parties/GlobalPartyItemDTO.schema";
-import type { GlobalPartyExtended } from "../../../shared/types/global-parties/GlobalPartiesTypes";
+import type { GlobalPartyExtended } from "../../../domain/types/global-parties/GlobalPartiesTypes";
 
 /**
  * @summary Maps DynamoDB DTO to domain row
@@ -81,3 +81,9 @@ export function globalPartyRowToDto(
     updatedAt: row.updatedAt,
   };
 }
+
+
+
+
+
+

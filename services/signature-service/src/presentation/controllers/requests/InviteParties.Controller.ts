@@ -9,8 +9,8 @@ import { makeRequestsCommandsPort } from "../../../app/adapters/requests/makeReq
 import { DefaultRequestsCommandService } from "../../../app/services/Requests";
 import { InvitationsBody } from "../../../presentation/schemas/requests";
 import { EnvelopeIdPath } from "../../../presentation/schemas/common/path";
-import type { InvitePartiesControllerInput } from "../../../shared/types/requests/ControllerInputs";
-import type { InvitePartiesAppResult } from "../../../shared/types/requests/AppServiceInputs";
+import type { InvitePartiesControllerInput } from "../../../domain/types/requests/ControllerInputs";
+import type { InvitePartiesAppResult } from "../../../domain/types/requests/AppServiceInputs";
 
 /**
  * @description Invite Parties controller
@@ -19,8 +19,8 @@ export const InvitePartiesController = createCommandController<InvitePartiesCont
   bodySchema: InvitationsBody,
   pathSchema: EnvelopeIdPath,
   appServiceClass: DefaultRequestsCommandService,
-  createDependencies: (c) => makeRequestsCommandsPort(createRequestsDependencies(c)),
-  extractParams: (path, body) => ({
+  createDependencies: (c: any) => makeRequestsCommandsPort(createRequestsDependencies(c)),
+  extractParams: (path: any, body: any) => ({
     envelopeId: path.id,
     partyIds: body.partyIds,
   }),
@@ -30,3 +30,11 @@ export const InvitePartiesController = createCommandController<InvitePartiesCont
 
 // Export handler for backward compatibility
 export const handler = InvitePartiesController;
+
+
+
+
+
+
+
+

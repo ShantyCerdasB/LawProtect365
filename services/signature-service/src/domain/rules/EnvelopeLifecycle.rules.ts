@@ -1,7 +1,7 @@
 
 import type { Envelope } from "../entities";
-import { EnvelopeStatusSchema, type EnvelopeStatus } from "../value-objects/EnvelopeStatus";
-import { invalidEnvelopeState } from "@/shared/errors";
+import { EnvelopeStatusSchema, type EnvelopeStatus } from "@/domain/value-objects/index";
+import { ConflictError, ErrorCodes } from "@lawprotect/shared-ts";
 
 /**
  * Validates a lifecycle transition for envelopes.
@@ -29,7 +29,11 @@ export const assertLifecycleTransition = (from: EnvelopeStatus, to: EnvelopeStat
   if (sFrom === "draft" && sTo === "sent") return;
   if (sFrom === "sent" && (sTo === "completed" || sTo === "canceled" || sTo === "declined")) return;
 
-  throw invalidEnvelopeState({ from: sFrom, to: sTo });
+  throw new ConflictError(
+    `Invalid envelope state transition from '${sFrom}' to '${sTo}'`,
+    ErrorCodes.COMMON_CONFLICT,
+    { from: sFrom, to: sTo }
+  );
 };
 
 /**
@@ -42,11 +46,21 @@ export const assertLifecycleTransition = (from: EnvelopeStatus, to: EnvelopeStat
  */
 export const assertDraft = (env: Pick<Envelope, "status" | "envelopeId">): void => {
   if (env.status !== "draft") {
-    throw invalidEnvelopeState({
-      envelopeId: env.envelopeId,
-      status: env.status,
-      required: "draft",
-      reason: "Structural mutations are only allowed in draft state",
-    });
+    throw new ConflictError(
+      `Envelope ${env.envelopeId} is not in draft state`,
+      ErrorCodes.COMMON_CONFLICT,
+      {
+        envelopeId: env.envelopeId,
+        status: env.status,
+        required: "draft",
+        reason: "Structural mutations are only allowed in draft state",
+      }
+    );
   }
 };
+
+
+
+
+
+

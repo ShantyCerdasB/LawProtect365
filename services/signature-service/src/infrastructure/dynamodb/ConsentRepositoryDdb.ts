@@ -17,12 +17,12 @@ import {
   toJsonValue,    // safe coercion → JsonValue
   ConflictError,
 } from "@lawprotect/shared-ts";
+import { badRequest } from "@/shared/errors";
 import type { DdbClientLike } from "@lawprotect/shared-ts";
 
 import { dtoToConsentRow } from "./mappers/ConsentItemDTO.mapper";
 import { CONSENT_TYPES, CONSENT_STATUSES } from "../../domain/values/enums";
-import { badRequest } from "../../shared/errors";
-import { validateConsentStatus } from "../../shared/validations";
+import { validateConsentStatus } from "../../domain/rules/consent";
 
 import type {
   ConsentRepoRow,
@@ -31,7 +31,7 @@ import type {
   ConsentRepoUpdateInput,
   ConsentRepoListInput,
   ConsentRepoListOutput,
-} from "../../shared/types/consent";
+} from "../../domain/types/consent";
 import { ConsentItemDTO, ConsentItemDTOSchema } from "../../presentation/schemas/consents/ConsentItemDTO.schema";
 
 const pk = (envelopeId: string) => `ENVELOPE#${envelopeId}`;
@@ -146,7 +146,7 @@ export class ConsentRepositoryDdb {
     }
 
     try {
-      if (!this.ddb.update) throw new Error("DDB client does not implement update()");
+      if (!this.ddb.update) throw badRequest("DDB client does not implement update()");
 
       const names: Record<string, string> = { "#updatedAt": "updatedAt" };
       const values: Record<string, unknown> = { ":now": nowIso() };
@@ -249,3 +249,9 @@ export class ConsentRepositoryDdb {
     }
   }
 }
+
+
+
+
+
+

@@ -12,8 +12,8 @@ import type {
   GetGlobalPartyAppResult,
   SearchGlobalPartiesByEmailAppInput,
   SearchGlobalPartiesByEmailAppResult
-} from "../../../shared/types/global-parties";
-import type { GlobalPartiesQueryService } from "../../../shared/types/global-parties/ServiceInterfaces";
+} from "../../../domain/types/global-parties";
+import type { GlobalPartiesQueryService } from "../../../domain/types/global-parties/ServiceInterfaces";
 
 /**
  * @description Default implementation of GlobalPartiesQueryService
@@ -33,4 +33,10 @@ export class DefaultGlobalPartiesQueryService implements GlobalPartiesQueryServi
     return this.queriesPort.searchByEmail(input);
   }
 }
+
+
+
+
+
+
 

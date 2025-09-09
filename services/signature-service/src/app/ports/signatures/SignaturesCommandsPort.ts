@@ -48,3 +48,9 @@ export interface SignaturesCommandsPort {
    */
   signHash(command: SignHashCommand): Promise<SignHashResult>;
 }
+
+
+
+
+
+

@@ -7,3 +7,7 @@ export * from "./events.js";
 export * from "./security.js";
 export * from "./corsConfig.js";
 export * from "./mapErrorOptions.js";
+export * from "./actor.js";
+export * from "./documentLock.js";
+export * from "./outbox.js";
+export * from "./response.js";

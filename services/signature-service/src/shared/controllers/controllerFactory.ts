@@ -1,55 +1,26 @@
 /**
  * @file controllerFactory.ts
- * @summary Universal controller factory using shared-ts middleware system
- * @description Factory for creating standardized controllers (POST/PUT/PATCH/DELETE operations)
+ * @summary Signature service specific controller factory helpers
+ * @description Helper functions for creating signature service specific controller configurations
  */
 
-import type { HandlerFn } from "@lawprotect/shared-ts";
-import { validateRequest, ok, created, noContent } from "@lawprotect/shared-ts";
-import { tenantFromCtx, actorFromCtx } from "../../presentation/middleware/auth";
+import { createController as createGenericController } from "@lawprotect/shared-ts";
 import { getContainer } from "../../core/Container";
-import type { CommandControllerConfig } from "../contracts/controllers";
-import { RESPONSE_TYPES } from "../../domain/values/enums";
-import type { Container } from "../contracts";
+import type { Container } from "../../infrastructure/contracts/core";
 import { makeSigningCommandsPort } from "../../app/adapters/signing/makeSigningCommandsPort";
 
 /**
  * @summary Creates a command controller (POST/PUT/PATCH/DELETE operations)
- * @description Universal factory function that creates standardized command controllers
+ * @description Wrapper around the generic createController that provides signature service specific configuration
  * 
  * @param config - Configuration for the controller
  * @returns HandlerFn for the command operation
  */
-export const createController = <TInput, TOutput>(
-  config: CommandControllerConfig<TInput, TOutput>
-): HandlerFn => {
-  return async (evt) => {
-    const validationSchemas: any = {};
-    if (config.pathSchema) validationSchemas.path = config.pathSchema;
-    if (config.bodySchema) validationSchemas.body = config.bodySchema;
-    
-    const validated = validateRequest(evt, validationSchemas);
-    const tenantId = tenantFromCtx(evt);
-    const actor = config.includeActor ? actorFromCtx(evt) : undefined;
-    
-    const c = getContainer();
-    const dependencies = config.createDependencies(c);
-    const appService = new config.appServiceClass(dependencies);
-    
-    const params = config.extractParams(validated.path, validated.body);
-    const result = await appService.execute({ tenantId, actor, ...params });
-    
-    const responseData = config.transformResult ? config.transformResult(result) : result;
-    
-    switch (config.responseType) {
-      case RESPONSE_TYPES[1]: // 'created'
-        return created({ data: responseData });
-      case RESPONSE_TYPES[2]: // 'noContent'
-        return noContent();
-      default: // 'ok'
-        return ok({ data: responseData });
-    }
-  };
+export const createController = <TInput, TOutput>(config: any) => {
+  return createGenericController<TInput, TOutput>({
+    ...config,
+    getContainer,
+  });
 };
 
 /**
@@ -143,7 +114,8 @@ export const createConsentDependencies = (c: Container) => ({
 export const createSigningDependenciesWithS3 = (c: Container) => makeSigningCommandsPort(
   c.repos.envelopes,
   c.repos.parties,
-  createBaseSigningConfig(c)
+  c.repos.documents,
+  createSigningDependencies(c, true)
 );
 
 /**
@@ -161,3 +133,9 @@ export const extractEnvelopeParams = (path: any, body: any) => ({
 
 // Alias for backward compatibility
 export const createCommandController = createController;
+
+
+
+
+
+

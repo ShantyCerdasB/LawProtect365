@@ -25,3 +25,9 @@ export class DefaultSignaturesCommandService {
     return this.commandsPort.signHash(command);
   }
 }
+
+
+
+
+
+

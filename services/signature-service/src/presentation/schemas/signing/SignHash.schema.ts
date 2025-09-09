@@ -8,8 +8,9 @@
  */
 
 import { z } from "zod";
-import { HashDigestSchema } from "@/domain/value-objects/HashDigest";
-import { KmsAlgorithmSchema, KmsKeyIdSchema } from "@/domain/value-objects/Kms";
+import { badRequest } from "@/shared/errors";
+import { HashDigestSchema } from "@/domain/value-objects/document";
+import { KmsAlgorithmSchema, KmsKeyIdSchema } from "@/domain/value-objects/security";
 
 
 /**
@@ -69,20 +70,26 @@ export type SignHashResponse = z.infer<typeof SignHashResponseSchema>;
  */
 export const parseSignHashRequest = (evt: any): SignHashRequest => {
   if (!evt.body) {
-    throw new Error("Missing request body");
+    throw badRequest("Missing request body");
   }
 
   let json: unknown;
   try {
     json = typeof evt.body === "string" ? JSON.parse(evt.body) : evt.body;
   } catch {
-    throw new Error("Invalid JSON in request body");
+    throw badRequest("Invalid JSON in request body");
   }
 
   const result = SignHashRequestSchema.safeParse(json);
   if (!result.success) {
-    throw new Error(`Validation failed: ${result.error.message}`);
+    throw badRequest(`Validation failed: ${result.error.message}`);
   }
 
   return result.data;
 };
+
+
+
+
+
+

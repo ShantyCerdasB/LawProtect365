@@ -59,7 +59,7 @@ export const requireTenant = (evt: ApiEvent, tenantId: string): AuthContext => {
  */
 const assertTenantBoundary = (ctxTenantId?: string, resourceTenantId?: string): void => {
   if (!ctxTenantId || !resourceTenantId || ctxTenantId !== resourceTenantId) {
-    throw makeForbidden("Tenant boundary violation");
+    throw makeForbidden("Tenant mismatch");
   }
 };
 

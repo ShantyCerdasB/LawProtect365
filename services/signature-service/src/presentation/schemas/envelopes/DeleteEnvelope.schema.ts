@@ -22,3 +22,9 @@ export const DeleteEnvelopeResponse = z.object({
 });
 
 export type DeleteEnvelopeResponse = z.infer<typeof DeleteEnvelopeResponse>;
+
+
+
+
+
+

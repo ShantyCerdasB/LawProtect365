@@ -5,8 +5,8 @@
  */
 
 import type { S3Presigner } from "@lawprotect/shared-ts";
-import type { EnvelopeId } from "../../../domain/value-objects/Ids";
-import type { SigningS3Service } from "../../../shared/types/signing";
+import type { EnvelopeId } from "@/domain/value-objects/ids";
+import type { SigningS3Service } from "../../../domain/types/signing";
 import { ulid } from "@lawprotect/shared-ts";
 
 /**
@@ -89,3 +89,9 @@ export class DefaultSigningS3Service implements SigningS3Service {
     };
   }
 }
+
+
+
+
+
+

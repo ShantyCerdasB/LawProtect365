@@ -7,16 +7,16 @@
 import { createCommandController } from "../../../shared/controllers/controllerFactory";
 import { makeConsentCommandsPort } from "../../../app/adapters/consent/MakeConsentCommandsPort";
 import { ConsentCommandService } from "../../../app/services/Consent/ConsentCommandService";
-import type { DelegateConsentControllerInput } from "../../../shared/types/consent/ControllerInputs";
-import type { DelegateConsentAppResult } from "../../../shared/types/consent/AppServiceInputs";
+import type { DelegateConsentControllerInput } from "../../../domain/types/consent/ControllerInputs";
+import type { DelegateConsentAppResult } from "../../../domain/types/consent/AppServiceInputs";
 import { DelegateConsentPath, DelegateConsentBody } from "../../schemas/consents/DelegateConsent.schema";
-import type { EnvelopeId, ConsentId } from "../../../domain/value-objects/Ids";
+import type { EnvelopeId, ConsentId } from "@/domain/value-objects/ids";
 
 export const handler = createCommandController<DelegateConsentControllerInput, DelegateConsentAppResult>({
   pathSchema: DelegateConsentPath,
   bodySchema: DelegateConsentBody,
   appServiceClass: ConsentCommandService,
-  createDependencies: (c) => makeConsentCommandsPort({
+  createDependencies: (c: any) => makeConsentCommandsPort({
     consentsRepo: c.repos.consents,
     delegationsRepo: c.repos.delegations,
     ids: c.ids,
@@ -26,7 +26,7 @@ export const handler = createCommandController<DelegateConsentControllerInput, D
     eventService: c.consent.events,
     idempotencyRunner: c.idempotency.runner
   }),
-  extractParams: (path, body) => ({
+  extractParams: (path: any, body: any) => ({
     envelopeId: path.envelopeId as EnvelopeId,
     consentId: path.consentId as ConsentId,
     delegateEmail: body.delegateEmail,
@@ -40,3 +40,11 @@ export const handler = createCommandController<DelegateConsentControllerInput, D
   responseType: "ok",
   includeActor: true,
 });
+
+
+
+
+
+
+
+

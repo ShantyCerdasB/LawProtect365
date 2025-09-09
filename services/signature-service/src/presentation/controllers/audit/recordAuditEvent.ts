@@ -18,8 +18,8 @@ import { RESPONSE_TYPES } from "../../../domain/values/enums";
 export const handler = createCommandController({
   bodySchema: RecordAuditEventBodySchema,
   appServiceClass: RecordAuditEventAppService,
-  createDependencies: (container) => makeAuditCommandsPort(container.repos.audit),
-  extractParams: (_, body) => ({
+  createDependencies: (container: any) => makeAuditCommandsPort(container.repos.audit),
+  extractParams: (_: any, body: any) => ({
     envelopeId: body.envelopeId,
     type: body.type,
     actor: body.actor,
@@ -28,3 +28,11 @@ export const handler = createCommandController({
   responseType: RESPONSE_TYPES[1], // 'created'
   includeActor: true, // Include actor context from JWT
 });
+
+
+
+
+
+
+
+

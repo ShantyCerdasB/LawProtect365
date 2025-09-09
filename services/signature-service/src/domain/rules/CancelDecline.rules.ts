@@ -1,5 +1,5 @@
 import { AppError, ErrorCodes } from "@lawprotect/shared-ts";
-import { ReasonSchema } from "../value-objects/Reason";
+import { ReasonSchema } from "../value-objects/common";
 import { EnvelopeStatus } from "../values/enums";
 
 /**
@@ -15,3 +15,9 @@ export const assertCancelDeclineAllowed = (status: EnvelopeStatus): void => {
  * Validates reason format and revocation side-effects can be orchestrated by callers.
  */
 export const assertReasonValid = (reason: unknown): string => ReasonSchema.parse(reason);
+
+
+
+
+
+

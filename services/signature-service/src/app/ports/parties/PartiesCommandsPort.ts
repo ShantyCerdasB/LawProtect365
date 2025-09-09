@@ -5,14 +5,14 @@
  * Defines the contract for Party command operations.
  */
 
-import type { TenantId } from "../../../domain/value-objects/Ids";
-import type { ActorContext } from "../../../domain/entities/ActorContext";
+import type { TenantId } from "@/domain/value-objects/ids";
+import type { ActorContext } from "@lawprotect/shared-ts";
 import type { 
   PartyRow,
   CreatePartyControllerInput,
   UpdatePartyControllerInput,
   DeletePartyControllerInput
-} from "../../../shared/types/parties";
+} from "../../../domain/types/parties";
 
 // Define command types that extend controller inputs with actor context
 export interface CreatePartyCommand extends CreatePartyControllerInput {
@@ -62,3 +62,9 @@ export interface PartiesCommandsPort {
    */
   delete(command: DeletePartyCommand): Promise<DeletePartyResult>;
 }
+
+
+
+
+
+

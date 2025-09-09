@@ -6,9 +6,9 @@
 
 import { BadRequestError, ConflictError, ErrorCodes, isEmail } from "@lawprotect/shared-ts";
 import type { Input } from "../../../domain/entities/Input";
-import type { EnvelopeId, PartyId } from "../../../domain/value-objects/Ids";
-import type { InputsRepository } from "../../../shared/contracts/repositories/inputs/InputsRepository";
-import type { RequestsValidationService } from "../../../shared/types/requests/ServiceInterfaces";
+import type { EnvelopeId, PartyId } from "@/domain/value-objects/ids";
+import type { InputsRepository } from "../../../domain/contracts/repositories/inputs/InputsRepository";
+import type { RequestsValidationService } from "../../../domain/types/requests/ServiceInterfaces";
 import type { 
   InvitePartiesCommand,
   RemindPartiesCommand,
@@ -229,3 +229,9 @@ export class DefaultRequestsValidationService implements RequestsValidationServi
 
 
 }
+
+
+
+
+
+

@@ -7,7 +7,7 @@
  */
 
 import type { Document } from "@/domain/entities/Document";
-import type { DocumentId } from "@/domain/value-objects/Ids";
+import type { DocumentId } from "@/domain/value-objects/index";
 import type { 
   DocumentsCommandsPort, 
   CreateDocumentCommand, 
@@ -18,10 +18,19 @@ import type {
   UpdateDocumentResult,
   UpdateDocumentBinaryCommand
 } from "../../ports/documents/DocumentsCommandsPort";
-import type { DocumentLock } from "@/domain/value-objects/DocumentLock";
-import type { DocumentsRepository } from "@/shared/contracts/repositories/documents/DocumentsRepository";
-import { documentNotFound } from "@/shared/errors";
-import { nowIso } from "@lawprotect/shared-ts";
+import type { DocumentLock } from "@lawprotect/shared-ts";
+import type { DocumentsRepository } from "@/domain/contracts/repositories/documents/DocumentsRepository";
+import { documentNotFound, envelopeNotFound, badRequest } from "@/shared/errors";
+import { nowIso, assertTenantBoundary } from "@lawprotect/shared-ts";
+import { 
+  assertDocumentMutable, 
+  assertSupportedContentType, 
+  assertDocumentSizeLimit,
+  assertDocumentLockDeletable,
+  assertDocumentStatusTransition,
+  assertDocumentBelongsToEnvelope,
+  assertEnvelopeDraftForDocumentModification
+} from "../../../domain/rules/Documents.rules";
 
 /**
  * Dependencies for the DocumentsCommandsPort
@@ -29,6 +38,8 @@ import { nowIso } from "@lawprotect/shared-ts";
 interface Dependencies {
   /** Documents repository for data persistence */
   documentsRepo: DocumentsRepository;
+  /** Envelopes repository for envelope validation */
+  envelopesRepo: any; // EnvelopesRepository
   /** ID generator for creating new document IDs */
   ids: { ulid(): string };
   /** S3 service for presigned URLs */
@@ -50,6 +61,20 @@ export const makeDocumentsCommandsPort = (deps: Dependencies): DocumentsCommands
      * @returns Promise resolving to creation result
      */
     async create(command: CreateDocumentCommand): Promise<CreateDocumentResult> {
+      // Apply generic rules
+      assertTenantBoundary(command.tenantId, command.tenantId);
+      
+      // Get envelope to validate document creation rules
+      const envelope = await deps.envelopesRepo.getById(command.envelopeId);
+      if (!envelope) {
+        throw envelopeNotFound({ envelopeId: command.envelopeId });
+      }
+      
+      // Apply domain-specific rules
+      assertEnvelopeDraftForDocumentModification(envelope);
+      assertSupportedContentType(command.contentType);
+      assertDocumentSizeLimit(command.size);
+      
       const documentId = deps.ids.ulid() as DocumentId;
       const now = nowIso();
 
@@ -86,8 +111,22 @@ export const makeDocumentsCommandsPort = (deps: Dependencies): DocumentsCommands
      * @returns Promise resolving to upload result with presigned URL
      */
     async upload(command: UploadDocumentCommand): Promise<UploadDocumentResult> {
+      // Apply generic rules
+      assertTenantBoundary(command.tenantId, command.tenantId);
+      
+      // Get envelope to validate document upload rules
+      const envelope = await deps.envelopesRepo.getById(command.envelopeId);
+      if (!envelope) {
+        throw envelopeNotFound({ envelopeId: command.envelopeId });
+      }
+      
+      // Apply domain-specific rules
+      assertEnvelopeDraftForDocumentModification(envelope);
+      assertSupportedContentType(command.contentType);
+      assertDocumentSizeLimit(command.size);
+      
       if (!deps.s3Service) {
-        throw new Error("S3 service not available for document upload");
+        throw badRequest("S3 service not available for document upload");
       }
 
       const documentId = deps.ids.ulid() as DocumentId;
@@ -146,6 +185,17 @@ export const makeDocumentsCommandsPort = (deps: Dependencies): DocumentsCommands
       if (!document) {
         throw documentNotFound({ id: command.documentId });
       }
+      
+      // Get envelope to validate document update rules
+      const envelope = await deps.envelopesRepo.getById(document.envelopeId);
+      if (!envelope) {
+        throw envelopeNotFound({ envelopeId: document.envelopeId });
+      }
+      
+      // Apply domain-specific rules
+      assertDocumentBelongsToEnvelope(document, document.envelopeId);
+      assertEnvelopeDraftForDocumentModification(envelope);
+      assertDocumentMutable(document);
 
       const updatedDocument = await deps.documentsRepo.update(command.documentId, {
         name: command.name,
@@ -173,6 +223,20 @@ export const makeDocumentsCommandsPort = (deps: Dependencies): DocumentsCommands
       if (!document) {
         throw documentNotFound({ id: command.documentId });
       }
+      
+      // Get envelope to validate document update rules
+      const envelope = await deps.envelopesRepo.getById(document.envelopeId);
+      if (!envelope) {
+        throw envelopeNotFound({ envelopeId: document.envelopeId });
+      }
+      
+      // Apply domain-specific rules
+      assertDocumentBelongsToEnvelope(document, document.envelopeId);
+      assertEnvelopeDraftForDocumentModification(envelope);
+      assertDocumentStatusTransition(document.status, "uploaded"); // Transition to uploaded when binary is updated
+      assertSupportedContentType(command.contentType);
+      assertDocumentSizeLimit(command.size);
+      assertDocumentMutable(document);
 
       const updatedDocument = await deps.documentsRepo.update(command.documentId, {
         contentType: command.contentType,
@@ -228,13 +292,18 @@ export const makeDocumentsCommandsPort = (deps: Dependencies): DocumentsCommands
       await deps.documentsRepo.update(documentId, { metadata: updatedMetadata });
     },
 
-    async deleteLock(documentId: DocumentId, lockId: string): Promise<void> {
+    async deleteLock(documentId: DocumentId, lockId: string, actorUserId: string): Promise<void> {
       const document = await deps.documentsRepo.getById(documentId);
       if (!document) {
-        throw new Error(`Document not found: ${documentId}`);
+        throw documentNotFound({ documentId });
       }
-
+      
+      // Apply domain-specific rules
       const currentLocks = Array.isArray(document.metadata?.locks) ? document.metadata.locks : [];
+      const lockToDelete = currentLocks.find((lock: any) => lock.lockId === lockId);
+      if (lockToDelete) {
+        assertDocumentLockDeletable(lockToDelete, actorUserId);
+      }
       const updatedLocks = currentLocks.filter((lock: any) => lock.lockId !== lockId);
       
       const updatedMetadata = {
@@ -246,3 +315,9 @@ export const makeDocumentsCommandsPort = (deps: Dependencies): DocumentsCommands
     },
   };
 };
+
+
+
+
+
+

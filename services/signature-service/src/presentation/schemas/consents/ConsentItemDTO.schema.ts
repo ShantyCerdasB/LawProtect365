@@ -26,3 +26,9 @@ export const ConsentItemDTOSchema = z.object({
 });
 
 export type ConsentItemDTO = z.infer<typeof ConsentItemDTOSchema>;
+
+
+
+
+
+

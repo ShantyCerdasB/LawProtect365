@@ -5,7 +5,7 @@
  */
 
 import { BadRequestError, ErrorCodes } from "@lawprotect/shared-ts";
-import type { CertificateValidationService } from "../../../shared/types/certificate/ServiceInterfaces";
+import type { CertificateValidationService } from "../../../domain/types/certificate/ServiceInterfaces";
 import type { GetCertificateQuery } from "../../ports/certificate/CertificateQueriesPort";
 
 /**
@@ -38,3 +38,9 @@ export class DefaultCertificateValidationService implements CertificateValidatio
     }
   }
 }
+
+
+
+
+
+

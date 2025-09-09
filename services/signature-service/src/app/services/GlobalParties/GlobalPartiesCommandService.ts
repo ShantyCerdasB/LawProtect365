@@ -13,7 +13,7 @@ import type {
   DeleteGlobalPartyCommand,
   DeleteGlobalPartyResult
 } from "../../ports/global-parties";
-import type { GlobalPartiesCommandService } from "../../../shared/types/global-parties/ServiceInterfaces";
+import type { GlobalPartiesCommandService } from "../../../domain/types/global-parties/ServiceInterfaces";
 
 /**
  * @description Default implementation of GlobalPartiesCommandService
@@ -33,3 +33,9 @@ export class DefaultGlobalPartiesCommandService implements GlobalPartiesCommandS
     return this.commandsPort.delete(command);
   }
 }
+
+
+
+
+
+

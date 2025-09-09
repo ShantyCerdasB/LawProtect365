@@ -40,33 +40,26 @@ import { DocumentRepositoryDdb } from "../infrastructure/dynamodb/DocumentReposi
 import { InputRepositoryDdb } from "../infrastructure/dynamodb/InputRepositoryDdb";
 import { PartyRepositoryDdb } from "../infrastructure/dynamodb/PartyRepositoryDdb";
 
-import { IdempotencyStoreDdb } from "../infrastructure/dynamodb/IdempotencyStoreDdb";
+import { IdempotencyStoreDdb } from "@lawprotect/shared-ts";
 import { AuditRepositoryDdb } from "../infrastructure/dynamodb/AuditRepositoryDdb";
 import { ConsentRepositoryDdb } from "../infrastructure/dynamodb/index";
 import { GlobalPartiesRepositoryDdb } from "../infrastructure/dynamodb/GlobalPartiesRepositoryDdb";
 
-import { IdempotencyKeyHasher } from "../infrastructure/idempotency/IdempotencyKeyHasher";
-import { IdempotencyRunner } from "../infrastructure/idempotency/IdempotencyRunner";
-import { RateLimitStoreDdb } from "../infrastructure/ratelimit/RateLimitStoreDdb";
-
-import { S3EvidenceStorage } from "../infrastructure/s3/S3EvidenceStorage";
-import { S3Presigner } from "../infrastructure/s3/S3Presigner";
+import { IdempotencyKeyHasher, IdempotencyRunner } from "@lawprotect/shared-ts";
+import { RateLimitStoreDdb, S3EvidenceStorage, S3Presigner } from "@lawprotect/shared-ts";
 import { S3SignedPdfIngestor } from "../infrastructure/s3/S3SignedPdfIngestor";
 
-import { KmsSigner } from "../infrastructure/kms/KmsSigner";
-
-import { SsmParamConfigProvider } from "../infrastructure/ssm/SsmParamConfigProvider";
+import { KmsSigner, SsmParamConfigProvider } from "@lawprotect/shared-ts";
 import { DelegationRepositoryDdb } from "../infrastructure/dynamodb/DelegationRepositoryDdb";
 
 import { randomToken, uuid, ulid, DdbClientLike, makeEventPublisher } from "@lawprotect/shared-ts";
-import type { Container } from "../shared/contracts";
+import type { Container } from "../infrastructure/contracts/core";
 
-import { OutboxRepositoryDdb } from "../infrastructure/dynamodb/OutboxRepositoryDdb";
-import { EventBusPortAdapter } from "../infrastructure/eventbridge/EventBusPortAdapter";
-import { MetricsService } from "../shared/services";
+import { OutboxRepositoryDdb, EventBusPortAdapter } from "@lawprotect/shared-ts";
+import { MetricsService } from "../domain/services";
 
 // EventBridge types
-import type { EventBridgeClientPort, PutEventsRequest, PutEventsResponse } from "../shared/contracts/eventbridge/EventBridgeClientPort";
+import type { EventBridgeClientPort, PutEventsRequest, PutEventsResponse } from "@lawprotect/shared-ts";
 
 import { ConsentValidationService } from "../app/services/Consent/ConsentValidationService";
 import { ConsentAuditService } from "../app/services/Consent/ConsentAuditService";
@@ -345,6 +338,12 @@ export const getContainer = (): Container => {
   );
   const partiesQueries = makePartiesQueriesPort(parties);
 
+  // Documents services - instantiate with correct dependencies
+  const documentsValidation = new DefaultDocumentsValidationService();
+  const documentsAudit = new DefaultDocumentsAuditService(audit);
+  const documentsEvents = new DefaultDocumentsEventService(outbox);
+  const documentsRateLimit = new DefaultDocumentsRateLimitService(otpRateLimitStore);
+
   // Envelopes services - instantiate with correct dependencies
   const envelopesValidation = new EnvelopesValidationService();
   const envelopesAudit = new EnvelopesAuditService(audit);
@@ -354,9 +353,13 @@ export const getContainer = (): Container => {
     envelopes,
     ids,
     config as any, // Cast to resolve type mismatch between core/Config and shared/types/core/config
+    parties,
+    inputs,
     envelopesValidation,
     envelopesAudit,
-    envelopesEvents
+    envelopesEvents,
+    // ✅ RATE LIMITING - PATRÓN REUTILIZABLE
+    documentsRateLimit // Use DocumentsRateLimitService for envelope operations
   );
   const envelopesQueries = makeEnvelopesQueriesPort(envelopes);
 
@@ -368,6 +371,9 @@ export const getContainer = (): Container => {
   const inputsCommands = makeInputsCommandsPort(
     inputs,
     ids,
+    parties,
+    documents,
+    envelopes,
     inputsValidation,
     inputsAudit,
     inputsEvents,
@@ -380,12 +386,6 @@ export const getContainer = (): Container => {
     inputsAudit
   );
 
-  // Documents services - instantiate with correct dependencies
-  const documentsValidation = new DefaultDocumentsValidationService();
-  const documentsAudit = new DefaultDocumentsAuditService(audit);
-  const documentsEvents = new DefaultDocumentsEventService(outbox);
-  const documentsRateLimit = new DefaultDocumentsRateLimitService(otpRateLimitStore);
-  
   // Create S3 adapter for DocumentsS3Service
   const documentsS3Adapter = {
     putObjectUrl: async (bucket: string, key: string, contentType: string, expiresIn?: number) => {
@@ -409,6 +409,7 @@ export const getContainer = (): Container => {
   
   const documentsCommands = makeDocumentsCommandsPort({
     documentsRepo: documents,
+    envelopesRepo: envelopes,
     ids,
     s3Service: documentsS3,
   });
@@ -463,6 +464,7 @@ export const getContainer = (): Container => {
   const signingCommands = makeSigningCommandsPort(
     envelopes,
     parties,
+    documents,
     {
       events: eventBus,
       ids,
@@ -597,3 +599,9 @@ export const getContainer = (): Container => {
 
   return singleton;
 };
+
+
+
+
+
+

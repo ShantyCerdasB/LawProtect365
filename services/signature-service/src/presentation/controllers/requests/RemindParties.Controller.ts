@@ -9,8 +9,8 @@ import { makeRequestsCommandsPort } from "../../../app/adapters/requests/makeReq
 import { DefaultRequestsCommandService } from "../../../app/services/Requests";
 import { RemindersBody } from "../../../presentation/schemas/requests";
 import { EnvelopeIdPath } from "../../../presentation/schemas/common/path";
-import type { RemindPartiesControllerInput } from "../../../shared/types/requests/ControllerInputs";
-import type { RemindPartiesAppResult } from "../../../shared/types/requests/AppServiceInputs";
+import type { RemindPartiesControllerInput } from "../../../domain/types/requests/ControllerInputs";
+import type { RemindPartiesAppResult } from "../../../domain/types/requests/AppServiceInputs";
 
 /**
  * @description Remind Parties controller
@@ -19,8 +19,8 @@ export const RemindPartiesController = createCommandController<RemindPartiesCont
   bodySchema: RemindersBody,
   pathSchema: EnvelopeIdPath,
   appServiceClass: DefaultRequestsCommandService,
-  createDependencies: (c) => makeRequestsCommandsPort(createRequestsDependencies(c)),
-  extractParams: (path, body) => ({
+  createDependencies: (c: any) => makeRequestsCommandsPort(createRequestsDependencies(c)),
+  extractParams: (path: any, body: any) => ({
     envelopeId: path.id,
     partyIds: body.partyIds,
     message: body.message,
@@ -31,3 +31,11 @@ export const RemindPartiesController = createCommandController<RemindPartiesCont
 
 // Export handler for backward compatibility
 export const handler = RemindPartiesController;
+
+
+
+
+
+
+
+

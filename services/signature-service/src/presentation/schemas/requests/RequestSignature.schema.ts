@@ -5,7 +5,7 @@
  */
 
 import { z } from "@lawprotect/shared-ts";
-import { EnvelopeIdSchema, PartyIdSchema } from "../../../domain/value-objects/Ids";
+import { EnvelopeIdSchema, PartyIdSchema } from "@/domain/value-objects/ids";
 
 /**
  * @description Request body schema for requesting a signature
@@ -32,3 +32,9 @@ export type RequestSignatureBody = z.infer<typeof RequestSignatureBody>;
  * @description Type for envelope path parameters
  */
 export type EnvelopePath = z.infer<typeof EnvelopePath>;
+
+
+
+
+
+

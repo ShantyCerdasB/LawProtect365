@@ -8,7 +8,7 @@
 
 import { HashAlgorithm, KmsAlgorithm } from "@/domain/values/enums";
 import type { EventEnvelope } from "@lawprotect/shared-ts";
-import type { EnvelopeId, PartyId, IpAddress } from "@/domain/value-objects/Ids";
+import type { EnvelopeId, PartyId, IpAddress } from"@/domain/value-objects/index";
 
 /**
  * Input for signing consent operation (replaces OTP verification)
@@ -268,3 +268,9 @@ export interface SigningCommandsPort {
    */
   downloadSignedDocument(command: DownloadSignedDocumentCommand): Promise<DownloadSignedDocumentResult>;
 }
+
+
+
+
+
+

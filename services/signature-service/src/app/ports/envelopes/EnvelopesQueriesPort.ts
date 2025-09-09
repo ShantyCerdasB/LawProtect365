@@ -5,9 +5,9 @@
  */
 
 import type { Envelope } from "../../../domain/entities/Envelope";
-import type { EnvelopeId, TenantId } from "../../../domain/value-objects/Ids";
-import type { EnvelopeStatus } from "../../../domain/value-objects/EnvelopeStatus";
-import type { ActorContext } from "../../../domain/entities/ActorContext";
+import type { EnvelopeId, TenantId } from "@/domain/value-objects/ids";
+import type { EnvelopeStatus } from "@/domain/value-objects/index";
+import type { ActorContext } from "@lawprotect/shared-ts";
 
 /**
  * @summary Input for getting an envelope by ID
@@ -92,3 +92,9 @@ export interface EnvelopesQueriesPort {
    */
   getStatus(query: GetEnvelopeStatusQuery): Promise<GetEnvelopeStatusResult>;
 }
+
+
+
+
+
+

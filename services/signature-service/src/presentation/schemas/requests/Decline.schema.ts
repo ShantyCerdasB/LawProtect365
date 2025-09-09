@@ -17,3 +17,9 @@ export const DeclineEnvelopeBody = z.object({
 
 export type DeclineEnvelopeBody = z.infer<typeof DeclineEnvelopeBody>;
 
+
+
+
+
+
+

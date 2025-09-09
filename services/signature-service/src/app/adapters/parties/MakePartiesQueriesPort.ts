@@ -8,7 +8,7 @@
 import type { PartiesQueriesPort } from "../../ports/parties";
 import type { Repository } from "@lawprotect/shared-ts";
 import type { Party } from "../../../domain/entities/Party";
-import type { PartyKey } from "../../../shared/types/infrastructure/dynamodb";
+import type { PartyKey } from "../../../domain/types/infrastructure/dynamodb";
 import { 
   ListPartiesAppInput,
   ListPartiesAppResult,
@@ -16,7 +16,7 @@ import {
   SearchPartiesByEmailAppResult,
   GetPartyAppInput,
   GetPartyAppResult
-} from "../../../shared/types/parties";
+} from "../../../domain/types/parties";
 
 
 /**
@@ -79,3 +79,9 @@ export function makePartiesQueriesPort(
     },
   };
 }
+
+
+
+
+
+

@@ -18,3 +18,9 @@ export type GetEnvelopeStatusParams = z.infer<typeof GetEnvelopeStatusParams>;
  */
 export const GetEnvelopeStatusResponse = BaseEnvelopeFields;
 export type GetEnvelopeStatusResponse = z.infer<typeof GetEnvelopeStatusResponse>;
+
+
+
+
+
+

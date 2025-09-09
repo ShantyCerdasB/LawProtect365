@@ -8,16 +8,16 @@
 import { createQueryController } from "../../../shared/controllers/queryFactory";
 import { makeConsentQueryPort } from "../../../app/adapters/consent/MakeConsentQueryPort";
 import { ConsentQueryService } from "../../../app/services/Consent/ConsentQueryService";
-import type { ListConsentsControllerInput } from "../../../shared/types/consent/ControllerInputs";
-import type { ListConsentsAppResult } from "../../../shared/types/consent/AppServiceInputs";
+import type { ListConsentsControllerInput } from "../../../domain/types/consent/ControllerInputs";
+import type { ListConsentsAppResult } from "../../../domain/types/consent/AppServiceInputs";
 import { ListConsentsPath, ListConsentsQuery } from "../../schemas/consents/ListConsents.schema";
 
 export const handler = createQueryController<ListConsentsControllerInput, ListConsentsAppResult>({
   pathSchema: ListConsentsPath,
   querySchema: ListConsentsQuery,
   appServiceClass: ConsentQueryService,
-  createDependencies: (c) => makeConsentQueryPort(c.repos.consents),
-  extractParams: (path, query) => ({
+  createDependencies: (c: any) => makeConsentQueryPort(c.repos.consents),
+  extractParams: (path: any, query: any) => ({
     envelopeId: path.envelopeId,
     limit: query.limit,
     cursor: query.cursor,
@@ -27,3 +27,11 @@ export const handler = createQueryController<ListConsentsControllerInput, ListCo
   }),
   responseType: "ok"
 });
+
+
+
+
+
+
+
+

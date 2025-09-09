@@ -1,7 +1,7 @@
 
-import { HashDigestSchema } from "../value-objects/HashDigest";
-import { KmsAlgorithmSchema } from "../value-objects/Kms";
-import { signatureHashMismatch, kmsPermissionDenied, invalidEnvelopeState } from "@/shared/errors";
+import { HashDigestSchema } from "@/domain/value-objects/index";
+import { KmsAlgorithmSchema } from "@/domain/value-objects/index";
+import { UnprocessableEntityError, ForbiddenError, ConflictError, ErrorCodes } from "@lawprotect/shared-ts";
 
 /**
  * Validates that the uploaded PDF digest matches the expected digest.
@@ -20,7 +20,11 @@ export const assertPdfDigestMatches = (
   const e = HashDigestSchema.parse(expected);
 
   if (p.alg !== e.alg || p.value !== e.value) {
-    throw signatureHashMismatch({ provided: p, expected: e });
+    throw new UnprocessableEntityError(
+      "PDF digest mismatch",
+      ErrorCodes.COMMON_UNPROCESSABLE_ENTITY,
+      { provided: p, expected: e }
+    );
   }
 };
 
@@ -39,7 +43,11 @@ export const assertKmsAlgorithmAllowed = (
 ): void => {
   const parsed = KmsAlgorithmSchema.parse(alg);
   if (allowed && !allowed.includes(parsed)) {
-    throw kmsPermissionDenied({ algorithm: parsed });
+    throw new ForbiddenError(
+      "KMS algorithm not allowed",
+      ErrorCodes.AUTH_FORBIDDEN,
+      { algorithm: parsed }
+    );
   }
 };
 
@@ -62,10 +70,20 @@ export const assertCompletionAllowed = (stats: {
   signedCount: number;
 }): void => {
   if (stats.signedCount < stats.requiredSigners) {
-    throw invalidEnvelopeState({
-      reason: "incomplete_signatures",
-      requiredSigners: stats.requiredSigners,
-      signedCount: stats.signedCount,
-    });
+    throw new ConflictError(
+      "Not all required signers have signed",
+      ErrorCodes.COMMON_CONFLICT,
+      {
+        reason: "incomplete_signatures",
+        requiredSigners: stats.requiredSigners,
+        signedCount: stats.signedCount,
+      }
+    );
   }
 };
+
+
+
+
+
+

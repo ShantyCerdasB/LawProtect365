@@ -8,10 +8,13 @@
 
 import type { Repository } from "@lawprotect/shared-ts";
 import type { Input } from "../../../domain/entities/Input";
-import type { InputKey } from "../../../shared/types/infrastructure/dynamodb";
-import type { InputId, PartyId } from "../../../domain/value-objects/Ids";
-import type { Ids } from "../../../shared/types/parties";
-import type { IdempotencyRunner } from "../../../infrastructure/idempotency/IdempotencyRunner";
+import type { InputKey } from "../../../domain/types/infrastructure/dynamodb";
+import type { InputId, PartyId } from "@/domain/value-objects/ids";
+import type { Ids } from "../../../domain/types/parties";
+import type { IdempotencyRunner } from "@lawprotect/shared-ts";
+import type { PartyRepositoryDdb } from "../../../infrastructure/dynamodb/PartyRepositoryDdb";
+import type { DocumentRepositoryDdb } from "../../../infrastructure/dynamodb/DocumentRepositoryDdb";
+import type { EnvelopeRepositoryDdb } from "../../../infrastructure/dynamodb/EnvelopeRepositoryDdb";
 import type { 
   InputsCommandsPort, 
   CreateInputsCommand, 
@@ -25,8 +28,13 @@ import type {
 import { InputsValidationService } from "../../services/Inputs/InputsValidationService";
 import { InputsAuditService } from "../../services/Inputs/InputsAuditService";
 import { InputsEventService } from "../../services/Inputs/InputsEventService";
-import { nowIso } from "@lawprotect/shared-ts";
+import { nowIso, assertTenantBoundary } from "@lawprotect/shared-ts";
 import { inputNotFound } from "../../../shared/errors";
+import { 
+  assertInputReferences, 
+  assertInputGeometry, 
+  assertNoIllegalOverlap 
+} from "../../../domain/rules/Inputs.rules";
 
 /**
  * Creates an InputsCommandsPort implementation
@@ -41,6 +49,10 @@ import { inputNotFound } from "../../../shared/errors";
 export const makeInputsCommandsPort = (
   inputsRepo: Repository<Input, InputKey>,
   ids: Ids,
+  // ✅ REPOSITORIES FOR RULES VALIDATION
+  partiesRepo: PartyRepositoryDdb,
+  documentsRepo: DocumentRepositoryDdb,
+  envelopesRepo: EnvelopeRepositoryDdb,
   // ✅ SERVICIOS OPCIONALES - PATRÓN REUTILIZABLE
   validationService?: InputsValidationService,
   auditService?: InputsAuditService,
@@ -51,6 +63,46 @@ export const makeInputsCommandsPort = (
   
   // 🔍 FUNCIÓN INTERNA PARA IDEMPOTENCY
   const createInternal = async (command: CreateInputsCommand): Promise<CreateInputsResult> => {
+    // Apply generic rules
+    assertTenantBoundary(command.tenantId, command.tenantId);
+    
+    // Apply domain-specific rules
+    // Get actual data from repositories for validation
+    const documentIds = [command.documentId];
+    
+    // Get party IDs from parties repository
+    const parties = await partiesRepo.listByEnvelope({ 
+      tenantId: command.tenantId, 
+      envelopeId: command.envelopeId 
+    });
+    const partyIds = parties.items.map(p => p.partyId);
+    
+    // Get document metadata for page size
+    const document = await documentsRepo.getById(command.documentId as any);
+    const pageSize = document ? { width: 612, height: 792 } : { width: 612, height: 792 }; // Default letter size
+    
+    // Get envelope configuration for strict mode
+    const envelope = await envelopesRepo.getById(command.envelopeId);
+    const strictMode = envelope?.policies?.strictMode || false;
+    
+    // Convert command inputs to Input entities for validation
+    const inputsForValidation: Input[] = command.inputs.map((input, index) => ({
+      inputId: `temp-${index}` as any, // Temporary ID for validation
+      envelopeId: command.envelopeId,
+      documentId: command.documentId,
+      type: input.type,
+      position: { page: input.page, x: input.x, y: input.y },
+      required: input.required,
+      partyId: input.partyId || ("" as PartyId),
+      value: input.value,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }));
+    
+    assertInputReferences(inputsForValidation, new Set(documentIds), new Set(partyIds));
+    assertInputGeometry(inputsForValidation, pageSize);
+    assertNoIllegalOverlap(inputsForValidation, Boolean(strictMode));
+    
     // 1. VALIDATION (opcional)
     if (validationService) {
       await validationService.validateCreate(command);
@@ -122,6 +174,9 @@ export const makeInputsCommandsPort = (
 
   // 🔍 FUNCIÓN INTERNA PARA IDEMPOTENCY
   const updateInternal = async (command: UpdateInputCommand): Promise<UpdateInputResult> => {
+    // Apply generic rules
+    assertTenantBoundary(command.tenantId, command.tenantId);
+    
     // 1. VALIDATION (opcional)
     if (validationService) {
       await validationService.validateUpdate(command);
@@ -200,6 +255,9 @@ export const makeInputsCommandsPort = (
 
   // 🔍 FUNCIÓN INTERNA PARA IDEMPOTENCY
   const updatePositionsInternal = async (command: UpdateInputPositionsCommand): Promise<UpdateInputPositionsResult> => {
+    // Apply generic rules
+    assertTenantBoundary(command.tenantId, command.tenantId);
+    
     // 1. VALIDATION (opcional)
     if (validationService) {
       await validationService.validateUpdatePositions(command);
@@ -259,6 +317,9 @@ export const makeInputsCommandsPort = (
 
   // 🔍 FUNCIÓN INTERNA PARA IDEMPOTENCY
   const deleteInternal = async (command: DeleteInputCommand): Promise<void> => {
+    // Apply generic rules
+    assertTenantBoundary(command.tenantId, command.tenantId);
+    
     // 1. VALIDATION (opcional)
     if (validationService) {
       await validationService.validateDelete(command);
@@ -354,3 +415,9 @@ export const makeInputsCommandsPort = (
     },
   };
 };
+
+
+
+
+
+

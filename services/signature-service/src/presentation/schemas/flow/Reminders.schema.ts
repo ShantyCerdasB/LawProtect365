@@ -11,3 +11,9 @@ export const RemindersBody = z.object({
   partyIds: z.array(z.string().uuid()).optional(),
 });
 export type RemindersBody = z.infer<typeof RemindersBody>;
+
+
+
+
+
+

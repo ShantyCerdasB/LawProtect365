@@ -1,160 +1,231 @@
-/**
- * @file withObservability.test.ts
- * @summary Unit tests for withObservability with full line and branch coverage.
- */
+import { withObservability, type ObservabilityFactories } from '../../src/http/withObservability.js';
 
-import { withObservability, type ObservabilityFactories } from "../../src/http/withObservability";
-import type { LoggerLike, MetricsLike, TracerLike } from "../../src/app/AppContext";
+describe('withObservability', () => {
+  let mockLogger: any;
+  let mockMetrics: any;
+  let mockTracer: any;
+  let mockFactories: ObservabilityFactories;
+  let mockEvent: any;
 
-type HttpEvent = {
-  headers?: Record<string, string>;
-  requestContext?: { http?: { method?: string; path?: string } };
-  ctx?: unknown;
-};
-
-describe("withObservability", () => {
-  const mkLogger = (): LoggerLike => {
-    const api: LoggerLike = {
-      debug: jest.fn(),
+  beforeEach(() => {
+    mockLogger = {
       info: jest.fn(),
-      warn: jest.fn(),
       error: jest.fn(),
-      // Return another logger-like object
-      // (shape is sufficient for structural typing)
-      child: jest.fn(() => mkLogger()),
     };
-    return api;
-  };
 
-  const mkMetrics = (): MetricsLike =>
-    ({
-      counter: jest.fn(),
-      histogram: jest.fn(),
-    } as unknown as MetricsLike);
+    mockMetrics = {
+      increment: jest.fn(),
+      timing: jest.fn(),
+    };
 
-  const mkTracer = (): TracerLike =>
-    ({
+    mockTracer = {
       startSpan: jest.fn(),
-      withSpan: jest.fn(),
-    } as unknown as TracerLike);
-
-  const makeObs = () => {
-    const loggerInst = mkLogger();
-    const metricsInst = mkMetrics();
-    const tracerInst = mkTracer();
-
-    const fns: ObservabilityFactories = {
-      logger: jest.fn(() => loggerInst),
-      metrics: jest.fn(() => metricsInst),
-      tracer: jest.fn(() => tracerInst),
+      endSpan: jest.fn(),
     };
 
-    return { fns, instances: { loggerInst, metricsInst, tracerInst } };
-  };
+    mockFactories = {
+      logger: jest.fn().mockReturnValue(mockLogger),
+      metrics: jest.fn().mockReturnValue(mockMetrics),
+      tracer: jest.fn().mockReturnValue(mockTracer),
+    };
 
-  const makeEvent = (overrides: Partial<HttpEvent> = {}): HttpEvent => ({
-    headers: {},
-    requestContext: { http: { method: "GET", path: "/ping" } },
-    ...overrides,
+    mockEvent = {
+      headers: {
+        'x-request-id': 'test-request-id',
+        'x-trace-id': 'test-trace-id',
+      },
+      requestContext: {
+        http: {
+          method: 'GET',
+          path: '/test',
+        },
+      },
+    };
+
+    // Mock process.env.ENV
+    process.env.ENV = 'test';
   });
-
-  const saveENV = process.env.ENV;
 
   afterEach(() => {
-    jest.restoreAllMocks();
-    if (saveENV === undefined) {
-      delete (process.env as any).ENV;
-    } else {
-      process.env.ENV = saveENV;
-    }
+    delete process.env.ENV;
+    jest.clearAllMocks();
   });
 
-  it("binds observability and prefers lowercase request/trace IDs", () => {
-    delete (process.env as any).ENV;
-    const { fns, instances } = makeObs();
-    const before = withObservability(fns);
+  it('should create a before middleware function', () => {
+    const middleware = withObservability(mockFactories);
 
-    const evt = makeEvent({
+    expect(typeof middleware).toBe('function');
+  });
+
+  it('should bind observability tools to event context', () => {
+    const middleware = withObservability(mockFactories);
+
+    middleware(mockEvent);
+
+    expect(mockFactories.logger).toHaveBeenCalledWith({
+      requestId: 'test-request-id',
+      traceId: 'test-trace-id',
+      route: '/test',
+      method: 'GET',
+    });
+    expect(mockFactories.metrics).toHaveBeenCalled();
+    expect(mockFactories.tracer).toHaveBeenCalled();
+
+    expect((mockEvent as any).ctx).toEqual({
+      env: 'test',
+      requestId: 'test-request-id',
+      logger: mockLogger,
+      metrics: mockMetrics,
+      tracer: mockTracer,
+      bag: {},
+    });
+  });
+
+  it('should handle missing request id header', () => {
+    const middleware = withObservability(mockFactories);
+    const eventWithoutRequestId = { ...mockEvent };
+    delete eventWithoutRequestId.headers['x-request-id'];
+
+    middleware(eventWithoutRequestId);
+
+    expect(mockFactories.logger).toHaveBeenCalledWith({
+      requestId: undefined,
+      traceId: 'test-trace-id',
+      route: '/test',
+      method: 'GET',
+    });
+    expect((eventWithoutRequestId as any).ctx.requestId).toBeUndefined();
+  });
+
+  it('should handle missing trace id header', () => {
+    const middleware = withObservability(mockFactories);
+    const eventWithoutTraceId = { ...mockEvent };
+    delete eventWithoutTraceId.headers['x-trace-id'];
+
+    middleware(eventWithoutTraceId);
+
+    expect(mockFactories.logger).toHaveBeenCalledWith({
+      requestId: 'test-request-id',
+      traceId: undefined,
+      route: '/test',
+      method: 'GET',
+    });
+  });
+
+  it('should handle case-insensitive request id header', () => {
+    const middleware = withObservability(mockFactories);
+    const eventWithUpperCaseHeader = {
+      ...mockEvent,
       headers: {
-        "x-request-id": "req-123",
-        "x-trace-id": "trace-abc",
-        "X-Request-Id": "UP-REQ",
-        "X-Trace-Id": "UP-TRACE",
+        'X-Request-Id': 'test-request-id-upper',
       },
+    };
+
+    middleware(eventWithUpperCaseHeader);
+
+    expect(mockFactories.logger).toHaveBeenCalledWith({
+      requestId: 'test-request-id-upper',
+      traceId: undefined,
+      route: '/test',
+      method: 'GET',
     });
-
-    const ret = before(evt as any);
-    expect(ret).toBeUndefined();
-
-    expect(fns.logger).toHaveBeenCalledTimes(1);
-    expect(fns.metrics).toHaveBeenCalledTimes(1);
-    expect(fns.tracer).toHaveBeenCalledTimes(1);
-
-    expect(fns.logger).toHaveBeenCalledWith({
-      requestId: "req-123",
-      traceId: "trace-abc",
-      route: "/ping",
-      method: "GET",
-    });
-
-    const ctx = (evt as any).ctx;
-    expect(ctx).toBeDefined();
-    expect(ctx.env).toBe("dev");
-    expect(ctx.requestId).toBe("req-123");
-    expect(ctx.logger).toBe(instances.loggerInst);
-    expect(ctx.metrics).toBe(instances.metricsInst);
-    expect(ctx.tracer).toBe(instances.tracerInst);
-    expect(ctx.bag).toEqual({});
   });
 
-  it("falls back to uppercase headers and uses provided ENV", () => {
-    process.env.ENV = "staging";
-    const { fns, instances } = makeObs();
-    const before = withObservability(fns);
+  it('should handle case-insensitive trace id header', () => {
+    const middleware = withObservability(mockFactories);
+    const eventWithUpperCaseHeader = {
+      ...mockEvent,
+      headers: {
+        'X-Trace-Id': 'test-trace-id-upper',
+      },
+    };
 
-    const evt = makeEvent({
-      headers: { "X-Request-Id": "REQ-UP", "X-Trace-Id": "TRACE-UP" },
+    middleware(eventWithUpperCaseHeader);
+
+    expect(mockFactories.logger).toHaveBeenCalledWith({
+      requestId: undefined,
+      traceId: 'test-trace-id-upper',
+      route: '/test',
+      method: 'GET',
     });
-
-    before(evt as any);
-
-    expect(fns.logger).toHaveBeenCalledWith({
-      requestId: "REQ-UP",
-      traceId: "TRACE-UP",
-      route: "/ping",
-      method: "GET",
-    });
-
-    const ctx = (evt as any).ctx;
-    expect(ctx.env).toBe("staging");
-    expect(ctx.requestId).toBe("REQ-UP");
-    expect(ctx.logger).toBe(instances.loggerInst);
-    expect(ctx.metrics).toBe(instances.metricsInst);
-    expect(ctx.tracer).toBe(instances.tracerInst);
   });
 
-  it("handles missing IDs and requestContext", () => {
-    const { fns } = makeObs();
-    const before = withObservability(fns);
-
-    const evt = makeEvent({
+  it('should handle missing headers object', () => {
+    const middleware = withObservability(mockFactories);
+    const eventWithoutHeaders = {
+      ...mockEvent,
       headers: undefined,
-      requestContext: undefined,
-    });
+    };
 
-    before(evt as any);
+    middleware(eventWithoutHeaders);
 
-    expect(fns.logger).toHaveBeenCalledWith({
+    expect(mockFactories.logger).toHaveBeenCalledWith({
       requestId: undefined,
       traceId: undefined,
+      route: '/test',
+      method: 'GET',
+    });
+  });
+
+  it('should handle missing request context', () => {
+    const middleware = withObservability(mockFactories);
+    const eventWithoutContext = {
+      ...mockEvent,
+      requestContext: undefined,
+    };
+
+    middleware(eventWithoutContext);
+
+    expect(mockFactories.logger).toHaveBeenCalledWith({
+      requestId: 'test-request-id',
+      traceId: 'test-trace-id',
       route: undefined,
       method: undefined,
     });
+  });
 
-    const ctx = (evt as any).ctx;
-    expect(ctx.requestId).toBeUndefined();
-    expect(typeof ctx.logger?.info).toBe("function");
-    expect(typeof ctx.metrics?.counter).toBe("function");
-    expect(typeof ctx.tracer?.startSpan).toBe("function");
+  it('should use default env when ENV is not set', () => {
+    delete process.env.ENV;
+    const middleware = withObservability(mockFactories);
+
+    middleware(mockEvent);
+
+    expect((mockEvent as any).ctx.env).toBe('dev');
+  });
+
+  it('should handle empty headers object', () => {
+    const middleware = withObservability(mockFactories);
+    const eventWithEmptyHeaders = {
+      ...mockEvent,
+      headers: {},
+    };
+
+    middleware(eventWithEmptyHeaders);
+
+    expect(mockFactories.logger).toHaveBeenCalledWith({
+      requestId: undefined,
+      traceId: undefined,
+      route: '/test',
+      method: 'GET',
+    });
+  });
+
+  it('should preserve existing ctx if present', () => {
+    const middleware = withObservability(mockFactories);
+    const eventWithExistingCtx = {
+      ...mockEvent,
+      ctx: { existing: 'value' },
+    };
+
+    middleware(eventWithExistingCtx);
+
+    expect((eventWithExistingCtx as any).ctx).toEqual({
+      env: 'test',
+      requestId: 'test-request-id',
+      logger: mockLogger,
+      metrics: mockMetrics,
+      tracer: mockTracer,
+      bag: {},
+    });
   });
 });

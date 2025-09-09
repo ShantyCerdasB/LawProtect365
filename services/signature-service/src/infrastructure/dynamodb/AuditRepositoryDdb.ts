@@ -28,8 +28,8 @@ import {
   randomToken,
 } from "@lawprotect/shared-ts";
 
-import type { AuditRepository, ListByEnvelopeInput } from "../../shared/contracts/repositories/audit";
-import type { AuditEvent } from "../../domain/value-objects/Audit";
+import type { AuditRepository, ListByEnvelopeInput } from "../../domain/contracts/repositories/audit";
+import type { AuditEvent } from "@/domain/value-objects/audit";
 import {
   auditItemMapper,
   auditItemFromRaw,
@@ -40,8 +40,8 @@ import {
   gsi2Pk,
 } from "./mappers/AuditItemMapper";
 import { toJsonObject } from "@lawprotect/shared-ts";
-import { DEFAULT_ENTITY_INDEX, DEFAULT_ID_INDEX } from "../../shared/types/infrastructure/constants";
-import { AUDIT_ENTITY_TYPE } from "../../shared/types/infrastructure/enums";
+import { DEFAULT_ENTITY_INDEX, DEFAULT_ID_INDEX } from "../../domain/types/infrastructure/constants";
+import { AUDIT_ENTITY_TYPE } from "../../domain/types/infrastructure/enums";
 
 /**
  * @summary DynamoDB implementation of the `AuditRepository` port
@@ -133,7 +133,10 @@ export class AuditRepositoryDdb implements AuditRepository {
 
       return {
         items,
-        meta: nextCursor ? { limit, nextCursor } : { limit },
+        meta: {
+          hasNext: !!nextCursor,
+          nextCursor,
+        },
       };
     } catch (err) {
       throw mapAwsError(err, "AuditRepositoryDdb.listByEnvelope");
@@ -231,3 +234,9 @@ export class AuditRepositoryDdb implements AuditRepository {
     return typeof h === "string" && h.length > 0 ? h : undefined;
   }
 }
+
+
+
+
+
+

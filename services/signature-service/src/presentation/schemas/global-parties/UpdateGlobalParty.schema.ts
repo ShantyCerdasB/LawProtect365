@@ -43,3 +43,9 @@ export type UpdateGlobalPartyParams = z.infer<typeof UpdateGlobalPartyParams>;
  */
 export type UpdateGlobalPartyBody = z.infer<typeof UpdateGlobalPartyBody>;
 
+
+
+
+
+
+

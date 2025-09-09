@@ -5,10 +5,10 @@
  * Extends BaseAuditService to provide Documents-specific audit functionality.
  */
 
-import { BaseAuditService } from "../../../shared/services/BaseAuditService";
-import type { AuditContext } from "../../../domain/entities/AuditContext";
-import type { DocumentId, EnvelopeId, TenantId } from "../../../domain/value-objects/Ids";
-import type { ActorContext } from "../../../domain/entities/ActorContext";
+import { BaseAuditService } from "../../../domain/services/BaseAuditService";
+import type { AuditContext } from "@lawprotect/shared-ts";
+import type { DocumentId, EnvelopeId, TenantId } from "@/domain/value-objects/ids";
+import type { ActorContext } from "@lawprotect/shared-ts";
 import { nowIso } from "@lawprotect/shared-ts";
 
 /**
@@ -282,3 +282,9 @@ export class DefaultDocumentsAuditService extends BaseAuditService implements Do
     );
   }
 }
+
+
+
+
+
+

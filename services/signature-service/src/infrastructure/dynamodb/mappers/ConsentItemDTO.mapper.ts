@@ -5,7 +5,7 @@
  * Handles validation, parsing, and type conversion for consent item data structures.
  */
 
-import type { ConsentRepoRow } from "../../../shared/types/consent";
+import type { ConsentRepoRow } from "../../../domain/types/consent";
 import { ConsentItemDTO, ConsentItemDTOSchema } from "../../../presentation/schemas/consents/ConsentItemDTO.schema";
 import { badRequest } from "../../../shared/errors";
 import { asISO, asISOOpt } from "@lawprotect/shared-ts";
@@ -49,3 +49,9 @@ export const dtoToConsentRow = (dto: ConsentItemDTO): ConsentRepoRow => ({
   expiresAt: asISOOpt(dto.expiresAt),
   metadata: dto.metadata,
 });
+
+
+
+
+
+

@@ -14,6 +14,8 @@ import type {
   UpdateInputPositionsResult,
   DeleteInputCommand
 } from "../../ports/inputs/InputsCommandsPort";
+// Input rules would need proper command structure integration
+import { assertTenantBoundary } from "@lawprotect/shared-ts";
 
 /**
  * @summary Default implementation of InputsCommandService
@@ -26,6 +28,9 @@ export class DefaultInputsCommandService {
    * Creates inputs in batch.
    */
   async create(command: CreateInputsCommand): Promise<CreateInputsResult> {
+    // Apply generic rules
+    assertTenantBoundary(command.tenantId, command.tenantId);
+
     return this.commandsPort.create(command);
   }
 
@@ -33,6 +38,9 @@ export class DefaultInputsCommandService {
    * Updates an existing input.
    */
   async update(command: UpdateInputCommand): Promise<UpdateInputResult> {
+    // Apply generic rules
+    assertTenantBoundary(command.tenantId, command.tenantId);
+    
     return this.commandsPort.update(command);
   }
 
@@ -40,6 +48,9 @@ export class DefaultInputsCommandService {
    * Updates input positions in batch.
    */
   async updatePositions(command: UpdateInputPositionsCommand): Promise<UpdateInputPositionsResult> {
+    // Apply generic rules
+    assertTenantBoundary(command.tenantId, command.tenantId);
+
     return this.commandsPort.updatePositions(command);
   }
 
@@ -47,6 +58,15 @@ export class DefaultInputsCommandService {
    * Deletes an input.
    */
   async delete(command: DeleteInputCommand): Promise<void> {
+    // Apply generic rules
+    assertTenantBoundary(command.tenantId, command.tenantId);
+    
     return this.commandsPort.delete(command);
   }
 }
+
+
+
+
+
+

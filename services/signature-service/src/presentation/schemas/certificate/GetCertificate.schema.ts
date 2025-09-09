@@ -46,3 +46,9 @@ export const GetCertificateResponse = z.object({
 export type GetCertificatePathType = z.infer<typeof GetCertificatePath>;
 export type GetCertificateQueryType = z.infer<typeof GetCertificateQuery>;
 export type GetCertificateResponseType = z.infer<typeof GetCertificateResponse>;
+
+
+
+
+
+

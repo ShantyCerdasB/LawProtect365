@@ -6,11 +6,11 @@
  */
 
 import type { EnvelopesQueriesPort, GetEnvelopeQuery, GetEnvelopeResult, ListEnvelopesQuery, ListEnvelopesResult, GetEnvelopeStatusQuery, GetEnvelopeStatusResult } from "../../ports/envelopes/EnvelopesQueriesPort";
-import type { EnvelopesRepository } from "../../../shared/contracts/repositories/envelopes/EnvelopesRepository";
+import type { EnvelopesRepository } from "../../../domain/contracts/repositories/envelopes/EnvelopesRepository";
 import type { EnvelopesValidationService } from "../../services/envelopes/EnvelopesValidationService";
 import type { EnvelopesAuditService } from "../../services/envelopes/EnvelopesAuditService";
 import type { EnvelopesEventService } from "../../services/envelopes/EnvelopesEventService";
-import type { AuditContext } from "../../../domain/entities/AuditContext";
+import type { AuditContext } from "@lawprotect/shared-ts";
 
 /**
  * Creates an EnvelopesQueriesPort implementation with optional services
@@ -169,3 +169,9 @@ export function makeEnvelopesQueriesPort(
     },
   };
 }
+
+
+
+
+
+

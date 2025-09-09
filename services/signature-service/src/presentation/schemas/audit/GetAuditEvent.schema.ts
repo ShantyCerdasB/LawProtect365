@@ -5,7 +5,7 @@
  */
 
 import { z } from "zod";
-import { AuditEventIdValidationSchema } from "../../../shared/validations/schemas/audit";
+import { AuditEventIdValidationSchema } from "@/domain/value-objects/audit";
 
 /**
  * @description Path parameters for getting audit event
@@ -19,4 +19,10 @@ export const GetAuditEventPathSchema = z.object({
  * @description Type for path parameters
  */
 export type GetAuditEventPath = z.infer<typeof GetAuditEventPathSchema>;
+
+
+
+
+
+
 

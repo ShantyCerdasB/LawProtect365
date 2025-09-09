@@ -9,7 +9,7 @@ import { makeDocumentsCommandsPort } from "../../../app/adapters/documents/makeD
 import { DefaultDocumentsCommandService } from "../../../app/services/Documents";
 import { DocumentIdPath } from "../../../presentation/schemas/common/path";
 import { z } from "@lawprotect/shared-ts";
-import type { DocumentLock } from "../../../domain/value-objects/DocumentLock";
+import type { DocumentLock } from "@lawprotect/shared-ts";
 import { randomBytes } from "crypto";
 
 /**
@@ -27,12 +27,13 @@ export const CreateDocumentLockController = createCommandController<{ documentId
   bodySchema: CreateDocumentLockBody,
   pathSchema: DocumentIdPath,
   appServiceClass: DefaultDocumentsCommandService,
-  createDependencies: (c) => makeDocumentsCommandsPort({
+  createDependencies: (c: any) => makeDocumentsCommandsPort({
     documentsRepo: c.repos.documents,
+    envelopesRepo: c.repos.envelopes,
     ids: c.ids,
     s3Service: c.services.documentsS3,
   }),
-  extractParams: (path, body) => ({
+  extractParams: (path: any, body: any) => ({
     documentId: path.id,
     lock: {
       lockId: `lock-${Date.now()}-${randomBytes(8).toString('hex')}`,
@@ -50,3 +51,11 @@ export const CreateDocumentLockController = createCommandController<{ documentId
 
 // Export handler for backward compatibility
 export const handler = CreateDocumentLockController;
+
+
+
+
+
+
+
+

@@ -1,96 +1,363 @@
-/**
- * @file cors.test.ts
- * @summary Tests for buildCorsHeaders, isPreflight, and preflightResponse (100% line & branch coverage).
- */
-
-import type { ApiResponse, ApiResponseStructured } from '../../src/http/httpTypes.js';
 import { buildCorsHeaders, isPreflight, preflightResponse } from '../../src/http/cors.js';
+import { CorsConfig } from '../../src/types/corsConfig.js';
 
 describe('buildCorsHeaders', () => {
-  it('builds headers from a single origin string and includes only configured fields', () => {
-    const headers = buildCorsHeaders({
-      allowOrigins: ['https://a.example'],
-      allowMethods: undefined,
-      allowHeaders: undefined,
-      exposeHeaders: undefined,
-      allowCredentials: false,
-      maxAgeSeconds: undefined,
-    });
+  it('should build basic CORS headers with string origin', () => {
+    const config: CorsConfig = {
+      allowOrigins: ['https://example.com'],
+    };
+
+    const headers = buildCorsHeaders(config);
 
     expect(headers).toEqual({
-      'Access-Control-Allow-Origin': 'https://a.example',
-      Vary: 'Origin',
+      'Access-Control-Allow-Origin': 'https://example.com',
+      'Vary': 'Origin',
     });
-
-    // No unintended fields
-    expect(headers['Access-Control-Allow-Methods']).toBeUndefined();
-    expect(headers['Access-Control-Allow-Headers']).toBeUndefined();
-    expect(headers['Access-Control-Expose-Headers']).toBeUndefined();
-    expect(headers['Access-Control-Allow-Credentials']).toBeUndefined();
-    expect(headers['Access-Control-Max-Age']).toBeUndefined();
   });
 
-  it('joins array origins and sets optional fields when provided', () => {
-    const headers = buildCorsHeaders({
-      allowOrigins: ['https://a.com', 'https://b.com'],
-      allowMethods: ['GET', 'POST'],
-      allowHeaders: ['content-type', 'authorization'],
-      exposeHeaders: ['x-request-id'],
+  it('should build CORS headers with array of origins', () => {
+    const config: CorsConfig = {
+      allowOrigins: ['https://example.com', 'https://app.example.com'],
+    };
+
+    const headers = buildCorsHeaders(config);
+
+    expect(headers).toEqual({
+      'Access-Control-Allow-Origin': 'https://example.com,https://app.example.com',
+      'Vary': 'Origin',
+    });
+  });
+
+  it('should include allow methods when provided', () => {
+    const config: CorsConfig = {
+      allowOrigins: ['https://example.com'],
+      allowMethods: ['GET', 'POST', 'PUT'],
+    };
+
+    const headers = buildCorsHeaders(config);
+
+    expect(headers).toEqual({
+      'Access-Control-Allow-Origin': 'https://example.com',
+      'Vary': 'Origin',
+      'Access-Control-Allow-Methods': 'GET,POST,PUT',
+    });
+  });
+
+  it('should include allow headers when provided', () => {
+    const config: CorsConfig = {
+      allowOrigins: ['https://example.com'],
+      allowHeaders: ['Content-Type', 'Authorization'],
+    };
+
+    const headers = buildCorsHeaders(config);
+
+    expect(headers).toEqual({
+      'Access-Control-Allow-Origin': 'https://example.com',
+      'Vary': 'Origin',
+      'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+    });
+  });
+
+  it('should include expose headers when provided', () => {
+    const config: CorsConfig = {
+      allowOrigins: ['https://example.com'],
+      exposeHeaders: ['X-Total-Count', 'X-Page-Size'],
+    };
+
+    const headers = buildCorsHeaders(config);
+
+    expect(headers).toEqual({
+      'Access-Control-Allow-Origin': 'https://example.com',
+      'Vary': 'Origin',
+      'Access-Control-Expose-Headers': 'X-Total-Count,X-Page-Size',
+    });
+  });
+
+  it('should include allow credentials when true', () => {
+    const config: CorsConfig = {
+      allowOrigins: ['https://example.com'],
       allowCredentials: true,
-      maxAgeSeconds: 600,
-    });
+    };
+
+    const headers = buildCorsHeaders(config);
 
     expect(headers).toEqual({
-      'Access-Control-Allow-Origin': 'https://a.com,https://b.com',
-      'Access-Control-Allow-Methods': 'GET,POST',
-      'Access-Control-Allow-Headers': 'content-type,authorization',
-      'Access-Control-Expose-Headers': 'x-request-id',
+      'Access-Control-Allow-Origin': 'https://example.com',
+      'Vary': 'Origin',
       'Access-Control-Allow-Credentials': 'true',
-      'Access-Control-Max-Age': '600',
-      Vary: 'Origin',
     });
   });
 
-  it('omits optional fields when arrays are empty', () => {
-    const headers = buildCorsHeaders({
-      allowOrigins: '*',
-      allowMethods: [],
-      allowHeaders: [],
-      exposeHeaders: [],
-      allowCredentials: false,
-    });
+  it('should include max age when provided', () => {
+    const config: CorsConfig = {
+      allowOrigins: ['https://example.com'],
+      maxAgeSeconds: 3600,
+    };
+
+    const headers = buildCorsHeaders(config);
 
     expect(headers).toEqual({
-      'Access-Control-Allow-Origin': '*',
-      Vary: 'Origin',
+      'Access-Control-Allow-Origin': 'https://example.com',
+      'Vary': 'Origin',
+      'Access-Control-Max-Age': '3600',
     });
+  });
+
+  it('should build complete CORS headers with all options', () => {
+    const config: CorsConfig = {
+      allowOrigins: ['https://example.com', 'https://app.example.com'],
+      allowMethods: ['GET', 'POST', 'PUT', 'DELETE'],
+      allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+      exposeHeaders: ['X-Total-Count'],
+      allowCredentials: true,
+      maxAgeSeconds: 86400,
+    };
+
+    const headers = buildCorsHeaders(config);
+
+    expect(headers).toEqual({
+      'Access-Control-Allow-Origin': 'https://example.com,https://app.example.com',
+      'Vary': 'Origin',
+      'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE',
+      'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Requested-With',
+      'Access-Control-Expose-Headers': 'X-Total-Count',
+      'Access-Control-Allow-Credentials': 'true',
+      'Access-Control-Max-Age': '86400',
+    });
+  });
+
+  it('should not include optional headers when not provided', () => {
+    const config: CorsConfig = {
+      allowOrigins: ['https://example.com'],
+    };
+
+    const headers = buildCorsHeaders(config);
+
+    expect(headers).not.toHaveProperty('Access-Control-Allow-Methods');
+    expect(headers).not.toHaveProperty('Access-Control-Allow-Headers');
+    expect(headers).not.toHaveProperty('Access-Control-Expose-Headers');
+    expect(headers).not.toHaveProperty('Access-Control-Allow-Credentials');
+    expect(headers).not.toHaveProperty('Access-Control-Max-Age');
+  });
+
+  it('should not include allow methods when empty array', () => {
+    const config: CorsConfig = {
+      allowOrigins: ['https://example.com'],
+      allowMethods: [],
+    };
+
+    const headers = buildCorsHeaders(config);
+
+    expect(headers).not.toHaveProperty('Access-Control-Allow-Methods');
+  });
+
+  it('should not include allow headers when empty array', () => {
+    const config: CorsConfig = {
+      allowOrigins: ['https://example.com'],
+      allowHeaders: [],
+    };
+
+    const headers = buildCorsHeaders(config);
+
+    expect(headers).not.toHaveProperty('Access-Control-Allow-Headers');
+  });
+
+  it('should not include expose headers when empty array', () => {
+    const config: CorsConfig = {
+      allowOrigins: ['https://example.com'],
+      exposeHeaders: [],
+    };
+
+    const headers = buildCorsHeaders(config);
+
+    expect(headers).not.toHaveProperty('Access-Control-Expose-Headers');
+  });
+
+  it('should not include allow credentials when false', () => {
+    const config: CorsConfig = {
+      allowOrigins: ['https://example.com'],
+      allowCredentials: false,
+    };
+
+    const headers = buildCorsHeaders(config);
+
+    expect(headers).not.toHaveProperty('Access-Control-Allow-Credentials');
+  });
+
+  it('should not include max age when not a number', () => {
+    const config: CorsConfig = {
+      allowOrigins: ['https://example.com'],
+      maxAgeSeconds: undefined,
+    };
+
+    const headers = buildCorsHeaders(config);
+
+    expect(headers).not.toHaveProperty('Access-Control-Max-Age');
   });
 });
 
 describe('isPreflight', () => {
-  it('returns true for OPTIONS (case-insensitive)', () => {
-    expect(isPreflight({ requestContext: { http: { method: 'OPTIONS' } } } as any)).toBe(true);
-    expect(isPreflight({ requestContext: { http: { method: 'options' } } } as any)).toBe(true);
+  it('should return true for OPTIONS method', () => {
+    const event = {
+      version: '2.0',
+      routeKey: 'GET /test',
+      rawPath: '/test',
+      rawQueryString: '',
+      headers: {},
+      requestContext: {
+        http: {
+          method: 'OPTIONS',
+        },
+      },
+    } as any;
+
+    expect(isPreflight(event)).toBe(true);
   });
 
-  it('returns false for non-OPTIONS and when method is missing', () => {
-    expect(isPreflight({ requestContext: { http: { method: 'GET' } } } as any)).toBe(false);
-    expect(isPreflight({ requestContext: { http: {} } } as any)).toBe(false);
+  it('should return true for lowercase options method', () => {
+    const event = {
+      version: '2.0',
+      routeKey: 'GET /test',
+      rawPath: '/test',
+      rawQueryString: '',
+      headers: {},
+      requestContext: {
+        http: {
+          method: 'options',
+        },
+      },
+    } as any;
+
+    expect(isPreflight(event)).toBe(true);
+  });
+
+  it('should return false for GET method', () => {
+    const event = {
+      version: '2.0',
+      routeKey: 'GET /test',
+      rawPath: '/test',
+      rawQueryString: '',
+      headers: {},
+      requestContext: {
+        http: {
+          method: 'GET',
+        },
+      },
+    } as any;
+
+    expect(isPreflight(event)).toBe(false);
+  });
+
+  it('should return false for POST method', () => {
+    const event = {
+      version: '2.0',
+      routeKey: 'POST /test',
+      rawPath: '/test',
+      rawQueryString: '',
+      headers: {},
+      requestContext: {
+        http: {
+          method: 'POST',
+        },
+      },
+    } as any;
+
+    expect(isPreflight(event)).toBe(false);
+  });
+
+  it('should return false when method is undefined', () => {
+    const event = {
+      version: '2.0',
+      routeKey: 'GET /test',
+      rawPath: '/test',
+      rawQueryString: '',
+      headers: {},
+      requestContext: {
+        http: {},
+      },
+    } as any;
+
+    expect(isPreflight(event)).toBe(false);
+  });
+
+  it('should return false when method is null', () => {
+    const event = {
+      version: '2.0',
+      routeKey: 'GET /test',
+      rawPath: '/test',
+      rawQueryString: '',
+      headers: {},
+      requestContext: {
+        http: {
+          method: null,
+        },
+      },
+    } as any;
+
+    expect(isPreflight(event)).toBe(false);
+  });
+
+  it('should return false when method is empty string', () => {
+    const event = {
+      version: '2.0',
+      routeKey: 'GET /test',
+      rawPath: '/test',
+      rawQueryString: '',
+      headers: {},
+      requestContext: {
+        http: {
+          method: '',
+        },
+      },
+    } as any;
+
+    expect(isPreflight(event)).toBe(false);
   });
 });
 
 describe('preflightResponse', () => {
-  // Narrow ApiResponse -> ApiResponseStructured for safe property assertions
-  const asStructured = (r: ApiResponse): ApiResponseStructured =>
-    (typeof r === 'string' ? { statusCode: 200, body: r } : r) as ApiResponseStructured;
+  it('should create preflight response with headers', () => {
+    const headers = {
+      'Access-Control-Allow-Origin': 'https://example.com',
+      'Access-Control-Allow-Methods': 'GET,POST',
+    };
 
-  it('returns a 204 structured response with provided headers and empty body', () => {
-    const corsHeaders = { 'Access-Control-Allow-Origin': '*' };
-    const res = preflightResponse(corsHeaders);
-    const s = asStructured(res);
+    const response = preflightResponse(headers);
 
-    expect(s.statusCode).toBe(204);
-    expect(s.headers).toBe(corsHeaders);
-    expect(s.body).toBe('');
+    expect(response).toEqual({
+      statusCode: 204,
+      headers,
+      body: '',
+    });
+  });
+
+  it('should create preflight response with empty headers', () => {
+    const headers = {};
+
+    const response = preflightResponse(headers);
+
+    expect(response).toEqual({
+      statusCode: 204,
+      headers: {},
+      body: '',
+    });
+  });
+
+  it('should create preflight response with complex headers', () => {
+    const headers = {
+      'Access-Control-Allow-Origin': 'https://example.com',
+      'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE',
+      'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+      'Access-Control-Allow-Credentials': 'true',
+      'Access-Control-Max-Age': '3600',
+    };
+
+    const response = preflightResponse(headers);
+
+    expect(response).toEqual({
+      statusCode: 204,
+      headers,
+      body: '',
+    });
   });
 });

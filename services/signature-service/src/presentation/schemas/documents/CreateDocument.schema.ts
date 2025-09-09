@@ -40,3 +40,9 @@ export const CreateDocumentResponse = z.object({
   createdAt: z.string().datetime(),
 });
 export type CreateDocumentResponse = z.infer<typeof CreateDocumentResponse>;
+
+
+
+
+
+

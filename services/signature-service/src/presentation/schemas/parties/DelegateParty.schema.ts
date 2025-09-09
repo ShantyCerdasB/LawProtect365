@@ -9,8 +9,7 @@
 
 import { z } from "@lawprotect/shared-ts";
 import { DELEGATION_STATUSES, DELEGATION_TYPES } from "../../../domain/values/enums";
-import { EmailSchema } from "../../../domain/value-objects/Email";
-import { PersonNameSchema } from "../../../domain/value-objects/PersonName";
+import { PersonNameSchema } from "../../../domain/value-objects/common";
 import { PartyMetadataSchema } from "../../../domain/value-objects/party/PartyMetadata";
 
 /**
@@ -24,7 +23,7 @@ export const DelegatePartyPath = z.object({
  * Request body for delegating a global party
  */
 export const DelegatePartyBody = z.object({
-  delegateEmail: EmailSchema,
+  delegateEmail: z.string().email("Invalid email format").max(255, "Email too long"),
   delegateName: PersonNameSchema,
   reason: z.string().min(1, "Reason is required").max(500, "Reason too long"),
   type: z.enum(DELEGATION_TYPES).default("temporary"),
@@ -52,3 +51,9 @@ export const DelegatePartyResponse = z.object({
 export type DelegatePartyPathType = z.infer<typeof DelegatePartyPath>;
 export type DelegatePartyBodyType = z.infer<typeof DelegatePartyBody>;
 export type DelegatePartyResponseType = z.infer<typeof DelegatePartyResponse>;
+
+
+
+
+
+

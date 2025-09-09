@@ -14,7 +14,7 @@ import type {
   SearchGlobalPartiesByEmailAppInput,
   SearchGlobalPartiesByEmailAppResult,
   MakeGlobalPartiesQueriesPortDeps
-} from "../../../shared/types/global-parties";
+} from "../../../domain/types/global-parties";
 
 /**
  * @description Creates GlobalPartiesQueriesPort implementation.
@@ -63,6 +63,12 @@ export const makeGlobalPartiesQueriesPort = (
     },
   };
 };
+
+
+
+
+
+
 
 
 

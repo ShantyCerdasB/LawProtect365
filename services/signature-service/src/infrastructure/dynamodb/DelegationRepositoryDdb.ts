@@ -20,7 +20,7 @@ import type { DdbClientLike } from "@lawprotect/shared-ts";
 import type {
   DelegationRepoCreateInput,
   DelegationRepoRow,
-} from "../../shared/types/delegation";
+} from "../../domain/types/delegation";
 import { DELEGATION_STATUSES } from "../../domain/values/enums";
 
 /** Local alias mirroring domain values; used only for the stored DTO. */
@@ -91,3 +91,9 @@ export class DelegationRepositoryDdb {
     }
   }
 }
+
+
+
+
+
+

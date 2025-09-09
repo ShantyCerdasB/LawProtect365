@@ -12,7 +12,7 @@ import type {
   SearchPartiesByEmailAppResult,
   GetPartyAppInput,
   GetPartyAppResult
-} from "../../../shared/types/parties";
+} from "../../../domain/types/parties";
 
 /**
  * @description Queries port for Party operations.
@@ -33,3 +33,9 @@ export interface PartiesQueriesPort {
    */
   searchByEmail(query: SearchPartiesByEmailAppInput): Promise<SearchPartiesByEmailAppResult>;
 }
+
+
+
+
+
+

@@ -7,8 +7,8 @@
 import { createCommandController } from "../../../shared/controllers/controllerFactory";
 import { EnvelopesCommandService } from "../../../app/services/envelopes";
 import { CreateEnvelopeBody, CreateEnvelopeParams } from "../../../presentation/schemas/envelopes/CreateEnvelope.schema";
-import type { CreateEnvelopeControllerInput } from "../../../shared/types/envelopes/ControllerInputs";
-import type { CreateEnvelopeAppResult } from "../../../shared/types/envelopes/AppServiceInputs";
+import type { CreateEnvelopeControllerInput } from "../../../domain/types/envelopes/ControllerInputs";
+import type { CreateEnvelopeAppResult } from "../../../domain/types/envelopes/AppServiceInputs";
 
 /**
  * @description Create Envelope controller
@@ -17,8 +17,8 @@ export const CreateEnvelopeController = createCommandController<CreateEnvelopeCo
   bodySchema: CreateEnvelopeBody,
   pathSchema: CreateEnvelopeParams,
   appServiceClass: EnvelopesCommandService,
-  createDependencies: (c) => c.envelopes.commandsPort,
-  extractParams: (path, body) => ({
+  createDependencies: (c: any) => c.envelopes.commandsPort,
+  extractParams: (path: any, body: any) => ({
     tenantId: path.tenantId,
     ownerId: body.ownerId,
     title: body.name,
@@ -27,3 +27,11 @@ export const CreateEnvelopeController = createCommandController<CreateEnvelopeCo
   responseType: "created",
   includeActor: true,
 });
+
+
+
+
+
+
+
+

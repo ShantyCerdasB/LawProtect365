@@ -24,6 +24,9 @@ const UTILS_MODULES = {
   crypto: '../../src/utils/crypto.js',
   math: '../../src/utils/math.js',
   security: '../../src/utils/security.js',
+  audit: '../../src/utils/audit.js',
+  idempotency: '../../src/utils/idempotency.js',
+  eventbridge: '../../src/utils/eventbridge.js',
 } as const;
 
 type UtilsModuleExports = Record<string, unknown>;
@@ -148,6 +151,9 @@ describe('utils barrel (src/utils/index.ts)', () => {
       UTILS_MODULES.crypto,
       UTILS_MODULES.math,
       UTILS_MODULES.security,
+      UTILS_MODULES.audit,
+      UTILS_MODULES.idempotency,
+      UTILS_MODULES.eventbridge,
     ];
     for (const p of starModules) {
       const mod: UtilsModuleExports = await import(p);

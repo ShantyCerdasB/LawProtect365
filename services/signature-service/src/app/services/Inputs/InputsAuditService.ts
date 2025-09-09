@@ -4,8 +4,8 @@
  * @description Handles audit logging for input create, update, and delete operations
  */
 
-import { BaseAuditService } from "../../../shared/services/BaseAuditService";
-import type { AuditContext } from "../../../domain/entities/AuditContext";
+import { BaseAuditService } from "../../../domain/services/BaseAuditService";
+import type { AuditContext } from "@lawprotect/shared-ts";
 import type { 
   CreateInputsCommand,
   UpdateInputCommand,
@@ -101,3 +101,9 @@ export class InputsAuditService extends BaseAuditService {
     await this.logBusinessEvent(auditContext, auditDetails);
   }
 }
+
+
+
+
+
+

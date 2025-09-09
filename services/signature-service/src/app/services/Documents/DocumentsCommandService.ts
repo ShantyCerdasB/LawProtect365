@@ -14,8 +14,13 @@ import type {
   UpdateDocumentResult,
   UpdateDocumentBinaryCommand
 } from "../../ports/documents/DocumentsCommandsPort";
-import type { DocumentId } from "../../../domain/value-objects/Ids";
-import type { DocumentLock } from "../../../domain/value-objects/DocumentLock";
+import type { DocumentId } from "@/domain/value-objects/ids";
+import type { DocumentLock } from "@lawprotect/shared-ts";
+import { 
+  assertSupportedContentType, 
+  assertDocumentSizeLimit
+} from "../../../domain/rules/Documents.rules";
+import { assertTenantBoundary } from "@lawprotect/shared-ts";
 
 /**
  * @description Service interface for Documents command operations
@@ -69,7 +74,7 @@ export interface DocumentsCommandService {
    * @param lockId - The lock ID to delete
    * @returns Promise resolving when lock deletion is complete
    */
-  deleteLock(documentId: DocumentId, lockId: string): Promise<void>;
+  deleteLock(documentId: DocumentId, lockId: string, actorUserId: string): Promise<void>;
 }
 
 /**
@@ -79,10 +84,24 @@ export class DefaultDocumentsCommandService implements DocumentsCommandService {
   constructor(private readonly commandsPort: DocumentsCommandsPort) {}
 
   async create(command: CreateDocumentCommand): Promise<CreateDocumentResult> {
+    // Apply generic rules
+    assertTenantBoundary(command.tenantId, command.tenantId);
+    
+    // Apply domain-specific rules
+    assertSupportedContentType(command.contentType);
+    assertDocumentSizeLimit(command.size);
+
     return this.commandsPort.create(command);
   }
 
   async upload(command: UploadDocumentCommand): Promise<UploadDocumentResult> {
+    // Apply generic rules
+    assertTenantBoundary(command.tenantId, command.tenantId);
+    
+    // Apply domain-specific rules
+    assertSupportedContentType(command.contentType);
+    assertDocumentSizeLimit(command.size);
+
     return this.commandsPort.upload(command);
   }
 
@@ -91,6 +110,10 @@ export class DefaultDocumentsCommandService implements DocumentsCommandService {
   }
 
   async updateBinary(command: UpdateDocumentBinaryCommand): Promise<UpdateDocumentResult> {
+    // Apply domain-specific rules
+    assertSupportedContentType(command.contentType);
+    assertDocumentSizeLimit(command.size);
+
     return this.commandsPort.updateBinary(command);
   }
 
@@ -102,7 +125,13 @@ export class DefaultDocumentsCommandService implements DocumentsCommandService {
     return this.commandsPort.createLock(lock);
   }
 
-  async deleteLock(documentId: DocumentId, lockId: string): Promise<void> {
-    return this.commandsPort.deleteLock(documentId, lockId);
+  async deleteLock(documentId: DocumentId, lockId: string, actorUserId: string): Promise<void> {
+    return this.commandsPort.deleteLock(documentId, lockId, actorUserId);
   }
 }
+
+
+
+
+
+

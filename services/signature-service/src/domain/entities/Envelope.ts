@@ -8,8 +8,8 @@
  * This aggregate is intentionally minimal and serializable.
  */
 
-import type { EnvelopeId, TenantId, UserId } from "../value-objects/Ids";
-import type { EnvelopeStatus } from "../value-objects/EnvelopeStatus";
+import type { EnvelopeId, TenantId, UserId } from "@/domain/value-objects/ids";
+import type { EnvelopeStatus } from "@/domain/value-objects/index";
 
 /**
  * Envelope aggregate.
@@ -48,3 +48,9 @@ export interface Envelope {
   /** Free-form metadata for extensibility. */
   metadata?: Record<string, unknown>;
 }
+
+
+
+
+
+

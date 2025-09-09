@@ -8,7 +8,7 @@ import { createCommandController } from "../../../shared/controllers/controllerF
 import { DefaultInputsCommandService } from "../../../app/services/Inputs";
 import { CreateInputsBody, EnvelopeInputPath } from "../../../presentation/schemas/inputs";
 import type { CreateInputsResult } from "../../../app/ports/inputs/InputsCommandsPort";
-import type { CreateInputsControllerInput } from "@/shared/types/inputs";
+import type { CreateInputsControllerInput } from "@/domain/types/inputs";
 
 /**
  * @description Create Inputs controller
@@ -17,8 +17,8 @@ export const CreateInputsController = createCommandController<CreateInputsContro
   bodySchema: CreateInputsBody,
   pathSchema: EnvelopeInputPath,
   appServiceClass: DefaultInputsCommandService,
-  createDependencies: (c) => c.inputs.commandsPort,
-  extractParams: (path, body) => ({
+  createDependencies: (c: any) => c.inputs.commandsPort,
+  extractParams: (path: any, body: any) => ({
     envelopeId: path.envelopeId,
     documentId: body.documentId,
     inputs: body.inputs,
@@ -26,3 +26,11 @@ export const CreateInputsController = createCommandController<CreateInputsContro
   responseType: "created",
   includeActor: true,
 });
+
+
+
+
+
+
+
+

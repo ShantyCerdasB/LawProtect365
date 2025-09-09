@@ -5,7 +5,7 @@
  */
 
 import { z } from "@lawprotect/shared-ts";
-import { EnvelopeIdSchema } from "../../../domain/value-objects/Ids";
+import { EnvelopeIdSchema } from "@/domain/value-objects/ids";
 
 /**
  * @description Request body schema for adding a viewer
@@ -32,3 +32,9 @@ export type AddViewerBody = z.infer<typeof AddViewerBody>;
  * @description Type for add viewer path parameters
  */
 export type AddViewerPath = z.infer<typeof AddViewerPath>;
+
+
+
+
+
+

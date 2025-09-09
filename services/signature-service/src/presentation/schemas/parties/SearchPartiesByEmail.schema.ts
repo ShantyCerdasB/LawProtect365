@@ -31,3 +31,9 @@ export type SearchPartiesByEmailParams = z.infer<typeof SearchPartiesByEmailPara
  * @description Type for SearchPartiesByEmail query parameters.
  */
 export type SearchPartiesByEmailQuery = z.infer<typeof SearchPartiesByEmailQuery>;
+
+
+
+
+
+

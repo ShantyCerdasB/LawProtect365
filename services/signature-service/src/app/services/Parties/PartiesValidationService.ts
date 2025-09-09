@@ -8,7 +8,7 @@ import type {
   CreatePartyControllerInput,
   UpdatePartyControllerInput,
   DeletePartyControllerInput
-} from "../../../shared/types/parties";
+} from "../../../domain/types/parties";
 import { BadRequestError, ErrorCodes, isEmail } from "@lawprotect/shared-ts";
 
 /**
@@ -152,3 +152,9 @@ export class PartiesValidationService {
   }
 
 }
+
+
+
+
+
+

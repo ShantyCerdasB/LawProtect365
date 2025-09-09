@@ -9,7 +9,7 @@ import { makeSigningCommandsPort } from "../../../app/adapters/signing/makeSigni
 import { DefaultSigningCommandService } from "../../../app/services/Signing";
 import { DeclineSigningBody } from "../../../presentation/schemas/signing/DeclineSigning.schema";
 import { EnvelopeIdPath } from "../../../presentation/schemas/common/path";
-import type { DeclineSigningControllerInput } from "../../../shared/types/signing/ControllerInputs";
+import type { DeclineSigningControllerInput } from "../../../domain/types/signing/ControllerInputs";
 import type { DeclineSigningResult } from "../../../app/ports/signing/SigningCommandsPort";
 
 /**
@@ -19,12 +19,13 @@ export const DeclineSigningController = createCommandController<DeclineSigningCo
   bodySchema: DeclineSigningBody,
   pathSchema: EnvelopeIdPath,
   appServiceClass: DefaultSigningCommandService,
-  createDependencies: (c) => makeSigningCommandsPort(
+  createDependencies: (c: any) => makeSigningCommandsPort(
     c.repos.envelopes,
     c.repos.parties,
+    c.repos.documents,
     createSigningDependencies(c)
   ),
-  extractParams: (path, body) => ({
+  extractParams: (path: any, body: any) => ({
     ...extractEnvelopeParams(path, body),
     signerId: body.signerId,
     reason: body.reason,
@@ -35,3 +36,11 @@ export const DeclineSigningController = createCommandController<DeclineSigningCo
 
 // Export handler for backward compatibility
 export const handler = DeclineSigningController;
+
+
+
+
+
+
+
+

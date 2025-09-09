@@ -79,3 +79,9 @@ export const AddPartyResponse = z.object({
 export type AddPartyPathType = z.infer<typeof AddPartyPath>;
 export type AddPartyBodyType = z.infer<typeof AddPartyBody>;
 export type AddPartyResponseType = z.infer<typeof AddPartyResponse>;
+
+
+
+
+
+

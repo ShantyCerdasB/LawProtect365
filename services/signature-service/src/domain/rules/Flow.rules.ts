@@ -1,5 +1,5 @@
 import type { Party, Input } from "../entities";
-import { badRequest, rateLimitPartyInvite } from "@/shared/errors";
+import { BadRequestError, TooManyRequestsError, ErrorCodes } from "@lawprotect/shared-ts";
 
 /**
  * Validates readiness to send an envelope.
@@ -20,10 +20,10 @@ export const assertReadyToSend = (
 ): void => {
   const hasSigner = parties.some((p) => p.role === "signer");
   if (!hasSigner) {
-    throw badRequest("At least one signer is required");
+    throw new BadRequestError("At least one signer is required");
   }
   if (inputs.length === 0) {
-    throw badRequest("No inputs defined");
+    throw new BadRequestError("No inputs defined");
   }
 };
 
@@ -57,12 +57,26 @@ export const assertInvitePolicy = (stats: {
     const remainingMs = stats.minCooldownMs - elapsed;
     if (remainingMs > 0) {
       const retryAfterSeconds = Math.ceil(remainingMs / 1000);
-      throw rateLimitPartyInvite(retryAfterSeconds, { reason: "cooldown" });
+      throw new TooManyRequestsError(
+        "Party invitation cooldown not elapsed",
+        ErrorCodes.COMMON_TOO_MANY_REQUESTS,
+        { retryAfterSeconds, reason: "cooldown" }
+      );
     }
   }
 
   if (stats.sentToday >= stats.dailyLimit) {
     const retryAfterSeconds = 24 * 60 * 60;
-    throw rateLimitPartyInvite(retryAfterSeconds, { reason: "daily_limit" });
+    throw new TooManyRequestsError(
+      "Daily party invitation limit reached",
+      ErrorCodes.COMMON_TOO_MANY_REQUESTS,
+      { retryAfterSeconds, reason: "daily_limit" }
+    );
   }
 };
+
+
+
+
+
+

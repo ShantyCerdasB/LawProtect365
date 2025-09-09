@@ -5,12 +5,12 @@
  * Extends BaseAuditService to provide Signing-specific audit functionality.
  */
 
-import { BaseAuditService } from "../../../shared/services/BaseAuditService";
-import type { AuditContext } from "../../../domain/entities/AuditContext";
-import type { EnvelopeId, PartyId, TenantId } from "../../../domain/value-objects/Ids";
-import type { ActorContext } from "../../../domain/entities/ActorContext";
+import { BaseAuditService } from "../../../domain/services/BaseAuditService";
+import type { AuditContext } from "@lawprotect/shared-ts";
+import type { EnvelopeId, PartyId, TenantId } from "@/domain/value-objects/ids";
+import type { ActorContext } from "@lawprotect/shared-ts";
 import { nowIso } from "@lawprotect/shared-ts";
-import type { SigningAuditService } from "../../../shared/types/signing";
+import type { SigningAuditService } from "../../../domain/types/signing";
 
 /**
  * @summary Audit service for Signing business logic
@@ -237,3 +237,9 @@ export class DefaultSigningAuditService extends BaseAuditService implements Sign
     });
   }
 }
+
+
+
+
+
+

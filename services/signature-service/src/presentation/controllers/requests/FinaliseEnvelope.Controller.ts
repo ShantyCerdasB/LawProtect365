@@ -9,8 +9,8 @@ import { makeRequestsCommandsPort } from "../../../app/adapters/requests/makeReq
 import { DefaultRequestsCommandService } from "../../../app/services/Requests";
 import { FinaliseEnvelopeBody } from "../../../presentation/schemas/requests";
 import { EnvelopeIdPath } from "../../../presentation/schemas/common/path";
-import type { FinaliseEnvelopeControllerInput } from "../../../shared/types/requests/ControllerInputs";
-import type { FinaliseEnvelopeAppResult } from "../../../shared/types/requests/AppServiceInputs";
+import type { FinaliseEnvelopeControllerInput } from "../../../domain/types/requests/ControllerInputs";
+import type { FinaliseEnvelopeAppResult } from "../../../domain/types/requests/AppServiceInputs";
 
 /**
  * @description Finalise Envelope controller
@@ -19,8 +19,8 @@ export const FinaliseEnvelopeController = createCommandController<FinaliseEnvelo
   bodySchema: FinaliseEnvelopeBody,
   pathSchema: EnvelopeIdPath,
   appServiceClass: DefaultRequestsCommandService,
-  createDependencies: (c) => makeRequestsCommandsPort(createRequestsDependencies(c)),
-  extractParams: (path, _body) => ({
+  createDependencies: (c: any) => makeRequestsCommandsPort(createRequestsDependencies(c)),
+  extractParams: (path: any, _body: any) => ({
     envelopeId: path.id,
   }),
   responseType: "ok",
@@ -29,3 +29,11 @@ export const FinaliseEnvelopeController = createCommandController<FinaliseEnvelo
 
 // Export handler for backward compatibility
 export const handler = FinaliseEnvelopeController;
+
+
+
+
+
+
+
+

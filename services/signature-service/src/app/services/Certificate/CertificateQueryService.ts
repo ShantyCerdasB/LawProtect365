@@ -23,3 +23,9 @@ export class DefaultCertificateQueryService {
     return this.queriesPort.getCertificate(query);
   }
 }
+
+
+
+
+
+

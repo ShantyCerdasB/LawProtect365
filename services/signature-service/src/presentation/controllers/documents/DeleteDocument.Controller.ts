@@ -8,7 +8,7 @@ import { createCommandController } from "../../../shared/controllers/controllerF
 import { makeDocumentsCommandsPort } from "../../../app/adapters/documents/makeDocumentsCommandsPort";
 import { DefaultDocumentsCommandService } from "../../../app/services/Documents";
 import { DocumentIdPath } from "../../../presentation/schemas/common/path";
-import type { DocumentId } from "../../../domain/value-objects/Ids";
+import type { DocumentId } from "@/domain/value-objects/ids";
 
 /**
  * @description Delete Document controller
@@ -16,12 +16,13 @@ import type { DocumentId } from "../../../domain/value-objects/Ids";
 export const DeleteDocumentController = createCommandController<{ documentId: DocumentId }, void>({
   pathSchema: DocumentIdPath,
   appServiceClass: DefaultDocumentsCommandService,
-  createDependencies: (c) => makeDocumentsCommandsPort({
+  createDependencies: (c: any) => makeDocumentsCommandsPort({
     documentsRepo: c.repos.documents,
+    envelopesRepo: c.repos.envelopes,
     ids: c.ids,
     s3Service: c.services.documentsS3,
   }),
-  extractParams: (path) => ({
+  extractParams: (path: any) => ({
     documentId: path.id,
   }),
   responseType: "noContent",
@@ -30,3 +31,11 @@ export const DeleteDocumentController = createCommandController<{ documentId: Do
 
 // Export handler for backward compatibility
 export const handler = DeleteDocumentController;
+
+
+
+
+
+
+
+

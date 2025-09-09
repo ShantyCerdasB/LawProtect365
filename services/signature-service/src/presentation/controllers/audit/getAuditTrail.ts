@@ -19,8 +19,8 @@ export const handler = createQueryController({
   pathSchema: GetAuditTrailPathSchema,
   querySchema: GetAuditTrailQuerySchema,
   appServiceClass: GetAuditTrailAppService,
-  createDependencies: (container) => makeAuditQueriesPort(container.repos.audit),
-  extractParams: (path, query) => ({
+  createDependencies: (container: any) => makeAuditQueriesPort(container.repos.audit),
+  extractParams: (path: any, query: any) => ({
     envelopeId: path.id,
     format: query.format,
     locale: query.locale,
@@ -29,3 +29,11 @@ export const handler = createQueryController({
   }),
   responseType: RESPONSE_TYPES[0], // 'ok'
 });
+
+
+
+
+
+
+
+

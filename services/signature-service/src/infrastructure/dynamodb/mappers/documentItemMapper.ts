@@ -14,4 +14,10 @@ export {
   toDocumentItem,
   fromDocumentItem,
   documentItemMapper,
-} from "../../../shared/types/infrastructure/DocumentDdbTypes";
+} from "../../../domain/types/infrastructure/DocumentDdbTypes";
+
+
+
+
+
+

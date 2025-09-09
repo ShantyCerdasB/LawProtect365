@@ -4,7 +4,7 @@
  * @description Represents the domain event emitted when a consent is delegated to another party
  */
 
-import { ConsentId, EnvelopeId, PartyId, TenantId } from "../value-objects/Ids";
+import { ConsentId, EnvelopeId, PartyId, TenantId } from "@/domain/value-objects/ids";
 
 /**
  * @summary Domain event payload for consent delegation
@@ -45,3 +45,9 @@ export interface ConsentDelegatedEvent {
   readonly type: typeof CONSENT_DELEGATED_EVENT_TYPE;
   readonly payload: ConsentDelegatedEventPayload;
 }
+
+
+
+
+
+

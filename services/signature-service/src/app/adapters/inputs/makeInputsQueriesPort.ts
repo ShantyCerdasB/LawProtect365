@@ -6,12 +6,12 @@
  */
 
 import type { Input } from "../../../domain/entities/Input";
-import type { InputId, PartyId } from "../../../domain/value-objects/Ids";
+import type { InputId, PartyId } from "@/domain/value-objects/ids";
 import type { InputsQueriesPort } from "../../ports/inputs/InputsQueriesPort";
-import type { InputsRepository } from "../../../shared/contracts/repositories/inputs/InputsRepository";
+import type { InputsRepository } from "../../../domain/contracts/repositories/inputs/InputsRepository";
 import type { InputsValidationService } from "../../services/Inputs/InputsValidationService";
 import type { InputsAuditService } from "../../services/Inputs/InputsAuditService";
-import type { AuditContext } from "../../../domain/entities/AuditContext";
+import type { AuditContext } from "@lawprotect/shared-ts";
 
 /**
  * Creates an InputsQueriesPort implementation with production-ready features
@@ -141,3 +141,9 @@ export const makeInputsQueriesPort = (
     };
   },
 });
+
+
+
+
+
+

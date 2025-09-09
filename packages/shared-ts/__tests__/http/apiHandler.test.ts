@@ -1,200 +1,251 @@
-/**
- * @file apiHandler.test.ts
- * @summary Tests for apiHandler wrapper (100% line & branch coverage).
- *
- * Mocks:
- *  - @errors/mapError.js
- *  - ./cors.js (buildCorsHeaders, isPreflight, preflightResponse)
- */
-
-// Mock with the exact specifiers the SUT uses
-jest.mock('@errors/mapError.js', () => ({
-  mapError: jest.fn(),
-}));
-
-jest.mock('../../src/http/cors.js', () => ({
-  buildCorsHeaders: jest.fn(),
-  isPreflight: jest.fn(),
-  preflightResponse: jest.fn(),
-}));
-
-import type { ApiResponse, ApiResponseStructured } from '../../src/http/httpTypes.js';
-import { apiHandler } from '../../src/http/apiHandler.js';
+import { apiHandler, type ApiHandlerOptions } from '../../src/http/apiHandler.js';
 import { mapError } from '../../src/errors/mapError.js';
 import { buildCorsHeaders, isPreflight, preflightResponse } from '../../src/http/cors.js';
 
-const mapErrorMock = mapError as unknown as jest.Mock;
-const buildCorsHeadersMock = buildCorsHeaders as unknown as jest.Mock;
-const isPreflightMock = isPreflight as unknown as jest.Mock;
-const preflightResponseMock = preflightResponse as unknown as jest.Mock;
+// Mock dependencies
+jest.mock('../../src/errors/mapError.js');
+jest.mock('../../src/http/cors.js');
 
-const baseEvent = (): any => ({
-  headers: {},
-  requestContext: { requestId: 'req-ctx-1' },
-});
+const mockMapError = mapError as jest.MockedFunction<typeof mapError>;
+const mockBuildCorsHeaders = buildCorsHeaders as jest.MockedFunction<typeof buildCorsHeaders>;
+const mockIsPreflight = isPreflight as jest.MockedFunction<typeof isPreflight>;
+const mockPreflightResponse = preflightResponse as jest.MockedFunction<typeof preflightResponse>;
 
-// Narrow ApiResponse -> ApiResponseStructured before accessing props
-const asStructured = (res: ApiResponse): ApiResponseStructured =>
-  typeof res === 'string'
-    ? ({ statusCode: 200, body: res } as ApiResponseStructured)
-    : (res as ApiResponseStructured);
+describe('apiHandler', () => {
+  let mockHandler: jest.Mock;
+  let mockEvent: any;
 
-const bodyText = (res: ApiResponse) =>
-  typeof res === 'string' ? res : String((res as ApiResponseStructured).body);
+  beforeEach(() => {
+    mockHandler = jest.fn();
+    mockEvent = {
+      requestContext: {
+        requestId: 'test-request-id',
+      },
+      headers: {
+        'x-request-id': 'test-request-id',
+      },
+    };
 
-beforeEach(() => {
-  jest.clearAllMocks();
-});
-
-describe('apiHandler — success path', () => {
-  it('wraps a handler that returns a string and produces a structured response; merges headers with correct precedence', async () => {
-    const fn = jest.fn(async () => 'hello');
-    const handler = apiHandler(fn, {
-      defaultHeaders: { X: 'def', K: 'keep' },
-    });
-
-    const res = await handler(baseEvent());
-    const s = asStructured(res);
-
-    expect(fn).toHaveBeenCalledTimes(1);
-    expect(s.statusCode).toBe(200);
-    expect(s.body).toBe('hello');
-    expect(s.headers).toEqual({ X: 'def', K: 'keep' });
-    expect(isPreflightMock).not.toHaveBeenCalled();
+    mockBuildCorsHeaders.mockReturnValue({ 'Access-Control-Allow-Origin': '*' });
+    mockIsPreflight.mockReturnValue(false);
+    mockPreflightResponse.mockReturnValue({ statusCode: 200, body: 'OK' });
+    mockMapError.mockReturnValue({ statusCode: 500, body: 'Internal Server Error' });
   });
 
-  it('merges defaultHeaders, CORS headers, then response headers (response has highest precedence)', async () => {
-    const fn = jest.fn(async () => ({
-      statusCode: 201,
-      body: 'ok',
-      headers: { X: 'resp', A: '1' },
-    }));
-
-    buildCorsHeadersMock.mockReturnValueOnce({ X: 'cors', C: 'cv' });
-
-    const handler = apiHandler(fn, {
-      cors: { allowOrigins: '*', allowMethods: ['GET'] } as any,
-      defaultHeaders: { X: 'def', K: 'keep' },
-    });
-
-    const res = await handler(baseEvent());
-    const s = asStructured(res);
-
-    expect(s.statusCode).toBe(201);
-    expect(s.body).toBe('ok');
-    expect(s.headers).toEqual({
-      K: 'keep', // default
-      C: 'cv',   // CORS
-      X: 'resp', // response overrides both
-      A: '1',    // response
-    });
-
-    // Because opts.cors is spread last, allowMethods from opts overrides defaults
-    expect(buildCorsHeadersMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        allowMethods: ['GET'],
-        allowHeaders: ['*'],
-        allowOrigins: '*',
-      }),
-    );
+  afterEach(() => {
+    jest.clearAllMocks();
   });
-});
 
-describe('apiHandler — preflight', () => {
-  it('handles preflight when CORS is enabled and isPreflight returns true', async () => {
-    const fn = jest.fn(); // should not be called
-    buildCorsHeadersMock.mockReturnValueOnce({ 'Access-Control-Allow-Origin': '*' });
-    isPreflightMock.mockReturnValueOnce(true);
+  it('should create a wrapped handler function', () => {
+    const wrappedHandler = apiHandler(mockHandler);
 
-    preflightResponseMock.mockImplementationOnce((_h: any) => ({
-      statusCode: 204,
-      body: '',
-      headers: { P: '1' },
-    }));
+    expect(typeof wrappedHandler).toBe('function');
+  });
 
-    const handler = apiHandler(fn, { cors: { allowOrigins: '*' } as any });
+  it('should call the original handler and return structured response', async () => {
+    const mockResponse = { statusCode: 200, body: 'test response' };
+    mockHandler.mockResolvedValue(mockResponse);
 
-    const res = await handler(baseEvent());
-    const s = asStructured(res);
+    const wrappedHandler = apiHandler(mockHandler);
+    const result = await wrappedHandler(mockEvent);
 
-    expect(fn).not.toHaveBeenCalled();
-    expect(isPreflightMock).toHaveBeenCalledTimes(1);
-    expect(s.statusCode).toBe(204);
-    expect(s.headers).toEqual({
+    expect(mockHandler).toHaveBeenCalledWith(mockEvent);
+    expect(result).toEqual({
+      ...mockResponse,
+      headers: {},
+    });
+  });
+
+  it('should handle string response', async () => {
+    const stringResponse = 'test string response';
+    mockHandler.mockResolvedValue(stringResponse);
+
+    const wrappedHandler = apiHandler(mockHandler);
+    const result = await wrappedHandler(mockEvent);
+
+    expect(result).toEqual({
+      statusCode: 200,
+      body: stringResponse,
+      headers: {},
+    });
+  });
+
+  it('should merge default headers', async () => {
+    const mockResponse = { statusCode: 200, body: 'test' };
+    mockHandler.mockResolvedValue(mockResponse);
+
+    const options: ApiHandlerOptions = {
+      defaultHeaders: { 'X-Custom-Header': 'custom-value' },
+    };
+
+    const wrappedHandler = apiHandler(mockHandler, options);
+    const result = await wrappedHandler(mockEvent);
+
+    expect((result as any).headers).toEqual({
+      'X-Custom-Header': 'custom-value',
+    });
+  });
+
+  it('should merge CORS headers', async () => {
+    const mockResponse = { statusCode: 200, body: 'test' };
+    mockHandler.mockResolvedValue(mockResponse);
+
+    const options: ApiHandlerOptions = {
+      cors: { allowOrigins: ['https://example.com'] },
+    };
+
+    const wrappedHandler = apiHandler(mockHandler, options);
+    const result = await wrappedHandler(mockEvent);
+
+    expect(mockBuildCorsHeaders).toHaveBeenCalledWith({
+      allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+      allowHeaders: ['*'],
+      allowOrigins: ['https://example.com'],
+    });
+    expect((result as any).headers).toEqual({
       'Access-Control-Allow-Origin': '*',
-      P: '1',
     });
   });
-});
 
-describe('apiHandler — error path', () => {
-  it('maps errors via mapError and merges headers; uses requestId from requestContext', async () => {
-    const boom = new Error('boom');
-    const fn = jest.fn(async () => {
-      throw boom;
+  it('should merge response headers with default and CORS headers', async () => {
+    const mockResponse = {
+      statusCode: 200,
+      body: 'test',
+      headers: { 'X-Response-Header': 'response-value' },
+    };
+    mockHandler.mockResolvedValue(mockResponse);
+
+    const options: ApiHandlerOptions = {
+      defaultHeaders: { 'X-Default-Header': 'default-value' },
+      cors: { allowOrigins: ['https://example.com'] },
+    };
+
+    const wrappedHandler = apiHandler(mockHandler, options);
+    const result = await wrappedHandler(mockEvent);
+
+    expect((result as any).headers).toEqual({
+      'X-Default-Header': 'default-value',
+      'Access-Control-Allow-Origin': '*',
+      'X-Response-Header': 'response-value',
     });
+  });
 
-    mapErrorMock.mockReturnValueOnce({
+  it('should handle preflight requests', async () => {
+    mockIsPreflight.mockReturnValue(true);
+
+    const options: ApiHandlerOptions = {
+      cors: { allowOrigins: ['https://example.com'] },
+    };
+
+    const wrappedHandler = apiHandler(mockHandler, options);
+    const result = await wrappedHandler(mockEvent);
+
+    expect(mockIsPreflight).toHaveBeenCalledWith(mockEvent);
+    expect(mockPreflightResponse).toHaveBeenCalledWith({ 'Access-Control-Allow-Origin': '*' });
+    expect(result).toEqual({
+      statusCode: 200,
+      body: 'OK',
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+      },
+    });
+    expect(mockHandler).not.toHaveBeenCalled();
+  });
+
+  it('should handle handler errors', async () => {
+    const error = new Error('Handler error');
+    mockHandler.mockRejectedValue(error);
+
+    const wrappedHandler = apiHandler(mockHandler);
+    const result = await wrappedHandler(mockEvent);
+
+    expect(mockMapError).toHaveBeenCalledWith(error, { requestId: 'test-request-id' });
+    expect(result).toEqual({
       statusCode: 500,
-      body: JSON.stringify({ error: 'E', message: 'm', requestId: 'req-ctx-1' }),
-      headers: { H: 'map' },
-    });
-
-    buildCorsHeadersMock.mockReturnValueOnce({ C: 'cors' });
-
-    const handler = apiHandler(fn, {
-      cors: { allowOrigins: '*' } as any,
-      defaultHeaders: { D: 'def' },
-    });
-
-    const res = await handler(baseEvent());
-    const s = asStructured(res);
-
-    expect(mapErrorMock).toHaveBeenCalledWith(boom, { requestId: 'req-ctx-1' });
-    expect(s.headers).toEqual({ D: 'def', C: 'cors', H: 'map' });
-    expect(s.statusCode).toBe(500);
-    expect(JSON.parse(bodyText(res))).toMatchObject({
-      error: 'E',
-      message: 'm',
-      requestId: 'req-ctx-1',
+      body: 'Internal Server Error',
+      headers: {},
     });
   });
 
-  it('falls back to x-request-id (lowercase) header when requestContext id is missing', async () => {
-    const event = {
-      ...baseEvent(),
-      requestContext: { requestId: '' },
-      headers: { 'x-request-id': 'hdr-lower' },
+  it('should extract request id from headers when requestContext is missing', async () => {
+    const error = new Error('Handler error');
+    mockHandler.mockRejectedValue(error);
+
+    const eventWithoutRequestContext = {
+      ...mockEvent,
+      requestContext: {},
     };
 
-    const fn = jest.fn(async () => {
-      throw new Error('x');
-    });
+    const wrappedHandler = apiHandler(mockHandler);
+    await wrappedHandler(eventWithoutRequestContext);
 
-    mapErrorMock.mockReturnValueOnce({ statusCode: 400, body: '{"ok":true}' });
-
-    const handler = apiHandler(fn);
-    await handler(event as any);
-
-    expect(mapErrorMock).toHaveBeenCalledWith(expect.any(Error), { requestId: 'hdr-lower' });
+    expect(mockMapError).toHaveBeenCalledWith(error, { requestId: 'test-request-id' });
   });
 
-  it('falls back to X-Request-Id (capitalized) header if lowercase not present', async () => {
-    const event = {
-      ...baseEvent(),
-      requestContext: { requestId: '' },
-      headers: { 'X-Request-Id': 'HDR-UP' },
+  it('should extract request id from X-Request-Id header (case insensitive)', async () => {
+    const error = new Error('Handler error');
+    mockHandler.mockRejectedValue(error);
+
+    const eventWithUpperCaseHeader = {
+      ...mockEvent,
+      headers: { 'X-Request-Id': 'upper-case-request-id' },
+      requestContext: {},
     };
 
-    const fn = jest.fn(async () => {
-      throw new Error('y');
+    const wrappedHandler = apiHandler(mockHandler);
+    await wrappedHandler(eventWithUpperCaseHeader);
+
+    expect(mockMapError).toHaveBeenCalledWith(error, { requestId: 'upper-case-request-id' });
+  });
+
+  it('should handle missing request id', async () => {
+    const error = new Error('Handler error');
+    mockHandler.mockRejectedValue(error);
+
+    const eventWithoutRequestId = {
+      ...mockEvent,
+      requestContext: {},
+      headers: {},
+    };
+
+    const wrappedHandler = apiHandler(mockHandler);
+    await wrappedHandler(eventWithoutRequestId);
+
+    expect(mockMapError).toHaveBeenCalledWith(error, { requestId: undefined });
+  });
+
+  it('should handle response with undefined body', async () => {
+    const mockResponse = { statusCode: 204, body: undefined };
+    mockHandler.mockResolvedValue(mockResponse);
+
+    const wrappedHandler = apiHandler(mockHandler);
+    const result = await wrappedHandler(mockEvent);
+
+    expect(result).toEqual({
+      statusCode: 204,
+      body: undefined,
+      headers: {},
     });
+  });
 
-    mapErrorMock.mockReturnValueOnce({ statusCode: 500, body: '{}' });
+  it('should handle response without headers', async () => {
+    const mockResponse = { statusCode: 200, body: 'test' };
+    mockHandler.mockResolvedValue(mockResponse);
 
-    const handler = apiHandler(fn);
-    await handler(event as any);
+    const wrappedHandler = apiHandler(mockHandler);
+    const result = await wrappedHandler(mockEvent);
 
-    expect(mapErrorMock).toHaveBeenCalledWith(expect.any(Error), { requestId: 'HDR-UP' });
+    expect((result as any).headers).toEqual({});
+  });
+
+  it('should not handle preflight when CORS is not configured', async () => {
+    mockIsPreflight.mockReturnValue(true);
+
+    const wrappedHandler = apiHandler(mockHandler);
+    const result = await wrappedHandler(mockEvent);
+
+    expect(mockIsPreflight).not.toHaveBeenCalled();
+    expect(mockPreflightResponse).not.toHaveBeenCalled();
+    expect(mockHandler).toHaveBeenCalledWith(mockEvent);
   });
 });

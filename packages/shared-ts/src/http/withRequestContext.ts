@@ -12,7 +12,7 @@ export const withRequestContext = (): BeforeMiddleware => {
     const reqId =
       headers["x-request-id"] ||
       headers["X-Request-Id"] ||
-      evt.requestContext.requestId ||
+      evt.requestContext?.requestId ||
       ulid();
 
     // Normalize header in a single canonical key

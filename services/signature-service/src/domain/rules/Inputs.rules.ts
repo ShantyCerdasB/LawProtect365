@@ -1,8 +1,16 @@
 
-import { AppError, ErrorCodes } from "@lawprotect/shared-ts";
+import { AppError, ErrorCodes, z } from "@lawprotect/shared-ts";
 import type { Input } from "../entities";
-import { InputTypeSchema } from "../value-objects/InputType";
-import { RectSchema } from "../value-objects/Geometry";
+import { InputTypeSchema } from "@/domain/value-objects/index";
+
+// Simple rectangle schema for input position validation
+const RectSchema = z.object({
+  x: z.number().min(0),
+  y: z.number().min(0),
+  width: z.number().positive(),
+  height: z.number().positive(),
+  page: z.number().int().positive().optional(),
+});
 
 /**
  * Validates that each input references valid document and party IDs if applicable.
@@ -102,3 +110,9 @@ export const assertNoIllegalOverlap = (
     }
   }
 };
+
+
+
+
+
+

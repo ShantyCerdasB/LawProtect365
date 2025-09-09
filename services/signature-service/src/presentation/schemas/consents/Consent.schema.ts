@@ -12,3 +12,9 @@ export const ConsentBody = z.object({
   consent: z.boolean(),
 });
 export type ConsentBody = z.infer<typeof ConsentBody>;
+
+
+
+
+
+

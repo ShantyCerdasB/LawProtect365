@@ -22,10 +22,10 @@
 import type { Mapper } from "@lawprotect/shared-ts";
 import { BadRequestError, ErrorCodes } from "@lawprotect/shared-ts";
 
-import type { AuditEvent, AuditEventId } from "../../../domain/value-objects/Audit";
-import type { TenantId, EnvelopeId } from "../../../domain/value-objects/Ids";
+import type { AuditEvent, AuditEventId } from "@/domain/value-objects/audit";
+import type { TenantId, EnvelopeId } from "@/domain/value-objects/ids";
 
-import { AUDIT_ENTITY_TYPE } from "../../../shared/types/infrastructure/enums";
+import { AUDIT_ENTITY_TYPE } from "../../../domain/types/infrastructure/enums";
 import { DdbAuditItem, isDdbAuditItem } from "@/domain/entities";
 
 
@@ -172,3 +172,9 @@ export const auditItemFromRaw = (raw: Record<string, unknown>): AuditEvent => {
   }
   return auditItemMapper.fromDTO(raw as DdbAuditItem);
 };
+
+
+
+
+
+

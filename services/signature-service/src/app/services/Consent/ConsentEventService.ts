@@ -6,7 +6,7 @@
  */
 
 import { ConsentDelegatedEvent } from "../../../domain/entities/ConsentDelegatedEvent";
-import { BaseEventService } from "../../../shared/services/BaseEventService";
+import { BaseEventService } from "../../../domain/services/BaseEventService";
 import type { DomainEvent } from "@lawprotect/shared-ts";
 import { makeEvent } from "@lawprotect/shared-ts";
 
@@ -48,3 +48,9 @@ export class ConsentEventService extends BaseEventService {
     await this.publishDomainEvent(event, traceId);
   }
 }
+
+
+
+
+
+

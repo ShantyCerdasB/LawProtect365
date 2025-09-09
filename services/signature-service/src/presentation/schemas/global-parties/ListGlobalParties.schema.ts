@@ -34,3 +34,9 @@ export const ListGlobalPartiesQuery = z.object({
 export type ListGlobalPartiesQuery = z.infer<typeof ListGlobalPartiesQuery>;
 
 
+
+
+
+
+
+

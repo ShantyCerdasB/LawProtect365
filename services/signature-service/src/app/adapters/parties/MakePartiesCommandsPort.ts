@@ -8,9 +8,9 @@
 import type { PartiesCommandsPort } from "../../ports/parties";
 import type { Repository } from "@lawprotect/shared-ts";
 import type { Party } from "../../../domain/entities/Party";
-import type { PartyKey } from "../../../shared/types/infrastructure/dynamodb";
-import type { Ids } from "../../../shared/types/parties";
-import type { IdempotencyRunner } from "../../../infrastructure/idempotency/IdempotencyRunner";
+import type { PartyKey } from "../../../domain/types/infrastructure/dynamodb";
+import type { Ids } from "../../../domain/types/parties";
+import type { IdempotencyRunner } from "@lawprotect/shared-ts";
 import { 
   CreatePartyCommand, 
   CreatePartyResult,
@@ -23,8 +23,10 @@ import { PartiesValidationService } from "../../services/Parties/PartiesValidati
 import { PartiesAuditService } from "../../services/Parties/PartiesAuditService";
 import { PartiesEventService } from "../../services/Parties/PartiesEventService";
 import { PartiesRateLimitService } from "../../services/Parties/PartiesRateLimitService";
-import { toPartyRow } from "../../../shared/types/parties";
-import { nowIso } from "@lawprotect/shared-ts";
+import { toPartyRow } from "../../../domain/types/parties";
+import { nowIso, assertTenantBoundary } from "@lawprotect/shared-ts";
+import { partyNotFound } from "@/shared/errors";
+import { assertInvitePolicy } from "../../../domain/rules/Flow.rules";
 
 /**
  * @description Creates PartiesCommandsPort implementation with optional services.
@@ -53,6 +55,25 @@ export function makePartiesCommandsPort(
   
   // 🔍 FUNCIÓN INTERNA PARA IDEMPOTENCY
   const createInternal = async (command: CreatePartyCommand): Promise<CreatePartyResult> => {
+    // Apply generic rules
+    assertTenantBoundary(command.tenantId, command.tenantId);
+    
+    // Apply domain-specific rules
+    if (rateLimitService) {
+      // Check rate limit for party creation
+      await rateLimitService.checkCreatePartyLimit(command.tenantId, command.envelopeId);
+      
+      // Get invite stats for validation
+      const usage = await rateLimitService.getCurrentUsage(command.tenantId, command.envelopeId);
+      const inviteStats = {
+        lastSentAt: Date.now() - (usage.resetInSeconds * 1000), // Calculate from reset time
+        sentToday: usage.currentUsage,
+        minCooldownMs: 30000, // 30 seconds cooldown from config
+        dailyLimit: usage.maxRequests
+      };
+      assertInvitePolicy(inviteStats);
+    }
+    
     // 1. VALIDATION (opcional)
     if (validationService) {
       await validationService.validateCreate(command);
@@ -111,6 +132,9 @@ export function makePartiesCommandsPort(
 
   // 🔍 FUNCIÓN INTERNA PARA IDEMPOTENCY
   const updateInternal = async (command: UpdatePartyCommand): Promise<UpdatePartyResult> => {
+    // Apply generic rules
+    assertTenantBoundary(command.tenantId, command.tenantId);
+    
     // 1. VALIDATION (opcional)
     if (validationService) {
       await validationService.validateUpdate(command);
@@ -123,7 +147,7 @@ export function makePartiesCommandsPort(
     });
     
     if (!existing) {
-      throw new Error(`Party with ID ${command.partyId} not found in envelope ${command.envelopeId}`);
+      throw partyNotFound({ partyId: command.partyId, envelopeId: command.envelopeId });
     }
 
     const now = nowIso();
@@ -175,6 +199,9 @@ export function makePartiesCommandsPort(
 
   // 🔍 FUNCIÓN INTERNA PARA IDEMPOTENCY
   const deleteInternal = async (command: DeletePartyCommand): Promise<DeletePartyResult> => {
+    // Apply generic rules
+    assertTenantBoundary(command.tenantId, command.tenantId);
+    
     // 1. VALIDATION (opcional)
     if (validationService) {
       await validationService.validateDelete(command);
@@ -187,7 +214,7 @@ export function makePartiesCommandsPort(
     });
     
     if (!existing) {
-      throw new Error(`Party with ID ${command.partyId} not found in envelope ${command.envelopeId}`);
+      throw partyNotFound({ partyId: command.partyId, envelopeId: command.envelopeId });
     }
 
     await partiesRepo.delete({ 
@@ -259,3 +286,9 @@ export function makePartiesCommandsPort(
     },
   };
 }
+
+
+
+
+
+

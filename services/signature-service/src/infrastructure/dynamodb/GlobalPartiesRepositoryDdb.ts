@@ -30,8 +30,8 @@ import { GlobalPartyItemDTOSchema } from "../../presentation/schemas/global-part
 import type {
   GlobalPartyExtended,
   GlobalPartyCommon,
-} from "../../shared/types/global-parties/GlobalPartiesTypes";
-import type { GlobalPartiesRepository } from "../../shared/contracts/repositories/global-parties/GlobalPartiesRepository";
+} from "../../domain/types/global-parties/GlobalPartiesTypes";
+import type { GlobalPartiesRepository } from "../../domain/contracts/repositories/global-parties/GlobalPartiesRepository";
 import type {
   CreateGlobalPartyAppInput,
   UpdateGlobalPartyAppInput,
@@ -41,7 +41,7 @@ import type {
   ListGlobalPartiesAppResult,
   SearchGlobalPartiesByEmailAppInput,
   SearchGlobalPartiesByEmailAppResult,
-} from "../../shared/types/global-parties/AppServiceInputs";
+} from "../../domain/types/global-parties/AppServiceInputs";
 
 const pk = (tenantId: string) => `TENANT#${tenantId}`;
 const sk = (partyId: string) => `PARTY#${partyId}`;
@@ -546,3 +546,9 @@ export class GlobalPartiesRepositoryDdb implements GlobalPartiesRepository {
     return partyId;
   }
 }
+
+
+
+
+
+

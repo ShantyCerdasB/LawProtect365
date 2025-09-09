@@ -4,11 +4,11 @@
  * @description Provides event publishing for all request operations
  */
 
-import { BaseEventService } from "../../../shared/services/BaseEventService";
+import { BaseEventService } from "../../../domain/services/BaseEventService";
 import { makeEvent, DomainEvent } from "@lawprotect/shared-ts";
-import type { RequestsEventService } from "../../../shared/types/requests/ServiceInterfaces";
-import type { PartyId, EnvelopeId, TenantId } from "../../../domain/value-objects/Ids";
-import type { ActorContext } from "../../../domain/entities/ActorContext";
+import type { RequestsEventService } from "../../../domain/types/requests/ServiceInterfaces";
+import type { PartyId, EnvelopeId, TenantId } from "@/domain/value-objects/ids";
+import type { ActorContext } from "@lawprotect/shared-ts";
 
 /**
  * @summary Event service for requests operations
@@ -173,3 +173,9 @@ export class DefaultRequestsEventService extends BaseEventService implements Req
     await this.publishModuleEvent(event);
   }
 }
+
+
+
+
+
+

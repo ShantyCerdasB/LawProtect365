@@ -10,3 +10,11 @@ export { handler as updateConsent } from "./UpdateConsent.Controller";
 export { handler as deleteConsent } from "./DeleteConsent.Controller";
 export { handler as submitConsent } from "./SubmitConsent.Controller";
 export { handler as delegateConsent } from "./DelegateConsent.Controller";
+
+
+
+
+
+
+
+

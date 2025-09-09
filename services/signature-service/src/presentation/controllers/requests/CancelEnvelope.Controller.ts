@@ -9,8 +9,8 @@ import { makeRequestsCommandsPort } from "../../../app/adapters/requests/makeReq
 import { DefaultRequestsCommandService } from "../../../app/services/Requests";
 import { CancelEnvelopeBody } from "../../../presentation/schemas/requests";
 import { EnvelopeIdPath } from "../../../presentation/schemas/common/path";
-import type { CancelEnvelopeControllerInput } from "../../../shared/types/requests/ControllerInputs";
-import type { CancelEnvelopeAppResult } from "../../../shared/types/requests/AppServiceInputs";
+import type { CancelEnvelopeControllerInput } from "../../../domain/types/requests/ControllerInputs";
+import type { CancelEnvelopeAppResult } from "../../../domain/types/requests/AppServiceInputs";
 
 /**
  * @description Cancel Envelope controller
@@ -19,8 +19,8 @@ export const CancelEnvelopeController = createCommandController<CancelEnvelopeCo
   bodySchema: CancelEnvelopeBody,
   pathSchema: EnvelopeIdPath,
   appServiceClass: DefaultRequestsCommandService,
-  createDependencies: (c) => makeRequestsCommandsPort(createRequestsDependencies(c)),
-  extractParams: (path, body) => ({
+  createDependencies: (c: any) => makeRequestsCommandsPort(createRequestsDependencies(c)),
+  extractParams: (path: any, body: any) => ({
     envelopeId: path.id,
     reason: body.reason,
   }),
@@ -30,3 +30,11 @@ export const CancelEnvelopeController = createCommandController<CancelEnvelopeCo
 
 // Export handler for backward compatibility
 export const handler = CancelEnvelopeController;
+
+
+
+
+
+
+
+

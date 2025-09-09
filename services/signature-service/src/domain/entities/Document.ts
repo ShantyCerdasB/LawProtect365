@@ -8,10 +8,10 @@
  * This aggregate is intentionally minimal and serializable.
  */
 
-import type { DocumentId, EnvelopeId, TenantId } from "../value-objects/Ids";
-import type { DocumentStatus } from "../value-objects/DocumentStatus";
-import type { S3ObjectRef } from "../value-objects/S3ObjectRef";
-import type { ContentType } from "../value-objects/ContentType";
+import type { DocumentId, EnvelopeId, TenantId } from "@/domain/value-objects/ids";
+import type { DocumentStatus } from "@/domain/value-objects/index";
+import type { S3ObjectRef } from "@/domain/value-objects/index";
+import type { ContentType } from "@/domain/value-objects/index";
 
 /**
  * Document aggregate.
@@ -56,3 +56,9 @@ export interface Document {
   /** Optional metadata for extensibility. */
   metadata?: Record<string, unknown>;
 }
+
+
+
+
+
+

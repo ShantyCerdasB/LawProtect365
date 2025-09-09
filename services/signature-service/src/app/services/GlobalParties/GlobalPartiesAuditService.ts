@@ -5,10 +5,10 @@
  * Extends BaseAuditService to provide Global Party-specific audit functionality.
  */
 
-import { BaseAuditService } from "../../../shared/services/BaseAuditService";
-import type { AuditContext } from "../../../domain/entities/AuditContext";
-import type {  PartyId, EnvelopeId, TenantId } from "../../../domain/value-objects/Ids";
-import type { ActorContext } from "../../../domain/entities/ActorContext";
+import { BaseAuditService } from "../../../domain/services/BaseAuditService";
+import type { AuditContext } from "@lawprotect/shared-ts";
+import type {  PartyId, EnvelopeId, TenantId } from "@/domain/value-objects/ids";
+import type { ActorContext } from "@lawprotect/shared-ts";
 import { nowIso } from "@lawprotect/shared-ts";
 
 /**
@@ -164,3 +164,9 @@ export class GlobalPartiesAuditService extends BaseAuditService {
     });
   }
 }
+
+
+
+
+
+

@@ -8,8 +8,8 @@ import { createCommandController } from "../../../shared/controllers/controllerF
 import { makeGlobalPartiesCommandsPort } from "../../../app/adapters/global-parties/MakeGlobalPartiesCommandsPort";
 import { DefaultGlobalPartiesCommandService } from "../../../app/services/GlobalParties";
 import { UpdateGlobalPartyBody } from "../../../presentation/schemas/global-parties/UpdateGlobalParty.schema";
-import type { UpdateGlobalPartyControllerInput } from "../../../shared/types/global-parties/ControllerInputs";
-import type { UpdateGlobalPartyAppResult } from "../../../shared/types/global-parties/AppServiceInputs";
+import type { UpdateGlobalPartyControllerInput } from "../../../domain/types/global-parties/ControllerInputs";
+import type { UpdateGlobalPartyAppResult } from "../../../domain/types/global-parties/AppServiceInputs";
 
 /**
  * @description Update Global Party controller
@@ -17,14 +17,14 @@ import type { UpdateGlobalPartyAppResult } from "../../../shared/types/global-pa
 export const UpdateGlobalPartyController = createCommandController<UpdateGlobalPartyControllerInput, UpdateGlobalPartyAppResult>({
   bodySchema: UpdateGlobalPartyBody,
   appServiceClass: DefaultGlobalPartiesCommandService,
-  createDependencies: (c) => makeGlobalPartiesCommandsPort({
+  createDependencies: (c: any) => makeGlobalPartiesCommandsPort({
     globalParties: c.repos.globalParties,
     ids: c.ids,
     validationService: c.globalParties.validationService,
     auditService: c.globalParties.auditService,
     eventService: c.globalParties.eventService,
   }),
-  extractParams: (_, body) => ({
+  extractParams: (_: any, body: any) => ({
     partyId: body.partyId,
     updates: {
       name: body.updates?.name,
@@ -40,3 +40,11 @@ export const UpdateGlobalPartyController = createCommandController<UpdateGlobalP
   responseType: "ok",
   includeActor: true,
 });
+
+
+
+
+
+
+
+

@@ -11,9 +11,9 @@ import type {
   GetConsentAppResult,
   ListConsentsAppInput,
   ListConsentsAppResult 
-} from "../../../shared/types/consent/AppServiceInputs";
-import type { ConsentQueryRepo } from "../../../shared/types/consent/AdapterDependencies";
-import { mapConsentRowToResult, mapConsentRowToListItem } from "../../../shared/types/consent/ConsentTypes";
+} from "../../../domain/types/consent/AppServiceInputs";
+import type { ConsentQueryRepo } from "../../../domain/types/consent/AdapterDependencies";
+import { mapConsentRowToResult, mapConsentRowToListItem } from "../../../domain/types/consent/ConsentTypes";
 
 /**
  * @summary Creates a ConsentQueriesPort implementation
@@ -75,3 +75,9 @@ export const makeConsentQueryPort = (repo: ConsentQueryRepo): ConsentQueriesPort
     };
   },
 });
+
+
+
+
+
+

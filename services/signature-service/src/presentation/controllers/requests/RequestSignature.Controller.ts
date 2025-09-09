@@ -9,8 +9,8 @@ import { makeRequestsCommandsPort } from "../../../app/adapters/requests/makeReq
 import { DefaultRequestsCommandService } from "../../../app/services/Requests";
 import { RequestSignatureBody } from "../../../presentation/schemas/requests";
 import { EnvelopeIdPath } from "../../../presentation/schemas/common/path";
-import type { RequestSignatureControllerInput } from "../../../shared/types/requests/ControllerInputs";
-import type { RequestSignatureAppResult } from "../../../shared/types/requests/AppServiceInputs";
+import type { RequestSignatureControllerInput } from "../../../domain/types/requests/ControllerInputs";
+import type { RequestSignatureAppResult } from "../../../domain/types/requests/AppServiceInputs";
 
 /**
  * @description Request Signature controller
@@ -19,8 +19,8 @@ export const RequestSignatureController = createCommandController<RequestSignatu
   bodySchema: RequestSignatureBody,
   pathSchema: EnvelopeIdPath,
   appServiceClass: DefaultRequestsCommandService,
-  createDependencies: (c) => makeRequestsCommandsPort(createRequestsDependencies(c)),
-  extractParams: (path, body) => ({
+  createDependencies: (c: any) => makeRequestsCommandsPort(createRequestsDependencies(c)),
+  extractParams: (path: any, body: any) => ({
     envelopeId: path.id,
     partyId: body.partyId,
     message: body.message,
@@ -31,3 +31,11 @@ export const RequestSignatureController = createCommandController<RequestSignatu
 
 // Export handler for backward compatibility
 export const handler = RequestSignatureController;
+
+
+
+
+
+
+
+

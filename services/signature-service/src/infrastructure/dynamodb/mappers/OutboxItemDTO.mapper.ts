@@ -4,15 +4,15 @@
  * @description Maps between DynamoDB item format and domain types for outbox operations
  */
 
-import type { OutboxRepoCreateInput } from "../../../shared/types/outbox";
-import type { OutboxItemDTO } from "../../../shared/types/outbox/OutboxDTO";
+import type { OutboxRepoCreateInput } from "../../../domain/types/outbox";
+import type { OutboxItemDTO } from "../../../domain/types/outbox/OutboxDTO";
 import type { OutboxRecord } from "@lawprotect/shared-ts";
 import { 
   OUTBOX_PARTITION_KEY, 
   OUTBOX_SORT_KEY_PREFIX, 
   OUTBOX_STATUS_PK_PREFIX,
   OUTBOX_STATUSES 
-} from "../../../shared/constants/outbox";
+} from "../../../domain/constants/outbox";
 
 /**
  * @summary Maps a create input to DynamoDB item
@@ -62,5 +62,11 @@ export function mapDtoToRecord(dto: OutboxItemDTO): OutboxRecord {
     traceId: dto.traceId,
   };
 }
+
+
+
+
+
+
 
 

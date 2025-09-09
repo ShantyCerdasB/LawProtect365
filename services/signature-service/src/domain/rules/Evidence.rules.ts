@@ -1,5 +1,5 @@
 import { AppError, ErrorCodes } from "@lawprotect/shared-ts";
-import { ContentTypeSchema } from "../value-objects/ContentType";
+import { ContentTypeSchema } from "@/domain/value-objects/index";
 import { ALLOWED_CONTENT_TYPES, type AllowedContentType } from "../values/enums";
 
 /**
@@ -27,3 +27,9 @@ export const assertPresignPolicy = (contentType: string, size: number, maxSize: 
     throw new AppError(ErrorCodes.COMMON_PAYLOAD_TOO_LARGE, 413, "File exceeds allowed size");
   }
 };
+
+
+
+
+
+

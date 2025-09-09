@@ -8,9 +8,9 @@ import { createQueryController } from "../../../shared/controllers/queryFactory"
 import { makeDocumentsQueriesPort } from "../../../app/adapters/documents/makeDocumentsQueriesPort";
 import { DefaultDocumentsQueryService } from "../../../app/services/Documents";
 import { DocumentIdPath } from "../../../presentation/schemas/common/path";
-import type { DocumentLock } from "../../../domain/value-objects/DocumentLock";
-import type { DocumentId } from "../../../domain/value-objects/Ids";
-import { DocumentIdSchema } from "../../../domain/value-objects/Ids";
+import type { DocumentLock } from "@lawprotect/shared-ts";
+import type { DocumentId } from "@/domain/value-objects/ids";
+import { DocumentIdSchema } from "@/domain/value-objects/ids";
 
 /**
  * @description List Document Locks controller
@@ -18,8 +18,8 @@ import { DocumentIdSchema } from "../../../domain/value-objects/Ids";
 export const ListDocumentLocksController = createQueryController<{ documentId: DocumentId }, DocumentLock[]>({
   pathSchema: DocumentIdPath,
   appServiceClass: DefaultDocumentsQueryService,
-  createDependencies: (c) => makeDocumentsQueriesPort(c.repos.documents),
-  extractParams: (path) => ({
+  createDependencies: (c: any) => makeDocumentsQueriesPort(c.repos.documents),
+  extractParams: (path: any) => ({
     documentId: DocumentIdSchema.parse(path.id),
   }),
   responseType: "ok"
@@ -27,3 +27,11 @@ export const ListDocumentLocksController = createQueryController<{ documentId: D
 
 // Export handler for backward compatibility
 export const handler = ListDocumentLocksController;
+
+
+
+
+
+
+
+

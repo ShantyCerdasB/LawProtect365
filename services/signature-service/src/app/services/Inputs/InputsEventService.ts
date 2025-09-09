@@ -4,8 +4,8 @@
  * @description Handles event publishing for input create, update, and delete operations
  */
 
-import { BaseEventService } from "../../../shared/services/BaseEventService";
-import type { ActorContext } from "../../../domain/entities/ActorContext";
+import { BaseEventService } from "../../../domain/services/BaseEventService";
+import type { ActorContext } from "@lawprotect/shared-ts";
 import type { DomainEvent } from "@lawprotect/shared-ts";
 
 /**
@@ -128,3 +128,9 @@ export class InputsEventService extends BaseEventService {
     await this.publishModuleEvent(event);
   }
 }
+
+
+
+
+
+

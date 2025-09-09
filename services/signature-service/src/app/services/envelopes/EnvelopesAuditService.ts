@@ -4,11 +4,11 @@
  * @description Logs envelope operations for compliance and tracking
  */
 
-import { BaseAuditService } from "../../../shared/services/BaseAuditService";
-import type { EnvelopeId, TenantId, UserId } from "../../../domain/value-objects/Ids";
-import type { EnvelopeStatus } from "../../../domain/value-objects/EnvelopeStatus";
+import { BaseAuditService } from "../../../domain/services/BaseAuditService";
+import type { EnvelopeId, TenantId, UserId } from "@/domain/value-objects/ids";
+import type { EnvelopeStatus } from "@/domain/value-objects/index";
 import type { Envelope } from "../../../domain/entities/Envelope";
-import type { AuditContext } from "../../../domain/entities/AuditContext";
+import type { AuditContext } from "@lawprotect/shared-ts";
 
 /**
  * @summary Audit service for envelope operations
@@ -203,3 +203,9 @@ export class EnvelopesAuditService extends BaseAuditService {
     });
   }
 }
+
+
+
+
+
+

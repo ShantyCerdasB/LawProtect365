@@ -32,3 +32,9 @@ export class DefaultInputsQueryService {
     return this.queriesPort.listByEnvelope(query);
   }
 }
+
+
+
+
+
+

@@ -7,18 +7,18 @@
 import { createCommandController, createConsentDependencies } from "../../../shared/controllers/controllerFactory";
 import { makeConsentCommandsPort } from "../../../app/adapters/consent/MakeConsentCommandsPort";
 import { ConsentCommandService } from "../../../app/services/Consent/ConsentCommandService";
-import type { UpdateConsentControllerInput } from "../../../shared/types/consent/ControllerInputs";
-import type { UpdateConsentAppResult } from "../../../shared/types/consent/AppServiceInputs";
+import type { UpdateConsentControllerInput } from "../../../domain/types/consent/ControllerInputs";
+import type { UpdateConsentAppResult } from "../../../domain/types/consent/AppServiceInputs";
 import { UpdateConsentPath, UpdateConsentBody } from "../../schemas/consents/UpdateConsent.schema";
-import type { EnvelopeId, ConsentId } from "../../../domain/value-objects/Ids";
+import type { EnvelopeId, ConsentId } from "@/domain/value-objects/ids";
 import type { ConsentStatus } from "../../../domain/values/enums";
 
 export const handler = createCommandController<UpdateConsentControllerInput, UpdateConsentAppResult>({
   pathSchema: UpdateConsentPath,
   bodySchema: UpdateConsentBody,
   appServiceClass: ConsentCommandService,
-  createDependencies: (c) => makeConsentCommandsPort(createConsentDependencies(c)),
-  extractParams: (path, body) => ({
+  createDependencies: (c: any) => makeConsentCommandsPort(createConsentDependencies(c)),
+  extractParams: (path: any, body: any) => ({
     envelopeId: path.envelopeId as EnvelopeId,
     consentId: path.consentId as ConsentId,
     status: body.status as ConsentStatus,
@@ -30,3 +30,11 @@ export const handler = createCommandController<UpdateConsentControllerInput, Upd
   responseType: "ok",
   includeActor: true,
 });
+
+
+
+
+
+
+
+

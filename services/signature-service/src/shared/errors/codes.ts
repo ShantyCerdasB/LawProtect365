@@ -68,3 +68,9 @@ export type SignatureErrorCode = keyof typeof SignatureErrorCodes;
  * - Signature-service specific codes above
  */
 export type AnyErrorCode = SharedErrorCode | SignatureErrorCode;
+
+
+
+
+
+

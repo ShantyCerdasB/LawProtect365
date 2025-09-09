@@ -14,8 +14,8 @@ import type {
   SubmitConsentAppResult,
   DelegateConsentAppInput,
   DelegateConsentAppResult
-} from "../../../shared/types/consent/AppServiceInputs";
-import type { ActorContext } from "../../../domain/entities/ActorContext";
+} from "../../../domain/types/consent/AppServiceInputs";
+import type { ActorContext } from "@lawprotect/shared-ts";
 
 /**
  * @summary Port interface for consent command operations
@@ -67,3 +67,9 @@ export interface ConsentCommandsPort {
    */
   delegate(input: DelegateConsentAppInput, actorContext?: ActorContext): Promise<DelegateConsentAppResult>;
 }
+
+
+
+
+
+

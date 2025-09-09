@@ -8,7 +8,7 @@ import { createCommandController, createSigningDependenciesWithS3 } from "../../
 import { DefaultSigningCommandService } from "../../../app/services/Signing";
 import { PresignUploadBody } from "../../../presentation/schemas/signing/PresignUpload.schema";
 import { EnvelopeIdPath } from "../../../presentation/schemas/common/path";
-import type { PresignUploadControllerInput } from "../../../shared/types/signing/ControllerInputs";
+import type { PresignUploadControllerInput } from "../../../domain/types/signing/ControllerInputs";
 import type { PresignUploadResult } from "../../../app/ports/signing/SigningCommandsPort";
 
 /**
@@ -19,7 +19,7 @@ export const PresignUploadController = createCommandController<PresignUploadCont
   pathSchema: EnvelopeIdPath,
   appServiceClass: DefaultSigningCommandService,
   createDependencies: createSigningDependenciesWithS3,
-  extractParams: (path, body) => ({
+  extractParams: (path: any, body: any) => ({
     tenantId: path.tenantId,
     envelopeId: path.id,
     filename: body.filename,
@@ -31,3 +31,11 @@ export const PresignUploadController = createCommandController<PresignUploadCont
 
 // Export handler for backward compatibility
 export const handler = PresignUploadController;
+
+
+
+
+
+
+
+

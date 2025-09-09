@@ -5,7 +5,7 @@
  */
 
 import type { ConsentQueriesPort } from "../../ports/consent/ConsentQueriesPort";
-import type { GetConsentAppInput, GetConsentAppResult, ListConsentsAppInput, ListConsentsAppResult } from "../../../shared/types/consent/AppServiceInputs";
+import type { GetConsentAppInput, GetConsentAppResult, ListConsentsAppInput, ListConsentsAppResult } from "../../../domain/types/consent/AppServiceInputs";
 import { NotFoundError } from "../../../shared/errors";
 
 /**
@@ -33,3 +33,9 @@ export class ConsentQueryService {
     }
   }
 }
+
+
+
+
+
+

@@ -5,13 +5,13 @@
  * Extends BaseAuditService to provide consent-specific audit functionality.
  */
 
-import { BaseAuditService } from "../../../shared/services/BaseAuditService";
-import type { AuditContext } from "../../../domain/entities/AuditContext";
+import { BaseAuditService } from "../../../domain/services/BaseAuditService";
+import type { AuditContext } from "@lawprotect/shared-ts";
 import type { 
   ConsentDelegationAuditDetails,
   ConsentUpdateAuditDetails 
-} from "../../../shared/types/consent/AuditDetails";
-import type { EnvelopeId } from "../../../domain/value-objects/Ids";
+} from "../../../domain/types/consent/AuditDetails";
+import type { EnvelopeId } from "@/domain/value-objects/ids";
 import { BadRequestError } from "../../../shared/errors";
 import { nowIso } from "@lawprotect/shared-ts";
 
@@ -87,3 +87,9 @@ export class ConsentAuditService extends BaseAuditService {
     });
   }
 }
+
+
+
+
+
+

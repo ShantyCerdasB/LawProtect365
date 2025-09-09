@@ -7,8 +7,8 @@
 import { createQueryController } from "../../../shared/controllers/queryFactory";
 import { EnvelopesQueryService } from "../../../app/services/envelopes";
 import { GetEnvelopeStatusParams } from "../../../presentation/schemas/envelopes/GetEnvelopeStatus.schema";
-import type { GetEnvelopeStatusControllerInput } from "../../../shared/types/envelopes/ControllerInputs";
-import type { GetEnvelopeStatusAppResult } from "../../../shared/types/envelopes/AppServiceInputs";
+import type { GetEnvelopeStatusControllerInput } from "../../../domain/types/envelopes/ControllerInputs";
+import type { GetEnvelopeStatusAppResult } from "../../../domain/types/envelopes/AppServiceInputs";
 
 /**
  * @description Get Envelope Status controller
@@ -16,10 +16,18 @@ import type { GetEnvelopeStatusAppResult } from "../../../shared/types/envelopes
 export const GetEnvelopeStatusController = createQueryController<GetEnvelopeStatusControllerInput, GetEnvelopeStatusAppResult>({
   pathSchema: GetEnvelopeStatusParams,
   appServiceClass: EnvelopesQueryService,
-  createDependencies: (c) => c.envelopes.queriesPort,
-  extractParams: (path) => ({
+  createDependencies: (c: any) => c.envelopes.queriesPort,
+  extractParams: (path: any) => ({
     tenantId: path.tenantId,
     envelopeId: path.envelopeId,
   }),
   responseType: "ok"
 });
+
+
+
+
+
+
+
+

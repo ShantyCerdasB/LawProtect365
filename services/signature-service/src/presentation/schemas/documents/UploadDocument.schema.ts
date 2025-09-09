@@ -28,3 +28,9 @@ export const UploadDocumentBody = z.object({
 });
 
 export type UploadDocumentBody = z.infer<typeof UploadDocumentBody>;
+
+
+
+
+
+

@@ -12,3 +12,9 @@ export const DeclineSigningBody = z.object({
   reason: z.string().max(500),
 });
 export type DeclineSigningBody = z.infer<typeof DeclineSigningBody>;
+
+
+
+
+
+

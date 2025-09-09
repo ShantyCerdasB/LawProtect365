@@ -20,3 +20,9 @@ export const SearchGlobalPartiesByEmailQuery = z.object({
  */
 export type SearchGlobalPartiesByEmailQuery = z.infer<typeof SearchGlobalPartiesByEmailQuery>;
 
+
+
+
+
+
+

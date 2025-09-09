@@ -6,8 +6,8 @@
  * Used by application services to query input information.
  */
 
-import type { TenantId, EnvelopeId, InputId, PartyId } from "../../../domain/value-objects/Ids";
-import type { ActorContext } from "../../../domain/entities/ActorContext";
+import type { TenantId, EnvelopeId, InputId, PartyId } from "@/domain/value-objects/ids";
+import type { ActorContext } from "@lawprotect/shared-ts";
 import { InputType } from "../../../domain/values/enums";
 
 /**
@@ -98,3 +98,9 @@ export interface InputsQueriesPort {
    */
   listByEnvelope(query: ListInputsQuery): Promise<ListInputsResult>;
 }
+
+
+
+
+
+

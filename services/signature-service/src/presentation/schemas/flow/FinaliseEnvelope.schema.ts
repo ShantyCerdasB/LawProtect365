@@ -10,3 +10,9 @@ export const FinaliseEnvelopeBody = z.object({
   message: z.string().max(500).optional(),
 });
 export type FinaliseEnvelopeBody = z.infer<typeof FinaliseEnvelopeBody>;
+
+
+
+
+
+

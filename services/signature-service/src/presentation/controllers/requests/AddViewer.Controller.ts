@@ -9,8 +9,8 @@ import { makeRequestsCommandsPort } from "../../../app/adapters/requests/makeReq
 import { DefaultRequestsCommandService } from "../../../app/services/Requests";
 import { AddViewerBody } from "../../../presentation/schemas/requests";
 import { EnvelopeIdPath } from "../../../presentation/schemas/common/path";
-import type { AddViewerControllerInput } from "../../../shared/types/requests/ControllerInputs";
-import type { AddViewerAppResult } from "../../../shared/types/requests/AppServiceInputs";
+import type { AddViewerControllerInput } from "../../../domain/types/requests/ControllerInputs";
+import type { AddViewerAppResult } from "../../../domain/types/requests/AppServiceInputs";
 
 /**
  * @description Add Viewer controller
@@ -19,8 +19,8 @@ export const AddViewerController = createCommandController<AddViewerControllerIn
   bodySchema: AddViewerBody,
   pathSchema: EnvelopeIdPath,
   appServiceClass: DefaultRequestsCommandService,
-  createDependencies: (c) => makeRequestsCommandsPort(createRequestsDependencies(c)),
-  extractParams: (path, body) => ({
+  createDependencies: (c: any) => makeRequestsCommandsPort(createRequestsDependencies(c)),
+  extractParams: (path: any, body: any) => ({
     envelopeId: path.id,
     email: body.email,
     name: body.name,
@@ -32,3 +32,11 @@ export const AddViewerController = createCommandController<AddViewerControllerIn
 
 // Export handler for backward compatibility
 export const handler = AddViewerController;
+
+
+
+
+
+
+
+

@@ -19,7 +19,8 @@ import type {
   DownloadSignedDocumentCommand,
   DownloadSignedDocumentResult
 } from "../../ports/signing/SigningCommandsPort";
-import type { SigningCommandService } from "../../../shared/types/signing/ServiceInterfaces";
+import type { SigningCommandService } from "../../../domain/types/signing/ServiceInterfaces";
+// Signing rules would need proper command structure integration
 
 /**
  * @description Default implementation of SigningCommandService
@@ -51,3 +52,9 @@ export class DefaultSigningCommandService implements SigningCommandService {
     return this.commandsPort.downloadSignedDocument(command);
   }
 }
+
+
+
+
+
+

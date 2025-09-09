@@ -12,7 +12,7 @@ import type {
   DeleteGlobalPartyControllerInput,
   ListGlobalPartiesControllerInput,
   SearchGlobalPartiesByEmailControllerInput
-} from "../../../shared/types/global-parties";
+} from "../../../domain/types/global-parties";
 
 /**
  * @description Default implementation of GlobalPartiesValidationService
@@ -100,3 +100,9 @@ export class DefaultGlobalPartiesValidationService implements GlobalPartiesValid
   }
 
 }
+
+
+
+
+
+

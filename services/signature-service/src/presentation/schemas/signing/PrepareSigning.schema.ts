@@ -5,7 +5,7 @@
  */
 
 import { z } from "zod";
-import { EnvelopeIdSchema, PartyIdSchema } from "@/domain/value-objects/Ids";
+import { EnvelopeIdSchema, PartyIdSchema } from "@/domain/value-objects/ids";
 
 /**
  * @description Body schema for prepare signing request
@@ -22,3 +22,9 @@ export const PrepareSigningParams = z.object({
   /** The envelope ID */
   id: EnvelopeIdSchema,
 });
+
+
+
+
+
+

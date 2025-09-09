@@ -9,7 +9,7 @@ import type { AuditQueriesPort } from "../../ports/audit";
 import type { 
   GetAuditEventAppInput, 
   GetAuditEventAppResult 
-} from "../../../shared/types/audit/AppServiceInputs";
+} from "../../../domain/types/audit/AppServiceInputs";
 
 /**
  * @description Application service for audit event operations
@@ -43,3 +43,9 @@ export class GetAuditEventAppService {
     };
   }
 }
+
+
+
+
+
+

@@ -1,90 +1,309 @@
-/**
- * @file request.test.ts
- * @summary Tests for getHeader, getPathParam, getQueryParam, and getJsonBody (100% line & branch coverage).
- */
-
 import { getHeader, getPathParam, getQueryParam, getJsonBody } from '../../src/http/request.js';
 import { BadRequestError } from '../../src/errors/errors.js';
 
-const makeEvt = (overrides: Partial<any> = {}) =>
-  ({
-    headers: {},
-    pathParameters: {},
-    queryStringParameters: {},
-    isBase64Encoded: false,
-    body: undefined,
-    requestContext: { http: { method: 'GET' } },
-    ...overrides,
-  } as any);
-
 describe('getHeader', () => {
-  it('returns a header value case-insensitively', () => {
-    const evt = makeEvt({ headers: { 'X-Request-ID': 'ABC', accept: 'json' } });
+  let mockEvent: any;
 
-    expect(getHeader(evt, 'x-request-id')).toBe('ABC');
-    expect(getHeader(evt, 'ACCEPT')).toBe('json');
-    expect(getHeader(evt, 'missing')).toBeUndefined();
+  beforeEach(() => {
+    mockEvent = {
+      headers: {
+        'content-type': 'application/json',
+        'Authorization': 'Bearer token123',
+        'X-Custom-Header': 'custom-value',
+      },
+    };
   });
 
-  it('handles missing headers object', () => {
-    const evt = makeEvt({ headers: undefined });
-    expect(getHeader(evt, 'anything')).toBeUndefined();
+  it('should return header value for exact match', () => {
+    const result = getHeader(mockEvent, 'content-type');
+
+    expect(result).toBe('application/json');
+  });
+
+  it('should return header value for case-insensitive match', () => {
+    const result = getHeader(mockEvent, 'CONTENT-TYPE');
+
+    expect(result).toBe('application/json');
+  });
+
+  it('should return header value for mixed case match', () => {
+    const result = getHeader(mockEvent, 'authorization');
+
+    expect(result).toBe('Bearer token123');
+  });
+
+  it('should return undefined when header is not found', () => {
+    const result = getHeader(mockEvent, 'non-existent-header');
+
+    expect(result).toBeUndefined();
+  });
+
+  it('should return undefined when headers is undefined', () => {
+    const eventWithoutHeaders = { ...mockEvent };
+    delete eventWithoutHeaders.headers;
+
+    const result = getHeader(eventWithoutHeaders, 'content-type');
+
+    expect(result).toBeUndefined();
+  });
+
+  it('should return undefined when headers is null', () => {
+    const eventWithNullHeaders = { ...mockEvent, headers: null };
+
+    const result = getHeader(eventWithNullHeaders, 'content-type');
+
+    expect(result).toBeUndefined();
+  });
+
+  it('should handle empty headers object', () => {
+    const eventWithEmptyHeaders = { ...mockEvent, headers: {} };
+
+    const result = getHeader(eventWithEmptyHeaders, 'content-type');
+
+    expect(result).toBeUndefined();
   });
 });
 
 describe('getPathParam', () => {
-  it('returns the path parameter when present', () => {
-    const evt = makeEvt({ pathParameters: { id: '42' } });
-    expect(getPathParam(evt, 'id')).toBe('42');
+  let mockEvent: any;
+
+  beforeEach(() => {
+    mockEvent = {
+      pathParameters: {
+        id: '123',
+        userId: 'user-456',
+      },
+    };
   });
 
-  it('returns undefined when absent or container missing', () => {
-    expect(getPathParam(makeEvt({ pathParameters: { } }), 'id')).toBeUndefined();
-    expect(getPathParam(makeEvt({ pathParameters: undefined }), 'id')).toBeUndefined();
+  it('should return path parameter value when it exists', () => {
+    const result = getPathParam(mockEvent, 'id');
+
+    expect(result).toBe('123');
+  });
+
+  it('should return path parameter value for different parameter', () => {
+    const result = getPathParam(mockEvent, 'userId');
+
+    expect(result).toBe('user-456');
+  });
+
+  it('should return undefined when path parameter does not exist', () => {
+    const result = getPathParam(mockEvent, 'non-existent-param');
+
+    expect(result).toBeUndefined();
+  });
+
+  it('should return undefined when pathParameters is undefined', () => {
+    const eventWithoutPathParams = { ...mockEvent };
+    delete eventWithoutPathParams.pathParameters;
+
+    const result = getPathParam(eventWithoutPathParams, 'id');
+
+    expect(result).toBeUndefined();
+  });
+
+  it('should return undefined when pathParameters is null', () => {
+    const eventWithNullPathParams = { ...mockEvent, pathParameters: null };
+
+    const result = getPathParam(eventWithNullPathParams, 'id');
+
+    expect(result).toBeUndefined();
+  });
+
+  it('should handle empty pathParameters object', () => {
+    const eventWithEmptyPathParams = { ...mockEvent, pathParameters: {} };
+
+    const result = getPathParam(eventWithEmptyPathParams, 'id');
+
+    expect(result).toBeUndefined();
   });
 });
 
 describe('getQueryParam', () => {
-  it('returns the query parameter when present', () => {
-    const evt = makeEvt({ queryStringParameters: { q: 'term' } });
-    expect(getQueryParam(evt, 'q')).toBe('term');
+  let mockEvent: any;
+
+  beforeEach(() => {
+    mockEvent = {
+      queryStringParameters: {
+        page: '1',
+        limit: '10',
+        search: 'test query',
+      },
+    };
   });
 
-  it('returns undefined when absent or container missing', () => {
-    expect(getQueryParam(makeEvt({ queryStringParameters: { } }), 'q')).toBeUndefined();
-    expect(getQueryParam(makeEvt({ queryStringParameters: undefined }), 'q')).toBeUndefined();
+  it('should return query parameter value when it exists', () => {
+    const result = getQueryParam(mockEvent, 'page');
+
+    expect(result).toBe('1');
+  });
+
+  it('should return query parameter value for different parameter', () => {
+    const result = getQueryParam(mockEvent, 'search');
+
+    expect(result).toBe('test query');
+  });
+
+  it('should return undefined when query parameter does not exist', () => {
+    const result = getQueryParam(mockEvent, 'non-existent-param');
+
+    expect(result).toBeUndefined();
+  });
+
+  it('should return undefined when queryStringParameters is undefined', () => {
+    const eventWithoutQueryParams = { ...mockEvent };
+    delete eventWithoutQueryParams.queryStringParameters;
+
+    const result = getQueryParam(eventWithoutQueryParams, 'page');
+
+    expect(result).toBeUndefined();
+  });
+
+  it('should return undefined when queryStringParameters is null', () => {
+    const eventWithNullQueryParams = { ...mockEvent, queryStringParameters: null };
+
+    const result = getQueryParam(eventWithNullQueryParams, 'page');
+
+    expect(result).toBeUndefined();
+  });
+
+  it('should handle empty queryStringParameters object', () => {
+    const eventWithEmptyQueryParams = { ...mockEvent, queryStringParameters: {} };
+
+    const result = getQueryParam(eventWithEmptyQueryParams, 'page');
+
+    expect(result).toBeUndefined();
   });
 });
 
 describe('getJsonBody', () => {
-  it('returns {} when body is missing or empty', () => {
-    expect(getJsonBody(makeEvt({ body: undefined }))).toEqual({});
-    expect(getJsonBody(makeEvt({ body: '' }))).toEqual({});
+  let mockEvent: any;
+
+  beforeEach(() => {
+    mockEvent = {
+      body: '{"name": "test", "value": 123}',
+      isBase64Encoded: false,
+    };
   });
 
-  it('parses plain JSON when not base64-encoded', () => {
-    const payload = { a: 1, s: 'x' };
-    const evt = makeEvt({ body: JSON.stringify(payload) });
-    expect(getJsonBody<typeof payload>(evt)).toEqual(payload);
+  it('should parse valid JSON body', () => {
+    const result = getJsonBody(mockEvent);
+
+    expect(result).toEqual({ name: 'test', value: 123 });
   });
 
-  it('decodes base64 and parses JSON when isBase64Encoded=true', () => {
-    const payload = { k: 'v', n: 7 };
-    const b64 = Buffer.from(JSON.stringify(payload)).toString('base64');
-    const evt = makeEvt({ isBase64Encoded: true, body: b64 });
-    expect(getJsonBody<typeof payload>(evt)).toEqual(payload);
-  });
-
-  it('throws BadRequestError on invalid JSON', () => {
-    const evt = makeEvt({ body: '{not-json' });
-    expect(() => getJsonBody(evt)).toThrow(BadRequestError);
-    try {
-      getJsonBody(evt);
-    } catch (e) {
-      const err = e as BadRequestError;
-      expect(err).toBeInstanceOf(BadRequestError);
-      expect(err.message).toBe('Invalid JSON body');
-      expect(err.statusCode).toBe(400);
+  it('should parse valid JSON body with type parameter', () => {
+    interface TestBody {
+      name: string;
+      value: number;
     }
+
+    const result = getJsonBody<TestBody>(mockEvent);
+
+    expect(result).toEqual({ name: 'test', value: 123 });
+  });
+
+  it('should return empty object when body is undefined', () => {
+    const eventWithoutBody = { ...mockEvent };
+    delete eventWithoutBody.body;
+
+    const result = getJsonBody(eventWithoutBody);
+
+    expect(result).toEqual({});
+  });
+
+  it('should return empty object when body is null', () => {
+    const eventWithNullBody = { ...mockEvent, body: null };
+
+    const result = getJsonBody(eventWithNullBody);
+
+    expect(result).toEqual({});
+  });
+
+  it('should return empty object when body is empty string', () => {
+    const eventWithEmptyBody = { ...mockEvent, body: '' };
+
+    const result = getJsonBody(eventWithEmptyBody);
+
+    expect(result).toEqual({});
+  });
+
+  it('should throw BadRequestError for invalid JSON', () => {
+    const eventWithInvalidJson = { ...mockEvent, body: 'invalid json' };
+
+    expect(() => getJsonBody(eventWithInvalidJson)).toThrow(BadRequestError);
+    expect(() => getJsonBody(eventWithInvalidJson)).toThrow('Invalid JSON body');
+  });
+
+  it('should throw BadRequestError for malformed JSON', () => {
+    const eventWithMalformedJson = { ...mockEvent, body: '{"name": "test", "value":}' };
+
+    expect(() => getJsonBody(eventWithMalformedJson)).toThrow(BadRequestError);
+    expect(() => getJsonBody(eventWithMalformedJson)).toThrow('Invalid JSON body');
+  });
+
+  it('should decode base64 encoded body', () => {
+    const jsonString = '{"name": "test", "value": 123}';
+    const base64Body = Buffer.from(jsonString, 'utf8').toString('base64');
+    const eventWithBase64Body = { ...mockEvent, body: base64Body, isBase64Encoded: true };
+
+    const result = getJsonBody(eventWithBase64Body);
+
+    expect(result).toEqual({ name: 'test', value: 123 });
+  });
+
+  it('should throw BadRequestError for invalid base64 encoded body', () => {
+    const eventWithInvalidBase64 = { ...mockEvent, body: 'invalid-base64', isBase64Encoded: true };
+
+    expect(() => getJsonBody(eventWithInvalidBase64)).toThrow(BadRequestError);
+    expect(() => getJsonBody(eventWithInvalidBase64)).toThrow('Invalid JSON body');
+  });
+
+  it('should handle complex JSON objects', () => {
+    const complexJson = {
+      users: [
+        { id: 1, name: 'John' },
+        { id: 2, name: 'Jane' }
+      ],
+      metadata: {
+        total: 2,
+        page: 1
+      }
+    };
+    const eventWithComplexJson = { ...mockEvent, body: JSON.stringify(complexJson) };
+
+    const result = getJsonBody(eventWithComplexJson);
+
+    expect(result).toEqual(complexJson);
+  });
+
+  it('should handle JSON arrays', () => {
+    const jsonArray = [1, 2, 3, 'test'];
+    const eventWithJsonArray = { ...mockEvent, body: JSON.stringify(jsonArray) };
+
+    const result = getJsonBody(eventWithJsonArray);
+
+    expect(result).toEqual(jsonArray);
+  });
+
+  it('should handle JSON primitives', () => {
+    const eventWithString = { ...mockEvent, body: '"test string"' };
+    const eventWithNumber = { ...mockEvent, body: '123' };
+    const eventWithBoolean = { ...mockEvent, body: 'true' };
+    const eventWithNull = { ...mockEvent, body: 'null' };
+
+    expect(getJsonBody(eventWithString)).toBe('test string');
+    expect(getJsonBody(eventWithNumber)).toBe(123);
+    expect(getJsonBody(eventWithBoolean)).toBe(true);
+    expect(getJsonBody(eventWithNull)).toBeNull();
+  });
+
+  it('should handle whitespace in JSON body', () => {
+    const eventWithWhitespace = { ...mockEvent, body: '  {"name": "test"}  ' };
+
+    const result = getJsonBody(eventWithWhitespace);
+
+    expect(result).toEqual({ name: 'test' });
   });
 });

@@ -6,10 +6,10 @@
  */
 
 import type { DocumentsQueriesPort, ListDocumentsQuery, ListDocumentsResult } from "../../ports/documents/DocumentsQueriesPort";
-import type { DocumentId } from "../../../domain/value-objects/Ids";
-import type { DocumentLock } from "@/domain/value-objects/DocumentLock";
+import type { DocumentId } from "@/domain/value-objects/ids";
+import type { DocumentLock } from "@lawprotect/shared-ts";
 import type { Document } from "@/domain/entities/Document";
-import type { DocumentsRepository } from "@/shared/contracts/repositories/documents/DocumentsRepository";
+import type { DocumentsRepository } from "@/domain/contracts/repositories/documents/DocumentsRepository";
 
 /**
  * Creates a DocumentsQueriesPort implementation
@@ -59,3 +59,9 @@ export const makeDocumentsQueriesPort = (documentsRepo: DocumentsRepository): Do
     return Array.isArray(locks) ? locks : [];
   },
 });
+
+
+
+
+
+

@@ -5,11 +5,11 @@
  */
 
 import type { CertificateQueriesPort, GetCertificateQuery, GetCertificateResult } from "../../ports/certificate/CertificateQueriesPort";
-import type { AuditRepository } from "../../../shared/contracts/repositories/audit";
+import type { AuditRepository } from "../../../domain/contracts/repositories/audit";
 import type { Repository } from "@lawprotect/shared-ts";
-import type { EnvelopeId } from "../../../domain/value-objects/Ids";
+import type { EnvelopeId } from "@/domain/value-objects/ids";
 import type { Envelope } from "../../../domain/entities/Envelope";
-import type { CertificateValidationService } from "../../../shared/types/certificate/ServiceInterfaces";
+import type { CertificateValidationService } from "../../../domain/types/certificate/ServiceInterfaces";
 
 /**
  * @summary Creates a CertificateQueriesPort implementation with production-ready features
@@ -106,3 +106,9 @@ function validateHashChain(events: any[]): boolean {
 
   return true;
 }
+
+
+
+
+
+

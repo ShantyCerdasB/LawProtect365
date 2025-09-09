@@ -5,10 +5,10 @@
  * Extends BaseEventService to provide Documents-specific event publishing functionality.
  */
 
-import { BaseEventService } from "../../../shared/services/BaseEventService";
+import { BaseEventService } from "../../../domain/services/BaseEventService";
 import type { DomainEvent } from "@lawprotect/shared-ts";
-import type { DocumentId, EnvelopeId, TenantId } from "../../../domain/value-objects/Ids";
-import type { ActorContext } from "../../../domain/entities/ActorContext";
+import type { DocumentId, EnvelopeId, TenantId } from "@/domain/value-objects/ids";
+import type { ActorContext } from "@lawprotect/shared-ts";
 
 /**
  * @description Service interface for Documents event operations
@@ -238,3 +238,9 @@ export class DefaultDocumentsEventService extends BaseEventService implements Do
     await this.publishDomainEvent(event, traceId);
   }
 }
+
+
+
+
+
+

@@ -6,8 +6,8 @@
  * Used by application services to query document information.
  */
 
-import type { EnvelopeId, DocumentId } from "../../../domain/value-objects/Ids";
-import type { DocumentLock } from "../../../domain/value-objects/DocumentLock";
+import type { EnvelopeId, DocumentId } from "@/domain/value-objects/ids";
+import type { DocumentLock } from "@lawprotect/shared-ts";
 import type { Document } from "../../../domain/entities/Document";
 
 /**
@@ -60,3 +60,9 @@ export interface DocumentsQueriesPort {
    */
   listLocks(documentId: DocumentId): Promise<DocumentLock[]>;
 }
+
+
+
+
+
+

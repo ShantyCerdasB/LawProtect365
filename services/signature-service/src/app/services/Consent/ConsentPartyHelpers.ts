@@ -4,9 +4,9 @@
  * @description Common helper functions for party creation and management in consent delegation
  */
 
-import type { GlobalPartiesRepository } from "../../../shared/contracts/repositories/global-parties/GlobalPartiesRepository";
-import type { FindOrCreatePartyInput } from "../../../shared/types/global-parties";
-import type { PartyId, TenantId } from "../../../domain/value-objects/Ids";
+import type { GlobalPartiesRepository } from "../../../domain/contracts/repositories/global-parties/GlobalPartiesRepository";
+import type { FindOrCreatePartyInput } from "../../../domain/types/global-parties";
+import type { PartyId, TenantId } from "@/domain/value-objects/ids";
 import { BadRequestError } from "../../../shared/errors";
 
 /**
@@ -98,3 +98,9 @@ export async function findOrCreatePartyForDelegation(
 
   return newPartyId;
 }
+
+
+
+
+
+

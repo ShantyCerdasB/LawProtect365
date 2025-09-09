@@ -7,8 +7,8 @@
 import { createCommandController } from "../../../shared/controllers/controllerFactory";
 import { EnvelopesCommandService } from "../../../app/services/envelopes";
 import { DeleteEnvelopeParams } from "../../../presentation/schemas/envelopes/DeleteEnvelope.schema";
-import type { DeleteEnvelopeControllerInput } from "../../../shared/types/envelopes/ControllerInputs";
-import type { DeleteEnvelopeAppResult } from "../../../shared/types/envelopes/AppServiceInputs";
+import type { DeleteEnvelopeControllerInput } from "../../../domain/types/envelopes/ControllerInputs";
+import type { DeleteEnvelopeAppResult } from "../../../domain/types/envelopes/AppServiceInputs";
 
 /**
  * @description Delete Envelope controller
@@ -16,11 +16,19 @@ import type { DeleteEnvelopeAppResult } from "../../../shared/types/envelopes/Ap
 export const DeleteEnvelopeController = createCommandController<DeleteEnvelopeControllerInput, DeleteEnvelopeAppResult>({
   pathSchema: DeleteEnvelopeParams,
   appServiceClass: EnvelopesCommandService,
-  createDependencies: (c) => c.envelopes.commandsPort,
-  extractParams: (path) => ({
+  createDependencies: (c: any) => c.envelopes.commandsPort,
+  extractParams: (path: any) => ({
     tenantId: path.tenantId,
     envelopeId: path.envelopeId,
   }),
   responseType: "ok",
   includeActor: true,
 });
+
+
+
+
+
+
+
+

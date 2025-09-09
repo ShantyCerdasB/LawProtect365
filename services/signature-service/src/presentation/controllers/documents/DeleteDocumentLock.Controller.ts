@@ -8,7 +8,7 @@ import { createCommandController } from "../../../shared/controllers/controllerF
 import { makeDocumentsCommandsPort } from "../../../app/adapters/documents/makeDocumentsCommandsPort";
 import { DefaultDocumentsCommandService } from "../../../app/services/Documents";
 import { z } from "@lawprotect/shared-ts";
-import type { DocumentId } from "../../../domain/value-objects/Ids";
+import type { DocumentId } from "@/domain/value-objects/ids";
 
 /**
  * @description Path parameter schema for document lock deletion
@@ -24,12 +24,13 @@ const DocumentLockPath = z.object({
 export const DeleteDocumentLockController = createCommandController<{ documentId: DocumentId; lockId: string }, void>({
   pathSchema: DocumentLockPath,
   appServiceClass: DefaultDocumentsCommandService,
-  createDependencies: (c) => makeDocumentsCommandsPort({
+  createDependencies: (c: any) => makeDocumentsCommandsPort({
     documentsRepo: c.repos.documents,
+    envelopesRepo: c.repos.envelopes,
     ids: c.ids,
     s3Service: c.services.documentsS3,
   }),
-  extractParams: (path) => ({
+  extractParams: (path: any) => ({
     documentId: path.documentId,
     lockId: path.lockId,
   }),
@@ -39,3 +40,11 @@ export const DeleteDocumentLockController = createCommandController<{ documentId
 
 // Export handler for backward compatibility
 export const handler = DeleteDocumentLockController;
+
+
+
+
+
+
+
+

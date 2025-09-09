@@ -4,19 +4,7 @@
  * @description Provides helper functions for common EventBridge tasks across microservices
  */
 
-/**
- * @description Generic EventBridge entry interface
- */
-export interface EventBridgeEntry {
-  Source: string;
-  DetailType: string;
-  Detail: string;
-  EventBusName?: string;
-  Time?: Date;
-  Region?: string;
-  Resources?: string[];
-  TraceHeader?: string;
-}
+import type { EventBridgeEntry } from "../contracts/eventbridge/EventBridgeClientPort.js";
 
 /**
  * @description Generic event metadata schema interface

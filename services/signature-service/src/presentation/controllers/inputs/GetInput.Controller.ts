@@ -8,7 +8,7 @@ import { createQueryController } from "../../../shared/controllers/queryFactory"
 import { DefaultInputsQueryService } from "../../../app/services/Inputs";
 import { GetInputQuery, EnvelopeInputPath } from "../../../presentation/schemas/inputs";
 import type { ListInputsResult } from "../../../app/ports/inputs/InputsQueriesPort";
-import type { GetInputQueryControllerInput } from "@/shared/types/inputs";
+import type { GetInputQueryControllerInput } from "@/domain/types/inputs";
 
 /**
  * @description Get Input controller
@@ -17,11 +17,19 @@ export const GetInputController = createQueryController<GetInputQueryControllerI
   querySchema: GetInputQuery,
   pathSchema: EnvelopeInputPath,
   appServiceClass: DefaultInputsQueryService,
-  createDependencies: (c) => c.inputs.queriesPort,
-  extractParams: (path) => ({
+  createDependencies: (c: any) => c.inputs.queriesPort,
+  extractParams: (path: any) => ({
     tenantId: path.tenantId,
     envelopeId: path.envelopeId,
     inputId: path.inputId,
   }),
   responseType: "ok"
 });
+
+
+
+
+
+
+
+

@@ -9,8 +9,8 @@ import { makeRequestsCommandsPort } from "../../../app/adapters/requests/makeReq
 import { DefaultRequestsCommandService } from "../../../app/services/Requests";
 import { DeclineEnvelopeBody } from "../../../presentation/schemas/requests";
 import { EnvelopeIdPath } from "../../../presentation/schemas/common/path";
-import type { DeclineEnvelopeControllerInput } from "../../../shared/types/requests/ControllerInputs";
-import type { DeclineEnvelopeAppResult } from "../../../shared/types/requests/AppServiceInputs";
+import type { DeclineEnvelopeControllerInput } from "../../../domain/types/requests/ControllerInputs";
+import type { DeclineEnvelopeAppResult } from "../../../domain/types/requests/AppServiceInputs";
 
 /**
  * @description Decline Envelope controller
@@ -19,8 +19,8 @@ export const DeclineEnvelopeController = createCommandController<DeclineEnvelope
   bodySchema: DeclineEnvelopeBody,
   pathSchema: EnvelopeIdPath,
   appServiceClass: DefaultRequestsCommandService,
-  createDependencies: (c) => makeRequestsCommandsPort(createRequestsDependencies(c)),
-  extractParams: (path, body) => ({
+  createDependencies: (c: any) => makeRequestsCommandsPort(createRequestsDependencies(c)),
+  extractParams: (path: any, body: any) => ({
     envelopeId: path.id,
     reason: body.reason,
   }),
@@ -30,3 +30,11 @@ export const DeclineEnvelopeController = createCommandController<DeclineEnvelope
 
 // Export handler for backward compatibility
 export const handler = DeclineEnvelopeController;
+
+
+
+
+
+
+
+

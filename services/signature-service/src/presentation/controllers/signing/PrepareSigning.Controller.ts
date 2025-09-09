@@ -9,7 +9,7 @@ import { makeSigningCommandsPort } from "../../../app/adapters/signing/makeSigni
 import { DefaultSigningCommandService } from "../../../app/services/Signing";
 import { PrepareSigningBody } from "../../../presentation/schemas/signing/PrepareSigning.schema";
 import { EnvelopeIdPath } from "../../../presentation/schemas/common/path";
-import type { PrepareSigningControllerInput } from "../../../shared/types/signing/ControllerInputs";
+import type { PrepareSigningControllerInput } from "../../../domain/types/signing/ControllerInputs";
 import type { PrepareSigningResult } from "../../../app/ports/signing/SigningCommandsPort";
 
 /**
@@ -19,12 +19,13 @@ export const PrepareSigningController = createCommandController<PrepareSigningCo
   bodySchema: PrepareSigningBody,
   pathSchema: EnvelopeIdPath,
   appServiceClass: DefaultSigningCommandService,
-  createDependencies: (c) => makeSigningCommandsPort(
+  createDependencies: (c: any) => makeSigningCommandsPort(
     c.repos.envelopes,
     c.repos.parties,
+    c.repos.documents,
     createSigningDependencies(c, true) // Include S3 service
   ),
-  extractParams: (path, body) => ({
+  extractParams: (path: any, body: any) => ({
     ...extractEnvelopeParams(path, body),
     signerId: body.signerId,
     token: "", // Will be injected by factory
@@ -34,3 +35,11 @@ export const PrepareSigningController = createCommandController<PrepareSigningCo
 
 // Export handler for backward compatibility
 export const handler = PrepareSigningController;
+
+
+
+
+
+
+
+

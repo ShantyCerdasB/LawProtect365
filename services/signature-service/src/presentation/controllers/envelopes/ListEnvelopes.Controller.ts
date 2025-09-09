@@ -7,8 +7,8 @@
 import { createQueryController } from "../../../shared/controllers/queryFactory";
 import { EnvelopesQueryService } from "../../../app/services/envelopes";
 import { ListEnvelopesParams, ListEnvelopesQuery } from "../../../presentation/schemas/envelopes/ListEnvelopes.schema";
-import type { ListEnvelopesControllerInput } from "../../../shared/types/envelopes/ControllerInputs";
-import type { ListEnvelopesAppResult } from "../../../shared/types/envelopes/AppServiceInputs";
+import type { ListEnvelopesControllerInput } from "../../../domain/types/envelopes/ControllerInputs";
+import type { ListEnvelopesAppResult } from "../../../domain/types/envelopes/AppServiceInputs";
 
 /**
  * @description List Envelopes controller
@@ -17,11 +17,19 @@ export const ListEnvelopesController = createQueryController<ListEnvelopesContro
   pathSchema: ListEnvelopesParams,
   querySchema: ListEnvelopesQuery,
   appServiceClass: EnvelopesQueryService,
-  createDependencies: (c) => c.envelopes.queriesPort,
-  extractParams: (path, query) => ({
+  createDependencies: (c: any) => c.envelopes.queriesPort,
+  extractParams: (path: any, query: any) => ({
     tenantId: path.tenantId,
     limit: query.limit,
     cursor: query.cursor,
   }),
   responseType: "ok"
 });
+
+
+
+
+
+
+
+

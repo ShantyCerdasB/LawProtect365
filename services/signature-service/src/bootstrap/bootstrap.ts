@@ -1,4 +1,4 @@
-﻿
+
 /**
  * @file bootstrap.ts
  * @summary Thin app bootstrap that exposes the DI container to handlers.
@@ -11,7 +11,7 @@
 
 import { getContainer } from "@/core/Container";
 import { corsFromEnv } from "@/presentation/middleware/http";
-import { Container } from "@/shared/contracts/core";
+import { Container } from "@/infrastructure/contracts/core";
 import { logger } from "@lawprotect/shared-ts";
 
 /**
@@ -63,3 +63,9 @@ export function initApp(): App {
 export function getApp(): App {
   return initApp();
 }
+
+
+
+
+
+

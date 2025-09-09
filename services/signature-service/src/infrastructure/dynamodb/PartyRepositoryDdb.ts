@@ -18,7 +18,7 @@ import {
   partySk,
   requireQuery,
   PartyKey,
-} from "../../shared/types/infrastructure/dynamodb";
+} from "../../domain/types/infrastructure/dynamodb";
 
 /**
  * @description Narrows a typed object into the loose `Record<string, unknown>` shape
@@ -291,3 +291,9 @@ export class PartyRepositoryDdb
     await this.delete({ envelopeId, partyId });
   }
 }
+
+
+
+
+
+

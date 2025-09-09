@@ -7,8 +7,8 @@
  * Used by application services to modify input data.
  */
 
-import type { TenantId, EnvelopeId, InputId, PartyId } from "../../../domain/value-objects/Ids";
-import type { ActorContext } from "../../../domain/entities/ActorContext";
+import type { TenantId, EnvelopeId, InputId, PartyId } from "@/domain/value-objects/ids";
+import type { ActorContext } from "@lawprotect/shared-ts";
 import { InputType } from "../../../domain/values/enums";
 
 /**
@@ -197,3 +197,9 @@ export interface InputsCommandsPort {
    */
   delete(command: DeleteInputCommand): Promise<void>;
 }
+
+
+
+
+
+

@@ -5,8 +5,8 @@
  * This port provides methods to handle invitation, reminder, cancellation, and other request operations.
  */
 
-import type { EnvelopeId, PartyId, TenantId } from "../../../domain/value-objects/Ids";
-import type { ActorContext } from "../../../domain/entities/ActorContext";
+import type { EnvelopeId, PartyId, TenantId } from "@/domain/value-objects/ids";
+import type { ActorContext } from "@lawprotect/shared-ts";
 /**
  * @description Command for inviting parties to sign an envelope.
  */
@@ -264,3 +264,9 @@ export interface RequestsCommandsPort {
    */
   addViewer(command: AddViewerCommand): Promise<AddViewerResult>;
 }
+
+
+
+
+
+

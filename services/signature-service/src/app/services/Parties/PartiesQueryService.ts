@@ -12,7 +12,7 @@ import type {
   GetPartyAppResult,
   SearchPartiesByEmailAppInput,
   SearchPartiesByEmailAppResult
-} from "../../../shared/types/parties";
+} from "../../../domain/types/parties";
 
 /**
  * @summary Default implementation of PartiesQueryService
@@ -42,3 +42,9 @@ export class DefaultPartiesQueryService {
     return this.queriesPort.searchByEmail(query);
   }
 }
+
+
+
+
+
+

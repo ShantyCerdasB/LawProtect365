@@ -14,3 +14,11 @@ export { GetGlobalPartyController } from "./GetGlobalParty.Controller";
 export { ListGlobalPartiesController } from "./ListGlobalParties.Controller";
 export { SearchGlobalPartiesByEmailController } from "./SearchGlobalPartiesByEmail.Controller";
 
+
+
+
+
+
+
+
+

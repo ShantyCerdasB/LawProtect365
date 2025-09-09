@@ -6,19 +6,19 @@
  * This service encapsulates all the business logic that was previously scattered in the adapter.
  */
 
-import type { ConsentCommandRepo } from "../../../shared/types/consent/AdapterDependencies";
+import type { ConsentCommandRepo } from "../../../domain/types/consent/AdapterDependencies";
 import type { DelegationRepositoryDdb } from "../../../infrastructure/dynamodb/DelegationRepositoryDdb";
-import type { GlobalPartiesRepository } from "../../../shared/contracts/repositories/global-parties/GlobalPartiesRepository";
+import type { GlobalPartiesRepository } from "../../../domain/contracts/repositories/global-parties/GlobalPartiesRepository";
 import type { ConsentValidationService } from "./ConsentValidationService";
 import type { ConsentAuditService } from "./ConsentAuditService";
 import type { ConsentEventService } from "./ConsentEventService";
 import type { 
   DelegateConsentAppInput, 
   DelegateConsentAppResult 
-} from "../../../shared/types/consent/AppServiceInputs";
-import type { PartyId, TenantId } from "../../../domain/value-objects/Ids";
+} from "../../../domain/types/consent/AppServiceInputs";
+import type { PartyId, TenantId } from "@/domain/value-objects/ids";
 import type { ConsentStatus } from "../../../domain/values/enums";
-import type { ActorContext } from "../../../domain/entities/ActorContext";
+import type { ActorContext } from "@lawprotect/shared-ts";
 import { nowIso, asISO, asISOOpt } from "@lawprotect/shared-ts";
 import { NotFoundError } from "../../../shared/errors";
 import { findOrCreatePartyForDelegation } from "./ConsentPartyHelpers";
@@ -168,3 +168,9 @@ export class ConsentDelegationService {
   }
 
 }
+
+
+
+
+
+

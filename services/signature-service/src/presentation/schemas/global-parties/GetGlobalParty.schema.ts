@@ -20,3 +20,9 @@ export const GetGlobalPartyParams = z.object({
 export type GetGlobalPartyParams = z.infer<typeof GetGlobalPartyParams>;
 
 
+
+
+
+
+
+

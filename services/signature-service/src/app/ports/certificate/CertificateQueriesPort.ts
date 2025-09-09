@@ -4,8 +4,8 @@
  * @description Defines the interface for certificate query operations
  */
 
-import type { EnvelopeId, TenantId } from "../../../domain/value-objects/Ids";
-import type { AuditEvent } from "../../../domain/value-objects/Audit";
+import type { EnvelopeId, TenantId } from "@/domain/value-objects/ids";
+import type { AuditEvent } from "@/domain/value-objects/audit";
 
 // ============================================================================
 // QUERY TYPES
@@ -60,3 +60,9 @@ export interface CertificateQueriesPort {
    */
   getCertificate(query: GetCertificateQuery): Promise<GetCertificateResult | null>;
 }
+
+
+
+
+
+

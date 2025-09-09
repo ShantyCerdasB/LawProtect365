@@ -31,3 +31,9 @@ export const CreateGlobalPartyBody = z.object({
 export type CreateGlobalPartyBody = z.infer<typeof CreateGlobalPartyBody>;
 
 
+
+
+
+
+
+

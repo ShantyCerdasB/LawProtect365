@@ -44,3 +44,9 @@ export const GlobalPartyItemDTOSchema = z.object({
 });
 
 export type GlobalPartyItemDTO = z.infer<typeof GlobalPartyItemDTOSchema>;
+
+
+
+
+
+

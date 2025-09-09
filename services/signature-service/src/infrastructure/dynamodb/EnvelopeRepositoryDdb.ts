@@ -15,14 +15,14 @@ import {
 } from "@lawprotect/shared-ts";
 
 import type { Envelope } from "../../domain/entities/Envelope";
-import type { EnvelopeId, TenantId } from "../../domain/value-objects/Ids";
+import type { EnvelopeId, TenantId } from "@/domain/value-objects/ids";
 import { 
   envelopeItemMapper, 
   envelopePk, 
   envelopeMetaSk,
   requireQuery 
-} from "../../shared/types/infrastructure/dynamodb";
-import type { EnvelopeListCursorPayload } from "../../shared/types/envelopes/EnvelopesTypes";
+} from "../../domain/types/infrastructure/dynamodb";
+import type { EnvelopeListCursorPayload } from "../../domain/types/envelopes/EnvelopesTypes";
 
 /**
  * @description DynamoDB implementation of `Repository<Envelope, EnvelopeId>`.
@@ -204,3 +204,9 @@ export class EnvelopeRepositoryDdb
     }
   }
 }
+
+
+
+
+
+

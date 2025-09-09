@@ -79,3 +79,9 @@ export interface Party {
   /** Optional OTP state for authentication (managed by Signing/Requests) */
   otpState?: OtpState;
 }
+
+
+
+
+
+

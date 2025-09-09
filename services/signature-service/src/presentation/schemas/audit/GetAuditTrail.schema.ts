@@ -5,9 +5,9 @@
  */
 
 import { z } from "zod";
-import { EnvelopeIdValidationSchema } from "../../../shared/validations/schemas/common";
-import { OptionalPaginationCursorValidationSchema } from "@/shared/validations/schemas/common/PaginationCursor.schema";
-import { OptionalUploadFormatValidationSchema } from "@/shared/validations/schemas/common/UploadFormat.schema";
+import { EnvelopeIdValidationSchema } from "@/domain/value-objects/ids";
+import { OptionalPaginationCursorValidationSchema } from "@/domain/value-objects/common";
+import { OptionalUploadFormatValidationSchema } from "@/domain/value-objects/common";
 
 
 /**
@@ -41,4 +41,10 @@ export type GetAuditTrailQuery = z.infer<typeof GetAuditTrailQuerySchema>;
  * @description Type for path parameters
  */
 export type GetAuditTrailPath = z.infer<typeof GetAuditTrailPathSchema>;
+
+
+
+
+
+
 

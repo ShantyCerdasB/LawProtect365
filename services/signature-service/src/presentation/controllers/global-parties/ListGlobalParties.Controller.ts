@@ -8,8 +8,8 @@ import { createQueryController } from "../../../shared/controllers/queryFactory"
 import { makeGlobalPartiesQueriesPort } from "../../../app/adapters/global-parties/MakeGlobalPartiesQueriesPort";
 import { DefaultGlobalPartiesQueryService } from "../../../app/services/GlobalParties";
 import { ListGlobalPartiesQuery } from "../../../presentation/schemas/global-parties/ListGlobalParties.schema";
-import type { ListGlobalPartiesControllerInput } from "../../../shared/types/global-parties/ControllerInputs";
-import type { ListGlobalPartiesAppResult } from "../../../shared/types/global-parties/AppServiceInputs";
+import type { ListGlobalPartiesControllerInput } from "../../../domain/types/global-parties/ControllerInputs";
+import type { ListGlobalPartiesAppResult } from "../../../domain/types/global-parties/AppServiceInputs";
 
 /**
  * @description List Global Parties controller
@@ -17,10 +17,10 @@ import type { ListGlobalPartiesAppResult } from "../../../shared/types/global-pa
 export const ListGlobalPartiesController = createQueryController<ListGlobalPartiesControllerInput, ListGlobalPartiesAppResult>({
   querySchema: ListGlobalPartiesQuery,
   appServiceClass: DefaultGlobalPartiesQueryService,
-  createDependencies: (c) => makeGlobalPartiesQueriesPort({
+  createDependencies: (c: any) => makeGlobalPartiesQueriesPort({
     globalParties: c.repos.globalParties,
   }),
-  extractParams: (_, query) => ({
+  extractParams: (_: any, query: any) => ({
     limit: query.limit,
     cursor: query.cursor,
     status: query.status,
@@ -30,3 +30,11 @@ export const ListGlobalPartiesController = createQueryController<ListGlobalParti
   }),
   responseType: "ok"
 });
+
+
+
+
+
+
+
+

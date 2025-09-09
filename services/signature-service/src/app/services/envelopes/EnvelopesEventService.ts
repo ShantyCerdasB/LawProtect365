@@ -4,9 +4,9 @@
  * @description Publishes domain events for envelope lifecycle changes
  */
 
-import { BaseEventService } from "../../../shared/services/BaseEventService";
-import type { EnvelopeId, TenantId, UserId } from "../../../domain/value-objects/Ids";
-import type { EnvelopeStatus } from "../../../domain/value-objects/EnvelopeStatus";
+import { BaseEventService } from "../../../domain/services/BaseEventService";
+import type { EnvelopeId, TenantId, UserId } from "@/domain/value-objects/ids";
+import type { EnvelopeStatus } from "@/domain/value-objects/index";
 import type { Envelope } from "../../../domain/entities/Envelope";
 import { makeEvent, type DomainEvent } from "@lawprotect/shared-ts";
 
@@ -193,3 +193,9 @@ export class EnvelopesEventService extends BaseEventService {
     await this.publishModuleEvent(event);
   }
 }
+
+
+
+
+
+

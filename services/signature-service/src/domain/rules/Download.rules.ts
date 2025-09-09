@@ -3,7 +3,7 @@
  * @summary Domain rules for document download operations.
  */
 
-import type { EnvelopeStatus } from "@/domain/value-objects/EnvelopeStatus";
+import type { EnvelopeStatus } from "@/domain/value-objects/envelope";
 import { invalidEnvelopeState } from "@/shared/errors";
 
 /**
@@ -24,3 +24,9 @@ export const assertDownloadAllowed = (status: EnvelopeStatus): void => {
     });
   }
 };
+
+
+
+
+
+

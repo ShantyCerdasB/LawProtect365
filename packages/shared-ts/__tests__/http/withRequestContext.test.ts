@@ -1,120 +1,174 @@
-/**
- * @file withRequestContext.test.ts
- * @summary Unit tests for withRequestContext achieving 100% line and branch coverage.
- */
+import { withRequestContext } from '../../src/http/withRequestContext.js';
+import { ulid } from 'ulid';
 
-jest.mock("ulid", () => ({ ulid: jest.fn() }));
+// Mock ulid
+jest.mock('ulid', () => ({
+  ulid: jest.fn(),
+}));
 
-import { withRequestContext } from "../../src/http/withRequestContext";
-import { ulid as ulidFn } from "ulid";
+const mockUlid = ulid as jest.MockedFunction<typeof ulid>;
 
-type HttpEvent = {
-  headers?: Record<string, string>;
-  requestContext: { requestId?: string };
-};
+describe('withRequestContext', () => {
+  let mockEvent: any;
 
-const ulidMock = ulidFn as unknown as jest.Mock;
+  beforeEach(() => {
+    mockEvent = {
+      headers: {},
+      requestContext: {},
+    };
 
-describe("withRequestContext", () => {
-  const makeEvent = (overrides: Partial<HttpEvent> = {}): HttpEvent => ({
-    headers: {},
-    requestContext: {},
-    ...overrides,
+    mockUlid.mockReturnValue('mock-ulid-123');
   });
 
   afterEach(() => {
     jest.clearAllMocks();
   });
 
-  /**
-   * Prefers lowercase header variants when both lowercase and uppercase are present.
-   * No IDs are generated when both values are already provided.
-   */
-  it("uses existing lowercase headers and does not generate IDs", () => {
-    const before = withRequestContext();
+  it('should create a before middleware function', () => {
+    const middleware = withRequestContext();
 
-    const evt = makeEvent({
-      headers: {
-        "x-request-id": "low-req",
-        "X-Request-Id": "UP-REQ",
-        "x-trace-id": "low-trace",
-        "X-Trace-Id": "UP-TRACE",
-      },
-      requestContext: { requestId: "ctx-req" },
-    });
-
-    const ret = before(evt as any);
-    expect(ret).toBeUndefined();
-    expect(ulidMock).not.toHaveBeenCalled();
-
-    expect(evt.headers!["x-request-id"]).toBe("low-req");
-    expect(evt.headers!["x-trace-id"]).toBe("low-trace");
+    expect(typeof middleware).toBe('function');
   });
 
-  /**
-   * Falls back to uppercase header variants when lowercase are missing,
-   * and normalizes them into lowercase canonical keys.
-   */
-  it("uses uppercase headers when lowercase are missing and normalizes to lowercase keys", () => {
-    const before = withRequestContext();
+  it('should use existing x-request-id header', () => {
+    const middleware = withRequestContext();
+    mockEvent.headers['x-request-id'] = 'existing-request-id';
 
-    const evt = makeEvent({
-      headers: {
-        "X-Request-Id": "UP-REQ",
-        "X-Trace-Id": "UP-TRACE",
-      },
-    });
+    middleware(mockEvent);
 
-    before(evt as any);
-
-    // No generation needed
-    expect(ulidMock).not.toHaveBeenCalled();
-
-    // Canonical lowercase headers are set to the uppercase values
-    expect(evt.headers!["x-request-id"]).toBe("UP-REQ");
-    expect(evt.headers!["x-trace-id"]).toBe("UP-TRACE");
-
-    // Original uppercase headers remain present (function does not delete them)
-    expect(evt.headers!["X-Request-Id"]).toBe("UP-REQ");
-    expect(evt.headers!["X-Trace-Id"]).toBe("UP-TRACE");
+    expect(mockEvent.headers['x-request-id']).toBe('existing-request-id');
+    expect(mockUlid).toHaveBeenCalledTimes(1); // Called once for trace id
   });
 
-  /**
-   * Uses requestContext.requestId when header is missing and generates a trace ID.
-   */
-  it("uses requestContext.requestId and generates only the trace ID", () => {
-    const before = withRequestContext();
-    ulidMock.mockReturnValue("TRACE-GEN"); // only trace should be generated
+  it('should use existing X-Request-Id header (case insensitive)', () => {
+    const middleware = withRequestContext();
+    mockEvent.headers['X-Request-Id'] = 'existing-request-id-upper';
 
-    const evt = makeEvent({
-      headers: {}, // no IDs provided
-      requestContext: { requestId: "CTX-REQ" },
-    });
+    middleware(mockEvent);
 
-    before(evt as any);
-
-    expect(ulidMock).toHaveBeenCalledTimes(1);
-    expect(evt.headers!["x-request-id"]).toBe("CTX-REQ");
-    expect(evt.headers!["x-trace-id"]).toBe("TRACE-GEN");
+    expect(mockEvent.headers['x-request-id']).toBe('existing-request-id-upper');
+    expect(mockUlid).toHaveBeenCalledTimes(1); // Called once for trace id
   });
 
-  /**
-   * Generates both request and trace IDs when none are provided anywhere.
-   * Also verifies headers object is created when initially undefined.
-   */
-  it("generates both IDs when absent in headers and requestContext", () => {
-    const before = withRequestContext();
-    ulidMock.mockReturnValueOnce("RID-1").mockReturnValueOnce("TID-1");
+  it('should use requestContext.requestId if no header present', () => {
+    const middleware = withRequestContext();
+    mockEvent.requestContext.requestId = 'context-request-id';
 
-    const evt = makeEvent({
-      headers: undefined, // triggers (evt.headers ||= {})
-      requestContext: {}, // no requestId provided
-    });
+    middleware(mockEvent);
 
-    before(evt as any);
+    expect(mockEvent.headers['x-request-id']).toBe('context-request-id');
+    expect(mockUlid).toHaveBeenCalledTimes(1); // Called once for trace id
+  });
 
-    expect(ulidMock).toHaveBeenCalledTimes(2);
-    expect(evt.headers!["x-request-id"]).toBe("RID-1");
-    expect(evt.headers!["x-trace-id"]).toBe("TID-1");
+  it('should generate new request id if none present', () => {
+    const middleware = withRequestContext();
+
+    middleware(mockEvent);
+
+    expect(mockEvent.headers['x-request-id']).toBe('mock-ulid-123');
+    expect(mockUlid).toHaveBeenCalledTimes(2); // Once for request id, once for trace id
+  });
+
+  it('should use existing x-trace-id header', () => {
+    const middleware = withRequestContext();
+    mockEvent.headers['x-trace-id'] = 'existing-trace-id';
+
+    middleware(mockEvent);
+
+    expect(mockEvent.headers['x-trace-id']).toBe('existing-trace-id');
+    expect(mockUlid).toHaveBeenCalledTimes(1); // Only for request id
+  });
+
+  it('should use existing X-Trace-Id header (case insensitive)', () => {
+    const middleware = withRequestContext();
+    mockEvent.headers['X-Trace-Id'] = 'existing-trace-id-upper';
+
+    middleware(mockEvent);
+
+    expect(mockEvent.headers['x-trace-id']).toBe('existing-trace-id-upper');
+    expect(mockUlid).toHaveBeenCalledTimes(1); // Only for request id
+  });
+
+  it('should generate new trace id if none present', () => {
+    const middleware = withRequestContext();
+
+    middleware(mockEvent);
+
+    expect(mockEvent.headers['x-trace-id']).toBe('mock-ulid-123');
+    expect(mockUlid).toHaveBeenCalledTimes(2); // Once for request id, once for trace id
+  });
+
+  it('should handle missing headers object', () => {
+    const middleware = withRequestContext();
+    delete mockEvent.headers;
+
+    middleware(mockEvent);
+
+    expect(mockEvent.headers).toBeDefined();
+    expect(mockEvent.headers['x-request-id']).toBe('mock-ulid-123');
+    expect(mockEvent.headers['x-trace-id']).toBe('mock-ulid-123');
+  });
+
+  it('should handle missing requestContext', () => {
+    const middleware = withRequestContext();
+    const eventWithoutRequestContext = { 
+      ...mockEvent,
+      requestContext: undefined 
+    };
+
+    middleware(eventWithoutRequestContext);
+
+    expect(eventWithoutRequestContext.headers['x-request-id']).toBe('mock-ulid-123');
+    expect(eventWithoutRequestContext.headers['x-trace-id']).toBe('mock-ulid-123');
+  });
+
+  it('should convert request id to string', () => {
+    const middleware = withRequestContext();
+    mockEvent.requestContext.requestId = 12345;
+
+    middleware(mockEvent);
+
+    expect(mockEvent.headers['x-request-id']).toBe('12345');
+    expect(typeof mockEvent.headers['x-request-id']).toBe('string');
+  });
+
+  it('should convert trace id to string', () => {
+    const middleware = withRequestContext();
+    mockEvent.headers['x-trace-id'] = 67890;
+
+    middleware(mockEvent);
+
+    expect(mockEvent.headers['x-trace-id']).toBe('67890');
+    expect(typeof mockEvent.headers['x-trace-id']).toBe('string');
+  });
+
+  it('should prioritize x-request-id over X-Request-Id', () => {
+    const middleware = withRequestContext();
+    mockEvent.headers['x-request-id'] = 'lowercase-id';
+    mockEvent.headers['X-Request-Id'] = 'uppercase-id';
+
+    middleware(mockEvent);
+
+    expect(mockEvent.headers['x-request-id']).toBe('lowercase-id');
+  });
+
+  it('should prioritize x-trace-id over X-Trace-Id', () => {
+    const middleware = withRequestContext();
+    mockEvent.headers['x-trace-id'] = 'lowercase-trace';
+    mockEvent.headers['X-Trace-Id'] = 'uppercase-trace';
+
+    middleware(mockEvent);
+
+    expect(mockEvent.headers['x-trace-id']).toBe('lowercase-trace');
+  });
+
+  it('should prioritize headers over requestContext', () => {
+    const middleware = withRequestContext();
+    mockEvent.headers['x-request-id'] = 'header-id';
+    mockEvent.requestContext.requestId = 'context-id';
+
+    middleware(mockEvent);
+
+    expect(mockEvent.headers['x-request-id']).toBe('header-id');
   });
 });

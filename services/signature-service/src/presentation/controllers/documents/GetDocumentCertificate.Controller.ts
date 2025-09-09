@@ -9,8 +9,8 @@ import { makeDocumentsQueriesPort } from "../../../app/adapters/documents/makeDo
 import { DefaultDocumentsQueryService } from "../../../app/services/Documents";
 import { DocumentIdPath } from "../../../presentation/schemas/common/path";
 import type { Document } from "../../../domain/entities/Document";
-import type { DocumentId } from "../../../domain/value-objects/Ids";
-import { DocumentIdSchema } from "../../../domain/value-objects/Ids";
+import type { DocumentId } from "@/domain/value-objects/ids";
+import { DocumentIdSchema } from "@/domain/value-objects/ids";
 
 /**
  * @description Get Document Certificate controller
@@ -18,8 +18,8 @@ import { DocumentIdSchema } from "../../../domain/value-objects/Ids";
 export const GetDocumentCertificateController = createQueryController<{ documentId: DocumentId }, Document | null>({
   pathSchema: DocumentIdPath,
   appServiceClass: DefaultDocumentsQueryService,
-  createDependencies: (c) => makeDocumentsQueriesPort(c.repos.documents),
-  extractParams: (path) => ({
+  createDependencies: (c: any) => makeDocumentsQueriesPort(c.repos.documents),
+  extractParams: (path: any) => ({
     documentId: DocumentIdSchema.parse(path.id),
   }),
   responseType: "ok"
@@ -27,3 +27,11 @@ export const GetDocumentCertificateController = createQueryController<{ document
 
 // Export handler for backward compatibility
 export const handler = GetDocumentCertificateController;
+
+
+
+
+
+
+
+

@@ -5,7 +5,7 @@
  */
 
 import { asISO, asISOOpt } from "@lawprotect/shared-ts";
-import type { DelegationRepoRow } from "../../../shared/types/delegation/DelegationTypes";
+import type { DelegationRepoRow } from "../../../domain/types/delegation/DelegationTypes";
 
 /**
  * @summary DynamoDB DTO shape for delegation items
@@ -49,3 +49,9 @@ export const dtoToDelegationRow = (dto: DelegationItemDTO): DelegationRepoRow =>
   expiresAt: asISOOpt(dto.expiresAt),
   metadata: dto.metadata,
 });
+
+
+
+
+
+

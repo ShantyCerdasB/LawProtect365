@@ -12,7 +12,7 @@ import type {
   SearchGlobalPartiesByEmailAppResult,
   GetGlobalPartyAppInput,
   GetGlobalPartyAppResult
-} from "../../../shared/types/global-parties";
+} from "../../../domain/types/global-parties";
 
 /**
  * @description Queries port for Global Party operations.
@@ -33,6 +33,12 @@ export interface GlobalPartiesQueriesPort {
    */
   searchByEmail(query: SearchGlobalPartiesByEmailAppInput): Promise<SearchGlobalPartiesByEmailAppResult>;
 }
+
+
+
+
+
+
 
 
 

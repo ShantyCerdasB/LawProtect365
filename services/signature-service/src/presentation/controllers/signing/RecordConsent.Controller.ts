@@ -9,7 +9,7 @@ import { makeSigningCommandsPort } from "../../../app/adapters/signing/makeSigni
 import { DefaultSigningCommandService } from "../../../app/services/Signing";
 import { SigningConsentBody } from "../../../presentation/schemas/signing/SigningConsent.schema";
 import { EnvelopeIdPath } from "../../../presentation/schemas/common/path";
-import type { SigningConsentControllerInput } from "../../../shared/types/signing/ControllerInputs";
+import type { SigningConsentControllerInput } from "../../../domain/types/signing/ControllerInputs";
 import type { SigningConsentResult } from "../../../app/ports/signing/SigningCommandsPort";
 
 /**
@@ -19,9 +19,10 @@ export const RecordConsentController = createCommandController<SigningConsentCon
   bodySchema: SigningConsentBody,
   pathSchema: EnvelopeIdPath,
   appServiceClass: DefaultSigningCommandService,
-  createDependencies: (c) => makeSigningCommandsPort(
+  createDependencies: (c: any) => makeSigningCommandsPort(
     c.repos.envelopes,
     c.repos.parties,
+    c.repos.documents,
     {
       events: c.events.publisher,
       ids: c.ids,
@@ -44,7 +45,7 @@ export const RecordConsentController = createCommandController<SigningConsentCon
       },
     }
   ),
-  extractParams: (path, body) => ({
+  extractParams: (path: any, body: any) => ({
     tenantId: path.tenantId,
     envelopeId: path.id,
     signerId: body.signerId,
@@ -57,3 +58,11 @@ export const RecordConsentController = createCommandController<SigningConsentCon
 
 // Export handler for backward compatibility
 export const handler = RecordConsentController;
+
+
+
+
+
+
+
+

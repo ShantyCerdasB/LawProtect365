@@ -1,19 +1,24 @@
-﻿export * from "./Ids";
-export * from "./Email";
-export * from "./PersonName";
-export * from "./S3ObjectRef";
-export * from "./ContentType";
-export * from "./HashDigest";
-export * from "./Page";
-export * from "./Geometry";
-export * from "./InputType";
-export * from "./Party";
-export * from "./RequestToken";
-export * from "./ConsentRecord";
-export * from "./Audit";
-export * from "./EnvelopeStatus";
-export * from "./Kms";
-export * from "./PaginationCursor";
-export * from "./ObjectVersion";
-export * from "./FileSize";
-export * from "./Reason";
+/**
+ * @file index.ts
+ * @summary Value objects exports
+ * @description Main exports for all value objects organized by domain
+ */
+
+// Common value objects
+export * from "./common";
+
+// Domain-specific value objects
+export * from "./audit";
+export * from "./consent";
+export * from "./document";
+export * from "./envelope";
+export * from "./ids";
+export * from "./party";
+export * from "./security";
+export * from "./storage";
+
+
+
+
+
+

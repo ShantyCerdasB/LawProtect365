@@ -9,7 +9,7 @@ import type {
   GetConsentAppResult,
   ListConsentsAppInput,
   ListConsentsAppResult 
-} from "../../../shared/types/consent/AppServiceInputs";
+} from "../../../domain/types/consent/AppServiceInputs";
 
 /**
  * @summary Port interface for consent query operations
@@ -32,3 +32,9 @@ export interface ConsentQueriesPort {
    */
   listByEnvelope(input: ListConsentsAppInput): Promise<ListConsentsAppResult>;
 }
+
+
+
+
+
+

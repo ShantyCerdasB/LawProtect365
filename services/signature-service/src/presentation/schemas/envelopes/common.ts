@@ -6,7 +6,7 @@
  */
 
 import { z } from "@lawprotect/shared-ts";
-import { TenantIdValidationSchema } from "../../../shared/validations/schemas/common";
+import { TenantIdValidationSchema } from "@/domain/value-objects/ids";
 import { ENVELOPE_STATUSES, ENVELOPE_VALIDATION_RULES, PAGINATION_LIMITS } from "../../../domain/values/enums";
 
 // Re-export commonly used enums and constants
@@ -125,3 +125,9 @@ export type BaseEnvelopeFields = z.infer<typeof BaseEnvelopeFields>;
 export type FullEnvelopeFields = z.infer<typeof FullEnvelopeFields>;
 export type EnvelopeNameFields = z.infer<typeof EnvelopeNameFields>;
 export type EnvelopeStatusFields = z.infer<typeof EnvelopeStatusFields>;
+
+
+
+
+
+

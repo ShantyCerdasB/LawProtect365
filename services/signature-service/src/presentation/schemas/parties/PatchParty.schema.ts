@@ -58,3 +58,9 @@ export const PatchPartyResponse = z.object({
 export type PatchPartyPathType = z.infer<typeof PatchPartyPath>;
 export type PatchPartyBodyType = z.infer<typeof PatchPartyBody>;
 export type PatchPartyResponseType = z.infer<typeof PatchPartyResponse>;
+
+
+
+
+
+

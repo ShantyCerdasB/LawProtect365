@@ -1,6 +1,6 @@
 import type { Document } from "../entities/Document";
 import type { Envelope } from "../entities/Envelope";
-import { DocumentStatusSchema, type DocumentStatus } from "../value-objects/DocumentStatus";
+import { DocumentStatusSchema, type DocumentStatus } from "@/domain/value-objects/index";
 import { ALLOWED_CONTENT_TYPES } from "../values/enums";
 import { invalidDocumentState, invalidDocumentContent } from "@/shared/errors";
 
@@ -147,3 +147,9 @@ export const assertDocumentLockDeletable = (
     });
   }
 };
+
+
+
+
+
+

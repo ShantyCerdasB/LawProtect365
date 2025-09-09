@@ -20,3 +20,9 @@ export type DeleteConsentResponseType = z.infer<typeof DeleteConsentResponse>;
 
 
 
+
+
+
+
+
+

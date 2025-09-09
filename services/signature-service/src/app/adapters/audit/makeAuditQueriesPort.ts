@@ -11,7 +11,7 @@ import type {
   GetAuditEventInput, 
   GetAuditEventResult
 } from "../../ports/audit";
-import type { AuditQueriesPortDependencies } from "../../../shared/types/audit";
+import type { AuditQueriesPortDependencies } from "../../../domain/types/audit";
 
 /**
  * @description Creates an implementation of AuditQueriesPort
@@ -47,7 +47,7 @@ export const makeAuditQueriesPort = (
         envelopeId: input.envelopeId,
         items,
         meta: {
-          limit: input.limit ?? 50,
+          hasNext: !!result.meta?.nextCursor,
           nextCursor: result.meta?.nextCursor,
         },
       };
@@ -77,3 +77,9 @@ export const makeAuditQueriesPort = (
     },
   };
 };
+
+
+
+
+
+

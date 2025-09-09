@@ -17,6 +17,10 @@ const MODULE_PATHS = [
   '../../src/types/security.js',
   '../../src/types/corsConfig.js',
   '../../src/types/mapErrorOptions.js',
+  '../../src/types/actor.js',
+  '../../src/types/documentLock.js',
+  '../../src/types/outbox.js',
+  '../../src/types/response.js',
 ] as const;
 
 type ModuleExports = Record<string, unknown>;

@@ -9,12 +9,12 @@
  * errors via `mapAwsError`. Implements `InputsRepository`.
  */
 
-import type { InputsRepository } from "../../shared/contracts/repositories/inputs/InputsRepository";
+import type { InputsRepository } from "../../domain/contracts/repositories/inputs/InputsRepository";
 import { ConflictError, NotFoundError, mapAwsError, nowIso, requireQuery } from "@lawprotect/shared-ts";
 import type { DdbClientLike } from "@lawprotect/shared-ts";
 import type { Input } from "../../domain/entities/Input";
-import type { EnvelopeId } from "../../domain/value-objects/Ids";
-import type { InputKey } from "../../shared/types/infrastructure/dynamodb";
+import type { EnvelopeId } from "@/domain/value-objects/ids";
+import type { InputKey } from "../../domain/types/infrastructure/dynamodb";
 import {
   inputItemMapper,
   inputPk,
@@ -254,3 +254,9 @@ export class InputRepositoryDdb implements InputsRepository {
     }
   }
 }
+
+
+
+
+
+

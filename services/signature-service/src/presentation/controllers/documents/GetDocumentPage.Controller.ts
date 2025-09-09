@@ -9,8 +9,8 @@ import { makeDocumentsQueriesPort } from "../../../app/adapters/documents/makeDo
 import { DefaultDocumentsQueryService } from "../../../app/services/Documents";
 import { z } from "@lawprotect/shared-ts";
 import type { Document } from "../../../domain/entities/Document";
-import type { DocumentId } from "../../../domain/value-objects/Ids";
-import { DocumentIdSchema } from "../../../domain/value-objects/Ids";
+import type { DocumentId } from "@/domain/value-objects/ids";
+import { DocumentIdSchema } from "@/domain/value-objects/ids";
 
 /**
  * @description Path parameter schema for document page retrieval
@@ -37,8 +37,8 @@ export const GetDocumentPageController = createQueryController<{ documentId: Doc
   pathSchema: EnvelopeDocPagePath,
   querySchema: DocumentPageQuery,
   appServiceClass: DefaultDocumentsQueryService,
-  createDependencies: (c) => makeDocumentsQueriesPort(c.repos.documents),
-  extractParams: (path) => ({
+  createDependencies: (c: any) => makeDocumentsQueriesPort(c.repos.documents),
+  extractParams: (path: any) => ({
     documentId: DocumentIdSchema.parse(path.docId),
   }),
   responseType: "ok"
@@ -46,3 +46,11 @@ export const GetDocumentPageController = createQueryController<{ documentId: Doc
 
 // Export handler for backward compatibility
 export const handler = GetDocumentPageController;
+
+
+
+
+
+
+
+

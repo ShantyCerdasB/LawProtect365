@@ -5,11 +5,11 @@
  * Extends BaseEventService to provide Party-specific event publishing functionality.
  */
 
-import { BaseEventService } from "../../../shared/services/BaseEventService";
+import { BaseEventService } from "../../../domain/services/BaseEventService";
 import type { DomainEvent } from "@lawprotect/shared-ts";
 import { makeEvent } from "@lawprotect/shared-ts";
-import type { PartyId, EnvelopeId, TenantId } from "../../../domain/value-objects/Ids";
-import type { ActorContext } from "../../../domain/entities/ActorContext";
+import type { PartyId, EnvelopeId, TenantId } from "@/domain/value-objects/ids";
+import type { ActorContext } from "@lawprotect/shared-ts";
 
 /**
  * @summary Event service for Parties domain events
@@ -131,3 +131,9 @@ export class PartiesEventService extends BaseEventService {
     await this.publishDomainEvent(event, traceId);
   }
 }
+
+
+
+
+
+

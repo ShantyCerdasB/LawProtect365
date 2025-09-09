@@ -5,8 +5,8 @@
  */
 
 import type { Envelope } from "../../../domain/entities/Envelope";
-import type { EnvelopeId, TenantId, UserId } from "../../../domain/value-objects/Ids";
-import type { EnvelopeStatus } from "../../../domain/value-objects/EnvelopeStatus";
+import type { EnvelopeId, TenantId, UserId } from "@/domain/value-objects/ids";
+import type { EnvelopeStatus } from "@/domain/value-objects/index";
 
 /**
  * @summary Base interface for envelope operations
@@ -105,3 +105,9 @@ export interface EnvelopesCommandsPort {
    */
   delete(command: DeleteEnvelopeCommand): Promise<DeleteEnvelopeResult>;
 }
+
+
+
+
+
+

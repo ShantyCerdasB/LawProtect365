@@ -38,3 +38,9 @@ export const GlobalPartyCommonFields = {
     sms: z.boolean().optional(),
   }).optional(),
 } as const;
+
+
+
+
+
+

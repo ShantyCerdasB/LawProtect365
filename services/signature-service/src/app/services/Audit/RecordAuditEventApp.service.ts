@@ -9,7 +9,7 @@ import type { AuditCommandsPort } from "../../ports/audit/AuditCommandsPort";
 import type { 
   RecordAuditEventAppInput, 
   RecordAuditEventAppResult 
-} from "../../../shared/types/audit/AppServiceInputs";
+} from "../../../domain/types/audit/AppServiceInputs";
 import { formatActor } from "@lawprotect/shared-ts";
 
 /**
@@ -42,3 +42,9 @@ export class RecordAuditEventAppService {
     };
   }
 }
+
+
+
+
+
+

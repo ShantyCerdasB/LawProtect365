@@ -26,12 +26,13 @@ export const PatchDocumentController = createCommandController<UpdateDocumentCom
   bodySchema: PatchDocumentBody,
   pathSchema: DocumentIdPath,
   appServiceClass: DefaultDocumentsCommandService,
-  createDependencies: (c) => makeDocumentsCommandsPort({
+  createDependencies: (c: any) => makeDocumentsCommandsPort({
     documentsRepo: c.repos.documents,
+    envelopesRepo: c.repos.envelopes,
     ids: c.ids,
     s3Service: c.services.documentsS3,
   }),
-  extractParams: (path, body) => ({
+  extractParams: (path: any, body: any) => ({
     documentId: path.id,
     name: body.name,
     metadata: body.metadata,
@@ -49,3 +50,11 @@ export const PatchDocumentController = createCommandController<UpdateDocumentCom
 
 // Export handler for backward compatibility
 export const handler = PatchDocumentController;
+
+
+
+
+
+
+
+

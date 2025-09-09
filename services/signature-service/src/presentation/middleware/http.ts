@@ -150,3 +150,9 @@ export const wrapPublicController = (
   base: HandlerFn,
   opts: Omit<WrapControllerOptions, "auth">
 ): HandlerFn => wrapController(base, { ...opts, auth: false });
+
+
+
+
+
+

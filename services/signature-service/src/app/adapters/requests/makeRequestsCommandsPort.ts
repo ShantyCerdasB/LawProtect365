@@ -26,8 +26,8 @@ import type { Repository } from "@lawprotect/shared-ts";
 import type { Envelope } from "../../../domain/entities/Envelope";
 import type { Party } from "../../../domain/entities/Party";
 import type { Input } from "../../../domain/entities/Input";
-import type { EnvelopeId, PartyId } from "../../../domain/value-objects/Ids";
-import type { PartyKey, InputKey } from "../../../shared/types/infrastructure/dynamodb";
+import type { EnvelopeId, PartyId } from "@/domain/value-objects/ids";
+import type { PartyKey, InputKey } from "../../../domain/types/infrastructure/dynamodb";
 import { DefaultRequestsValidationService } from "../../services/Requests/RequestsValidationService";
 import { DefaultRequestsAuditService } from "../../services/Requests/RequestsAuditService";
 import { DefaultRequestsEventService } from "../../services/Requests/RequestsEventService";
@@ -36,7 +36,7 @@ import { nowIso, NotFoundError, ConflictError, BadRequestError, ErrorCodes } fro
 import { assertLifecycleTransition, assertDraft } from "../../../domain/rules/EnvelopeLifecycle.rules";
 import { assertReadyToSend, assertInvitePolicy } from "../../../domain/rules/Flow.rules";
 import { assertCancelDeclineAllowed, assertReasonValid } from "../../../domain/rules/CancelDecline.rules";
-import type { S3Presigner } from "../../../infrastructure/s3/S3Presigner";
+import type { S3Presigner } from "@lawprotect/shared-ts";
 
 // Helper function types
 type ValidationService = DefaultRequestsValidationService;
@@ -691,3 +691,9 @@ export function makeRequestsCommandsPort(config: RequestsCommandsPortConfig): Re
     }
   };
 }
+
+
+
+
+
+

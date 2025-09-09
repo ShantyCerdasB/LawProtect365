@@ -10,15 +10,15 @@ import type { DdbClientLike } from "@lawprotect/shared-ts";
 import { requireQuery, mapAwsError, ConflictError, ErrorCodes, nowIso, toDdbItem } from "@lawprotect/shared-ts";
 
 import type { Document } from "../../domain/entities/Document";
-import type { DocumentId, EnvelopeId } from "../../domain/value-objects/Ids";
+import type { DocumentId, EnvelopeId } from "@/domain/value-objects/ids";
 import { 
   documentItemMapper, 
   documentPk, 
   documentSk,
   type DdbDocumentItem 
-} from "../../shared/types/infrastructure/DocumentDdbTypes";
+} from "../../domain/types/infrastructure/DocumentDdbTypes";
 import { documentNotFound, badRequest } from "../../shared/errors";
-import type { DocumentsRepository, DocumentKey } from "../../shared/contracts/repositories/documents/DocumentsRepository";
+import type { DocumentsRepository, DocumentKey } from "../../domain/contracts/repositories/documents/DocumentsRepository";
 
 /**
  * @summary Coerces a typed object into the Record<string, unknown> shape expected by DynamoDB clients
@@ -332,4 +332,10 @@ export class DocumentRepositoryDdb implements DocumentsRepository {
     }
   }
 }
+
+
+
+
+
+
 

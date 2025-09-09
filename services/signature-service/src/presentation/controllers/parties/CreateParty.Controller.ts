@@ -7,7 +7,7 @@
 import { createCommandController } from "../../../shared/controllers/controllerFactory";
 import { DefaultPartiesCommandService } from "../../../app/services/Parties";
 import { CreatePartyBody, CreatePartyParams } from "../../../presentation/schemas/parties/CreateParty.schema";
-import type { CreatePartyControllerInput } from "../../../shared/types/parties/ControllerInputs";
+import type { CreatePartyControllerInput } from "../../../domain/types/parties/ControllerInputs";
 import type { CreatePartyResult } from "../../../app/ports/parties";
 
 /**
@@ -17,8 +17,8 @@ export const CreatePartyController = createCommandController<CreatePartyControll
   bodySchema: CreatePartyBody,
   pathSchema: CreatePartyParams,
   appServiceClass: DefaultPartiesCommandService,
-  createDependencies: (c) => c.parties.commandsPort,
-  extractParams: (path, body) => ({
+  createDependencies: (c: any) => c.parties.commandsPort,
+  extractParams: (path: any, body: any) => ({
     tenantId: path.tenantId,
     envelopeId: path.envelopeId,
     name: body.name,
@@ -29,3 +29,11 @@ export const CreatePartyController = createCommandController<CreatePartyControll
   responseType: "created",
   includeActor: true,
 });
+
+
+
+
+
+
+
+

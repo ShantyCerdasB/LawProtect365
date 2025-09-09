@@ -18,9 +18,17 @@ import { RESPONSE_TYPES } from "../../../domain/values/enums";
 export const handler = createQueryController({
   pathSchema: GetAuditEventPathSchema,
   appServiceClass: GetAuditEventAppService,
-  createDependencies: (container) => makeAuditQueriesPort(container.repos.audit),
-  extractParams: (path) => ({
+  createDependencies: (container: any) => makeAuditQueriesPort(container.repos.audit),
+  extractParams: (path: any) => ({
     eventId: path.id,
   }),
   responseType: RESPONSE_TYPES[0], // 'ok'
 });
+
+
+
+
+
+
+
+

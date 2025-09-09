@@ -6,12 +6,14 @@
  */
 
 import type { EnvelopesCommandsPort, CreateEnvelopeCommand, CreateEnvelopeResult, UpdateEnvelopeCommand, UpdateEnvelopeResult, DeleteEnvelopeCommand, DeleteEnvelopeResult } from "../../ports/envelopes/EnvelopesCommandsPort";
-import type { EnvelopesRepository } from "../../../shared/contracts/repositories/envelopes/EnvelopesRepository";
+import type { EnvelopesRepository } from "../../../domain/contracts/repositories/envelopes/EnvelopesRepository";
 import type { EnvelopesValidationService } from "../../services/envelopes/EnvelopesValidationService";
 import type { EnvelopesAuditService } from "../../services/envelopes/EnvelopesAuditService";
 import type { EnvelopesEventService } from "../../services/envelopes/EnvelopesEventService";
-import type { SignatureServiceConfig } from "../../../shared/contracts/core/Config";
-import type { EnvelopeStatus } from "../../../domain/value-objects/EnvelopeStatus";
+import type { SignatureServiceConfig } from "../../../infrastructure/contracts/core/Config";
+import type { EnvelopeStatus } from "@/domain/value-objects/index";
+import type { PartyRepositoryDdb } from "../../../infrastructure/dynamodb/PartyRepositoryDdb";
+import type { InputRepositoryDdb } from "../../../infrastructure/dynamodb/InputRepositoryDdb";
 import { nowIso } from "@lawprotect/shared-ts";
 import { 
   BadRequestError, 
@@ -19,6 +21,9 @@ import {
   ConflictError,
   ErrorCodes 
 } from "../../../shared/errors";
+import { assertTenantBoundary } from "@lawprotect/shared-ts";
+import { assertLifecycleTransition, assertDraft } from "../../../domain/rules/EnvelopeLifecycle.rules";
+import { assertReadyToSend } from "../../../domain/rules/Flow.rules";
 
 /**
  * Creates an EnvelopesCommandsPort implementation
@@ -34,10 +39,15 @@ export function makeEnvelopesCommandsPort(
   envelopesRepo: EnvelopesRepository,
   ids: { ulid(): string },
   _config: SignatureServiceConfig, // Used for future configuration extensions
+  // ✅ REPOSITORIES FOR RULES VALIDATION
+  partiesRepo: PartyRepositoryDdb,
+  inputsRepo: InputRepositoryDdb,
   // ✅ SERVICIOS OPCIONALES - PATRÓN REUTILIZABLE
   validationService?: EnvelopesValidationService,
   auditService?: EnvelopesAuditService,
-  eventService?: EnvelopesEventService
+  eventService?: EnvelopesEventService,
+  // ✅ RATE LIMITING - PATRÓN REUTILIZABLE
+  rateLimitService?: any // EnvelopesRateLimitService
 ): EnvelopesCommandsPort {
     // Helper function to get system actor details
   const getSystemActor = () => ({
@@ -52,6 +62,9 @@ export function makeEnvelopesCommandsPort(
      * @returns Promise resolving to the created envelope
      */
     async create(command: CreateEnvelopeCommand): Promise<CreateEnvelopeResult> {
+      // Apply generic rules
+      assertTenantBoundary(command.tenantId, command.tenantId);
+      
       // 1. VALIDATION (opcional)
       if (validationService) {
         const isValid = validationService.validateCreateParams({
@@ -119,6 +132,42 @@ export function makeEnvelopesCommandsPort(
      * @returns Promise resolving to the updated envelope
      */
     async update(command: UpdateEnvelopeCommand): Promise<UpdateEnvelopeResult> {
+      // Apply generic rules
+      assertTenantBoundary(command.tenantId, command.tenantId);
+      
+      // Get current envelope for domain rules
+      const currentEnvelope = await envelopesRepo.getById(command.envelopeId);
+      if (!currentEnvelope) {
+        throw new NotFoundError(`Envelope ${command.envelopeId} not found`);
+      }
+      
+      // Apply domain-specific rules
+      if (command.status && currentEnvelope.status !== command.status) {
+        assertLifecycleTransition(currentEnvelope.status, command.status);
+        
+        // If transitioning to "sent", validate envelope is ready
+        if (command.status === "sent") {
+          // Get actual parties and inputs for validation
+          const parties = await partiesRepo.listByEnvelope({ 
+            tenantId: command.tenantId, 
+            envelopeId: command.envelopeId 
+          });
+          const inputs = await inputsRepo.listByEnvelope({ 
+            envelopeId: command.envelopeId 
+          });
+          assertReadyToSend(parties.items, inputs.items);
+          
+          // Apply rate limiting for envelope sending
+          if (rateLimitService) {
+            await rateLimitService.checkSendEnvelopeLimit(command.tenantId);
+          }
+        }
+      }
+      
+      if (command.parties || command.documents) {
+        assertDraft({ status: currentEnvelope.status, envelopeId: command.envelopeId });
+      }
+      
       // 1. VALIDATION (opcional)
       if (validationService) {
         const isValid = validationService.validateUpdateParams({
@@ -203,6 +252,9 @@ export function makeEnvelopesCommandsPort(
      * @returns Promise resolving to deletion confirmation
      */
     async delete(command: DeleteEnvelopeCommand): Promise<DeleteEnvelopeResult> {
+      // Apply generic rules
+      assertTenantBoundary(command.tenantId, command.tenantId);
+      
       // 1. VALIDATION (opcional)
       if (validationService) {
         const current = await envelopesRepo.getById(command.envelopeId);
@@ -257,3 +309,9 @@ export function makeEnvelopesCommandsPort(
     },
   };
 }
+
+
+
+
+
+

@@ -31,6 +31,38 @@ export const toDdbItem = <T extends object>(v: T): Record<string, unknown> =>
  */
 export const stringifyResult = (result: unknown): string => {
   try {
+    // Handle undefined explicitly
+    if (result === undefined) {
+      return stableStringify({ ok: false, reason: "non-serializable-result" });
+    }
+    
+    // Check for non-serializable types before attempting to stringify
+    if (typeof result === 'function' || typeof result === 'symbol' || typeof result === 'bigint') {
+      return stableStringify({ ok: false, reason: "non-serializable-result" });
+    }
+    
+    // Check for objects with non-serializable properties
+    if (typeof result === 'object' && result !== null) {
+      const hasNonSerializable = (obj: any): boolean => {
+        for (const key in obj) {
+          if (obj.hasOwnProperty(key)) {
+            const value = obj[key];
+            if (typeof value === 'function' || typeof value === 'symbol' || typeof value === 'bigint') {
+              return true;
+            }
+            if (typeof value === 'object' && value !== null && hasNonSerializable(value)) {
+              return true;
+            }
+          }
+        }
+        return false;
+      };
+      
+      if (hasNonSerializable(result)) {
+        return stableStringify({ ok: false, reason: "non-serializable-result" });
+      }
+    }
+    
     return stableStringify(result as any);
   } catch {
     return stableStringify({ ok: false, reason: "non-serializable-result" });

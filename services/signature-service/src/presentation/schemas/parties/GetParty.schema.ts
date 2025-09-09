@@ -20,3 +20,9 @@ export const GetPartyParams = z.object({
  * @description Type for GetParty path parameters.
  */
 export type GetPartyParams = z.infer<typeof GetPartyParams>;
+
+
+
+
+
+

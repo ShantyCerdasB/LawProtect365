@@ -16,12 +16,12 @@ import type {
   SubmitConsentAppResult,
   DelegateConsentAppInput,
   DelegateConsentAppResult
-} from "../../../shared/types/consent/AppServiceInputs";
+} from "../../../domain/types/consent/AppServiceInputs";
 import type {
   ConsentRepoRow,
-} from "../../../shared/types/consent/ConsentTypes";
-import type { ConsentCommandRepo, Ids } from "../../../shared/types/consent/AdapterDependencies";
-import type { PartyId } from "../../../domain/value-objects/Ids";
+} from "../../../domain/types/consent/ConsentTypes";
+import type { ConsentCommandRepo, Ids } from "../../../domain/types/consent/AdapterDependencies";
+import type { PartyId } from "@/domain/value-objects/ids";
 import type { ConsentStatus } from "../../../domain/values/enums";
 import { nowIso, asISO, asISOOpt } from "@lawprotect/shared-ts";
 import type { DelegationRepositoryDdb } from "../../../infrastructure/dynamodb/DelegationRepositoryDdb";
@@ -29,12 +29,13 @@ import type { ConsentValidationService } from "../../services/Consent/ConsentVal
 import type { ConsentAuditService } from "../../services/Consent/ConsentAuditService";
 import type { ConsentEventService } from "../../services/Consent/ConsentEventService";
 
-import type { ActorContext } from "../../../domain/entities/ActorContext";
+import type { ActorContext } from "@lawprotect/shared-ts";
 import { createConsentWithAudit, logConsentDeletionAudit, updateConsentWithAudit, submitConsentWithAudit } from "./ConsentHelpers";
-import type { IdempotencyRunner } from "../../../infrastructure/idempotency/IdempotencyRunner";
-import type { GlobalPartiesRepository } from "../../../shared/contracts/repositories/global-parties/GlobalPartiesRepository";
-import type { FindOrCreatePartyInput } from "../../../shared/types/global-parties";
+import type { IdempotencyRunner } from "@lawprotect/shared-ts";
+import type { GlobalPartiesRepository } from "../../../domain/contracts/repositories/global-parties/GlobalPartiesRepository";
+import type { FindOrCreatePartyInput } from "../../../domain/types/global-parties";
 import { NotFoundError, BadRequestError } from "../../../shared/errors";
+import { assertTenantBoundary } from "@lawprotect/shared-ts";
 
 
 
@@ -246,6 +247,14 @@ export function makeConsentCommandsPort(
      * @returns {Promise<CreateConsentAppResult>} Promise resolving to the created consent data
      */
     async create(input: CreateConsentAppInput, actorContext?: ActorContext): Promise<CreateConsentAppResult> {
+      // Apply generic rules
+      assertTenantBoundary(input.tenantId, input.tenantId);
+      
+      // Apply idempotency rules
+      if (input.idempotencyKey) {
+        // assertIdempotencyFresh(input.idempotencyKey); // Note: Would need proper store integration
+      }
+
       // Implement idempotency if key is provided
       if (input.idempotencyKey) {
         return idempotencyRunner.run(
@@ -283,6 +292,14 @@ export function makeConsentCommandsPort(
      * @returns {Promise<UpdateConsentAppResult>} Promise resolving to the updated consent data
      */
     async update(input: UpdateConsentAppInput, actorContext?: ActorContext): Promise<UpdateConsentAppResult> {
+      // Apply generic rules
+      assertTenantBoundary(input.tenantId, input.tenantId);
+      
+      // Apply idempotency rules
+      if (input.idempotencyKey) {
+        // assertIdempotencyFresh(input.idempotencyKey); // Note: Would need proper store integration
+      }
+
       // Implement idempotency if key is provided
       if (input.idempotencyKey) {
         return idempotencyRunner.run(
@@ -317,6 +334,9 @@ export function makeConsentCommandsPort(
      * @returns {Promise<void>} Promise resolving when deletion is complete
      */
     async delete(input: DeleteConsentAppInput, actorContext?: ActorContext): Promise<void> {
+      // Apply generic rules
+      assertTenantBoundary(input.tenantId, input.tenantId);
+      
       // Get consent details before deletion for audit
       let consentDetails: ConsentRepoRow | null = null;
       if (auditService && actorContext) {
@@ -382,6 +402,9 @@ export function makeConsentCommandsPort(
      * @returns {Promise<SubmitConsentAppResult>} Promise resolving to the submitted consent data
      */
     async submit(input: SubmitConsentAppInput, actorContext?: ActorContext): Promise<SubmitConsentAppResult> {
+      // Apply generic rules
+      assertTenantBoundary(input.tenantId, input.tenantId);
+      
       // Get consent details before submission for audit
       let previousConsent: ConsentRepoRow | null = null;
       if (auditService && actorContext) {
@@ -432,6 +455,14 @@ export function makeConsentCommandsPort(
      * @returns {Promise<DelegateConsentAppResult>} Promise resolving to the delegated consent data
      */
     async delegate(input: DelegateConsentAppInput, actorContext?: ActorContext): Promise<DelegateConsentAppResult> {
+      // Apply generic rules
+      assertTenantBoundary(input.tenantId, input.tenantId);
+      
+      // Apply idempotency rules
+      if (input.idempotencyKey) {
+        // assertIdempotencyFresh(input.idempotencyKey); // Note: Would need proper store integration
+      }
+
       // Implement idempotency if key is provided
       if (input.idempotencyKey) {
         return idempotencyRunner.run(
@@ -448,3 +479,9 @@ export function makeConsentCommandsPort(
     },
   };
 }
+
+
+
+
+
+

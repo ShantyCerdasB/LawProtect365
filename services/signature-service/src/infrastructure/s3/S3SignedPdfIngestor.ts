@@ -48,7 +48,7 @@ import type {
   SignedPdfIngestInput, 
   SignedPdfIngestOutput, 
   S3SignedPdfIngestorOptions 
-} from "../../shared/types/s3";
+} from "../../domain/types/s3";
 
 /**
  * Ingests signed PDF documents into S3 via a provided {@link S3Port}.
@@ -131,3 +131,9 @@ export class S3SignedPdfIngestor {
     };
   }
 }
+
+
+
+
+
+

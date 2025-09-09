@@ -22,3 +22,9 @@ export const GetEnvelopeResponse = FullEnvelopeFields.extend({
 });
 
 export type GetEnvelopeResponse = z.infer<typeof GetEnvelopeResponse>;
+
+
+
+
+
+

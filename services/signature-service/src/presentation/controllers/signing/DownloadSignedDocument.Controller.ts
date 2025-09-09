@@ -8,7 +8,7 @@ import { createCommandController, createSigningDependenciesWithS3 } from "../../
 import { DefaultSigningCommandService } from "../../../app/services/Signing";
 import { DownloadSignedDocumentBody } from "../../../presentation/schemas/signing/DownloadSignedDocument.schema";
 import { EnvelopeIdPath } from "../../../presentation/schemas/common/path";
-import type { DownloadSignedDocumentControllerInput } from "../../../shared/types/signing/ControllerInputs";
+import type { DownloadSignedDocumentControllerInput } from "../../../domain/types/signing/ControllerInputs";
 import type { DownloadSignedDocumentResult } from "../../../app/ports/signing/SigningCommandsPort";
 
 /**
@@ -19,7 +19,7 @@ export const DownloadSignedDocumentController = createCommandController<Download
   pathSchema: EnvelopeIdPath,
   appServiceClass: DefaultSigningCommandService,
   createDependencies: createSigningDependenciesWithS3,
-  extractParams: (path, _body) => ({
+  extractParams: (path: any, _body: any) => ({
     tenantId: path.tenantId,
     envelopeId: path.id,
     token: "", // Will be injected by factory
@@ -29,3 +29,11 @@ export const DownloadSignedDocumentController = createCommandController<Download
 
 // Export handler for backward compatibility
 export const handler = DownloadSignedDocumentController;
+
+
+
+
+
+
+
+

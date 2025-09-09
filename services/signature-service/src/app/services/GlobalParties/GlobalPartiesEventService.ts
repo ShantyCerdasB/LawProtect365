@@ -5,10 +5,10 @@
  * Extends BaseEventService to provide Global Party-specific event publishing functionality.
  */
 
-import { BaseEventService } from "../../../shared/services/BaseEventService";
+import { BaseEventService } from "../../../domain/services/BaseEventService";
 import type { DomainEvent } from "@lawprotect/shared-ts";
-import type { TenantId, PartyId } from "../../../domain/value-objects/Ids";
-import type { ActorContext } from "../../../domain/entities/ActorContext";
+import type { TenantId, PartyId } from "@/domain/value-objects/ids";
+import type { ActorContext } from "@lawprotect/shared-ts";
 
 /**
  * @summary Event service for Global Parties domain events
@@ -110,3 +110,9 @@ export class GlobalPartiesEventService extends BaseEventService {
     await this.publishGlobalPartyDeletedEvent(partyId, tenantId, actor);
   }
 }
+
+
+
+
+
+

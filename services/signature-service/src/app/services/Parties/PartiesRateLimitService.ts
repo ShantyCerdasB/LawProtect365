@@ -5,9 +5,9 @@
  * per envelope within a time window. Uses tenant + envelope scoped keys.
  */
 
-import type { RateLimitStore } from "../../../shared/contracts/ratelimit";
-import type { TenantId, EnvelopeId } from "../../../domain/value-objects/Ids";
-import type { PartiesRateLimitConfig } from "../../../shared/types/parties/PartiesTypes";
+import type { RateLimitStore } from "@lawprotect/shared-ts";
+import type { TenantId, EnvelopeId } from "@/domain/value-objects/ids";
+import type { PartiesRateLimitConfig } from "../../../domain/types/parties/PartiesTypes";
 import { TooManyRequestsError, ErrorCodes } from "@lawprotect/shared-ts";
 
 /**
@@ -91,3 +91,9 @@ export class PartiesRateLimitService {
     }
   }
 }
+
+
+
+
+
+

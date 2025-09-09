@@ -20,3 +20,9 @@ export const DownloadSignedDocumentResponse = z.object({
   fileSize: z.number().positive().optional(),
 });
 export type DownloadSignedDocumentResponse = z.infer<typeof DownloadSignedDocumentResponse>;
+
+
+
+
+
+

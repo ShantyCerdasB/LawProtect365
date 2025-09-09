@@ -12,3 +12,9 @@ export const AttachEnvelopeDocumentBody = z.object({
   contentType: z.string().min(1),
 });
 export type AttachEnvelopeDocumentBody = z.infer<typeof AttachEnvelopeDocumentBody>;
+
+
+
+
+
+

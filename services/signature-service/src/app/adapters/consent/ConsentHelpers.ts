@@ -4,10 +4,10 @@
  * @description Common helper functions to eliminate code duplication in consent adapters and services
  */
 
-import type { ConsentCommandRepo } from "../../../shared/types/consent/AdapterDependencies";
+import type { ConsentCommandRepo } from "../../../domain/types/consent/AdapterDependencies";
 import type { ConsentAuditService } from "../../services/Consent/ConsentAuditService";
-import type { CreateConsentAppInput, CreateConsentAppResult } from "../../../shared/types/consent/AppServiceInputs";
-import type { ActorContext } from "../../../domain/entities/ActorContext";
+import type { CreateConsentAppInput, CreateConsentAppResult } from "../../../domain/types/consent/AppServiceInputs";
+import type { ActorContext } from "@lawprotect/shared-ts";
 import type { UserId } from "@lawprotect/shared-ts";
 import { nowIso, asISO, asISOOpt } from "@lawprotect/shared-ts";
 
@@ -285,3 +285,9 @@ function mapRowToSubmitResult(row: any): any {
     submittedAt: row.updatedAt,
   };
 }
+
+
+
+
+
+

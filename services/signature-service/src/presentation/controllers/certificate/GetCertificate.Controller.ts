@@ -9,7 +9,7 @@ import { makeCertificateQueriesPort } from "../../../app/adapters/certificate/ma
 import { DefaultCertificateQueryService } from "../../../app/services/Certificate";
 import { GetCertificateQuery } from "../../../presentation/schemas/certificate/GetCertificate.schema";
 import { EnvelopeIdPath } from "../../../presentation/schemas/common/path";
-import type { GetCertificateControllerInput } from "../../../shared/types/certificate/ControllerInputs";
+import type { GetCertificateControllerInput } from "../../../domain/types/certificate/ControllerInputs";
 import type { GetCertificateResult } from "../../../app/ports/certificate/CertificateQueriesPort";
 
 /**
@@ -19,12 +19,12 @@ export const GetCertificateController = createQueryController<GetCertificateCont
   querySchema: GetCertificateQuery,
   pathSchema: EnvelopeIdPath,
   appServiceClass: DefaultCertificateQueryService,
-  createDependencies: (c) => makeCertificateQueriesPort(
+  createDependencies: (c: any) => makeCertificateQueriesPort(
     c.repos.audit,
     c.repos.envelopes,
     c.certificate.validationService
   ),
-  extractParams: (path, query) => ({
+  extractParams: (path: any, query: any) => ({
     tenantId: path.tenantId,
     envelopeId: path.id,
     limit: query.limit,
@@ -35,3 +35,11 @@ export const GetCertificateController = createQueryController<GetCertificateCont
 
 // Export handler for backward compatibility
 export const handler = GetCertificateController;
+
+
+
+
+
+
+
+

@@ -5,8 +5,8 @@
  */
 
 import { z } from "@lawprotect/shared-ts";
-import { EnvelopeIdValidationSchema as EnvelopeIdSchema, PartyIdValidationSchema as PartyIdSchema } from "../../../shared/validations/schemas/common";
-import { ConsentTypeValidationSchema } from "../../../shared/validations/schemas/consent";
+import { EnvelopeIdValidationSchema as EnvelopeIdSchema, PartyIdValidationSchema as PartyIdSchema } from "@/domain/value-objects/ids";
+import { ConsentTypeValidationSchema } from "@/domain/value-objects/consent";
 
 /** Path: /envelopes/:envelopeId/consents */
 export const CreateConsentPath = z.object({ 
@@ -38,3 +38,9 @@ export const CreateConsentResponse = z.object({
 export type CreateConsentPathType = z.infer<typeof CreateConsentPath>;
 export type CreateConsentBodyType = z.infer<typeof CreateConsentBody>;
 export type CreateConsentResponseType = z.infer<typeof CreateConsentResponse>;
+
+
+
+
+
+

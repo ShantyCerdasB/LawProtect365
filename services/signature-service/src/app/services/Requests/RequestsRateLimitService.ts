@@ -5,10 +5,10 @@
  */
 
 
-import type { EnvelopeId, PartyId } from "../../../domain/value-objects/Ids";
-import type { ActorContext } from "../../../domain/entities/ActorContext";
-import type { RateLimitStore } from "../../../shared/contracts/ratelimit";
-import type { RequestsRateLimitService } from "../../../shared/types/requests/ServiceInterfaces";
+import type { EnvelopeId, PartyId } from "@/domain/value-objects/ids";
+import type { ActorContext } from "@lawprotect/shared-ts";
+import type { RateLimitStore } from "@lawprotect/shared-ts";
+import type { RequestsRateLimitService } from "../../../domain/types/requests/ServiceInterfaces";
 
 /**
  * @summary Rate limiting service for requests operations
@@ -122,3 +122,9 @@ export class DefaultRequestsRateLimitService implements RequestsRateLimitService
     await this.rateLimitStore.incrementAndCheck(key, window);
   }
 }
+
+
+
+
+
+
