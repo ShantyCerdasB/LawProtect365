@@ -12,29 +12,27 @@ import type {
 } from "../../ports/inputs/InputsQueriesPort";
 
 /**
- * @summary Default implementation of InputsQueryService
+ * @summary Query service for Input operations
  * @description Simple wrapper around InputsQueriesPort
  */
-export class DefaultInputsQueryService {
+export class InputsQueryService {
   constructor(private readonly queriesPort: InputsQueriesPort) {}
 
   /**
-   * Gets an input by ID.
+   * @summary Gets an input by ID
+   * @param query - Query data for getting input
+   * @returns Promise resolving to input or null
    */
   async getById(query: GetInputQuery): Promise<ListInputsResult["items"][number] | null> {
     return this.queriesPort.getById(query);
   }
 
   /**
-   * Lists inputs by envelope with optional filters.
+   * @summary Lists inputs by envelope with optional filters
+   * @param query - Query data for listing inputs
+   * @returns Promise resolving to paginated list of inputs
    */
   async listByEnvelope(query: ListInputsQuery): Promise<ListInputsResult> {
     return this.queriesPort.listByEnvelope(query);
   }
-}
-
-
-
-
-
-
+};

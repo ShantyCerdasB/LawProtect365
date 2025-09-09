@@ -150,11 +150,6 @@ export class PartiesValidationService {
       );
     }
   }
-
-}
-
-
-
-
+};
 
 

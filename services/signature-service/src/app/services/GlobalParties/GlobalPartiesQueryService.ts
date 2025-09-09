@@ -13,12 +13,13 @@ import type {
   SearchGlobalPartiesByEmailAppInput,
   SearchGlobalPartiesByEmailAppResult
 } from "../../../domain/types/global-parties";
-import type { GlobalPartiesQueryService } from "../../../domain/types/global-parties/ServiceInterfaces";
+import type { GlobalPartiesQueryService as IGlobalPartiesQueryService } from "../../../domain/types/global-parties/ServiceInterfaces";
 
 /**
+ * @summary Query service for Global Parties operations
  * @description Default implementation of GlobalPartiesQueryService
  */
-export class DefaultGlobalPartiesQueryService implements GlobalPartiesQueryService {
+export class GlobalPartiesQueryService implements IGlobalPartiesQueryService {
   constructor(private readonly queriesPort: GlobalPartiesQueriesPort) {}
 
   async list(input: ListGlobalPartiesAppInput): Promise<ListGlobalPartiesAppResult> {
@@ -32,11 +33,5 @@ export class DefaultGlobalPartiesQueryService implements GlobalPartiesQueryServi
   async searchByEmail(input: SearchGlobalPartiesByEmailAppInput): Promise<SearchGlobalPartiesByEmailAppResult> {
     return this.queriesPort.searchByEmail(input);
   }
-}
-
-
-
-
-
-
+};
 

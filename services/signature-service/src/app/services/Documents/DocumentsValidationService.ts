@@ -11,8 +11,8 @@ import type {
   UpdateDocumentBinaryCommand
 } from "../../ports/documents/DocumentsCommandsPort";
 import type { DocumentLock } from "@lawprotect/shared-ts";
-import type { DocumentId, EnvelopeId } from "@/domain/value-objects/ids";
-import type { EnvelopeStatus, DocumentStatus } from "@/domain/value-objects/index";
+import type { DocumentId, EnvelopeId } from "../../../domain/value-objects/ids";
+import type { EnvelopeStatus, DocumentStatus } from "../../../domain/value-objects/index";
 import { badRequest } from "../../../shared/errors";
 import { ErrorCodes } from "@lawprotect/shared-ts";
 import { FILE_SIZE_LIMITS } from "../../../domain/values/enums";
@@ -342,10 +342,4 @@ export class DefaultDocumentsValidationService implements DocumentsValidationSer
   validateDocumentLockDeletable(lock: { lockId: string; ownerId: string; expiresAt: string }, ownerId: string): void {
     assertDocumentLockDeletable(lock, ownerId);
   }
-}
-
-
-
-
-
-
+};

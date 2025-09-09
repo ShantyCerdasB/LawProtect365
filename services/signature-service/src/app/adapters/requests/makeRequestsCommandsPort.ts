@@ -31,19 +31,19 @@ import type { Input } from "../../../domain/entities/Input";
 import type { EnvelopeId, PartyId } from "../../../domain/value-objects/ids";
 import type { PartyStatus, PartyRole, EnvelopeStatus } from "../../../domain/values/enums";
 import type { PartyKey, InputKey } from "../../../domain/types/infrastructure/dynamodb";
-import { DefaultRequestsValidationService } from "../../services/Requests/RequestsValidationService";
-import { DefaultRequestsAuditService } from "../../services/Requests/RequestsAuditService";
-import { DefaultRequestsEventService } from "../../services/Requests/RequestsEventService";
-import { DefaultRequestsRateLimitService } from "../../services/Requests/RequestsRateLimitService";
+import { RequestsValidationService } from "../../services/Requests/RequestsValidationService";
+import { RequestsAuditService } from "../../services/Requests/RequestsAuditService";
+import { RequestsEventService } from "../../services/Requests/RequestsEventService";
+import { RequestsRateLimitService } from "../../services/Requests/RequestsRateLimitService";
 import { assertLifecycleTransition, assertDraft } from "../../../domain/rules/EnvelopeLifecycle.rules";
 import { assertReadyToSend, assertInvitePolicy } from "../../../domain/rules/Flow.rules";
 import { assertCancelDeclineAllowed, assertReasonValid } from "../../../domain/rules/CancelDecline.rules";
 
 // Helper function types
-type ValidationService = DefaultRequestsValidationService;
-type AuditService = DefaultRequestsAuditService;
-type EventService = DefaultRequestsEventService;
-type RateLimitService = DefaultRequestsRateLimitService;
+type ValidationService = RequestsValidationService;
+type AuditService = RequestsAuditService;
+type EventService = RequestsEventService;
+type RateLimitService = RequestsRateLimitService;
 
 /**
  * Validates envelope existence and returns the envelope entity
@@ -472,10 +472,10 @@ interface RequestsCommandsPortConfig {
     inputs: Repository<Input, InputKey, undefined>;
   };
   services?: {
-    validation?: DefaultRequestsValidationService;
-    audit?: DefaultRequestsAuditService;
-    event?: DefaultRequestsEventService;
-    rateLimit?: DefaultRequestsRateLimitService;
+    validation?: RequestsValidationService;
+    audit?: RequestsAuditService;
+    event?: RequestsEventService;
+    rateLimit?: RequestsRateLimitService;
   };
   infrastructure?: {
     ids?: { ulid(): string };

@@ -1,3 +1,10 @@
+/**
+ * @file Documents.rules.ts
+ * @summary Domain rules for document lifecycle and validation
+ * @description Validates document status transitions, content validation,
+ * size limits, and envelope relationships for document operations.
+ */
+
 import type { Document } from "../entities/Document";
 import type { Envelope } from "../entities/Envelope";
 import { DocumentStatusSchema, type DocumentStatus } from "@/domain/value-objects/index";
@@ -147,9 +154,5 @@ export const assertDocumentLockDeletable = (
     });
   }
 };
-
-
-
-
 
 

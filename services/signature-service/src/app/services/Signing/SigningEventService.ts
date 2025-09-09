@@ -8,14 +8,14 @@
 import { BaseEventService } from "../../../domain/services/BaseEventService";
 import type { DomainEvent, ActorContext } from "@lawprotect/shared-ts";
 import type { EnvelopeId, PartyId, TenantId } from "@/domain/value-objects/ids";
-import type { SigningEventService } from "../../../domain/types/signing";
+import type { SigningEventService as ISigningEventService } from "../../../domain/types/signing";
 
 /**
  * @summary Event service for Signing domain events
  * @description Extends BaseEventService to provide Signing-specific event publishing functionality.
  * Uses the outbox pattern for reliable event delivery.
  */
-export class DefaultSigningEventService extends BaseEventService implements SigningEventService {
+export class SigningEventService extends BaseEventService implements ISigningEventService {
   /**
    * @summary Publishes a signing completed domain event
    * @description Publishes a signing completion event using the outbox pattern
@@ -216,10 +216,4 @@ export class DefaultSigningEventService extends BaseEventService implements Sign
   ): Promise<void> {
     await this.publishDomainEvent(event, traceId);
   }
-}
-
-
-
-
-
-
+};

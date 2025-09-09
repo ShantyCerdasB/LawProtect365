@@ -15,36 +15,36 @@ import type {
 } from "../../../domain/types/parties";
 
 /**
- * @summary Default implementation of PartiesQueryService
+ * @summary Query service for Parties operations
  * @description Simple wrapper around PartiesQueriesPort
  */
-export class DefaultPartiesQueryService {
+export class PartiesQueryService {
   constructor(private readonly queriesPort: PartiesQueriesPort) {}
 
   /**
-   * Lists Parties in an envelope with optional filters.
+   * @summary Lists Parties in an envelope with optional filters
+   * @param query - Query data for listing parties
+   * @returns Promise resolving to paginated list of parties
    */
   async list(query: ListPartiesAppInput): Promise<ListPartiesAppResult> {
     return this.queriesPort.list(query);
   }
 
   /**
-   * Gets a Party by ID.
+   * @summary Gets a Party by ID
+   * @param query - Query data for getting party
+   * @returns Promise resolving to party or null
    */
   async getById(query: GetPartyAppInput): Promise<GetPartyAppResult> {
     return this.queriesPort.getById(query);
   }
 
   /**
-   * Searches Parties by email in an envelope.
+   * @summary Searches Parties by email in an envelope
+   * @param query - Query data for searching parties
+   * @returns Promise resolving to search results
    */
   async searchByEmail(query: SearchPartiesByEmailAppInput): Promise<SearchPartiesByEmailAppResult> {
     return this.queriesPort.searchByEmail(query);
   }
-}
-
-
-
-
-
-
+};

@@ -6,7 +6,7 @@
 
 import { BaseEventService } from "../../../domain/services/BaseEventService";
 import { makeEvent, DomainEvent } from "@lawprotect/shared-ts";
-import type { RequestsEventService } from "../../../domain/types/requests/ServiceInterfaces";
+import type { RequestsEventService as IRequestsEventService } from "../../../domain/types/requests/ServiceInterfaces";
 import type { PartyId, EnvelopeId, TenantId } from "@/domain/value-objects/ids";
 import type { ActorContext } from "@lawprotect/shared-ts";
 
@@ -14,7 +14,7 @@ import type { ActorContext } from "@lawprotect/shared-ts";
  * @summary Event service for requests operations
  * @description Extends BaseEventService to provide request-specific event publishing
  */
-export class DefaultRequestsEventService extends BaseEventService implements RequestsEventService {
+export class RequestsEventService extends BaseEventService implements IRequestsEventService {
   
   /**
    * @summary Publishes a module-specific domain event
@@ -172,10 +172,4 @@ export class DefaultRequestsEventService extends BaseEventService implements Req
     
     await this.publishModuleEvent(event);
   }
-}
-
-
-
-
-
-
+};

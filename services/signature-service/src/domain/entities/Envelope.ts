@@ -16,37 +16,37 @@ import type { EnvelopeStatus } from "@/domain/value-objects/index";
  */
 export interface Envelope {
   /** Canonical identifier of the envelope (ULID/UUID brand). */
-  envelopeId: EnvelopeId;
+  readonly envelopeId: EnvelopeId;
 
   /** Owner (creator) of the envelope. */
-  ownerId: UserId;
+  readonly ownerId: UserId;
 
   /** Tenant owning the resource (multitenancy boundary). */
-  tenantId: TenantId;
+  readonly tenantId: TenantId;
 
   /** Human-friendly title (trimmed, typically ≤ 255 chars). */
-  title: string;
+  readonly title: string;
 
   /** Current lifecycle status of the envelope. */
-  status: EnvelopeStatus;
+  readonly status: EnvelopeStatus;
 
   /** ISO-8601 creation timestamp. */
-  createdAt: string;
+  readonly createdAt: string;
 
   /** ISO-8601 last update timestamp. */
-  updatedAt: string;
+  readonly updatedAt: string;
 
   /** Associated party identifiers. */
-  parties: string[];
+  readonly parties: string[];
 
   /** Associated document identifiers. */
-  documents: string[];
+  readonly documents: string[];
 
   /** Optional policy configuration at the envelope level. */
-  policies?: Record<string, unknown>;
+  readonly policies?: Record<string, unknown>;
 
   /** Free-form metadata for extensibility. */
-  metadata?: Record<string, unknown>;
+  readonly metadata?: Record<string, unknown>;
 }
 
 

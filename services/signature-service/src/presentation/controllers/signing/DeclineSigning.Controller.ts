@@ -4,9 +4,8 @@
  * @description Handles signing decline requests
  */
 
-import { createCommandController, createSigningDependencies, extractEnvelopeParams } from "../../../shared/controllers/controllerFactory";
-import { makeSigningCommandsPort } from "../../../app/adapters/signing/makeSigningCommandsPort";
-import { DefaultSigningCommandService } from "../../../app/services/Signing";
+import { createCommandController, extractEnvelopeParams } from "../../../shared/controllers/controllerFactory";
+import { SigningCommandService } from "../../../app/services/Signing";
 import { DeclineSigningBody } from "../../../presentation/schemas/signing/DeclineSigning.schema";
 import { EnvelopeIdPath } from "../../../presentation/schemas/common/path";
 import type { DeclineSigningControllerInput } from "../../../domain/types/signing/ControllerInputs";
@@ -18,13 +17,8 @@ import type { DeclineSigningResult } from "../../../app/ports/signing/SigningCom
 export const DeclineSigningController = createCommandController<DeclineSigningControllerInput, DeclineSigningResult>({
   bodySchema: DeclineSigningBody,
   pathSchema: EnvelopeIdPath,
-  appServiceClass: DefaultSigningCommandService,
-  createDependencies: (c: any) => makeSigningCommandsPort(
-    c.repos.envelopes,
-    c.repos.parties,
-    c.repos.documents,
-    createSigningDependencies(c)
-  ),
+  appServiceClass: SigningCommandService,
+  createDependencies: (c: any) => c.signing.commandsPort,
   extractParams: (path: any, body: any) => ({
     ...extractEnvelopeParams(path, body),
     signerId: body.signerId,

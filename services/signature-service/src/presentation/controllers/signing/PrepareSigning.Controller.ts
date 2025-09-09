@@ -4,9 +4,8 @@
  * @description Handles signing preparation operations
  */
 
-import { createCommandController, createSigningDependencies, extractEnvelopeParams } from "../../../shared/controllers/controllerFactory";
-import { makeSigningCommandsPort } from "../../../app/adapters/signing/makeSigningCommandsPort";
-import { DefaultSigningCommandService } from "../../../app/services/Signing";
+import { createCommandController, extractEnvelopeParams } from "../../../shared/controllers/controllerFactory";
+import { SigningCommandService } from "../../../app/services/Signing";
 import { PrepareSigningBody } from "../../../presentation/schemas/signing/PrepareSigning.schema";
 import { EnvelopeIdPath } from "../../../presentation/schemas/common/path";
 import type { PrepareSigningControllerInput } from "../../../domain/types/signing/ControllerInputs";
@@ -18,13 +17,8 @@ import type { PrepareSigningResult } from "../../../app/ports/signing/SigningCom
 export const PrepareSigningController = createCommandController<PrepareSigningControllerInput, PrepareSigningResult>({
   bodySchema: PrepareSigningBody,
   pathSchema: EnvelopeIdPath,
-  appServiceClass: DefaultSigningCommandService,
-  createDependencies: (c: any) => makeSigningCommandsPort(
-    c.repos.envelopes,
-    c.repos.parties,
-    c.repos.documents,
-    createSigningDependencies(c, true) // Include S3 service
-  ),
+  appServiceClass: SigningCommandService,
+  createDependencies: (c: any) => c.signing.commandsPort,
   extractParams: (path: any, body: any) => ({
     ...extractEnvelopeParams(path, body),
     signerId: body.signerId,

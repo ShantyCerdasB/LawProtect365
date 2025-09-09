@@ -23,7 +23,7 @@ export function createConsentDependencies(c: any) {
 /**
  * Common parameter extraction for consent controllers
  */
-export function extractConsentParams(path: any, body: any) {
+export function extractConsentParams(path: Record<string, unknown>, body: Record<string, unknown>) {
   return {
     envelopeId: path.envelopeId,
     metadata: body.metadata,

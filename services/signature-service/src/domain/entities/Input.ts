@@ -20,11 +20,11 @@ import { InputType } from "../values/enums";
  */
 export interface InputPosition {
   /** Page number (1-based) */
-  page: number;
+  readonly page: number;
   /** X coordinate (normalized 0–1 or absolute) */
-  x: number;
+  readonly x: number;
   /** Y coordinate (normalized 0–1 or absolute) */
-  y: number;
+  readonly y: number;
 }
 
 /**
@@ -33,25 +33,25 @@ export interface InputPosition {
  */
 export interface Input {
   /** Unique identifier of the input */
-  inputId: string;
+  readonly inputId: string;
   /** Envelope the input belongs to */
-  envelopeId: string;
+  readonly envelopeId: string;
   /** Document the input belongs to */
-  documentId: string;
+  readonly documentId: string;
   /** Party ID assigned to this input */
-  partyId: string;
+  readonly partyId: string;
   /** Input type (signature, initials, text, date) */
-  type: InputType;
+  readonly type: InputType;
   /** Whether the input is mandatory */
-  required: boolean;
+  readonly required: boolean;
   /** Page and coordinates */
-  position: InputPosition;
+  readonly position: InputPosition;
   /** Optional user-provided value */
-  value?: string;
+  readonly value?: string;
   /** Creation timestamp (ISO string) */
-  createdAt: string;
+  readonly createdAt: string;
   /** Last update timestamp (ISO string) */
-  updatedAt: string;
+  readonly updatedAt: string;
 }
 
 

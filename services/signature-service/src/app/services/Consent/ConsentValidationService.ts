@@ -59,10 +59,4 @@ export class ConsentValidationService {
       throw new BadRequestError("Cannot delegate consent to the same party");
     }
   }
-}
-
-
-
-
-
-
+};

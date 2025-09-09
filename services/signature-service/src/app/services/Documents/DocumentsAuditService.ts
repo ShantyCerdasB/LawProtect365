@@ -7,7 +7,7 @@
 
 import { BaseAuditService } from "../../../domain/services/BaseAuditService";
 import type { AuditContext, ActorContext } from "@lawprotect/shared-ts";
-import type { DocumentId, EnvelopeId, TenantId } from "@/domain/value-objects/ids";
+import type { DocumentId, EnvelopeId, TenantId } from "../../../domain/value-objects/ids";
 import { nowIso } from "@lawprotect/shared-ts";
 
 /**
@@ -280,10 +280,4 @@ export class DefaultDocumentsAuditService extends BaseAuditService implements Do
       }
     );
   }
-}
-
-
-
-
-
-
+};

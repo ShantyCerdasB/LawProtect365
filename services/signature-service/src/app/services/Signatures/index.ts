@@ -4,10 +4,6 @@
  * @description Exports all signatures services
  */
 
-export { DefaultSignaturesCommandService } from "./SignaturesCommandService";
-
-
-
-
+export * from "./SignaturesCommandService";
 
 

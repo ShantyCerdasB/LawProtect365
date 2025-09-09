@@ -6,14 +6,15 @@
 
 
 import type { EnvelopeId, PartyId, TenantId } from "@/domain/value-objects/ids";
-import type { SigningRateLimitService } from "../../../domain/types/signing";
+import type { SigningRateLimitService as ISigningRateLimitService } from "../../../domain/types/signing";
 import { TooManyRequestsError, RateLimitStore } from "@lawprotect/shared-ts";
 import { SignatureErrorCodes } from "../../../shared/errors";
 
 /**
+ * @summary Rate limit service for Signing operations
  * @description Default implementation of SigningRateLimitService
  */
-export class DefaultSigningRateLimitService implements SigningRateLimitService {
+export class SigningRateLimitService implements ISigningRateLimitService {
   constructor(private readonly rateLimitStore: RateLimitStore) {}
 
   /**
@@ -91,10 +92,4 @@ export class DefaultSigningRateLimitService implements SigningRateLimitService {
       throw error;
     }
   }
-}
-
-
-
-
-
-
+};

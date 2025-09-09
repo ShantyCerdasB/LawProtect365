@@ -6,7 +6,7 @@
 
 import { createCommandController, createRequestsDependencies } from "../../../shared/controllers/controllerFactory";
 import { makeRequestsCommandsPort } from "../../../app/adapters/requests/makeRequestsCommandsPort";
-import { DefaultRequestsCommandService } from "../../../app/services/Requests";
+import { RequestsCommandService } from "../../../app/services/Requests";
 import { RemindersBody } from "../../../presentation/schemas/requests";
 import { EnvelopeIdPath } from "../../../presentation/schemas/common/path";
 import type { RemindPartiesControllerInput } from "../../../domain/types/requests/ControllerInputs";
@@ -18,7 +18,7 @@ import type { RemindPartiesAppResult } from "../../../domain/types/requests/AppS
 export const RemindPartiesController = createCommandController<RemindPartiesControllerInput, RemindPartiesAppResult>({
   bodySchema: RemindersBody,
   pathSchema: EnvelopeIdPath,
-  appServiceClass: DefaultRequestsCommandService,
+  appServiceClass: RequestsCommandService,
   createDependencies: (c: any) => makeRequestsCommandsPort(createRequestsDependencies(c)),
   extractParams: (path: any, body: any) => ({
     envelopeId: path.id,

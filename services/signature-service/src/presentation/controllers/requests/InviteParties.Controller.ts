@@ -6,7 +6,7 @@
 
 import { createCommandController, createRequestsDependencies } from "../../../shared/controllers/controllerFactory";
 import { makeRequestsCommandsPort } from "../../../app/adapters/requests/makeRequestsCommandsPort";
-import { DefaultRequestsCommandService } from "../../../app/services/Requests";
+import { RequestsCommandService } from "../../../app/services/Requests";
 import { InvitationsBody } from "../../../presentation/schemas/requests";
 import { EnvelopeIdPath } from "../../../presentation/schemas/common/path";
 import type { InvitePartiesControllerInput } from "../../../domain/types/requests/ControllerInputs";
@@ -18,7 +18,7 @@ import type { InvitePartiesAppResult } from "../../../domain/types/requests/AppS
 export const InvitePartiesController = createCommandController<InvitePartiesControllerInput, InvitePartiesAppResult>({
   bodySchema: InvitationsBody,
   pathSchema: EnvelopeIdPath,
-  appServiceClass: DefaultRequestsCommandService,
+  appServiceClass: RequestsCommandService,
   createDependencies: (c: any) => makeRequestsCommandsPort(createRequestsDependencies(c)),
   extractParams: (path: any, body: any) => ({
     envelopeId: path.id,

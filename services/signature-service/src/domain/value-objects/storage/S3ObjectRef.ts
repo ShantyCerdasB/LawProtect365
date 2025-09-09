@@ -35,11 +35,3 @@ export interface S3ObjectRef {
   /** Optional version ID for versioned objects */
   versionId?: S3ObjectVersionId;
 }
-
-// S3ObjectRefSchema removed - validation is handled manually in DocumentsS3Service
-
-
-
-
-
-

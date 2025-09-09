@@ -16,43 +16,43 @@ import type { DocumentStatus, S3ObjectRef, ContentType } from "@/domain/value-ob
  */
 export interface Document {
   /** Canonical identifier of the document (ULID/UUID brand). */
-  documentId: DocumentId;
+  readonly documentId: DocumentId;
 
   /** Envelope this document belongs to. */
-  envelopeId: EnvelopeId;
+  readonly envelopeId: EnvelopeId;
 
   /** Tenant owning the resource (multitenancy boundary). */
-  tenantId: TenantId;
+  readonly tenantId: TenantId;
 
   /** Human-friendly name of the document. */
-  name: string;
+  readonly name: string;
 
   /** Current lifecycle status of the document. */
-  status: DocumentStatus;
+  readonly status: DocumentStatus;
 
   /** MIME type of the document. */
-  contentType: ContentType;
+  readonly contentType: ContentType;
 
   /** Size of the document in bytes. */
-  size: number;
+  readonly size: number;
 
   /** SHA-256 hash digest of the document content. */
-  digest: string;
+  readonly digest: string;
 
   /** S3 storage reference. */
-  s3Ref: S3ObjectRef;
+  readonly s3Ref: S3ObjectRef;
 
   /** Number of pages in the document (for PDFs). */
-  pageCount?: number;
+  readonly pageCount?: number;
 
   /** ISO-8601 creation timestamp. */
-  createdAt: string;
+  readonly createdAt: string;
 
   /** ISO-8601 last update timestamp. */
-  updatedAt: string;
+  readonly updatedAt: string;
 
   /** Optional metadata for extensibility. */
-  metadata?: Record<string, unknown>;
+  readonly metadata?: Record<string, unknown>;
 }
 
 

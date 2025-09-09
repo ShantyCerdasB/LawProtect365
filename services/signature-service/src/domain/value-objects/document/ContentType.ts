@@ -18,6 +18,3 @@ export type ContentType = z.infer<typeof ContentTypeSchema>;
 
 
 
-
-
-

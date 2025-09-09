@@ -6,13 +6,14 @@
 
 import type { S3Presigner } from "@lawprotect/shared-ts";
 import type { EnvelopeId } from "@/domain/value-objects/ids";
-import type { SigningS3Service } from "../../../domain/types/signing";
+import type { SigningS3Service as ISigningS3Service } from "../../../domain/types/signing";
 import { ulid } from "@lawprotect/shared-ts";
 
 /**
+ * @summary S3 service for Signing operations
  * @description Default implementation of SigningS3Service
  */
-export class DefaultSigningS3Service implements SigningS3Service {
+export class SigningS3Service implements ISigningS3Service {
   constructor(
     private readonly s3Presigner: S3Presigner,
     private readonly uploadBucket: string,
@@ -88,10 +89,4 @@ export class DefaultSigningS3Service implements SigningS3Service {
       expiresAt,
     };
   }
-}
-
-
-
-
-
-
+};

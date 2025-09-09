@@ -50,10 +50,4 @@ export class ConsentCommandService {
     
     throw new BadRequestError('Invalid input type for consent command service', undefined, { input });
   }
-}
-
-
-
-
-
-
+};

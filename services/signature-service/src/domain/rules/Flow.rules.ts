@@ -1,3 +1,10 @@
+/**
+ * @file Flow.rules.ts
+ * @summary Domain rules for envelope flow and invitation policies
+ * @description Validates envelope readiness to send, party invitation
+ * rate limits, and cooldown policies for envelope operations.
+ */
+
 import type { Party, Input } from "../entities";
 import { BadRequestError, TooManyRequestsError, ErrorCodes } from "@lawprotect/shared-ts";
 
@@ -74,9 +81,5 @@ export const assertInvitePolicy = (stats: {
     );
   }
 };
-
-
-
-
 
 

@@ -10,7 +10,7 @@ import type { EnvelopesRepository } from "../../../domain/contracts/repositories
 import type { EnvelopesValidationService } from "../../services/envelopes/EnvelopesValidationService";
 import type { EnvelopesAuditService } from "../../services/envelopes/EnvelopesAuditService";
 import type { EnvelopesEventService } from "../../services/envelopes/EnvelopesEventService";
-import type { SignatureServiceConfig } from "../../../infrastructure/contracts/core/Config";
+import type { SignatureServiceConfig } from "../../../core/Config";
 import type { EnvelopeStatus } from "@/domain/value-objects/index";
 import type { PartyRepositoryDdb } from "../../../infrastructure/dynamodb/PartyRepositoryDdb";
 import type { InputRepositoryDdb } from "../../../infrastructure/dynamodb/InputRepositoryDdb";

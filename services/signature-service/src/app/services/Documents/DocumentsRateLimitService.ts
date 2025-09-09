@@ -4,7 +4,7 @@
  * @description Handles rate limiting for Documents operations using domain rules
  */
 
-import type { EnvelopeId, TenantId } from "@/domain/value-objects/ids";
+import type { EnvelopeId, TenantId } from "../../../domain/value-objects/ids";
 import { TooManyRequestsError, RateLimitStore } from "@lawprotect/shared-ts";
 import { SignatureErrorCodes } from "../../../shared/errors";
 import { UPLOAD_RATE_LIMITS } from "../../../domain/values/enums";
@@ -231,10 +231,4 @@ export class DefaultDocumentsRateLimitService implements DocumentsRateLimitServi
       );
     }
   }
-}
-
-
-
-
-
-
+};

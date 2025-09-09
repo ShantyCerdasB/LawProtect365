@@ -6,7 +6,7 @@
 
 import { createCommandController, createRequestsDependencies } from "../../../shared/controllers/controllerFactory";
 import { makeRequestsCommandsPort } from "../../../app/adapters/requests/makeRequestsCommandsPort";
-import { DefaultRequestsCommandService } from "../../../app/services/Requests";
+import { RequestsCommandService } from "../../../app/services/Requests";
 import { DeclineEnvelopeBody } from "../../../presentation/schemas/requests";
 import { EnvelopeIdPath } from "../../../presentation/schemas/common/path";
 import type { DeclineEnvelopeControllerInput } from "../../../domain/types/requests/ControllerInputs";
@@ -18,7 +18,7 @@ import type { DeclineEnvelopeAppResult } from "../../../domain/types/requests/Ap
 export const DeclineEnvelopeController = createCommandController<DeclineEnvelopeControllerInput, DeclineEnvelopeAppResult>({
   bodySchema: DeclineEnvelopeBody,
   pathSchema: EnvelopeIdPath,
-  appServiceClass: DefaultRequestsCommandService,
+  appServiceClass: RequestsCommandService,
   createDependencies: (c: any) => makeRequestsCommandsPort(createRequestsDependencies(c)),
   extractParams: (path: any, body: any) => ({
     envelopeId: path.id,

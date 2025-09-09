@@ -19,9 +19,9 @@ import type { EnvelopeId, TenantId } from "@/domain/value-objects/ids";
 import { 
   envelopeItemMapper, 
   envelopePk, 
-  envelopeMetaSk,
-  requireQuery 
+  envelopeMetaSk
 } from "../../domain/types/infrastructure/dynamodb";
+import { requireQuery } from "@lawprotect/shared-ts";
 import type { EnvelopeListCursorPayload } from "../../domain/types/envelopes/EnvelopesTypes";
 
 /**
@@ -204,9 +204,5 @@ export class EnvelopeRepositoryDdb
     }
   }
 }
-
-
-
-
 
 

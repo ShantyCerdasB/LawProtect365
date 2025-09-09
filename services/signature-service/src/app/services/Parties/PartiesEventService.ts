@@ -129,10 +129,4 @@ export class PartiesEventService extends BaseEventService {
   ): Promise<void> {
     await this.publishDomainEvent(event, traceId);
   }
-}
-
-
-
-
-
-
+};

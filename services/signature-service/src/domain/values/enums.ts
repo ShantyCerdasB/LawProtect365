@@ -100,8 +100,20 @@ export const HASH_ALGORITHM = ["sha256", "sha384", "sha512"] as const;
 export type HashAlgorithm = (typeof HASH_ALGORITHM)[number];
 
 
-export const INPUT_VALUES = ["signature", "initials", "text", "checkbox", "date"] as const; 
+export const INPUT_VALUES = ["signature", "initials", "text", "checkbox", "date", "email", "phone", "number", "file", "select", "radio"] as const; 
 export type InputType = (typeof INPUT_VALUES)[number];
+
+// Input Required Status
+export const INPUT_REQUIRED_STATUS = ["required", "optional", "conditional"] as const;
+export type InputRequiredStatus = (typeof INPUT_REQUIRED_STATUS)[number];
+
+// Input Validation Status
+export const INPUT_VALIDATION_STATUS = ["valid", "invalid", "pending", "not_validated"] as const;
+export type InputValidationStatus = (typeof INPUT_VALIDATION_STATUS)[number];
+
+// Input Completion Status
+export const INPUT_COMPLETION_STATUS = ["not_started", "in_progress", "completed", "skipped"] as const;
+export type InputCompletionStatus = (typeof INPUT_COMPLETION_STATUS)[number];
 
 export const OTP_POLICY = { codeLength: 6, expiresInMinutes: 10, maxTries: 3, cooldownSeconds: 60, rateLimitPerMinute: 5, rateLimitPerDay: 10, } as const;
 

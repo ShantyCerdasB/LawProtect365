@@ -16,9 +16,9 @@ import type {
   DelegateConsentAppInput, 
   DelegateConsentAppResult 
 } from "../../../domain/types/consent/AppServiceInputs";
-import type { PartyId, TenantId } from "@/domain/value-objects/ids";
+import type { PartyId } from "../../../domain/value-objects/ids";
 import type { ConsentStatus } from "../../../domain/values/enums";
-import type { ActorContext } from "@lawprotect/shared-ts";
+import type { ActorContext, AuditContext } from "@lawprotect/shared-ts";
 import { nowIso, asISO, asISOOpt } from "@lawprotect/shared-ts";
 import { NotFoundError } from "../../../shared/errors";
 import { findOrCreatePartyForDelegation } from "./ConsentPartyHelpers";
@@ -120,12 +120,12 @@ export class ConsentDelegationService {
     // 6. AUDIT - Use actor context if available, fallback to system context
     if (this.auditService) {
       const auditContext = createConsentAuditContext(
-        input.tenantId as TenantId,
+        input.tenantId,
         input.envelopeId,
         actorContext
-      );
+      ) as AuditContext;
       
-      await this.auditService.logConsentDelegation(auditContext as any, {
+      await this.auditService.logConsentDelegation(auditContext, {
         consentId: input.consentId,
         originalPartyId: currentConsent.partyId as PartyId,
         delegatePartyId: delegatePartyId,
@@ -166,11 +166,4 @@ export class ConsentDelegationService {
       metadata: input.metadata,
     };
   }
-
-}
-
-
-
-
-
-
+};

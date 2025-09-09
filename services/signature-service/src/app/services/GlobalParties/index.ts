@@ -4,15 +4,10 @@
  * @description Exports all Global Parties services
  */
 
-// Default implementations
-export { DefaultGlobalPartiesCommandService } from "./GlobalPartiesCommandService";
-export { DefaultGlobalPartiesQueryService } from "./GlobalPartiesQueryService";
-export { DefaultGlobalPartiesValidationService } from "./GlobalPartiesValidationService";
-export { GlobalPartiesAuditService } from "./GlobalPartiesAuditService";
-export { GlobalPartiesEventService } from "./GlobalPartiesEventService";
-
-
-
-
+export * from "./GlobalPartiesAuditService";
+export * from "./GlobalPartiesCommandService";
+export * from "./GlobalPartiesEventService";
+export * from "./GlobalPartiesQueryService";
+export * from "./GlobalPartiesValidationService";
 
 

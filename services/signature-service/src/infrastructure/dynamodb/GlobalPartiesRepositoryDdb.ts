@@ -69,28 +69,28 @@ export class GlobalPartiesRepositoryDdb implements GlobalPartiesRepository {
    */
   async create(input: CreateGlobalPartyAppInput): Promise<void> {
     // Validate enum values
-    if (!PARTY_ROLES.includes(input.role as any)) {
+    if (!PARTY_ROLES.includes(input.role as typeof PARTY_ROLES[number])) {
       throw new BadRequestError(`Invalid party role: ${input.role}`, "INPUT_TYPE_NOT_ALLOWED", {
         validRoles: PARTY_ROLES,
         providedRole: input.role,
       });
     }
     
-    if (!PARTY_SOURCES.includes(input.source as any)) {
+    if (!PARTY_SOURCES.includes(input.source as typeof PARTY_SOURCES[number])) {
       throw new BadRequestError(`Invalid party source: ${input.source}`, "INPUT_TYPE_NOT_ALLOWED", {
         validSources: PARTY_SOURCES,
         providedSource: input.source,
       });
     }
 
-    if (!GLOBAL_PARTY_STATUSES.includes(input.status as any)) {
+    if (!GLOBAL_PARTY_STATUSES.includes(input.status as typeof GLOBAL_PARTY_STATUSES[number])) {
       throw new BadRequestError(`Invalid party status: ${input.status}`, "INPUT_TYPE_NOT_ALLOWED", {
         validStatuses: GLOBAL_PARTY_STATUSES,
         providedStatus: input.status,
       });
     }
 
-    if (!AUTH_METHODS.includes(input.preferences.defaultAuth as any)) {
+    if (!AUTH_METHODS.includes(input.preferences.defaultAuth as typeof AUTH_METHODS[number])) {
       throw new BadRequestError(`Invalid auth method: ${input.preferences.defaultAuth}`, "INPUT_TYPE_NOT_ALLOWED", {
         validAuthMethods: AUTH_METHODS,
         providedAuthMethod: input.preferences.defaultAuth,
@@ -99,8 +99,8 @@ export class GlobalPartiesRepositoryDdb implements GlobalPartiesRepository {
 
     const now = nowIso();
     const party: GlobalPartyExtended = {
-      partyId: input.partyId as any,
-      tenantId: input.tenantId as any,
+      partyId: input.partyId,
+      tenantId: input.tenantId,
       name: input.name,
       email: input.email,
       emails: input.emails,
@@ -131,7 +131,7 @@ export class GlobalPartiesRepositoryDdb implements GlobalPartiesRepository {
     try {
       await this.ddb.put({
         TableName: this.tableName,
-        Item: validatedDto as any,
+        Item: validatedDto as Record<string, unknown>,
         ConditionExpression: "attribute_not_exists(pk) AND attribute_not_exists(sk)",
       });
     } catch (error) {
@@ -185,28 +185,28 @@ export class GlobalPartiesRepositoryDdb implements GlobalPartiesRepository {
    */
   async update(input: UpdateGlobalPartyAppInput): Promise<void> {
     // Validate enum values if provided
-    if (input.updates.role && !PARTY_ROLES.includes(input.updates.role as any)) {
+    if (input.updates.role && !PARTY_ROLES.includes(input.updates.role as typeof PARTY_ROLES[number])) {
       throw new BadRequestError(`Invalid party role: ${input.updates.role}`, "INPUT_TYPE_NOT_ALLOWED", {
         validRoles: PARTY_ROLES,
         providedRole: input.updates.role,
       });
     }
 
-    if (input.updates.source && !PARTY_SOURCES.includes(input.updates.source as any)) {
+    if (input.updates.source && !PARTY_SOURCES.includes(input.updates.source as typeof PARTY_SOURCES[number])) {
       throw new BadRequestError(`Invalid party source: ${input.updates.source}`, "INPUT_TYPE_NOT_ALLOWED", {
         validSources: PARTY_SOURCES,
         providedSource: input.updates.source,
       });
     }
 
-    if (input.updates.status && !GLOBAL_PARTY_STATUSES.includes(input.updates.status as any)) {
+    if (input.updates.status && !GLOBAL_PARTY_STATUSES.includes(input.updates.status as typeof GLOBAL_PARTY_STATUSES[number])) {
       throw new BadRequestError(`Invalid party status: ${input.updates.status}`, "INPUT_TYPE_NOT_ALLOWED", {
         validStatuses: GLOBAL_PARTY_STATUSES,
         providedStatus: input.updates.status,
       });
     }
 
-    if (input.updates.preferences?.defaultAuth && !AUTH_METHODS.includes(input.updates.preferences.defaultAuth as any)) {
+    if (input.updates.preferences?.defaultAuth && !AUTH_METHODS.includes(input.updates.preferences.defaultAuth as typeof AUTH_METHODS[number])) {
       throw new BadRequestError(`Invalid auth method: ${input.updates.preferences.defaultAuth}`, "INPUT_TYPE_NOT_ALLOWED", {
         validAuthMethods: AUTH_METHODS,
         providedAuthMethod: input.updates.preferences.defaultAuth,
@@ -525,11 +525,11 @@ export class GlobalPartiesRepositoryDdb implements GlobalPartiesRepository {
       tenantId: input.tenantId as any,
       name: input.name,
       email: input.email,
-      role: "signer" as any,
-      source: "manual" as any,
-      status: "active" as any,
+      role: "signer" as typeof PARTY_ROLES[number],
+      source: "manual" as typeof PARTY_SOURCES[number],
+      status: "active" as typeof GLOBAL_PARTY_STATUSES[number],
       preferences: {
-        defaultAuth: "otpViaEmail" as any,
+        defaultAuth: "otpViaEmail" as typeof AUTH_METHODS[number],
         defaultLocale: undefined,
       },
       notificationPreferences: {
@@ -546,9 +546,6 @@ export class GlobalPartiesRepositoryDdb implements GlobalPartiesRepository {
     return partyId;
   }
 }
-
-
-
 
 
 

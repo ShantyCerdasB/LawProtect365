@@ -14,7 +14,7 @@ import type {
   UpdateDocumentResult,
   UpdateDocumentBinaryCommand
 } from "../../ports/documents/DocumentsCommandsPort";
-import type { DocumentId } from "@/domain/value-objects/ids";
+import type { DocumentId } from "../../../domain/value-objects/ids";
 import type { DocumentLock } from "@lawprotect/shared-ts";
 import { 
   assertSupportedContentType, 
@@ -128,10 +128,4 @@ export class DefaultDocumentsCommandService implements DocumentsCommandService {
   async deleteLock(documentId: DocumentId, lockId: string, actorUserId: string): Promise<void> {
     return this.commandsPort.deleteLock(documentId, lockId, actorUserId);
   }
-}
-
-
-
-
-
-
+};

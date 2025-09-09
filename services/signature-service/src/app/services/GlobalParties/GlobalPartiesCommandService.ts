@@ -13,12 +13,13 @@ import type {
   DeleteGlobalPartyCommand,
   DeleteGlobalPartyResult
 } from "../../ports/global-parties";
-import type { GlobalPartiesCommandService } from "../../../domain/types/global-parties/ServiceInterfaces";
+import type { GlobalPartiesCommandService as IGlobalPartiesCommandService } from "../../../domain/types/global-parties/ServiceInterfaces";
 
 /**
+ * @summary Command service for Global Parties operations
  * @description Default implementation of GlobalPartiesCommandService
  */
-export class DefaultGlobalPartiesCommandService implements GlobalPartiesCommandService {
+export class GlobalPartiesCommandService implements IGlobalPartiesCommandService {
   constructor(private readonly commandsPort: GlobalPartiesCommandsPort) {}
 
   async create(command: CreateGlobalPartyCommand): Promise<CreateGlobalPartyResult> {
@@ -32,10 +33,4 @@ export class DefaultGlobalPartiesCommandService implements GlobalPartiesCommandS
   async delete(command: DeleteGlobalPartyCommand): Promise<DeleteGlobalPartyResult> {
     return this.commandsPort.delete(command);
   }
-}
-
-
-
-
-
-
+};

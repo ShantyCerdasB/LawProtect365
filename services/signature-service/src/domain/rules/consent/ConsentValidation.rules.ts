@@ -1,7 +1,8 @@
 /**
  * @file ConsentValidation.rules.ts
- * @summary Validation rules for consent enums
- * @description Validates and converts string values to domain enums
+ * @summary Domain rules for consent validation
+ * @description Validates and converts string values to consent domain enums,
+ * ensuring type safety and proper enum usage throughout the consent system.
  */
 
 import { CONSENT_STATUSES } from "../../values/enums";

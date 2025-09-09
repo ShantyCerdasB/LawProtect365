@@ -4,15 +4,15 @@
  * @description Validates envelope state transitions and business rules
  */
 
-import type { EnvelopeId, TenantId, UserId } from "@/domain/value-objects/ids";
-import type { EnvelopeStatus } from "@/domain/value-objects/index";
+import type { EnvelopeId, TenantId, UserId } from "../../../domain/value-objects/ids";
+import type { EnvelopeStatus } from "../../../domain/value-objects/index";
 import { 
   ENVELOPE_STATUSES, 
   ENVELOPE_TRANSITION_RULES, 
   ENVELOPE_TITLE_LIMITS, 
   ENVELOPE_VALIDATION_RULES 
 } from "../../../domain/values/enums";
-import { badRequest } from "@/shared/errors";
+import { badRequest } from "../../../shared/errors";
 
 /**
  * @summary Validates envelope state transitions
@@ -167,10 +167,4 @@ export class EnvelopesValidationService {
       throw badRequest("TenantId and EnvelopeId are required for getStatus operation");
     }
   }
-}
-
-
-
-
-
-
+};

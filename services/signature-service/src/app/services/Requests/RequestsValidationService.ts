@@ -8,7 +8,7 @@ import { BadRequestError, ConflictError, ErrorCodes, isEmail } from "@lawprotect
 import type { Input } from "../../../domain/entities/Input";
 import type { EnvelopeId, PartyId } from "@/domain/value-objects/ids";
 import type { InputsRepository } from "../../../domain/contracts/repositories/inputs/InputsRepository";
-import type { RequestsValidationService } from "../../../domain/types/requests/ServiceInterfaces";
+import type { RequestsValidationService as IRequestsValidationService } from "../../../domain/types/requests/ServiceInterfaces";
 import type { 
   InvitePartiesCommand,
   RemindPartiesCommand,
@@ -23,7 +23,7 @@ import type {
  * @summary Validation service for requests operations
  * @description Validates input parameters for all request operations
  */
-export class DefaultRequestsValidationService implements RequestsValidationService {
+export class RequestsValidationService implements IRequestsValidationService {
   
   constructor(private readonly inputsRepo?: InputsRepository) {}
 
@@ -226,12 +226,6 @@ export class DefaultRequestsValidationService implements RequestsValidationServi
     const incompleteInputs = requiredInputs.items.filter((input: Input) => !input.value);
     return incompleteInputs.length > 0;
   }
-
-
-}
-
-
-
-
+};
 
 

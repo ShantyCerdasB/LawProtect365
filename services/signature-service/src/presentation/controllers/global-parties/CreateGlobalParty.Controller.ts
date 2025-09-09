@@ -6,7 +6,7 @@
 
 import { createCommandController } from "../../../shared/controllers/controllerFactory";
 import { makeGlobalPartiesCommandsPort } from "../../../app/adapters/global-parties/MakeGlobalPartiesCommandsPort";
-import { DefaultGlobalPartiesCommandService } from "../../../app/services/GlobalParties";
+import { GlobalPartiesCommandService } from "../../../app/services/GlobalParties";
 import { CreateGlobalPartyBody } from "../../../presentation/schemas/global-parties/CreateGlobalParty.schema";
 import type { CreateGlobalPartyControllerInput } from "../../../domain/types/global-parties/ControllerInputs";
 import type { CreateGlobalPartyAppResult } from "../../../domain/types/global-parties/AppServiceInputs";
@@ -16,7 +16,7 @@ import type { CreateGlobalPartyAppResult } from "../../../domain/types/global-pa
  */
 export const CreateGlobalPartyController = createCommandController<CreateGlobalPartyControllerInput, CreateGlobalPartyAppResult>({
   bodySchema: CreateGlobalPartyBody,
-  appServiceClass: DefaultGlobalPartiesCommandService,
+  appServiceClass: GlobalPartiesCommandService,
   createDependencies: (c: any) => makeGlobalPartiesCommandsPort({
     globalParties: c.repos.globalParties,
     ids: c.ids,

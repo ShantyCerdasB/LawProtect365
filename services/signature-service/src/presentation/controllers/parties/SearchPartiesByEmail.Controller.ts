@@ -5,7 +5,7 @@
  */
 
 import { createQueryController } from "../../../shared/controllers/queryFactory";
-import { DefaultPartiesQueryService } from "../../../app/services/Parties";
+import { PartiesQueryService } from "../../../app/services/Parties";
 import { SearchPartiesByEmailParams, SearchPartiesByEmailQuery } from "../../../presentation/schemas/parties/SearchPartiesByEmail.schema";
 import type { SearchPartiesByEmailAppInput, SearchPartiesByEmailAppResult } from "../../../domain/types/parties/AppServiceInputs";
 
@@ -15,7 +15,7 @@ import type { SearchPartiesByEmailAppInput, SearchPartiesByEmailAppResult } from
 export const SearchPartiesByEmailController = createQueryController<SearchPartiesByEmailAppInput, SearchPartiesByEmailAppResult>({
   pathSchema: SearchPartiesByEmailParams,
   querySchema: SearchPartiesByEmailQuery,
-  appServiceClass: DefaultPartiesQueryService,
+  appServiceClass: PartiesQueryService,
   createDependencies: (c: any) => c.parties.queriesPort,
   extractParams: (path: any, query: any) => ({
     tenantId: path.tenantId,

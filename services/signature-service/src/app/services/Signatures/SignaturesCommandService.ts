@@ -11,9 +11,10 @@ import type {
 import type { SignaturesCommandsPort } from "../../ports/signatures/SignaturesCommandsPort";
 
 /**
+ * @summary Command service for Signatures operations
  * @description Default implementation of SignaturesCommandService
  */
-export class DefaultSignaturesCommandService {
+export class SignaturesCommandService {
   constructor(private readonly commandsPort: SignaturesCommandsPort) {}
 
   /**
@@ -24,10 +25,4 @@ export class DefaultSignaturesCommandService {
   async signHash(command: SignHashCommand): Promise<SignHashResult> {
     return this.commandsPort.signHash(command);
   }
-}
-
-
-
-
-
-
+};

@@ -1,4 +1,11 @@
 
+/**
+ * @file Inputs.rules.ts
+ * @summary Domain rules for input validation and geometry
+ * @description Validates input references, positions, geometry bounds,
+ * and overlap detection for document input operations.
+ */
+
 import { AppError, ErrorCodes, z } from "@lawprotect/shared-ts";
 import type { Input } from "../entities";
 import { InputTypeSchema } from "@/domain/value-objects/index";
@@ -110,9 +117,5 @@ export const assertNoIllegalOverlap = (
     }
   }
 };
-
-
-
-
 
 

@@ -5,7 +5,7 @@
  */
 
 import { createCommandController, createSigningDependenciesWithS3 } from "../../../shared/controllers/controllerFactory";
-import { DefaultSigningCommandService } from "../../../app/services/Signing";
+import { SigningCommandService } from "../../../app/services/Signing";
 import { DownloadSignedDocumentBody } from "../../../presentation/schemas/signing/DownloadSignedDocument.schema";
 import { EnvelopeIdPath } from "../../../presentation/schemas/common/path";
 import type { DownloadSignedDocumentControllerInput } from "../../../domain/types/signing/ControllerInputs";
@@ -17,7 +17,7 @@ import type { DownloadSignedDocumentResult } from "../../../app/ports/signing/Si
 export const DownloadSignedDocumentController = createCommandController<DownloadSignedDocumentControllerInput, DownloadSignedDocumentResult>({
   bodySchema: DownloadSignedDocumentBody,
   pathSchema: EnvelopeIdPath,
-  appServiceClass: DefaultSigningCommandService,
+  appServiceClass: SigningCommandService,
   createDependencies: createSigningDependenciesWithS3,
   extractParams: (path: any, _body: any) => ({
     tenantId: path.tenantId,

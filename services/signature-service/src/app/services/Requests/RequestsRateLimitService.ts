@@ -7,13 +7,13 @@
 
 import type { EnvelopeId, PartyId } from "@/domain/value-objects/ids";
 import type { ActorContext, RateLimitStore } from "@lawprotect/shared-ts";
-import type { RequestsRateLimitService } from "../../../domain/types/requests/ServiceInterfaces";
+import type { RequestsRateLimitService as IRequestsRateLimitService } from "../../../domain/types/requests/ServiceInterfaces";
 
 /**
  * @summary Rate limiting service for requests operations
  * @description Prevents spam by limiting the frequency of request operations
  */
-export class DefaultRequestsRateLimitService implements RequestsRateLimitService {
+export class RequestsRateLimitService implements IRequestsRateLimitService {
   constructor(private readonly rateLimitStore: RateLimitStore) {}
 
   /**
@@ -120,10 +120,4 @@ export class DefaultRequestsRateLimitService implements RequestsRateLimitService
     
     await this.rateLimitStore.incrementAndCheck(key, window);
   }
-}
-
-
-
-
-
-
+};

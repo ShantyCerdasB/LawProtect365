@@ -4,11 +4,7 @@
  * @description Exports all certificate services
  */
 
-export { DefaultCertificateValidationService } from "./CertificateValidationService";
 export { DefaultCertificateQueryService } from "./CertificateQueryService";
-
-
-
-
+export { DefaultCertificateValidationService } from "./CertificateValidationService";
 
 

@@ -18,14 +18,16 @@ import type {
 import { assertTenantBoundary } from "@lawprotect/shared-ts";
 
 /**
- * @summary Default implementation of InputsCommandService
+ * @summary Command service for Input operations
  * @description Simple wrapper around InputsCommandsPort
  */
-export class DefaultInputsCommandService {
+export class InputsCommandService {
   constructor(private readonly commandsPort: InputsCommandsPort) {}
 
   /**
-   * Creates inputs in batch.
+   * @summary Creates inputs in batch
+   * @param command - Command data for creating inputs
+   * @returns Promise resolving to creation result
    */
   async create(command: CreateInputsCommand): Promise<CreateInputsResult> {
     // Apply generic rules
@@ -35,7 +37,9 @@ export class DefaultInputsCommandService {
   }
 
   /**
-   * Updates an existing input.
+   * @summary Updates an existing input
+   * @param command - Command data for updating input
+   * @returns Promise resolving to update result
    */
   async update(command: UpdateInputCommand): Promise<UpdateInputResult> {
     // Apply generic rules
@@ -45,7 +49,9 @@ export class DefaultInputsCommandService {
   }
 
   /**
-   * Updates input positions in batch.
+   * @summary Updates input positions in batch
+   * @param command - Command data for updating positions
+   * @returns Promise resolving to positions update result
    */
   async updatePositions(command: UpdateInputPositionsCommand): Promise<UpdateInputPositionsResult> {
     // Apply generic rules
@@ -55,7 +61,9 @@ export class DefaultInputsCommandService {
   }
 
   /**
-   * Deletes an input.
+   * @summary Deletes an input
+   * @param command - Command data for deleting input
+   * @returns Promise resolving when deletion is complete
    */
   async delete(command: DeleteInputCommand): Promise<void> {
     // Apply generic rules
@@ -63,10 +71,4 @@ export class DefaultInputsCommandService {
     
     return this.commandsPort.delete(command);
   }
-}
-
-
-
-
-
-
+};

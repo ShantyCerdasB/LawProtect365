@@ -47,10 +47,4 @@ export class ConsentEventService extends BaseEventService {
   ): Promise<void> {
     await this.publishDomainEvent(event, traceId);
   }
-}
-
-
-
-
-
-
+};

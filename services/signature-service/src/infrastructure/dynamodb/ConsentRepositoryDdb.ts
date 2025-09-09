@@ -61,14 +61,14 @@ export class ConsentRepositoryDdb {
    */
   async create(input: ConsentRepoCreateInput): Promise<ConsentRepoRow> {
     // Validate enum values
-    if (!CONSENT_TYPES.includes(input.consentType as any)) {
+    if (!CONSENT_TYPES.includes(input.consentType as typeof CONSENT_TYPES[number])) {
       throw badRequest(`Invalid consent type: ${input.consentType}`, "INPUT_TYPE_NOT_ALLOWED", {
         validTypes: CONSENT_TYPES,
         providedType: input.consentType,
       });
     }
     
-    if (!CONSENT_STATUSES.includes(input.status as any)) {
+    if (!CONSENT_STATUSES.includes(input.status as typeof CONSENT_STATUSES[number])) {
       throw badRequest(`Invalid consent status: ${input.status}`, "INPUT_TYPE_NOT_ALLOWED", {
         validStatuses: CONSENT_STATUSES,
         providedStatus: input.status,
@@ -94,7 +94,7 @@ export class ConsentRepositoryDdb {
     try {
       await this.ddb.put({
         TableName: this.tableName,
-        Item: dto as any,
+        Item: dto as Record<string, unknown>,
         ConditionExpression: "attribute_not_exists(pk) AND attribute_not_exists(sk)",
       });
       return dtoToConsentRow(dto);
@@ -138,7 +138,7 @@ export class ConsentRepositoryDdb {
    */
   async update(keys: ConsentRepoKey, changes: ConsentRepoUpdateInput): Promise<ConsentRepoRow> {
     // Validate enum values if provided
-    if (typeof changes.status !== "undefined" && !CONSENT_STATUSES.includes(changes.status as any)) {
+    if (typeof changes.status !== "undefined" && !CONSENT_STATUSES.includes(changes.status as typeof CONSENT_STATUSES[number])) {
       throw badRequest(`Invalid consent status: ${changes.status}`, "INPUT_TYPE_NOT_ALLOWED", {
         validStatuses: CONSENT_STATUSES,
         providedStatus: changes.status,
@@ -249,9 +249,6 @@ export class ConsentRepositoryDdb {
     }
   }
 }
-
-
-
 
 
 

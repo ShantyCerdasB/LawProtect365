@@ -5,8 +5,8 @@
  */
 
 import { BaseAuditService } from "../../../domain/services/BaseAuditService";
-import type { EnvelopeId, TenantId, UserId } from "@/domain/value-objects/ids";
-import type { EnvelopeStatus } from "@/domain/value-objects/index";
+import type { EnvelopeId, TenantId, UserId } from "../../../domain/value-objects/ids";
+import type { EnvelopeStatus } from "../../../domain/value-objects/index";
 import type { Envelope } from "../../../domain/entities/Envelope";
 import type { AuditContext } from "@lawprotect/shared-ts";
 
@@ -202,10 +202,4 @@ export class EnvelopesAuditService extends BaseAuditService {
       operation: "getStatus"
     });
   }
-}
-
-
-
-
-
-
+};

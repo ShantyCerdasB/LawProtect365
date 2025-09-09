@@ -11,7 +11,7 @@ import type {
   ConsentDelegationAuditDetails,
   ConsentUpdateAuditDetails 
 } from "../../../domain/types/consent/AuditDetails";
-import type { EnvelopeId } from "@/domain/value-objects/ids";
+import type { EnvelopeId } from "../../../domain/value-objects/ids";
 import { BadRequestError } from "../../../shared/errors";
 import { nowIso } from "@lawprotect/shared-ts";
 
@@ -86,10 +86,4 @@ export class ConsentAuditService extends BaseAuditService {
       metadata: details.metadata,
     });
   }
-}
-
-
-
-
-
-
+};

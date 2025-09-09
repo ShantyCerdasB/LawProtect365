@@ -5,7 +5,7 @@
  */
 
 import type { 
-  SigningValidationService,
+  SigningValidationService as ISigningValidationService,
   CompleteSigningControllerInput,
   DeclineSigningControllerInput,
   PrepareSigningControllerInput,
@@ -18,9 +18,10 @@ import { assertKmsAlgorithmAllowed } from "../../../domain/rules/Signing.rules";
 import { badRequest, unprocessable, signatureHashMismatch, kmsPermissionDenied } from "../../../shared/errors";
 
 /**
+ * @summary Validation service for Signing operations
  * @description Default implementation of SigningValidationService
  */
-export class DefaultSigningValidationService implements SigningValidationService {
+export class SigningValidationService implements ISigningValidationService {
   validateCompleteSigning(input: CompleteSigningControllerInput): void {
     if (!input.envelopeId?.trim()) {
       throw badRequest("Envelope ID is required", "ENVELOPE_NOT_FOUND");
@@ -134,10 +135,4 @@ export class DefaultSigningValidationService implements SigningValidationService
       throw badRequest("Request token is required", "REQUEST_TOKEN_INVALID");
     }
   }
-}
-
-
-
-
-
-
+};

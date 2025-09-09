@@ -5,8 +5,8 @@
  */
 
 import { BaseEventService } from "../../../domain/services/BaseEventService";
-import type { EnvelopeId, TenantId, UserId } from "@/domain/value-objects/ids";
-import type { EnvelopeStatus } from "@/domain/value-objects/index";
+import type { EnvelopeId, TenantId, UserId } from "../../../domain/value-objects/ids";
+import type { EnvelopeStatus } from "../../../domain/value-objects/index";
 import type { Envelope } from "../../../domain/entities/Envelope";
 import { makeEvent, type DomainEvent } from "@lawprotect/shared-ts";
 
@@ -192,10 +192,4 @@ export class EnvelopesEventService extends BaseEventService {
 
     await this.publishModuleEvent(event);
   }
-}
-
-
-
-
-
-
+};

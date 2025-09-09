@@ -23,6 +23,3 @@ export const createQueryController = <TInput, TOutput>(config: any) => {
 
 
 
-
-
-

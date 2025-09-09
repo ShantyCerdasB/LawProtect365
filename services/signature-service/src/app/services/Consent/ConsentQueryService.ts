@@ -32,10 +32,4 @@ export class ConsentQueryService {
       return this.consentQueries.listByEnvelope(input);
     }
   }
-}
-
-
-
-
-
-
+};

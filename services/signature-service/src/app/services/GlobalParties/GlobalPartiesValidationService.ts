@@ -6,7 +6,7 @@
 
 import { BadRequestError, UnprocessableEntityError, isEmail } from "@lawprotect/shared-ts";
 import type { 
-  GlobalPartiesValidationService,
+  GlobalPartiesValidationService as IGlobalPartiesValidationService,
   CreateGlobalPartyControllerInput,
   UpdateGlobalPartyControllerInput,
   DeleteGlobalPartyControllerInput,
@@ -15,9 +15,10 @@ import type {
 } from "../../../domain/types/global-parties";
 
 /**
+ * @summary Validation service for Global Parties operations
  * @description Default implementation of GlobalPartiesValidationService
  */
-export class DefaultGlobalPartiesValidationService implements GlobalPartiesValidationService {
+export class GlobalPartiesValidationService implements IGlobalPartiesValidationService {
   validateCreate(input: CreateGlobalPartyControllerInput): void {
     if (!input.name?.trim()) {
       throw new BadRequestError(
@@ -54,6 +55,14 @@ export class DefaultGlobalPartiesValidationService implements GlobalPartiesValid
       throw new BadRequestError(
         "Email cannot be empty if provided",
         "GLOBAL_PARTY_EMAIL_CANNOT_BE_EMPTY"
+      );
+    }
+
+    // Validate email format if provided
+    if (input.updates.email && !isEmail(input.updates.email)) {
+      throw new UnprocessableEntityError(
+        "Invalid email format",
+        "GLOBAL_PARTY_INVALID_EMAIL_FORMAT"
       );
     }
 
@@ -98,11 +107,4 @@ export class DefaultGlobalPartiesValidationService implements GlobalPartiesValid
       );
     }
   }
-
-}
-
-
-
-
-
-
+};

@@ -7,7 +7,7 @@
 
 import { BaseEventService } from "../../../domain/services/BaseEventService";
 import type { DomainEvent, ActorContext } from "@lawprotect/shared-ts";
-import type { DocumentId, EnvelopeId, TenantId } from "@/domain/value-objects/ids";
+import type { DocumentId, EnvelopeId, TenantId } from "../../../domain/value-objects/ids";
 
 /**
  * @description Service interface for Documents event operations
@@ -236,10 +236,4 @@ export class DefaultDocumentsEventService extends BaseEventService implements Do
   ): Promise<void> {
     await this.publishDomainEvent(event, traceId);
   }
-}
-
-
-
-
-
-
+};

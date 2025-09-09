@@ -19,21 +19,21 @@ import { SignatureMethod } from "../values/enums";
  */
 export interface Signature {
   /** Unique identifier of the signature */
-  signatureId: string;
+  readonly signatureId: string;
   /** Input the signature fulfills */
-  inputId: string;
+  readonly inputId: string;
   /** Party who signed */
-  partyId: string;
+  readonly partyId: string;
   /** Envelope context */
-  envelopeId: string;
+  readonly envelopeId: string;
   /** Method used (drawn, typed, uploaded) */
-  method: SignatureMethod;
+  readonly method: SignatureMethod;
   /** Binary blob location in S3 (bucket/key) */
-  bucket: string;
+  readonly bucket: string;
   /** S3 key for the signature binary data */
-  key: string;
+  readonly key: string;
   /** Signature timestamp (ISO8601) */
-  signedAt: string;
+  readonly signedAt: string;
 }
 
 

@@ -58,10 +58,4 @@ export class EnvelopesCommandService {
 
     return this.commandsPort.delete(command);
   }
-}
-
-
-
-
-
-
+};

@@ -27,6 +27,3 @@ export type ConsentRecord = z.infer<typeof ConsentRecordSchema>;
 
 
 
-
-
-

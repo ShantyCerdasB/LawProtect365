@@ -2,6 +2,10 @@
  * @file DocumentsRepository.ts
  * @summary Repository contract for Document entities
  * @description Defines the interface for Document repository operations using branded types
+ * 
+ * This module defines the contract for document persistence operations, providing
+ * both unique identifier-based and composite key-based operations for single-table
+ * design patterns. It supports CRUD operations, existence checks, and pagination.
  */
 
 import type { Document } from "@/domain/entities/Document";
@@ -98,9 +102,3 @@ export interface DocumentsRepository {
    */
   existsByKey(documentKey: DocumentKey): Promise<boolean>;
 }
-
-
-
-
-
-

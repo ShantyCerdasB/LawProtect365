@@ -26,11 +26,8 @@ export const PersonNameSchema = z
   .transform((v) => {
     const display =
       v.display ?? [v.given, v.family].filter(Boolean).join(" ").trim();
-    return { display, given: v.given, family: v.family };
-  });
-
-
-
+  return { display, given: v.given, family: v.family };
+});
 
 
 

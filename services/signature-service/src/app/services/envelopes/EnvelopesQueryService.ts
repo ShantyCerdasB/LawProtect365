@@ -47,10 +47,4 @@ export class EnvelopesQueryService {
   async getStatus(query: GetEnvelopeStatusQuery): Promise<GetEnvelopeStatusResult> {
     return this.queriesPort.getStatus(query);
   }
-}
-
-
-
-
-
-
+};

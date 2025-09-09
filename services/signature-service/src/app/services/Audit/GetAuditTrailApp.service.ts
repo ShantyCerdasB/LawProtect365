@@ -5,7 +5,7 @@
  * and handles validation and error mapping for the audit trail workflow.
  */
 
-import type { AuditQueriesPort } from "../../ports/audit";
+import type { AuditQueriesPort } from "../../ports/audit/AuditQueriesPort";
 import type { 
   GetAuditTrailAppInput, 
   GetAuditTrailAppResult 
@@ -13,13 +13,15 @@ import type {
 import type { PaginationCursor } from "../../../domain/value-objects";
 
 /**
- * @description Application service for audit trail operations
+ * @summary Application service for audit trail operations
+ * @description Orchestrates the audit trail retrieval process with proper validation
  */
 export class GetAuditTrailAppService {
   constructor(private readonly auditQueries: AuditQueriesPort) {}
 
   /**
-   * @description Get audit trail for an envelope
+   * @summary Get audit trail for an envelope
+   * @description Get audit trail for an envelope with pagination support
    * @param input - Input parameters
    * @returns Promise resolving to audit trail result
    */
@@ -42,10 +44,4 @@ export class GetAuditTrailAppService {
       nextCursor: result.meta?.nextCursor as PaginationCursor | undefined,
     };
   }
-}
-
-
-
-
-
-
+};

@@ -7,7 +7,7 @@
 import { createController as createGenericController } from "@lawprotect/shared-ts";
 import { getContainer } from "../../core/Container";
 import type { Container } from "../../infrastructure/contracts/core";
-import { makeSigningCommandsPort } from "../../app/adapters/signing/makeSigningCommandsPort";
+import { createConsentDependencies } from "./helpers/ConsentControllerHelpers";
 
 /**
  * @summary Creates a command controller (POST/PUT/PATCH/DELETE operations)
@@ -29,26 +29,6 @@ export const createController = <TInput, TOutput>(config: any) => {
  * @param c - Container instance
  * @returns Base signing configuration
  */
-const createBaseSigningConfig = (c: Container) => ({
-  events: c.signing.commandsPort,
-  ids: c.ids,
-  time: c.time,
-  rateLimit: c.signing.rateLimitService,
-  signer: c.crypto.signer,
-  idempotency: c.idempotency.runner,
-  signingConfig: {
-    defaultKeyId: c.config.kms.signerKeyId,
-    allowedAlgorithms: [c.config.kms.signingAlgorithm],
-  },
-  uploadConfig: {
-    uploadBucket: c.config.s3.evidenceBucket,
-    uploadTtlSeconds: c.config.s3.presignTtlSeconds,
-  },
-  downloadConfig: {
-    signedBucket: c.config.s3.signedBucket,
-    downloadTtlSeconds: c.config.s3.presignTtlSeconds,
-  },
-});
 
 /**
  * @summary Creates signing command dependencies configuration
@@ -57,10 +37,7 @@ const createBaseSigningConfig = (c: Container) => ({
  * @param includeS3Service - Whether to include S3 service (optional)
  * @returns Signing command dependencies configuration
  */
-export const createSigningDependencies = (c: Container, includeS3Service = false) => {
-  const baseConfig = createBaseSigningConfig(c);
-  return includeS3Service ? { ...baseConfig, s3Service: c.signing.s3Service } : baseConfig;
-};
+export const createSigningDependencies = (c: Container) => c.signing.commandsPort;
 
 /**
  * @summary Creates requests command dependencies configuration
@@ -86,37 +63,11 @@ export const createRequestsDependencies = (c: Container) => ({
   }
 });
 
-/**
- * @summary Creates consent command dependencies configuration
- * @description Helper function to create standardized consent command dependencies
- * @param c - Container instance
- * @returns Consent command dependencies configuration
- */
-export const createConsentDependencies = (c: Container) => ({
-  consentsRepo: Object.assign(c.repos.consents, {
-    delegations: c.repos.delegations
-  }),
-  delegationsRepo: c.repos.delegations,
-  ids: c.ids,
-  globalPartiesRepo: c.consent.party,
-  validationService: c.consent.validation,
-  auditService: c.consent.audit,
-  eventService: c.consent.events,
-  idempotencyRunner: c.idempotency.runner
-});
+// Re-export createConsentDependencies from helpers
+export { createConsentDependencies };
 
-/**
- * @summary Creates signing command dependencies with S3 service
- * @description Helper function to create standardized signing command dependencies with S3 service
- * @param c - Container instance
- * @returns Signing command dependencies configuration with S3 service
- */
-export const createSigningDependenciesWithS3 = (c: Container) => makeSigningCommandsPort(
-  c.repos.envelopes,
-  c.repos.parties,
-  c.repos.documents,
-  createSigningDependencies(c, true)
-);
+// Alias for backward compatibility
+export const createSigningDependenciesWithS3 = createSigningDependencies;
 
 /**
  * @summary Creates standardized envelope path extraction
@@ -125,7 +76,7 @@ export const createSigningDependenciesWithS3 = (c: Container) => makeSigningComm
  * @param body - Request body
  * @returns Standardized envelope parameters
  */
-export const extractEnvelopeParams = (path: any, body: any) => ({
+export const extractEnvelopeParams = (path: Record<string, unknown>, body: Record<string, unknown>) => ({
   tenantId: path.tenantId,
   envelopeId: path.id,
   ...body
@@ -133,9 +84,5 @@ export const extractEnvelopeParams = (path: any, body: any) => ({
 
 // Alias for backward compatibility
 export const createCommandController = createController;
-
-
-
-
 
 

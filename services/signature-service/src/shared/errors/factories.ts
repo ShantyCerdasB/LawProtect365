@@ -24,7 +24,7 @@ import {
   UnauthorizedError,
   UnprocessableEntityError,
 } from "@lawprotect/shared-ts";
-import { SignatureErrorCodes, type AnyErrorCode } from "./codes.js";
+import { SignatureErrorCodes, type AnyErrorCode } from "./codes";
 
 /**
  * @description Creates a NotFoundError for when an envelope was not found (404).
@@ -282,9 +282,5 @@ export const rateLimitPartyInvite = (retryAfterSeconds = 60, details?: unknown) 
   (err as any).retryAfterSeconds = retryAfterSeconds;
   return err;
 };
-
-
-
-
 
 

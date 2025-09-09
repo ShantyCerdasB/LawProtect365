@@ -37,10 +37,4 @@ export class DefaultCertificateValidationService implements CertificateValidatio
       throw new BadRequestError("Cursor cannot be empty", ErrorCodes.COMMON_BAD_REQUEST, { query });
     }
   }
-}
-
-
-
-
-
-
+};

@@ -2,11 +2,14 @@
 /**
  * @file bootstrap.ts
  * @summary Thin app bootstrap that exposes the DI container to handlers.
- *
  * @description
  * - Uses the existing infra Container (singleton).
  * - Ensures one-time initialization on cold start.
  * - Provides a stable surface for handlers/tests.
+ * 
+ * This module provides the main application bootstrap functionality for the signature service.
+ * It initializes the dependency injection container and exposes it through a singleton pattern
+ * to ensure consistent access across handlers and tests.
  */
 
 import { getContainer } from "@/core/Container";
@@ -63,9 +66,3 @@ export function initApp(): App {
 export function getApp(): App {
   return initApp();
 }
-
-
-
-
-
-

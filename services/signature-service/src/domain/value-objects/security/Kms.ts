@@ -6,12 +6,10 @@
  * with proper validation and type safety.
  */
 
-import { z } from "zod";
+import { z, type Brand } from "@lawprotect/shared-ts";
 import { KMS_ALGORITHMS } from "../../values/enums";
 
 const TrimmedString = z.string().trim();
-
-type Brand<T, B> = T & { readonly __brand: B };
 
 /**
  * @description KMS key identifier (ARN or key id) branded.
@@ -31,9 +29,5 @@ export const KmsKeyIdSchema = TrimmedString.transform((v) => v as KmsKeyId);
  */
 export const KmsAlgorithmSchema = z.enum(KMS_ALGORITHMS);
 export type KmsAlgorithmType = z.infer<typeof KmsAlgorithmSchema>;
-
-
-
-
 
 

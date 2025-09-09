@@ -4,6 +4,10 @@
  * @description Service-specific configuration for the signature-service.
  * Extends the shared AppConfig with domain resources and feature toggles.
  * Provides configuration for DynamoDB tables, S3 buckets, KMS keys, EventBridge, and upload settings.
+ * 
+ * This module defines the complete configuration interface and loading logic for the signature service.
+ * It handles environment variable validation, provides sensible defaults, and ensures type safety
+ * for all configuration properties used throughout the application.
  */
 
 import { buildAppConfig, getEnv, getRequired, getNumber, getBoolean } from "@lawprotect/shared-ts";
@@ -154,6 +158,18 @@ export interface SignatureServiceConfig extends AppConfig {
     /** Maximum page size for audit queries */
     maxPageSize: number;
   };
+
+  /**
+   * @description Rate limiting configuration for parties.
+   */
+  partiesRateLimit: {
+    /** Maximum parties per envelope */
+    maxPartiesPerEnvelope: number;
+    /** Rate limit window in seconds */
+    windowSeconds: number;
+    /** TTL for rate limit entries in seconds */
+    ttlSeconds: number;
+  };
 }
 
 /**
@@ -253,13 +269,13 @@ export const loadConfig = (
       defaultPageSize: getNumber("AUDIT_DEFAULT_PAGE_SIZE", 50, { min: 1, max: 100 }),
       maxPageSize: getNumber("AUDIT_MAX_PAGE_SIZE", 100, { min: 1, max: 1000 }),
     },
+
+    partiesRateLimit: {
+      maxPartiesPerEnvelope: getNumber("PARTIES_MAX_PER_ENVELOPE", 50, { min: 1, max: 100 }),
+      windowSeconds: getNumber("PARTIES_RATE_LIMIT_WINDOW_SECONDS", 3600, { min: 60, max: 86400 }),
+      ttlSeconds: getNumber("PARTIES_RATE_LIMIT_TTL_SECONDS", 7200, { min: 300, max: 86400 }),
+    },
   };
 
   return { ...cfg, ...(overrides ?? {}) };
 };
-
-
-
-
-
-

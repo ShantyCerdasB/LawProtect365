@@ -4,25 +4,12 @@
  * @description Exports all documents services
  */
 
-export { DefaultDocumentsCommandService } from "./DocumentsCommandService";
-export { DefaultDocumentsQueryService } from "./DocumentsQueryService";
-export { DefaultDocumentsValidationService } from "./DocumentsValidationService";
-export { DefaultDocumentsEventService } from "./DocumentsEventService";
-export { DefaultDocumentsAuditService } from "./DocumentsAuditService";
-export { DefaultDocumentsRateLimitService } from "./DocumentsRateLimitService";
-export { DefaultDocumentsS3Service } from "./DocumentsS3Service";
-
-// Export interfaces
-export type { DocumentsCommandService } from "./DocumentsCommandService";
-export type { DocumentsQueryService } from "./DocumentsQueryService";
-export type { DocumentsValidationService } from "./DocumentsValidationService";
-export type { DocumentsEventService } from "./DocumentsEventService";
-export type { DocumentsAuditService } from "./DocumentsAuditService";
-export type { DocumentsRateLimitService } from "./DocumentsRateLimitService";
-export type { DocumentsS3Service } from "./DocumentsS3Service";
-
-
-
-
+export * from "./DocumentsAuditService";
+export * from "./DocumentsCommandService";
+export * from "./DocumentsEventService";
+export * from "./DocumentsQueryService";
+export * from "./DocumentsRateLimitService";
+export * from "./DocumentsS3Service";
+export * from "./DocumentsValidationService";
 
 

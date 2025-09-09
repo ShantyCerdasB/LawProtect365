@@ -4,8 +4,8 @@
  * @description Handles S3 operations for Documents including presigned URLs and object management
  */
 
-import type { DocumentId, EnvelopeId, TenantId } from "@/domain/value-objects/ids";
-import type { ContentType } from "@/domain/value-objects/index";
+import type { DocumentId, EnvelopeId, TenantId } from "../../../domain/value-objects/ids";
+import type { ContentType } from "../../../domain/value-objects/index";
 import { assertPresignPolicy } from "../../../domain/rules/Evidence.rules";
 
 /**
@@ -184,10 +184,4 @@ export class DefaultDocumentsS3Service implements DocumentsS3Service {
 
     return true;
   }
-}
-
-
-
-
-
-
+};

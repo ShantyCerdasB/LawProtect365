@@ -117,7 +117,7 @@ export class S3SignedPdfIngestor {
       cacheControl,
       metadata: input.metadata,
       kmsKeyId,
-             acl: S3_ACL_TYPES[0], // "private"
+      acl: S3_ACL_TYPES[0], // "private"
     });
 
     const httpUrl = toHttpUrl(bucket, input.key, region, {
@@ -131,9 +131,6 @@ export class S3SignedPdfIngestor {
     };
   }
 }
-
-
-
 
 
 

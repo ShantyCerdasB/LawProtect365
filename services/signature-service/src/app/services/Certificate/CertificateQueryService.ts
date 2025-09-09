@@ -22,10 +22,4 @@ export class DefaultCertificateQueryService {
   async getCertificate(query: GetCertificateQuery): Promise<GetCertificateResult | null> {
     return this.queriesPort.getCertificate(query);
   }
-}
-
-
-
-
-
-
+};

@@ -1,4 +1,11 @@
 
+/**
+ * @file Signing.rules.ts
+ * @summary Domain rules for signing operations and cryptographic validation
+ * @description Validates PDF digest matching, KMS algorithm permissions,
+ * and envelope completion requirements for signing operations.
+ */
+
 import { HashDigestSchema, KmsAlgorithmSchema } from "@/domain/value-objects/index";
 import { UnprocessableEntityError, ForbiddenError, ConflictError, ErrorCodes } from "@lawprotect/shared-ts";
 
@@ -80,9 +87,5 @@ export const assertCompletionAllowed = (stats: {
     );
   }
 };
-
-
-
-
 
 

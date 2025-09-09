@@ -20,6 +20,3 @@ export const DEFAULT_ID_INDEX = "gsi2";
 
 
 
-
-
-

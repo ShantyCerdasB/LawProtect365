@@ -6,7 +6,7 @@
 
 import { createCommandController } from "../../../shared/controllers/controllerFactory";
 import { makeSigningCommandsPort } from "../../../app/adapters/signing/makeSigningCommandsPort";
-import { DefaultSigningCommandService } from "../../../app/services/Signing";
+import { SigningCommandService } from "../../../app/services/Signing";
 import { SigningConsentBody } from "../../../presentation/schemas/signing/SigningConsent.schema";
 import { EnvelopeIdPath } from "../../../presentation/schemas/common/path";
 import type { SigningConsentControllerInput } from "../../../domain/types/signing/ControllerInputs";
@@ -18,7 +18,7 @@ import type { SigningConsentResult } from "../../../app/ports/signing/SigningCom
 export const RecordConsentController = createCommandController<SigningConsentControllerInput, SigningConsentResult>({
   bodySchema: SigningConsentBody,
   pathSchema: EnvelopeIdPath,
-  appServiceClass: DefaultSigningCommandService,
+  appServiceClass: SigningCommandService,
   createDependencies: (c: any) => makeSigningCommandsPort(
     c.repos.envelopes,
     c.repos.parties,

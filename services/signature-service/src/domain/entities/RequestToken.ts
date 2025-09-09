@@ -6,15 +6,15 @@
 
 export interface RequestToken {
   /** Token value (opaque, random). */
-  tokenId: string;
+  readonly tokenId: string;
   /** Party the token belongs to. */
-  partyId: string;
+  readonly partyId: string;
   /** Envelope context. */
-  envelopeId: string;
+  readonly envelopeId: string;
   /** Expiration timestamp (ISO8601). */
-  expiresAt: string;
+  readonly expiresAt: string;
   /** Creation timestamp (ISO8601). */
-  createdAt: string;
+  readonly createdAt: string;
 }
 
 

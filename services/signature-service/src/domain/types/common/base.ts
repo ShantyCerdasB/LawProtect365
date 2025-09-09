@@ -5,7 +5,7 @@
  */
 
 import { ISODateString } from "@lawprotect/shared-ts";
-import type { EnvelopeId, ConsentId } from "@/domain/value-objects/ids";
+import type { EnvelopeId, ConsentId } from "@/domain/value-objects";
 
 /**
  * @summary Entity with timestamp fields
@@ -66,9 +66,5 @@ export type DelegationKey = {
   /** Delegation identifier */
   readonly delegationId: string;
 };
-
-
-
-
 
 

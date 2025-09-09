@@ -4,7 +4,7 @@
  * @description Zod schema for validating reason strings with appropriate length limits
  */
 
-import { z } from "zod";
+import { z } from "@lawprotect/shared-ts";
 
 /**
  * @summary Reason validation schema

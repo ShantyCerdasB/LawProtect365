@@ -108,10 +108,4 @@ export class GlobalPartiesEventService extends BaseEventService {
   async publishDeleted(partyId: PartyId, tenantId: TenantId, actor: ActorContext): Promise<void> {
     await this.publishGlobalPartyDeletedEvent(partyId, tenantId, actor);
   }
-}
-
-
-
-
-
-
+};

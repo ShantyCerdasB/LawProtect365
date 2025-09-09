@@ -10,7 +10,7 @@
  */
 
 import type { InputsRepository } from "../../domain/contracts/repositories/inputs/InputsRepository";
-import { ConflictError, NotFoundError, mapAwsError, nowIso, requireQuery } from "@lawprotect/shared-ts";
+import { ConflictError, NotFoundError, mapAwsError, nowIso, requireQuery, BadRequestError } from "@lawprotect/shared-ts";
 import type { DdbClientLike } from "@lawprotect/shared-ts";
 import type { Input } from "../../domain/entities/Input";
 import type { EnvelopeId } from "@/domain/value-objects/ids";
@@ -20,6 +20,7 @@ import {
   inputPk,
   inputSk,
 } from "./mappers/inputItemMapper";
+import { INPUT_VALUES } from "../../domain/values/enums";
 
 
 /**
@@ -55,7 +56,15 @@ export class InputRepositoryDdb implements InputsRepository {
   }
 
   /**
-   * @description Adds a filter condition to the query parameters
+   * @summary Adds a filter condition to the query parameters
+   * @description Helper method to dynamically add filter conditions to DynamoDB query parameters.
+   * Builds expression attribute names and values for filtering operations.
+   * 
+   * @param queryParams - DynamoDB query parameters object to modify
+   * @param filterExpressions - Array of filter expressions to append to
+   * @param fieldName - The actual field name in the database
+   * @param value - The value to filter by
+   * @param attributeName - The attribute name to use in the expression
    */
   private addFilterCondition(
     queryParams: any,
@@ -73,7 +82,17 @@ export class InputRepositoryDdb implements InputsRepository {
   }
 
   /**
-   * @description Builds filter expressions for the query
+   * @summary Builds filter expressions for the query
+   * @description Helper method to build DynamoDB filter expressions based on provided parameters.
+   * Supports filtering by documentId, partyId, input type, and required status.
+   * 
+   * @param queryParams - DynamoDB query parameters object to modify
+   * @param params - Filter parameters object
+   * @param params.documentId - Optional document ID to filter by
+   * @param params.partyId - Optional party ID to filter by
+   * @param params.type - Optional input type to filter by
+   * @param params.required - Optional required status to filter by
+   * @returns Array of filter expression strings
    */
   private buildFilterExpressions(
     queryParams: any,
@@ -173,13 +192,22 @@ export class InputRepositoryDdb implements InputsRepository {
    * @param {Input} entity Domain entity to persist.
    * @returns {Promise<Input>} The persisted entity (same reference).
    * @throws {ConflictError} When the conditional write fails due to preexistence.
+   * @throws {BadRequestError} When input type is invalid.
    * @throws {HttpError} Normalized provider error via `mapAwsError`.
    */
   async create(entity: Input): Promise<Input> {
+    // Validate input type
+    if (!INPUT_VALUES.includes(entity.type as typeof INPUT_VALUES[number])) {
+      throw new BadRequestError(`Invalid input type: ${entity.type}`, "INPUT_TYPE_NOT_ALLOWED", {
+        validTypes: INPUT_VALUES,
+        providedType: entity.type,
+      });
+    }
+
     try {
       await this.ddb.put({
         TableName: this.tableName,
-        Item: inputItemMapper.toDTO(entity) as any,
+        Item: inputItemMapper.toDTO(entity) as Record<string, unknown>,
         ConditionExpression:
           "attribute_not_exists(pk) AND attribute_not_exists(sk)",
       });
@@ -199,6 +227,7 @@ export class InputRepositoryDdb implements InputsRepository {
    * @param {Partial<Input>} patch Partial fields to apply.
    * @returns {Promise<Input>} The updated `Input`.
    * @throws {NotFoundError} When the item does not exist.
+   * @throws {BadRequestError} When input type is invalid.
    * @throws {HttpError} Normalized provider error via `mapAwsError`.
    */
   async update(inputKey: InputKey, patch: Partial<Input>): Promise<Input> {
@@ -206,18 +235,26 @@ export class InputRepositoryDdb implements InputsRepository {
       const current = await this.getById(inputKey);
       if (!current) throw new NotFoundError("Input not found");
 
+      // Validate input type if provided
+      if (patch.type && !INPUT_VALUES.includes(patch.type as typeof INPUT_VALUES[number])) {
+        throw new BadRequestError(`Invalid input type: ${patch.type}`, "INPUT_TYPE_NOT_ALLOWED", {
+          validTypes: INPUT_VALUES,
+          providedType: patch.type,
+        });
+      }
+
       const next: Input = Object.freeze({
         ...current,
         required: patch.required ?? current.required,
         position: patch.position ?? current.position,
         value: patch.value ?? current.value,
-        // If the domain allows changing `type`, add: type: patch.type ?? current.type,
+        type: patch.type ?? current.type,
         updatedAt: nowIso(),
       });
 
       await this.ddb.put({
         TableName: this.tableName,
-        Item: inputItemMapper.toDTO(next) as any,
+        Item: inputItemMapper.toDTO(next) as Record<string, unknown>,
         ConditionExpression:
           "attribute_exists(pk) AND attribute_exists(sk)",
       });
@@ -254,9 +291,6 @@ export class InputRepositoryDdb implements InputsRepository {
     }
   }
 }
-
-
-
 
 
 

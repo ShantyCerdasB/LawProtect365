@@ -13,17 +13,17 @@ import { OtpChannel, PartyRole, PartyStatus, AuthMethod } from "../values/enums"
  */
 export interface OtpState {
   /** Hashed OTP code for secure storage */
-  codeHash: string;
+  readonly codeHash: string;
   /** Delivery channel (email or SMS) */
-  channel: OtpChannel;
+  readonly channel: OtpChannel;
   /** Expiration timestamp (ISO 8601) */
-  expiresAt: string;
+  readonly expiresAt: string;
   /** Number of attempts made */
-  tries: number;
+  readonly tries: number;
   /** Maximum allowed attempts */
-  maxTries: number;
+  readonly maxTries: number;
   /** Creation timestamp (ISO 8601) */
-  createdAt: string;
+  readonly createdAt: string;
 }
 
 /**
@@ -32,7 +32,7 @@ export interface OtpState {
  */
 export interface PartyAuth {
   /** Authentication methods enabled for this party */
-  methods: AuthMethod[];
+  readonly methods: AuthMethod[];
 }
 
 /**
@@ -41,43 +41,43 @@ export interface PartyAuth {
  */
 export interface Party {
   /** Tenant identifier */
-  tenantId: TenantId;
+  readonly tenantId: TenantId;
   /** Unique identifier of the party */
-  partyId: PartyId;
+  readonly partyId: PartyId;
   /** Envelope the party belongs to */
-  envelopeId: EnvelopeId;
+  readonly envelopeId: EnvelopeId;
   /** Full name of the party */
-  name: string;
+  readonly name: string;
   /** Email address of the party */
-  email: string;
+  readonly email: string;
   /** Functional role within the envelope */
-  role: PartyRole;
+  readonly role: PartyRole;
   /** Current status of the party */
-  status: PartyStatus;
+  readonly status: PartyStatus;
   /** Invitation timestamp (ISO 8601) */
-  invitedAt: string;
+  readonly invitedAt: string;
   /** Optional signature completion timestamp (ISO 8601) */
-  signedAt?: string;
+  readonly signedAt?: string;
   /**
    * Signing sequence number used for ordered flows.
    * Must be a positive integer when the party participates in signing/approval.
    * Ignored for viewers.
    */
-  sequence: number;
+  readonly sequence: number;
   /** Optional phone number of the party */
-  phone?: string;
+  readonly phone?: string;
   /** Optional locale preference of the party */
-  locale?: string;
+  readonly locale?: string;
   /** Authentication configuration for this party */
-  auth: PartyAuth;
+  readonly auth: PartyAuth;
   /** Optional reference to global party (contact) */
-  globalPartyId?: string;
+  readonly globalPartyId?: string;
   /** Creation timestamp (ISO 8601) */
-  createdAt: string;
+  readonly createdAt: string;
   /** Last update timestamp (ISO 8601) */
-  updatedAt: string;
+  readonly updatedAt: string;
   /** Optional OTP state for authentication (managed by Signing/Requests) */
-  otpState?: OtpState;
+  readonly otpState?: OtpState;
 }
 
 

@@ -1,7 +1,6 @@
 /**
  * @file Container.ts
  * @summary Dependency Injection (DI) container for the signature-service.
- *
  * @description
  * Provides a singleton container for infrastructure dependencies:
  * - AWS clients (DynamoDB, S3, KMS, EventBridge, SSM)
@@ -12,9 +11,10 @@
  * - Event publishing (EventBridge)
  * - Config provider (SSM-backed)
  * - High-level application services (use cases)
- *
- * Note: This file only adds documentation and organizational comments; business logic
- * and code behavior remain unchanged.
+ * 
+ * This module implements the main dependency injection container for the signature service.
+ * It initializes all AWS clients, repositories, services, and application ports in a
+ * centralized, singleton pattern to ensure consistent dependency management across the application.
  */
 
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
@@ -73,7 +73,7 @@ import { ConsentAuditService } from "../app/services/Consent/ConsentAuditService
 import { ConsentEventService } from "../app/services/Consent/ConsentEventService";
 import { makeConsentQueryPort } from "../app/adapters/consent/MakeConsentQueryPort";
 
-import { DefaultGlobalPartiesValidationService } from "../app/services/GlobalParties/GlobalPartiesValidationService";
+import { GlobalPartiesValidationService } from "../app/services/GlobalParties/GlobalPartiesValidationService";
 import { GlobalPartiesAuditService } from "../app/services/GlobalParties/GlobalPartiesAuditService";
 import { GlobalPartiesEventService } from "../app/services/GlobalParties/GlobalPartiesEventService";
 import { makeGlobalPartiesCommandsPort } from "../app/adapters/global-parties/MakeGlobalPartiesCommandsPort";
@@ -111,10 +111,10 @@ import { makeInputsCommandsPort } from "../app/adapters/inputs/makeInputsCommand
 import { makeInputsQueriesPort } from "../app/adapters/inputs/makeInputsQueriesPort";
 
 // Requests services
-import { DefaultRequestsValidationService } from "../app/services/Requests/RequestsValidationService";
-import { DefaultRequestsAuditService } from "../app/services/Requests/RequestsAuditService";
-import { DefaultRequestsEventService } from "../app/services/Requests/RequestsEventService";
-import { DefaultRequestsRateLimitService } from "../app/services/Requests/RequestsRateLimitService";
+import { RequestsValidationService } from "../app/services/Requests/RequestsValidationService";
+import { RequestsAuditService } from "../app/services/Requests/RequestsAuditService";
+import { RequestsEventService } from "../app/services/Requests/RequestsEventService";
+import { RequestsRateLimitService } from "../app/services/Requests/RequestsRateLimitService";
 import { makeRequestsCommandsPort } from "../app/adapters/requests/makeRequestsCommandsPort";
 import { makeSigningCommandsPort } from "../app/adapters/signing/makeSigningCommandsPort";
 import { makeSignaturesCommandsPort } from "../app/adapters/signatures/makeSignaturesCommandsPort";
@@ -126,17 +126,17 @@ import { DefaultCertificateValidationService } from "../app/services/Certificate
 import { makeAuditCommandsPort, makeAuditQueriesPort } from "../app/adapters/audit";
 
 // Signing services
-import { 
-  DefaultSigningValidationService,
-  DefaultSigningCommandService,
-  DefaultSigningEventService,
-  DefaultSigningAuditService,
-  DefaultSigningRateLimitService,
-  DefaultSigningS3Service
+import {
+  SigningValidationService,
+  SigningCommandService,
+  SigningEventService,
+  SigningAuditService,
+  SigningRateLimitService,
+  SigningS3Service
 } from "../app/services/Signing";
 
 // Signatures services
-import { DefaultSignaturesCommandService } from "../app/services/Signatures";
+import { SignaturesCommandService } from "../app/services/Signatures";
 import { makeCertificateQueriesPort } from "../app/adapters/certificate/makeCertificateQueriesPort";
 
 let singleton: Container;
@@ -307,7 +307,7 @@ export const getContainer = (): Container => {
   const consentEvents = new ConsentEventService(outbox);
 
   // Global Parties services - instantiate with correct dependencies
-  const globalPartiesValidation = new DefaultGlobalPartiesValidationService();
+  const globalPartiesValidation = new GlobalPartiesValidationService();
   const globalPartiesAudit = new GlobalPartiesAuditService(audit);
   const globalPartiesEvents = new GlobalPartiesEventService(outbox);
   
@@ -328,11 +328,7 @@ export const getContainer = (): Container => {
   // ✅ RATE LIMITING - Configuración por tenant
   const partiesRateLimit = new PartiesRateLimitService(
     otpRateLimitStore,
-    { 
-      maxPartiesPerEnvelope: 50, 
-      windowSeconds: 3600, // 1 hora
-      ttlSeconds: 7200     // 2 horas
-    }
+    config.partiesRateLimit
   );
   
   const partiesCommands = makePartiesCommandsPort(
@@ -362,7 +358,7 @@ export const getContainer = (): Container => {
   const envelopesCommands = makeEnvelopesCommandsPort({
     envelopesRepo: envelopes,
     ids,
-    config: config as any, // Cast to resolve type mismatch between core/Config and shared/types/core/config
+    config,
     partiesRepo: parties,
     inputsRepo: inputs,
     validationService: envelopesValidation,
@@ -428,10 +424,10 @@ export const getContainer = (): Container => {
   const documentsQueries = makeDocumentsQueriesPort(documents);
 
   // Requests services - instantiate with correct dependencies
-  const requestsValidation = new DefaultRequestsValidationService(inputs);
-  const requestsAudit = new DefaultRequestsAuditService(audit);
-  const requestsEvents = new DefaultRequestsEventService(outbox);
-  const requestsRateLimit = new DefaultRequestsRateLimitService(otpRateLimitStore);
+  const requestsValidation = new RequestsValidationService(inputs);
+  const requestsAudit = new RequestsAuditService(audit);
+  const requestsEvents = new RequestsEventService(outbox);
+  const requestsRateLimit = new RequestsRateLimitService(otpRateLimitStore);
   
   const requestsCommands = makeRequestsCommandsPort({
     repositories: {
@@ -468,11 +464,11 @@ export const getContainer = (): Container => {
   });
 
   // Signing services - instantiate with correct dependencies
-  const signingValidation = new DefaultSigningValidationService();
-  const signingEvent = new DefaultSigningEventService(outbox);
-  const signingAudit = new DefaultSigningAuditService(audit);
-  const signingRateLimit = new DefaultSigningRateLimitService(otpRateLimitStore);
-  const signingS3 = new DefaultSigningS3Service(
+  const signingValidation = new SigningValidationService();
+  const signingEvent = new SigningEventService(outbox);
+  const signingAudit = new SigningAuditService(audit);
+  const signingRateLimit = new SigningRateLimitService(otpRateLimitStore);
+  const signingS3 = new SigningS3Service(
     presigner,
     config.s3.evidenceBucket,
     config.s3.signedBucket,
@@ -507,7 +503,7 @@ export const getContainer = (): Container => {
     }
   );
 
-  const signingCommand = new DefaultSigningCommandService(signingCommands);
+  const signingCommand = new SigningCommandService(signingCommands);
 
   // Signatures services - instantiate with correct dependencies
   const signaturesCommands = makeSignaturesCommandsPort(
@@ -518,7 +514,7 @@ export const getContainer = (): Container => {
     }
   );
 
-  const signaturesCommand = new DefaultSignaturesCommandService(signaturesCommands);
+  const signaturesCommand = new SignaturesCommandService(signaturesCommands);
 
   singleton = {
     config,
@@ -620,9 +616,3 @@ export const getContainer = (): Container => {
 
   return singleton;
 };
-
-
-
-
-
-

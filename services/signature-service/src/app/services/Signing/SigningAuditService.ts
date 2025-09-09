@@ -9,14 +9,14 @@ import { BaseAuditService } from "../../../domain/services/BaseAuditService";
 import type { AuditContext, ActorContext } from "@lawprotect/shared-ts";
 import type { EnvelopeId, PartyId, TenantId } from "@/domain/value-objects/ids";
 import { nowIso } from "@lawprotect/shared-ts";
-import type { SigningAuditService } from "../../../domain/types/signing";
+import type { SigningAuditService as ISigningAuditService } from "../../../domain/types/signing";
 
 /**
  * @summary Audit service for Signing business logic
  * @description Extends BaseAuditService to provide Signing-specific audit logging functionality.
  * This service is different from Audit Application Services - it's for business logic audit logging.
  */
-export class DefaultSigningAuditService extends BaseAuditService implements SigningAuditService {
+export class SigningAuditService extends BaseAuditService implements ISigningAuditService {
   /**
    * @summary Logs a business event for audit purposes
    * @description Implementation of the abstract method from BaseAuditService
@@ -235,10 +235,4 @@ export class DefaultSigningAuditService extends BaseAuditService implements Sign
       partyId,
     });
   }
-}
-
-
-
-
-
-
+};

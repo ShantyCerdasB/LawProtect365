@@ -6,7 +6,7 @@
 
 import { createCommandController } from "../../../shared/controllers/controllerFactory";
 import { makeGlobalPartiesCommandsPort } from "../../../app/adapters/global-parties/MakeGlobalPartiesCommandsPort";
-import { DefaultGlobalPartiesCommandService } from "../../../app/services/GlobalParties";
+import { GlobalPartiesCommandService } from "../../../app/services/GlobalParties";
 import { DeleteGlobalPartyParams } from "../../../presentation/schemas/global-parties/DeleteGlobalParty.schema";
 import type { DeleteGlobalPartyControllerInput } from "../../../domain/types/global-parties/ControllerInputs";
 import type { DeleteGlobalPartyAppResult } from "../../../domain/types/global-parties/AppServiceInputs";
@@ -16,7 +16,7 @@ import type { DeleteGlobalPartyAppResult } from "../../../domain/types/global-pa
  */
 export const DeleteGlobalPartyController = createCommandController<DeleteGlobalPartyControllerInput, DeleteGlobalPartyAppResult>({
   pathSchema: DeleteGlobalPartyParams,
-  appServiceClass: DefaultGlobalPartiesCommandService,
+  appServiceClass: GlobalPartiesCommandService,
   createDependencies: (c: any) => makeGlobalPartiesCommandsPort({
     globalParties: c.repos.globalParties,
     ids: c.ids,

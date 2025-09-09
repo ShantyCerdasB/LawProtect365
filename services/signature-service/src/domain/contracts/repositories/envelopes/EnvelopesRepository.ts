@@ -2,6 +2,10 @@
  * @file EnvelopesRepository.ts
  * @summary Repository contract for envelopes
  * @description Defines the interface for envelope persistence operations
+ * 
+ * This module defines the contract for envelope persistence operations,
+ * extending the base Repository interface with envelope-specific methods
+ * for tenant-based queries and pagination.
  */
 
 import { Envelope } from "@/domain/entities";
@@ -28,9 +32,3 @@ export interface EnvelopesRepository extends Repository<Envelope, EnvelopeId, un
     cursor?: string;
   }): Promise<{ items: Envelope[]; nextCursor?: string }>;
 }
-
-
-
-
-
-

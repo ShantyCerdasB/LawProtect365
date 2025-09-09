@@ -10,15 +10,16 @@
  */
 
 import type { Repository, DdbClientLike } from "@lawprotect/shared-ts";
-import { ConflictError, NotFoundError, mapAwsError, toDdbItem } from "@lawprotect/shared-ts";
+import { ConflictError, NotFoundError, mapAwsError, toDdbItem, BadRequestError } from "@lawprotect/shared-ts";
 import type { Party } from "../../domain/entities/Party";
 import {
   partyItemMapper,
   partyPk,
   partySk,
-  requireQuery,
   PartyKey,
 } from "../../domain/types/infrastructure/dynamodb";
+import { requireQuery } from "@lawprotect/shared-ts";
+import { PARTY_ROLES, PARTY_STATUSES } from "../../domain/values/enums";
 
 /**
  * @description Narrows a typed object into the loose `Record<string, unknown>` shape
@@ -78,9 +79,26 @@ export class PartyRepositoryDdb
    * @param {Party} entity Domain entity to persist.
    * @returns {Promise<Party>} The same `Party` entity.
    * @throws {ConflictError} When the conditional write fails (already exists).
+   * @throws {BadRequestError} When party role or status is invalid.
    * @throws {HttpError} Normalized AWS error via `mapAwsError`.
    */
   async create(entity: Party): Promise<Party> {
+    // Validate party role
+    if (!PARTY_ROLES.includes(entity.role as typeof PARTY_ROLES[number])) {
+      throw new BadRequestError(`Invalid party role: ${entity.role}`, "INPUT_TYPE_NOT_ALLOWED", {
+        validRoles: PARTY_ROLES,
+        providedRole: entity.role,
+      });
+    }
+
+    // Validate party status
+    if (!PARTY_STATUSES.includes(entity.status as typeof PARTY_STATUSES[number])) {
+      throw new BadRequestError(`Invalid party status: ${entity.status}`, "INPUT_TYPE_NOT_ALLOWED", {
+        validStatuses: PARTY_STATUSES,
+        providedStatus: entity.status,
+      });
+    }
+
     try {
       await this.ddb.put({
         TableName: this.tableName,
@@ -104,12 +122,29 @@ export class PartyRepositoryDdb
    * @param {Partial<Party>} patch Partial fields to update.
    * @returns {Promise<Party>} The updated `Party`.
    * @throws {NotFoundError} When the item does not exist.
+   * @throws {BadRequestError} When party role or status is invalid.
    * @throws {HttpError} Normalized AWS error via `mapAwsError`.
    */
   async update(key: PartyKey, patch: Partial<Party>): Promise<Party> {
     try {
       const current = await this.getById(key);
       if (!current) throw new NotFoundError("Party not found");
+
+      // Validate party role if provided
+      if (patch.role && !PARTY_ROLES.includes(patch.role as typeof PARTY_ROLES[number])) {
+        throw new BadRequestError(`Invalid party role: ${patch.role}`, "INPUT_TYPE_NOT_ALLOWED", {
+          validRoles: PARTY_ROLES,
+          providedRole: patch.role,
+        });
+      }
+
+      // Validate party status if provided
+      if (patch.status && !PARTY_STATUSES.includes(patch.status as typeof PARTY_STATUSES[number])) {
+        throw new BadRequestError(`Invalid party status: ${patch.status}`, "INPUT_TYPE_NOT_ALLOWED", {
+          validStatuses: PARTY_STATUSES,
+          providedStatus: patch.status,
+        });
+      }
 
       const next: Party = Object.freeze({
         ...current,
@@ -272,8 +307,15 @@ export class PartyRepositoryDdb
   }
 
   /**
-   * @description Updates a party entity (for compatibility with new adapters).
-   * @param {Party} party The party entity to update.
+   * @summary Updates a party entity (for compatibility with new adapters)
+   * @description Compatibility method that wraps the standard update method.
+   * Used by legacy adapters that expect a different method signature.
+   * 
+   * @param party - The party entity to update
+   * @returns Promise that resolves when the update is complete
+   * @throws {NotFoundError} When the party is not found
+   * @throws {BadRequestError} When party role or status is invalid
+   * @throws {HttpError} Normalized AWS error via `mapAwsError`
    */
   async updateParty(party: Party): Promise<void> {
     await this.update(
@@ -283,17 +325,19 @@ export class PartyRepositoryDdb
   }
 
   /**
-   * @description Deletes a party by ID and envelope ID (for compatibility with new adapters).
-   * @param {string} partyId The party ID.
-   * @param {string} envelopeId The envelope ID.
+   * @summary Deletes a party by ID and envelope ID (for compatibility with new adapters)
+   * @description Compatibility method that wraps the standard delete method.
+   * Used by legacy adapters that expect a different method signature.
+   * 
+   * @param partyId - The party ID to delete
+   * @param envelopeId - The envelope ID containing the party
+   * @returns Promise that resolves when the deletion is complete
+   * @throws {NotFoundError} When the party is not found
+   * @throws {HttpError} Normalized AWS error via `mapAwsError`
    */
   async deleteParty(partyId: string, envelopeId: string): Promise<void> {
     await this.delete({ envelopeId, partyId });
   }
 }
-
-
-
-
 
 

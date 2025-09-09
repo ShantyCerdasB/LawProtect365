@@ -17,14 +17,16 @@ import type {
 import { assertTenantBoundary } from "@lawprotect/shared-ts";
 
 /**
- * @summary Default implementation of PartiesCommandService
+ * @summary Command service for Parties operations
  * @description Simple wrapper around PartiesCommandsPort
  */
-export class DefaultPartiesCommandService {
+export class PartiesCommandService {
   constructor(private readonly commandsPort: PartiesCommandsPort) {}
 
   /**
-   * Creates a new Party in an envelope.
+   * @summary Creates a new Party in an envelope
+   * @param command - Command data for creating party
+   * @returns Promise resolving to creation result
    */
   async create(command: CreatePartyCommand): Promise<CreatePartyResult> {
     // Apply generic rules
@@ -34,7 +36,9 @@ export class DefaultPartiesCommandService {
   }
 
   /**
-   * Updates an existing Party.
+   * @summary Updates an existing Party
+   * @param command - Command data for updating party
+   * @returns Promise resolving to update result
    */
   async update(command: UpdatePartyCommand): Promise<UpdatePartyResult> {
     // Apply generic rules
@@ -44,7 +48,9 @@ export class DefaultPartiesCommandService {
   }
 
   /**
-   * Deletes a Party from an envelope.
+   * @summary Deletes a Party from an envelope
+   * @param command - Command data for deleting party
+   * @returns Promise resolving to deletion result
    */
   async delete(command: DeletePartyCommand): Promise<DeletePartyResult> {
     // Apply generic rules
@@ -52,10 +58,4 @@ export class DefaultPartiesCommandService {
 
     return this.commandsPort.delete(command);
   }
-}
-
-
-
-
-
-
+};

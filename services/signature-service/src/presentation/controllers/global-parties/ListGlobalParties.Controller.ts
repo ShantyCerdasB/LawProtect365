@@ -6,7 +6,7 @@
 
 import { createQueryController } from "../../../shared/controllers/queryFactory";
 import { makeGlobalPartiesQueriesPort } from "../../../app/adapters/global-parties/MakeGlobalPartiesQueriesPort";
-import { DefaultGlobalPartiesQueryService } from "../../../app/services/GlobalParties";
+import { GlobalPartiesQueryService } from "../../../app/services/GlobalParties";
 import { ListGlobalPartiesQuery } from "../../../presentation/schemas/global-parties/ListGlobalParties.schema";
 import type { ListGlobalPartiesControllerInput } from "../../../domain/types/global-parties/ControllerInputs";
 import type { ListGlobalPartiesAppResult } from "../../../domain/types/global-parties/AppServiceInputs";
@@ -16,7 +16,7 @@ import type { ListGlobalPartiesAppResult } from "../../../domain/types/global-pa
  */
 export const ListGlobalPartiesController = createQueryController<ListGlobalPartiesControllerInput, ListGlobalPartiesAppResult>({
   querySchema: ListGlobalPartiesQuery,
-  appServiceClass: DefaultGlobalPartiesQueryService,
+  appServiceClass: GlobalPartiesQueryService,
   createDependencies: (c: any) => makeGlobalPartiesQueriesPort({
     globalParties: c.repos.globalParties,
   }),

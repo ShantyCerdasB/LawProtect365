@@ -5,20 +5,22 @@
  * and handles validation and error mapping for the audit event workflow.
  */
 
-import type { AuditQueriesPort } from "../../ports/audit";
+import type { AuditQueriesPort } from "../../ports/audit/AuditQueriesPort";
 import type { 
   GetAuditEventAppInput, 
   GetAuditEventAppResult 
 } from "../../../domain/types/audit/AppServiceInputs";
 
 /**
- * @description Application service for audit event operations
+ * @summary Application service for audit event operations
+ * @description Orchestrates the audit event retrieval process with proper validation
  */
 export class GetAuditEventAppService {
   constructor(private readonly auditQueries: AuditQueriesPort) {}
 
   /**
-   * @description Get a specific audit event by ID
+   * @summary Get a specific audit event by ID
+   * @description Get a specific audit event by ID with proper validation
    * @param input - Input parameters
    * @returns Promise resolving to audit event result or null if not found
    */
@@ -42,10 +44,4 @@ export class GetAuditEventAppService {
       metadata: result.event.metadata || {},
     };
   }
-}
-
-
-
-
-
-
+};

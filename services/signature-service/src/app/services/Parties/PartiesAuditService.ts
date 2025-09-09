@@ -129,10 +129,4 @@ export class PartiesAuditService extends BaseAuditService {
       envelopeId: input.envelopeId,
     });
   }
-}
-
-
-
-
-
-
+};

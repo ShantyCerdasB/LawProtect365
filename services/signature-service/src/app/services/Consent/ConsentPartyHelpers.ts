@@ -6,7 +6,8 @@
 
 import type { GlobalPartiesRepository } from "../../../domain/contracts/repositories/global-parties/GlobalPartiesRepository";
 import type { FindOrCreatePartyInput } from "../../../domain/types/global-parties";
-import type { PartyId, TenantId } from "@/domain/value-objects/ids";
+import type { PartyId, TenantId } from "../../../domain/value-objects/ids";
+import { PARTY_ROLES, PARTY_SOURCES, PARTY_STATUSES, AUTH_METHODS } from "../../../domain/values/enums";
 import { BadRequestError } from "../../../shared/errors";
 
 /**
@@ -30,11 +31,11 @@ export function createDefaultPartyForDelegation(
     tenantId,
     email,
     name,
-    role: "signer" as any, // Default role for delegates
-    source: "manual" as any, // Default source
-    status: "active" as any, // Default status
+    role: PARTY_ROLES[0], // "signer" - Default role for delegates
+    source: PARTY_SOURCES[0], // "manual" - Default source
+    status: PARTY_STATUSES[4], // "active" - Default status
     preferences: {
-      defaultAuth: "otpViaEmail" as any,
+      defaultAuth: AUTH_METHODS[0], // "otpViaEmail" - Default auth method
       defaultLocale: undefined,
     },
     notificationPreferences: {
@@ -97,10 +98,4 @@ export async function findOrCreatePartyForDelegation(
   await globalPartiesRepo.create(partyData);
 
   return newPartyId;
-}
-
-
-
-
-
-
+};

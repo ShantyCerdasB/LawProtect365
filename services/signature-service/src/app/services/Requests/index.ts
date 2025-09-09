@@ -4,14 +4,10 @@
  * @description Exports all Requests service classes
  */
 
-export { DefaultRequestsCommandService } from "./RequestsCommandService";
-export { DefaultRequestsValidationService } from "./RequestsValidationService";
-export { DefaultRequestsAuditService } from "./RequestsAuditService";
-export { DefaultRequestsEventService } from "./RequestsEventService";
-export { DefaultRequestsRateLimitService } from "./RequestsRateLimitService";
-
-
-
-
+export * from "./RequestsAuditService";
+export * from "./RequestsCommandService";
+export * from "./RequestsEventService";
+export * from "./RequestsRateLimitService";
+export * from "./RequestsValidationService";
 
 

@@ -1,4 +1,11 @@
 
+/**
+ * @file EnvelopeLifecycle.rules.ts
+ * @summary Domain rules for envelope lifecycle transitions
+ * @description Validates envelope state transitions and draft requirements
+ * for structural mutations in the envelope lifecycle.
+ */
+
 import type { Envelope } from "../entities";
 import { EnvelopeStatusSchema, type EnvelopeStatus } from "@/domain/value-objects/index";
 import { ConflictError, ErrorCodes } from "@lawprotect/shared-ts";
@@ -58,9 +65,5 @@ export const assertDraft = (env: Pick<Envelope, "status" | "envelopeId">): void 
     );
   }
 };
-
-
-
-
 
 

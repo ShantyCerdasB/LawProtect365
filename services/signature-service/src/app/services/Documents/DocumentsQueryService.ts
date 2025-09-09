@@ -9,7 +9,7 @@ import type {
   ListDocumentsQuery,
   ListDocumentsResult
 } from "../../ports/documents/DocumentsQueriesPort";
-import type { DocumentId } from "@/domain/value-objects/ids";
+import type { DocumentId } from "../../../domain/value-objects/ids";
 import type { Document } from "../../../domain/entities/Document";
 import type { DocumentLock } from "@lawprotect/shared-ts";
 
@@ -56,10 +56,4 @@ export class DefaultDocumentsQueryService implements DocumentsQueryService {
   async listLocks(documentId: DocumentId): Promise<DocumentLock[]> {
     return this.queriesPort.listLocks(documentId);
   }
-}
-
-
-
-
-
-
+};

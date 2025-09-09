@@ -5,7 +5,7 @@
  */
 
 import { createCommandController } from "../../../shared/controllers/controllerFactory";
-import { DefaultInputsCommandService } from "../../../app/services/Inputs";
+import { InputsCommandService } from "../../../app/services/Inputs";
 import { CreateInputsBody, EnvelopeInputPath } from "../../../presentation/schemas/inputs";
 import type { CreateInputsResult } from "../../../app/ports/inputs/InputsCommandsPort";
 import type { CreateInputsControllerInput } from "@/domain/types/inputs";
@@ -16,7 +16,7 @@ import type { CreateInputsControllerInput } from "@/domain/types/inputs";
 export const CreateInputsController = createCommandController<CreateInputsControllerInput, CreateInputsResult>({
   bodySchema: CreateInputsBody,
   pathSchema: EnvelopeInputPath,
-  appServiceClass: DefaultInputsCommandService,
+  appServiceClass: InputsCommandService,
   createDependencies: (c: any) => c.inputs.commandsPort,
   extractParams: (path: any, body: any) => ({
     envelopeId: path.envelopeId,

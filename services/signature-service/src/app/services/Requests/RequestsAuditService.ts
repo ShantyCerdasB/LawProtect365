@@ -6,7 +6,7 @@
 
 import { BaseAuditService } from "../../../domain/services/BaseAuditService";
 import type { AuditContext, ActorContext } from "@lawprotect/shared-ts";
-import type { RequestsAuditService } from "../../../domain/types/requests/ServiceInterfaces";
+import type { RequestsAuditService as IRequestsAuditService } from "../../../domain/types/requests/ServiceInterfaces";
 import type { PartyId, EnvelopeId, TenantId } from "@/domain/value-objects/ids";
 import { nowIso } from "@lawprotect/shared-ts";
 
@@ -14,7 +14,7 @@ import { nowIso } from "@lawprotect/shared-ts";
  * @summary Audit service for requests operations
  * @description Extends BaseAuditService to provide request-specific audit logging
  */
-export class DefaultRequestsAuditService extends BaseAuditService implements RequestsAuditService {
+export class RequestsAuditService extends BaseAuditService implements IRequestsAuditService {
   
   /**
    * @summary Logs a business event for audit purposes
@@ -135,10 +135,4 @@ export class DefaultRequestsAuditService extends BaseAuditService implements Req
       partyId,
     });
   }
-}
-
-
-
-
-
-
+};

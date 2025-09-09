@@ -2,6 +2,10 @@
  * @file AuditRepository.ts
  * @summary Audit repository contract
  * @description Repository interface for audit events persistence
+ * 
+ * This module defines the contract for audit event persistence operations,
+ * providing a clear interface for recording, retrieving, and querying audit
+ * events with proper pagination and filtering capabilities.
  */
 
 import type { AuditEvent, AuditEventId } from "@/domain/value-objects/audit";
@@ -46,9 +50,3 @@ export interface AuditRepository {
    */
   listByEnvelope(input: ListByEnvelopeInput): Promise<CursorPage<AuditEvent>>;
 }
-
-
-
-
-
-

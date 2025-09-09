@@ -6,7 +6,7 @@
 
 import { createQueryController } from "../../../shared/controllers/queryFactory";
 import { makeGlobalPartiesQueriesPort } from "../../../app/adapters/global-parties/MakeGlobalPartiesQueriesPort";
-import { DefaultGlobalPartiesQueryService } from "../../../app/services/GlobalParties";
+import { GlobalPartiesQueryService } from "../../../app/services/GlobalParties";
 import { SearchGlobalPartiesByEmailQuery } from "../../../presentation/schemas/global-parties/SearchGlobalPartiesByEmail.schema";
 import type { SearchGlobalPartiesByEmailControllerInput } from "../../../domain/types/global-parties/ControllerInputs";
 import type { SearchGlobalPartiesByEmailAppResult } from "../../../domain/types/global-parties/AppServiceInputs";
@@ -16,7 +16,7 @@ import type { SearchGlobalPartiesByEmailAppResult } from "../../../domain/types/
  */
 export const SearchGlobalPartiesByEmailController = createQueryController<SearchGlobalPartiesByEmailControllerInput, SearchGlobalPartiesByEmailAppResult>({
   querySchema: SearchGlobalPartiesByEmailQuery,
-  appServiceClass: DefaultGlobalPartiesQueryService,
+  appServiceClass: GlobalPartiesQueryService,
   createDependencies: (c: any) => makeGlobalPartiesQueriesPort({
     globalParties: c.repos.globalParties,
   }),

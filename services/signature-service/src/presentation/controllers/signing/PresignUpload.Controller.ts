@@ -5,7 +5,7 @@
  */
 
 import { createCommandController, createSigningDependenciesWithS3 } from "../../../shared/controllers/controllerFactory";
-import { DefaultSigningCommandService } from "../../../app/services/Signing";
+import { SigningCommandService } from "../../../app/services/Signing";
 import { PresignUploadBody } from "../../../presentation/schemas/signing/PresignUpload.schema";
 import { EnvelopeIdPath } from "../../../presentation/schemas/common/path";
 import type { PresignUploadControllerInput } from "../../../domain/types/signing/ControllerInputs";
@@ -17,7 +17,7 @@ import type { PresignUploadResult } from "../../../app/ports/signing/SigningComm
 export const PresignUploadController = createCommandController<PresignUploadControllerInput, PresignUploadResult>({
   bodySchema: PresignUploadBody,
   pathSchema: EnvelopeIdPath,
-  appServiceClass: DefaultSigningCommandService,
+  appServiceClass: SigningCommandService,
   createDependencies: createSigningDependenciesWithS3,
   extractParams: (path: any, body: any) => ({
     tenantId: path.tenantId,

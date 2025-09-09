@@ -5,7 +5,7 @@
  * and handles validation and error mapping for the audit event recording workflow.
  */
 
-import type { AuditCommandsPort } from "../../ports/audit/AuditCommandsPort";
+import type { AuditCommandsPort } from "../../ports/audit";
 import type { 
   RecordAuditEventAppInput, 
   RecordAuditEventAppResult 
@@ -13,13 +13,15 @@ import type {
 import { formatActor } from "@lawprotect/shared-ts";
 
 /**
- * @description Application service for audit event recording operations
+ * @summary Application service for audit event recording operations
+ * @description Orchestrates the audit event recording process with proper validation
  */
 export class RecordAuditEventAppService {
   constructor(private readonly auditCommands: AuditCommandsPort) {}
 
   /**
-   * @description Record a new audit event
+   * @summary Record a new audit event
+   * @description Record a new audit event with proper validation and formatting
    * @param input - Input parameters for recording audit event
    * @returns Promise resolving to audit event recording result
    */
@@ -41,10 +43,4 @@ export class RecordAuditEventAppService {
       metadata: result.metadata,
     };
   }
-}
-
-
-
-
-
-
+};

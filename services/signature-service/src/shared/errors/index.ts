@@ -39,12 +39,8 @@ export {
   SignatureErrorCodes,
   type SignatureErrorCode,
   type AnyErrorCode,
-} from "./codes.js";
+} from "./codes";
 
-export * from "./factories.js";
-
-
-
-
+export * from "./factories";
 
 

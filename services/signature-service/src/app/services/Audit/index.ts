@@ -4,12 +4,8 @@
  * @description Exports all audit application services
  */
 
-export * from "./GetAuditTrailApp.service";
 export * from "./GetAuditEventApp.service";
+export * from "./GetAuditTrailApp.service";
 export * from "./RecordAuditEventApp.service";
-
-
-
-
 
 

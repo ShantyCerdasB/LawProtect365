@@ -5,7 +5,7 @@
  */
 
 import { createQueryController } from "../../../shared/controllers/queryFactory";
-import { DefaultPartiesQueryService } from "../../../app/services/Parties";
+import { PartiesQueryService } from "../../../app/services/Parties";
 import { ListPartiesQuery, ListPartiesParams } from "../../../presentation/schemas/parties/ListParties.schema";
 import type { ListPartiesAppInput, ListPartiesAppResult } from "../../../domain/types/parties/AppServiceInputs";
 
@@ -15,7 +15,7 @@ import type { ListPartiesAppInput, ListPartiesAppResult } from "../../../domain/
 export const ListPartiesController = createQueryController<ListPartiesAppInput, ListPartiesAppResult>({
   querySchema: ListPartiesQuery,
   pathSchema: ListPartiesParams,
-  appServiceClass: DefaultPartiesQueryService,
+  appServiceClass: PartiesQueryService,
   createDependencies: (c: any) => c.parties.queriesPort,
   extractParams: (path: any, query: any) => ({
     tenantId: path.tenantId,

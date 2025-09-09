@@ -23,14 +23,16 @@ import type {
 } from "../../ports/requests/RequestsCommandsPort";
 
 /**
- * @summary Default implementation of RequestsCommandService
+ * @summary Command service for Requests operations
  * @description Delegates all operations to the RequestsCommandsPort
  */
-export class DefaultRequestsCommandService {
+export class RequestsCommandService {
   constructor(private readonly commandsPort: RequestsCommandsPort) {}
 
   /**
    * @summary Invite parties to sign an envelope
+   * @param command - Command data for inviting parties
+   * @returns Promise resolving to invite result
    */
   async inviteParties(command: InvitePartiesCommand): Promise<InvitePartiesResult> {
     return this.commandsPort.inviteParties(command);
@@ -38,6 +40,8 @@ export class DefaultRequestsCommandService {
 
   /**
    * @summary Send reminders to parties
+   * @param command - Command data for sending reminders
+   * @returns Promise resolving to reminder result
    */
   async remindParties(command: RemindPartiesCommand): Promise<RemindPartiesResult> {
     return this.commandsPort.remindParties(command);
@@ -45,6 +49,8 @@ export class DefaultRequestsCommandService {
 
   /**
    * @summary Cancel an envelope
+   * @param command - Command data for canceling envelope
+   * @returns Promise resolving to cancel result
    */
   async cancelEnvelope(command: CancelEnvelopeCommand): Promise<CancelEnvelopeResult> {
     return this.commandsPort.cancelEnvelope(command);
@@ -52,6 +58,8 @@ export class DefaultRequestsCommandService {
 
   /**
    * @summary Decline an envelope
+   * @param command - Command data for declining envelope
+   * @returns Promise resolving to decline result
    */
   async declineEnvelope(command: DeclineEnvelopeCommand): Promise<DeclineEnvelopeResult> {
     return this.commandsPort.declineEnvelope(command);
@@ -59,6 +67,8 @@ export class DefaultRequestsCommandService {
 
   /**
    * @summary Finalise an envelope
+   * @param command - Command data for finalizing envelope
+   * @returns Promise resolving to finalize result
    */
   async finaliseEnvelope(command: FinaliseEnvelopeCommand): Promise<FinaliseEnvelopeResult> {
     return this.commandsPort.finaliseEnvelope(command);
@@ -66,6 +76,8 @@ export class DefaultRequestsCommandService {
 
   /**
    * @summary Request signature from parties
+   * @param command - Command data for requesting signature
+   * @returns Promise resolving to signature request result
    */
   async requestSignature(command: RequestSignatureCommand): Promise<RequestSignatureResult> {
     return this.commandsPort.requestSignature(command);
@@ -73,14 +85,10 @@ export class DefaultRequestsCommandService {
 
   /**
    * @summary Add a viewer to an envelope
+   * @param command - Command data for adding viewer
+   * @returns Promise resolving to add viewer result
    */
   async addViewer(command: AddViewerCommand): Promise<AddViewerResult> {
     return this.commandsPort.addViewer(command);
   }
-}
-
-
-
-
-
-
+};

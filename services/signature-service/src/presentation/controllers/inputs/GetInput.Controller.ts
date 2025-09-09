@@ -5,7 +5,7 @@
  */
 
 import { createQueryController } from "../../../shared/controllers/queryFactory";
-import { DefaultInputsQueryService } from "../../../app/services/Inputs";
+import { InputsQueryService } from "../../../app/services/Inputs";
 import { GetInputQuery, EnvelopeInputPath } from "../../../presentation/schemas/inputs";
 import type { ListInputsResult } from "../../../app/ports/inputs/InputsQueriesPort";
 import type { GetInputQueryControllerInput } from "@/domain/types/inputs";
@@ -16,7 +16,7 @@ import type { GetInputQueryControllerInput } from "@/domain/types/inputs";
 export const GetInputController = createQueryController<GetInputQueryControllerInput, ListInputsResult["items"][number] | null>({
   querySchema: GetInputQuery,
   pathSchema: EnvelopeInputPath,
-  appServiceClass: DefaultInputsQueryService,
+  appServiceClass: InputsQueryService,
   createDependencies: (c: any) => c.inputs.queriesPort,
   extractParams: (path: any) => ({
     tenantId: path.tenantId,

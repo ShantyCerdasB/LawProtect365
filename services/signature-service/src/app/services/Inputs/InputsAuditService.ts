@@ -28,7 +28,7 @@ export class InputsAuditService extends BaseAuditService {
   ): Promise<void> {
     await this.auditRepo.record({
       tenantId: context.tenantId,
-      envelopeId: context.envelopeId || ("" as any), // Handle optional envelopeId
+      envelopeId: context.envelopeId || ("" as any),
       type: details.action as string,
       occurredAt: new Date().toISOString(),
       actor: context.actor || { email: "system" },
@@ -100,10 +100,4 @@ export class InputsAuditService extends BaseAuditService {
 
     await this.logBusinessEvent(auditContext, auditDetails);
   }
-}
-
-
-
-
-
-
+};

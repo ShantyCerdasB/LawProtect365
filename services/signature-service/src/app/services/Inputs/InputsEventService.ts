@@ -126,10 +126,4 @@ export class InputsEventService extends BaseEventService {
 
     await this.publishModuleEvent(event);
   }
-}
-
-
-
-
-
-
+};
