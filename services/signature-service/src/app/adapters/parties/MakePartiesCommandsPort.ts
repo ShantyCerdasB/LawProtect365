@@ -6,11 +6,10 @@
  */
 
 import type { PartiesCommandsPort } from "../../ports/parties";
-import type { Repository } from "@lawprotect/shared-ts";
+import type { Repository, IdempotencyRunner } from "@lawprotect/shared-ts";
 import type { Party } from "../../../domain/entities/Party";
 import type { PartyKey } from "../../../domain/types/infrastructure/dynamodb";
 import type { Ids } from "../../../domain/types/parties";
-import type { IdempotencyRunner } from "@lawprotect/shared-ts";
 import { 
   CreatePartyCommand, 
   CreatePartyResult,

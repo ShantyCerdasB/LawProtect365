@@ -7,9 +7,8 @@
 
 import type { EnvelopeId, PartyId, TenantId } from "@/domain/value-objects/ids";
 import type { SigningRateLimitService } from "../../../domain/types/signing";
-import { TooManyRequestsError } from "@lawprotect/shared-ts";
+import { TooManyRequestsError, RateLimitStore } from "@lawprotect/shared-ts";
 import { SignatureErrorCodes } from "../../../shared/errors";
-import { RateLimitStore } from "@lawprotect/shared-ts";
 
 /**
  * @description Default implementation of SigningRateLimitService

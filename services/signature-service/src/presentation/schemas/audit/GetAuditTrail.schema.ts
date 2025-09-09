@@ -6,8 +6,7 @@
 
 import { z } from "zod";
 import { EnvelopeIdValidationSchema } from "@/domain/value-objects/ids";
-import { OptionalPaginationCursorValidationSchema } from "@/domain/value-objects/common";
-import { OptionalUploadFormatValidationSchema } from "@/domain/value-objects/common";
+import { OptionalPaginationCursorValidationSchema, OptionalUploadFormatValidationSchema } from "@/domain/value-objects/common";
 
 
 /**

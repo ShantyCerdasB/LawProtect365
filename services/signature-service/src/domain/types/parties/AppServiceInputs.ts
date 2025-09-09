@@ -6,8 +6,7 @@
 
 import type { TenantId, EnvelopeId, PartyId } from "@/domain/value-objects/ids";
 import type { Party } from "../../../domain/entities/Party";
-import { PartyRole } from "@/domain/values/enums";
-import { PartyStatus } from "@/domain/values/enums";
+import { PartyRole, PartyStatus } from "@/domain/values/enums";
 
 // ============================================================================
 // LIST PARTIES

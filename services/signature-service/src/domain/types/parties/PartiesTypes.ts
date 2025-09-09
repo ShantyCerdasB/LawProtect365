@@ -4,10 +4,9 @@
  * @description Defines party-specific types and utility functions
  */
 
-import { PartyRole } from "@/domain/values/enums";
+import { PartyRole, PartyStatus } from "@/domain/values/enums";
 import type { Party } from "../../../domain/entities/Party";
 import type { TenantId, EnvelopeId, PartyId } from "@/domain/value-objects/ids";
-import { PartyStatus } from "@/domain/values/enums";
 
 // ============================================================================
 // DOMAIN TYPES

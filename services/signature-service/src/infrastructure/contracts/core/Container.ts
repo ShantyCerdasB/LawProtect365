@@ -19,10 +19,8 @@ import type { IdempotencyStoreDdb } from "@lawprotect/shared-ts";
 import type { AuditRepositoryDdb } from "../../../infrastructure/dynamodb/AuditRepositoryDdb";
 import type { ConsentRepositoryDdb } from "../../../infrastructure/dynamodb/ConsentRepositoryDdb";
 import type { DelegationRepositoryDdb } from "../../../infrastructure/dynamodb/DelegationRepositoryDdb";
-import type { OutboxPort, EventPublisher } from "@lawprotect/shared-ts";
-import type { IdempotencyKeyHasher, IdempotencyRunner, RateLimitStoreDdb, S3EvidenceStorage, S3Presigner, KmsSigner, SsmParamConfigProvider } from "@lawprotect/shared-ts";
+import type { OutboxPort, EventPublisher, IdempotencyKeyHasher, IdempotencyRunner, RateLimitStoreDdb, S3EvidenceStorage, S3Presigner, KmsSigner, SsmParamConfigProvider, AuditContext } from "@lawprotect/shared-ts";
 import type { S3SignedPdfIngestor } from "../../../infrastructure/s3/S3SignedPdfIngestor";
-import type { AuditContext } from "@lawprotect/shared-ts";
 
 // Consent service types
 import type { ConsentValidationService } from "../../../app/services/Consent/ConsentValidationService";

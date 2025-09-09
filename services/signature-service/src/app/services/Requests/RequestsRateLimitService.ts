@@ -6,8 +6,7 @@
 
 
 import type { EnvelopeId, PartyId } from "@/domain/value-objects/ids";
-import type { ActorContext } from "@lawprotect/shared-ts";
-import type { RateLimitStore } from "@lawprotect/shared-ts";
+import type { ActorContext, RateLimitStore } from "@lawprotect/shared-ts";
 import type { RequestsRateLimitService } from "../../../domain/types/requests/ServiceInterfaces";
 
 /**

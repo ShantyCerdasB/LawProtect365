@@ -5,10 +5,9 @@
  */
 
 import type { TenantId, EnvelopeId, DocumentId } from "@/domain/value-objects/ids";
-import type { ActorContext } from "@lawprotect/shared-ts";
+import type { ActorContext, DocumentLock } from "@lawprotect/shared-ts";
 import type { S3ObjectRef } from "../../../domain/value-objects/storage";
 import type { ContentType } from "../../../domain/value-objects/document";
-import type { DocumentLock } from "@lawprotect/shared-ts";
 
 
 /**

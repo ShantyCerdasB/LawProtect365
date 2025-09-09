@@ -6,9 +6,8 @@
  */
 
 import { BaseEventService } from "../../../domain/services/BaseEventService";
-import type { DomainEvent } from "@lawprotect/shared-ts";
+import type { DomainEvent, ActorContext } from "@lawprotect/shared-ts";
 import type { EnvelopeId, PartyId, TenantId } from "@/domain/value-objects/ids";
-import type { ActorContext } from "@lawprotect/shared-ts";
 import type { SigningEventService } from "../../../domain/types/signing";
 
 /**

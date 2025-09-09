@@ -6,9 +6,8 @@
  */
 
 import { BaseEventService } from "../../../domain/services/BaseEventService";
-import type { DomainEvent } from "@lawprotect/shared-ts";
+import type { DomainEvent, ActorContext } from "@lawprotect/shared-ts";
 import type { DocumentId, EnvelopeId, TenantId } from "@/domain/value-objects/ids";
-import type { ActorContext } from "@lawprotect/shared-ts";
 
 /**
  * @description Service interface for Documents event operations

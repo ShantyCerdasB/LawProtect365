@@ -5,10 +5,9 @@
  * Uses the outbox pattern for reliable event delivery.
  */
 
-import type { OutboxPort, DomainEvent } from "@lawprotect/shared-ts";
+import type { OutboxPort, DomainEvent, ActorContext } from "@lawprotect/shared-ts";
 import { makeEvent } from "@lawprotect/shared-ts";
 import type { OutboxRepoCreateInput } from "../types/outbox/OutboxRepositoryTypes";
-import type { ActorContext } from "@lawprotect/shared-ts";
 
 /**
  * @summary Maps a domain event to outbox input format

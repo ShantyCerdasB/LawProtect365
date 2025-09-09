@@ -12,8 +12,7 @@ import type {
 } from "../../ports/documents/DocumentsCommandsPort";
 import type { DocumentLock } from "@lawprotect/shared-ts";
 import type { DocumentId, EnvelopeId } from "@/domain/value-objects/ids";
-import type { EnvelopeStatus } from "@/domain/value-objects/index";
-import type { DocumentStatus } from "@/domain/value-objects/index";
+import type { EnvelopeStatus, DocumentStatus } from "@/domain/value-objects/index";
 import { badRequest } from "../../../shared/errors";
 import { ErrorCodes } from "@lawprotect/shared-ts";
 import { FILE_SIZE_LIMITS } from "../../../domain/values/enums";

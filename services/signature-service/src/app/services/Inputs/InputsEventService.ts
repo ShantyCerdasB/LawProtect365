@@ -5,8 +5,7 @@
  */
 
 import { BaseEventService } from "../../../domain/services/BaseEventService";
-import type { ActorContext } from "@lawprotect/shared-ts";
-import type { DomainEvent } from "@lawprotect/shared-ts";
+import type { ActorContext, DomainEvent } from "@lawprotect/shared-ts";
 
 /**
  * @summary Event service for Input operations

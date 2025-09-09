@@ -26,6 +26,7 @@ import {
   decodeCursor,
   requireQuery,
   randomToken,
+  toJsonObject,
 } from "@lawprotect/shared-ts";
 
 import type { AuditRepository, ListByEnvelopeInput } from "../../domain/contracts/repositories/audit";
@@ -39,7 +40,6 @@ import {
   gsi1Sk,
   gsi2Pk,
 } from "./mappers/AuditItemMapper";
-import { toJsonObject } from "@lawprotect/shared-ts";
 import { DEFAULT_ENTITY_INDEX, DEFAULT_ID_INDEX } from "../../domain/types/infrastructure/constants";
 import { AUDIT_ENTITY_TYPE } from "../../domain/types/infrastructure/enums";
 

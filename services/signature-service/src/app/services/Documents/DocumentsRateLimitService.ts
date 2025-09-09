@@ -5,9 +5,8 @@
  */
 
 import type { EnvelopeId, TenantId } from "@/domain/value-objects/ids";
-import { TooManyRequestsError } from "@lawprotect/shared-ts";
+import { TooManyRequestsError, RateLimitStore } from "@lawprotect/shared-ts";
 import { SignatureErrorCodes } from "../../../shared/errors";
-import { RateLimitStore } from "@lawprotect/shared-ts";
 import { UPLOAD_RATE_LIMITS } from "../../../domain/values/enums";
 
 /**

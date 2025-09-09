@@ -6,9 +6,8 @@
  */
 
 import { BaseAuditService } from "../../../domain/services/BaseAuditService";
-import type { AuditContext } from "@lawprotect/shared-ts";
+import type { AuditContext, ActorContext } from "@lawprotect/shared-ts";
 import type { EnvelopeId, PartyId, TenantId } from "@/domain/value-objects/ids";
-import type { ActorContext } from "@lawprotect/shared-ts";
 import { nowIso } from "@lawprotect/shared-ts";
 import type { SigningAuditService } from "../../../domain/types/signing";
 
