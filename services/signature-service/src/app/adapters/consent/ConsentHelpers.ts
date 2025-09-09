@@ -7,8 +7,7 @@
 import type { ConsentCommandRepo } from "../../../domain/types/consent/AdapterDependencies";
 import type { ConsentAuditService } from "../../services/Consent/ConsentAuditService";
 import type { CreateConsentAppInput, CreateConsentAppResult } from "../../../domain/types/consent/AppServiceInputs";
-import type { ActorContext } from "@lawprotect/shared-ts";
-import type { UserId } from "@lawprotect/shared-ts";
+import type { ActorContext, UserId } from "@lawprotect/shared-ts";
 import { nowIso, asISO, asISOOpt } from "@lawprotect/shared-ts";
 
 /**

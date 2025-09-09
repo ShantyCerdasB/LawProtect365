@@ -9,9 +9,7 @@
  */
 
 import type { DocumentId, EnvelopeId, TenantId } from "@/domain/value-objects/ids";
-import type { DocumentStatus } from "@/domain/value-objects/index";
-import type { S3ObjectRef } from "@/domain/value-objects/index";
-import type { ContentType } from "@/domain/value-objects/index";
+import type { DocumentStatus, S3ObjectRef, ContentType } from "@/domain/value-objects/index";
 
 /**
  * Document aggregate.

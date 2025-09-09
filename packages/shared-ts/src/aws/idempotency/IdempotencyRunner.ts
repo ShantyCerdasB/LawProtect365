@@ -85,6 +85,8 @@ export class IdempotencyRunner {
     } catch (err) {
       // Do not mark completed; pending will naturally expire by TTL.
       // If you want to actively remove/mark failed, extend the store contract.
+      // Log the error for debugging purposes before re-throwing
+      console.error(`Idempotency execution failed for key ${key}:`, err);
       throw err;
     }
   }

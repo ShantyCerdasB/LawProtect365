@@ -40,25 +40,33 @@ import { DocumentRepositoryDdb } from "../infrastructure/dynamodb/DocumentReposi
 import { InputRepositoryDdb } from "../infrastructure/dynamodb/InputRepositoryDdb";
 import { PartyRepositoryDdb } from "../infrastructure/dynamodb/PartyRepositoryDdb";
 
-import { IdempotencyStoreDdb } from "@lawprotect/shared-ts";
+import { 
+  IdempotencyStoreDdb, 
+  IdempotencyKeyHasher, 
+  IdempotencyRunner,
+  RateLimitStoreDdb, 
+  S3EvidenceStorage, 
+  S3Presigner,
+  KmsSigner, 
+  SsmParamConfigProvider,
+  randomToken, 
+  uuid, 
+  ulid, 
+  DdbClientLike, 
+  makeEventPublisher,
+  OutboxRepositoryDdb, 
+  EventBusPortAdapter, 
+  MetricsService,
+  type EventBridgeClientPort, 
+  type PutEventsRequest, 
+  type PutEventsResponse
+} from "@lawprotect/shared-ts";
 import { AuditRepositoryDdb } from "../infrastructure/dynamodb/AuditRepositoryDdb";
 import { ConsentRepositoryDdb } from "../infrastructure/dynamodb/index";
 import { GlobalPartiesRepositoryDdb } from "../infrastructure/dynamodb/GlobalPartiesRepositoryDdb";
-
-import { IdempotencyKeyHasher, IdempotencyRunner } from "@lawprotect/shared-ts";
-import { RateLimitStoreDdb, S3EvidenceStorage, S3Presigner } from "@lawprotect/shared-ts";
 import { S3SignedPdfIngestor } from "../infrastructure/s3/S3SignedPdfIngestor";
-
-import { KmsSigner, SsmParamConfigProvider } from "@lawprotect/shared-ts";
 import { DelegationRepositoryDdb } from "../infrastructure/dynamodb/DelegationRepositoryDdb";
-
-import { randomToken, uuid, ulid, DdbClientLike, makeEventPublisher } from "@lawprotect/shared-ts";
 import type { Container } from "../infrastructure/contracts/core";
-
-import { OutboxRepositoryDdb, EventBusPortAdapter, MetricsService } from "@lawprotect/shared-ts";
-
-// EventBridge types
-import type { EventBridgeClientPort, PutEventsRequest, PutEventsResponse } from "@lawprotect/shared-ts";
 
 import { ConsentValidationService } from "../app/services/Consent/ConsentValidationService";
 import { ConsentAuditService } from "../app/services/Consent/ConsentAuditService";

@@ -61,7 +61,7 @@ export const makeSigningCommandsPort = (
     async recordSigningConsent(command: SigningConsentCommand): Promise<SigningConsentResult> {
       
       // Validate signing operation
-      const { party } = await validateSigningOperation(
+      await validateSigningOperation(
         command,
         _envelopesRepo,
         _partiesRepo,
@@ -99,7 +99,7 @@ export const makeSigningCommandsPort = (
     async prepareSigning(command: PrepareSigningCommand): Promise<PrepareSigningResult> {
       
       // Validate signing operation
-      const { party } = await validateSigningOperation(
+      await validateSigningOperation(
         command,
         _envelopesRepo,
         _partiesRepo,

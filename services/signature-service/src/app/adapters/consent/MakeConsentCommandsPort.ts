@@ -23,19 +23,15 @@ import type {
 import type { ConsentCommandRepo, Ids } from "../../../domain/types/consent/AdapterDependencies";
 import type { PartyId } from "@/domain/value-objects/ids";
 import type { ConsentStatus } from "../../../domain/values/enums";
-import { nowIso, asISO, asISOOpt } from "@lawprotect/shared-ts";
+import { nowIso, asISO, asISOOpt, type ActorContext, type IdempotencyRunner, assertTenantBoundary } from "@lawprotect/shared-ts";
 import type { DelegationRepositoryDdb } from "../../../infrastructure/dynamodb/DelegationRepositoryDdb";
 import type { ConsentValidationService } from "../../services/Consent/ConsentValidationService";
 import type { ConsentAuditService } from "../../services/Consent/ConsentAuditService";
 import type { ConsentEventService } from "../../services/Consent/ConsentEventService";
-
-import type { ActorContext } from "@lawprotect/shared-ts";
 import { createConsentWithAudit, logConsentDeletionAudit, updateConsentWithAudit, submitConsentWithAudit } from "./ConsentHelpers";
-import type { IdempotencyRunner } from "@lawprotect/shared-ts";
 import type { GlobalPartiesRepository } from "../../../domain/contracts/repositories/global-parties/GlobalPartiesRepository";
 import type { FindOrCreatePartyInput } from "../../../domain/types/global-parties";
 import { NotFoundError, BadRequestError } from "../../../shared/errors";
-import { assertTenantBoundary } from "@lawprotect/shared-ts";
 
 
 
