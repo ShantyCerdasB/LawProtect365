@@ -11,7 +11,7 @@ import {
   assertEventType,
   assertActorShape,
 } from '../../src/rules/Audit.rules.js';
-import { BadRequestError, ErrorCodes } from '../../src/errors/index.js';
+import { BadRequestError } from '../../src/errors/index.js';
 
 describe('Audit.rules', () => {
   describe('assertImmutable', () => {

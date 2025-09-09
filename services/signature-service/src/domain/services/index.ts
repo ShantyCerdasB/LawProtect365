@@ -6,7 +6,6 @@
 
 export * from "./BaseAuditService";
 export * from "./BaseEventService";
-export * from "./MetricsService";
 
 
 

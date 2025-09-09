@@ -5,7 +5,6 @@
  */
 
 import { RateLimitStoreDdb } from '../../../src/aws/ratelimit/RateLimitStoreDdb.js';
-import { TooManyRequestsError, ErrorCodes } from '../../../src/errors/index.js';
 
 // Mock dependencies
 jest.mock('../../../src/index.js', () => ({

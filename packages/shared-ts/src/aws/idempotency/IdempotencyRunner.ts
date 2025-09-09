@@ -85,7 +85,6 @@ export class IdempotencyRunner {
     } catch (err) {
       // Do not mark completed; pending will naturally expire by TTL.
       // If you want to actively remove/mark failed, extend the store contract.
-      // Re-throw the error to maintain the original behavior
       throw err;
     }
   }

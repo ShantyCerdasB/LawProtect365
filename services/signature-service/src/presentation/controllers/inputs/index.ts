@@ -8,7 +8,6 @@
 export { CreateInputsController } from "./CreateInputs.Controller";
 export { GetInputController } from "./GetInput.Controller";
 export { ListInputsController } from "./ListInputs.Controller";
-// export { UpdateInputController } from "./UpdateInput.Controller"; // File is empty
 export { UpdateInputPositionsController } from "./UpdateInputPositions.Controller";
 export { DeleteInputController } from "./DeleteInput.Controller";
 

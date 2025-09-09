@@ -5,8 +5,8 @@
  */
 
 import { KmsSigner } from '../../../src/aws/kms/KmsSigner.js';
-import { KMSClient, EncryptCommand, DecryptCommand, SignCommand, VerifyCommand } from '@aws-sdk/client-kms';
-import { BadRequestError, InternalError, ErrorCodes } from '../../../src/errors/index.js';
+import { EncryptCommand, DecryptCommand, SignCommand, VerifyCommand } from '@aws-sdk/client-kms';
+import { BadRequestError, InternalError } from '../../../src/errors/index.js';
 
 // Mock AWS SDK
 jest.mock('@aws-sdk/client-kms');

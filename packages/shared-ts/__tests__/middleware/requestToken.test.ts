@@ -1,5 +1,4 @@
 import { requireRequestToken } from '../../src/middleware/requestToken.js';
-import type { ApiEvent } from '../../src/http/httpTypes.js';
 
 // Mock the requireHeaderToken function
 jest.mock('../../src/http/headers.js', () => ({

@@ -9,7 +9,6 @@ import {
 
 describe('EventBridge Utils', () => {
   const mockTimestamp = '2023-01-01T00:00:00.000Z';
-  const mockUuid = 'test-uuid-123';
 
   // Mock Date.now
   beforeEach(() => {

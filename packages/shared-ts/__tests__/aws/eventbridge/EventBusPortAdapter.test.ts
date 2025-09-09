@@ -4,7 +4,6 @@
  */
 
 import { EventBusPortAdapter } from '../../../src/aws/eventbridge/EventBusPortAdapter.js';
-import { InternalError, ErrorCodes } from '../../../src/errors/index.js';
 import type { DomainEvent } from '../../../src/events/index.js';
 import type { EventBridgeClientPort } from '../../../src/contracts/eventbridge/index.js';
 

@@ -12,22 +12,14 @@ import type { CreateConsentAppResult } from "../../../domain/types/consent/AppSe
 import { CreateConsentPath, CreateConsentBody } from "../../schemas/consents/CreateConsent.schema";
 import type { EnvelopeId, PartyId } from "@/domain/value-objects/ids";
 import type { ConsentType, ConsentStatus } from "../../../domain/values/enums";
+import { createConsentDependencies } from "../../../shared/controllers/helpers";
 // Note: Rate limiting would need proper store integration
 
 export const handler = createCommandController<CreateConsentControllerInput, CreateConsentAppResult>({
   pathSchema: CreateConsentPath,
   bodySchema: CreateConsentBody,
   appServiceClass: ConsentCommandService,
-  createDependencies: (c: any) => makeConsentCommandsPort({
-    consentsRepo: c.repos.consents,
-    delegationsRepo: c.repos.delegations,
-    ids: c.ids,
-    globalPartiesRepo: c.consent.party,
-    validationService: c.consent.validation,
-    auditService: c.consent.audit,
-    eventService: c.consent.events,
-    idempotencyRunner: c.idempotency.runner
-  }),
+  createDependencies: (c: any) => makeConsentCommandsPort(createConsentDependencies(c)),
   extractParams: (path: any, body: any) => ({
     envelopeId: path.envelopeId as EnvelopeId,
     partyId: body.partyId as PartyId,

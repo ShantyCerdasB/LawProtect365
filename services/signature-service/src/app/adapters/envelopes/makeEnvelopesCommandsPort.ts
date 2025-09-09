@@ -14,46 +14,163 @@ import type { SignatureServiceConfig } from "../../../infrastructure/contracts/c
 import type { EnvelopeStatus } from "@/domain/value-objects/index";
 import type { PartyRepositoryDdb } from "../../../infrastructure/dynamodb/PartyRepositoryDdb";
 import type { InputRepositoryDdb } from "../../../infrastructure/dynamodb/InputRepositoryDdb";
-import { nowIso } from "@lawprotect/shared-ts";
+import { nowIso, assertTenantBoundary } from "@lawprotect/shared-ts";
 import { 
   BadRequestError, 
   NotFoundError, 
   ConflictError,
   ErrorCodes 
 } from "../../../shared/errors";
-import { assertTenantBoundary } from "@lawprotect/shared-ts";
 import { assertLifecycleTransition, assertDraft } from "../../../domain/rules/EnvelopeLifecycle.rules";
 import { assertReadyToSend } from "../../../domain/rules/Flow.rules";
 
 /**
+ * Configuration for EnvelopesCommandsPort
+ */
+interface EnvelopesCommandsPortConfig {
+  envelopesRepo: EnvelopesRepository;
+  ids: { ulid(): string };
+  config: SignatureServiceConfig;
+  partiesRepo: PartyRepositoryDdb;
+  inputsRepo: InputRepositoryDdb;
+  validationService?: EnvelopesValidationService;
+  auditService?: EnvelopesAuditService;
+  eventService?: EnvelopesEventService;
+  rateLimitService?: any; // EnvelopesRateLimitService
+}
+
+/**
  * Creates an EnvelopesCommandsPort implementation
- * @param envelopesRepo - The envelope repository for data persistence
- * @param ids - ID generation utilities
- * @param config - Service configuration
- * @param validationService - Optional validation service
- * @param auditService - Optional audit service
- * @param eventService - Optional event service
+ * @param config - Configuration object containing all dependencies
  * @returns Configured EnvelopesCommandsPort implementation
  */
 export function makeEnvelopesCommandsPort(
-  envelopesRepo: EnvelopesRepository,
-  ids: { ulid(): string },
-  _config: SignatureServiceConfig, // Used for future configuration extensions
-  // ✅ REPOSITORIES FOR RULES VALIDATION
-  partiesRepo: PartyRepositoryDdb,
-  inputsRepo: InputRepositoryDdb,
-  // ✅ SERVICIOS OPCIONALES - PATRÓN REUTILIZABLE
-  validationService?: EnvelopesValidationService,
-  auditService?: EnvelopesAuditService,
-  eventService?: EnvelopesEventService,
-  // ✅ RATE LIMITING - PATRÓN REUTILIZABLE
-  rateLimitService?: any // EnvelopesRateLimitService
+  config: EnvelopesCommandsPortConfig
 ): EnvelopesCommandsPort {
+  const {
+    envelopesRepo,
+    ids,
+    config: _config,
+    partiesRepo,
+    inputsRepo,
+    validationService,
+    auditService,
+    eventService,
+    rateLimitService
+  } = config;
     // Helper function to get system actor details
   const getSystemActor = () => ({
     userId: "system" as any,
     email: process.env.SYSTEM_EMAIL || "system@envelope.service"
   });
+
+  // Helper methods for update function to reduce cognitive complexity
+  const validateStatusTransition = async (command: UpdateEnvelopeCommand, currentEnvelope: any) => {
+    if (command.status && currentEnvelope.status !== command.status) {
+      assertLifecycleTransition(currentEnvelope.status, command.status);
+      
+      // If transitioning to "sent", validate envelope is ready
+      if (command.status === "sent") {
+        // Get actual parties and inputs for validation
+        const parties = await partiesRepo.listByEnvelope({ 
+          tenantId: command.tenantId, 
+          envelopeId: command.envelopeId 
+        });
+        const inputs = await inputsRepo.listByEnvelope({ 
+          envelopeId: command.envelopeId 
+        });
+        assertReadyToSend(parties.items, inputs.items);
+        
+        // Apply rate limiting for envelope sending
+        if (rateLimitService) {
+          await rateLimitService.checkSendEnvelopeLimit(command.tenantId);
+        }
+      }
+    }
+  };
+
+  const validateDraftModifications = (command: UpdateEnvelopeCommand, currentEnvelope: any) => {
+    if (command.parties || command.documents) {
+      assertDraft({ status: currentEnvelope.status, envelopeId: command.envelopeId });
+    }
+  };
+
+  const validateUpdateParams = (command: UpdateEnvelopeCommand) => {
+    if (validationService) {
+      const isValid = validationService.validateUpdateParams({
+        envelopeId: command.envelopeId,
+        title: command.title,
+        status: command.status,
+      });
+      if (!isValid) {
+        throw new BadRequestError(
+          "Invalid envelope update parameters", 
+          ErrorCodes.COMMON_BAD_REQUEST,
+          { envelopeId: command.envelopeId, title: command.title, status: command.status }
+        );
+      }
+    }
+  };
+
+  const performUpdate = async (command: UpdateEnvelopeCommand) => {
+    const current = await envelopesRepo.getById(command.envelopeId);
+    if (!current) {
+      throw new NotFoundError(
+        "Envelope not found", 
+        ErrorCodes.COMMON_NOT_FOUND,
+        { envelopeId: command.envelopeId }
+      );
+    }
+
+    const previousStatus = current.status;
+    const next = {
+      ...current,
+      title: command.title ?? current.title,
+      status: command.status ?? current.status,
+      updatedAt: nowIso(),
+    };
+
+    // Validate status transition if status is being changed
+    if (command.status && validationService) {
+      const canTransition = validationService.validateStatusTransition(previousStatus, command.status);
+      if (!canTransition) {
+        throw new ConflictError(
+          `Invalid status transition from ${previousStatus} to ${command.status}`, 
+          ErrorCodes.COMMON_CONFLICT,
+          { previousStatus, newStatus: command.status, envelopeId: command.envelopeId }
+        );
+      }
+    }
+
+    return await envelopesRepo.update(command.envelopeId, next);
+  };
+
+  const logAudit = async (command: UpdateEnvelopeCommand, _result: any, previousStatus: string) => {
+    if (auditService) {
+      const auditContext = {
+        tenantId: command.tenantId,
+        actor: getSystemActor()
+      };
+      await auditService.logUpdate(auditContext, {
+        envelopeId: command.envelopeId,
+        changes: { title: command.title, status: command.status },
+        previousStatus: previousStatus as EnvelopeStatus,
+      });
+    }
+  };
+
+  const publishEvents = async (command: UpdateEnvelopeCommand, result: any, previousStatus: string) => {
+    if (eventService) {
+      await eventService.publishEnvelopeUpdatedEvent({
+        tenantId: command.tenantId,
+        actor: getSystemActor()
+      }, {
+        envelope: result,
+        previousStatus: previousStatus as EnvelopeStatus,
+        changes: { title: command.title, status: command.status },
+      });
+    }
+  };
 
   return {
     /**
@@ -142,104 +259,20 @@ export function makeEnvelopesCommandsPort(
       }
       
       // Apply domain-specific rules
-      if (command.status && currentEnvelope.status !== command.status) {
-        assertLifecycleTransition(currentEnvelope.status, command.status);
-        
-        // If transitioning to "sent", validate envelope is ready
-        if (command.status === "sent") {
-          // Get actual parties and inputs for validation
-          const parties = await partiesRepo.listByEnvelope({ 
-            tenantId: command.tenantId, 
-            envelopeId: command.envelopeId 
-          });
-          const inputs = await inputsRepo.listByEnvelope({ 
-            envelopeId: command.envelopeId 
-          });
-          assertReadyToSend(parties.items, inputs.items);
-          
-          // Apply rate limiting for envelope sending
-          if (rateLimitService) {
-            await rateLimitService.checkSendEnvelopeLimit(command.tenantId);
-          }
-        }
-      }
-      
-      if (command.parties || command.documents) {
-        assertDraft({ status: currentEnvelope.status, envelopeId: command.envelopeId });
-      }
+      await validateStatusTransition(command, currentEnvelope);
+      validateDraftModifications(command, currentEnvelope);
       
       // 1. VALIDATION (opcional)
-      if (validationService) {
-        const isValid = validationService.validateUpdateParams({
-          envelopeId: command.envelopeId,
-          title: command.title,
-          status: command.status,
-        });
-        if (!isValid) {
-          throw new BadRequestError(
-            "Invalid envelope update parameters", 
-            ErrorCodes.COMMON_BAD_REQUEST,
-            { envelopeId: command.envelopeId, title: command.title, status: command.status }
-          );
-        }
-      }
-
+      validateUpdateParams(command);
+      
       // 2. BUSINESS LOGIC
-      const current = await envelopesRepo.getById(command.envelopeId);
-      if (!current) {
-        throw new NotFoundError(
-          "Envelope not found", 
-          ErrorCodes.COMMON_NOT_FOUND,
-          { envelopeId: command.envelopeId }
-        );
-      }
-
-      const previousStatus = current.status;
-      const next = {
-        ...current,
-        title: command.title ?? current.title,
-        status: command.status ?? current.status,
-        updatedAt: nowIso(),
-      };
-
-      // Validate status transition if status is being changed
-      if (command.status && validationService) {
-        const canTransition = validationService.validateStatusTransition(previousStatus, command.status);
-        if (!canTransition) {
-          throw new ConflictError(
-            `Invalid status transition from ${previousStatus} to ${command.status}`, 
-            ErrorCodes.COMMON_CONFLICT,
-            { previousStatus, newStatus: command.status, envelopeId: command.envelopeId }
-          );
-        }
-      }
-
-      const result = await envelopesRepo.update(command.envelopeId, next);
+      const result = await performUpdate(command);
 
       // 3. AUDIT (opcional) - MISMO PATRÓN
-      if (auditService) {
-        const auditContext = {
-          tenantId: command.tenantId,
-          actor: getSystemActor()
-        };
-        await auditService.logUpdate(auditContext, {
-          envelopeId: command.envelopeId,
-          changes: { title: command.title, status: command.status },
-          previousStatus,
-        });
-      }
+      await logAudit(command, result, currentEnvelope.status);
 
       // 4. EVENTS (opcional) - MISMO PATRÓN
-      if (eventService) {
-        await eventService.publishEnvelopeUpdatedEvent({
-          tenantId: command.tenantId,
-          actor: getSystemActor()
-        }, {
-          envelope: result,
-          previousStatus,
-          changes: { title: command.title, status: command.status },
-        });
-      }
+      await publishEvents(command, result, currentEnvelope.status);
 
       // Ensure the returned result matches the expected UpdateEnvelopeResult type,
       // which requires an 'envelope' property.

@@ -11,21 +11,13 @@ import type { DelegateConsentControllerInput } from "../../../domain/types/conse
 import type { DelegateConsentAppResult } from "../../../domain/types/consent/AppServiceInputs";
 import { DelegateConsentPath, DelegateConsentBody } from "../../schemas/consents/DelegateConsent.schema";
 import type { EnvelopeId, ConsentId } from "@/domain/value-objects/ids";
+import { createConsentDependencies } from "../../../shared/controllers/helpers";
 
 export const handler = createCommandController<DelegateConsentControllerInput, DelegateConsentAppResult>({
   pathSchema: DelegateConsentPath,
   bodySchema: DelegateConsentBody,
   appServiceClass: ConsentCommandService,
-  createDependencies: (c: any) => makeConsentCommandsPort({
-    consentsRepo: c.repos.consents,
-    delegationsRepo: c.repos.delegations,
-    ids: c.ids,
-    globalPartiesRepo: c.consent.party,
-    validationService: c.consent.validation,
-    auditService: c.consent.audit,
-    eventService: c.consent.events,
-    idempotencyRunner: c.idempotency.runner
-  }),
+  createDependencies: (c: any) => makeConsentCommandsPort(createConsentDependencies(c)),
   extractParams: (path: any, body: any) => ({
     envelopeId: path.envelopeId as EnvelopeId,
     consentId: path.consentId as ConsentId,

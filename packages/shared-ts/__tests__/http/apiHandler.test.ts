@@ -242,7 +242,7 @@ describe('apiHandler', () => {
     mockIsPreflight.mockReturnValue(true);
 
     const wrappedHandler = apiHandler(mockHandler);
-    const result = await wrappedHandler(mockEvent);
+    await wrappedHandler(mockEvent);
 
     expect(mockIsPreflight).not.toHaveBeenCalled();
     expect(mockPreflightResponse).not.toHaveBeenCalled();

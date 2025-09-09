@@ -20,8 +20,7 @@
 
 import { mapAwsError, nowIso, TooManyRequestsError, ErrorCodes } from "../../index.js";
 import type { DdbClientLike } from "../ddb.js";
-import type { RateLimitStore } from "../../contracts/ratelimit/index.js";
-import type { RateLimitWindow, RateLimitUsage } from "../../contracts/ratelimit/index.js";
+import type { RateLimitStore, RateLimitWindow, RateLimitUsage } from "../../contracts/ratelimit/index.js";
 import type { DdbRateLimitItem } from "./types.js";
 import { RATE_LIMIT_ENTITY } from "./types.js";
 

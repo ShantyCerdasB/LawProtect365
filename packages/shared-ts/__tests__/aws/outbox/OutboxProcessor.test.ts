@@ -1,6 +1,5 @@
 import { OutboxProcessor } from '../../../src/aws/outbox/OutboxProcessor.js';
-import type { OutboxPort, EventBusPort } from '../../../src/index.js';
-import type { OutboxRecord } from '../../../src/index.js';
+import type { OutboxPort, EventBusPort, OutboxRecord } from '../../../src/index.js';
 
 describe('OutboxProcessor', () => {
   let processor: OutboxProcessor;

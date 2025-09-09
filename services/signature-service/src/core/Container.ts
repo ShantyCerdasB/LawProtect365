@@ -55,8 +55,7 @@ import { DelegationRepositoryDdb } from "../infrastructure/dynamodb/DelegationRe
 import { randomToken, uuid, ulid, DdbClientLike, makeEventPublisher } from "@lawprotect/shared-ts";
 import type { Container } from "../infrastructure/contracts/core";
 
-import { OutboxRepositoryDdb, EventBusPortAdapter } from "@lawprotect/shared-ts";
-import { MetricsService } from "../domain/services";
+import { OutboxRepositoryDdb, EventBusPortAdapter, MetricsService } from "@lawprotect/shared-ts";
 
 // EventBridge types
 import type { EventBridgeClientPort, PutEventsRequest, PutEventsResponse } from "@lawprotect/shared-ts";
@@ -349,18 +348,17 @@ export const getContainer = (): Container => {
   const envelopesAudit = new EnvelopesAuditService(audit);
   const envelopesEvents = new EnvelopesEventService(outbox);
   
-  const envelopesCommands = makeEnvelopesCommandsPort(
-    envelopes,
+  const envelopesCommands = makeEnvelopesCommandsPort({
+    envelopesRepo: envelopes,
     ids,
-    config as any, // Cast to resolve type mismatch between core/Config and shared/types/core/config
-    parties,
-    inputs,
-    envelopesValidation,
-    envelopesAudit,
-    envelopesEvents,
-    // ✅ RATE LIMITING - PATRÓN REUTILIZABLE
-    documentsRateLimit // Use DocumentsRateLimitService for envelope operations
-  );
+    config: config as any, // Cast to resolve type mismatch between core/Config and shared/types/core/config
+    partiesRepo: parties,
+    inputsRepo: inputs,
+    validationService: envelopesValidation,
+    auditService: envelopesAudit,
+    eventService: envelopesEvents,
+    rateLimitService: documentsRateLimit // Use DocumentsRateLimitService for envelope operations
+  });
   const envelopesQueries = makeEnvelopesQueriesPort(envelopes);
 
   // Inputs services - instantiate with correct dependencies
@@ -368,18 +366,17 @@ export const getContainer = (): Container => {
   const inputsAudit = new InputsAuditService(audit);
   const inputsEvents = new InputsEventService(outbox);
   
-  const inputsCommands = makeInputsCommandsPort(
-    inputs,
+  const inputsCommands = makeInputsCommandsPort({
+    inputsRepo: inputs,
     ids,
-    parties,
-    documents,
-    envelopes,
-    inputsValidation,
-    inputsAudit,
-    inputsEvents,
-    // ✅ IDEMPOTENCY - PATRÓN REUTILIZABLE
-    runner
-  );
+    partiesRepo: parties,
+    documentsRepo: documents,
+    envelopesRepo: envelopes,
+    validationService: inputsValidation,
+    auditService: inputsAudit,
+    eventService: inputsEvents,
+    idempotencyRunner: runner
+  });
   const inputsQueries = makeInputsQueriesPort(
     inputs,
     inputsValidation,

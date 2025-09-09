@@ -1,7 +1,7 @@
 import { OutboxRepositoryDdb } from '../../../src/aws/outbox/OutboxRepositoryDdb.js';
-import { ConflictError, ErrorCodes } from '../../../src/index.js';
+import { ConflictError } from '../../../src/index.js';
 import type { DdbClientLike } from '../../../src/aws/ddb.js';
-import type { DomainEvent, OutboxRecord } from '../../../src/index.js';
+import type { DomainEvent } from '../../../src/index.js';
 
 describe('OutboxRepositoryDdb', () => {
   let repository: OutboxRepositoryDdb;

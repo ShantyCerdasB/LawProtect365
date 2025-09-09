@@ -6,7 +6,7 @@
  * basic payload sanity for audit events persisted by the adapters.
  */
 
-import { BadRequestError, ErrorCodes } from "../errors/index.js";
+import { BadRequestError } from "../errors/index.js";
 
 /**
  * Assert the minimal immutable shape of an audit event.

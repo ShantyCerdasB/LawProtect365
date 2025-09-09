@@ -10,13 +10,13 @@ import type { Repository, ISODateString } from "@lawprotect/shared-ts";
 import type { SigningCommandsPort, SigningConsentCommand, SigningConsentResult, PrepareSigningCommand, PrepareSigningResult, CompleteSigningCommand, CompleteSigningResult, DeclineSigningCommand, DeclineSigningResult, PresignUploadCommand, PresignUploadResult, DownloadSignedDocumentCommand, DownloadSignedDocumentResult } from "@/app/ports/signing/SigningCommandsPort";
 import type { Envelope } from "@/domain/entities/Envelope";
 import type { EnvelopeId } from "@/domain/value-objects/ids";
-import { IpAddressSchema } from "@/domain/value-objects/ids";
 import { IdempotencyRunner, KmsSigner, EventBusPortAdapter, NotFoundError, ErrorCodes } from "@lawprotect/shared-ts";
-import { envelopeNotFound, partyNotFound, badRequest } from "@/shared/errors";
+import { badRequest, partyNotFound } from "@/shared/errors";
 import { assertKmsAlgorithmAllowed, assertCompletionAllowed, assertPdfDigestMatches } from "../../../domain/rules/Signing.rules";
 import { assertDownloadAllowed } from "../../../domain/rules/Download.rules";
 import { assertCancelDeclineAllowed, assertReasonValid } from "../../../domain/rules/CancelDecline.rules";
 import { assertPresignPolicy, buildEvidencePath } from "../../../domain/rules/Evidence.rules";
+import { validateSigningOperation } from "./SigningValidationHelpers";
 import type { SigningRateLimitService, SigningS3Service } from "@/domain/types/signing/ServiceInterfaces";
 
 /**
@@ -60,25 +60,13 @@ export const makeSigningCommandsPort = (
      */
     async recordSigningConsent(command: SigningConsentCommand): Promise<SigningConsentResult> {
       
-      // Validate IP address if provided
-      if (command.actor.ip) {
-        IpAddressSchema.parse(command.actor.ip);
-      }
-
-      // Get and validate envelope
-      const envelope = await _envelopesRepo.getById(command.envelopeId);
-      if (!envelope) {
-        throw envelopeNotFound({ envelopeId: command.envelopeId });
-      }
-
-      // Get and validate party
-      const party = await _partiesRepo.getById({ 
-        envelopeId: command.envelopeId, 
-        partyId: command.signerId 
-      });
-      if (!party) {
-        throw partyNotFound({ partyId: command.signerId, envelopeId: command.envelopeId });
-      }
+      // Validate signing operation
+      const { party } = await validateSigningOperation(
+        command,
+        _envelopesRepo,
+        _partiesRepo,
+        command.signerId
+      );
 
       const consentedAt = new Date().toISOString();
 
@@ -110,25 +98,13 @@ export const makeSigningCommandsPort = (
      */
     async prepareSigning(command: PrepareSigningCommand): Promise<PrepareSigningResult> {
       
-      // Validate IP address if provided
-      if (command.actor.ip) {
-        IpAddressSchema.parse(command.actor.ip);
-      }
-
-      // Get and validate envelope
-      const envelope = await _envelopesRepo.getById(command.envelopeId);
-      if (!envelope) {
-        throw envelopeNotFound({ envelopeId: command.envelopeId });
-      }
-
-      // Get and validate party
-      const party = await _partiesRepo.getById({ 
-        envelopeId: command.envelopeId, 
-        partyId: command.signerId 
-      });
-      if (!party) {
-        throw partyNotFound({ partyId: command.signerId, envelopeId: command.envelopeId });
-      }
+      // Validate signing operation
+      const { party } = await validateSigningOperation(
+        command,
+        _envelopesRepo,
+        _partiesRepo,
+        command.signerId
+      );
 
       const preparedAt = new Date().toISOString();
 
@@ -160,16 +136,12 @@ export const makeSigningCommandsPort = (
      */
     async completeSigning(command: CompleteSigningCommand): Promise<CompleteSigningResult> {
       
-      // Validate IP address if provided
-      if (command.actor.ip) {
-        IpAddressSchema.parse(command.actor.ip);
-      }
-
-      // Get and validate envelope
-      const envelope = await _envelopesRepo.getById(command.envelopeId);
-      if (!envelope) {
-        throw envelopeNotFound({ envelopeId: command.envelopeId });
-      }
+      // Validate signing operation
+      const { envelope } = await validateSigningOperation(
+        command,
+        _envelopesRepo,
+        _partiesRepo
+      );
       
       // Apply domain-specific rules
       if (command.algorithm) {
@@ -192,7 +164,7 @@ export const makeSigningCommandsPort = (
         doc.digest && doc.digest.alg === command.digest.alg && doc.digest.value === command.digest.value
       );
       
-      if (targetDocument && targetDocument.digest) {
+      if (targetDocument?.digest) {
         assertPdfDigestMatches(command.digest, targetDocument.digest);
       }
       
@@ -269,16 +241,12 @@ export const makeSigningCommandsPort = (
      */
     async declineSigning(command: DeclineSigningCommand): Promise<DeclineSigningResult> {
       
-      // Validate IP address if provided
-      if (command.actor.ip) {
-        IpAddressSchema.parse(command.actor.ip);
-      }
-
-      // Get and validate envelope
-      const envelope = await _envelopesRepo.getById(command.envelopeId);
-      if (!envelope) {
-        throw envelopeNotFound({ envelopeId: command.envelopeId });
-      }
+      // Validate signing operation
+      const { envelope } = await validateSigningOperation(
+        command,
+        _envelopesRepo,
+        _partiesRepo
+      );
       
       // Apply domain-specific rules
       assertCancelDeclineAllowed(envelope.status);
@@ -331,16 +299,12 @@ export const makeSigningCommandsPort = (
      */
     async presignUpload(command: PresignUploadCommand): Promise<PresignUploadResult> {
       
-      // Validate IP address if provided
-      if (command.actor.ip) {
-        IpAddressSchema.parse(command.actor.ip);
-      }
-
-      // Get and validate envelope
-      const envelope = await _envelopesRepo.getById(command.envelopeId);
-      if (!envelope) {
-        throw envelopeNotFound({ envelopeId: command.envelopeId });
-      }
+      // Validate signing operation
+      const { envelope } = await validateSigningOperation(
+        command,
+        _envelopesRepo,
+        _partiesRepo
+      );
       
       // Apply domain-specific rules for evidence integrity
       const maxFileSize = 10 * 1024 * 1024; // 10MB default
@@ -395,16 +359,12 @@ export const makeSigningCommandsPort = (
      */
     async downloadSignedDocument(command: DownloadSignedDocumentCommand): Promise<DownloadSignedDocumentResult> {
       
-      // Validate IP address if provided
-      if (command.actor.ip) {
-        IpAddressSchema.parse(command.actor.ip);
-      }
-      
-      // Get envelope for domain rules
-      const envelope = await _envelopesRepo.getById(command.envelopeId);
-      if (!envelope) {
-        throw envelopeNotFound({ envelopeId: command.envelopeId });
-      }
+      // Validate signing operation
+      const { envelope } = await validateSigningOperation(
+        command,
+        _envelopesRepo,
+        _partiesRepo
+      );
       
       // Apply domain-specific rules
       assertDownloadAllowed(envelope.status);

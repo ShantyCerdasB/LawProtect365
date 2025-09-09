@@ -5,7 +5,7 @@
  */
 
 import { S3EvidenceStorage } from '../../../src/aws/s3/S3EvidenceStorage.js';
-import { S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { PutObjectCommand, HeadObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 
 // Mock AWS SDK
 jest.mock('@aws-sdk/client-s3');

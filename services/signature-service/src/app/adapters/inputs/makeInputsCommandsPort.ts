@@ -6,12 +6,11 @@
  * and type conversions for input command operations.
  */
 
-import type { Repository } from "@lawprotect/shared-ts";
+import type { Repository, IdempotencyRunner } from "@lawprotect/shared-ts";
 import type { Input } from "../../../domain/entities/Input";
 import type { InputKey } from "../../../domain/types/infrastructure/dynamodb";
 import type { InputId, PartyId } from "@/domain/value-objects/ids";
 import type { Ids } from "../../../domain/types/parties";
-import type { IdempotencyRunner } from "@lawprotect/shared-ts";
 import type { PartyRepositoryDdb } from "../../../infrastructure/dynamodb/PartyRepositoryDdb";
 import type { DocumentRepositoryDdb } from "../../../infrastructure/dynamodb/DocumentRepositoryDdb";
 import type { EnvelopeRepositoryDdb } from "../../../infrastructure/dynamodb/EnvelopeRepositoryDdb";
@@ -37,29 +36,39 @@ import {
 } from "../../../domain/rules/Inputs.rules";
 
 /**
+ * Configuration for InputsCommandsPort
+ */
+interface InputsCommandsPortConfig {
+  inputsRepo: Repository<Input, InputKey>;
+  ids: Ids;
+  partiesRepo: PartyRepositoryDdb;
+  documentsRepo: DocumentRepositoryDdb;
+  envelopesRepo: EnvelopeRepositoryDdb;
+  validationService?: InputsValidationService;
+  auditService?: InputsAuditService;
+  eventService?: InputsEventService;
+  idempotencyRunner?: IdempotencyRunner;
+}
+
+/**
  * Creates an InputsCommandsPort implementation
- * @param inputsRepo - The input repository for data persistence
- * @param ids - ID generation service
- * @param validationService - Optional validation service
- * @param auditService - Optional audit service
- * @param eventService - Optional event service
- * @param idempotencyRunner - Optional idempotency runner
+ * @param config - Configuration object containing all dependencies
  * @returns Configured InputsCommandsPort implementation
  */
 export const makeInputsCommandsPort = (
-  inputsRepo: Repository<Input, InputKey>,
-  ids: Ids,
-  // ✅ REPOSITORIES FOR RULES VALIDATION
-  partiesRepo: PartyRepositoryDdb,
-  documentsRepo: DocumentRepositoryDdb,
-  envelopesRepo: EnvelopeRepositoryDdb,
-  // ✅ SERVICIOS OPCIONALES - PATRÓN REUTILIZABLE
-  validationService?: InputsValidationService,
-  auditService?: InputsAuditService,
-  eventService?: InputsEventService,
-  // ✅ IDEMPOTENCY - PATRÓN REUTILIZABLE
-  idempotencyRunner?: IdempotencyRunner
+  config: InputsCommandsPortConfig
 ): InputsCommandsPort => {
+  const {
+    inputsRepo,
+    ids,
+    partiesRepo,
+    documentsRepo: _documentsRepo,
+    envelopesRepo,
+    validationService,
+    auditService,
+    eventService,
+    idempotencyRunner
+  } = config;
   
   // 🔍 FUNCIÓN INTERNA PARA IDEMPOTENCY
   const createInternal = async (command: CreateInputsCommand): Promise<CreateInputsResult> => {
@@ -77,9 +86,8 @@ export const makeInputsCommandsPort = (
     });
     const partyIds = parties.items.map(p => p.partyId);
     
-    // Get document metadata for page size
-    const document = await documentsRepo.getById(command.documentId as any);
-    const pageSize = document ? { width: 612, height: 792 } : { width: 612, height: 792 }; // Default letter size
+    // Use default page size for validation
+    const pageSize = { width: 612, height: 792 }; // Default letter size (8.5" x 11" at 72 DPI)
     
     // Get envelope configuration for strict mode
     const envelope = await envelopesRepo.getById(command.envelopeId);

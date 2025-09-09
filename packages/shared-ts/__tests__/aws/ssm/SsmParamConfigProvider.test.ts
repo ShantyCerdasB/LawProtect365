@@ -5,7 +5,6 @@
  */
 
 import { SsmParamConfigProvider } from '../../../src/aws/ssm/SsmParamConfigProvider.js';
-import { SSMClient, GetParameterCommand } from '@aws-sdk/client-ssm';
 
 // Mock AWS SDK
 jest.mock('@aws-sdk/client-ssm');

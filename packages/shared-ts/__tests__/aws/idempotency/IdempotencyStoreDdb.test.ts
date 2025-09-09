@@ -1,5 +1,5 @@
 import { IdempotencyStoreDdb } from '../../../src/aws/idempotency/IdempotencyStoreDdb.js';
-import { ConflictError, NotFoundError, ErrorCodes } from '../../../src/index.js';
+import { ConflictError, NotFoundError } from '../../../src/index.js';
 import type { DdbClientLike } from '../../../src/aws/ddb.js';
 
 describe('IdempotencyStoreDdb', () => {

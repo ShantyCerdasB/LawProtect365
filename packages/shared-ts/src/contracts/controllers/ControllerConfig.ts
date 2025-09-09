@@ -8,7 +8,6 @@ import type {
   BeforeMiddleware,
   AfterMiddleware 
 } from "../../http/middleware.js";
-import type { ResponseContentType } from "../../types/response.js";
 
 /**
  * @summary Configuration for query controllers (GET operations)

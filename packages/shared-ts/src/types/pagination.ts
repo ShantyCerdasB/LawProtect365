@@ -7,11 +7,6 @@
 import type { Brand } from "./brand.js";
 
 /**
- * @description Opaque pagination token.
- */
-export type Cursor = string;
-
-/**
  * @description Opaque base64url pagination cursor branded type.
  * Provides compile-time type safety for pagination cursors.
  */
@@ -24,7 +19,7 @@ export interface PaginationParams {
   /** Maximum number of items to return */
   limit: number;
   /** Optional cursor for pagination */
-  cursor?: Cursor;
+  cursor?: string;
 }
 
 /**
@@ -34,7 +29,7 @@ export interface PageMeta {
   /** Whether there are more items available */
   hasNext: boolean;
   /** Cursor for the next page */
-  nextCursor?: Cursor;
+  nextCursor?: string;
   /** Total count of items (if available) */
   totalCount?: number;
 }
