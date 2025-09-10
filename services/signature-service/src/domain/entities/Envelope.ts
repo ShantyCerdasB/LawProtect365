@@ -8,7 +8,7 @@
  * This aggregate is intentionally minimal and serializable.
  */
 
-import type { EnvelopeId, TenantId, UserId } from "@/domain/value-objects/ids";
+import type { EnvelopeId } from "@/domain/value-objects/ids";
 import type { EnvelopeStatus } from "@/domain/value-objects/index";
 
 /**
@@ -18,14 +18,11 @@ export interface Envelope {
   /** Canonical identifier of the envelope (ULID/UUID brand). */
   readonly envelopeId: EnvelopeId;
 
-  /** Owner (creator) of the envelope. */
-  readonly ownerId: UserId;
+  /** Owner (creator) email of the envelope. */
+  readonly ownerEmail: string;
 
-  /** Tenant owning the resource (multitenancy boundary). */
-  readonly tenantId: TenantId;
-
-  /** Human-friendly title (trimmed, typically ≤ 255 chars). */
-  readonly title: string;
+  /** Human-friendly name (trimmed, typically ≤ 255 chars). */
+  readonly name: string;
 
   /** Current lifecycle status of the envelope. */
   readonly status: EnvelopeStatus;
@@ -48,9 +45,4 @@ export interface Envelope {
   /** Free-form metadata for extensibility. */
   readonly metadata?: Record<string, unknown>;
 }
-
-
-
-
-
 

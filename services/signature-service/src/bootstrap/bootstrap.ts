@@ -46,13 +46,11 @@ export function initApp(): App {
   appSingleton = {
     container,
     config: container.config,
-    cors: corsFromEnv(),
-  };
+    cors: corsFromEnv()};
 
   logger.info("signature-service bootstrapped", {
     service: appSingleton.config.serviceName,
-    env: appSingleton.config.env,
-  });
+    env: appSingleton.config.env});
 
   return appSingleton;
 }

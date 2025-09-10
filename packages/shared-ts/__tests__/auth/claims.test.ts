@@ -15,8 +15,7 @@ describe('toJwtClaims', () => {
       iat: 1234567000,
       jti: 'jti-1',
       email: 'a@example.com',
-      email_verified: true,
-    };
+      email_verified: true};
     const c = toJwtClaims(payload);
 
     expect(c.sub).toBe('u-1');
@@ -29,7 +28,7 @@ describe('toJwtClaims', () => {
     expect(c.emailVerified).toBe(true);
     expect(c.roles).toEqual([]);
     expect(c.scopes).toEqual([]);
-    expect(c.tenantId).toBeUndefined();
+    expect(c).toBeUndefined();
     expect(c.raw).toBe(payload);
   });
 
@@ -56,8 +55,7 @@ describe('toJwtClaims', () => {
       sub: 'u',
       iss: 'iss',
       'cognito:groups': ['admin', 'lawyer', 123, null],
-      roles: ['client'],
-    };
+      roles: ['client']};
     const c = toJwtClaims(payload as any);
     expect(c.roles).toEqual(['admin', 'lawyer']);
   });
@@ -71,23 +69,22 @@ describe('toJwtClaims', () => {
   it('resolves tenantId from "tenant_id"', () => {
     const payload = { sub: 'u', iss: 'iss', tenant_id: 't-1' };
     const c = toJwtClaims(payload as any);
-    expect(c.tenantId).toBe('t-1');
+    expect(c).toBe('t-1');
   });
 
   it('resolves tenantId from "custom:tenantId"', () => {
     const payload = { sub: 'u', iss: 'iss', 'custom:tenantId': 't-2' };
     const c = toJwtClaims(payload as any);
-    expect(c.tenantId).toBe('t-2');
+    expect(c).toBe('t-2');
   });
 
   it('resolves tenantId from namespaced claim', () => {
     const payload = {
       sub: 'u',
       iss: 'iss',
-      'https://claims.example.com/tenant_id': 't-3',
-    };
+      'https://claims.example.com/tenant_id': 't-3'};
     const c = toJwtClaims(payload as any);
-    expect(c.tenantId).toBe('t-3');
+    expect(c).toBe('t-3');
   });
 
   it('filters non-string roles and normalizes missing fields', () => {
@@ -98,8 +95,7 @@ describe('toJwtClaims', () => {
       jti: 99, // ignored
       email_verified: 'nope', // ignored
       email: 42, // ignored
-      roles: ['r1', 2, null],
-    };
+      roles: ['r1', 2, null]};
     const c = toJwtClaims(payload as any);
     expect(c.sub).toBe(''); // defaulted
     expect(c.iss).toBe(''); // defaulted
@@ -111,6 +107,6 @@ describe('toJwtClaims', () => {
     expect(c.emailVerified).toBeUndefined();
     expect(c.roles).toEqual(['r1']);
     expect(c.scopes).toEqual([]);
-    expect(c.tenantId).toBeUndefined();
+    expect(c).toBeUndefined();
   });
 });

@@ -27,13 +27,11 @@ export class InputsAuditService extends BaseAuditService {
     details: Record<string, unknown>
   ): Promise<void> {
     await this.auditRepo.record({
-      tenantId: context.tenantId,
       envelopeId: context.envelopeId || ("" as any),
       type: details.action as string,
       occurredAt: new Date().toISOString(),
       actor: context.actor || { email: "system" },
-      metadata: details,
-    });
+      metadata: details});
   }
 
   /**
@@ -47,7 +45,12 @@ export class InputsAuditService extends BaseAuditService {
       documentId: command.documentId,
       inputCount: command.inputs.length,
       inputTypes: command.inputs.map(input => input.type),
-      actor: command.actor
+      actor: {
+        userId: command.actor?.userId,
+        email: command.actor?.email,
+        ip: command.actor?.ip,
+        role: (command.actor as any)?.roles?.[0] || command.actor?.role
+      }
     };
 
     await this.logBusinessEvent(auditContext, auditDetails);
@@ -64,7 +67,12 @@ export class InputsAuditService extends BaseAuditService {
       inputId: command.inputId,
       updatedFields: Object.keys(command.updates),
       updates: command.updates,
-      actor: command.actor
+      actor: {
+        userId: command.actor?.userId,
+        email: command.actor?.email,
+        ip: command.actor?.ip,
+        role: (command.actor as any)?.roles?.[0] || command.actor?.role
+      }
     };
 
     await this.logBusinessEvent(auditContext, auditDetails);
@@ -80,7 +88,12 @@ export class InputsAuditService extends BaseAuditService {
       envelopeId: command.envelopeId,
       inputCount: command.items.length,
       inputIds: command.items.map(item => item.inputId),
-      actor: command.actor
+      actor: {
+        userId: command.actor?.userId,
+        email: command.actor?.email,
+        ip: command.actor?.ip,
+        role: (command.actor as any)?.roles?.[0] || command.actor?.role
+      }
     };
 
     await this.logBusinessEvent(auditContext, auditDetails);
@@ -95,7 +108,12 @@ export class InputsAuditService extends BaseAuditService {
       action: "delete_input",
       envelopeId: command.envelopeId,
       inputId: command.inputId,
-      actor: command.actor
+      actor: {
+        userId: command.actor?.userId,
+        email: command.actor?.email,
+        ip: command.actor?.ip,
+        role: (command.actor as any)?.roles?.[0] || command.actor?.role
+      }
     };
 
     await this.logBusinessEvent(auditContext, auditDetails);

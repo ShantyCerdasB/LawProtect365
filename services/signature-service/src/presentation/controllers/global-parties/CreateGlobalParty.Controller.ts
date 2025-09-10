@@ -22,8 +22,7 @@ export const CreateGlobalPartyController = createCommandController<CreateGlobalP
     ids: c.ids,
     validationService: c.globalParties.validationService,
     auditService: c.globalParties.auditService,
-    eventService: c.globalParties.eventService,
-  }),
+    eventService: c.globalParties.eventService}),
   extractParams: (_: any, body: any) => ({
     name: body.name,
     email: body.email,
@@ -33,16 +32,7 @@ export const CreateGlobalPartyController = createCommandController<CreateGlobalP
     metadata: body.metadata,
     preferences: body.preferences,
     notificationPreferences: body.notificationPreferences,
-    stats: body.stats || { signedCount: 0, totalEnvelopes: 0 },
-  }),
+    stats: body.stats || { signedCount: 0, totalEnvelopes: 0 }}),
   responseType: "created",
-  includeActor: true,
-});
-
-
-
-
-
-
-
+  includeActor: true});
 

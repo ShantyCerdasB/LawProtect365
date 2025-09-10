@@ -44,8 +44,7 @@ describe('withTracing', () => {
 
     const wrapped = withTracing(failing, {
       name: 'calcTotal',
-      attributes: { svc: 'orders' },
-    });
+      attributes: { svc: 'orders' }});
 
     await expect(wrapped(ctx, 42)).rejects.toBe(err);
 

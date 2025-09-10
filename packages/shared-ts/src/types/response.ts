@@ -11,8 +11,7 @@ export const RESPONSE_CONTENT_TYPES = {
   JSON: "json",
   TEXT: "text", 
   BINARY: "binary",
-  STREAM: "stream",
-} as const;
+  STREAM: "stream"} as const;
 
 /**
  * Generic response content type for API controllers

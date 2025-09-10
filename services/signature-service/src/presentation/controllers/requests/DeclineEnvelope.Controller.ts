@@ -22,19 +22,10 @@ export const DeclineEnvelopeController = createCommandController<DeclineEnvelope
   createDependencies: (c: any) => makeRequestsCommandsPort(createRequestsDependencies(c)),
   extractParams: (path: any, body: any) => ({
     envelopeId: path.id,
-    reason: body.reason,
-  }),
+    reason: body.reason}),
   responseType: "ok",
-  includeActor: true,
-});
+  includeActor: true});
 
 // Export handler for backward compatibility
 export const handler = DeclineEnvelopeController;
-
-
-
-
-
-
-
 

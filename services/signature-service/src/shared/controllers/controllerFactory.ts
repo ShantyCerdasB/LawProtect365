@@ -4,7 +4,7 @@
  * @description Helper functions for creating signature service specific controller configurations
  */
 
-import { createController as createGenericController, withAuth } from "@lawprotect/shared-ts";
+import { createController as createGenericController, withAuth, mapError } from "@lawprotect/shared-ts";
 import { getContainer } from "../../core/Container";
 import type { Container } from "../../infrastructure/contracts/core";
 import { createConsentDependencies } from "./helpers/ConsentControllerHelpers";
@@ -12,24 +12,37 @@ import { createConsentDependencies } from "./helpers/ConsentControllerHelpers";
 /**
  * @summary Creates a command controller (POST/PUT/PATCH/DELETE operations)
  * @description Wrapper around the generic createController that provides signature service specific configuration
- * with JWT authentication middleware applied (only in production)
+ * with unified JWT authentication and role validation middleware
  * 
  * @param config - Configuration for the controller
- * @returns HandlerFn for the command operation with JWT auth applied
+ * @returns HandlerFn for the command operation
  */
 export const createController = <TInput, TOutput>(config: any) => {
   const baseController = createGenericController<TInput, TOutput>({
     ...config,
-    getContainer,
-  });
+    getContainer});
   
-  // Apply JWT authentication middleware only in production
-  if (process.env.NODE_ENV === 'production') {
-    return withAuth(baseController);
-  }
+  // Apply JWT authentication middleware with production configuration
+  const jwtOptions = {
+    issuer: process.env.JWT_ISSUER || 'https://cognito-idp.us-east-1.amazonaws.com/us-east-1_test',
+    audience: process.env.JWT_AUDIENCE || 'test-client-id',
+    jwksUri: process.env.JWKS_URI || 'http://localhost:3000/.well-known/jwks.json',
+    clockToleranceSec: 60
+  };
   
-  // In test/development, return controller without auth middleware
-  return baseController;
+  // Apply unified authentication and authorization middleware
+  const authController = withAuth(baseController, jwtOptions);
+  
+  // Then wrap with error handling using shared-ts mapError
+  const wrappedController = async (evt: any) => {
+    try {
+      return await authController(evt);
+    } catch (error: any) {
+      return mapError(error);
+    }
+  };
+  
+  return wrappedController;
 };
 
 /**
@@ -58,7 +71,8 @@ export const createRequestsDependencies = (c: Container) => ({
   repositories: {
     envelopes: c.repos.envelopes,
     parties: c.repos.parties,
-    inputs: c.repos.inputs
+    inputs: c.repos.inputs,
+    invitationTokens: c.repos.invitationTokens
   },
   services: {
     validation: c.requests.validationService,
@@ -86,12 +100,9 @@ export const createSigningDependenciesWithS3 = createSigningDependencies;
  * @returns Standardized envelope parameters
  */
 export const extractEnvelopeParams = (path: Record<string, unknown>, body: Record<string, unknown>) => ({
-  tenantId: path.tenantId,
   envelopeId: path.id,
   ...body
 });
 
 // Alias for backward compatibility
 export const createCommandController = createController;
-
-

@@ -10,8 +10,7 @@
 // Mock environment utilities with the same specifier used by the SUT
 jest.mock('@utils/env.js', () => ({
   getEnv: jest.fn(),
-  getNumber: jest.fn(),
-}));
+  getNumber: jest.fn()}));
 
 // Mock Prisma client constructor; capture options on the instance for assertions
 const PrismaClientCtor = jest.fn().mockImplementation(function (this: any, opts: any) {

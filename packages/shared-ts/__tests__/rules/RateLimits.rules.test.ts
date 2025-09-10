@@ -7,8 +7,7 @@ import {
   selectRateLimitConfig,
   assertRateLimit,
   toRateLimitHeaders,
-  clampListPageSize,
-} from '../../src/rules/RateLimits.rules.js';
+  clampListPageSize} from '../../src/rules/RateLimits.rules.js';
 import { AppError, ErrorCodes } from '../../src/errors/index.js';
 
 // Mock the config module
@@ -16,9 +15,7 @@ jest.mock('../../src/config/rateLimit.js', () => ({
   defaultRateLimit: jest.fn((env: string) => ({
     limitPerMinute: env === 'prod' ? 100 : 10,
     burst: env === 'prod' ? 20 : 5,
-    emitHeaders: env === 'prod',
-  })),
-}));
+    emitHeaders: env === 'prod'}))}));
 
 describe('RateLimits.rules', () => {
   const originalEnv = process.env.ENV;
@@ -39,8 +36,7 @@ describe('RateLimits.rules', () => {
       expect(config).toEqual({
         limitPerMinute: 10,
         burst: 5,
-        emitHeaders: false,
-      });
+        emitHeaders: false});
     });
 
     it('should return config for specified environment', () => {
@@ -49,8 +45,7 @@ describe('RateLimits.rules', () => {
       expect(config).toEqual({
         limitPerMinute: 100,
         burst: 20,
-        emitHeaders: true,
-      });
+        emitHeaders: true});
     });
 
     it('should use process.env.ENV when available', () => {
@@ -60,8 +55,7 @@ describe('RateLimits.rules', () => {
       expect(config).toEqual({
         limitPerMinute: 10,
         burst: 5,
-        emitHeaders: false,
-      });
+        emitHeaders: false});
     });
   });
 
@@ -69,8 +63,7 @@ describe('RateLimits.rules', () => {
     const defaultConfig = {
       limitPerMinute: 10,
       burst: 5,
-      emitHeaders: false,
-    };
+      emitHeaders: false};
 
     it('should pass when usage is within limit', () => {
       expect(() => assertRateLimit(5, defaultConfig)).not.toThrow();
@@ -125,16 +118,14 @@ describe('RateLimits.rules', () => {
     const config = {
       limitPerMinute: 100,
       burst: 20,
-      emitHeaders: true,
-    };
+      emitHeaders: true};
 
     it('should return headers when emitHeaders is true', () => {
       const headers = toRateLimitHeaders(50, config);
       
       expect(headers).toEqual({
         'X-RateLimit-Limit': '100',
-        'X-RateLimit-Remaining': '50',
-      });
+        'X-RateLimit-Remaining': '50'});
     });
 
     it('should return empty object when emitHeaders is false', () => {
@@ -149,8 +140,7 @@ describe('RateLimits.rules', () => {
       
       expect(headers).toEqual({
         'X-RateLimit-Limit': '100',
-        'X-RateLimit-Remaining': '25',
-      });
+        'X-RateLimit-Remaining': '25'});
     });
 
     it('should not return negative remaining', () => {
@@ -158,8 +148,7 @@ describe('RateLimits.rules', () => {
       
       expect(headers).toEqual({
         'X-RateLimit-Limit': '100',
-        'X-RateLimit-Remaining': '0',
-      });
+        'X-RateLimit-Remaining': '0'});
     });
 
     it('should use default config when not provided', () => {
@@ -173,8 +162,7 @@ describe('RateLimits.rules', () => {
       
       expect(headers).toEqual({
         'X-RateLimit-Limit': '100',
-        'X-RateLimit-Remaining': '100',
-      });
+        'X-RateLimit-Remaining': '100'});
     });
   });
 

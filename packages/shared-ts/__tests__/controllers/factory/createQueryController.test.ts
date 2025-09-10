@@ -24,8 +24,7 @@ describe('createQueryController', () => {
     mockContainer = { get: jest.fn() };
     mockDependencies = { dep1: 'value1' };
     mockAppService = {
-      execute: jest.fn(),
-    };
+      execute: jest.fn()};
 
     mockConfig = {
       pathSchema: { type: 'object' },
@@ -35,14 +34,12 @@ describe('createQueryController', () => {
       appServiceClass: jest.fn().mockReturnValue(mockAppService),
       extractParams: jest.fn().mockReturnValue({ param1: 'value1' }),
       transformResult: jest.fn(),
-      responseType: 'ok' as const,
-    };
+      responseType: 'ok' as const};
 
     mockValidateRequest.mockReturnValue({
       path: { id: '123' },
       query: { page: '1' },
-      body: undefined,
-    });
+      body: undefined});
     mockTenantFromCtx.mockReturnValue('tenant-123');
     mockOk.mockReturnValue({ statusCode: 200, body: '{"data":"result"}' });
     mockCreated.mockReturnValue({ statusCode: 201, body: '{"data":"result"}' });
@@ -62,8 +59,7 @@ describe('createQueryController', () => {
 
     expect(mockValidateRequest).toHaveBeenCalledWith({}, {
       path: mockConfig.pathSchema,
-      query: mockConfig.querySchema,
-    });
+      query: mockConfig.querySchema});
     expect(mockTenantFromCtx).toHaveBeenCalledWith({});
     expect(mockConfig.getContainer).toHaveBeenCalled();
     expect(mockConfig.createDependencies).toHaveBeenCalledWith(mockContainer);
@@ -73,9 +69,7 @@ describe('createQueryController', () => {
       { page: '1' }
     );
     expect(mockAppService.execute).toHaveBeenCalledWith({
-      tenantId: 'tenant-123',
-      param1: 'value1',
-    });
+      param1: 'value1'});
     expect(mockConfig.transformResult).toHaveBeenCalledWith('test-result');
     expect(mockOk).toHaveBeenCalledWith({ data: 'transformed-result' });
     expect(result).toEqual({ statusCode: 200, body: '{"data":"result"}' });
@@ -112,8 +106,7 @@ describe('createQueryController', () => {
     await controller({} as any);
 
     expect(mockValidateRequest).toHaveBeenCalledWith({}, {
-      query: mockConfig.querySchema,
-    });
+      query: mockConfig.querySchema});
   });
 
   it('should create a query controller without query schema', async () => {
@@ -124,8 +117,7 @@ describe('createQueryController', () => {
     await controller({} as any);
 
     expect(mockValidateRequest).toHaveBeenCalledWith({}, {
-      path: mockConfig.pathSchema,
-    });
+      path: mockConfig.pathSchema});
   });
 
   it('should create a query controller without transformResult', async () => {

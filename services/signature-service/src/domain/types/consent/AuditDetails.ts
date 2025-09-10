@@ -47,8 +47,3 @@ export interface ConsentUpdateAuditDetails {
   readonly metadata?: Record<string, unknown>;
 }
 
-
-
-
-
-

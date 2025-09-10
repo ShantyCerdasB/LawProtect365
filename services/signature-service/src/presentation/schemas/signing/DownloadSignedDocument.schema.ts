@@ -7,8 +7,7 @@ import { z, UuidV4 } from "@lawprotect/shared-ts";
 
 /** Body payload for downloading a signed document. */
 export const DownloadSignedDocumentBody = z.object({
-  envelopeId: UuidV4,
-});
+  envelopeId: UuidV4});
 export type DownloadSignedDocumentBody = z.infer<typeof DownloadSignedDocumentBody>;
 
 /** Response schema for the download URL. */
@@ -17,12 +16,6 @@ export const DownloadSignedDocumentResponse = z.object({
   expiresAt: z.string().datetime(),
   filename: z.string(),
   contentType: z.string(),
-  fileSize: z.number().positive().optional(),
-});
+  fileSize: z.number().positive().optional()});
 export type DownloadSignedDocumentResponse = z.infer<typeof DownloadSignedDocumentResponse>;
-
-
-
-
-
 

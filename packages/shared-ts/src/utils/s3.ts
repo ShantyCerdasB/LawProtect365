@@ -135,7 +135,6 @@ export const isValidKey = (key: string): boolean => {
   return true;
 };
 
-
 /**
  * Builds an HTTPS URL for an S3 object (no signing).
  * @param bucket Bucket name.
@@ -188,7 +187,6 @@ export const guessContentType = (filename: string): string | undefined => {
     zip: "application/zip",
     xml: "application/xml",
     docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  };
+    xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"};
   return map[ext];
 };

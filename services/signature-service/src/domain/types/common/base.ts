@@ -37,15 +37,6 @@ export type EnvelopeScoped = {
 };
 
 /**
- * @summary Entity scoped to a tenant
- * @description Base type for entities that belong to a specific tenant
- */
-export type TenantScoped = {
-  /** Tenant identifier */
-  readonly tenantId: string;
-};
-
-/**
  * @summary Composite key for consent entities
  * @description Key structure for consent-related entities
  */
@@ -66,5 +57,4 @@ export type DelegationKey = {
   /** Delegation identifier */
   readonly delegationId: string;
 };
-
 

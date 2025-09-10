@@ -16,5 +16,3 @@ import { DOCUMENT_STATUSES } from "../../values/enums";
 export const DocumentStatusSchema = z.enum(DOCUMENT_STATUSES);
 export type DocumentStatus = z.infer<typeof DocumentStatusSchema>;
 
-
-

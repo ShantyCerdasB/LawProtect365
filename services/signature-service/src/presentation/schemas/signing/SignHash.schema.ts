@@ -12,7 +12,6 @@ import { badRequest } from "@/shared/errors";
 import { HashDigestSchema } from "@/domain/value-objects/document";
 import { KmsAlgorithmSchema, KmsKeyIdSchema } from "@/domain/value-objects/security";
 
-
 /**
  * Request body schema for signing a hash digest.
  */
@@ -31,8 +30,7 @@ export const SignHashRequestSchema = z.object({
    * Optional KMS key ID override.
    * If omitted, the default key from configuration is used.
    */
-  keyId: KmsKeyIdSchema.optional(),
-});
+  keyId: KmsKeyIdSchema.optional()});
 
 /**
  * Response schema for the signed hash digest.
@@ -51,8 +49,7 @@ export const SignHashResponseSchema = z.object({
   /**
    * Base64url-encoded signature (no padding).
    */
-  signature: z.string().regex(/^[A-Za-z0-9_-]+$/, "Expected base64url"),
-});
+  signature: z.string().regex(/^[A-Za-z0-9_-]+$/, "Expected base64url")});
 
 /**
  * Type definitions inferred from schemas.
@@ -87,9 +84,4 @@ export const parseSignHashRequest = (evt: any): SignHashRequest => {
 
   return result.data;
 };
-
-
-
-
-
 

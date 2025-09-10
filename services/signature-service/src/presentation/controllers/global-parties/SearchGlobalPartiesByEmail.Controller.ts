@@ -18,19 +18,10 @@ export const SearchGlobalPartiesByEmailController = createQueryController<Search
   querySchema: SearchGlobalPartiesByEmailQuery,
   appServiceClass: GlobalPartiesQueryService,
   createDependencies: (c: any) => makeGlobalPartiesQueriesPort({
-    globalParties: c.repos.globalParties,
-  }),
+    globalParties: c.repos.globalParties}),
   extractParams: (_: any, query: any) => ({
     email: query.email,
-    limit: query.limit,
-  }),
+    limit: query.limit}),
   responseType: "ok"
 });
-
-
-
-
-
-
-
 

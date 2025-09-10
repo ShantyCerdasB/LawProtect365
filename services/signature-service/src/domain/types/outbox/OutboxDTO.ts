@@ -41,8 +41,3 @@ export interface OutboxItemDTO {
   readonly updatedAt: string;
 }
 
-
-
-
-
-

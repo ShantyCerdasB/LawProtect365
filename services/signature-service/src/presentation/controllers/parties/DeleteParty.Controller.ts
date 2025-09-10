@@ -18,18 +18,8 @@ export const DeletePartyController = createCommandController<DeletePartyControll
   appServiceClass: PartiesCommandService,
   createDependencies: (c: any) => c.parties.commandsPort,
   extractParams: (path: any) => ({
-    tenantId: path.tenantId,
     envelopeId: path.envelopeId,
-    partyId: path.partyId,
-  }),
+    partyId: path.partyId}),
   responseType: "noContent",
-  includeActor: true,
-});
-
-
-
-
-
-
-
+  includeActor: true});
 

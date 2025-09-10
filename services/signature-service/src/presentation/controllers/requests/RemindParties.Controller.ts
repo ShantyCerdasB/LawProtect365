@@ -23,19 +23,10 @@ export const RemindPartiesController = createCommandController<RemindPartiesCont
   extractParams: (path: any, body: any) => ({
     envelopeId: path.id,
     partyIds: body.partyIds,
-    message: body.message,
-  }),
+    message: body.message}),
   responseType: "ok",
-  includeActor: true,
-});
+  includeActor: true});
 
 // Export handler for backward compatibility
 export const handler = RemindPartiesController;
-
-
-
-
-
-
-
 

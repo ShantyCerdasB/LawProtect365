@@ -22,16 +22,14 @@ import {
   DecryptCommand,
   SignCommand,
   VerifyCommand,
-  type SigningAlgorithmSpec,
-} from "@aws-sdk/client-kms";
+  type SigningAlgorithmSpec} from "@aws-sdk/client-kms";
 
 import type {
   KmsPort,
   KmsEncryptInput,
   KmsDecryptInput,
   KmsSignInput,
-  KmsVerifyInput,
-} from "../ports.js";
+  KmsVerifyInput} from "../ports.js";
 
 import {
   BadRequestError,
@@ -102,13 +100,11 @@ export class KmsSigner implements KmsPort {
         new EncryptCommand({
           KeyId: keyId,
           Plaintext: input.plaintext,
-          EncryptionContext: input.context,
-        })
+          EncryptionContext: input.context})
       );
       if (!res.CiphertextBlob) {
         throw new InternalError("KMS returned empty CiphertextBlob", ErrorCodes.COMMON_INTERNAL_ERROR, {
-          op: ctx,
-        });
+          op: ctx});
       }
       return { ciphertext: res.CiphertextBlob };
     });
@@ -123,13 +119,11 @@ export class KmsSigner implements KmsPort {
       const res = await this.client.send(
         new DecryptCommand({
           CiphertextBlob: input.ciphertext,
-          EncryptionContext: input.context,
-        })
+          EncryptionContext: input.context})
       );
       if (!res.Plaintext) {
         throw new InternalError("KMS returned empty Plaintext", ErrorCodes.COMMON_INTERNAL_ERROR, {
-          op: ctx,
-        });
+          op: ctx});
       }
       return { plaintext: res.Plaintext };
     });
@@ -157,13 +151,11 @@ export class KmsSigner implements KmsPort {
           KeyId: keyId,
           Message: input.message,
           MessageType: messageType,
-          SigningAlgorithm: algo as SigningAlgorithmSpec,
-        })
+          SigningAlgorithm: algo as SigningAlgorithmSpec})
       );
       if (!res.Signature) {
         throw new InternalError("KMS returned empty Signature", ErrorCodes.COMMON_INTERNAL_ERROR, {
-          op: ctx,
-        });
+          op: ctx});
       }
       return { signature: res.Signature };
     });
@@ -191,8 +183,7 @@ export class KmsSigner implements KmsPort {
           Message: input.message,
           MessageType: messageType,
           Signature: input.signature,
-          SigningAlgorithm: algo as SigningAlgorithmSpec,
-        })
+          SigningAlgorithm: algo as SigningAlgorithmSpec})
       );
       return { valid: Boolean(res.SignatureValid) };
     });
@@ -224,9 +215,4 @@ export class KmsSigner implements KmsPort {
     throw mapAwsError(lastErr, op);
   }
 }
-
-
-
-
-
 

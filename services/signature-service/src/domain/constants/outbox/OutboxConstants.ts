@@ -17,8 +17,7 @@ export const OUTBOX_STATUSES = {
   /** Event was successfully processed. */
   DISPATCHED: "dispatched",
   /** Event processing failed. */
-  FAILED: "failed",
-} as const;
+  FAILED: "failed"} as const;
 
 export type OutboxStatus = (typeof OUTBOX_STATUSES)[keyof typeof OUTBOX_STATUSES];
 
@@ -53,5 +52,4 @@ export const REPOSITORY_LIMITS = {
   /** Maximum retry attempts for failed operations */
   MAX_RETRY_ATTEMPTS: 3,
   /** Default timeout for repository operations (milliseconds) */
-  DEFAULT_TIMEOUT_MS: 30000,
-} as const;
+  DEFAULT_TIMEOUT_MS: 30000} as const;

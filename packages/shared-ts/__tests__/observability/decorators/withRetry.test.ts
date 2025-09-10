@@ -40,8 +40,7 @@ describe('withRetry', () => {
       backoffMs: (attempt) => {
         expect(attempt).toBe(1); // 1-based attempt used for backoff
         return 200;
-      },
-    });
+      }});
 
     const p = wrapped({} as any, 'in');
 
@@ -67,8 +66,7 @@ describe('withRetry', () => {
     const wrapped = withRetry(op, {
       maxAttempts: 5,
       shouldRetry: () => false,
-      backoffMs: () => 999,
-    });
+      backoffMs: () => 999});
 
     await expect(wrapped({} as any, 'x')).rejects.toBe(err);
     expect(op).toHaveBeenCalledTimes(1);
@@ -84,8 +82,7 @@ describe('withRetry', () => {
     const wrapped = withRetry(op, {
       maxAttempts: 0, // while guard makes it at least 1, but break uses raw maxAttempts
       shouldRetry: () => true,
-      backoffMs: () => 500,
-    });
+      backoffMs: () => 500});
 
     await expect(wrapped({} as any, null as any)).rejects.toBe(err);
     expect(op).toHaveBeenCalledTimes(1);

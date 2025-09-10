@@ -18,8 +18,7 @@ import { EnvelopeId, InputId } from "../common/path";
  */
 export const EnvelopePath = z.object({
   /** Envelope identifier */
-  envelopeId: EnvelopeId,
-});
+  envelopeId: EnvelopeId});
 export type EnvelopePath = z.infer<typeof EnvelopePath>;
 
 /**
@@ -30,14 +29,6 @@ export const EnvelopeInputPath = z.object({
   /** Envelope identifier (UUID v4) */
   envelopeId: EnvelopeId,
   /** Input identifier (UUID v4) */
-  inputId: InputId,
-});
+  inputId: InputId});
 export type EnvelopeInputPath = z.infer<typeof EnvelopeInputPath>;
-
-
-
-
-
-
-
 

@@ -18,5 +18,3 @@ export const DEFAULT_ENTITY_INDEX = "gsi1";
  */
 export const DEFAULT_ID_INDEX = "gsi2";
 
-
-

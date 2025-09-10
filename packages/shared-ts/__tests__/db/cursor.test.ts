@@ -10,12 +10,10 @@
 // Must mock using the exact specifiers used by the SUT
 jest.mock('@utils/json.js', () => ({
   stableStringify: jest.fn((v: unknown) => JSON.stringify(v)),
-  parseJson: jest.fn((s: string) => JSON.parse(s)),
-}));
+  parseJson: jest.fn((s: string) => JSON.parse(s))}));
 
 jest.mock('@utils/crypto.js', () => ({
-  toBase64Url: jest.fn((buf: Buffer) => buf.toString('base64')),
-}));
+  toBase64Url: jest.fn((buf: Buffer) => buf.toString('base64'))}));
 
 import { encodeCursor, decodeCursor, cursorFromRecord } from '../../src/db/index.js';
 
@@ -94,10 +92,8 @@ describe('cursorFromRecord + coercions', () => {
         inner: innerBuf,
         undef: undefined as unknown as string,
         fn: () => 1,
-        sym: Symbol('sym'),
-      },
-      ignored: 999,
-    };
+        sym: Symbol('sym')},
+      ignored: 999};
 
     const cursor = cursorFromRecord(rec, [
       's',

@@ -1,7 +1,7 @@
 /**
  * @file ControllerInputs.ts
  * @summary Input types for global party controllers
- * @description Defines input types for controllers that don't include tenantId (added by factory)
+ * @description Defines input types for controllers
  */
 
 import type { PartyId } from "@/domain/value-objects/ids";
@@ -96,9 +96,4 @@ export interface DeleteGlobalPartyControllerInput {
   /** Party identifier */
   readonly partyId: PartyId;
 }
-
-
-
-
-
 

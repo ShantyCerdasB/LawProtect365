@@ -18,23 +18,14 @@ export const ListGlobalPartiesController = createQueryController<ListGlobalParti
   querySchema: ListGlobalPartiesQuery,
   appServiceClass: GlobalPartiesQueryService,
   createDependencies: (c: any) => makeGlobalPartiesQueriesPort({
-    globalParties: c.repos.globalParties,
-  }),
+    globalParties: c.repos.globalParties}),
   extractParams: (_: any, query: any) => ({
     limit: query.limit,
     cursor: query.cursor,
     status: query.status,
     role: query.role,
     source: query.source,
-    email: query.email,
-  }),
+    email: query.email}),
   responseType: "ok"
 });
-
-
-
-
-
-
-
 

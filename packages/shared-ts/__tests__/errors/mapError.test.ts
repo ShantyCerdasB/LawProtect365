@@ -29,23 +29,20 @@ describe('mapError → AppError passthrough', () => {
 
     const res = mapError(err, {
       requestId: 'req-1',
-      headers: { 'x-extra': 'ok' },
-    });
+      headers: { 'x-extra': 'ok' }});
 
     const s = asStructured(res);
     expect(s.statusCode).toBe(418);
     expect(s.headers).toEqual({
       'Content-Type': 'application/json; charset=utf-8',
       'x-request-id': 'req-1',
-      'x-extra': 'ok',
-    });
+      'x-extra': 'ok'});
 
     const body = parseBody(res);
     expect(body).toEqual({
       error: 'CUSTOM_CODE',
       message: 'Teapot',
-      requestId: 'req-1',
-    });
+      requestId: 'req-1'});
   });
 
   it('exposes details when opts.exposeDetails=true regardless of ENV', () => {
@@ -63,8 +60,7 @@ describe('mapError → AppError passthrough', () => {
       error: 'X',
       message: 'oops',
       details,
-      requestId: '123',
-    });
+      requestId: '123'});
   });
 
   it('exposes details automatically in dev/staging when opts.exposeDetails is undefined', () => {
@@ -79,8 +75,7 @@ describe('mapError → AppError passthrough', () => {
     expect(body).toEqual({
       error: 'Y',
       message: 'conflict',
-      details: { id: '42' },
-    });
+      details: { id: '42' }});
   });
 });
 
@@ -105,8 +100,7 @@ describe('mapError → provider/classification mappings', () => {
     expect(s.statusCode).toBe(400);
     expect(parseBody(res)).toEqual({
       error: ErrorCodes.COMMON_BAD_REQUEST,
-      message: 'Bad Request',
-    });
+      message: 'Bad Request'});
   });
 
   it('maps throttling (by name) to 429 and adds Retry-After when missing', () => {
@@ -119,8 +113,7 @@ describe('mapError → provider/classification mappings', () => {
     const body = parseBody(res);
     expect(body).toEqual({
       error: ErrorCodes.COMMON_TOO_MANY_REQUESTS,
-      message: 'Too Many Requests',
-    });
+      message: 'Too Many Requests'});
   });
 
   it('maps throttling (by code) to 429 and preserves existing Retry-After header', () => {
@@ -141,8 +134,7 @@ describe('mapError → provider/classification mappings', () => {
     expect(asStructured(res2).statusCode).toBe(409);
     expect(parseBody(res1)).toEqual({
       error: ErrorCodes.COMMON_CONFLICT,
-      message: 'Conflict',
-    });
+      message: 'Conflict'});
   });
 
   it('maps ValidationException to 400', () => {
@@ -153,8 +145,7 @@ describe('mapError → provider/classification mappings', () => {
     expect(asStructured(r2).statusCode).toBe(400);
     expect(parseBody(r1)).toEqual({
       error: ErrorCodes.COMMON_BAD_REQUEST,
-      message: 'Bad Request',
-    });
+      message: 'Bad Request'});
   });
 
   it('maps AccessDeniedException to 403', () => {
@@ -162,8 +153,7 @@ describe('mapError → provider/classification mappings', () => {
     expect(asStructured(r).statusCode).toBe(403);
     expect(parseBody(r)).toEqual({
       error: ErrorCodes.AUTH_FORBIDDEN,
-      message: 'Forbidden',
-    });
+      message: 'Forbidden'});
   });
 
   it('maps ResourceNotFoundException to 404', () => {
@@ -171,8 +161,7 @@ describe('mapError → provider/classification mappings', () => {
     expect(asStructured(r).statusCode).toBe(404);
     expect(parseBody(r)).toEqual({
       error: ErrorCodes.COMMON_NOT_FOUND,
-      message: 'Not Found',
-    });
+      message: 'Not Found'});
   });
 
   it('falls back to 500 for unknown errors', () => {
@@ -180,8 +169,7 @@ describe('mapError → provider/classification mappings', () => {
     expect(asStructured(r).statusCode).toBe(500);
     expect(parseBody(r)).toEqual({
       error: ErrorCodes.COMMON_INTERNAL_ERROR,
-      message: 'Internal Error',
-    });
+      message: 'Internal Error'});
   });
 });
 
@@ -193,8 +181,7 @@ describe('mapError headers', () => {
     const s = asStructured(res);
     expect(s.headers).toMatchObject({
       'Content-Type': 'application/json; charset=utf-8',
-      'x-custom': '1',
-    });
+      'x-custom': '1'});
   });
 
   it('omits x-request-id when not provided; includes when provided (stringified)', () => {

@@ -11,8 +11,7 @@ import {
   toTitleCase,
   slugify,
   stripControlChars,
-  leftPad,
-} from "../../src/utils/string";
+  leftPad} from "../../src/utils/string";
 
 describe("utils/strings", () => {
   describe("isBlank()", () => {

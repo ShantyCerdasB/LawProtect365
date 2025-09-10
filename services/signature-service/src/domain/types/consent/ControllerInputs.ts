@@ -1,7 +1,7 @@
 /**
  * @file ControllerInputs.ts
  * @summary Input types for consent controllers
- * @description Defines input types for controllers that don't include tenantId (added by factory)
+ * @description Defines input types for controllers 
  */
 
 import type { EnvelopeId, PartyId, ConsentId } from "@/domain/value-objects/ids";
@@ -9,7 +9,7 @@ import type { ConsentType, ConsentStatus } from "../../../domain/values/enums";
 
 /**
  * @summary Input for creating consent controller
- * @description Parameters required to create a new consent (without tenantId)
+ * @description Parameters required to create a new consent (without )
  */
 export interface CreateConsentControllerInput {
   /** Envelope identifier */
@@ -32,7 +32,7 @@ export interface CreateConsentControllerInput {
 
 /**
  * @summary Input for listing consents controller
- * @description Parameters required to list consents (without tenantId)
+ * @description Parameters required to list consents (without )
  */
 export interface ListConsentsControllerInput {
   /** Envelope identifier */
@@ -51,7 +51,7 @@ export interface ListConsentsControllerInput {
 
 /**
  * @summary Input for updating consent controller
- * @description Parameters required to update a consent (without tenantId)
+ * @description Parameters required to update a consent (without )
  */
 export interface UpdateConsentControllerInput {
   /** Envelope identifier */
@@ -72,7 +72,7 @@ export interface UpdateConsentControllerInput {
 
 /**
  * @summary Input for deleting consent controller
- * @description Parameters required to delete a consent (without tenantId)
+ * @description Parameters required to delete a consent (without )
  */
 export interface DeleteConsentControllerInput {
   /** Envelope identifier */
@@ -87,7 +87,7 @@ export interface DeleteConsentControllerInput {
 
 /**
  * @summary Input for submitting consent controller
- * @description Parameters required to submit a consent (without tenantId)
+ * @description Parameters required to submit a consent (without )
  */
 export interface SubmitConsentControllerInput {
   /** Envelope identifier */
@@ -102,7 +102,7 @@ export interface SubmitConsentControllerInput {
 
 /**
  * @summary Input for delegating consent controller
- * @description Parameters required to delegate a consent (without tenantId)
+ * @description Parameters required to delegate a consent (without )
  */
 export interface DelegateConsentControllerInput {
   /** Envelope identifier */
@@ -124,9 +124,4 @@ export interface DelegateConsentControllerInput {
   /** TTL for idempotency key in seconds */
   readonly ttlSeconds?: number;
 }
-
-
-
-
-
 

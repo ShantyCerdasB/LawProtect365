@@ -11,7 +11,8 @@ import type {
   PrepareSigningControllerInput,
   SigningConsentControllerInput,
   PresignUploadControllerInput,
-  DownloadSignedDocumentControllerInput
+  DownloadSignedDocumentControllerInput,
+  ValidateInvitationTokenControllerInput
 } from "../../../domain/types/signing";
 import { HashDigestSchema, KmsAlgorithmSchema } from "@/domain/value-objects/index";
 import { assertKmsAlgorithmAllowed } from "../../../domain/rules/Signing.rules";
@@ -134,5 +135,12 @@ export class SigningValidationService implements ISigningValidationService {
     if (!input.token?.trim()) {
       throw badRequest("Request token is required", "REQUEST_TOKEN_INVALID");
     }
+  }
+
+  validateInvitationToken(input: ValidateInvitationTokenControllerInput): void {
+    if (!input.token?.trim()) {
+      throw badRequest("Invitation token is required", "INVITATION_TOKEN_INVALID");
+    }
+    // IP and UserAgent are optional, no validation needed
   }
 };

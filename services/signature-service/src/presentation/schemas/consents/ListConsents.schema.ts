@@ -19,8 +19,7 @@ export const ListConsentsQuery = z.object({
   cursor: z.string().optional(),
   status: ConsentStatusValidationSchema.optional(),
   consentType: ConsentTypeValidationSchema.optional(),
-  partyId: PartyIdSchema.optional(),
-});
+  partyId: PartyIdSchema.optional()});
 
 /** Response */
 export const ListConsentsResponse = z.object({
@@ -33,25 +32,13 @@ export const ListConsentsResponse = z.object({
     createdAt: z.string(),
     updatedAt: z.string().optional(),
     expiresAt: z.string().optional(),
-    metadata: z.record(z.unknown()).optional(),
-  })),
+    metadata: z.record(z.unknown()).optional()})),
   meta: z.object({
     limit: z.number(),
     nextCursor: z.string().optional(),
-    total: z.number().optional(),
-  }),
-});
+    total: z.number().optional()})});
 
 export type ListConsentsPathType = z.infer<typeof ListConsentsPath>;
 export type ListConsentsQueryType = z.infer<typeof ListConsentsQuery>;
 export type ListConsentsResponseType = z.infer<typeof ListConsentsResponse>;
-
-
-
-
-
-
-
-
-
 

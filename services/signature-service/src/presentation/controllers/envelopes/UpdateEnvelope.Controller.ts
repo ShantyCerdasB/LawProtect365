@@ -19,19 +19,9 @@ export const UpdateEnvelopeController = createCommandController<UpdateEnvelopeCo
   appServiceClass: EnvelopesCommandService,
   createDependencies: (c: any) => c.envelopes.commandsPort,
   extractParams: (path: any, body: any) => ({
-    tenantId: path.tenantId,
     envelopeId: path.envelopeId,
     title: body.title,
-    status: body.status,
-  }),
+    status: body.status}),
   responseType: "ok",
-  includeActor: true,
-});
-
-
-
-
-
-
-
+  includeActor: true});
 

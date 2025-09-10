@@ -5,11 +5,6 @@
  */
 
 export * from "./Idempotency.rules.js";
-export * from "./Multitenancy.rules.js";
 export * from "./RateLimits.rules.js";
 export * from "./Audit.rules.js";
-
-
-
-
 

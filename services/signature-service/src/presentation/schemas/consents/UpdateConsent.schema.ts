@@ -20,8 +20,7 @@ export const UpdateConsentBody = z.object({
   metadata: z.record(z.unknown()).optional(),
   expiresAt: z.string().optional(),
   idempotencyKey: z.string().optional(),
-  ttlSeconds: z.number().int().positive().max(3600).optional(),
-});
+  ttlSeconds: z.number().int().positive().max(3600).optional()});
 
 /** Response */
 export const UpdateConsentResponse = z.object({
@@ -33,15 +32,9 @@ export const UpdateConsentResponse = z.object({
   createdAt: z.string(),
   updatedAt: z.string(),
   expiresAt: z.string().optional(),
-  metadata: z.record(z.unknown()).optional(),
-});
+  metadata: z.record(z.unknown()).optional()});
 
 export type UpdateConsentPathType = z.infer<typeof UpdateConsentPath>;
 export type UpdateConsentBodyType = z.infer<typeof UpdateConsentBody>;
 export type UpdateConsentResponseType = z.infer<typeof UpdateConsentResponse>;
-
-
-
-
-
 

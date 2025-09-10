@@ -20,16 +20,7 @@ export const handler = createCommandController<SubmitConsentControllerInput, Sub
     envelopeId: path.envelopeId as EnvelopeId,
     consentId: path.consentId as ConsentId,
     idempotencyKey: body?.idempotencyKey,
-    ttlSeconds: body?.ttlSeconds || 300,
-  }),
+    ttlSeconds: body?.ttlSeconds || 300}),
   responseType: "ok",
-  includeActor: true,
-});
-
-
-
-
-
-
-
+  includeActor: true});
 

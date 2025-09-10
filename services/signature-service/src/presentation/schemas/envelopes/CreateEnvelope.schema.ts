@@ -4,9 +4,8 @@
  * @description Defines Zod schemas for envelope creation payload validation and response formatting.
  */
 
-import { z, UuidV4 } from "@lawprotect/shared-ts";
+import { z } from "@lawprotect/shared-ts";
 import { 
-  TenantOnlyParams, 
   EnvelopeNameFields, 
   EnvelopeIdField, 
   CreatedAtField 
@@ -15,17 +14,20 @@ import {
 /**
  * @description Path parameters schema for creating an envelope
  */
-export const CreateEnvelopeParams = TenantOnlyParams;
-export type CreateEnvelopeParams = z.infer<typeof CreateEnvelopeParams>;
+export const CreateEnvelopeParams = z.object({});
+
+/**
+ * @description Path parameters type for creating an envelope
+ */
+export type CreateEnvelopeParamsType = z.infer<typeof CreateEnvelopeParams>;
 
 /**
  * @description Body payload schema for creating an envelope.
  * Validates the required fields for envelope creation including name, description, and owner.
  */
 export const CreateEnvelopeBody = EnvelopeNameFields.extend({
-  /** Owner identifier (UUID v4) */
-  ownerId: UuidV4,
-});
+  /** Owner email address */
+  ownerEmail: z.string().email()});
 export type CreateEnvelopeBody = z.infer<typeof CreateEnvelopeBody>;
 
 /**
@@ -36,12 +38,6 @@ export const CreateEnvelopeResponse = z.object({
   /** Created envelope identifier */
   id: EnvelopeIdField,
   /** Creation timestamp */
-  createdAt: CreatedAtField,
-});
+  createdAt: CreatedAtField});
 export type CreateEnvelopeResponse = z.infer<typeof CreateEnvelopeResponse>;
-
-
-
-
-
 

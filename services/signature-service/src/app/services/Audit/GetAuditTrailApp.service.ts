@@ -27,11 +27,9 @@ export class GetAuditTrailAppService {
    */
   async execute(input: GetAuditTrailAppInput): Promise<GetAuditTrailAppResult> {
     const result = await this.auditQueries.getAuditTrail({
-      tenantId: input.tenantId,
       envelopeId: input.envelopeId,
       cursor: input.cursor,
-      limit: input.limit,
-    });
+      limit: input.limit});
 
     return {
       envelopeId: result.envelopeId,
@@ -39,9 +37,7 @@ export class GetAuditTrailAppService {
         at: item.at,
         actor: item.actor,
         action: item.action,
-        metadata: item.metadata || {},
-      })),
-      nextCursor: result.meta?.nextCursor as PaginationCursor | undefined,
-    };
+        metadata: item.metadata || {}})),
+      nextCursor: result.meta?.nextCursor as PaginationCursor | undefined};
   }
 };

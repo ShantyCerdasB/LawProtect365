@@ -7,5 +7,3 @@
 export * from "./PartiesCommandsPort";
 export * from "./PartiesQueriesPort";
 
-
-

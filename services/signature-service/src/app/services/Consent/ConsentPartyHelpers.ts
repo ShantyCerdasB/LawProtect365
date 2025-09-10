@@ -6,46 +6,39 @@
 
 import type { GlobalPartiesRepository } from "../../../domain/contracts/repositories/global-parties/GlobalPartiesRepository";
 import type { FindOrCreatePartyInput } from "../../../domain/types/global-parties";
-import type { PartyId, TenantId } from "../../../domain/value-objects/ids";
-import { PARTY_ROLES, PARTY_SOURCES, PARTY_STATUSES, AUTH_METHODS } from "../../../domain/values/enums";
+import type { PartyId } from "../../../domain/value-objects/ids";
+import { PARTY_ROLES, PARTY_SOURCES, PARTY_STATUSES } from "../../../domain/values/enums";
 import { BadRequestError } from "../../../shared/errors";
 
 /**
  * @summary Creates a default party configuration for delegation
  * @description Centralized party configuration for consent delegation
  * 
- * @param partyId - Party ID
- * @param tenantId - Tenant ID
- * @param email - Party email
+ * @param partyId - Party ID * @param email - Party email
  * @param name - Party name
  * @returns Party creation object with default configuration
  */
 export function createDefaultPartyForDelegation(
   partyId: PartyId,
-  tenantId: TenantId,
   email: string,
   name: string
 ) {
   return {
     partyId,
-    tenantId,
     email,
     name,
     role: PARTY_ROLES[0], // "signer" - Default role for delegates
     source: PARTY_SOURCES[0], // "manual" - Default source
     status: PARTY_STATUSES[4], // "active" - Default status
     preferences: {
-      defaultAuth: AUTH_METHODS[0], // "otpViaEmail" - Default auth method
-      defaultLocale: undefined,
-    },
+      defaultAuth: undefined, // No default auth method
+      defaultLocale: undefined},
     notificationPreferences: {
       email: true,
-      sms: false,
-    },
+      sms: false},
     stats: {
       signedCount: 0,
-      totalEnvelopes: 0,
-    },
+      totalEnvelopes: 0},
     metadata: {
       createdFor: "consent-delegation",
       originalEmail: email,
@@ -77,7 +70,6 @@ export async function findOrCreatePartyForDelegation(
 
   // First, try to find existing party by email
   const existingParty = await globalPartiesRepo.findByEmail({
-    tenantId: input.tenantId,
     email: input.email
   });
 
@@ -90,7 +82,6 @@ export async function findOrCreatePartyForDelegation(
   
   const partyData = createDefaultPartyForDelegation(
     newPartyId,
-    input.tenantId,
     input.email,
     input.name
   );

@@ -10,8 +10,3 @@
  */
 export type Ids = { ulid(): string };
 
-
-
-
-
-

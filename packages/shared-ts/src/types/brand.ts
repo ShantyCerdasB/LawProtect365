@@ -9,7 +9,6 @@ export type Brand<T, Tag extends string> = T & { readonly __brand: Tag };
 
 /** Branded identifiers commonly used across services. */
 export type UserId = Brand<string, "UserId">;
-export type TenantId = Brand<string, "TenantId">;
 export type CaseId = Brand<string, "CaseId">;
 export type DocumentId = Brand<string, "DocumentId">;
 export type TemplateId = Brand<string, "TemplateId">;

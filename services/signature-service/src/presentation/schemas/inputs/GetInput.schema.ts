@@ -27,8 +27,7 @@ export const GetInputResponse = z.object({
   /** Position of the input */
   position: z.object({
     x: z.number(),
-    y: z.number(),
-  }),
+    y: z.number()}),
   /** Party ID assigned to this input (optional) */
   assignedPartyId: z.string().optional(),
   /** Whether the input is required */
@@ -38,12 +37,6 @@ export const GetInputResponse = z.object({
   /** ISO timestamp when the input was created */
   createdAt: z.string().datetime(),
   /** ISO timestamp when the input was last updated */
-  updatedAt: z.string().datetime(),
-});
+  updatedAt: z.string().datetime()});
 export type GetInputResponse = z.infer<typeof GetInputResponse>;
-
-
-
-
-
 

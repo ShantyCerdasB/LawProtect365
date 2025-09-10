@@ -6,10 +6,3 @@
 
 export { GetCertificateController, handler } from "./GetCertificate.Controller";
 
-
-
-
-
-
-
-

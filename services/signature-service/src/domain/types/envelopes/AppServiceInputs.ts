@@ -4,14 +4,13 @@
  * @description Defines the input and result types used by envelope app services
  */
 
-import type { TenantId, EnvelopeId, UserId } from "@/domain/value-objects/ids";
+import type { EnvelopeId, UserId } from "@/domain/value-objects/ids";
 import type { EnvelopeStatus } from "@/domain/value-objects/index";
 
 /**
  * @summary Input for creating an envelope app service
  */
 export interface CreateEnvelopeAppInput {
-  readonly tenantId: TenantId;
   readonly ownerId: UserId;
   readonly title: string;
   readonly description?: string;
@@ -29,7 +28,6 @@ export interface CreateEnvelopeAppResult {
  * @summary Input for getting an envelope app service
  */
 export interface GetEnvelopeAppInput {
-  readonly tenantId: TenantId;
   readonly envelopeId: EnvelopeId;
 }
 
@@ -51,7 +49,6 @@ export interface GetEnvelopeAppResult {
  * @summary Input for listing envelopes app service
  */
 export interface ListEnvelopesAppInput {
-  readonly tenantId: TenantId;
   readonly limit: number;
   readonly cursor?: string;
 }
@@ -77,7 +74,6 @@ export interface ListEnvelopesAppResult {
  * @summary Input for updating an envelope app service
  */
 export interface UpdateEnvelopeAppInput {
-  readonly tenantId: TenantId;
   readonly envelopeId: EnvelopeId;
   readonly title?: string;
   readonly status?: EnvelopeStatus;
@@ -97,7 +93,6 @@ export interface UpdateEnvelopeAppResult {
  * @summary Input for deleting an envelope app service
  */
 export interface DeleteEnvelopeAppInput {
-  readonly tenantId: TenantId;
   readonly envelopeId: EnvelopeId;
 }
 
@@ -113,7 +108,6 @@ export interface DeleteEnvelopeAppResult {
  * @summary Input for getting envelope status app service
  */
 export interface GetEnvelopeStatusAppInput {
-  readonly tenantId: TenantId;
   readonly envelopeId: EnvelopeId;
 }
 
@@ -125,9 +119,4 @@ export interface GetEnvelopeStatusAppResult {
   readonly status: EnvelopeStatus;
   readonly updatedAt: string;
 }
-
-
-
-
-
 

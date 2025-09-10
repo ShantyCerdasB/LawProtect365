@@ -8,7 +8,6 @@ import type { Input } from "@/domain/entities/Input";
 import type { EnvelopeId } from "@/domain/value-objects/index";
 import type { InputKey } from "@/domain/types/infrastructure/dynamodb";
 
-
 /**
  * Repository contract for Input entities
  * Provides CRUD operations and specific queries for Input management
@@ -65,9 +64,4 @@ export interface InputsRepository {
    */
   exists(inputKey: InputKey): Promise<boolean>;
 }
-
-
-
-
-
 

@@ -44,16 +44,6 @@ export const assertAscendingByTime = (items: readonly any[]): void => {
 };
 
 /**
- * Check if the event belongs to the given tenant.
- *
- * @param eventTenantId - Tenant id in the event.
- * @param tenantId - Expected tenant id.
- * @returns True when both tenant ids match.
- */
-export const sameTenant = (eventTenantId: string, tenantId: string): boolean =>
-  eventTenantId === tenantId;
-
-/**
  * Check if the event belongs to the given envelope.
  *
  * @param eventEnvelopeId - Envelope id in the event.
@@ -112,9 +102,4 @@ export const assertChainLink = (e: any): void => {
     throw new BadRequestError("prevHash present but hash missing");
   }
 };
-
-
-
-
-
 

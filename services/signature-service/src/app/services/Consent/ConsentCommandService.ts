@@ -7,7 +7,7 @@
 import type { ConsentCommandsPort } from "../../../app/ports/consent/ConsentCommandsPort";
 import type { CreateConsentAppInput, CreateConsentAppResult, UpdateConsentAppInput, UpdateConsentAppResult, DeleteConsentAppInput, SubmitConsentAppInput, SubmitConsentAppResult, DelegateConsentAppInput, DelegateConsentAppResult } from "../../../domain/types/consent/AppServiceInputs";
 import type { ActorContext } from "@lawprotect/shared-ts";
-import { BadRequestError, assertTenantBoundary } from "@lawprotect/shared-ts";
+import { BadRequestError } from "@lawprotect/shared-ts";
 
 /**
  * @summary Simple command service for consent operations
@@ -27,8 +27,6 @@ export class ConsentCommandService {
     actorContext?: ActorContext
   ): Promise<CreateConsentAppResult | UpdateConsentAppResult | void | SubmitConsentAppResult | DelegateConsentAppResult> {
     // Apply generic rules
-    assertTenantBoundary(input.tenantId, input.tenantId);
-
     if ('type' in input && 'status' in input) {
       // CreateConsentAppInput
       return this.consentCommands.create(input, actorContext);

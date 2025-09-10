@@ -16,8 +16,7 @@ describe('defaultRateLimit', () => {
     expect(cfg).toEqual({
       limitPerMinute: 900,
       burst: 200,
-      emitHeaders: true,
-    });
+      emitHeaders: true});
   });
 
   /**
@@ -30,13 +29,11 @@ describe('defaultRateLimit', () => {
     expect(devCfg).toEqual({
       limitPerMinute: 1800,
       burst: 400,
-      emitHeaders: true,
-    });
+      emitHeaders: true});
 
     expect(stagingCfg).toEqual({
       limitPerMinute: 1800,
       burst: 400,
-      emitHeaders: true,
-    });
+      emitHeaders: true});
   });
 });

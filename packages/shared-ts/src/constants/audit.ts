@@ -20,8 +20,7 @@ export const AUDIT_PAGINATION_DEFAULTS = {
   /** Maximum allowed page size for audit queries */
   MAX_LIMIT: 100,
   /** Minimum allowed page size for audit queries */
-  MIN_LIMIT: 1,
-} as const;
+  MIN_LIMIT: 1} as const;
 
 /**
  * @summary Audit event validation constants
@@ -31,8 +30,7 @@ export const AUDIT_VALIDATION = {
   /** Maximum length for audit event metadata */
   MAX_METADATA_SIZE: 10000,
   /** Maximum length for actor information */
-  MAX_ACTOR_INFO_LENGTH: 1000,
-} as const;
+  MAX_ACTOR_INFO_LENGTH: 1000} as const;
 
 /**
  * @summary Hash chain validation constants
@@ -42,5 +40,4 @@ export const HASH_CHAIN_VALIDATION = {
   /** Expected hash length for SHA-256 */
   SHA256_LENGTH: 64,
   /** Maximum number of events to validate in a single chain */
-  MAX_CHAIN_LENGTH: 10000,
-} as const;
+  MAX_CHAIN_LENGTH: 10000} as const;

@@ -18,8 +18,7 @@ import {
   UnprocessableEntityError,
   TooManyRequestsError,
   InternalError,
-  NotImplementedError,
-} from '../../src/errors/errors.js';
+  NotImplementedError} from '../../src/errors/errors.js';
 import { AppError } from '../../src/errors/AppError.js';
 import { ErrorCodes, type ErrorCode } from '../../src/errors/codes.js';
 
@@ -29,8 +28,7 @@ const expectDefault = (
     name,
     status,
     code,
-    message,
-  }: { name: string; status: number; code: ErrorCode; message: string }
+    message}: { name: string; status: number; code: ErrorCode; message: string }
 ) => {
   expect(err).toBeInstanceOf(Error);
   expect(err).toBeInstanceOf(AppError);
@@ -51,8 +49,7 @@ describe('HttpError subclasses (defaults)', () => {
       name: 'BadRequestError',
       status: 400,
       code: ErrorCodes.COMMON_BAD_REQUEST,
-      message: 'Bad Request',
-    });
+      message: 'Bad Request'});
   });
 
   it('UnauthorizedError', () => {
@@ -61,8 +58,7 @@ describe('HttpError subclasses (defaults)', () => {
       name: 'UnauthorizedError',
       status: 401,
       code: ErrorCodes.AUTH_UNAUTHORIZED,
-      message: 'Unauthorized',
-    });
+      message: 'Unauthorized'});
   });
 
   it('ForbiddenError', () => {
@@ -71,8 +67,7 @@ describe('HttpError subclasses (defaults)', () => {
       name: 'ForbiddenError',
       status: 403,
       code: ErrorCodes.AUTH_FORBIDDEN,
-      message: 'Forbidden',
-    });
+      message: 'Forbidden'});
   });
 
   it('NotFoundError', () => {
@@ -81,8 +76,7 @@ describe('HttpError subclasses (defaults)', () => {
       name: 'NotFoundError',
       status: 404,
       code: ErrorCodes.COMMON_NOT_FOUND,
-      message: 'Not Found',
-    });
+      message: 'Not Found'});
   });
 
   it('ConflictError', () => {
@@ -91,8 +85,7 @@ describe('HttpError subclasses (defaults)', () => {
       name: 'ConflictError',
       status: 409,
       code: ErrorCodes.COMMON_CONFLICT,
-      message: 'Conflict',
-    });
+      message: 'Conflict'});
   });
 
   it('UnsupportedMediaTypeError', () => {
@@ -101,8 +94,7 @@ describe('HttpError subclasses (defaults)', () => {
       name: 'UnsupportedMediaTypeError',
       status: 415,
       code: ErrorCodes.COMMON_UNSUPPORTED_MEDIA_TYPE,
-      message: 'Unsupported Media Type',
-    });
+      message: 'Unsupported Media Type'});
   });
 
   it('UnprocessableEntityError', () => {
@@ -111,8 +103,7 @@ describe('HttpError subclasses (defaults)', () => {
       name: 'UnprocessableEntityError',
       status: 422,
       code: ErrorCodes.COMMON_UNPROCESSABLE_ENTITY,
-      message: 'Unprocessable Entity',
-    });
+      message: 'Unprocessable Entity'});
   });
 
   it('TooManyRequestsError', () => {
@@ -121,8 +112,7 @@ describe('HttpError subclasses (defaults)', () => {
       name: 'TooManyRequestsError',
       status: 429,
       code: ErrorCodes.COMMON_TOO_MANY_REQUESTS,
-      message: 'Too Many Requests',
-    });
+      message: 'Too Many Requests'});
   });
 
   it('InternalError', () => {
@@ -131,8 +121,7 @@ describe('HttpError subclasses (defaults)', () => {
       name: 'InternalError',
       status: 500,
       code: ErrorCodes.COMMON_INTERNAL_ERROR,
-      message: 'Internal Error',
-    });
+      message: 'Internal Error'});
   });
 
   it('NotImplementedError', () => {
@@ -141,8 +130,7 @@ describe('HttpError subclasses (defaults)', () => {
       name: 'NotImplementedError',
       status: 501,
       code: ErrorCodes.COMMON_NOT_IMPLEMENTED,
-      message: 'Not Implemented',
-    });
+      message: 'Not Implemented'});
   });
 });
 
@@ -160,8 +148,7 @@ describe('HttpError subclasses (overrides and JSON)', () => {
       error: ErrorCodes.COMMON_CONFLICT,
       message: 'Bad input',
       details,
-      statusCode: 400,
-    });
+      statusCode: 400});
   });
 
   it('other subclasses also accept overrides', () => {

@@ -42,7 +42,7 @@ describe("app/index re-exports", () => {
     expect(errMapped).toBe(err);
 
     // resultMapErr (only maps Err)
-    const errMapped2 = (app as any).resultMapErr(err, (e: string) => `E:${e}`);
+    const errMapped2 = (app as any).resultMapErr(err, (e: string) => `E:e`);
     const okMappedErr = (app as any).resultMapErr(ok, (_: unknown) => "nope");
     expect(errMapped2).toEqual({ ok: false, error: "E:bad" });
     expect(okMappedErr).toBe(ok);

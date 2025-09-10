@@ -233,3 +233,99 @@ export class ServiceUnavailableError extends HttpError<string> {
     super(503, code, message, details);
   }
 }
+
+/** 403 Forbidden - Invitation token expired */
+export class InvitationTokenExpiredError extends HttpError<string> {
+  /**
+   * @param message Defaults to `"Invitation token has expired"`.
+   * @param code Defaults to {@link ErrorCodes.INVITATION_TOKEN_EXPIRED}.
+   * @param details Optional structured details.
+   */
+  constructor(
+    message = "Invitation token has expired",
+    code: string = ErrorCodes.INVITATION_TOKEN_EXPIRED,
+    details?: unknown
+  ) {
+    super(403, code, message, details);
+  }
+}
+
+/** 403 Forbidden - Invalid invitation token */
+export class InvitationTokenInvalidError extends HttpError<string> {
+  /**
+   * @param message Defaults to `"Invalid invitation token"`.
+   * @param code Defaults to {@link ErrorCodes.INVITATION_TOKEN_INVALID}.
+   * @param details Optional structured details.
+   */
+  constructor(
+    message = "Invalid invitation token",
+    code: string = ErrorCodes.INVITATION_TOKEN_INVALID,
+    details?: unknown
+  ) {
+    super(403, code, message, details);
+  }
+}
+
+/** 403 Forbidden - Invitation token already used */
+export class InvitationTokenAlreadyUsedError extends HttpError<string> {
+  /**
+   * @param message Defaults to `"Invitation token has already been used"`.
+   * @param code Defaults to {@link ErrorCodes.INVITATION_TOKEN_ALREADY_USED}.
+   * @param details Optional structured details.
+   */
+  constructor(
+    message = "Invitation token has already been used",
+    code: string = ErrorCodes.INVITATION_TOKEN_ALREADY_USED,
+    details?: unknown
+  ) {
+    super(403, code, message, details);
+  }
+}
+
+/** 404 Not Found - Invitation not found */
+export class InvitationNotFoundError extends HttpError<string> {
+  /**
+   * @param message Defaults to `"Invitation not found"`.
+   * @param code Defaults to {@link ErrorCodes.INVITATION_NOT_FOUND}.
+   * @param details Optional structured details.
+   */
+  constructor(
+    message = "Invitation not found",
+    code: string = ErrorCodes.INVITATION_NOT_FOUND,
+    details?: unknown
+  ) {
+    super(404, code, message, details);
+  }
+}
+
+/** 403 Forbidden - Consent not recorded */
+export class ConsentNotRecordedError extends HttpError<string> {
+  /**
+   * @param message Defaults to `"Consent must be recorded before signing"`.
+   * @param code Defaults to {@link ErrorCodes.CONSENT_NOT_RECORDED}.
+   * @param details Optional structured details.
+   */
+  constructor(
+    message = "Consent must be recorded before signing",
+    code: string = ErrorCodes.CONSENT_NOT_RECORDED,
+    details?: unknown
+  ) {
+    super(403, code, message, details);
+  }
+}
+
+/** 403 Forbidden - Document access denied */
+export class DocumentAccessDeniedError extends HttpError<string> {
+  /**
+   * @param message Defaults to `"Access denied to this document"`.
+   * @param code Defaults to {@link ErrorCodes.DOCUMENT_ACCESS_DENIED}.
+   * @param details Optional structured details.
+   */
+  constructor(
+    message = "Access denied to this document",
+    code: string = ErrorCodes.DOCUMENT_ACCESS_DENIED,
+    details?: unknown
+  ) {
+    super(403, code, message, details);
+  }
+}

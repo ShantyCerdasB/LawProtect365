@@ -59,8 +59,7 @@ export const REPOSITORY_LIMITS = {
   /** Minimum page size allowed */
   MIN_PAGE_SIZE: 1,
   /** Maximum items per batch operation */
-  MAX_BATCH_SIZE: 25,
-} as const;
+  MAX_BATCH_SIZE: 25} as const;
 
 /**
  * @summary Validates pagination parameters

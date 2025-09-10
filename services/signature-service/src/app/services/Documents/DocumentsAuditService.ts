@@ -7,7 +7,7 @@
 
 import { BaseAuditService } from "../../../domain/services/BaseAuditService";
 import type { AuditContext, ActorContext } from "@lawprotect/shared-ts";
-import type { DocumentId, EnvelopeId, TenantId } from "../../../domain/value-objects/ids";
+import type { DocumentId, EnvelopeId } from "../../../domain/value-objects/ids";
 import { nowIso } from "@lawprotect/shared-ts";
 
 /**
@@ -17,15 +17,12 @@ export interface DocumentsAuditService {
   /**
    * Logs a document creation event for audit purposes
    * @param documentId - Document identifier
-   * @param envelopeId - Envelope identifier
-   * @param tenantId - Tenant identifier
-   * @param actor - Actor context for audit purposes
+   * @param envelopeId - Envelope identifier   * @param actor - Actor context for audit purposes
    * @param metadata - Additional metadata for the audit log
    */
   logDocumentCreated(
     documentId: DocumentId,
     envelopeId: EnvelopeId,
-    tenantId: TenantId,
     actor: ActorContext,
     metadata?: Record<string, unknown>
   ): Promise<void>;
@@ -33,15 +30,12 @@ export interface DocumentsAuditService {
   /**
    * Logs a document upload event for audit purposes
    * @param documentId - Document identifier
-   * @param envelopeId - Envelope identifier
-   * @param tenantId - Tenant identifier
-   * @param actor - Actor context for audit purposes
+   * @param envelopeId - Envelope identifier   * @param actor - Actor context for audit purposes
    * @param metadata - Additional metadata for the audit log
    */
   logDocumentUploaded(
     documentId: DocumentId,
     envelopeId: EnvelopeId,
-    tenantId: TenantId,
     actor: ActorContext,
     metadata?: Record<string, unknown>
   ): Promise<void>;
@@ -49,15 +43,12 @@ export interface DocumentsAuditService {
   /**
    * Logs a document update event for audit purposes
    * @param documentId - Document identifier
-   * @param envelopeId - Envelope identifier
-   * @param tenantId - Tenant identifier
-   * @param actor - Actor context for audit purposes
+   * @param envelopeId - Envelope identifier   * @param actor - Actor context for audit purposes
    * @param metadata - Additional metadata for the audit log
    */
   logDocumentUpdated(
     documentId: DocumentId,
     envelopeId: EnvelopeId,
-    tenantId: TenantId,
     actor: ActorContext,
     metadata?: Record<string, unknown>
   ): Promise<void>;
@@ -65,15 +56,12 @@ export interface DocumentsAuditService {
   /**
    * Logs a document deletion event for audit purposes
    * @param documentId - Document identifier
-   * @param envelopeId - Envelope identifier
-   * @param tenantId - Tenant identifier
-   * @param actor - Actor context for audit purposes
+   * @param envelopeId - Envelope identifier   * @param actor - Actor context for audit purposes
    * @param metadata - Additional metadata for the audit log
    */
   logDocumentDeleted(
     documentId: DocumentId,
     envelopeId: EnvelopeId,
-    tenantId: TenantId,
     actor: ActorContext,
     metadata?: Record<string, unknown>
   ): Promise<void>;
@@ -81,16 +69,13 @@ export interface DocumentsAuditService {
   /**
    * Logs a document lock creation event for audit purposes
    * @param documentId - Document identifier
-   * @param envelopeId - Envelope identifier
-   * @param tenantId - Tenant identifier
-   * @param lockId - Lock identifier
+   * @param envelopeId - Envelope identifier   * @param lockId - Lock identifier
    * @param actor - Actor context for audit purposes
    * @param metadata - Additional metadata for the audit log
    */
   logDocumentLockCreated(
     documentId: DocumentId,
     envelopeId: EnvelopeId,
-    tenantId: TenantId,
     lockId: string,
     actor: ActorContext,
     metadata?: Record<string, unknown>
@@ -119,42 +104,34 @@ export class DefaultDocumentsAuditService extends BaseAuditService implements Do
     }
 
     await this.auditRepo.record({
-      tenantId: context.tenantId,
       envelopeId: context.envelopeId as EnvelopeId,
       type: details.eventType as string,
       occurredAt: nowIso(),
       actor: context.actor,
-      metadata: details,
-    });
+      metadata: details});
   }
 
   /**
    * @summary Logs a document creation event for audit purposes
    * @description Records document creation in the audit trail for compliance and traceability
    * @param documentId - Document identifier
-   * @param envelopeId - Envelope identifier
-   * @param tenantId - Tenant identifier
-   * @param actor - Actor context for audit purposes
+   * @param envelopeId - Envelope identifier   * @param actor - Actor context for audit purposes
    * @param metadata - Additional metadata for the audit log
    */
   async logDocumentCreated(
     documentId: DocumentId,
     envelopeId: EnvelopeId,
-    tenantId: TenantId,
     actor: ActorContext,
     metadata?: Record<string, unknown>
   ): Promise<void> {
     await this.logBusinessEvent(
       {
-        tenantId,
         envelopeId,
-        actor,
-      },
+        actor},
       {
         eventType: "document.created",
         documentId,
-        ...metadata,
-      }
+        ...metadata}
     );
   }
 
@@ -162,29 +139,23 @@ export class DefaultDocumentsAuditService extends BaseAuditService implements Do
    * @summary Logs a document upload event for audit purposes
    * @description Records document upload in the audit trail for compliance and traceability
    * @param documentId - Document identifier
-   * @param envelopeId - Envelope identifier
-   * @param tenantId - Tenant identifier
-   * @param actor - Actor context for audit purposes
+   * @param envelopeId - Envelope identifier   * @param actor - Actor context for audit purposes
    * @param metadata - Additional metadata for the audit log
    */
   async logDocumentUploaded(
     documentId: DocumentId,
     envelopeId: EnvelopeId,
-    tenantId: TenantId,
     actor: ActorContext,
     metadata?: Record<string, unknown>
   ): Promise<void> {
     await this.logBusinessEvent(
       {
-        tenantId,
         envelopeId,
-        actor,
-      },
+        actor},
       {
         eventType: "document.uploaded",
         documentId,
-        ...metadata,
-      }
+        ...metadata}
     );
   }
 
@@ -192,29 +163,23 @@ export class DefaultDocumentsAuditService extends BaseAuditService implements Do
    * @summary Logs a document update event for audit purposes
    * @description Records document update in the audit trail for compliance and traceability
    * @param documentId - Document identifier
-   * @param envelopeId - Envelope identifier
-   * @param tenantId - Tenant identifier
-   * @param actor - Actor context for audit purposes
+   * @param envelopeId - Envelope identifier   * @param actor - Actor context for audit purposes
    * @param metadata - Additional metadata for the audit log
    */
   async logDocumentUpdated(
     documentId: DocumentId,
     envelopeId: EnvelopeId,
-    tenantId: TenantId,
     actor: ActorContext,
     metadata?: Record<string, unknown>
   ): Promise<void> {
     await this.logBusinessEvent(
       {
-        tenantId,
         envelopeId,
-        actor,
-      },
+        actor},
       {
         eventType: "document.updated",
         documentId,
-        ...metadata,
-      }
+        ...metadata}
     );
   }
 
@@ -222,29 +187,23 @@ export class DefaultDocumentsAuditService extends BaseAuditService implements Do
    * @summary Logs a document deletion event for audit purposes
    * @description Records document deletion in the audit trail for compliance and traceability
    * @param documentId - Document identifier
-   * @param envelopeId - Envelope identifier
-   * @param tenantId - Tenant identifier
-   * @param actor - Actor context for audit purposes
+   * @param envelopeId - Envelope identifier   * @param actor - Actor context for audit purposes
    * @param metadata - Additional metadata for the audit log
    */
   async logDocumentDeleted(
     documentId: DocumentId,
     envelopeId: EnvelopeId,
-    tenantId: TenantId,
     actor: ActorContext,
     metadata?: Record<string, unknown>
   ): Promise<void> {
     await this.logBusinessEvent(
       {
-        tenantId,
         envelopeId,
-        actor,
-      },
+        actor},
       {
         eventType: "document.deleted",
         documentId,
-        ...metadata,
-      }
+        ...metadata}
     );
   }
 
@@ -252,32 +211,26 @@ export class DefaultDocumentsAuditService extends BaseAuditService implements Do
    * @summary Logs a document lock creation event for audit purposes
    * @description Records document lock creation in the audit trail for compliance and traceability
    * @param documentId - Document identifier
-   * @param envelopeId - Envelope identifier
-   * @param tenantId - Tenant identifier
-   * @param lockId - Lock identifier
+   * @param envelopeId - Envelope identifier   * @param lockId - Lock identifier
    * @param actor - Actor context for audit purposes
    * @param metadata - Additional metadata for the audit log
    */
   async logDocumentLockCreated(
     documentId: DocumentId,
     envelopeId: EnvelopeId,
-    tenantId: TenantId,
     lockId: string,
     actor: ActorContext,
     metadata?: Record<string, unknown>
   ): Promise<void> {
     await this.logBusinessEvent(
       {
-        tenantId,
         envelopeId,
-        actor,
-      },
+        actor},
       {
         eventType: "document.lock.created",
         documentId,
         lockId,
-        ...metadata,
-      }
+        ...metadata}
     );
   }
 };

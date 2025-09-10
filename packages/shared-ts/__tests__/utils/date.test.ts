@@ -22,8 +22,7 @@ import {
   diffMs,
   formatDateUTC,
   asISO,
-  asISOOpt,
-} from "../../src/utils/date.js";
+  asISOOpt} from "../../src/utils/date.js";
 
 describe("nowIso", () => {
   afterEach(() => {

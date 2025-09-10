@@ -4,7 +4,7 @@
  * @description Validates envelope state transitions and business rules
  */
 
-import type { EnvelopeId, TenantId, UserId } from "../../../domain/value-objects/ids";
+import type { EnvelopeId } from "../../../domain/value-objects/ids";
 import type { EnvelopeStatus } from "../../../domain/value-objects/index";
 import { 
   ENVELOPE_STATUSES, 
@@ -36,17 +36,23 @@ export class EnvelopesValidationService {
    * @returns true if parameters are valid, false otherwise
    */
   validateCreateParams(params: {
-    tenantId: TenantId;
-    ownerId: UserId;
-    title: string;
-  }): boolean {
-    return (
-      params.tenantId !== undefined &&
-      params.ownerId !== undefined &&
-      params.title !== undefined &&
-      params.title.trim().length >= ENVELOPE_TITLE_LIMITS.MIN_LENGTH &&
-      params.title.trim().length <= ENVELOPE_TITLE_LIMITS.MAX_LENGTH
+    ownerEmail: string;
+    name: string;
+  }, actorEmail?: string): boolean {
+    // Basic validation
+    const basicValidation = (
+      params !== undefined &&
+      params.ownerEmail !== undefined &&
+      params.ownerEmail.trim().length > 0 &&
+      params.name !== undefined &&
+      params.name.trim().length >= ENVELOPE_TITLE_LIMITS.MIN_LENGTH &&
+      params.name.trim().length <= ENVELOPE_TITLE_LIMITS.MAX_LENGTH
     );
+
+    // Authorization validation - user can only create envelopes for their own email
+    const authorizationValidation = !actorEmail || params.ownerEmail === actorEmail;
+
+    return basicValidation && authorizationValidation;
   }
 
   /**
@@ -56,13 +62,13 @@ export class EnvelopesValidationService {
    */
   validateUpdateParams(params: {
     envelopeId: EnvelopeId;
-    title?: string;
+    name?: string;
     status?: EnvelopeStatus;
   }): boolean {
-    if (params.title !== undefined) {
+    if (params.name !== undefined) {
       if (
-        params.title.trim().length < ENVELOPE_TITLE_LIMITS.MIN_LENGTH || 
-        params.title.trim().length > ENVELOPE_TITLE_LIMITS.MAX_LENGTH
+        params.name.trim().length < ENVELOPE_TITLE_LIMITS.MIN_LENGTH || 
+        params.name.trim().length > ENVELOPE_TITLE_LIMITS.MAX_LENGTH
       ) {
         return false;
       }
@@ -137,9 +143,9 @@ export class EnvelopesValidationService {
    * @param query - Get envelope query parameters
    * @returns Promise that resolves if validation passes, rejects if validation fails
    */
-  async validateGetById(query: { tenantId: TenantId; envelopeId: EnvelopeId }): Promise<void> {
-    if (!query.tenantId || !query.envelopeId) {
-      throw badRequest("TenantId and EnvelopeId are required for getById operation");
+  async validateGetById(query: { envelopeId: EnvelopeId }): Promise<void> {
+    if (!query || !query.envelopeId) {
+      throw badRequest("EnvelopeId is required for getById operation");
     }
   }
 
@@ -148,10 +154,8 @@ export class EnvelopesValidationService {
    * @param query - List envelopes query parameters
    * @returns Promise that resolves if validation passes, rejects if validation fails
    */
-  async validateList(query: { tenantId: TenantId; limit?: number; cursor?: string }): Promise<void> {
-    if (!query.tenantId) {
-      throw badRequest("TenantId is required for list operation");
-    }
+  async validateList(query: {  limit?: number; cursor?: string }): Promise<void> {
+
     if (query.limit && (query.limit < 1 || query.limit > 100)) {
       throw badRequest("Limit must be between 1 and 100");
     }
@@ -162,9 +166,9 @@ export class EnvelopesValidationService {
    * @param query - Get envelope status query parameters
    * @returns Promise that resolves if validation passes, rejects if validation fails
    */
-  async validateGetStatus(query: { tenantId: TenantId; envelopeId: EnvelopeId }): Promise<void> {
-    if (!query.tenantId || !query.envelopeId) {
-      throw badRequest("TenantId and EnvelopeId are required for getStatus operation");
+  async validateGetStatus(query: { envelopeId: EnvelopeId }): Promise<void> {
+    if (!query || !query.envelopeId) {
+      throw badRequest("EnvelopeId is required for getStatus operation");
     }
   }
 };

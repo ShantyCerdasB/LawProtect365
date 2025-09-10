@@ -70,8 +70,7 @@ export class IdempotencyStoreDdb implements IdempotencyStore {
       const res = await this.ddb.get({
         TableName: this.tableName,
         Key: { pk: idempotencyPk(key), sk: idempotencySk() },
-        ConsistentRead: true,
-      });
+        ConsistentRead: true});
 
       if (!res.Item) return null;
       if (!isDdbIdempotencyItem(res.Item)) return null;
@@ -93,8 +92,7 @@ export class IdempotencyStoreDdb implements IdempotencyStore {
       const res = await this.ddb.get({
         TableName: this.tableName,
         Key: { pk: idempotencyPk(key), sk: idempotencySk() },
-        ConsistentRead: true,
-      });
+        ConsistentRead: true});
 
       if (!res.Item) return null;
       if (!isDdbIdempotencyItem(res.Item)) return null;
@@ -110,8 +108,7 @@ export class IdempotencyStoreDdb implements IdempotencyStore {
         expiresAt,
         result: res.Item.resultJson ? JSON.parse(res.Item.resultJson) : undefined,
         createdAt: res.Item.createdAt,
-        updatedAt: res.Item.updatedAt,
-      };
+        updatedAt: res.Item.updatedAt};
     } catch (err) {
       throw mapAwsError(err, "IdempotencyStoreDdb.getRecord");
     }
@@ -134,15 +131,13 @@ export class IdempotencyStoreDdb implements IdempotencyStore {
       state: "pending",
       createdAt: now,
       updatedAt: now,
-      ttl: toTtl(ttlSeconds),
-    };
+      ttl: toTtl(ttlSeconds)};
 
     try {
       await this.ddb.put({
         TableName: this.tableName,
         Item: toDdbItem(item),
-        ConditionExpression: "attribute_not_exists(pk) AND attribute_not_exists(sk)",
-      });
+        ConditionExpression: "attribute_not_exists(pk) AND attribute_not_exists(sk)"});
     } catch (err: any) {
       if (String(err?.name) === "ConditionalCheckFailedException") {
         throw new ConflictError("Idempotency key already exists", ErrorCodes.COMMON_CONFLICT);
@@ -182,16 +177,13 @@ export class IdempotencyStoreDdb implements IdempotencyStore {
           "#state": "state",
           "#resultJson": "resultJson",
           "#updatedAt": "updatedAt",
-          ...(ttl ? { "#ttl": "ttl" } : {}),
-        },
+          ...(ttl ? { "#ttl": "ttl" } : {})},
         ExpressionAttributeValues: {
           ":completed": "completed",
           ":resultJson": resultJson,
           ":updatedAt": now,
-          ...(ttl ? { ":ttl": ttl } : {}),
-        },
-        ReturnValues: "NONE",
-      });
+          ...(ttl ? { ":ttl": ttl } : {})},
+        ReturnValues: "NONE"});
     } catch (err: any) {
       if (String(err?.name) === "ConditionalCheckFailedException") {
         throw new NotFoundError("Idempotency key not found", ErrorCodes.COMMON_NOT_FOUND);
@@ -200,9 +192,4 @@ export class IdempotencyStoreDdb implements IdempotencyStore {
     }
   }
 }
-
-
-
-
-
 

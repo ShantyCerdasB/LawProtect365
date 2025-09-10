@@ -5,7 +5,6 @@
  */
 
 import type { 
-  TenantId, 
   EnvelopeId, 
   ConsentId 
 } from "@/domain/value-objects/ids";
@@ -16,7 +15,6 @@ import type {
  */
 export interface ConsentDelegationValidationInput {
   /** Tenant identifier */
-  readonly tenantId: TenantId;
   /** Envelope identifier */
   readonly envelopeId: EnvelopeId;
   /** Consent identifier */
@@ -26,9 +24,4 @@ export interface ConsentDelegationValidationInput {
   /** Delegate name */
   readonly delegateName: string;
 }
-
-
-
-
-
 

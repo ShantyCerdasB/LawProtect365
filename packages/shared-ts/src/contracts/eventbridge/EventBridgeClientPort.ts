@@ -4,7 +4,6 @@
  * @description Defines a comprehensive contract for EventBridge client implementations
  */
 
-
 /**
  * EventBridge event entry structure.
  */

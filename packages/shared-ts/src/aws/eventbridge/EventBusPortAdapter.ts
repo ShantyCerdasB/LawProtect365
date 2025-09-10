@@ -23,8 +23,7 @@ import {
   mapAwsError,
   InternalError,
   ErrorCodes,
-  chunk,
-} from "../../index.js";
+  chunk} from "../../index.js";
 
 import type { EventBusPort, DomainEvent } from "../../events/index.js";
 import type { EventBridgeClientPort } from "../../contracts/eventbridge/index.js";
@@ -74,8 +73,7 @@ export class EventBusPortAdapter implements EventBusPort {
             ErrorCodes.COMMON_INTERNAL_ERROR,
             {
               failedCount: failed,
-              entries: res?.Entries,
-            }
+              entries: res?.Entries}
           );
         }
       } catch (err) {
@@ -98,13 +96,7 @@ export class EventBusPortAdapter implements EventBusPort {
       EventBusName: this.busName,
       Time: new Date(evt.occurredAt),
       Resources: this.resources,
-      TraceHeader: evt.metadata?.["x-trace-id"],
-    };
+      TraceHeader: evt.metadata?.["x-trace-id"]};
   }
 }
-
-
-
-
-
 

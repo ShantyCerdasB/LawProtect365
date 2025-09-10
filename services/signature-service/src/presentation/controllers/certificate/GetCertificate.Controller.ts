@@ -25,21 +25,12 @@ export const GetCertificateController = createQueryController<GetCertificateCont
     c.certificate.validationService
   ),
   extractParams: (path: any, query: any) => ({
-    tenantId: path.tenantId,
     envelopeId: path.id,
     limit: query.limit,
-    cursor: query.cursor,
-  }),
+    cursor: query.cursor}),
   responseType: "ok"
 });
 
 // Export handler for backward compatibility
 export const handler = GetCertificateController;
-
-
-
-
-
-
-
 

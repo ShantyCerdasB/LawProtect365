@@ -4,8 +4,7 @@ import {
   maybeFromNullable,
   maybeMap,
   maybeUnwrapOr,
-  type Maybe,
-} from "../../src/app/Maybe";
+  type Maybe} from "../../src/app/Maybe";
 
 describe("Maybe", () => {
   it("creates Some with the provided value", () => {

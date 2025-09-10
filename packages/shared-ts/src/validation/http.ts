@@ -110,6 +110,11 @@ export const validateJsonBody = <S extends z.ZodTypeAny>(
 
   const out = schema.safeParse(json);
   if (!out.success) {
+    console.log('Schema validation failed:', {
+      json,
+      issues: out.error.issues,
+      schemaName: schema._def?.typeName || 'unknown'
+    });
     throw new AppError(
       ErrorCodes.COMMON_UNPROCESSABLE_ENTITY,
       422,

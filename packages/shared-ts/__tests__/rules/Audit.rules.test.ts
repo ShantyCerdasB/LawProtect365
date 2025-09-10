@@ -9,8 +9,7 @@ import {
   sameTenant,
   sameEnvelope,
   assertEventType,
-  assertActorShape,
-} from '../../src/rules/Audit.rules.js';
+  assertActorShape} from '../../src/rules/Audit.rules.js';
 import { BadRequestError } from '../../src/errors/index.js';
 
 describe('Audit.rules', () => {
@@ -20,9 +19,7 @@ describe('Audit.rules', () => {
         id: 'event-123',
         occurredAt: '2023-01-01T00:00:00Z',
         type: 'UserCreated',
-        tenantId: 'tenant-456',
-        actorId: 'actor-789',
-      };
+        actorId: 'actor-789'};
 
       expect(() => assertImmutable(validEvent)).not.toThrow();
     });
@@ -47,8 +44,7 @@ describe('Audit.rules', () => {
     it('should throw BadRequestError for missing id', () => {
       const event = {
         occurredAt: '2023-01-01T00:00:00Z',
-        type: 'UserCreated',
-      };
+        type: 'UserCreated'};
 
       expect(() => assertImmutable(event)).toThrow(BadRequestError);
       expect(() => assertImmutable(event)).toThrow('Invalid audit event shape');
@@ -57,8 +53,7 @@ describe('Audit.rules', () => {
     it('should throw BadRequestError for missing occurredAt', () => {
       const event = {
         id: 'event-123',
-        type: 'UserCreated',
-      };
+        type: 'UserCreated'};
 
       expect(() => assertImmutable(event)).toThrow(BadRequestError);
       expect(() => assertImmutable(event)).toThrow('Invalid audit event shape');
@@ -67,8 +62,7 @@ describe('Audit.rules', () => {
     it('should throw BadRequestError for missing type', () => {
       const event = {
         id: 'event-123',
-        occurredAt: '2023-01-01T00:00:00Z',
-      };
+        occurredAt: '2023-01-01T00:00:00Z'};
 
       expect(() => assertImmutable(event)).toThrow(BadRequestError);
       expect(() => assertImmutable(event)).toThrow('Invalid audit event shape');
@@ -78,8 +72,7 @@ describe('Audit.rules', () => {
       const event = {
         id: '',
         occurredAt: '2023-01-01T00:00:00Z',
-        type: 'UserCreated',
-      };
+        type: 'UserCreated'};
 
       expect(() => assertImmutable(event)).toThrow(BadRequestError);
       expect(() => assertImmutable(event)).toThrow('Invalid audit event shape');

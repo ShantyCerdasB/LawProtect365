@@ -16,5 +16,3 @@ import { ALLOWED_CONTENT_TYPES } from "../../values/enums";
 export const ContentTypeSchema = z.enum(ALLOWED_CONTENT_TYPES);
 export type ContentType = z.infer<typeof ContentTypeSchema>;
 
-
-

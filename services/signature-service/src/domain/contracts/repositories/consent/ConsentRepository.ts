@@ -13,8 +13,6 @@ import type {
   ConsentRepoListOutput 
 } from "../../../../domain/types/consent";
 
-
-
 /**
  * @summary Consent repository contract
  * @description Defines the interface for consent persistence operations
@@ -50,9 +48,4 @@ export interface ConsentRepository {
    */
   listByEnvelope(input: ConsentRepoListInput): Promise<ConsentRepoListOutput>;
 }
-
-
-
-
-
 

@@ -6,7 +6,7 @@
 
 import { PartyRole, PartyStatus } from "@/domain/values/enums";
 import type { Party } from "../../../domain/entities/Party";
-import type { TenantId, EnvelopeId, PartyId } from "@/domain/value-objects/ids";
+import type { EnvelopeId, PartyId } from "@/domain/value-objects/ids";
 
 // ============================================================================
 // DOMAIN TYPES
@@ -17,7 +17,6 @@ import type { TenantId, EnvelopeId, PartyId } from "@/domain/value-objects/ids";
  * @description Simplified party representation for app services
  */
 export interface PartyRow {
-  tenantId: TenantId;
   /** Party identifier */
   readonly partyId: PartyId;
   /** Envelope identifier */
@@ -32,8 +31,8 @@ export interface PartyRow {
   readonly status: PartyStatus;
   /** Sequence number for signing order */
   readonly sequence: number;
-  /** When the party was invited */
-  readonly invitedAt: string;
+  /** When the party was invited (optional) */
+  readonly invitedAt?: string;
   /** When the party signed (optional) */
   readonly signedAt?: string;
   /** When the party was created */
@@ -51,7 +50,6 @@ export interface PartyRow {
  * @description Converts a Party domain entity to a simplified row representation
  */
 export const toPartyRow = (party: Party): PartyRow => ({
-  tenantId: party.tenantId,
   partyId: party.partyId,
   envelopeId: party.envelopeId,
   name: party.name,
@@ -62,15 +60,13 @@ export const toPartyRow = (party: Party): PartyRow => ({
   invitedAt: party.invitedAt,
   signedAt: party.signedAt,
   createdAt: party.createdAt,
-  updatedAt: party.updatedAt,
-});
+  updatedAt: party.updatedAt});
 
 /**
  * @summary Maps PartyRow to Party domain entity
  * @description Converts a PartyRow back to a Party domain entity
  */
 export const fromPartyRow = (row: PartyRow): Party => ({
-  tenantId: row.tenantId as TenantId, // This will be injected by the service
   partyId: row.partyId,
   envelopeId: row.envelopeId,
   name: row.name,
@@ -80,10 +76,9 @@ export const fromPartyRow = (row: PartyRow): Party => ({
   invitedAt: row.invitedAt,
   signedAt: row.signedAt,
   sequence: row.sequence,
-  auth: { methods: ["otpViaEmail"] }, // Default auth
+  auth: { methods: [] }, // Default auth
   createdAt: row.createdAt,
   updatedAt: row.updatedAt,
-  otpState: undefined, // Default OTP state
 });
 
 // ============================================================================
@@ -127,9 +122,4 @@ export interface PartiesRateLimitConfig {
   /** TTL for rate limit records in seconds */
   ttlSeconds: number;
 }
-
-
-
-
-
 

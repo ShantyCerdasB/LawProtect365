@@ -18,18 +18,9 @@ export const GetGlobalPartyController = createQueryController<GetGlobalPartyCont
   pathSchema: GetGlobalPartyParams,
   appServiceClass: GlobalPartiesQueryService,
   createDependencies: (c: any) => makeGlobalPartiesQueriesPort({
-    globalParties: c.repos.globalParties,
-  }),
+    globalParties: c.repos.globalParties}),
   extractParams: (path: any) => ({
-    partyId: path.globalPartyId,
-  }),
+    partyId: path.globalPartyId}),
   responseType: "ok"
 });
-
-
-
-
-
-
-
 

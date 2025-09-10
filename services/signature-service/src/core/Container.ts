@@ -24,17 +24,46 @@ import {
   PutCommand,
   DeleteCommand,
   UpdateCommand,
-  QueryCommand,
-} from "@aws-sdk/lib-dynamodb";
+  QueryCommand} from "@aws-sdk/lib-dynamodb";
 import { S3Client } from "@aws-sdk/client-s3";
 import { KMSClient } from "@aws-sdk/client-kms";
 import {
   EventBridgeClient,
-  PutEventsCommand,
-} from "@aws-sdk/client-eventbridge";
+  PutEventsCommand} from "@aws-sdk/client-eventbridge";
 import { SSMClient } from "@aws-sdk/client-ssm";
 
-import { loadConfig } from "./Config";
+import { loadConfig, type DynamoDBConfig } from "./Config";
+
+/**
+ * @description Creates a DynamoDB client based on the current environment configuration
+ * @param dynamodbConfig - DynamoDB configuration object
+ * @returns Configured DynamoDB client instance
+ */
+const createDynamoDBClient = (dynamodbConfig: DynamoDBConfig): DynamoDBClient => {
+  if (dynamodbConfig.useLocal) {
+    // DynamoDB Local configuration
+    return new DynamoDBClient({
+      endpoint: dynamodbConfig.endpoint,
+      region: dynamodbConfig.region,
+      credentials: dynamodbConfig.credentials
+    });
+  }
+  
+  // Production DynamoDB configuration
+  return new DynamoDBClient({
+    region: dynamodbConfig.region
+  });
+};
+
+/**
+ * @description Creates a DynamoDB Document client based on the current environment configuration
+ * @param dynamodbConfig - DynamoDB configuration object
+ * @returns Configured DynamoDB Document client instance
+ */
+const createDynamoDBDocumentClient = (dynamodbConfig: DynamoDBConfig): DynamoDBDocumentClient => {
+  const client = createDynamoDBClient(dynamodbConfig);
+  return DynamoDBDocumentClient.from(client);
+};
 
 import { DocumentRepositoryDdb } from "../infrastructure/dynamodb/DocumentRepositoryDdb";
 import { InputRepositoryDdb } from "../infrastructure/dynamodb/InputRepositoryDdb";
@@ -82,6 +111,7 @@ import { PartiesValidationService } from "../app/services/Parties/PartiesValidat
 import { PartiesAuditService } from "../app/services/Parties/PartiesAuditService";
 import { PartiesEventService } from "../app/services/Parties/PartiesEventService";
 import { PartiesRateLimitService } from "../app/services/Parties/PartiesRateLimitService";
+import { PartiesCommandService } from "../app/services/Parties/PartiesCommandService";
 import { makePartiesCommandsPort } from "../app/adapters/parties/MakePartiesCommandsPort";
 import { makePartiesQueriesPort } from "../app/adapters/parties/MakePartiesQueriesPort";
 import { EnvelopeRepositoryDdb } from "@/infrastructure/dynamodb/EnvelopeRepositoryDdb";
@@ -99,6 +129,7 @@ import { DefaultDocumentsAuditService } from "../app/services/Documents/Document
 import { DefaultDocumentsEventService } from "../app/services/Documents/DocumentsEventService";
 import { DefaultDocumentsRateLimitService } from "../app/services/Documents/DocumentsRateLimitService";
 import { DefaultDocumentsS3Service } from "../app/services/Documents/DocumentsS3Service";
+import { DefaultDocumentsCommandService } from "../app/services/Documents/DocumentsCommandService";
 import { makeDocumentsCommandsPort } from "../app/adapters/documents/makeDocumentsCommandsPort";
 import { makeDocumentsQueriesPort } from "../app/adapters/documents/makeDocumentsQueriesPort";
 
@@ -123,6 +154,7 @@ import { DefaultCertificateValidationService } from "../app/services/Certificate
 
 // Audit services
 import { makeAuditCommandsPort, makeAuditQueriesPort } from "../app/adapters/audit";
+import { InvitationTokenRepositoryDdb } from "../infrastructure/dynamodb/InvitationTokenRepositoryDdb";
 
 // Signing services
 import {
@@ -152,16 +184,14 @@ export const getContainer = (): Container => {
   const config = loadConfig();
 
   // AWS SDK clients
-  const ddb = new DynamoDBClient({ region: config.region });
+  const ddb = createDynamoDBClient(config.dynamodb);
   const s3 = new S3Client({ region: config.region });
   const kms = new KMSClient({ region: config.region });
   const evb = new EventBridgeClient({ region: config.region });
   const ssm = new SSMClient({ region: config.region });
 
   // DynamoDB Document wrapper
-  const doc = DynamoDBDocumentClient.from(ddb, {
-    marshallOptions: { removeUndefinedValues: true },
-  });
+  const doc = createDynamoDBDocumentClient(config.dynamodb);
 
   const ddbLike: DdbClientLike = {
     async get(p) {
@@ -182,10 +212,8 @@ export const getContainer = (): Container => {
       const out = await doc.send(new QueryCommand(p));
       return {
         Items: (out.Items ?? []) as Record<string, unknown>[],
-        LastEvaluatedKey: out.LastEvaluatedKey as Record<string, unknown> | undefined,
-      };
-    },
-  };
+        LastEvaluatedKey: out.LastEvaluatedKey as Record<string, unknown> | undefined};
+    }};
 
   // Repositories
   const documents = new DocumentRepositoryDdb(config.ddb.documentsTable, ddbLike);
@@ -197,6 +225,10 @@ export const getContainer = (): Container => {
     config.ddb.auditTable || config.ddb.envelopesTable,
     ddbLike
   );
+  const invitationTokens = new InvitationTokenRepositoryDdb(
+    config.ddb.invitationTokensTable || `${config.environment === 'test' ? 'test-' : config.environment === 'local' ? 'local-' : ''}invitation-tokens`,
+    ddbLike
+  );
   const idempotencyStore = new IdempotencyStoreDdb(config.ddb.idempotencyTable, ddbLike);
   const consents = new ConsentRepositoryDdb(config.ddb.envelopesTable, ddbLike);
 
@@ -205,7 +237,7 @@ export const getContainer = (): Container => {
   const runner = new IdempotencyRunner(idempotencyStore, { defaultTtlSeconds: 300 });
 
   // Rate limiting helpers
-  const otpRateLimitStore = new RateLimitStoreDdb(config.ddb.idempotencyTable, ddbLike);
+  const rateLimitStore = new RateLimitStoreDdb(config.ddb.idempotencyTable, ddbLike);
   const delegations = new DelegationRepositoryDdb(config.ddb.envelopesTable, ddbLike);
 
   // S3 helpers
@@ -213,28 +245,24 @@ export const getContainer = (): Container => {
     defaultTtl: config.s3.presignTtlSeconds,
     defaultAcl: config.s3.defaultPublicAcl ? "public-read" : "private",
     defaultCacheControl: config.s3.defaultCacheControl,
-    defaultKmsKeyId: config.s3.sseKmsKeyId,
-  });
+    defaultKmsKeyId: config.s3.sseKmsKeyId});
 
   const evidence = new S3EvidenceStorage(s3, {
     maxAttempts: Number(process.env.S3_MAX_ATTEMPTS ?? 3),
     defaultBucket: config.s3.evidenceBucket,
     defaultKmsKeyId: config.s3.sseKmsKeyId,
     defaultCacheControl: config.s3.defaultCacheControl,
-    defaultAcl: config.s3.defaultPublicAcl ? "public-read" : "private",
-  });
+    defaultAcl: config.s3.defaultPublicAcl ? "public-read" : "private"});
 
   const pdfIngestor = new S3SignedPdfIngestor(evidence, {
     defaultBucket: config.s3.signedBucket || config.s3.evidenceBucket,
     defaultRegion: config.region,
-    defaultKmsKeyId: config.s3.sseKmsKeyId,
-  });
+    defaultKmsKeyId: config.s3.sseKmsKeyId});
 
   // KMS signer
   const signer = new KmsSigner(kms, {
     signerKeyId: config.kms.signerKeyId,
-    signingAlgorithm: config.kms.signingAlgorithm,
-  });
+    signingAlgorithm: config.kms.signingAlgorithm});
 
   // EventBridge publisher
   const evbCompat: EventBridgeClientPort = {
@@ -248,31 +276,25 @@ export const getContainer = (): Container => {
           Time: entry.Time,
           Region: entry.Region,
           Resources: entry.Resources,
-          TraceHeader: entry.TraceHeader,
-        }))
+          TraceHeader: entry.TraceHeader}))
       }));
       
       return {
         FailedEntryCount: result.FailedEntryCount || 0,
         FailedEntries: [],
-        Entries: [],
-      };
-    },
-  };
+        Entries: []};
+    }};
 
   // SSM-backed config provider
   const configProvider = new SsmParamConfigProvider(ssm, {
     envFallbackPrefix: process.env.SSM_FALLBACK_PREFIX,
     maxAttempts: Number(process.env.SSM_MAX_ATTEMPTS ?? 3),
-    defaultTtlMs: Number(process.env.SSM_DEFAULT_TTL_MS ?? 30_000),
-  });
-
+    defaultTtlMs: Number(process.env.SSM_DEFAULT_TTL_MS ?? 30_000)});
 
   const ids = {
     ulid: uuid, // Use UUID instead of ULID for production consistency
     uuid,
-    token: (bytes = 32) => randomToken(bytes),
-  };
+    token: (bytes = 32) => randomToken(bytes)};
 
   const time = { now: () => Date.now() };
 
@@ -280,21 +302,18 @@ export const getContainer = (): Container => {
   const metricsService = new MetricsService({
     namespace: config.metrics.namespace,
     region: config.metrics.region,
-    enabled: config.metrics.enableOutboxMetrics,
-  });
+    enabled: config.metrics.enableOutboxMetrics});
 
   // Event bus adapter
   const eventBus = new EventBusPortAdapter({
     busName: config.events.busName,
     source: config.events.source,
-    client: evbCompat,
-  });
+    client: evbCompat});
 
   // Outbox repository for reliable event publishing
   const outbox = new OutboxRepositoryDdb({
     tableName: config.ddb.outboxTable,
-    client: ddbLike,
-  });
+    client: ddbLike});
 
   // Create event publisher using makeEventPublisher from shared-ts
   const eventPublisher = makeEventPublisher(eventBus, outbox);
@@ -315,8 +334,7 @@ export const getContainer = (): Container => {
     ids,
     validationService: globalPartiesValidation,
     auditService: globalPartiesAudit,
-    eventService: globalPartiesEvents,
-  });
+    eventService: globalPartiesEvents});
   const globalPartiesQueries = makeGlobalPartiesQueriesPort({ globalParties });
 
   // Parties services - instantiate with correct dependencies
@@ -326,7 +344,7 @@ export const getContainer = (): Container => {
   
   // ✅ RATE LIMITING - Configuración por tenant
   const partiesRateLimit = new PartiesRateLimitService(
-    otpRateLimitStore,
+    rateLimitStore,
     config.partiesRateLimit
   );
   
@@ -342,12 +360,13 @@ export const getContainer = (): Container => {
     partiesRateLimit
   );
   const partiesQueries = makePartiesQueriesPort(parties);
+  const partiesCommand = new PartiesCommandService(partiesCommands, envelopes);
 
   // Documents services - instantiate with correct dependencies
   const documentsValidation = new DefaultDocumentsValidationService();
   const documentsAudit = new DefaultDocumentsAuditService(audit);
   const documentsEvents = new DefaultDocumentsEventService(outbox);
-  const documentsRateLimit = new DefaultDocumentsRateLimitService(otpRateLimitStore);
+  const documentsRateLimit = new DefaultDocumentsRateLimitService(rateLimitStore);
 
   // Envelopes services - instantiate with correct dependencies
   const envelopesValidation = new EnvelopesValidationService();
@@ -396,17 +415,14 @@ export const getContainer = (): Container => {
         bucket,
         key,
         contentType,
-        expiresInSeconds: expiresIn,
-      });
+        expiresInSeconds: expiresIn});
     },
     getObjectUrl: async (bucket: string, key: string, expiresIn?: number) => {
       return await presigner.getObjectUrl({
         bucket,
         key,
-        expiresInSeconds: expiresIn,
-      });
-    },
-  };
+        expiresInSeconds: expiresIn});
+    }};
   
   const documentsS3 = new DefaultDocumentsS3Service(documentsS3Adapter);
   
@@ -417,22 +433,22 @@ export const getContainer = (): Container => {
     s3Service: documentsS3,
     s3Config: {
       evidenceBucket: config.s3.evidenceBucket,
-      signedBucket: config.s3.signedBucket,
-    },
-  });
+      signedBucket: config.s3.signedBucket}});
   const documentsQueries = makeDocumentsQueriesPort(documents);
+  const documentsCommand = new DefaultDocumentsCommandService(documentsCommands);
 
   // Requests services - instantiate with correct dependencies
   const requestsValidation = new RequestsValidationService(inputs);
   const requestsAudit = new RequestsAuditService(audit);
   const requestsEvents = new RequestsEventService(outbox);
-  const requestsRateLimit = new RequestsRateLimitService(otpRateLimitStore);
+  const requestsRateLimit = new RequestsRateLimitService(rateLimitStore);
   
   const requestsCommands = makeRequestsCommandsPort({
     repositories: {
       envelopes,
       parties,
-      inputs
+      inputs,
+      invitationTokens
     },
     services: {
       validation: requestsValidation,
@@ -466,7 +482,7 @@ export const getContainer = (): Container => {
   const signingValidation = new SigningValidationService();
   const signingEvent = new SigningEventService(outbox);
   const signingAudit = new SigningAuditService(audit);
-  const signingRateLimit = new SigningRateLimitService(otpRateLimitStore);
+  const signingRateLimit = new SigningRateLimitService(rateLimitStore);
   const signingS3 = new SigningS3Service(
     presigner,
     config.s3.evidenceBucket,
@@ -479,6 +495,7 @@ export const getContainer = (): Container => {
     envelopes,
     parties,
     documents,
+    invitationTokens,
     {
       events: eventBus,
       ids,
@@ -488,18 +505,14 @@ export const getContainer = (): Container => {
       idempotency: runner,
       signingConfig: {
         defaultKeyId: config.kms.signerKeyId,
-        allowedAlgorithms: [config.kms.signingAlgorithm],
-      },
+        allowedAlgorithms: [config.kms.signingAlgorithm]},
       uploadConfig: {
         uploadBucket: config.s3.evidenceBucket,
-        uploadTtlSeconds: config.s3.presignTtlSeconds,
-      },
+        uploadTtlSeconds: config.s3.presignTtlSeconds},
       downloadConfig: {
         signedBucket: config.s3.signedBucket,
-        downloadTtlSeconds: config.s3.presignTtlSeconds,
-      },
-      s3Service: signingS3,
-    }
+        downloadTtlSeconds: config.s3.presignTtlSeconds},
+      s3Service: signingS3}
   );
 
   const signingCommand = new SigningCommandService(signingCommands);
@@ -509,8 +522,7 @@ export const getContainer = (): Container => {
     signer,
     {
       defaultKeyId: config.kms.signerKeyId,
-      allowedAlgorithms: [config.kms.signingAlgorithm],
-    }
+      allowedAlgorithms: [config.kms.signingAlgorithm]}
   );
 
   const signaturesCommand = new SignaturesCommandService(signaturesCommands);
@@ -518,9 +530,9 @@ export const getContainer = (): Container => {
   singleton = {
     config,
     aws: { ddb, s3, kms, evb, ssm },
-    repos: { documents, envelopes, inputs, parties, globalParties, audit, idempotency: idempotencyStore, consents, delegations, outbox },
+    repos: { documents, envelopes, inputs, parties, globalParties, audit, invitationTokens, idempotency: idempotencyStore, consents, delegations, outbox },
     idempotency: { hasher, runner },
-    rateLimit: { otpStore: otpRateLimitStore },
+    rateLimit: { store: rateLimitStore },
     storage: { evidence, presigner, pdfIngestor },
     crypto: { signer },
     events: { eventPublisher },
@@ -528,57 +540,51 @@ export const getContainer = (): Container => {
       validation: consentValidation,
       audit: consentAudit,
       events: consentEvents,
-      party: globalParties,
-    },
+      party: globalParties},
     globalParties: {
       commandsPort: globalPartiesCommands,
       queriesPort: globalPartiesQueries,
       validationService: globalPartiesValidation,
       auditService: globalPartiesAudit,
-      eventService: globalPartiesEvents,
-    },
+      eventService: globalPartiesEvents},
             parties: {
           commandsPort: partiesCommands,
           queriesPort: partiesQueries,
+          command: partiesCommand,
           validationService: partiesValidation,
           auditService: partiesAudit,
           eventService: partiesEvents,
-          rateLimitService: partiesRateLimit,
-        },
+          rateLimitService: partiesRateLimit},
         envelopes: {
           commandsPort: envelopesCommands,
           queriesPort: envelopesQueries,
           validationService: envelopesValidation,
           auditService: envelopesAudit,
-          eventService: envelopesEvents,
-        },
+          eventService: envelopesEvents},
         inputs: {
           commandsPort: inputsCommands,
           queriesPort: inputsQueries,
           validationService: inputsValidation,
           auditService: inputsAudit,
-          eventService: inputsEvents,
-        },
+          eventService: inputsEvents},
         documents: {
           commandsPort: documentsCommands,
           queriesPort: documentsQueries,
+          command: documentsCommand,
           validationService: documentsValidation,
           auditService: documentsAudit,
           eventService: documentsEvents,
           rateLimitService: documentsRateLimit,
-          s3Service: documentsS3,
-        },
+          s3Service: documentsS3},
         requests: {
           commandsPort: requestsCommands,
           validationService: requestsValidation,
           auditService: requestsAudit,
           eventService: requestsEvents,
-          rateLimitService: requestsRateLimit,
-        },
+          rateLimitService: requestsRateLimit},
         certificate: {
           queriesPort: certificateQueries,
-          validationService: certificateValidation,
-        },
+          validationService: certificateValidation},
         signing: {
           commandsPort: signingCommands,
           command: signingCommand,
@@ -586,12 +592,10 @@ export const getContainer = (): Container => {
           eventService: signingEvent,
           auditService: signingAudit,
           rateLimitService: signingRateLimit,
-          s3Service: signingS3,
-        },
+          s3Service: signingS3},
         signatures: {
           commandsPort: signaturesCommands,
-          command: signaturesCommand,
-        },
+          command: signaturesCommand},
         audit: {
           commandsPort: auditCommands,
           queriesPort: auditQueries,
@@ -602,16 +606,13 @@ export const getContainer = (): Container => {
               metadata: details,
               actor: context,
               occurredAt: new Date().toISOString(),
-              tenantId: context?.tenantId || "default",
-              envelopeId: context?.envelopeId || "system",
-            });
+              envelopeId: context?.envelopeId || "system"});
           }
         },
     configProvider,
     ids,
     time,
-    metricsService,
-  };
+    metricsService};
 
   return singleton;
 };

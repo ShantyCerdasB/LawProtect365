@@ -19,16 +19,7 @@ export const handler = createCommandController<DeleteConsentControllerInput, voi
     envelopeId: path.envelopeId as EnvelopeId,
     consentId: path.consentId as ConsentId,
     idempotencyKey: body?.idempotencyKey,
-    ttlSeconds: body?.ttlSeconds || 300,
-  }),
+    ttlSeconds: body?.ttlSeconds || 300}),
   responseType: "noContent",
-  includeActor: true,
-});
-
-
-
-
-
-
-
+  includeActor: true});
 

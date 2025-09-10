@@ -43,15 +43,11 @@ export function makeEnvelopesQueriesPort(
       // 2. BUSINESS LOGIC
       const envelope = await envelopesRepo.getById(query.envelopeId);
       
-      // Filter by tenant for security
-      if (envelope && envelope.tenantId !== query.tenantId) {
-        return { envelope: null };
-      }
+      // Filter by tenant for security - removed
 
       // 3. AUDIT (opcional) - PATRÓN PRODUCTION-READY
       if (auditService && envelope) {
         const auditContext: AuditContext = {
-          tenantId: query.tenantId,
           envelopeId: query.envelopeId,
           actor: query.actor
         };
@@ -61,7 +57,6 @@ export function makeEnvelopesQueriesPort(
       // 4. EVENTS (opcional) - PATRÓN PRODUCTION-READY
       if (eventService && envelope) {
         const auditContext: AuditContext = {
-          tenantId: query.tenantId,
           envelopeId: query.envelopeId,
           actor: query.actor
         };
@@ -83,16 +78,13 @@ export function makeEnvelopesQueriesPort(
       }
 
       // 2. BUSINESS LOGIC
-      const result = await envelopesRepo.listByTenant({
-        tenantId: query.tenantId,
+      const result = await envelopesRepo.listAll({
         limit: query.limit ?? PAGINATION_LIMITS.DEFAULT_LIMIT,
-        cursor: query.cursor,
-      });
+        cursor: query.cursor});
 
       // 3. AUDIT (opcional) - PATRÓN PRODUCTION-READY
       if (auditService) {
         const auditContext: AuditContext = {
-          tenantId: query.tenantId,
           actor: query.actor
         };
         await auditService.logList(auditContext, { 
@@ -105,7 +97,6 @@ export function makeEnvelopesQueriesPort(
       // 4. EVENTS (opcional) - PATRÓN PRODUCTION-READY
       if (eventService) {
         const auditContext: AuditContext = {
-          tenantId: query.tenantId,
           actor: query.actor
         };
         await eventService.publishEnvelopeListAccessed(auditContext, { 
@@ -135,15 +126,11 @@ export function makeEnvelopesQueriesPort(
         return { status: "not_found" as any };
       }
 
-      // Filter by tenant for security
-      if (envelope.tenantId !== query.tenantId) {
-        return { status: "not_found" as any };
-      }
+      // Filter by tenant for security - removed
 
       // 3. AUDIT (opcional) - PATRÓN PRODUCTION-READY
       if (auditService) {
         const auditContext: AuditContext = {
-          tenantId: query.tenantId,
           envelopeId: query.envelopeId,
           actor: query.actor
         };
@@ -156,7 +143,6 @@ export function makeEnvelopesQueriesPort(
       // 4. EVENTS (opcional) - PATRÓN PRODUCTION-READY
       if (eventService) {
         const auditContext: AuditContext = {
-          tenantId: query.tenantId,
           envelopeId: query.envelopeId,
           actor: query.actor
         };
@@ -167,6 +153,5 @@ export function makeEnvelopesQueriesPort(
       }
 
       return { status: envelope.status };
-    },
-  };
+    }};
 }

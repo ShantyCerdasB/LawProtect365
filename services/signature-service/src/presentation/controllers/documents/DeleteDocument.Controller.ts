@@ -23,23 +23,12 @@ export const DeleteDocumentController = createCommandController<{ documentId: Do
     s3Service: c.documents.s3Service,
     s3Config: {
       evidenceBucket: c.config.s3.evidenceBucket,
-      signedBucket: c.config.s3.signedBucket,
-    },
-  }),
+      signedBucket: c.config.s3.signedBucket}}),
   extractParams: (path: any) => ({
-    documentId: path.id,
-  }),
+    documentId: path.id}),
   responseType: "noContent",
-  includeActor: true,
-});
+  includeActor: true});
 
 // Export handler for backward compatibility
 export const handler = DeleteDocumentController;
-
-
-
-
-
-
-
 

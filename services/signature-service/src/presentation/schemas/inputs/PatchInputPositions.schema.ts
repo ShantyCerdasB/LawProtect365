@@ -26,10 +26,8 @@ export const PatchInputPositionsBody = z.object({
       /** X coordinate of the input */
       x: z.number().min(0),
       /** Y coordinate of the input */
-      y: z.number().min(0),
-    })
-  ),
-});
+      y: z.number().min(0)})
+  )});
 export type PatchInputPositionsBody = z.infer<typeof PatchInputPositionsBody>;
 
 /**
@@ -38,14 +36,6 @@ export type PatchInputPositionsBody = z.infer<typeof PatchInputPositionsBody>;
  */
 export const PatchInputPositionsResponse = z.object({
   /** Number of inputs updated */
-  updated: z.number(),
-});
+  updated: z.number()});
 export type PatchInputPositionsResponse = z.infer<typeof PatchInputPositionsResponse>;
-
-
-
-
-
-
-
 

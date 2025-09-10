@@ -60,10 +60,8 @@ export class DocumentRepositoryDdb implements DocumentsRepository {
         IndexName: "GSI1", // GSI on documentId
         KeyConditionExpression: "gsi1pk = :gsi1pk",
         ExpressionAttributeValues: {
-          ":gsi1pk": `DOCUMENT#${documentId}`,
-        },
-        Limit: 1,
-      });
+          ":gsi1pk": `DOCUMENT#${documentId}`},
+        Limit: 1});
 
       if (!result.Items || result.Items.length === 0) {
         return null;
@@ -97,8 +95,7 @@ export class DocumentRepositoryDdb implements DocumentsRepository {
         Key: { 
           pk: documentPk(documentKey.envelopeId), 
           sk: documentSk(String(documentKey.documentId)) 
-        },
-      });
+        }});
       return res.Item
         ? documentItemMapper.fromDTO(res.Item as unknown as DdbDocumentItem)
         : null;
@@ -141,8 +138,7 @@ export class DocumentRepositoryDdb implements DocumentsRepository {
       await this.ddb.put({
         TableName: this.tableName,
         Item: toDdbItem(documentItemMapper.toDTO(entity)),
-        ConditionExpression: "attribute_not_exists(pk) AND attribute_not_exists(sk)",
-      });
+        ConditionExpression: "attribute_not_exists(pk) AND attribute_not_exists(sk)"});
       return entity;
     } catch (err: any) {
       if (String(err?.name) === "ConditionalCheckFailedException") {
@@ -171,14 +167,12 @@ export class DocumentRepositoryDdb implements DocumentsRepository {
       const next: Document = Object.freeze({
         ...current,
         ...patch,
-        updatedAt: nowIso(),
-      });
+        updatedAt: nowIso()});
 
       await this.ddb.put({
         TableName: this.tableName,
         Item: toDdbItem(documentItemMapper.toDTO(next)),
-        ConditionExpression: "attribute_exists(pk) AND attribute_exists(sk)",
-      });
+        ConditionExpression: "attribute_exists(pk) AND attribute_exists(sk)"});
 
       return next;
     } catch (err: any) {
@@ -206,14 +200,12 @@ export class DocumentRepositoryDdb implements DocumentsRepository {
       const next: Document = Object.freeze({
         ...current,
         ...patch,
-        updatedAt: nowIso(),
-      });
+        updatedAt: nowIso()});
 
       await this.ddb.put({
         TableName: this.tableName,
         Item: toDdbItem(documentItemMapper.toDTO(next)),
-        ConditionExpression: "attribute_exists(pk) AND attribute_exists(sk)",
-      });
+        ConditionExpression: "attribute_exists(pk) AND attribute_exists(sk)"});
 
       return next;
     } catch (err: any) {
@@ -247,8 +239,7 @@ export class DocumentRepositoryDdb implements DocumentsRepository {
           pk: documentPk(document.envelopeId), 
           sk: documentSk(String(documentId)) 
         },
-        ConditionExpression: "attribute_exists(pk) AND attribute_exists(sk)",
-      });
+        ConditionExpression: "attribute_exists(pk) AND attribute_exists(sk)"});
     } catch (err: any) {
       if (String(err?.name) === "ConditionalCheckFailedException") {
         throw documentNotFound({ id: documentId });
@@ -272,8 +263,7 @@ export class DocumentRepositoryDdb implements DocumentsRepository {
           pk: documentPk(documentKey.envelopeId), 
           sk: documentSk(String(documentKey.documentId)) 
         },
-        ConditionExpression: "attribute_exists(pk) AND attribute_exists(sk)",
-      });
+        ConditionExpression: "attribute_exists(pk) AND attribute_exists(sk)"});
     } catch (err: any) {
       if (String(err?.name) === "ConditionalCheckFailedException") {
         throw documentNotFound({ id: documentKey.documentId });
@@ -312,8 +302,7 @@ export class DocumentRepositoryDdb implements DocumentsRepository {
         KeyConditionExpression: "pk = :pk",
         ExpressionAttributeValues: { ":pk": documentPk(params.envelopeId) },
         Limit: params.limit || 50,
-        ...(params.cursor ? { ExclusiveStartKey: JSON.parse(params.cursor) as Record<string, unknown> } : {}),
-      };
+        ...(params.cursor ? { ExclusiveStartKey: JSON.parse(params.cursor) as Record<string, unknown> } : {})};
 
       const result = await this.ddb.query(queryParams);
 
@@ -325,14 +314,10 @@ export class DocumentRepositoryDdb implements DocumentsRepository {
         items,
         nextCursor: result.LastEvaluatedKey
           ? JSON.stringify(result.LastEvaluatedKey)
-          : undefined,
-      };
+          : undefined};
     } catch (err) {
       throw mapAwsError(err, "DocumentRepositoryDdb.listByEnvelope");
     }
   }
 }
-
-
-
 

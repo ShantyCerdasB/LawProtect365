@@ -39,30 +39,6 @@ export const requirePermissions = (evt: ApiEvent, perms: Permission[]): AuthCont
   return auth;
 };
 
-/**
- * Asserts tenant equivalence between subject and expected tenant id.
- * @param evt API event with auth context.
- * @param tenantId Expected tenant id.
- */
-export const requireTenant = (evt: ApiEvent, tenantId: string): AuthContext => {
-  const auth = requireAuth(evt);
-  // Use local tenant boundary validation
-  assertTenantBoundary(auth.tenantId, tenantId);
-  return auth;
-};
-
-/**
- * Ensures the mutation tenant matches the caller tenant context.
- * @param ctxTenantId - Tenant ID from auth context
- * @param resourceTenantId - Tenant ID of the resource being accessed
- * @throws ForbiddenError when tenant boundary is violated
- */
-const assertTenantBoundary = (ctxTenantId?: string, resourceTenantId?: string): void => {
-  if (!ctxTenantId || !resourceTenantId || ctxTenantId !== resourceTenantId) {
-    throw makeForbidden("Tenant mismatch");
-  }
-};
-
 const makeUnauthorized = (message: string) => {
   const e: any = new Error(message);
   e.name = "UnauthorizedError";

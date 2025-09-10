@@ -19,8 +19,7 @@ export const ListInputsQuery = z.object({
   /** Maximum number of inputs to return */
   limit: z.coerce.number().int().positive().max(100).optional(),
   /** Pagination cursor for getting the next page */
-  cursor: z.string().optional(),
-});
+  cursor: z.string().optional()});
 export type ListInputsQuery = z.infer<typeof ListInputsQuery>;
 
 /**
@@ -42,8 +41,7 @@ export const ListInputsResponse = z.object({
         x: z.number(),
         y: z.number(),
         w: z.number(),
-        h: z.number(),
-      }),
+        h: z.number()}),
       /** Party ID assigned to this input (optional) */
       assignedPartyId: z.string().optional(),
       /** Whether the input is required */
@@ -53,18 +51,9 @@ export const ListInputsResponse = z.object({
       /** ISO timestamp when the input was created */
       createdAt: z.string().datetime(),
       /** ISO timestamp when the input was last updated */
-      updatedAt: z.string().datetime(),
-    })
+      updatedAt: z.string().datetime()})
   ),
   /** Cursor for the next page of results (optional) */
-  nextCursor: z.string().optional(),
-});
+  nextCursor: z.string().optional()});
 export type ListInputsResponse = z.infer<typeof ListInputsResponse>;
-
-
-
-
-
-
-
 

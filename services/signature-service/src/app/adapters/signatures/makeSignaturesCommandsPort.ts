@@ -47,14 +47,11 @@ export const makeSignaturesCommandsPort = (
       const result = await signer.sign({
         message: Buffer.from(validatedDigest.value, 'hex'),
         signingAlgorithm: validatedAlgorithm,
-        keyId: keyId,
-      });
+        keyId: keyId});
 
       return {
         signature: Buffer.from(result.signature).toString('base64'),
         algorithm: validatedAlgorithm,
-        keyId: keyId,
-      };
-    },
-  };
+        keyId: keyId};
+    }};
 };

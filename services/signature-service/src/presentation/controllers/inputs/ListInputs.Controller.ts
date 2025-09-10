@@ -19,22 +19,13 @@ export const ListInputsController = createQueryController<ListInputsQueryControl
   appServiceClass: InputsQueryService,
   createDependencies: (c: any) => c.inputs.queriesPort,
   extractParams: (path: any, query: any) => ({
-    tenantId: path.tenantId,
     envelopeId: path.envelopeId,
     limit: query.limit,
     cursor: query.cursor,
     documentId: query.documentId,
     partyId: query.partyId,
     type: query.type,
-    required: query.required,
-  }),
+    required: query.required}),
   responseType: "ok"
 });
-
-
-
-
-
-
-
 

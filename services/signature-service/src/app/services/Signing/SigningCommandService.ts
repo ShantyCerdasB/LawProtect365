@@ -17,17 +17,24 @@ import type {
   PresignUploadCommand,
   PresignUploadResult,
   DownloadSignedDocumentCommand,
-  DownloadSignedDocumentResult
+  DownloadSignedDocumentResult,
+  ValidateInvitationTokenCommand,
+  ValidateInvitationTokenResult,
+  CompleteSigningWithTokenCommand,
+  CompleteSigningWithTokenResult
 } from "../../ports/signing/SigningCommandsPort";
 import type { SigningCommandService as ISigningCommandService } from "../../../domain/types/signing/ServiceInterfaces";
+// Authorization validation is handled by middleware in controllers
 // Signing rules would need proper command structure integration
 
 /**
  * @summary Command service for Signing operations
- * @description Default implementation of SigningCommandService
+ * @description Default implementation of SigningCommandService with authorization validation
  */
 export class SigningCommandService implements ISigningCommandService {
-  constructor(private readonly commandsPort: SigningCommandsPort) {}
+  constructor(
+    private readonly commandsPort: SigningCommandsPort
+  ) {}
 
   /**
    * @summary Completes signing process
@@ -35,6 +42,7 @@ export class SigningCommandService implements ISigningCommandService {
    * @returns Promise resolving to completion result
    */
   async completeSigning(command: CompleteSigningCommand): Promise<CompleteSigningResult> {
+    // Authorization validation is handled by middleware in the controller
     return this.commandsPort.completeSigning(command);
   }
 
@@ -62,6 +70,7 @@ export class SigningCommandService implements ISigningCommandService {
    * @returns Promise resolving to consent result
    */
   async recordSigningConsent(command: SigningConsentCommand): Promise<SigningConsentResult> {
+    // Authorization validation is handled by middleware in the controller
     return this.commandsPort.recordSigningConsent(command);
   }
 
@@ -80,6 +89,27 @@ export class SigningCommandService implements ISigningCommandService {
    * @returns Promise resolving to download result
    */
   async downloadSignedDocument(command: DownloadSignedDocumentCommand): Promise<DownloadSignedDocumentResult> {
+    // Authorization validation is handled by middleware in the controller
     return this.commandsPort.downloadSignedDocument(command);
+  }
+
+  /**
+   * @summary Validates invitation token for unauthenticated signing
+   * @param command - Command data for validating invitation token
+   * @returns Promise resolving to validation result
+   */
+  async validateInvitationToken(command: ValidateInvitationTokenCommand): Promise<ValidateInvitationTokenResult> {
+    // No authorization validation needed as this is for unauthenticated users
+    return this.commandsPort.validateInvitationToken(command);
+  }
+
+  /**
+   * @summary Completes signing using invitation token for unauthenticated users
+   * @param command - Command data for completing signing with token
+   * @returns Promise resolving to signing result
+   */
+  async completeSigningWithToken(command: CompleteSigningWithTokenCommand): Promise<CompleteSigningWithTokenResult> {
+    // No authorization validation needed as this is for unauthenticated users
+    return this.commandsPort.completeSigningWithToken(command);
   }
 };

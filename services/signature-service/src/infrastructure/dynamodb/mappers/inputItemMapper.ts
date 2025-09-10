@@ -13,8 +13,5 @@ export {
   isDdbInputItem,
   toInputItem,
   fromInputItem,
-  inputItemMapper,
-} from "../../../domain/types/infrastructure/InputDdbTypes";
-
-
+  inputItemMapper} from "../../../domain/types/infrastructure/InputDdbTypes";
 

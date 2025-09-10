@@ -11,11 +11,9 @@ jest.mock('@validation/env.js', () => ({
 
 // These are relative in the SUT; use resolved paths from the test
 jest.mock('../../src/config/flags.js', () => ({
-  loadFeatureFlags: jest.fn(),
-}));
+  loadFeatureFlags: jest.fn()}));
 jest.mock('../../src/config/rateLimit.js', () => ({
-  defaultRateLimit: jest.fn(),
-}));
+  defaultRateLimit: jest.fn()}));
 jest.mock('../../src/config/cors.js', () => ({
   buildDefaultCors: jest.fn((origins: string[] | '*') => ({ origins })), // simple echo
 }));
@@ -72,8 +70,7 @@ describe('buildAppConfig', () => {
       flags: { featureA: true },
       rateLimit: { windowMs: 1000, max: 50 },
       jwtIssuer: undefined,
-      jwtAudience: undefined,
-    });
+      jwtAudience: undefined});
     expect(rateMock).toHaveBeenCalledWith('dev');
   });
 
@@ -85,8 +82,7 @@ describe('buildAppConfig', () => {
       SERVICE_NAME: 'svc2',
       AWS_REGION: 'eu-west-1',
       ENV: 'staging',
-      LOG_LEVEL: 'warn',
-    });
+      LOG_LEVEL: 'warn'});
     flagsMock.mockReturnValueOnce({ ff: true });
     rateMock.mockImplementationOnce((env: string) => ({ bucket: env, max: 5 }));
 
@@ -103,13 +99,12 @@ describe('buildAppConfig', () => {
       isProd: false,
       corsAllowedOrigins: '*',
       flags: { ff: true },
-      rateLimit: { bucket: 'staging', max: 5 },
-    });
+      rateLimit: { bucket: 'staging', max: 5 }});
     expect(rateMock).toHaveBeenCalledWith('staging');
   });
 
   it('parses CORS_ALLOWED_ORIGINS list and merges overrides last', () => {
-    process.env.CORS_ALLOWED_ORIGINS = '  https://a.com , ,https://b.com  ,  ';
+    process.env.CORS_ALLOWED_ORIGINS = '  https://a.com ,https://b.com  ,  ';
     envMock.mockReturnValueOnce({
       PROJECT_NAME: 'p3',
       SERVICE_NAME: 'svc3',
@@ -117,8 +112,7 @@ describe('buildAppConfig', () => {
       ENV: 'prod',
       LOG_LEVEL: undefined,
       JWT_ISSUER: 'https://issuer',
-      JWT_AUDIENCE: 'client',
-    });
+      JWT_AUDIENCE: 'client'});
     flagsMock.mockReturnValueOnce({ f1: true });
     rateMock.mockImplementationOnce(() => ({ windowMs: 2000, max: 10 }));
 
@@ -126,8 +120,7 @@ describe('buildAppConfig', () => {
       logLevel: 'debug',
       corsAllowedOrigins: ['http://override.local'],
       flags: { f1: false, f2: true }, // ✅ all booleans to satisfy Record<string, boolean>
-      rateLimit: { windowMs: 1, max: 1 } as any,
-    };
+      rateLimit: { windowMs: 1, max: 1 } as any};
 
     const cfg = buildAppConfig(overrides);
 

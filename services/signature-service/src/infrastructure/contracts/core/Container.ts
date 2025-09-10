@@ -17,6 +17,7 @@ import type { PartyRepositoryDdb } from "../../../infrastructure/dynamodb/PartyR
 import type { GlobalPartiesRepositoryDdb } from "../../../infrastructure/dynamodb/GlobalPartiesRepositoryDdb";
 import type { IdempotencyStoreDdb, EventPublisher, IdempotencyKeyHasher, IdempotencyRunner, RateLimitStoreDdb, S3EvidenceStorage, S3Presigner, KmsSigner, SsmParamConfigProvider, AuditContext, MetricsService } from "@lawprotect/shared-ts";
 import type { AuditRepositoryDdb } from "../../../infrastructure/dynamodb/AuditRepositoryDdb";
+import type { InvitationTokenRepositoryDdb } from "../../../infrastructure/dynamodb/InvitationTokenRepositoryDdb";
 import type { ConsentRepositoryDdb } from "../../../infrastructure/dynamodb/ConsentRepositoryDdb";
 import type { DelegationRepositoryDdb } from "../../../infrastructure/dynamodb/DelegationRepositoryDdb";
 import type { OutboxPort } from "@lawprotect/shared-ts";
@@ -38,6 +39,7 @@ import type { GlobalPartiesEventService } from "../../../app/services/GlobalPart
 
 import type { PartiesCommandsPort } from "../../../app/ports/parties/PartiesCommandsPort";
 import type { PartiesQueriesPort } from "../../../app/ports/parties/PartiesQueriesPort";
+import type { PartiesCommandService } from "../../../app/services/Parties/PartiesCommandService";
 import type { PartiesValidationService } from "../../../app/services/Parties/PartiesValidationService";
 import type { PartiesAuditService } from "../../../app/services/Parties/PartiesAuditService";
 import type { PartiesEventService } from "../../../app/services/Parties/PartiesEventService";
@@ -57,6 +59,7 @@ import type { InputsEventService } from "../../../app/services/Inputs/InputsEven
 
 import type { DocumentsCommandsPort } from "../../../app/ports/documents/DocumentsCommandsPort";
 import type { DocumentsQueriesPort } from "../../../app/ports/documents/DocumentsQueriesPort";
+import type { DefaultDocumentsCommandService } from "../../../app/services/Documents/DocumentsCommandService";
 import type { DefaultDocumentsValidationService } from "../../../app/services/Documents/DocumentsValidationService";
 import type { DefaultDocumentsAuditService } from "../../../app/services/Documents/DocumentsAuditService";
 import type { DefaultDocumentsEventService } from "../../../app/services/Documents/DocumentsEventService";
@@ -106,6 +109,7 @@ export interface Container {
     readonly parties: PartyRepositoryDdb;
     readonly globalParties: GlobalPartiesRepositoryDdb;
     readonly audit: AuditRepositoryDdb;
+    readonly invitationTokens: InvitationTokenRepositoryDdb;
     readonly idempotency: IdempotencyStoreDdb;
     readonly consents: ConsentRepositoryDdb;
     readonly delegations: DelegationRepositoryDdb;
@@ -120,7 +124,7 @@ export interface Container {
 
   /** Rate limiting helpers */
   readonly rateLimit: {
-    readonly otpStore: RateLimitStoreDdb;
+    readonly store: RateLimitStoreDdb;
   };
 
   /** S3 storage helpers */
@@ -161,6 +165,7 @@ export interface Container {
   readonly parties: {
     readonly commandsPort: PartiesCommandsPort;
     readonly queriesPort: PartiesQueriesPort;
+    readonly command: PartiesCommandService;
     readonly validationService: PartiesValidationService;
     readonly auditService: PartiesAuditService;
     readonly eventService: PartiesEventService;
@@ -189,6 +194,7 @@ export interface Container {
   readonly documents: {
     readonly commandsPort: DocumentsCommandsPort;
     readonly queriesPort: DocumentsQueriesPort;
+    readonly command: DefaultDocumentsCommandService;
     readonly validationService: DefaultDocumentsValidationService;
     readonly auditService: DefaultDocumentsAuditService;
     readonly eventService: DefaultDocumentsEventService;

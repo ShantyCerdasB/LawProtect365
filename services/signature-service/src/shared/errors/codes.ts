@@ -37,11 +37,9 @@ export const SignatureErrorCodes = {
   PARTY_ROLE_INVALID: "PARTY_ROLE_INVALID",
   PARTY_INVALID_STATE: "PARTY_INVALID_STATE",
 
-  // Requests / tokens / OTP
+  // Requests / tokens
   REQUEST_TOKEN_INVALID: "REQUEST_TOKEN_INVALID",
   REQUEST_TOKEN_EXPIRED: "REQUEST_TOKEN_EXPIRED",
-  OTP_INVALID: "OTP_INVALID",
-  OTP_EXPIRED: "OTP_EXPIRED",
   CONSENT_REQUIRED: "CONSENT_REQUIRED",
 
   // Signing / KMS / crypto
@@ -56,8 +54,7 @@ export const SignatureErrorCodes = {
 
   // Rate limits (domain-scoped; transport still uses 429)
   RATE_LIMIT_ENVELOPE_SEND: "RATE_LIMIT_ENVELOPE_SEND",
-  RATE_LIMIT_PARTY_INVITE: "RATE_LIMIT_PARTY_INVITE", 
-} as const;
+  RATE_LIMIT_PARTY_INVITE: "RATE_LIMIT_PARTY_INVITE"} as const;
 
 /** Union of signature-service specific code strings. */
 export type SignatureErrorCode = keyof typeof SignatureErrorCodes;
@@ -68,6 +65,4 @@ export type SignatureErrorCode = keyof typeof SignatureErrorCodes;
  * - Signature-service specific codes above
  */
 export type AnyErrorCode = SharedErrorCode | SignatureErrorCode;
-
-
 

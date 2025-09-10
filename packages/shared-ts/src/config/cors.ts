@@ -16,5 +16,4 @@ export const buildDefaultCors = (
   allowHeaders: ["content-type", "authorization", "x-request-id", "x-csrf-token", "x-amz-date"],
   exposeHeaders: ["x-request-id", "x-next-cursor"],
   allowCredentials,
-  maxAgeSeconds: 600,
-});
+  maxAgeSeconds: 600});

@@ -12,17 +12,10 @@ import { AuditEventIdValidationSchema } from "@/domain/value-objects/audit";
  */
 export const GetAuditEventPathSchema = z.object({
   /** Audit event identifier */
-  eventId: AuditEventIdValidationSchema,
-});
+  eventId: AuditEventIdValidationSchema});
 
 /**
  * @description Type for path parameters
  */
 export type GetAuditEventPath = z.infer<typeof GetAuditEventPathSchema>;
-
-
-
-
-
-
 

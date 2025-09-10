@@ -10,4 +10,3 @@ export * from "./InputsEventService";
 export * from "./InputsQueryService";
 export * from "./InputsValidationService";
 
-

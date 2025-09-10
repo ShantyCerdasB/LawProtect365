@@ -22,19 +22,9 @@ export const DeleteGlobalPartyController = createCommandController<DeleteGlobalP
     ids: c.ids,
     validationService: c.globalParties.validationService,
     auditService: c.globalParties.auditService,
-    eventService: c.globalParties.eventService,
-  }),
+    eventService: c.globalParties.eventService}),
   extractParams: (path: any) => ({
-    partyId: path.partyId,
-  }),
+    partyId: path.partyId}),
   responseType: "noContent",
-  includeActor: true,
-});
-
-
-
-
-
-
-
+  includeActor: true});
 

@@ -4,7 +4,7 @@
  * @description Defines the contract for querying audit events and trails
  */
 
-import type { EnvelopeId, TenantId, PaginationCursor } from "../../../domain/value-objects";
+import type { EnvelopeId, PaginationCursor } from "../../../domain/value-objects";
 import type { AuditEvent, AuditEventId } from "../../../domain/value-objects/audit";
 import type { CursorPage } from "@lawprotect/shared-ts";
 import type { UploadFormat } from "../../../domain/values/enums";
@@ -13,8 +13,6 @@ import type { UploadFormat } from "../../../domain/values/enums";
  * @description Input for getting audit trail of an envelope
  */
 export interface GetAuditTrailInput {
-  /** Tenant identifier */
-  readonly tenantId: TenantId;
   /** Envelope identifier */
   readonly envelopeId: EnvelopeId;
   /** Optional pagination cursor */
@@ -50,8 +48,7 @@ export interface GetAuditTrailResult extends CursorPage<{
 export interface GetAuditEventInput {
   /** Audit event identifier */
   readonly eventId: AuditEventId;
-  /** Tenant identifier for authorization */
-  readonly tenantId: TenantId;
+
 }
 
 /**

@@ -1,36 +1,35 @@
-import { assertTenantBoundary, belongsToTenant } from '../../src/rules/Multitenancy.rules.js';
+import { belongsToTenant } from "@lawprotect/shared-ts";
 import { AppError } from '../../src/errors/AppError.js';
 import { ErrorCodes } from '../../src/errors/codes.js';
 
 describe('Multitenancy Rules', () => {
   describe('assertTenantBoundary', () => {
     it('should throw when ctxTenantId is undefined', () => {
-      expect(() => assertTenantBoundary(undefined, 'tenant-123')).toThrow(AppError);
-      expect(() => assertTenantBoundary(undefined, 'tenant-123')).toThrow('Tenant boundary violation');
+      expect(() => ).toThrow(AppError);
+      expect(() => ).toThrow('Tenant boundary violation');
     });
 
     it('should throw when resourceTenantId is undefined', () => {
-      expect(() => assertTenantBoundary('tenant-123', undefined)).toThrow(AppError);
-      expect(() => assertTenantBoundary('tenant-123', undefined)).toThrow('Tenant boundary violation');
+      expect(() => ).toThrow(AppError);
+      expect(() => ).toThrow('Tenant boundary violation');
     });
 
     it('should throw when both tenant IDs are undefined', () => {
-      expect(() => assertTenantBoundary(undefined, undefined)).toThrow(AppError);
-      expect(() => assertTenantBoundary(undefined, undefined)).toThrow('Tenant boundary violation');
+      expect(() => ).toThrow(AppError);
+      expect(() => ).toThrow('Tenant boundary violation');
     });
 
     it('should throw when tenant IDs do not match', () => {
-      expect(() => assertTenantBoundary('tenant-123', 'tenant-456')).toThrow(AppError);
-      expect(() => assertTenantBoundary('tenant-123', 'tenant-456')).toThrow('Tenant boundary violation');
+      expect(() => ).toThrow(AppError);
+      expect(() => ).toThrow('Tenant boundary violation');
     });
 
     it('should not throw when tenant IDs match', () => {
-      expect(() => assertTenantBoundary('tenant-123', 'tenant-123')).not.toThrow();
+      expect(() => ).not.toThrow();
     });
 
     it('should throw with correct error code and status', () => {
       try {
-        assertTenantBoundary('tenant-123', 'tenant-456');
         fail('Expected AppError to be thrown');
       } catch (error) {
         expect(error).toBeInstanceOf(AppError);
@@ -41,20 +40,20 @@ describe('Multitenancy Rules', () => {
     });
 
     it('should handle empty string tenant IDs', () => {
-      expect(() => assertTenantBoundary('', 'tenant-123')).toThrow(AppError);
-      expect(() => assertTenantBoundary('tenant-123', '')).toThrow(AppError);
-      expect(() => assertTenantBoundary('', '')).not.toThrow(); // Both empty strings are equal
+      expect(() => ).toThrow(AppError);
+      expect(() => ).toThrow(AppError);
+      expect(() => ).not.toThrow(); // Both empty strings are equal
     });
 
     it('should handle null tenant IDs', () => {
-      expect(() => assertTenantBoundary(null as any, 'tenant-123')).toThrow(AppError);
-      expect(() => assertTenantBoundary('tenant-123', null as any)).toThrow(AppError);
-      expect(() => assertTenantBoundary(null as any, null as any)).toThrow(AppError);
+      expect(() => ).toThrow(AppError);
+      expect(() => ).toThrow(AppError);
+      expect(() => ).toThrow(AppError);
     });
 
     it('should be case sensitive', () => {
-      expect(() => assertTenantBoundary('Tenant-123', 'tenant-123')).toThrow(AppError);
-      expect(() => assertTenantBoundary('tenant-123', 'Tenant-123')).toThrow(AppError);
+      expect(() => ).toThrow(AppError);
+      expect(() => ).toThrow(AppError);
     });
   });
 

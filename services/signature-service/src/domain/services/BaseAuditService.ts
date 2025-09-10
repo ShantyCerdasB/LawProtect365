@@ -7,7 +7,7 @@
 
 import type { AuditRepository } from "../../domain/contracts/repositories/audit/AuditRepository";
 import type { AuditContext } from "@lawprotect/shared-ts";
-import { EnvelopeId, TenantId } from "@/domain/value-objects/ids";
+import { EnvelopeId } from "@/domain/value-objects/ids";
 import { ActorContext } from "@lawprotect/shared-ts";
 
 /**
@@ -31,27 +31,18 @@ export abstract class BaseAuditService {
 
   /**
    * @summary Creates a standardized audit context
-   * @description Helper method to create audit context with common fields
-   * @param tenantId - Tenant identifier
-   * @param envelopeId - Envelope identifier
+   * @description Helper method to create audit context with common fields   * @param envelopeId - Envelope identifier
    * @param actor - Actor information
    * @returns AuditContext object
    */
   protected createAuditContext(
-    tenantId: TenantId,
     envelopeId: EnvelopeId,
     actor: ActorContext
   ): AuditContext {
     return {
-      tenantId,
       envelopeId,
       actor
     };
   }
 }
-
-
-
-
-
 

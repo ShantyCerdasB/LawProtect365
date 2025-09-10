@@ -5,7 +5,6 @@
  */
 
 import { createCommandController } from "../../../shared/controllers/controllerFactory";
-import { makeSigningCommandsPort } from "../../../app/adapters/signing/makeSigningCommandsPort";
 import { SigningCommandService } from "../../../app/services/Signing";
 import { SigningConsentBody } from "../../../presentation/schemas/signing/SigningConsent.schema";
 import { EnvelopeIdPath } from "../../../presentation/schemas/common/path";
@@ -19,51 +18,19 @@ export const RecordConsentController = createCommandController<SigningConsentCon
   bodySchema: SigningConsentBody,
   pathSchema: EnvelopeIdPath,
   appServiceClass: SigningCommandService,
-  createDependencies: (c: any) => makeSigningCommandsPort(
-    c.repos.envelopes,
-    c.repos.parties,
-    c.repos.documents,
-    {
-      events: c.events.publisher,
-      ids: c.ids,
-      time: c.time,
-      rateLimit: c.rateLimitStore,
-      signer: c.crypto.signer,
-      idempotency: c.idempotency.runner,
-      s3Service: c.signing.s3Service,
-      signingConfig: {
-        defaultKeyId: c.config.kms.signerKeyId,
-        allowedAlgorithms: [c.config.kms.signingAlgorithm],
-      },
-      uploadConfig: {
-        uploadBucket: c.config.s3.evidenceBucket,
-        uploadTtlSeconds: c.config.s3.presignTtlSeconds,
-      },
-      downloadConfig: {
-        signedBucket: c.config.s3.signedBucket,
-        downloadTtlSeconds: c.config.s3.presignTtlSeconds,
-      },
-    }
-  ),
-  extractParams: (path: any, body: any) => ({
-    tenantId: path.tenantId,
+  createDependencies: (c: any) => c.signing.command, // Use the service from container
+  extractParams: (path: any, body: any, context: any) => ({
     envelopeId: path.id,
     signerId: body.signerId,
     consentGiven: body.consentGiven,
     consentText: body.consentText,
     token: "", // Will be injected by factory
+    actorEmail: context?.actor?.email // Add auth context
   }),
   responseType: "ok",
-  methodName: "recordSigningConsent",
-});
+  includeActor: true, // Enable auth validation
+  methodName: "recordSigningConsent"});
 
 // Export handler for backward compatibility
 export const handler = RecordConsentController;
-
-
-
-
-
-
-
 

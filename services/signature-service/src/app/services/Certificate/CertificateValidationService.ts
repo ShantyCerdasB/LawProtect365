@@ -25,8 +25,8 @@ export class DefaultCertificateValidationService implements CertificateValidatio
       throw new BadRequestError("Envelope ID is required", ErrorCodes.COMMON_BAD_REQUEST, { query });
     }
 
-    if (!query.tenantId || query.tenantId.trim().length === 0) {
-      throw new BadRequestError("Tenant ID is required", ErrorCodes.COMMON_BAD_REQUEST, { query });
+    if (!query) {
+      throw new BadRequestError("Query is required", ErrorCodes.COMMON_BAD_REQUEST, { query });
     }
 
     if (!query.limit || query.limit < 1 || query.limit > 100) {

@@ -4,7 +4,7 @@
  * @description Handles signed document download requests
  */
 
-import { createCommandController, createSigningDependenciesWithS3 } from "../../../shared/controllers/controllerFactory";
+import { createCommandController } from "../../../shared/controllers/controllerFactory";
 import { SigningCommandService } from "../../../app/services/Signing";
 import { DownloadSignedDocumentBody } from "../../../presentation/schemas/signing/DownloadSignedDocument.schema";
 import { EnvelopeIdPath } from "../../../presentation/schemas/common/path";
@@ -18,23 +18,16 @@ export const DownloadSignedDocumentController = createCommandController<Download
   bodySchema: DownloadSignedDocumentBody,
   pathSchema: EnvelopeIdPath,
   appServiceClass: SigningCommandService,
-  createDependencies: createSigningDependenciesWithS3,
-  extractParams: (path: any, _body: any) => ({
-    tenantId: path.tenantId,
+  createDependencies: (c: any) => c.signing.command, // Use the service from container
+  extractParams: (path: any, _body: any, context: any) => ({
     envelopeId: path.id,
     token: "", // Will be injected by factory
+    actorEmail: context?.actor?.email // Add auth context
   }),
   responseType: "ok",
-  methodName: "downloadSignedDocument",
-});
+  includeActor: true, // Enable auth validation
+  methodName: "downloadSignedDocument"});
 
 // Export handler for backward compatibility
 export const handler = DownloadSignedDocumentController;
-
-
-
-
-
-
-
 

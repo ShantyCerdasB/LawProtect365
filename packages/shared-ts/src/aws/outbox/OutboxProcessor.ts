@@ -110,8 +110,7 @@ export class OutboxProcessor {
           successfulEvents: 0,
           failedEvents: 0,
           results: [],
-          totalDurationMs: Date.now() - startTime,
-        };
+          totalDurationMs: Date.now() - startTime};
       }
 
       this.log("Processing batch", { eventCount: events.length });
@@ -142,8 +141,7 @@ export class OutboxProcessor {
         successfulEvents: successfulCount,
         failedEvents: failedCount,
         results,
-        totalDurationMs: totalDuration,
-      };
+        totalDurationMs: totalDuration};
 
       this.log("Batch completed", { ...batchResult });
       return batchResult;
@@ -173,8 +171,7 @@ export class OutboxProcessor {
         type: event.type,
         payload: event.payload,
         id: event.id,
-        occurredAt: event.occurredAt,
-      }]);
+        occurredAt: event.occurredAt}]);
 
       // Mark as dispatched
       await this.outboxRepository.markDispatched(event.id);
@@ -189,8 +186,7 @@ export class OutboxProcessor {
         eventId: event.id,
         success: true,
         attempts: attempts + 1,
-        durationMs: duration,
-      };
+        durationMs: duration};
 
     } catch (error) {
       attempts++;
@@ -216,8 +212,7 @@ export class OutboxProcessor {
         success: false,
         error: lastError,
         attempts,
-        durationMs: duration,
-      };
+        durationMs: duration};
     }
   }
 
@@ -256,9 +251,4 @@ export class OutboxProcessor {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 } 
-
-
-
-
-
 

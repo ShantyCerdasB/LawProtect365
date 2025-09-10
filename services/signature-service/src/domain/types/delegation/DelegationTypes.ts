@@ -71,8 +71,6 @@ export type DelegationRepoRow =
   & {
     /** Delegation identifier */
     readonly delegationId: string;
-    /** Tenant identifier */
-    readonly tenantId: string;
     /** Consent identifier */
     readonly consentId: string;
     /** Original party identifier */
@@ -98,10 +96,4 @@ export type DelegationRepoCreateInput = Omit<
   /** Creation timestamp */
   readonly createdAt?: ISODateString;
 };
-
-
-
-
-
-
 

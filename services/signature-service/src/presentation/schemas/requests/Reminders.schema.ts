@@ -14,14 +14,7 @@ export const RemindersBody = z.object({
   /** Optional array of specific party IDs to remind. If not provided, all pending parties will be reminded. */
   partyIds: z.array(z.string().uuid()).optional(),
   /** Optional custom message to include in the reminder notification. */
-  message: z.string().max(500, "Message must be 500 characters or less").optional(),
-});
+  message: z.string().max(500, "Message must be 500 characters or less").optional()});
 
 export type RemindersBody = z.infer<typeof RemindersBody>;
-
-
-
-
-
-
 

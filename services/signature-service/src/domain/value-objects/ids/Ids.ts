@@ -29,8 +29,6 @@ export type SignatureId = Brand<string, "SignatureId">;
 /** @description Consent identifier (UUID) */
 export type ConsentId = Brand<string, "ConsentId">;
 
-/** @description Tenant identifier (trimmed, non-empty) */
-export type TenantId = Brand<string, "TenantId">;
 /** @description User identifier (trimmed, non-empty) */
 export type UserId = Brand<string, "UserId">;
 /** @description IP address (IPv4 or IPv6) */
@@ -72,14 +70,6 @@ export const ConsentIdSchema = EntityIdSchema.transform(
 );
 
 /**
- * @description TenantId validator.
- * Uses a trimmed string piped into a length constraint to avoid chaining
- * `.min` directly on a ZodEffects instance.
- */
-export const TenantIdSchema = TrimmedString.pipe(z.string().min(1)).transform(
-  (v: string) => v as TenantId
-);
-/**
  * @description UserId validator.
  * Uses a trimmed string piped into a length constraint to avoid chaining
  * `.min` directly on a ZodEffects instance.
@@ -92,6 +82,4 @@ export const UserIdSchema = TrimmedString.pipe(z.string().min(1)).transform(
 export const IpAddressSchema = z.string().ip().transform(
   (v: string) => v as IpAddress
 );
-
-
 

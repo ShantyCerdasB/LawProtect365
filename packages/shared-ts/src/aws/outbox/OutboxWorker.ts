@@ -21,8 +21,7 @@ interface OutboxWorkerConfig {
  */
 const DEFAULT_CONFIG: OutboxWorkerConfig = {
   maxBatchSize: 100,
-  continueOnError: true,
-};
+  continueOnError: true};
 
 /**
  * @summary Lambda handler for outbox event processing
@@ -50,8 +49,7 @@ export const outboxProcessor = async (
     logger.info("Starting outbox processing", {
       requestId: context.awsRequestId,
       timestamp,
-      config: DEFAULT_CONFIG,
-    });
+      config: DEFAULT_CONFIG});
 
     // Note: This worker needs to be customized per service to get the container
     // Implementation should inject the event publisher via the constructor
@@ -67,8 +65,7 @@ export const outboxProcessor = async (
     logger.info("Outbox processing completed", {
       requestId: context.awsRequestId,
       duration,
-      timestamp,
-    });
+      timestamp});
 
     return {
       statusCode: 200,
@@ -76,9 +73,7 @@ export const outboxProcessor = async (
         processed: processedCount,
         failed: failedCount,
         duration,
-        timestamp,
-      },
-    };
+        timestamp}};
 
   } catch (error) {
     const duration = Date.now() - startTime;
@@ -87,8 +82,7 @@ export const outboxProcessor = async (
       requestId: context.awsRequestId,
       error: error instanceof Error ? error.message : String(error),
       duration,
-      timestamp,
-    });
+      timestamp});
 
     if (DEFAULT_CONFIG.continueOnError) {
       return {
@@ -97,9 +91,7 @@ export const outboxProcessor = async (
           processed: 0,
           failed: 1,
           duration,
-          timestamp,
-        },
-      };
+          timestamp}};
     }
 
     throw error;
@@ -111,9 +103,4 @@ export const outboxProcessor = async (
  * @description Allows manual execution of outbox processing
  */
 export const handler = outboxProcessor;
-
-
-
-
-
 

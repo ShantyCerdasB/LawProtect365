@@ -60,10 +60,8 @@ export const assertDraft = (env: Pick<Envelope, "status" | "envelopeId">): void 
         envelopeId: env.envelopeId,
         status: env.status,
         required: "draft",
-        reason: "Structural mutations are only allowed in draft state",
-      }
+        reason: "Structural mutations are only allowed in draft state"}
     );
   }
 };
-
 

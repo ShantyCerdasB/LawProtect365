@@ -16,15 +16,13 @@ import {
   isValidBucketName,
   isValidKey,
   toHttpUrl,
-  guessContentType,
-} from "../../src/utils/s3.js";
+  guessContentType} from "../../src/utils/s3.js";
 import {
   runDirnameTests,
   runBasenameTests,
   commonBasenameTestCases,
   s3SpecificDirnameTestCases,
-  s3SpecificBasenameTestCases,
-} from "./test-helpers.js";
+  s3SpecificBasenameTestCases} from "./test-helpers.js";
 
 describe("utils/s3", () => {
   // ── parse/format/isS3Uri ─────────────────────────────────────────────────────
@@ -32,15 +30,13 @@ describe("utils/s3", () => {
     it("parses s3://bucket/key", () => {
       expect(parseS3Uri("s3://my-bucket/path/to/file.pdf")).toEqual({
         bucket: "my-bucket",
-        key: "path/to/file.pdf",
-      });
+        key: "path/to/file.pdf"});
     });
 
     it("parses s3://bucket with empty key", () => {
       expect(parseS3Uri("s3://data-bucket")).toEqual({
         bucket: "data-bucket",
-        key: "",
-      });
+        key: ""});
     });
 
     it("throws on non-s3 URI", () => {
@@ -188,8 +184,7 @@ describe("utils/s3", () => {
     it("builds accelerate + dualstack URL", () => {
       const url = toHttpUrl("bkt", "a/b.txt", "ap-southeast-2", {
         accelerate: true,
-        dualstack: true,
-      });
+        dualstack: true});
       expect(url).toBe("https://bkt.s3-accelerate.dualstack.amazonaws.com/a/b.txt");
     });
 

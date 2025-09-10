@@ -32,8 +32,7 @@ export function toEventBridgeEntry(metadata: EventMetadataSchema): EventBridgeEn
     Time: metadata.time || new Date(),
     Region: metadata.region,
     Resources: metadata.resources,
-    TraceHeader: metadata.traceHeader,
-  };
+    TraceHeader: metadata.traceHeader};
 }
 
 /**
@@ -50,8 +49,7 @@ export function createEventMetadata(
     detailType,
     detail,
     time: new Date(),
-    ...options,
-  };
+    ...options};
 }
 
 /**

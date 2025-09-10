@@ -5,13 +5,11 @@
  */
 
 import { createCommandController } from "../../../shared/controllers/controllerFactory";
-import { makeDocumentsCommandsPort } from "../../../app/adapters/documents/makeDocumentsCommandsPort";
 import { DefaultDocumentsCommandService } from "../../../app/services/Documents";
 import { CreateDocumentBody } from "../../../presentation/schemas/documents/CreateDocument.schema";
 import { EnvelopeIdPath } from "../../../presentation/schemas/common/path";
 import type { CreateDocumentCommand, CreateDocumentResult } from "../../../app/ports/documents/DocumentsCommandsPort";
-import { createDocumentDependencies, extractDocumentCreateParams } from "../../../shared/controllers/helpers";
-import { assertTenantBoundary } from "@lawprotect/shared-ts";
+import { extractDocumentCreateParams } from "../../../shared/controllers/helpers";
 
 /**
  * @description Create Document controller
@@ -20,25 +18,21 @@ export const CreateDocumentController = createCommandController<CreateDocumentCo
   bodySchema: CreateDocumentBody,
   pathSchema: EnvelopeIdPath,
   appServiceClass: DefaultDocumentsCommandService,
-  createDependencies: (c: any) => makeDocumentsCommandsPort(createDocumentDependencies(c)),
+  createDependencies: (c: any) => c.documents.command, // Use the service from container
   extractParams: (path: any, body: any, context: any) => {
-    // Validate cross-tenant access
-    assertTenantBoundary(context.tenantId, path.tenantId);
+    const params = extractDocumentCreateParams(path, body);
     
-    return extractDocumentCreateParams(path, body);
+    // Add authorization validation
+    if (context?.actor?.email) {
+      (params as any).actorEmail = context.actor.email;
+    }
+    
+    return params;
   },
   responseType: "created",
   includeActor: true,
-  methodName: "create",
-});
+  methodName: "create"});
 
 // Export handler for backward compatibility
 export const handler = CreateDocumentController;
-
-
-
-
-
-
-
 

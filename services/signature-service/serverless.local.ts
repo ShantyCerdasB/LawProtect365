@@ -70,8 +70,7 @@ async function main() {
   const headers: Record<string, string> = {
     "content-type": "application/json",
     "x-forwarded-for": "127.0.0.1",
-    "user-agent": "serverless.local.ts",
-  };
+    "user-agent": "serverless.local.ts"};
 
   let body: string | undefined;
   if (rawBodyArg) {
@@ -95,8 +94,7 @@ async function main() {
       routeKey: `${method} ${requestPath}`,
       stage: "$default",
       time: new Date().toISOString(),
-      timeEpoch: Date.now(),
-    } as any,
+      timeEpoch: Date.now()} as any,
     isBase64Encoded: false,
     body,
     // 👇 muchos controladores nuestros leen evt.ctx.auth
@@ -104,13 +102,9 @@ async function main() {
     // @ts-expect-error: campo extendido por nuestro middleware
     ctx: {
       auth: {
-        tenantId: "tenant-local",
         userId: "user-local",
         email: "local@example.com",
-        roles: ["admin"],
-      },
-    },
-  };
+        roles: ["admin"]}}};
 
   const res = await handler(fakeEvent, {} as any, () => {});
   // Imprime limpio

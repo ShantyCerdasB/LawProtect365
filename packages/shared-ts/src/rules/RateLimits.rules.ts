@@ -65,8 +65,7 @@ export const toRateLimitHeaders = (
   // `X-RateLimit-Reset` is left to the transport layer if you have precise window timestamps.
   return {
     "X-RateLimit-Limit": String(limit),
-    "X-RateLimit-Remaining": String(remaining),
-  };
+    "X-RateLimit-Remaining": String(remaining)};
 };
 
 /**
@@ -88,9 +87,4 @@ export const clampListPageSize = (
   if (n > max) return max;
   return n;
 };
-
-
-
-
-
 

@@ -10,15 +10,13 @@
 
 // Mock redact to be a transparent pass-through (we assert it was called with the full record)
 jest.mock('../../src/observability/redact.js', () => ({
-  deepRedact: jest.fn((x: any) => x),
-}));
+  deepRedact: jest.fn((x: any) => x)}));
 
 // Mock context helpers; per-test we override implementations
 jest.mock('../../src/observability/context.js', () => ({
   getRequestContext: jest.fn(),
   getRequestId: jest.fn(),
-  getTraceId: jest.fn(),
-}));
+  getTraceId: jest.fn()}));
 
 import { createLogger, logger as sharedLogger } from '../../src/observability/logger.js';
 import { deepRedact } from '../../src/observability/redact.js';
@@ -75,8 +73,7 @@ describe('createLogger — thresholds, output streams, and field merging', () =>
       traceId: 'TID-FALLBACK',
       svc: 'api',
       env: 'test',
-      a: 1,
-    });
+      a: 1});
     // redact was applied on the full record
     expect(redactMock).toHaveBeenLastCalledWith(expect.objectContaining({ msg: 'hello' }));
 
@@ -103,8 +100,7 @@ describe('createLogger — thresholds, output streams, and field merging', () =>
     getCtxMock.mockReturnValue({
       requestId: 'RID-CTX',
       traceId: 'TID-CTX',
-      fields: { tenant: 't1', user: 'u1' },
-    });
+      fields: { tenant: 't1', user: 'u1' }});
 
     const parent = createLogger({ svc: 'core' }, 'debug');
     const child = parent.child({ mod: 'auth' });
@@ -130,8 +126,7 @@ describe('createLogger — thresholds, output streams, and field merging', () =>
       once: true,
       ok: true,
       tenant: 't1',
-      user: 'u1',
-    });
+      user: 'u1'});
   });
 });
 

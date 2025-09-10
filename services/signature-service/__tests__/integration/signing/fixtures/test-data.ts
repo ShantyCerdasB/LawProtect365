@@ -5,7 +5,6 @@
  */
 
 export const TEST_ENVELOPE = {
-  tenantId: 'test-tenant-123',
   name: 'Test Signing Envelope',
   description: 'Integration test envelope for signing workflow',
   creatorId: 'test-creator-123',

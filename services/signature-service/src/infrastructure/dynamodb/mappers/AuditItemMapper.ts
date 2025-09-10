@@ -6,11 +6,10 @@
  * Normalizes the persistence shape for immutable audit events using a single-table design:
  *
  * - Table keys:
- *   • `pk` = `TENANT#<tenantId>`
  *   • `sk` = `ENV#<envelopeId>#TS#<occurredAt>#ID#<id>`
  *
  * - Indexes:
- *   • GSI1 (by envelope): `gsi1pk` = `ENV#<tenantId>#<envelopeId>`, `gsi1sk` = `<occurredAt>#<id>`
+ *   • GSI1 (by envelope): `gsi1pk` =
  *   • GSI2 (by id):       `gsi2pk` = `ID#<id>`
  *
  * The mapper:
@@ -23,11 +22,10 @@ import type { Mapper } from "@lawprotect/shared-ts";
 import { BadRequestError, ErrorCodes } from "@lawprotect/shared-ts";
 
 import type { AuditEvent, AuditEventId } from "@/domain/value-objects/audit";
-import type { TenantId, EnvelopeId } from "@/domain/value-objects/ids";
+import type { EnvelopeId } from "@/domain/value-objects/ids";
 
 import { AUDIT_ENTITY_TYPE } from "../../../domain/types/infrastructure/enums";
 import { DdbAuditItem, isDdbAuditItem } from "@/domain/entities";
-
 
 /* ────────────────────────────────────────────────────────────────────────── */
 /* Key builders                                                              */
@@ -36,10 +34,9 @@ import { DdbAuditItem, isDdbAuditItem } from "@/domain/entities";
 /**
  * @summary Builds the table partition key for an audit event
  * @description Builds the table partition key for an audit event.
- * @param tenantId - Tenant identifier
  * @returns Partition key string
  */
-export const auditPk = (tenantId: string): string => `TENANT#${tenantId}`;
+export const auditPk = (): string => `AUDIT`;
 
 /**
  * @summary Builds the table sort key for an audit event (time-ordered within envelope)
@@ -55,12 +52,11 @@ export const auditSk = (envelopeId: string, occurredAtIso: string, id: string): 
 /**
  * @summary GSI1 (by envelope) partition key
  * @description GSI1 (by envelope) partition key.
- * @param tenantId - Tenant identifier
  * @param envelopeId - Envelope identifier
  * @returns GSI1 partition key string
  */
-export const gsi1Pk = (tenantId: string, envelopeId: string): string =>
-  `ENV#${tenantId}#${envelopeId}`;
+export const gsi1Pk = (envelopeId: string): string =>
+  `ENV#${envelopeId}`;
 
 /**
  * @summary GSI1 (by envelope) sort key (ISO timestamp + tiebreaker id)
@@ -100,29 +96,38 @@ export const auditItemMapper: Mapper<AuditEvent, DdbAuditItem> = {
    */
   toDTO(ev: AuditEvent): DdbAuditItem {
     const id = ev.id as unknown as string;
-    const tenantId = ev.tenantId as unknown as string;
     const envelopeId = ev.envelopeId as unknown as string;
 
-    return {
-      pk: auditPk(tenantId),
+    const item: Record<string, any> = {
+      pk: auditPk(),
       sk: auditSk(envelopeId, ev.occurredAt, id),
       type: AUDIT_ENTITY_TYPE,
 
       id,
-      tenantId,
       envelopeId,
       occurredAt: ev.occurredAt,
       eventType: ev.type,
 
-      actor: ev.actor ? { ...ev.actor } : undefined,
-      metadata: ev.metadata ? { ...ev.metadata } : undefined,
-      prevHash: ev.prevHash,
-      hash: ev.hash,
-
-      gsi1pk: gsi1Pk(tenantId, envelopeId),
+      gsi1pk: gsi1Pk(envelopeId),
       gsi1sk: gsi1Sk(ev.occurredAt, id),
-      gsi2pk: gsi2Pk(id),
+      gsi2pk: gsi2Pk(id)
     };
+
+    // Only add optional fields if they have values
+    if (ev.actor) {
+      item.actor = { ...ev.actor };
+    }
+    if (ev.metadata) {
+      item.metadata = { ...ev.metadata };
+    }
+    if (ev.prevHash) {
+      item.prevHash = ev.prevHash;
+    }
+    if (ev.hash) {
+      item.hash = ev.hash;
+    }
+
+    return item as DdbAuditItem;
   },
 
   /**
@@ -143,17 +148,14 @@ export const auditItemMapper: Mapper<AuditEvent, DdbAuditItem> = {
 
     return Object.freeze<AuditEvent>({
       id: dto.id as unknown as AuditEventId,
-      tenantId: dto.tenantId as unknown as TenantId,
       envelopeId: dto.envelopeId as unknown as EnvelopeId,
       type: dto.eventType,
       occurredAt: dto.occurredAt,
       actor: dto.actor ? { ...(dto.actor as Record<string, unknown>) } : undefined,
       metadata: dto.metadata ? { ...(dto.metadata as Record<string, unknown>) } : undefined,
       prevHash: dto.prevHash,
-      hash: dto.hash,
-    });
-  },
-};
+      hash: dto.hash});
+  }};
 
 /**
  * @summary Convenience helper to map from a raw DocumentClient item into `AuditEvent`
@@ -172,9 +174,4 @@ export const auditItemFromRaw = (raw: Record<string, unknown>): AuditEvent => {
   }
   return auditItemMapper.fromDTO(raw as DdbAuditItem);
 };
-
-
-
-
-
 

@@ -28,8 +28,7 @@ import type {
   AfterMiddleware,
   CorsConfig,
   JwtVerifyOptions,
-  ObservabilityFactories,
-} from "@lawprotect/shared-ts";
+  ObservabilityFactories} from "@lawprotect/shared-ts";
 import {
   compose,
   apiHandler,
@@ -38,8 +37,7 @@ import {
   withRequestContext as withReqIds,
   withObservability,
   withControllerLogging,
-  getEnv,
-} from "@lawprotect/shared-ts";
+  getEnv} from "@lawprotect/shared-ts";
 
 /**
  * @description Configuration options for wrapping a business controller with the shared HTTP pipeline.
@@ -104,8 +102,7 @@ export const corsFromEnv = (): CorsConfig => {
     allowMethods,
     exposeHeaders,
     allowCredentials,
-    maxAgeSeconds,
-  };
+    maxAgeSeconds};
 };
 
 /**
@@ -131,8 +128,7 @@ export const wrapController = (base: HandlerFn, opts: WrapControllerOptions): Ha
   // Compose remaining middlewares
   handler = compose(handler, {
     before: [withReqIds(), withObservability(observability), ...before],
-    after: [logging.after, ...after],
-  });
+    after: [logging.after, ...after]});
 
   // Let apiHandler manage CORS & error mapping uniformly
   return apiHandler(handler, { cors: builtCors, defaultHeaders: corsHeaders });
@@ -150,9 +146,4 @@ export const wrapPublicController = (
   base: HandlerFn,
   opts: Omit<WrapControllerOptions, "auth">
 ): HandlerFn => wrapController(base, { ...opts, auth: false });
-
-
-
-
-
 

@@ -18,8 +18,7 @@
 import type {
   OutboxPort,
   DomainEvent,
-  OutboxRecord,
-} from "../../index.js";
+  OutboxRecord} from "../../index.js";
 import type { DdbClientLike } from "../ddb.js";
 import {
   clamp,
@@ -27,8 +26,7 @@ import {
   ConflictError,
   ErrorCodes,
   requireQuery,
-  requireUpdate,
-} from "../../index.js";
+  requireUpdate} from "../../index.js";
 import { mapCreateInputToDto, mapDtoToRecord } from "./mappers.js";
 import type { OutboxRepositoryDdbProps, AwsOutboxRepoCreateInput, OutboxItemDTO } from "./types.js";
 import { 
@@ -74,8 +72,7 @@ export class OutboxRepositoryDdb implements OutboxPort {
       eventType: evt.type,
       payload: evt.payload ? (evt.payload as Record<string, unknown>) : undefined,
       occurredAt: evt.occurredAt,
-      traceId,
-    };
+      traceId};
 
     const item = mapCreateInputToDto(input);
 
@@ -83,8 +80,7 @@ export class OutboxRepositoryDdb implements OutboxPort {
       await this.ddb.put({
         TableName: this.table,
         Item: item as unknown as Record<string, unknown>,
-        ConditionExpression: "attribute_not_exists(pk) AND attribute_not_exists(sk)",
-      });
+        ConditionExpression: "attribute_not_exists(pk) AND attribute_not_exists(sk)"});
     } catch (err: any) {
       if (String(err?.name) === "ConditionalCheckFailedException") {
         throw new ConflictError("Outbox record already exists", ErrorCodes.COMMON_CONFLICT);
@@ -116,16 +112,13 @@ export class OutboxRepositoryDdb implements OutboxPort {
           "#gpk": "gsi1pk",
           "#updatedAt": "updatedAt",
           "#attempts": "attempts",
-          "#lastError": "lastError",
-        },
+          "#lastError": "lastError"},
         ExpressionAttributeValues: {
           ":s": OUTBOX_STATUSES.DISPATCHED,
           ":g": `${OUTBOX_STATUS_PK_PREFIX}${OUTBOX_STATUSES.DISPATCHED}`,
           ":now": new Date().toISOString(),
-          ":zero": 0,
-        },
-        ReturnValues: "NONE",
-      });
+          ":zero": 0},
+        ReturnValues: "NONE"});
     } catch (err) {
       throw mapAwsError(err, "OutboxRepositoryDdb.markDispatched");
     }
@@ -152,18 +145,15 @@ export class OutboxRepositoryDdb implements OutboxPort {
           "#gpk": "gsi1pk",
           "#updatedAt": "updatedAt",
           "#attempts": "attempts",
-          "#lastError": "lastError",
-        },
+          "#lastError": "lastError"},
         ExpressionAttributeValues: {
           ":s": OUTBOX_STATUSES.FAILED,
           ":g": `${OUTBOX_STATUS_PK_PREFIX}${OUTBOX_STATUSES.FAILED}`,
           ":now": new Date().toISOString(),
           ":zero": 0,
           ":one": 1,
-          ":err": String(error),
-        },
-        ReturnValues: "NONE",
-      });
+          ":err": String(error)},
+        ReturnValues: "NONE"});
     } catch (err) {
       throw mapAwsError(err, "OutboxRepositoryDdb.markFailed");
     }
@@ -196,9 +186,4 @@ export class OutboxRepositoryDdb implements OutboxPort {
     }
   }
 }
-
-
-
-
-
 

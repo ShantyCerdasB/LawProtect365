@@ -1,4 +1,5 @@
 import type { UserRole } from "../types/auth.js";
+import { VALID_COGNITO_ROLES } from "./validRoles.js";
 
 /**
  * Role helpers for hierarchical checks and normalization.
@@ -9,7 +10,7 @@ import type { UserRole } from "../types/auth.js";
  */
 export type Role = UserRole;
 
-const ORDER: UserRole[] = ["client", "lawyer", "admin", "super_admin"];
+const ORDER: UserRole[] = [...VALID_COGNITO_ROLES];
 
 /**
  * Returns true when the subject has at least the required role in the hierarchy.
@@ -49,7 +50,7 @@ export const toRole = (r: string): UserRole | undefined => {
   if (x === "super_admin" || x === "super-admin") return "super_admin";
   if (x === "admin") return "admin";
   if (x === "lawyer" || x === "abogado") return "lawyer";
-  if (x === "client" || x === "cliente") return "client";
+  if (x === "customer" || x === "cliente" || x === "client") return "customer";
   if (x === "system") return "system";
   return undefined;
 };

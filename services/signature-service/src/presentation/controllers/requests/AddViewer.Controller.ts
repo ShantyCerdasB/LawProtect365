@@ -24,19 +24,10 @@ export const AddViewerController = createCommandController<AddViewerControllerIn
     envelopeId: path.id,
     email: body.email,
     name: body.name,
-    locale: body.locale,
-  }),
+    locale: body.locale}),
   responseType: "created",
-  includeActor: true,
-});
+  includeActor: true});
 
 // Export handler for backward compatibility
 export const handler = AddViewerController;
-
-
-
-
-
-
-
 

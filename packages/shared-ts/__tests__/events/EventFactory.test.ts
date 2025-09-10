@@ -5,8 +5,7 @@
 
 // Mock using the resolved path that the SUT imports
 jest.mock('../../src/utils/id.js', () => ({
-  ulid: jest.fn(() => 'ULID-MOCK'),
-}));
+  ulid: jest.fn(() => 'ULID-MOCK')}));
 
 import { makeEvent } from '../../src/events/index.js';
 import { ulid } from '../../src/utils/id.js';
@@ -36,8 +35,7 @@ describe('makeEvent', () => {
       type: 'com.example.ThingHappened',
       occurredAt: '2024-01-02T03:04:05.000Z',
       payload,
-      metadata,
-    });
+      metadata});
   });
 
   it('omits metadata when not provided', () => {

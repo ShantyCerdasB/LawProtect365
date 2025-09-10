@@ -1,9 +1,9 @@
-import type { TenantId, UserId } from "./brand.js";
+import type { UserId } from "./brand.js";
 
 /**
  * Enumerates platform roles used in RBAC checks.
  */
-export type UserRole = "client" | "lawyer" | "admin" | "super_admin" | "system";
+export type UserRole = "customer" | "lawyer" | "admin" | "super_admin" | "system";
 
 /**
  * Canonical JWT claims normalized for the platform.
@@ -29,7 +29,7 @@ export interface JwtClaims {
   emailVerified?: boolean;
 
   /** Tenant hint for multi-tenant scenarios. */
-  tenantId?: string;
+
   /** Normalized roles (e.g., from cognito:groups). */
   roles?: string[];
   /** OAuth scopes as array. */
@@ -71,7 +71,7 @@ export interface JwtVerificationResult {
 export interface Principal {
   userId: UserId;
   roles: UserRole[];
-  tenantId?: TenantId;
+
   email?: string;
 }
 
@@ -82,7 +82,7 @@ export interface AuthContext {
   /** Canonical user id suitable for business logic. */
   userId: UserId;
   /** Tenant boundary when applicable. */
-  tenantId?: TenantId;
+
   /** Roles as received/normalized (not necessarily UserRole). */
   roles: string[];
   /** Scopes granted to the token. */

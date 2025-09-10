@@ -5,11 +5,12 @@
  * used across different DynamoDB repositories and mappers.
  */
 
-import type { DdbClientLike, TenantId, Mapper, UserId } from "@lawprotect/shared-ts";
+import type { DdbClientLike, Mapper } from "@lawprotect/shared-ts";
 import { badRequest } from "@/shared/errors";
 import { BadRequestError, ErrorCodes } from "@lawprotect/shared-ts";
 import { Envelope, Party } from "@/domain/entities";
 import { PartyId, EnvelopeId } from "@/domain/value-objects";
+import type { InvitationToken } from "../../entities/InvitationToken";
 
 /**
  * @summary Minimal shape of the `query` operation required (SDK-agnostic)
@@ -129,29 +130,21 @@ export interface DdbItemWithAudit extends DdbItem {
   readonly updatedBy?: string;
 }
 
-/**
- * @summary DynamoDB item with tenant isolation
- * @description Extends DdbItem to include tenant identifier
- * for multi-tenancy support.
- */
-export interface DdbItemWithTenant extends DdbItem {
-  /** Tenant identifier for multi-tenancy */
-  readonly tenantId: string;
-}
+// DdbItemWithTenant interface removed - no longer needed
 
 /**
  * @summary Complete DynamoDB item with all common fields
  * @description Combines all common DynamoDB item interfaces
  * for comprehensive item structure.
  */
-export interface DdbItemComplete extends DdbItemWithTTL, DdbItemWithVersion, DdbItemWithAudit, DdbItemWithTenant {}
+export interface DdbItemComplete extends DdbItemWithTTL, DdbItemWithVersion, DdbItemWithAudit {}
 
 /**
  * @summary DynamoDB Party item structure
  * @description Specific DynamoDB item structure for Party entities
  * in the single-table design pattern.
  */
-export interface DdbPartyItem extends DdbItemWithTenant, DdbItemWithAudit {
+export interface DdbPartyItem extends DdbItem, DdbItemWithAudit {
   /** Party identifier */
   readonly partyId: string;
   /** Associated envelope identifier */
@@ -164,29 +157,20 @@ export interface DdbPartyItem extends DdbItemWithTenant, DdbItemWithAudit {
   readonly role: string;
   /** Current party status */
   readonly status: string;
-  /** When the party was invited */
-  readonly invitedAt: string;
+  /** When the party was invited (optional) */
+  readonly invitedAt?: string;
   /** When the party signed (optional) */
   readonly signedAt?: string;
   /** Sequence number for signing order */
   readonly sequence: number;
-  /** OTP state for authentication (optional) */
-  readonly otpState?: {
-    readonly required: boolean;
-    readonly verified: boolean;
-    readonly attempts: number;
-    readonly lastAttempt?: string;
-  };
 }
-
-
 
 /**
  * @summary DynamoDB Document item structure
  * @description Specific DynamoDB item structure for Document entities
  * in the single-table design pattern.
  */
-export interface DdbDocumentItem extends DdbItemWithTenant, DdbItemWithAudit {
+export interface DdbDocumentItem extends DdbItem, DdbItemWithAudit {
   /** Document identifier */
   readonly documentId: string;
   /** Associated envelope identifier */
@@ -212,7 +196,7 @@ export interface DdbDocumentItem extends DdbItemWithTenant, DdbItemWithAudit {
  * @description Specific DynamoDB item structure for Input entities
  * in the single-table design pattern.
  */
-export interface DdbInputItem extends DdbItemWithTenant, DdbItemWithAudit {
+export interface DdbInputItem extends DdbItem, DdbItemWithAudit {
   /** Input identifier */
   readonly inputId: string;
   /** Associated envelope identifier */
@@ -350,7 +334,6 @@ export function requireUpdate(ddb: DdbClientLike): asserts ddb is DdbClientWithU
   }
 }
 
-
 /**
  * @summary Party ↔ DynamoDB item mapper
  * @description Maps between Party domain entities and DynamoDB items
@@ -371,14 +354,13 @@ export const isDdbPartyItem = (v: unknown): v is DdbPartyItem => {
       typeof o.pk === "string" &&
       typeof o.sk === "string" &&
       o.type === PARTY_ENTITY &&
-      typeof o.tenantId === "string" &&
       typeof o.envelopeId === "string" &&
       typeof o.partyId === "string" &&
       typeof o.name === "string" &&
       typeof o.email === "string" &&
       typeof o.role === "string" &&
       typeof o.status === "string" &&
-      typeof o.invitedAt === "string" &&
+      (o.invitedAt === undefined || typeof o.invitedAt === "string") &&
       typeof o.sequence === "number" &&
       typeof o.createdAt === "string" &&
       typeof o.updatedAt === "string"
@@ -391,7 +373,6 @@ export const toPartyItem = (src: Party): DdbPartyItem => ({
   sk: partySk(src.partyId),
   type: PARTY_ENTITY,
 
-  tenantId: src.tenantId,
   envelopeId: src.envelopeId,
   partyId: src.partyId,
 
@@ -408,14 +389,6 @@ export const toPartyItem = (src: Party): DdbPartyItem => ({
   createdAt: src.createdAt,
   updatedAt: src.updatedAt,
 
-  ...(src.otpState !== undefined ? { 
-    otpState: {
-      required: src.otpState.tries < src.otpState.maxTries,
-      verified: false, // Default value
-      attempts: src.otpState.tries,
-      lastAttempt: src.otpState.createdAt
-    }
-  } : {}),
 });
 
 /** Item → Domain */
@@ -428,10 +401,7 @@ export const fromPartyItem = (item: unknown): Party => {
     );
   }
 
-
-
   return Object.freeze<Party>({
-    tenantId: item.tenantId as TenantId,
     partyId: item.partyId as PartyId,
     envelopeId: item.envelopeId as EnvelopeId,
     name: item.name,
@@ -444,27 +414,16 @@ export const fromPartyItem = (item: unknown): Party => {
 
     sequence: item.sequence,
 
-    auth: { methods: ["otpViaEmail"] }, // Default auth
+    auth: { methods: [] }, // Default auth
 
     createdAt: item.createdAt,
-    updatedAt: item.updatedAt,
-
-    otpState: item.otpState ? {
-      codeHash: "dummy", // Default value
-      channel: "email" as any, // Default value
-      expiresAt: new Date().toISOString(), // Default value
-      tries: item.otpState.attempts,
-      maxTries: 3, // Default value
-      createdAt: item.otpState.lastAttempt || new Date().toISOString()
-    } : undefined,
-  });
+    updatedAt: item.updatedAt});
 };
 
 /** Mapper export */
 export const partyItemMapper: Mapper<Party, DdbPartyItem> = {
   toDTO: toPartyItem,
-  fromDTO: fromPartyItem,
-};
+  fromDTO: fromPartyItem};
 
 // ============================================================================
 // ENVELOPE ITEM MAPPER
@@ -489,13 +448,11 @@ export interface DdbEnvelopeItem {
 
   /** Envelope identifier (stored as plain string for DynamoDB) */
   envelopeId: string;
-  /** Tenant identifier (stored as plain string for DynamoDB) */
-  tenantId: string;
-  /** Owner identifier (stored as plain string for DynamoDB) */
-  ownerId: string;
+  /** Owner email (stored as plain string for DynamoDB) */
+  ownerEmail: string;
 
-  /** Envelope title */
-  title: string;
+  /** Envelope name */
+  name: string;
   /** Envelope status */
   status: string;
   /** Creation timestamp (ISO-8601) */
@@ -571,9 +528,8 @@ export function isDdbEnvelopeItem(value: unknown): value is DdbEnvelopeItem {
     typeof o.sk === "string" &&
     o.type === ENVELOPE_ENTITY &&
     typeof o.envelopeId === "string" &&
-    typeof o.tenantId === "string" &&
-    typeof o.ownerId === "string" &&
-    typeof o.title === "string" &&
+    typeof o.ownerEmail === "string" &&
+    typeof o.name === "string" &&
     typeof o.status === "string" &&
     typeof o.createdAt === "string" &&
     typeof o.updatedAt === "string" &&
@@ -589,8 +545,7 @@ export function isDdbEnvelopeItem(value: unknown): value is DdbEnvelopeItem {
 /** Domain → Item */
 export const toEnvelopeItem = (src: Envelope): DdbEnvelopeItem => {
   const envelopeIdStr = src.envelopeId as unknown as string;
-  const tenantIdStr = src.tenantId as unknown as string;
-  const ownerIdStr = (src.ownerId as UserId | string) as unknown as string;
+  const ownerEmailStr = src.ownerEmail as unknown as string;
 
   return {
     pk: envelopePk(envelopeIdStr),
@@ -598,10 +553,9 @@ export const toEnvelopeItem = (src: Envelope): DdbEnvelopeItem => {
     type: ENVELOPE_ENTITY,
 
     envelopeId: envelopeIdStr,
-    tenantId: tenantIdStr,
-    ownerId: ownerIdStr,
+    ownerEmail: ownerEmailStr,
 
-    title: src.title,
+    name: src.name,
     status: src.status as string,
     createdAt: src.createdAt,
     updatedAt: src.updatedAt,
@@ -610,9 +564,8 @@ export const toEnvelopeItem = (src: Envelope): DdbEnvelopeItem => {
     documents: [...(src.documents ?? [])],
 
     // Example owner-based GSI (optional; include only if your table defines it)
-    gsi1pk: gsi1OwnerPk(ownerIdStr),
-    gsi1sk: gsi1OwnerSk(src.updatedAt),
-  };
+    gsi1pk: gsi1OwnerPk(ownerEmailStr),
+    gsi1sk: gsi1OwnerSk(src.updatedAt)};
 };
 
 /** Item → Domain */
@@ -627,26 +580,168 @@ export const fromEnvelopeItem = (item: unknown): Envelope => {
 
   return Object.freeze<Envelope>({
     envelopeId: item.envelopeId as EnvelopeId,
-    tenantId: item.tenantId as TenantId,
-    ownerId: item.ownerId as UserId,
+    ownerEmail: item.ownerEmail || 'default-owner@example.com', // Fallback
 
-    title: item.title,
+    name: item.name,
     status: item.status as any, // Cast to EnvelopeStatus
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,
     parties: [...item.parties],
-    documents: [...item.documents],
-  });
+    documents: [...item.documents]});
 };
 
 /** Mapper export */
 export const envelopeItemMapper: Mapper<Envelope, DdbEnvelopeItem> = {
   toDTO: toEnvelopeItem,
-  fromDTO: fromEnvelopeItem,
+  fromDTO: fromEnvelopeItem};
+
+// ============================================================================
+// INVITATION TOKEN ITEM MAPPER
+// ============================================================================
+
+/** @description DynamoDB entity label for InvitationToken rows */
+export const INVITATION_TOKEN_ENTITY = "InvitationToken" as const;
+
+/**
+ * @description DynamoDB persistence shape for an `InvitationToken` row.
+ * Values are plain strings for storage compatibility.
+ */
+export interface DdbInvitationTokenItem {
+  /** DynamoDB partition key */
+  pk: string;
+  /** DynamoDB sort key */
+  sk: string;
+  /** Entity type identifier */
+  type: typeof INVITATION_TOKEN_ENTITY;
+  /** GSI1 partition key for token lookup */
+  gsi1pk: string;
+  /** GSI1 sort key for status and date sorting */
+  gsi1sk: string;
+
+  /** Token identifier */
+  tokenId: string;
+  /** The actual token string */
+  token: string;
+  /** Envelope identifier */
+  envelopeId: string;
+  /** Party identifier */
+  partyId: string;
+  /** Email of the invited party */
+  email: string;
+  /** Name of the invited party */
+  name?: string;
+  /** Role of the invited party */
+  role: string;
+  /** Email of the person who created the invitation */
+  invitedBy: string;
+  /** Name of the person who created the invitation */
+  invitedByName?: string;
+  /** Current status of the token */
+  status: string;
+  /** When the token was created */
+  createdAt: string;
+  /** When the token expires */
+  expiresAt: string;
+  /** When the token was used (if applicable) */
+  usedAt?: string;
+  /** IP address when token was used */
+  usedFromIp?: string;
+  /** User agent when token was used */
+  usedWithUserAgent?: string;
+  /** Custom message for the invitation */
+  message?: string;
+  /** Deadline for signing */
+  signByDate?: string;
+  /** Signing order preference */
+  signingOrder?: string;
+}
+
+/**
+ * @description Composite key for InvitationToken operations
+ */
+export interface InvitationTokenKey {
+  /** Token identifier */
+  readonly tokenId: string;
+}
+
+/**
+ * @description Helper functions for InvitationToken DynamoDB keys
+ */
+export const invitationTokenPk = (envelopeId: EnvelopeId): string => `ENVELOPE#${envelopeId}`;
+export const invitationTokenSk = (tokenId: string): string => `TOKEN#${tokenId}`;
+export const invitationTokenGsi1Pk = (token: string): string => `TOKEN#${token}`;
+export const invitationTokenGsi1Sk = (status: string, createdAt: string): string => `STATUS#${status}#${createdAt}`;
+
+/**
+ * @description Converts domain `InvitationToken` to DynamoDB item format
+ */
+export const toInvitationTokenItem = (src: InvitationToken): DdbInvitationTokenItem => {
+  const item: DdbInvitationTokenItem = {
+    pk: invitationTokenPk(src.envelopeId),
+    sk: invitationTokenSk(src.tokenId),
+    type: INVITATION_TOKEN_ENTITY,
+    gsi1pk: invitationTokenGsi1Pk(src.token),
+    gsi1sk: invitationTokenGsi1Sk(src.status, src.createdAt),
+    tokenId: src.tokenId,
+    token: src.token,
+    envelopeId: src.envelopeId,
+    partyId: src.partyId,
+    email: src.email,
+    name: src.name,
+    role: src.role,
+    invitedBy: src.invitedBy,
+    invitedByName: src.invitedByName,
+    status: src.status,
+    createdAt: src.createdAt,
+    expiresAt: src.expiresAt,
+    usedAt: src.usedAt,
+    usedFromIp: src.usedFromIp,
+    usedWithUserAgent: src.usedWithUserAgent,
+    message: src.message,
+    signByDate: src.signByDate,
+    signingOrder: src.signingOrder
+  };
+
+  return item;
 };
 
+/**
+ * @description Converts DynamoDB item to domain `InvitationToken`
+ */
+export const fromInvitationTokenItem = (item: DdbInvitationTokenItem): InvitationToken => {
+  if (item.type !== INVITATION_TOKEN_ENTITY) {
+    throw new BadRequestError(
+      `Invalid entity type: expected ${INVITATION_TOKEN_ENTITY}, got ${item.type}`,
+      ErrorCodes.COMMON_BAD_REQUEST,
+      { item }
+    );
+  }
 
+  return Object.freeze<InvitationToken>({
+    tokenId: item.tokenId,
+    token: item.token,
+    envelopeId: item.envelopeId as EnvelopeId,
+    partyId: item.partyId as PartyId,
+    email: item.email,
+    name: item.name,
+    role: item.role as "signer",
+    invitedBy: item.invitedBy,
+    invitedByName: item.invitedByName,
+    status: item.status as any,
+    createdAt: item.createdAt,
+    expiresAt: item.expiresAt,
+    usedAt: item.usedAt,
+    usedFromIp: item.usedFromIp,
+    usedWithUserAgent: item.usedWithUserAgent,
+    message: item.message,
+    signByDate: item.signByDate,
+    signingOrder: item.signingOrder as any
+  });
+};
 
-
-
+/** Mapper export */
+export const invitationTokenItemMapper: Mapper<InvitationToken, DdbInvitationTokenItem> = {
+  toDTO: toInvitationTokenItem,
+  fromDTO: fromInvitationTokenItem
+};
 

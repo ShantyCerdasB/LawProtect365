@@ -12,10 +12,3 @@ export { FinaliseEnvelopeController, handler as finaliseEnvelopeHandler } from "
 export { RequestSignatureController, handler as requestSignatureHandler } from "./RequestSignature.Controller";
 export { AddViewerController, handler as addViewerHandler } from "./AddViewer.Controller";
 
-
-
-
-
-
-
-

@@ -7,8 +7,3 @@
 export * from "./CreateParty.schema";
 export * from "./ListParties.schema";
 
-
-
-
-
-

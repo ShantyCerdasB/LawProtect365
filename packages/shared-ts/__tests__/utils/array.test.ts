@@ -14,8 +14,7 @@ import {
   groupBy,
   partition,
   sumBy,
-  range,
-} from "../../src/utils/array.js";
+  range} from "../../src/utils/array.js";
 
 describe("compact", () => {
   it("filters out null and undefined", () => {
@@ -120,16 +119,14 @@ describe("groupBy", () => {
     const result = groupBy(input, (n) => (n % 2 === 0 ? "even" as const : "odd" as const));
     expect(result).toEqual({
       odd: [1, 3, 5],
-      even: [2, 4],
-    });
+      even: [2, 4]});
   });
 
   it("groups items by numeric key", () => {
     const input = [10, 11, 12, 13];
     const result = groupBy(input, (n) => Math.floor(n / 10));
     expect(result).toEqual({
-      1: [10, 11, 12, 13],
-    });
+      1: [10, 11, 12, 13]});
   });
 
   it("supports symbol keys", () => {
@@ -139,8 +136,7 @@ describe("groupBy", () => {
     const result = groupBy(input, (n) => (n % 2 === 0 ? even : odd));
     expect(result).toEqual({
       [odd]: [1, 3],
-      [even]: [2, 4],
-    });
+      [even]: [2, 4]});
   });
 
   it("does not mutate the original array", () => {

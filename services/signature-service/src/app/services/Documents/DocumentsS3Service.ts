@@ -4,7 +4,7 @@
  * @description Handles S3 operations for Documents including presigned URLs and object management
  */
 
-import type { DocumentId, EnvelopeId, TenantId } from "../../../domain/value-objects/ids";
+import type { DocumentId, EnvelopeId } from "../../../domain/value-objects/ids";
 import type { ContentType } from "../../../domain/value-objects/index";
 import { assertPresignPolicy } from "../../../domain/rules/Evidence.rules";
 
@@ -41,15 +41,12 @@ export interface DocumentsS3Service {
   ): Promise<{ url: string; expiresAt: string }>;
 
   /**
-   * Generates S3 object key for document storage
-   * @param tenantId - Tenant identifier
-   * @param envelopeId - Envelope identifier
+   * Generates S3 object key for document storage   * @param envelopeId - Envelope identifier
    * @param documentId - Document identifier
    * @param fileName - Original file name
    * @returns S3 object key
    */
   generateObjectKey(
-    tenantId: TenantId,
     envelopeId: EnvelopeId,
     documentId: DocumentId,
     fileName: string
@@ -71,8 +68,7 @@ export class DefaultDocumentsS3Service implements DocumentsS3Service {
     private readonly s3Presigner: {
       putObjectUrl(bucket: string, key: string, contentType: string, expiresIn?: number): Promise<string>;
       getObjectUrl(bucket: string, key: string, expiresIn?: number): Promise<string>;
-    },
-  ) {}
+    }) {}
 
   /**
    * Creates a presigned upload URL for document upload
@@ -119,15 +115,12 @@ export class DefaultDocumentsS3Service implements DocumentsS3Service {
   }
 
   /**
-   * Generates S3 object key for document storage
-   * @param tenantId - Tenant identifier
-   * @param envelopeId - Envelope identifier
+   * Generates S3 object key for document storage   * @param envelopeId - Envelope identifier
    * @param documentId - Document identifier
    * @param fileName - Original file name
    * @returns S3 object key
    */
   generateObjectKey(
-    tenantId: TenantId,
     envelopeId: EnvelopeId,
     documentId: DocumentId,
     fileName: string
@@ -135,10 +128,10 @@ export class DefaultDocumentsS3Service implements DocumentsS3Service {
     // Sanitize fileName to prevent path traversal and ensure valid S3 key
     const sanitizedFileName = fileName
       .replace(/[^a-zA-Z0-9._-]/g, '_')
-      .replace(/_{2,}/g, '_')
+      .replace(/_{2}/g, '_')
       .replace(/(^_|_$)/g, '');
 
-    return `documents/${tenantId}/${envelopeId}/${documentId}/${sanitizedFileName}`;
+    return `documents/${envelopeId}/${documentId}/${sanitizedFileName}`;
   }
 
   /**

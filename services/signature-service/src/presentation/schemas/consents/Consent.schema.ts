@@ -9,12 +9,6 @@ import { z, UuidV4 } from "@lawprotect/shared-ts";
 export const ConsentBody = z.object({
   envelopeId: UuidV4,
   signerId: UuidV4,
-  consent: z.boolean(),
-});
+  consent: z.boolean()});
 export type ConsentBody = z.infer<typeof ConsentBody>;
-
-
-
-
-
 

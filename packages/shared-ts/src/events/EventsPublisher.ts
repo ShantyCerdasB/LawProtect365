@@ -32,8 +32,7 @@ export const makeEventPublisher = (bus: EventBusPort, outbox: OutboxPort): Event
           type: r.type,
           occurredAt: r.occurredAt,
           payload: r.payload,
-          metadata: r.traceId ? { "x-trace-id": r.traceId } : undefined,
-        };
+          metadata: r.traceId ? { "x-trace-id": r.traceId } : undefined};
 
         try {
           // Port expects an array
@@ -43,6 +42,5 @@ export const makeEventPublisher = (bus: EventBusPort, outbox: OutboxPort): Event
           await outbox.markFailed(r.id, String((e as Error)?.message ?? e));
         }
       }
-    },
-  };
+    }};
 };

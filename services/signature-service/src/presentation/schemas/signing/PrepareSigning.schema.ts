@@ -12,19 +12,12 @@ import { EnvelopeIdSchema, PartyIdSchema } from "@/domain/value-objects/ids";
  */
 export const PrepareSigningBody = z.object({
   /** The signer/party ID */
-  signerId: PartyIdSchema,
-});
+  signerId: PartyIdSchema});
 
 /**
  * @description Path schema for prepare signing request
  */
 export const PrepareSigningParams = z.object({
   /** The envelope ID */
-  id: EnvelopeIdSchema,
-});
-
-
-
-
-
+  id: EnvelopeIdSchema});
 

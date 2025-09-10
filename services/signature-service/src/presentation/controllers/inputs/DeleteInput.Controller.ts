@@ -18,16 +18,7 @@ export const DeleteInputController = createCommandController<DeleteInputControll
   createDependencies: (c: any) => c.inputs.commandsPort,
   extractParams: (path: any) => ({
     envelopeId: path.envelopeId,
-    inputId: path.inputId,
-  }),
+    inputId: path.inputId}),
   responseType: "noContent",
-  includeActor: true,
-});
-
-
-
-
-
-
-
+  includeActor: true});
 

@@ -90,8 +90,7 @@ describe("validation/env", () => {
 
       // One issue should reference PROJECT_NAME
       const hasProjectIssue = issues.some(
-        (iss: any) => Array.isArray(iss?.path) && iss.path.includes("PROJECT_NAME"),
-      );
+        (iss: any) => Array.isArray(iss?.path) && iss.path.includes("PROJECT_NAME"));
       expect(hasProjectIssue).toBe(true);
 
       // Optional: code and status (if exposed by your AppError)

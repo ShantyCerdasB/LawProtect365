@@ -16,16 +16,14 @@ import {
   ensureTrailingSlash,
   stripTrailingSlash,
   isSubpath,
-  split,
-} from "../../src/utils/path.js";
+  split} from "../../src/utils/path.js";
 import {
   runDirnameTests,
   runBasenameTests,
   commonDirnameTestCases,
   commonBasenameTestCases,
   pathSpecificDirnameTestCases,
-  pathSpecificBasenameTestCases,
-} from "./test-helpers.js";
+  pathSpecificBasenameTestCases} from "./test-helpers.js";
 
 describe("utils/path", () => {
   describe("toPosix()", () => {

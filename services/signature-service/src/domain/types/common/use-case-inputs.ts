@@ -14,7 +14,7 @@ export type WithActor = { actor?: ActorInfo };
 export type WithMetadata = { metadata?: Record<string, unknown> };
 export type WithExpiresAtInput = { /** ISO-8601 string */ expiresAt?: string };
 
-export type TenantScoped   = { tenantId: string };
+export type TenantScoped   = { };
 export type EnvelopeScoped = { envelopeId: string };
 export type ConsentScoped  = { consentId: string };
 export type PartyScoped    = { partyId: string };
@@ -28,10 +28,4 @@ export type WithPagination = {
 
 /** ── NEW: reusable composites used by SubmitConsent ──────────────────────── */
 export type TenantEnvelopeConsentInput = TenantScoped & EnvelopeScoped & ConsentScoped;
-
-
-
-
-
-
 

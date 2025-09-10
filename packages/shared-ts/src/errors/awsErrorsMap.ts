@@ -5,16 +5,14 @@ import {
   InternalError,
   NotFoundError,
   ServiceUnavailableError,
-  TooManyRequestsError,
-} from "./errors.js";
+  TooManyRequestsError} from "./errors.js";
 import { ErrorCodes } from "./codes.js";
 import {
   extractAwsError,
   isAwsAccessDenied,
   isAwsRetryable,
   isAwsServiceUnavailable,
-  isAwsThrottling,
-} from "../aws/errors.js";
+  isAwsThrottling} from "../aws/errors.js";
 
 /**
  * Maps raw AWS SDK errors into shared {@link HttpError} subclasses with stable error codes.
@@ -80,8 +78,7 @@ const NAME_TO_ERROR: Record<string, ErrFactory> = {
 
   // Validation variants (DynamoDB, SSM, and other AWS services)
   ValidationException: mkBadRequest,
-  InvalidParameterException: mkBadRequest,
-};
+  InvalidParameterException: mkBadRequest};
 
 /**
  * Maps an unknown AWS SDK error to a shared `HttpError` instance using

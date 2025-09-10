@@ -5,7 +5,6 @@
  * Defines the contract for Party command operations.
  */
 
-import type { TenantId } from "../../../domain/value-objects/ids";
 import type { ActorContext } from "@lawprotect/shared-ts";
 import type { 
   PartyRow,
@@ -15,19 +14,13 @@ import type {
 } from "../../../domain/types/parties";
 
 // Define command types that extend controller inputs with actor context
-export interface CreatePartyCommand extends CreatePartyControllerInput {
-  tenantId: TenantId;
-  actor: ActorContext;
+export interface CreatePartyCommand extends CreatePartyControllerInput { actor: ActorContext;
 }
 
-export interface UpdatePartyCommand extends UpdatePartyControllerInput {
-  tenantId: TenantId;
-  actor: ActorContext;
+export interface UpdatePartyCommand extends UpdatePartyControllerInput { actor: ActorContext;
 }
 
-export interface DeletePartyCommand extends DeletePartyControllerInput {
-  tenantId: TenantId;
-  actor: ActorContext;
+export interface DeletePartyCommand extends DeletePartyControllerInput { actor: ActorContext;
 }
 
 // Define result types that are not in shared yet

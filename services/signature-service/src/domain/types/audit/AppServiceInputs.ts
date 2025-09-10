@@ -4,7 +4,7 @@
  * @description Defines the input and output contracts for audit application services
  */
 
-import type { TenantId, EnvelopeId, AuditEventId } from "@/domain/value-objects/index";
+import type { EnvelopeId, AuditEventId } from "@/domain/value-objects/index";
 import type { AuditEventType } from "@/domain/values/enums";
 import type { AuditActor } from "@lawprotect/shared-ts";
 import type { PaginationCursor } from "@/domain/value-objects";
@@ -15,7 +15,6 @@ import type { PaginationCursor } from "@/domain/value-objects";
  */
 export interface GetAuditEventAppInput {
   /** Tenant identifier */
-  readonly tenantId: TenantId;
   /** Audit event identifier */
   readonly eventId: AuditEventId;
 }
@@ -47,7 +46,6 @@ export interface GetAuditEventAppResult {
  */
 export interface GetAuditTrailAppInput {
   /** Tenant identifier */
-  readonly tenantId: TenantId;
   /** Envelope identifier */
   readonly envelopeId: EnvelopeId;
   /** Pagination cursor */
@@ -88,7 +86,6 @@ export interface GetAuditTrailAppResult {
  */
 export interface RecordAuditEventAppInput {
   /** Tenant identifier */
-  readonly tenantId: TenantId;
   /** Envelope identifier */
   readonly envelopeId: EnvelopeId;
   /** Event type */
@@ -117,9 +114,4 @@ export interface RecordAuditEventAppResult {
   /** Event metadata */
   readonly metadata?: Record<string, unknown>;
 }
-
-
-
-
-
 

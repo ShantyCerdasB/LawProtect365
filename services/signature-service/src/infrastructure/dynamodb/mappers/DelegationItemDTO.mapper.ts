@@ -15,7 +15,6 @@ export interface DelegationItemDTO {
   pk: string;
   sk: string;
   type: "Delegation";
-  tenantId: string;
   consentId: string;
   envelopeId: string;
   originalPartyId: string;
@@ -37,7 +36,6 @@ export interface DelegationItemDTO {
  */
 export const dtoToDelegationRow = (dto: DelegationItemDTO): DelegationRepoRow => ({
   delegationId: dto.sk.replace("DELEGATION#", ""),
-  tenantId: dto.tenantId,
   consentId: dto.consentId,
   envelopeId: dto.envelopeId,
   originalPartyId: dto.originalPartyId,
@@ -47,11 +45,5 @@ export const dtoToDelegationRow = (dto: DelegationItemDTO): DelegationRepoRow =>
   createdAt: asISO(dto.createdAt),
   updatedAt: asISO(dto.updatedAt),
   expiresAt: asISOOpt(dto.expiresAt),
-  metadata: dto.metadata,
-});
-
-
-
-
-
+  metadata: dto.metadata});
 

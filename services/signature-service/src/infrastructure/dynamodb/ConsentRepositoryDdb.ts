@@ -15,8 +15,7 @@ import {
   encodeCursor,   // opaque cursors (JsonValue)
   decodeCursor,   // opaque cursors (JsonValue)
   toJsonValue,    // safe coercion → JsonValue
-  ConflictError,
-} from "@lawprotect/shared-ts";
+  ConflictError} from "@lawprotect/shared-ts";
 import { badRequest } from "@/shared/errors";
 import type { DdbClientLike } from "@lawprotect/shared-ts";
 
@@ -30,8 +29,7 @@ import type {
   ConsentRepoCreateInput,
   ConsentRepoUpdateInput,
   ConsentRepoListInput,
-  ConsentRepoListOutput,
-} from "../../domain/types/consent";
+  ConsentRepoListOutput} from "../../domain/types/consent";
 import { ConsentItemDTO, ConsentItemDTOSchema } from "../../presentation/schemas/consents/ConsentItemDTO.schema";
 
 const pk = (envelopeId: string) => `ENVELOPE#${envelopeId}`;
@@ -64,15 +62,13 @@ export class ConsentRepositoryDdb {
     if (!CONSENT_TYPES.includes(input.consentType as typeof CONSENT_TYPES[number])) {
       throw badRequest(`Invalid consent type: ${input.consentType}`, "INPUT_TYPE_NOT_ALLOWED", {
         validTypes: CONSENT_TYPES,
-        providedType: input.consentType,
-      });
+        providedType: input.consentType});
     }
     
     if (!CONSENT_STATUSES.includes(input.status as typeof CONSENT_STATUSES[number])) {
       throw badRequest(`Invalid consent status: ${input.status}`, "INPUT_TYPE_NOT_ALLOWED", {
         validStatuses: CONSENT_STATUSES,
-        providedStatus: input.status,
-      });
+        providedStatus: input.status});
     }
 
     const now = input.createdAt ?? nowIso();
@@ -81,7 +77,6 @@ export class ConsentRepositoryDdb {
       sk: sk(input.consentId),
       type: "Consent",
       envelopeId: input.envelopeId,
-      tenantId: input.tenantId,
       consentId: input.consentId,
       partyId: input.partyId,
       consentType: input.consentType as typeof CONSENT_TYPES[number],
@@ -89,14 +84,12 @@ export class ConsentRepositoryDdb {
       createdAt: now,
       updatedAt: now,
       expiresAt: input.expiresAt,
-      metadata: input.metadata,
-    };
+      metadata: input.metadata};
     try {
       await this.ddb.put({
         TableName: this.tableName,
         Item: dto as Record<string, unknown>,
-        ConditionExpression: "attribute_not_exists(pk) AND attribute_not_exists(sk)",
-      });
+        ConditionExpression: "attribute_not_exists(pk) AND attribute_not_exists(sk)"});
       return dtoToConsentRow(dto);
     } catch (err: any) {
       if (String(err?.name) === "ConditionalCheckFailedException") {
@@ -116,8 +109,7 @@ export class ConsentRepositoryDdb {
       const out = await this.ddb.get({
         TableName: this.tableName,
         Key: { pk: pk(keys.envelopeId), sk: sk(keys.consentId) },
-        ConsistentRead: true,
-      });
+        ConsistentRead: true});
       if (!out.Item) return null;
       const dto = ConsentItemDTOSchema.parse(out.Item);
       return dtoToConsentRow(dto);
@@ -141,8 +133,7 @@ export class ConsentRepositoryDdb {
     if (typeof changes.status !== "undefined" && !CONSENT_STATUSES.includes(changes.status as typeof CONSENT_STATUSES[number])) {
       throw badRequest(`Invalid consent status: ${changes.status}`, "INPUT_TYPE_NOT_ALLOWED", {
         validStatuses: CONSENT_STATUSES,
-        providedStatus: changes.status,
-      });
+        providedStatus: changes.status});
     }
 
     try {
@@ -175,8 +166,7 @@ export class ConsentRepositoryDdb {
         ExpressionAttributeNames: names,
         ExpressionAttributeValues: values,
         ConditionExpression: "attribute_exists(pk) AND attribute_exists(sk)",
-        ReturnValues: "ALL_NEW",
-      });
+        ReturnValues: "ALL_NEW"});
 
       const dto = ConsentItemDTOSchema.parse(out.Attributes);
       return dtoToConsentRow(dto);
@@ -198,8 +188,7 @@ export class ConsentRepositoryDdb {
       await this.ddb.delete({
         TableName: this.tableName,
         Key: { pk: pk(keys.envelopeId), sk: sk(keys.consentId) },
-        ConditionExpression: "attribute_exists(pk) AND attribute_exists(sk)",
-      });
+        ConditionExpression: "attribute_exists(pk) AND attribute_exists(sk)"});
     } catch (err: any) {
       throw mapAwsError(err, "ConsentRepositoryDdb.delete");
     }
@@ -231,8 +220,7 @@ export class ConsentRepositoryDdb {
         FilterExpression: filters.length ? filters.join(" AND ") : undefined,
         Limit: Math.min(input.limit ?? 50, 100),
         ExclusiveStartKey: decodeCursor<Record<string, unknown>>(input.cursor),
-        ScanIndexForward: true,
-      });
+        ScanIndexForward: true});
 
       const items: ConsentRepoRow[] =
         (out?.Items ?? []).map(raw => dtoToConsentRow(ConsentItemDTOSchema.parse(raw)));
@@ -242,13 +230,10 @@ export class ConsentRepositoryDdb {
 
       return {
         items,
-        meta: { limit: Math.min(input.limit ?? 50, 100), nextCursor, total: undefined },
-      };
+        meta: { limit: Math.min(input.limit ?? 50, 100), nextCursor, total: undefined }};
     } catch (err: any) {
       throw mapAwsError(err, "ConsentRepositoryDdb.listByEnvelope");
     }
   }
 }
-
-
 

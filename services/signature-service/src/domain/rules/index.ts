@@ -7,5 +7,3 @@ export * as CancelDecline     from "./CancelDecline.rules";
 export * as Evidence          from "./Evidence.rules";
 export * as Download          from "./Download.rules";
 
-
-

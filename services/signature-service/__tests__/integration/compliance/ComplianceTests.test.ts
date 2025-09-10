@@ -26,10 +26,9 @@ import type { ApiResponseStructured } from '@lawprotect/shared-ts';
 mockAwsServices();
 
 describe('Legal Compliance (ESIGN Act, UETA)', () => {
-  let tenantId: string;
+  let container: any;
   let envelopeId: string;
   let partyId: string;
-  let documentId: string;
 
   const assertResponse = (response: any): ApiResponseStructured => {
     return response as ApiResponseStructured;
@@ -37,13 +36,13 @@ describe('Legal Compliance (ESIGN Act, UETA)', () => {
 
   beforeAll(async () => {
     getContainer();
-    tenantId = generateTestTenantId();
+     generateTestTenantId();
   });
 
   beforeEach(async () => {
     // Create envelope for each test
     const createEnvelopeResult = await CreateEnvelopeController(createApiGatewayEvent({
-      pathParameters: createTestPathParams({ tenantId }),
+      pathParameters: createTestPathParams({ }),
       body: {
         ownerId: '550e8400-e29b-41d4-a716-446655440000',
         name: 'Compliance Test Contract',
@@ -63,7 +62,7 @@ describe('Legal Compliance (ESIGN Act, UETA)', () => {
     const pdfDigest = calculatePdfDigest(testPdf);
 
     const createDocumentResult = await CreateDocumentController(createApiGatewayEvent({
-      pathParameters: { tenantId, id: envelopeId },
+      pathParameters: { id: envelopeId },
       body: {
         name: 'Compliance Test Document.pdf',
         contentType: 'application/pdf',
@@ -83,7 +82,7 @@ describe('Legal Compliance (ESIGN Act, UETA)', () => {
 
     // Create party
     const createPartyResult = await CreatePartyController(createApiGatewayEvent({
-      pathParameters: { tenantId, envelopeId },
+      pathParameters: { envelopeId },
       body: {
         name: 'Compliance Test Signer',
         email: 'compliance-signer@test.com',
@@ -104,7 +103,7 @@ describe('Legal Compliance (ESIGN Act, UETA)', () => {
     it('should record all consent events', async () => {
       // Invite party
       const invitePartiesResult = await InvitePartiesController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
           partyIds: [partyId],
           message: 'Please sign this document'
@@ -120,7 +119,7 @@ describe('Legal Compliance (ESIGN Act, UETA)', () => {
 
       // Record consent
       const recordConsentResult = await RecordConsentController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
           signerId: partyId,
           consentGiven: true,
@@ -143,7 +142,7 @@ describe('Legal Compliance (ESIGN Act, UETA)', () => {
     it('should maintain immutable audit trails', async () => {
       // Complete signing workflow
       const invitePartiesResult = await InvitePartiesController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
           partyIds: [partyId],
           message: 'Please sign this document'
@@ -158,7 +157,7 @@ describe('Legal Compliance (ESIGN Act, UETA)', () => {
       expect(inviteResponse.statusCode).toBe(200);
 
       const recordConsentResult = await RecordConsentController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
           signerId: partyId,
           consentGiven: true,
@@ -174,7 +173,7 @@ describe('Legal Compliance (ESIGN Act, UETA)', () => {
       expect(consentResponse.statusCode).toBe(200);
 
       const completeSigningResult = await CompleteSigningController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
           signerId: partyId,
           digest: 'test-digest',
@@ -199,7 +198,7 @@ describe('Legal Compliance (ESIGN Act, UETA)', () => {
     it('should validate signature authenticity', async () => {
       // Complete signing workflow
       const invitePartiesResult = await InvitePartiesController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
           partyIds: [partyId],
           message: 'Please sign this document'
@@ -214,7 +213,7 @@ describe('Legal Compliance (ESIGN Act, UETA)', () => {
       expect(inviteResponse.statusCode).toBe(200);
 
       const recordConsentResult = await RecordConsentController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
           signerId: partyId,
           consentGiven: true,
@@ -230,7 +229,7 @@ describe('Legal Compliance (ESIGN Act, UETA)', () => {
       expect(consentResponse.statusCode).toBe(200);
 
       const completeSigningResult = await CompleteSigningController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
           signerId: partyId,
           digest: 'test-digest',
@@ -258,7 +257,7 @@ describe('Legal Compliance (ESIGN Act, UETA)', () => {
       const pdfDigest = calculatePdfDigest(testPdf);
 
       const createDocumentResult = await CreateDocumentController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
           name: 'Integrity Test Document.pdf',
           contentType: 'application/pdf',
@@ -286,7 +285,7 @@ describe('Legal Compliance (ESIGN Act, UETA)', () => {
     it('should handle legal hold scenarios', async () => {
       // Create envelope for legal hold
       const createEnvelopeResult = await CreateEnvelopeController(createApiGatewayEvent({
-        pathParameters: createTestPathParams({ tenantId }),
+        pathParameters: createTestPathParams({ }),
         body: {
           ownerId: '550e8400-e29b-41d4-a716-446655440000',
           name: 'Legal Hold Contract',
@@ -309,7 +308,7 @@ describe('Legal Compliance (ESIGN Act, UETA)', () => {
     it('should support compliance reporting', async () => {
       // Complete signing workflow for compliance reporting
       const invitePartiesResult = await InvitePartiesController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
           partyIds: [partyId],
           message: 'Please sign this document'
@@ -324,7 +323,7 @@ describe('Legal Compliance (ESIGN Act, UETA)', () => {
       expect(inviteResponse.statusCode).toBe(200);
 
       const recordConsentResult = await RecordConsentController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
           signerId: partyId,
           consentGiven: true,
@@ -340,7 +339,7 @@ describe('Legal Compliance (ESIGN Act, UETA)', () => {
       expect(consentResponse.statusCode).toBe(200);
 
       const completeSigningResult = await CompleteSigningController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
           signerId: partyId,
           digest: 'test-digest',
@@ -367,7 +366,7 @@ describe('Legal Compliance (ESIGN Act, UETA)', () => {
     it('should maintain complete audit trail', async () => {
       // Complete signing workflow
       const invitePartiesResult = await InvitePartiesController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
           partyIds: [partyId],
           message: 'Please sign this document'
@@ -382,7 +381,7 @@ describe('Legal Compliance (ESIGN Act, UETA)', () => {
       expect(inviteResponse.statusCode).toBe(200);
 
       const recordConsentResult = await RecordConsentController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
           signerId: partyId,
           consentGiven: true,
@@ -398,7 +397,7 @@ describe('Legal Compliance (ESIGN Act, UETA)', () => {
       expect(consentResponse.statusCode).toBe(200);
 
       const completeSigningResult = await CompleteSigningController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
           signerId: partyId,
           digest: 'test-digest',
@@ -423,7 +422,7 @@ describe('Legal Compliance (ESIGN Act, UETA)', () => {
     it('should maintain audit trail with timestamps', async () => {
       // Complete signing workflow
       const invitePartiesResult = await InvitePartiesController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
           partyIds: [partyId],
           message: 'Please sign this document'
@@ -438,7 +437,7 @@ describe('Legal Compliance (ESIGN Act, UETA)', () => {
       expect(inviteResponse.statusCode).toBe(200);
 
       const recordConsentResult = await RecordConsentController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
           signerId: partyId,
           consentGiven: true,
@@ -454,7 +453,7 @@ describe('Legal Compliance (ESIGN Act, UETA)', () => {
       expect(consentResponse.statusCode).toBe(200);
 
       const completeSigningResult = await CompleteSigningController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
           signerId: partyId,
           digest: 'test-digest',
@@ -479,7 +478,7 @@ describe('Legal Compliance (ESIGN Act, UETA)', () => {
     it('should maintain audit trail with user context', async () => {
       // Complete signing workflow
       const invitePartiesResult = await InvitePartiesController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
           partyIds: [partyId],
           message: 'Please sign this document'
@@ -494,7 +493,7 @@ describe('Legal Compliance (ESIGN Act, UETA)', () => {
       expect(inviteResponse.statusCode).toBe(200);
 
       const recordConsentResult = await RecordConsentController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
           signerId: partyId,
           consentGiven: true,
@@ -510,7 +509,7 @@ describe('Legal Compliance (ESIGN Act, UETA)', () => {
       expect(consentResponse.statusCode).toBe(200);
 
       const completeSigningResult = await CompleteSigningController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
           signerId: partyId,
           digest: 'test-digest',
@@ -537,7 +536,7 @@ describe('Legal Compliance (ESIGN Act, UETA)', () => {
     it('should handle data retention requirements', async () => {
       // Create envelope for data retention testing
       const createEnvelopeResult = await CreateEnvelopeController(createApiGatewayEvent({
-        pathParameters: createTestPathParams({ tenantId }),
+        pathParameters: createTestPathParams({ }),
         body: {
           ownerId: '550e8400-e29b-41d4-a716-446655440000',
           name: 'Data Retention Contract',
@@ -560,7 +559,7 @@ describe('Legal Compliance (ESIGN Act, UETA)', () => {
     it('should handle privacy requirements', async () => {
       // Create envelope for privacy testing
       const createEnvelopeResult = await CreateEnvelopeController(createApiGatewayEvent({
-        pathParameters: createTestPathParams({ tenantId }),
+        pathParameters: createTestPathParams({ }),
         body: {
           ownerId: '550e8400-e29b-41d4-a716-446655440000',
           name: 'Privacy Contract',

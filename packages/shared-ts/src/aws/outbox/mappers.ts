@@ -11,22 +11,30 @@ import { OUTBOX_PARTITION_KEY, OUTBOX_SORT_KEY_PREFIX, OUTBOX_STATUS_PK_PREFIX, 
 
 export const mapCreateInputToDto = (input: AwsOutboxRepoCreateInput): OutboxItemDTO => {
   const now = nowIso();
-  return {
+  const item: Record<string, any> = {
     pk: OUTBOX_PARTITION_KEY,
     sk: `${OUTBOX_SORT_KEY_PREFIX}${input.id}`,
     type: "Outbox",
     id: input.id,
     eventType: input.eventType,
-    payload: input.payload,
     occurredAt: input.occurredAt,
     status: OUTBOX_STATUSES.PENDING,
     gsi1pk: `${OUTBOX_STATUS_PK_PREFIX}${OUTBOX_STATUSES.PENDING}`,
     gsi1sk: `${input.occurredAt}#${input.id}`,
     attempts: 0,
-    traceId: input.traceId,
     createdAt: now,
-    updatedAt: now,
+    updatedAt: now
   };
+
+  // Only add optional fields if they have values
+  if (input.payload) {
+    item.payload = input.payload;
+  }
+  if (input.traceId) {
+    item.traceId = input.traceId;
+  }
+
+  return item as OutboxItemDTO;
 };
 
 export const mapDtoToRecord = (dto: OutboxItemDTO): OutboxRecord => {
@@ -38,6 +46,5 @@ export const mapDtoToRecord = (dto: OutboxItemDTO): OutboxRecord => {
     status: dto.status as "pending" | "dispatched" | "failed",
     attempts: dto.attempts,
     lastError: dto.lastError,
-    traceId: dto.traceId,
-  };
+    traceId: dto.traceId};
 };

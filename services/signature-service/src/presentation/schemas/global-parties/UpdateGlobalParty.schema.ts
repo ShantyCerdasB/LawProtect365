@@ -12,8 +12,7 @@ import { GlobalPartyCommonFields } from "./GlobalPartyCommonSchemas";
  * @description Path parameters schema for updating a Global Party.
  */
 export const UpdateGlobalPartyParams = z.object({
-  partyId: z.string().min(1, "Party ID is required").max(255, "Party ID too long"),
-});
+  partyId: z.string().min(1, "Party ID is required").max(255, "Party ID too long")});
 
 /**
  * @description Request body schema for updating a Global Party.
@@ -30,8 +29,7 @@ export const UpdateGlobalPartyBody = z.object({
   tags: GlobalPartyCommonFields.tags,
   attributes: GlobalPartyCommonFields.attributes,
   preferences: GlobalPartyCommonFields.preferences,
-  notificationPreferences: GlobalPartyCommonFields.notificationPreferences,
-});
+  notificationPreferences: GlobalPartyCommonFields.notificationPreferences});
 
 /**
  * @description Type for UpdateGlobalParty path parameters.
@@ -42,10 +40,4 @@ export type UpdateGlobalPartyParams = z.infer<typeof UpdateGlobalPartyParams>;
  * @description Type for UpdateGlobalParty request body.
  */
 export type UpdateGlobalPartyBody = z.infer<typeof UpdateGlobalPartyBody>;
-
-
-
-
-
-
 

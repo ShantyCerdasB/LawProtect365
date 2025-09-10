@@ -37,8 +37,3 @@ export interface OutboxRepoCreateInput {
 
 // Note: OutboxRecord is imported from @lawprotect/shared-ts to ensure consistency
 
-
-
-
-
-

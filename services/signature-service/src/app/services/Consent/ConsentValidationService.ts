@@ -29,10 +29,8 @@ export class ConsentValidationService {
   ): Promise<void> {
     // 1. Check if consent exists and is in a delegatable state
     const consent = await this.consentQueries.getById({
-      tenantId: input.tenantId,
       envelopeId: input.envelopeId,
-      consentId: input.consentId,
-    });
+      consentId: input.consentId});
 
     if (!consent) {
       throw new NotFoundError(`Consent not found: ${input.consentId}`);

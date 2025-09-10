@@ -27,12 +27,10 @@ export class RecordAuditEventAppService {
    */
   async execute(input: RecordAuditEventAppInput): Promise<RecordAuditEventAppResult> {
     const result = await this.auditCommands.recordAuditEvent({
-      tenantId: input.tenantId,
       envelopeId: input.envelopeId,
       type: input.type,
       actor: input.actor,
-      metadata: input.metadata,
-    });
+      metadata: input.metadata});
 
     return {
       id: result.id,
@@ -40,7 +38,6 @@ export class RecordAuditEventAppService {
       at: result.occurredAt,
       type: result.type,
       actor: result.actor ? formatActor(result.actor) : undefined,
-      metadata: result.metadata,
-    };
+      metadata: result.metadata};
   }
 };

@@ -12,20 +12,13 @@ export const CompleteSigningBody = z
       value: z
         .string()
         .min(1)
-        .regex(/^[A-Za-z0-9_-]+$/, "Expected base64url without padding"),
-    }),
+        .regex(/^[A-Za-z0-9_-]+$/, "Expected base64url without padding")}),
 
     algorithm: z.enum(KMS_ALGORITHMS), // ✅ sin corchetes extra
 
-    keyId: z.string().min(1).optional(),
-    otpCode: z.string().min(1).optional(),
+    keyId: z.string().min(1).optional()
   })
   .strict();
 
 export type CompleteSigningBody = z.infer<typeof CompleteSigningBody>;
-
-
-
-
-
 

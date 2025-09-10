@@ -8,7 +8,6 @@ import { z } from "zod";
 import { EnvelopeIdValidationSchema } from "@/domain/value-objects/ids";
 import { AuditEventTypeValidationSchema } from "@/domain/value-objects/audit";
 
-
 /**
  * @description Body schema for recording audit event
  */
@@ -24,19 +23,12 @@ export const RecordAuditEventBodySchema = z.object({
     /** User email */
     email: z.string().email().optional(),
     /** User role */
-    role: z.string().optional(),
-  }).optional(),
+    role: z.string().optional()}).optional(),
   /** Event metadata (optional) */
-  metadata: z.record(z.unknown()).optional(),
-});
+  metadata: z.record(z.unknown()).optional()});
 
 /**
  * @description Type for body parameters
  */
 export type RecordAuditEventBody = z.infer<typeof RecordAuditEventBodySchema>;
-
-
-
-
-
 

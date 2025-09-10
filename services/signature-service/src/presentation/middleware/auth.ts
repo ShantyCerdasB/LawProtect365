@@ -15,7 +15,6 @@
 import type { ApiEvent } from "@lawprotect/shared-ts";
 import { getHeaders } from "@lawprotect/shared-ts";
 
-// tenantFromCtx moved to @lawprotect/shared-ts
 
 /**
  * @description Extracts client IP address from request headers and API Gateway context.
@@ -37,9 +36,4 @@ export const clientIp = (evt: ApiEvent): string | undefined => {
 // actorFromCtx moved to @lawprotect/shared-ts
 
 // requireRequestToken moved to @lawprotect/shared-ts as requireHeaderToken
-
-
-
-
-
 

@@ -16,8 +16,7 @@ jest.mock('../../../src/index.js', () => ({
   shouldRetry: jest.fn(() => ({ retry: false, delayMs: 0 })),
   isAwsRetryable: jest.fn(() => false),
   pickMessageType: jest.fn(() => 'RAW'),
-  sleep: jest.fn(() => Promise.resolve()),
-}));
+  sleep: jest.fn(() => Promise.resolve())}));
 
 describe('KmsSigner', () => {
   let mockKmsClient: any;
@@ -26,14 +25,12 @@ describe('KmsSigner', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockKmsClient = {
-      send: jest.fn(),
-    };
+      send: jest.fn()};
     
     kmsSigner = new KmsSigner(mockKmsClient, {
       defaultKeyId: 'test-key-id',
       defaultSigningAlgorithm: 'RSASSA_PSS_SHA_256',
-      maxAttempts: 3,
-    });
+      maxAttempts: 3});
   });
 
   describe('constructor', () => {
@@ -46,8 +43,7 @@ describe('KmsSigner', () => {
       const options = {
         defaultKeyId: 'custom-key',
         defaultSigningAlgorithm: 'ECDSA_SHA_256' as const,
-        maxAttempts: 5,
-      };
+        maxAttempts: 5};
       const signer = new KmsSigner(mockKmsClient, options);
       expect(signer).toBeInstanceOf(KmsSigner);
     });
@@ -55,8 +51,7 @@ describe('KmsSigner', () => {
     it('should handle back-compat options', () => {
       const options = {
         signerKeyId: 'back-compat-key',
-        signingAlgorithm: 'ECDSA_SHA_384' as const,
-      };
+        signingAlgorithm: 'ECDSA_SHA_384' as const};
       const signer = new KmsSigner(mockKmsClient, options);
       expect(signer).toBeInstanceOf(KmsSigner);
     });
@@ -68,12 +63,10 @@ describe('KmsSigner', () => {
 
     it('should encrypt successfully with default key', async () => {
       mockKmsClient.send.mockResolvedValueOnce({
-        CiphertextBlob: mockCiphertext,
-      });
+        CiphertextBlob: mockCiphertext});
 
       const result = await kmsSigner.encrypt({
-        plaintext: mockPlaintext,
-      } as any);
+        plaintext: mockPlaintext} as any);
 
       expect(result).toEqual({ ciphertext: mockCiphertext });
       expect(mockKmsClient.send).toHaveBeenCalledWith(
@@ -86,14 +79,12 @@ describe('KmsSigner', () => {
       const context = { purpose: 'test' };
       
       mockKmsClient.send.mockResolvedValueOnce({
-        CiphertextBlob: mockCiphertext,
-      });
+        CiphertextBlob: mockCiphertext});
 
       const result = await kmsSigner.encrypt({
         keyId: customKeyId,
         plaintext: mockPlaintext,
-        context,
-      });
+        context});
 
       expect(result).toEqual({ ciphertext: mockCiphertext });
       expect(mockKmsClient.send).toHaveBeenCalledWith(
@@ -105,18 +96,15 @@ describe('KmsSigner', () => {
       const signerWithoutDefaultKey = new KmsSigner(mockKmsClient);
       
       await expect(signerWithoutDefaultKey.encrypt({
-        plaintext: mockPlaintext,
-      } as any)).rejects.toThrow(BadRequestError);
+        plaintext: mockPlaintext} as any)).rejects.toThrow(BadRequestError);
     });
 
     it('should throw InternalError when KMS returns empty ciphertext', async () => {
       mockKmsClient.send.mockResolvedValueOnce({
-        CiphertextBlob: undefined,
-      });
+        CiphertextBlob: undefined});
 
       await expect(kmsSigner.encrypt({
-        plaintext: mockPlaintext,
-      } as any)).rejects.toThrow(InternalError);
+        plaintext: mockPlaintext} as any)).rejects.toThrow(InternalError);
     });
 
     it('should handle AWS errors', async () => {
@@ -124,8 +112,7 @@ describe('KmsSigner', () => {
       mockKmsClient.send.mockRejectedValueOnce(awsError);
 
       await expect(kmsSigner.encrypt({
-        plaintext: mockPlaintext,
-      } as any)).rejects.toThrow(awsError);
+        plaintext: mockPlaintext} as any)).rejects.toThrow(awsError);
     });
   });
 
@@ -135,12 +122,10 @@ describe('KmsSigner', () => {
 
     it('should decrypt successfully', async () => {
       mockKmsClient.send.mockResolvedValueOnce({
-        Plaintext: mockPlaintext,
-      });
+        Plaintext: mockPlaintext});
 
       const result = await kmsSigner.decrypt({
-        ciphertext: mockCiphertext,
-      });
+        ciphertext: mockCiphertext});
 
       expect(result).toEqual({ plaintext: mockPlaintext });
       expect(mockKmsClient.send).toHaveBeenCalledWith(
@@ -152,13 +137,11 @@ describe('KmsSigner', () => {
       const context = { purpose: 'test' };
       
       mockKmsClient.send.mockResolvedValueOnce({
-        Plaintext: mockPlaintext,
-      });
+        Plaintext: mockPlaintext});
 
       const result = await kmsSigner.decrypt({
         ciphertext: mockCiphertext,
-        context,
-      });
+        context});
 
       expect(result).toEqual({ plaintext: mockPlaintext });
       expect(mockKmsClient.send).toHaveBeenCalledWith(
@@ -168,12 +151,10 @@ describe('KmsSigner', () => {
 
     it('should throw InternalError when KMS returns empty plaintext', async () => {
       mockKmsClient.send.mockResolvedValueOnce({
-        Plaintext: undefined,
-      });
+        Plaintext: undefined});
 
       await expect(kmsSigner.decrypt({
-        ciphertext: mockCiphertext,
-      })).rejects.toThrow(InternalError);
+        ciphertext: mockCiphertext})).rejects.toThrow(InternalError);
     });
 
     it('should handle AWS errors', async () => {
@@ -181,8 +162,7 @@ describe('KmsSigner', () => {
       mockKmsClient.send.mockRejectedValueOnce(awsError);
 
       await expect(kmsSigner.decrypt({
-        ciphertext: mockCiphertext,
-      })).rejects.toThrow(awsError);
+        ciphertext: mockCiphertext})).rejects.toThrow(awsError);
     });
   });
 
@@ -192,12 +172,10 @@ describe('KmsSigner', () => {
 
     it('should sign successfully with default key and algorithm', async () => {
       mockKmsClient.send.mockResolvedValueOnce({
-        Signature: mockSignature,
-      });
+        Signature: mockSignature});
 
       const result = await kmsSigner.sign({
-        message: mockMessage,
-      } as any);
+        message: mockMessage} as any);
 
       expect(result).toEqual({ signature: mockSignature });
       expect(mockKmsClient.send).toHaveBeenCalledWith(
@@ -210,14 +188,12 @@ describe('KmsSigner', () => {
       const customAlgorithm = 'ECDSA_SHA_256';
       
       mockKmsClient.send.mockResolvedValueOnce({
-        Signature: mockSignature,
-      });
+        Signature: mockSignature});
 
       const result = await kmsSigner.sign({
         keyId: customKeyId,
         signingAlgorithm: customAlgorithm,
-        message: mockMessage,
-      });
+        message: mockMessage});
 
       expect(result).toEqual({ signature: mockSignature });
       expect(mockKmsClient.send).toHaveBeenCalledWith(
@@ -229,18 +205,15 @@ describe('KmsSigner', () => {
       const signerWithoutDefaultKey = new KmsSigner(mockKmsClient);
       
       await expect(signerWithoutDefaultKey.sign({
-        message: mockMessage,
-      } as any)).rejects.toThrow(BadRequestError);
+        message: mockMessage} as any)).rejects.toThrow(BadRequestError);
     });
 
     it('should throw InternalError when KMS returns empty signature', async () => {
       mockKmsClient.send.mockResolvedValueOnce({
-        Signature: undefined,
-      });
+        Signature: undefined});
 
       await expect(kmsSigner.sign({
-        message: mockMessage,
-      } as any)).rejects.toThrow(InternalError);
+        message: mockMessage} as any)).rejects.toThrow(InternalError);
     });
 
     it('should handle AWS errors', async () => {
@@ -248,8 +221,7 @@ describe('KmsSigner', () => {
       mockKmsClient.send.mockRejectedValueOnce(awsError);
 
       await expect(kmsSigner.sign({
-        message: mockMessage,
-      } as any)).rejects.toThrow(awsError);
+        message: mockMessage} as any)).rejects.toThrow(awsError);
     });
   });
 
@@ -259,13 +231,11 @@ describe('KmsSigner', () => {
 
     it('should verify successfully with valid signature', async () => {
       mockKmsClient.send.mockResolvedValueOnce({
-        SignatureValid: true,
-      });
+        SignatureValid: true});
 
       const result = await kmsSigner.verify({
         message: mockMessage,
-        signature: mockSignature,
-      } as any);
+        signature: mockSignature} as any);
 
       expect(result).toEqual({ valid: true });
       expect(mockKmsClient.send).toHaveBeenCalledWith(
@@ -275,13 +245,11 @@ describe('KmsSigner', () => {
 
     it('should verify with invalid signature', async () => {
       mockKmsClient.send.mockResolvedValueOnce({
-        SignatureValid: false,
-      });
+        SignatureValid: false});
 
       const result = await kmsSigner.verify({
         message: mockMessage,
-        signature: mockSignature,
-      } as any);
+        signature: mockSignature} as any);
 
       expect(result).toEqual({ valid: false });
     });
@@ -291,15 +259,13 @@ describe('KmsSigner', () => {
       const customAlgorithm = 'ECDSA_SHA_256';
       
       mockKmsClient.send.mockResolvedValueOnce({
-        SignatureValid: true,
-      });
+        SignatureValid: true});
 
       const result = await kmsSigner.verify({
         keyId: customKeyId,
         signingAlgorithm: customAlgorithm,
         message: mockMessage,
-        signature: mockSignature,
-      });
+        signature: mockSignature});
 
       expect(result).toEqual({ valid: true });
       expect(mockKmsClient.send).toHaveBeenCalledWith(
@@ -312,8 +278,7 @@ describe('KmsSigner', () => {
       
       await expect(signerWithoutDefaultKey.verify({
         message: mockMessage,
-        signature: mockSignature,
-      } as any)).rejects.toThrow(BadRequestError);
+        signature: mockSignature} as any)).rejects.toThrow(BadRequestError);
     });
 
     it('should handle AWS errors', async () => {
@@ -322,8 +287,7 @@ describe('KmsSigner', () => {
 
       await expect(kmsSigner.verify({
         message: mockMessage,
-        signature: mockSignature,
-      } as any)).rejects.toThrow(awsError);
+        signature: mockSignature} as any)).rejects.toThrow(awsError);
     });
   });
 
@@ -344,8 +308,7 @@ describe('KmsSigner', () => {
         .mockResolvedValueOnce({ CiphertextBlob: new Uint8Array([1, 2, 3]) });
 
       const result = await kmsSigner.encrypt({
-        plaintext: new Uint8Array([1, 2, 3]),
-      } as any);
+        plaintext: new Uint8Array([1, 2, 3])} as any);
 
       expect(result).toEqual({ ciphertext: new Uint8Array([1, 2, 3]) });
       expect(mockKmsClient.send).toHaveBeenCalledTimes(2);
@@ -362,8 +325,7 @@ describe('KmsSigner', () => {
       mockKmsClient.send.mockRejectedValueOnce(awsError);
 
       await expect(kmsSigner.encrypt({
-        plaintext: new Uint8Array([1, 2, 3]),
-      } as any)).rejects.toThrow(awsError);
+        plaintext: new Uint8Array([1, 2, 3])} as any)).rejects.toThrow(awsError);
       
       expect(mockKmsClient.send).toHaveBeenCalledTimes(1);
     });

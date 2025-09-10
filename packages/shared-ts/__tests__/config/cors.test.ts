@@ -19,8 +19,7 @@ describe('buildDefaultCors', () => {
       allowHeaders: HEADERS,
       exposeHeaders: EXPOSE,
       allowCredentials: false,
-      maxAgeSeconds: 600,
-    });
+      maxAgeSeconds: 600});
   });
 
   it('acepta un array de origins y allowCredentials=true', () => {

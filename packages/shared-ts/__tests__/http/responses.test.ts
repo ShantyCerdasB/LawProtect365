@@ -13,8 +13,7 @@ import {
   unprocessable,
   tooManyRequests,
   internalError,
-  notImplemented,
-} from '../../src/http/responses.js';
+  notImplemented} from '../../src/http/responses.js';
 import { HttpStatus } from '../../src/http/httpTypes.js';
 
 describe('json', () => {
@@ -25,8 +24,7 @@ describe('json', () => {
     expect(response).toEqual({
       statusCode: 200,
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify(data),
-    });
+      body: JSON.stringify(data)});
   });
 
   it('should create JSON response with status code and no data', () => {
@@ -35,8 +33,7 @@ describe('json', () => {
     expect(response).toEqual({
       statusCode: 204,
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
-      body: '',
-    });
+      body: ''});
   });
 
   it('should create JSON response with custom headers', () => {
@@ -48,10 +45,8 @@ describe('json', () => {
       statusCode: 200,
       headers: {
         'Content-Type': 'application/json; charset=utf-8',
-        'X-Custom-Header': 'custom-value',
-      },
-      body: JSON.stringify(data),
-    });
+        'X-Custom-Header': 'custom-value'},
+      body: JSON.stringify(data)});
   });
 
   it('should handle undefined data', () => {
@@ -60,8 +55,7 @@ describe('json', () => {
     expect(response).toEqual({
       statusCode: 200,
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
-      body: '',
-    });
+      body: ''});
   });
 
   it('should handle null data', () => {
@@ -70,8 +64,7 @@ describe('json', () => {
     expect(response).toEqual({
       statusCode: 200,
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
-      body: 'null',
-    });
+      body: 'null'});
   });
 });
 
@@ -83,8 +76,7 @@ describe('ok', () => {
     expect(response).toEqual({
       statusCode: 200,
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify(data),
-    });
+      body: JSON.stringify(data)});
   });
 
   it('should create 200 OK response without data', () => {
@@ -93,8 +85,7 @@ describe('ok', () => {
     expect(response).toEqual({
       statusCode: 200,
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
-      body: '',
-    });
+      body: ''});
   });
 
   it('should create 200 OK response with custom headers', () => {
@@ -106,10 +97,8 @@ describe('ok', () => {
       statusCode: 200,
       headers: {
         'Content-Type': 'application/json; charset=utf-8',
-        'X-Custom-Header': 'custom-value',
-      },
-      body: JSON.stringify(data),
-    });
+        'X-Custom-Header': 'custom-value'},
+      body: JSON.stringify(data)});
   });
 });
 
@@ -121,8 +110,7 @@ describe('created', () => {
     expect(response).toEqual({
       statusCode: 201,
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify(data),
-    });
+      body: JSON.stringify(data)});
   });
 
   it('should create 201 Created response without data', () => {
@@ -131,8 +119,7 @@ describe('created', () => {
     expect(response).toEqual({
       statusCode: 201,
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
-      body: '',
-    });
+      body: ''});
   });
 
   it('should create 201 Created response with custom headers', () => {
@@ -144,10 +131,8 @@ describe('created', () => {
       statusCode: 201,
       headers: {
         'Content-Type': 'application/json; charset=utf-8',
-        'Location': '/api/users/123',
-      },
-      body: JSON.stringify(data),
-    });
+        'Location': '/api/users/123'},
+      body: JSON.stringify(data)});
   });
 });
 
@@ -158,8 +143,7 @@ describe('noContent', () => {
     expect(response).toEqual({
       statusCode: 204,
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
-      body: '',
-    });
+      body: ''});
   });
 
   it('should create 204 No Content response with custom headers', () => {
@@ -170,10 +154,8 @@ describe('noContent', () => {
       statusCode: 204,
       headers: {
         'Content-Type': 'application/json; charset=utf-8',
-        'X-Custom-Header': 'custom-value',
-      },
-      body: '',
-    });
+        'X-Custom-Header': 'custom-value'},
+      body: ''});
   });
 });
 
@@ -185,8 +167,7 @@ describe('accepted', () => {
     expect(response).toEqual({
       statusCode: 202,
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify(data),
-    });
+      body: JSON.stringify(data)});
   });
 
   it('should create 202 Accepted response without data', () => {
@@ -195,8 +176,7 @@ describe('accepted', () => {
     expect(response).toEqual({
       statusCode: 202,
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
-      body: '',
-    });
+      body: ''});
   });
 
   it('should create 202 Accepted response with custom headers', () => {
@@ -208,10 +188,8 @@ describe('accepted', () => {
       statusCode: 202,
       headers: {
         'Content-Type': 'application/json; charset=utf-8',
-        'X-Custom-Header': 'custom-value',
-      },
-      body: JSON.stringify(data),
-    });
+        'X-Custom-Header': 'custom-value'},
+      body: JSON.stringify(data)});
   });
 });
 
@@ -222,8 +200,7 @@ describe('badRequest', () => {
     expect(response).toEqual({
       statusCode: 400,
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({ error: 'BadRequest', message: 'Bad Request' }),
-    });
+      body: JSON.stringify({ error: 'BadRequest', message: 'Bad Request' })});
   });
 
   it('should create 400 Bad Request response with custom message', () => {
@@ -232,8 +209,7 @@ describe('badRequest', () => {
     expect(response).toEqual({
       statusCode: 400,
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({ error: 'BadRequest', message: 'Invalid input' }),
-    });
+      body: JSON.stringify({ error: 'BadRequest', message: 'Invalid input' })});
   });
 
   it('should create 400 Bad Request response with message and details', () => {
@@ -243,8 +219,7 @@ describe('badRequest', () => {
     expect(response).toEqual({
       statusCode: 400,
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({ error: 'BadRequest', message: 'Invalid input', details }),
-    });
+      body: JSON.stringify({ error: 'BadRequest', message: 'Invalid input', details })});
   });
 });
 
@@ -255,8 +230,7 @@ describe('unauthorized', () => {
     expect(response).toEqual({
       statusCode: 401,
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({ error: 'Unauthorized', message: 'Unauthorized' }),
-    });
+      body: JSON.stringify({ error: 'Unauthorized', message: 'Unauthorized' })});
   });
 
   it('should create 401 Unauthorized response with custom message', () => {
@@ -265,8 +239,7 @@ describe('unauthorized', () => {
     expect(response).toEqual({
       statusCode: 401,
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({ error: 'Unauthorized', message: 'Invalid credentials' }),
-    });
+      body: JSON.stringify({ error: 'Unauthorized', message: 'Invalid credentials' })});
   });
 });
 
@@ -277,8 +250,7 @@ describe('forbidden', () => {
     expect(response).toEqual({
       statusCode: 403,
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({ error: 'Forbidden', message: 'Forbidden' }),
-    });
+      body: JSON.stringify({ error: 'Forbidden', message: 'Forbidden' })});
   });
 
   it('should create 403 Forbidden response with custom message', () => {
@@ -287,8 +259,7 @@ describe('forbidden', () => {
     expect(response).toEqual({
       statusCode: 403,
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({ error: 'Forbidden', message: 'Access denied' }),
-    });
+      body: JSON.stringify({ error: 'Forbidden', message: 'Access denied' })});
   });
 });
 
@@ -299,8 +270,7 @@ describe('notFound', () => {
     expect(response).toEqual({
       statusCode: 404,
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({ error: 'NotFound', message: 'Not Found' }),
-    });
+      body: JSON.stringify({ error: 'NotFound', message: 'Not Found' })});
   });
 
   it('should create 404 Not Found response with custom message', () => {
@@ -309,8 +279,7 @@ describe('notFound', () => {
     expect(response).toEqual({
       statusCode: 404,
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({ error: 'NotFound', message: 'Resource not found' }),
-    });
+      body: JSON.stringify({ error: 'NotFound', message: 'Resource not found' })});
   });
 });
 
@@ -321,8 +290,7 @@ describe('conflict', () => {
     expect(response).toEqual({
       statusCode: 409,
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({ error: 'Conflict', message: 'Conflict' }),
-    });
+      body: JSON.stringify({ error: 'Conflict', message: 'Conflict' })});
   });
 
   it('should create 409 Conflict response with custom message', () => {
@@ -331,8 +299,7 @@ describe('conflict', () => {
     expect(response).toEqual({
       statusCode: 409,
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({ error: 'Conflict', message: 'Resource already exists' }),
-    });
+      body: JSON.stringify({ error: 'Conflict', message: 'Resource already exists' })});
   });
 });
 
@@ -343,8 +310,7 @@ describe('unsupportedMedia', () => {
     expect(response).toEqual({
       statusCode: 415,
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({ error: 'UnsupportedMediaType', message: 'Unsupported Media Type' }),
-    });
+      body: JSON.stringify({ error: 'UnsupportedMediaType', message: 'Unsupported Media Type' })});
   });
 
   it('should create 415 Unsupported Media Type response with custom message', () => {
@@ -353,8 +319,7 @@ describe('unsupportedMedia', () => {
     expect(response).toEqual({
       statusCode: 415,
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({ error: 'UnsupportedMediaType', message: 'Only JSON is supported' }),
-    });
+      body: JSON.stringify({ error: 'UnsupportedMediaType', message: 'Only JSON is supported' })});
   });
 });
 
@@ -365,8 +330,7 @@ describe('unprocessable', () => {
     expect(response).toEqual({
       statusCode: 422,
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({ error: 'UnprocessableEntity', message: 'Unprocessable Entity' }),
-    });
+      body: JSON.stringify({ error: 'UnprocessableEntity', message: 'Unprocessable Entity' })});
   });
 
   it('should create 422 Unprocessable Entity response with custom message', () => {
@@ -375,8 +339,7 @@ describe('unprocessable', () => {
     expect(response).toEqual({
       statusCode: 422,
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({ error: 'UnprocessableEntity', message: 'Validation failed' }),
-    });
+      body: JSON.stringify({ error: 'UnprocessableEntity', message: 'Validation failed' })});
   });
 
   it('should create 422 Unprocessable Entity response with message and details', () => {
@@ -386,8 +349,7 @@ describe('unprocessable', () => {
     expect(response).toEqual({
       statusCode: 422,
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({ error: 'UnprocessableEntity', message: 'Validation failed', details }),
-    });
+      body: JSON.stringify({ error: 'UnprocessableEntity', message: 'Validation failed', details })});
   });
 });
 
@@ -398,8 +360,7 @@ describe('tooManyRequests', () => {
     expect(response).toEqual({
       statusCode: 429,
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({ error: 'TooManyRequests', message: 'Too Many Requests' }),
-    });
+      body: JSON.stringify({ error: 'TooManyRequests', message: 'Too Many Requests' })});
   });
 
   it('should create 429 Too Many Requests response with custom message', () => {
@@ -408,8 +369,7 @@ describe('tooManyRequests', () => {
     expect(response).toEqual({
       statusCode: 429,
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({ error: 'TooManyRequests', message: 'Rate limit exceeded' }),
-    });
+      body: JSON.stringify({ error: 'TooManyRequests', message: 'Rate limit exceeded' })});
   });
 });
 
@@ -420,8 +380,7 @@ describe('internalError', () => {
     expect(response).toEqual({
       statusCode: 500,
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({ error: 'InternalError', message: 'Internal Error' }),
-    });
+      body: JSON.stringify({ error: 'InternalError', message: 'Internal Error' })});
   });
 
   it('should create 500 Internal Error response with custom message', () => {
@@ -430,8 +389,7 @@ describe('internalError', () => {
     expect(response).toEqual({
       statusCode: 500,
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({ error: 'InternalError', message: 'Something went wrong' }),
-    });
+      body: JSON.stringify({ error: 'InternalError', message: 'Something went wrong' })});
   });
 });
 
@@ -442,8 +400,7 @@ describe('notImplemented', () => {
     expect(response).toEqual({
       statusCode: 501,
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({ error: 'NotImplemented', message: 'Not Implemented' }),
-    });
+      body: JSON.stringify({ error: 'NotImplemented', message: 'Not Implemented' })});
   });
 
   it('should create 501 Not Implemented response with custom message', () => {
@@ -452,7 +409,6 @@ describe('notImplemented', () => {
     expect(response).toEqual({
       statusCode: 501,
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({ error: 'NotImplemented', message: 'Feature not available' }),
-    });
+      body: JSON.stringify({ error: 'NotImplemented', message: 'Feature not available' })});
   });
 });

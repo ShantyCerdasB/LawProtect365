@@ -5,7 +5,7 @@
  */
 
 import type { ActorContext } from "@lawprotect/shared-ts";
-import type { TenantId, EnvelopeId, PartyId } from "@/domain/value-objects/ids";
+import type { EnvelopeId, PartyId } from "@/domain/value-objects/ids";
 import type { 
   InvitePartiesCommand,
   RemindPartiesCommand,
@@ -63,37 +63,37 @@ export interface RequestsAuditService {
   /**
    * Logs invite parties operation
    */
-  logInviteParties(partyIds: PartyId[], envelopeId: EnvelopeId, tenantId: TenantId, actor: ActorContext): Promise<void>;
+  logInviteParties(partyIds: PartyId[], envelopeId: EnvelopeId, actor: ActorContext): Promise<void>;
 
   /**
    * Logs remind parties operation
    */
-  logRemindParties(partyIds: PartyId[], envelopeId: EnvelopeId, tenantId: TenantId, actor: ActorContext): Promise<void>;
+  logRemindParties(partyIds: PartyId[], envelopeId: EnvelopeId, actor: ActorContext): Promise<void>;
 
   /**
    * Logs cancel envelope operation
    */
-  logCancelEnvelope(envelopeId: EnvelopeId, tenantId: TenantId, actor: ActorContext): Promise<void>;
+  logCancelEnvelope(envelopeId: EnvelopeId, actor: ActorContext): Promise<void>;
 
   /**
    * Logs decline envelope operation
    */
-  logDeclineEnvelope(envelopeId: EnvelopeId, tenantId: TenantId, actor: ActorContext): Promise<void>;
+  logDeclineEnvelope(envelopeId: EnvelopeId, actor: ActorContext): Promise<void>;
 
   /**
    * Logs finalise envelope operation
    */
-  logFinaliseEnvelope(envelopeId: EnvelopeId, tenantId: TenantId, actor: ActorContext): Promise<void>;
+  logFinaliseEnvelope(envelopeId: EnvelopeId, actor: ActorContext): Promise<void>;
 
   /**
    * Logs request signature operation
    */
-  logRequestSignature(partyId: PartyId, envelopeId: EnvelopeId, tenantId: TenantId, actor: ActorContext): Promise<void>;
+  logRequestSignature(partyId: PartyId, envelopeId: EnvelopeId, actor: ActorContext): Promise<void>;
 
   /**
    * Logs add viewer operation
    */
-  logAddViewer(partyId: PartyId, envelopeId: EnvelopeId, tenantId: TenantId, actor: ActorContext): Promise<void>;
+  logAddViewer(partyId: PartyId, envelopeId: EnvelopeId, actor: ActorContext): Promise<void>;
 }
 
 /**
@@ -103,37 +103,37 @@ export interface RequestsEventService {
   /**
    * Publishes invite parties event
    */
-  publishInviteParties(partyIds: PartyId[], envelopeId: EnvelopeId, tenantId: TenantId, actor: ActorContext): Promise<void>;
+  publishInviteParties(partyIds: PartyId[], envelopeId: EnvelopeId,  actor: ActorContext): Promise<void>;
 
   /**
    * Publishes remind parties event
    */
-  publishRemindParties(partyIds: PartyId[], envelopeId: EnvelopeId, tenantId: TenantId, actor: ActorContext): Promise<void>;
+  publishRemindParties(partyIds: PartyId[], envelopeId: EnvelopeId,  actor: ActorContext): Promise<void>;
 
   /**
    * Publishes cancel envelope event
    */
-  publishCancelEnvelope(envelopeId: EnvelopeId, tenantId: TenantId, actor: ActorContext): Promise<void>;
+  publishCancelEnvelope(envelopeId: EnvelopeId, actor: ActorContext): Promise<void>;
 
   /**
    * Publishes decline envelope event
    */
-  publishDeclineEnvelope(envelopeId: EnvelopeId, tenantId: TenantId, actor: ActorContext): Promise<void>;
+  publishDeclineEnvelope(envelopeId: EnvelopeId, actor: ActorContext): Promise<void>;
 
   /**
    * Publishes finalise envelope event
    */
-  publishFinaliseEnvelope(envelopeId: EnvelopeId, tenantId: TenantId, actor: ActorContext): Promise<void>;
+  publishFinaliseEnvelope(envelopeId: EnvelopeId, actor: ActorContext): Promise<void>;
 
   /**
    * Publishes request signature event
    */
-  publishRequestSignature(partyId: PartyId, envelopeId: EnvelopeId, tenantId: TenantId, actor: ActorContext): Promise<void>;
+  publishRequestSignature(partyId: PartyId, envelopeId: EnvelopeId, actor: ActorContext): Promise<void>;
 
   /**
    * Publishes add viewer event
    */
-  publishAddViewer(partyId: PartyId, envelopeId: EnvelopeId, tenantId: TenantId, actor: ActorContext): Promise<void>;
+  publishAddViewer(partyId: PartyId, envelopeId: EnvelopeId, actor: ActorContext): Promise<void>;
 }
 
 /**
@@ -175,9 +175,4 @@ export interface RequestsRateLimitService {
    */
   checkAddViewerLimit(envelopeId: EnvelopeId, actor: ActorContext): Promise<void>;
 }
-
-
-
-
-
 

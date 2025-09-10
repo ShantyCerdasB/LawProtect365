@@ -8,7 +8,7 @@
 import { BaseEventService } from "../../../domain/services/BaseEventService";
 import type { DomainEvent, ActorContext } from "@lawprotect/shared-ts";
 import { makeEvent } from "@lawprotect/shared-ts";
-import type { PartyId, EnvelopeId, TenantId } from "@/domain/value-objects/ids";
+import type { PartyId, EnvelopeId } from "@/domain/value-objects/ids";
 
 /**
  * @summary Event service for Parties domain events
@@ -19,15 +19,12 @@ export class PartiesEventService extends BaseEventService {
   /**
    * @summary Publishes a Party created domain event
    * @description Publishes a Party creation event using the outbox pattern
-   * @param partyId - Party identifier
-   * @param tenantId - Tenant identifier
-   * @param envelopeId - Envelope identifier
+   * @param partyId - Party identifier   * @param envelopeId - Envelope identifier
    * @param actor - Actor context for audit purposes
    * @param traceId - Optional trace ID for observability
    */
   async publishPartyCreatedEvent(
     partyId: PartyId,
-    tenantId: TenantId,
     envelopeId: EnvelopeId,
     actor: ActorContext,
     traceId?: string
@@ -36,17 +33,15 @@ export class PartiesEventService extends BaseEventService {
       "party.created",
       {
         partyId,
-        tenantId,
         envelopeId,
         actor: {
           userId: actor.userId,
           email: actor.email,
           ip: actor.ip,
-          userAgent: actor.userAgent,
-          role: actor.role,
+          ...(actor.userAgent && { userAgent: actor.userAgent }),
+          ...(actor.role && { role: actor.role })
         },
-        occurredAt: new Date().toISOString(),
-      },
+        occurredAt: new Date().toISOString()},
       traceId ? { "x-trace-id": traceId } : undefined
     );
     
@@ -56,16 +51,13 @@ export class PartiesEventService extends BaseEventService {
   /**
    * @summary Publishes a Party updated domain event
    * @description Publishes a Party update event using the outbox pattern
-   * @param partyId - Party identifier
-   * @param tenantId - Tenant identifier
-   * @param envelopeId - Envelope identifier
+   * @param partyId - Party identifier   * @param envelopeId - Envelope identifier
    * @param updatedFields - Fields that were updated
    * @param actor - Actor context for audit purposes
    * @param traceId - Optional trace ID for observability
    */
   async publishPartyUpdatedEvent(
     partyId: PartyId,
-    tenantId: TenantId,
     envelopeId: EnvelopeId,
     updatedFields: Record<string, unknown>,
     actor: ActorContext,
@@ -75,18 +67,16 @@ export class PartiesEventService extends BaseEventService {
       "party.updated",
       {
         partyId,
-        tenantId,
         envelopeId,
         updatedFields,
         actor: {
           userId: actor.userId,
           email: actor.email,
           ip: actor.ip,
-          userAgent: actor.userAgent,
-          role: actor.role,
+          ...(actor.userAgent && { userAgent: actor.userAgent }),
+          ...(actor.role && { role: actor.role })
         },
-        occurredAt: new Date().toISOString(),
-      },
+        occurredAt: new Date().toISOString()},
       traceId ? { "x-trace-id": traceId } : undefined
     );
     
@@ -96,22 +86,19 @@ export class PartiesEventService extends BaseEventService {
   /**
    * @summary Publishes a Party deleted domain event
    * @description Publishes a Party deletion event using the outbox pattern
-   * @param partyId - Party identifier
-   * @param tenantId - Tenant identifier
-   * @param envelopeId - Envelope identifier
+   * @param partyId - Party identifier   * @param envelopeId - Envelope identifier
    * @param actor - Actor context for audit purposes
    * @param traceId - Optional trace ID for observability
    */
   async publishPartyDeletedEvent(
     partyId: PartyId,
-    tenantId: TenantId,
     envelopeId: EnvelopeId,
     actor: ActorContext,
     traceId?: string
   ): Promise<void> {
     await this.publishStandardizedEvent(
       "party.deleted",
-      { partyId, tenantId, envelopeId },
+      { partyId, envelopeId },
       actor,
       traceId
     );

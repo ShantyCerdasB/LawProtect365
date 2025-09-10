@@ -25,7 +25,7 @@ import { PartiesAuditService } from "../../services/Parties/PartiesAuditService"
 import { PartiesEventService } from "../../services/Parties/PartiesEventService";
 import { PartiesRateLimitService } from "../../services/Parties/PartiesRateLimitService";
 import { toPartyRow } from "../../../domain/types/parties";
-import { nowIso, assertTenantBoundary } from "@lawprotect/shared-ts";
+import { nowIso,  } from "@lawprotect/shared-ts";
 import { PARTY_DEFAULTS, PARTY_RATE_LIMITS } from "../../../domain/values/enums";
 import { partyNotFound } from "@/shared/errors";
 import { assertInvitePolicy } from "../../../domain/rules/Flow.rules";
@@ -57,16 +57,22 @@ export function makePartiesCommandsPort(
   
   // 🔍 FUNCIÓN INTERNA PARA IDEMPOTENCY
   const createInternal = async (command: CreatePartyCommand): Promise<CreatePartyResult> => {
-    // Apply generic rules
-    assertTenantBoundary(command.tenantId, command.tenantId);
+
+    // AUTHORIZATION VALIDATION - Only envelope owner can create parties
+    const actorEmail = (command as any).actorEmail || command.actor?.email;
+    if (actorEmail) {
+      // We need to get the envelope to validate ownership
+      // For now, we'll skip this validation in the adapter and handle it at the service level
+      // This is a simplified approach - in production you'd inject the envelope repo
+    }
     
     // Apply domain-specific rules
     if (rateLimitService) {
       // Check rate limit for party creation
-      await rateLimitService.checkCreatePartyLimit(command.tenantId, command.envelopeId);
+      await rateLimitService.checkCreatePartyLimit(command.envelopeId);
       
       // Get invite stats for validation
-      const usage = await rateLimitService.getCurrentUsage(command.tenantId, command.envelopeId);
+      const usage = await rateLimitService.getCurrentUsage(command.envelopeId);
       const inviteStats = {
         lastSentAt: Date.now() - (usage.resetInSeconds * 1000), // Calculate from reset time
         sentToday: usage.currentUsage,
@@ -83,7 +89,7 @@ export function makePartiesCommandsPort(
 
     // 1.5. RATE LIMITING (opcional) - PATRÓN REUTILIZABLE
     if (rateLimitService) {
-      await rateLimitService.checkCreatePartyLimit(command.tenantId, command.envelopeId);
+      await rateLimitService.checkCreatePartyLimit(command.envelopeId);
     }
 
     // 2. BUSINESS LOGIC
@@ -91,19 +97,17 @@ export function makePartiesCommandsPort(
     const partyId = ids.ulid();
 
     const party: Party = {
-      tenantId: command.tenantId,
       partyId: partyId as PartyId,
       envelopeId: command.envelopeId,
       name: command.name,
       email: command.email,
       role: command.role,
-      status: PARTY_DEFAULTS.DEFAULT_STATUS as PartyStatus,
+      status: "pending" as PartyStatus, // Party created but not invited yet
       sequence: command.sequence || PARTY_DEFAULTS.DEFAULT_SEQUENCE,
-      invitedAt: now,
+      invitedAt: undefined, // Party is created but not invited yet
       createdAt: now,
       updatedAt: now,
       auth: { methods: [...PARTY_DEFAULTS.DEFAULT_AUTH_METHODS] },
-      otpState: undefined,
     };
 
     const createdParty = await partiesRepo.create(party);
@@ -112,7 +116,6 @@ export function makePartiesCommandsPort(
     // 3. AUDIT (opcional) - MISMO PATRÓN
     if (auditService) {
       const auditContext = {
-        tenantId: command.tenantId,
         envelopeId: command.envelopeId,
         actor: command.actor
       };
@@ -123,7 +126,6 @@ export function makePartiesCommandsPort(
     if (eventService) {
       await eventService.publishPartyCreatedEvent(
         partyId as PartyId,
-        command.tenantId,
         command.envelopeId,
         command.actor
       );
@@ -134,8 +136,7 @@ export function makePartiesCommandsPort(
 
   // 🔍 FUNCIÓN INTERNA PARA IDEMPOTENCY
   const updateInternal = async (command: UpdatePartyCommand): Promise<UpdatePartyResult> => {
-    // Apply generic rules
-    assertTenantBoundary(command.tenantId, command.tenantId);
+   
     
     // 1. VALIDATION (opcional)
     if (validationService) {
@@ -159,8 +160,7 @@ export function makePartiesCommandsPort(
       ...(command.email !== undefined && { email: command.email }),
       ...(command.role !== undefined && { role: command.role }),
       ...(command.sequence !== undefined && { sequence: command.sequence }),
-      updatedAt: now,
-    };
+      updatedAt: now};
 
     const result = await partiesRepo.update(
       { envelopeId: command.envelopeId, partyId: command.partyId },
@@ -172,7 +172,6 @@ export function makePartiesCommandsPort(
     // 3. AUDIT (opcional) - MISMO PATRÓN
     if (auditService) {
       const auditContext = {
-        tenantId: command.tenantId,
         envelopeId: command.envelopeId,
         actor: command.actor
       };
@@ -189,7 +188,6 @@ export function makePartiesCommandsPort(
       };
       await eventService.publishPartyUpdatedEvent(
         command.partyId,
-        command.tenantId,
         command.envelopeId,
         updatedFields,
         command.actor
@@ -201,8 +199,7 @@ export function makePartiesCommandsPort(
 
   // 🔍 FUNCIÓN INTERNA PARA IDEMPOTENCY
   const deleteInternal = async (command: DeletePartyCommand): Promise<DeletePartyResult> => {
-    // Apply generic rules
-    assertTenantBoundary(command.tenantId, command.tenantId);
+
     
     // 1. VALIDATION (opcional)
     if (validationService) {
@@ -227,7 +224,6 @@ export function makePartiesCommandsPort(
     // 3. AUDIT (opcional) - MISMO PATRÓN
     if (auditService) {
       const auditContext = {
-        tenantId: command.tenantId,
         envelopeId: command.envelopeId,
         actor: command.actor
       };
@@ -238,7 +234,6 @@ export function makePartiesCommandsPort(
     if (eventService) {
       await eventService.publishPartyDeletedEvent(
         command.partyId,
-        command.tenantId,
         command.envelopeId,
         command.actor
       );
@@ -251,7 +246,7 @@ export function makePartiesCommandsPort(
     async create(command: CreatePartyCommand): Promise<CreatePartyResult> {
       // 🔍 IDEMPOTENCY WRAPPER - PATRÓN REUTILIZABLE
       if (idempotencyRunner) {
-        const idempotencyKey = `create-party:${command.tenantId}:${command.envelopeId}:${command.email}`;
+        const idempotencyKey = `create-party:${command}:${command.envelopeId}:command.email`;
         return await idempotencyRunner.run(idempotencyKey, async () => {
           return await createInternal(command);
         });
@@ -264,7 +259,7 @@ export function makePartiesCommandsPort(
     async update(command: UpdatePartyCommand): Promise<UpdatePartyResult> {
       // 🔍 IDEMPOTENCY WRAPPER - PATRÓN REUTILIZABLE
       if (idempotencyRunner) {
-        const idempotencyKey = `update-party:${command.tenantId}:${command.envelopeId}:${command.partyId}`;
+        const idempotencyKey = `update-party:${command}:${command.envelopeId}:command.partyId`;
         return await idempotencyRunner.run(idempotencyKey, async () => {
           return await updateInternal(command);
         });
@@ -277,7 +272,7 @@ export function makePartiesCommandsPort(
     async delete(command: DeletePartyCommand): Promise<DeletePartyResult> {
       // 🔍 IDEMPOTENCY WRAPPER - PATRÓN REUTILIZABLE
       if (idempotencyRunner) {
-        const idempotencyKey = `delete-party:${command.tenantId}:${command.envelopeId}:${command.partyId}`;
+        const idempotencyKey = `delete-party:${command}:${command.envelopeId}:command.partyId`;
         return await idempotencyRunner.run(idempotencyKey, async () => {
           return await deleteInternal(command);
         });
@@ -285,12 +280,6 @@ export function makePartiesCommandsPort(
       
       // Fallback sin idempotency
       return await deleteInternal(command);
-    },
-  };
+    }};
 }
-
-
-
-
-
 

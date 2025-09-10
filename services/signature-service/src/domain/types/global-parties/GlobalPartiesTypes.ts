@@ -4,7 +4,7 @@
  * @description Defines global party-related domain types used across the application
  */
 
-import type { TenantId, PartyId } from "@/domain/value-objects/ids";
+import type { PartyId } from "@/domain/value-objects/ids";
 import type { PARTY_ROLES, GLOBAL_PARTY_STATUSES, PARTY_SOURCES, AUTH_METHODS } from "../../../domain/values/enums";
 
 /**
@@ -12,7 +12,7 @@ import type { PARTY_ROLES, GLOBAL_PARTY_STATUSES, PARTY_SOURCES, AUTH_METHODS } 
  */
 export type GlobalPartyPreferences = {
   /** Default authentication method */
-  readonly defaultAuth: (typeof AUTH_METHODS)[number];
+  readonly defaultAuth?: (typeof AUTH_METHODS)[number];
   /** Default locale preference */
   readonly defaultLocale?: string;
 };
@@ -46,7 +46,6 @@ export type GlobalPartyCommon = {
   /** The unique identifier of the global party */
   readonly partyId: PartyId;
   /** The tenant ID that owns the party */
-  readonly tenantId: TenantId;
   /** The name of the party */
   readonly name: string;
   /** The email of the party */
@@ -62,7 +61,6 @@ export type GlobalPartyCommon = {
   /** ISO timestamp when the party was last updated */
   readonly updatedAt: string;
 };
-
 
 /**
  * @summary Extended global party with additional fields
@@ -121,10 +119,4 @@ export type GlobalPartyPatch = {
   /** New statistics for the party (optional) */
   readonly stats?: Partial<GlobalPartyStats>;
 };
-
-
-
-
-
-
 

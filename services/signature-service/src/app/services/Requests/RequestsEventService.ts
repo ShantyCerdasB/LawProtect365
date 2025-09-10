@@ -7,7 +7,7 @@
 import { BaseEventService } from "../../../domain/services/BaseEventService";
 import { makeEvent, DomainEvent } from "@lawprotect/shared-ts";
 import type { RequestsEventService as IRequestsEventService } from "../../../domain/types/requests/ServiceInterfaces";
-import type { PartyId, EnvelopeId, TenantId } from "@/domain/value-objects/ids";
+import type { PartyId, EnvelopeId } from "@/domain/value-objects/ids";
 import type { ActorContext } from "@lawprotect/shared-ts";
 
 /**
@@ -32,20 +32,28 @@ export class RequestsEventService extends BaseEventService implements IRequestsE
   /**
    * @summary Publish invite parties event
    */
-  async publishInviteParties(partyIds: PartyId[], envelopeId: EnvelopeId, tenantId: TenantId, actor: ActorContext): Promise<void> {
+  async publishInviteParties(
+    partyIds: PartyId[], 
+    envelopeId: EnvelopeId, 
+    actor: ActorContext,
+    message?: string,
+    signByDate?: string,
+    signingOrder?: "owner_first" | "invitees_first"
+  ): Promise<void> {
     const event = makeEvent("requests.invite_parties", {
       partyIds,
       envelopeId,
-      tenantId,
+      ...(message && { message }),
+      ...(signByDate && { signByDate }),
+      ...(signingOrder && { signingOrder }),
       actor: {
-        userId: actor.userId,
-        email: actor.email,
-        ip: actor.ip,
-        userAgent: actor.userAgent,
-        role: actor.role,
+        ...(actor.userId && { userId: actor.userId }),
+        ...(actor.email && { email: actor.email }),
+        ...(actor.ip && { ip: actor.ip }),
+        ...(actor.userAgent && { userAgent: actor.userAgent }),
+        ...(actor.role && { role: actor.role })
       },
-      occurredAt: new Date().toISOString(),
-    });
+      occurredAt: new Date().toISOString()});
     
     await this.publishModuleEvent(event);
   }
@@ -53,20 +61,18 @@ export class RequestsEventService extends BaseEventService implements IRequestsE
   /**
    * @summary Publish remind parties event
    */
-  async publishRemindParties(partyIds: PartyId[], envelopeId: EnvelopeId, tenantId: TenantId, actor: ActorContext): Promise<void> {
+  async publishRemindParties(partyIds: PartyId[], envelopeId: EnvelopeId, actor: ActorContext): Promise<void> {
     const event = makeEvent("requests.remind_parties", {
       partyIds,
       envelopeId,
-      tenantId,
       actor: {
-        userId: actor.userId,
-        email: actor.email,
-        ip: actor.ip,
-        userAgent: actor.userAgent,
-        role: actor.role,
+        ...(actor.userId && { userId: actor.userId }),
+        ...(actor.email && { email: actor.email }),
+        ...(actor.ip && { ip: actor.ip }),
+        ...(actor.userAgent && { userAgent: actor.userAgent }),
+        ...(actor.role && { role: actor.role })
       },
-      occurredAt: new Date().toISOString(),
-    });
+      occurredAt: new Date().toISOString()});
     
     await this.publishModuleEvent(event);
   }
@@ -74,19 +80,17 @@ export class RequestsEventService extends BaseEventService implements IRequestsE
   /**
    * @summary Publish cancel envelope event
    */
-  async publishCancelEnvelope(envelopeId: EnvelopeId, tenantId: TenantId, actor: ActorContext): Promise<void> {
+  async publishCancelEnvelope(envelopeId: EnvelopeId, actor: ActorContext): Promise<void> {
     const event = makeEvent("requests.cancel_envelope", {
       envelopeId,
-      tenantId,
       actor: {
-        userId: actor.userId,
-        email: actor.email,
-        ip: actor.ip,
-        userAgent: actor.userAgent,
-        role: actor.role,
+        ...(actor.userId && { userId: actor.userId }),
+        ...(actor.email && { email: actor.email }),
+        ...(actor.ip && { ip: actor.ip }),
+        ...(actor.userAgent && { userAgent: actor.userAgent }),
+        ...(actor.role && { role: actor.role })
       },
-      occurredAt: new Date().toISOString(),
-    });
+      occurredAt: new Date().toISOString()});
     
     await this.publishModuleEvent(event);
   }
@@ -94,19 +98,17 @@ export class RequestsEventService extends BaseEventService implements IRequestsE
   /**
    * @summary Publish decline envelope event
    */
-  async publishDeclineEnvelope(envelopeId: EnvelopeId, tenantId: TenantId, actor: ActorContext): Promise<void> {
+  async publishDeclineEnvelope(envelopeId: EnvelopeId, actor: ActorContext): Promise<void> {
     const event = makeEvent("requests.decline_envelope", {
       envelopeId,
-      tenantId,
       actor: {
-        userId: actor.userId,
-        email: actor.email,
-        ip: actor.ip,
-        userAgent: actor.userAgent,
-        role: actor.role,
+        ...(actor.userId && { userId: actor.userId }),
+        ...(actor.email && { email: actor.email }),
+        ...(actor.ip && { ip: actor.ip }),
+        ...(actor.userAgent && { userAgent: actor.userAgent }),
+        ...(actor.role && { role: actor.role })
       },
-      occurredAt: new Date().toISOString(),
-    });
+      occurredAt: new Date().toISOString()});
     
     await this.publishModuleEvent(event);
   }
@@ -114,19 +116,17 @@ export class RequestsEventService extends BaseEventService implements IRequestsE
   /**
    * @summary Publish finalise envelope event
    */
-  async publishFinaliseEnvelope(envelopeId: EnvelopeId, tenantId: TenantId, actor: ActorContext): Promise<void> {
+  async publishFinaliseEnvelope(envelopeId: EnvelopeId, actor: ActorContext): Promise<void> {
     const event = makeEvent("requests.finalise_envelope", {
       envelopeId,
-      tenantId,
       actor: {
-        userId: actor.userId,
-        email: actor.email,
-        ip: actor.ip,
-        userAgent: actor.userAgent,
-        role: actor.role,
+        ...(actor.userId && { userId: actor.userId }),
+        ...(actor.email && { email: actor.email }),
+        ...(actor.ip && { ip: actor.ip }),
+        ...(actor.userAgent && { userAgent: actor.userAgent }),
+        ...(actor.role && { role: actor.role })
       },
-      occurredAt: new Date().toISOString(),
-    });
+      occurredAt: new Date().toISOString()});
     
     await this.publishModuleEvent(event);
   }
@@ -134,20 +134,18 @@ export class RequestsEventService extends BaseEventService implements IRequestsE
   /**
    * @summary Publish request signature event
    */
-  async publishRequestSignature(partyId: PartyId, envelopeId: EnvelopeId, tenantId: TenantId, actor: ActorContext): Promise<void> {
+  async publishRequestSignature(partyId: PartyId, envelopeId: EnvelopeId, actor: ActorContext): Promise<void> {
     const event = makeEvent("requests.request_signature", {
       partyId,
       envelopeId,
-      tenantId,
       actor: {
-        userId: actor.userId,
-        email: actor.email,
-        ip: actor.ip,
-        userAgent: actor.userAgent,
-        role: actor.role,
+        ...(actor.userId && { userId: actor.userId }),
+        ...(actor.email && { email: actor.email }),
+        ...(actor.ip && { ip: actor.ip }),
+        ...(actor.userAgent && { userAgent: actor.userAgent }),
+        ...(actor.role && { role: actor.role })
       },
-      occurredAt: new Date().toISOString(),
-    });
+      occurredAt: new Date().toISOString()});
     
     await this.publishModuleEvent(event);
   }
@@ -155,20 +153,18 @@ export class RequestsEventService extends BaseEventService implements IRequestsE
   /**
    * @summary Publish add viewer event
    */
-  async publishAddViewer(partyId: PartyId, envelopeId: EnvelopeId, tenantId: TenantId, actor: ActorContext): Promise<void> {
+  async publishAddViewer(partyId: PartyId, envelopeId: EnvelopeId, actor: ActorContext): Promise<void> {
     const event = makeEvent("requests.add_viewer", {
       partyId,
       envelopeId,
-      tenantId,
       actor: {
-        userId: actor.userId,
-        email: actor.email,
-        ip: actor.ip,
-        userAgent: actor.userAgent,
-        role: actor.role,
+        ...(actor.userId && { userId: actor.userId }),
+        ...(actor.email && { email: actor.email }),
+        ...(actor.ip && { ip: actor.ip }),
+        ...(actor.userAgent && { userAgent: actor.userAgent }),
+        ...(actor.role && { role: actor.role })
       },
-      occurredAt: new Date().toISOString(),
-    });
+      occurredAt: new Date().toISOString()});
     
     await this.publishModuleEvent(event);
   }

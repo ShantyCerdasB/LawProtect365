@@ -4,18 +4,15 @@
  * Provides methods to create, update, delete, and upload documents with proper business rule validation.
  */
 
-import type { TenantId, EnvelopeId, DocumentId } from "../../../domain/value-objects/ids";
+import type { EnvelopeId, DocumentId } from "../../../domain/value-objects/ids";
 import type { ActorContext, DocumentLock } from "@lawprotect/shared-ts";
 import type { S3ObjectRef } from "../../../domain/value-objects/storage";
 import type { ContentType } from "../../../domain/value-objects/document";
-
 
 /**
  * @description Command for creating a new document within an envelope.
  */
 export interface CreateDocumentCommand {
-  /** The tenant ID that owns the document */
-  tenantId: TenantId;
   /** The envelope ID the document belongs to */
   envelopeId: EnvelopeId;
   /** The name of the document */
@@ -48,8 +45,6 @@ export interface CreateDocumentResult {
  * @description Command for uploading a new document (original document upload).
  */
 export interface UploadDocumentCommand {
-  /** The tenant ID that owns the document */
-  tenantId: TenantId;
   /** The envelope ID the document belongs to */
   envelopeId: EnvelopeId;
   /** The name of the document */

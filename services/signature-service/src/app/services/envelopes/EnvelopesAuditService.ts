@@ -5,7 +5,7 @@
  */
 
 import { BaseAuditService } from "../../../domain/services/BaseAuditService";
-import type { EnvelopeId, TenantId, UserId } from "../../../domain/value-objects/ids";
+import type { EnvelopeId, UserId } from "../../../domain/value-objects/ids";
 import type { EnvelopeStatus } from "../../../domain/value-objects/index";
 import type { Envelope } from "../../../domain/entities/Envelope";
 import type { AuditContext } from "@lawprotect/shared-ts";
@@ -31,13 +31,11 @@ export class EnvelopesAuditService extends BaseAuditService {
     }
 
     await this.auditRepo.record({
-      tenantId: context.tenantId,
       envelopeId: context.envelopeId as EnvelopeId,
       type: details.eventType as string,
       occurredAt: new Date().toISOString(),
       actor: context.actor,
-      metadata: details,
-    });
+      metadata: details});
   }
 
   /**
@@ -45,9 +43,8 @@ export class EnvelopesAuditService extends BaseAuditService {
    * @param context - Audit context
    * @param details - Envelope creation details
    */
-  async logCreate(context: { tenantId: TenantId; actor: { userId: UserId; email: string } }, details: { envelopeId: EnvelopeId; title: string; ownerId: UserId }): Promise<void> {
+  async logCreate(context: { actor: { userId: UserId; email: string } }, details: { envelopeId: EnvelopeId; name: string; ownerEmail: string }): Promise<void> {
     const auditContext = this.createAuditContext(
-      context.tenantId,
       details.envelopeId,
       { userId: context.actor.userId, email: context.actor.email }
     );
@@ -55,8 +52,8 @@ export class EnvelopesAuditService extends BaseAuditService {
     await this.logBusinessEvent(auditContext, {
       eventType: "envelope.created",
       envelopeId: details.envelopeId,
-      title: details.title,
-      ownerId: details.ownerId
+      name: details.name,
+      ownerEmail: details.ownerEmail
     });
   }
 
@@ -65,9 +62,8 @@ export class EnvelopesAuditService extends BaseAuditService {
    * @param context - Audit context
    * @param details - Envelope update details
    */
-  async logUpdate(context: { tenantId: TenantId; actor: { userId: UserId; email: string } }, details: { envelopeId: EnvelopeId; changes: Partial<Envelope>; previousStatus?: EnvelopeStatus }): Promise<void> {
+  async logUpdate(context: { actor: { userId: UserId; email: string } }, details: { envelopeId: EnvelopeId; changes: Partial<Envelope>; previousStatus?: EnvelopeStatus }): Promise<void> {
     const auditContext = this.createAuditContext(
-      context.tenantId,
       details.envelopeId,
       { userId: context.actor.userId, email: context.actor.email }
     );
@@ -85,9 +81,8 @@ export class EnvelopesAuditService extends BaseAuditService {
    * @param context - Audit context
    * @param details - Envelope deletion details
    */
-  async logDelete(context: { tenantId: TenantId; actor: { userId: UserId; email: string } }, details: { envelopeId: EnvelopeId; title: string; status: EnvelopeStatus }): Promise<void> {
+  async logDelete(context: { actor: { userId: UserId; email: string } }, details: { envelopeId: EnvelopeId; name: string; status: EnvelopeStatus }): Promise<void> {
     const auditContext = this.createAuditContext(
-      context.tenantId,
       details.envelopeId,
       { userId: context.actor.userId, email: context.actor.email }
     );
@@ -95,7 +90,7 @@ export class EnvelopesAuditService extends BaseAuditService {
     await this.logBusinessEvent(auditContext, {
       eventType: "envelope.deleted",
       envelopeId: details.envelopeId,
-      title: details.title,
+      name: details.name,
       status: details.status
     });
   }
@@ -105,9 +100,8 @@ export class EnvelopesAuditService extends BaseAuditService {
    * @param context - Audit context
    * @param details - Status change details
    */
-  async logStatusChange(context: { tenantId: TenantId; actor: { userId: UserId; email: string } }, details: { envelopeId: EnvelopeId; previousStatus: EnvelopeStatus; newStatus: EnvelopeStatus; reason?: string }): Promise<void> {
+  async logStatusChange(context: { actor: { userId: UserId; email: string } }, details: { envelopeId: EnvelopeId; previousStatus: EnvelopeStatus; newStatus: EnvelopeStatus; reason?: string }): Promise<void> {
     const auditContext = this.createAuditContext(
-      context.tenantId,
       details.envelopeId,
       { userId: context.actor.userId, email: context.actor.email }
     );
@@ -126,9 +120,8 @@ export class EnvelopesAuditService extends BaseAuditService {
    * @param context - Audit context
    * @param details - Party addition details
    */
-  async logPartyAdded(context: { tenantId: TenantId; actor: { userId: UserId; email: string } }, details: { envelopeId: EnvelopeId; partyId: string; role: string }): Promise<void> {
+  async logPartyAdded(context: { actor: { userId: UserId; email: string } }, details: { envelopeId: EnvelopeId; partyId: string; role: string }): Promise<void> {
     const auditContext = this.createAuditContext(
-      context.tenantId,
       details.envelopeId,
       { userId: context.actor.userId, email: context.actor.email }
     );
@@ -146,9 +139,8 @@ export class EnvelopesAuditService extends BaseAuditService {
    * @param context - Audit context
    * @param details - Document addition details
    */
-  async logDocumentAdded(context: { tenantId: TenantId; actor: { userId: UserId; email: string } }, details: { envelopeId: EnvelopeId; documentId: string; documentName: string }): Promise<void> {
+  async logDocumentAdded(context: { actor: { userId: UserId; email: string } }, details: { envelopeId: EnvelopeId; documentId: string; documentName: string }): Promise<void> {
     const auditContext = this.createAuditContext(
-      context.tenantId,
       details.envelopeId,
       { userId: context.actor.userId, email: context.actor.email }
     );

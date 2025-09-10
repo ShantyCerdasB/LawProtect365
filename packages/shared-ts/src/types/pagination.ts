@@ -44,4 +44,3 @@ export interface CursorPage<T> {
   meta: PageMeta;
 }
 
-

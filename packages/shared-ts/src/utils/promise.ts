@@ -14,8 +14,7 @@ export const sleep = (ms: number): Promise<void> =>
 export const withTimeout = <T>(
   p: Promise<T>,
   ms: number,
-  message = "Timeout",
-): Promise<T> => {
+  message = "Timeout"): Promise<T> => {
   type Result =
     | { t: "value"; v: T }
     | { t: "error"; e: unknown }
@@ -26,8 +25,7 @@ export const withTimeout = <T>(
   // ✓ Provide both generics so the rejection handler returns Result, not never
   const guarded: Promise<Result> = p.then<Result, Result>(
     (v) => ({ t: "value", v }),
-    (e) => ({ t: "error", e }),
-  );
+    (e) => ({ t: "error", e }));
 
   const timeoutP: Promise<Result> = new Promise((res) => {
     timerId = setTimeout(() => res({ t: "timeout" }), ms);
@@ -40,7 +38,6 @@ export const withTimeout = <T>(
     return r.v;
   });
 };
-
 
 /**
  * Retries an async function with exponential backoff.
@@ -55,8 +52,7 @@ export const retry = async <T>(
     maxDelayMs?: number;
     factor?: number;
     shouldRetry?: (e: unknown) => boolean;
-  } = {},
-): Promise<T> => {
+  } = {}): Promise<T> => {
   const retries = opts.retries ?? 3;
   const factor = opts.factor ?? 2;
   const min = opts.minDelayMs ?? 100;
@@ -82,12 +78,10 @@ export const retry = async <T>(
 
 /** Waits for all promises and returns settled results preserving order. */
 export const settleAll = async <T>(
-  promises: Promise<T>[],
-): Promise<Array<{ ok: true; value: T } | { ok: false; error: unknown }>> => {
+  promises: Promise<T>[]): Promise<Array<{ ok: true; value: T } | { ok: false; error: unknown }>> => {
   const results = await Promise.allSettled(promises);
   return results.map((r) =>
     r.status === "fulfilled"
       ? { ok: true, value: r.value }
-      : { ok: false, error: r.reason },
-  );
+      : { ok: false, error: r.reason });
 };

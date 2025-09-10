@@ -7,5 +7,3 @@
 export * from "./controllerFactory";
 export * from "./queryFactory";
 
-
-

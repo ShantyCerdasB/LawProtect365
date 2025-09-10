@@ -18,16 +18,12 @@ export const PersonNameSchema = z
     /** Given/first name (optional) */
     given: TrimmedString.pipe(CollapsedWhitespace).optional(),
     /** Family/last name (optional) */
-    family: TrimmedString.pipe(CollapsedWhitespace).optional(),
-  })
+    family: TrimmedString.pipe(CollapsedWhitespace).optional()})
   .refine((v) => Boolean(v.display || v.given || v.family), {
-    message: "At least one of display, given or family is required",
-  })
+    message: "At least one of display, given or family is required"})
   .transform((v) => {
     const display =
       v.display ?? [v.given, v.family].filter(Boolean).join(" ").trim();
   return { display, given: v.given, family: v.family };
 });
-
-
 

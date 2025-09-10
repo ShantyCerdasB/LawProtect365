@@ -10,18 +10,11 @@ export const EnvelopeDocumentItem = z.object({
   id: z.string(),
   name: z.string(),
   contentType: z.string(),
-  createdAt: z.string().datetime(),
-});
+  createdAt: z.string().datetime()});
 export type EnvelopeDocumentItem = z.infer<typeof EnvelopeDocumentItem>;
 
 /** Response containing a list of envelope documents. */
 export const ListEnvelopeDocumentsResponse = z.object({
-  items: z.array(EnvelopeDocumentItem),
-});
+  items: z.array(EnvelopeDocumentItem)});
 export type ListEnvelopeDocumentsResponse = z.infer<typeof ListEnvelopeDocumentsResponse>;
-
-
-
-
-
 

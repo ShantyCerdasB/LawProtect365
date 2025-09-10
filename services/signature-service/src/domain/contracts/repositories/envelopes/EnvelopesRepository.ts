@@ -9,9 +9,8 @@
  */
 
 import { Envelope } from "@/domain/entities";
-import { EnvelopeId, TenantId } from "@/domain/value-objects/index";
+import { EnvelopeId } from "@/domain/value-objects/index";
 import type { Repository } from "@lawprotect/shared-ts";
-
 
 /**
  * @summary Repository interface for envelope operations
@@ -19,15 +18,14 @@ import type { Repository } from "@lawprotect/shared-ts";
  */
 export interface EnvelopesRepository extends Repository<Envelope, EnvelopeId, undefined> {
   /**
-   * @summary Lists envelopes by tenant with pagination
-   * @description Retrieves envelopes for a specific tenant using cursor-based pagination
-   * @param params.tenantId - Tenant identifier
+   * @summary Lists all envelopes with pagination
+   * @description Retrieves all envelopes using cursor-based pagination
+   * @param params - List parameters
    * @param params.limit - Maximum number of items to return
    * @param params.cursor - Optional cursor for pagination
    * @returns Promise with items and next cursor
    */
-  listByTenant(params: {
-    tenantId: TenantId;
+  listAll(params: {
     limit: number;
     cursor?: string;
   }): Promise<{ items: Envelope[]; nextCursor?: string }>;

@@ -127,8 +127,7 @@ describe("randomInt()", () => {
         u8.fill(0);
         return arr;
       },
-      subtle: undefined,
-    };
+      subtle: undefined};
 
     await jest.isolateModulesAsync(async () => {
       const { randomInt } = await import("../../src/utils/math.js");
@@ -154,8 +153,7 @@ describe("randomInt()", () => {
           expect(min).toBe(0);
           expect(max).toBe(7);
           return 0; // deterministic return
-        }),
-      };
+        })};
     });
 
     await jest.isolateModulesAsync(async () => {
@@ -202,8 +200,7 @@ describe("randomInt()", () => {
           u8.fill(0);
           return arr;
         },
-        subtle: undefined,
-      };
+        subtle: undefined};
       
       const result = randomInt(10, 5);
       expect(result).toBeGreaterThanOrEqual(5);

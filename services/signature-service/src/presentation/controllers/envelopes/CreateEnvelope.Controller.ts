@@ -18,21 +18,12 @@ export const CreateEnvelopeController = createCommandController<CreateEnvelopeCo
   pathSchema: CreateEnvelopeParams,
   appServiceClass: EnvelopesCommandService,
   createDependencies: (c: any) => c.envelopes.commandsPort,
-  extractParams: (path: any, body: any) => ({
-    tenantId: path.tenantId,
-    ownerId: body.ownerId,
-    title: body.name,
-    description: body.description,
+  extractParams: (_path: any, body: any, context: any) => ({
+    ownerEmail: body.ownerEmail,
+    name: body.name,
+    actorEmail: context.actor?.email
   }),
   responseType: "created",
   includeActor: true,
-  methodName: "create",
-});
-
-
-
-
-
-
-
+  methodName: "create"});
 

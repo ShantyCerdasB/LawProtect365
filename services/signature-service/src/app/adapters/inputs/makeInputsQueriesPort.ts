@@ -12,7 +12,6 @@ import type { InputsRepository } from "../../../domain/contracts/repositories/in
 import type { InputsValidationService } from "../../services/Inputs/InputsValidationService";
 import type { InputsAuditService } from "../../services/Inputs/InputsAuditService";
 import type { AuditContext } from "@lawprotect/shared-ts";
-import { assertTenantBoundary } from "@lawprotect/shared-ts";
 
 /**
  * Creates an InputsQueriesPort implementation with production-ready features
@@ -34,8 +33,6 @@ export const makeInputsQueriesPort = (
    */
   async getById(query) {
     // Apply generic rules
-    assertTenantBoundary(query.tenantId, query.tenantId);
-    
     // 1. VALIDATION (opcional)
     if (validationService) {
       await validationService.validateGetById(query);
@@ -44,8 +41,7 @@ export const makeInputsQueriesPort = (
     // 2. SECURITY FILTERING - Solo inputs del tenant
     const input = await inputsRepo.getById({
       envelopeId: query.envelopeId,
-      inputId: query.inputId,
-    });
+      inputId: query.inputId});
     
     if (!input) {
       return null; // Retornar null en lugar de lanzar error para queries
@@ -54,7 +50,6 @@ export const makeInputsQueriesPort = (
     // 3. AUDIT LOGGING (opcional)
     if (auditService && query.actor) {
       const auditContext: AuditContext = {
-        tenantId: query.tenantId,
         envelopeId: query.envelopeId,
         actor: query.actor
       };
@@ -73,14 +68,12 @@ export const makeInputsQueriesPort = (
       page: input.position.page,
       position: {
         x: input.position.x,
-        y: input.position.y,
-      },
+        y: input.position.y},
       assignedPartyId: input.partyId as PartyId | undefined,
       required: input.required,
       value: input.value,
       createdAt: input.createdAt,
-      updatedAt: input.updatedAt,
-    };
+      updatedAt: input.updatedAt};
   },
 
   /**
@@ -89,8 +82,6 @@ export const makeInputsQueriesPort = (
    */
   async listByEnvelope(query) {
     // Apply generic rules
-    assertTenantBoundary(query.tenantId, query.tenantId);
-    
     // 1. VALIDATION (opcional)
     if (validationService) {
       await validationService.validateListByEnvelope(query);
@@ -104,13 +95,11 @@ export const makeInputsQueriesPort = (
       documentId: query.documentId,
       partyId: query.partyId,
       type: query.type,
-      required: query.required,
-    });
+      required: query.required});
 
     // 3. AUDIT LOGGING (opcional)
     if (auditService && query.actor) {
       const auditContext: AuditContext = {
-        tenantId: query.tenantId,
         envelopeId: query.envelopeId,
         actor: query.actor
       };
@@ -122,8 +111,7 @@ export const makeInputsQueriesPort = (
           documentId: query.documentId,
           partyId: query.partyId,
           type: query.type,
-          required: query.required,
-        },
+          required: query.required},
         resultCount: result.items.length,
         actor: query.actor
       });
@@ -136,15 +124,11 @@ export const makeInputsQueriesPort = (
         page: input.position.page,
         position: {
           x: input.position.x,
-          y: input.position.y,
-        },
+          y: input.position.y},
         assignedPartyId: input.partyId as PartyId | undefined,
         required: input.required,
         value: input.value,
         createdAt: input.createdAt,
-        updatedAt: input.updatedAt,
-      })),
-      nextCursor: result.nextCursor,
-    };
-  },
-});
+        updatedAt: input.updatedAt})),
+      nextCursor: result.nextCursor};
+  }});

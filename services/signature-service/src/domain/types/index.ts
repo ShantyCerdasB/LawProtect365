@@ -13,12 +13,8 @@ export * from "./infrastructure/eventbridge";
 export * from "./infrastructure/constants";
 export * from "./infrastructure/enums";
 
-
-
 // Common types
 export * from "./common";
-
-
 
 // Consent types
 export * from "./consent";
@@ -38,6 +34,4 @@ export * from "./audit";
 // Validation schemas moved to src/shared/validations/
 
 // Core types - moved to shared/contracts/core/Config.ts
-
-
 

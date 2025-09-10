@@ -29,6 +29,5 @@ export function extractConsentParams(path: Record<string, unknown>, body: Record
     metadata: body.metadata,
     expiresAt: body.expiresAt,
     idempotencyKey: body.idempotencyKey,
-    ttlSeconds: body.ttlSeconds || 300,
-  };
+    ttlSeconds: body.ttlSeconds || 300};
 }

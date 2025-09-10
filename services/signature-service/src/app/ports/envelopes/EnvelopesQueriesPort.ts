@@ -5,7 +5,7 @@
  */
 
 import type { Envelope } from "../../../domain/entities/Envelope";
-import type { EnvelopeId, TenantId } from "../../../domain/value-objects/ids";
+import type { EnvelopeId } from "../../../domain/value-objects/ids";
 import type { EnvelopeStatus } from "../../../domain/value-objects/index";
 import type { ActorContext } from "@lawprotect/shared-ts";
 
@@ -14,7 +14,6 @@ import type { ActorContext } from "@lawprotect/shared-ts";
  * @description Data to retrieve a specific envelope
  */
 export interface GetEnvelopeQuery {
-  readonly tenantId: TenantId;
   readonly envelopeId: EnvelopeId;
   readonly actor?: ActorContext;
 }
@@ -32,7 +31,6 @@ export interface GetEnvelopeResult {
  * @description Parameters for listing envelopes with optional filters
  */
 export interface ListEnvelopesQuery {
-  readonly tenantId: TenantId;
   readonly status?: EnvelopeStatus;
   readonly limit?: number;
   readonly cursor?: string;
@@ -53,7 +51,6 @@ export interface ListEnvelopesResult {
  * @description Data to retrieve envelope status
  */
 export interface GetEnvelopeStatusQuery {
-  readonly tenantId: TenantId;
   readonly envelopeId: EnvelopeId;
   readonly actor?: ActorContext;
 }

@@ -6,14 +6,13 @@
  * at repository boundaries so we never trust raw DDB shapes.
  */
 
-import { GLOBAL_PARTY_STATUSES, PARTY_ROLES, PARTY_SOURCES, AUTH_METHODS } from "../../../domain/values/enums";
+import { GLOBAL_PARTY_STATUSES, PARTY_ROLES, PARTY_SOURCES } from "../../../domain/values/enums";
 import { z } from "@lawprotect/shared-ts";
 
 export const GlobalPartyItemDTOSchema = z.object({
   pk: z.string(),
   sk: z.string(),
   type: z.literal("GlobalParty"),
-  tenantId: z.string(),
   partyId: z.string(),
   name: z.string(),
   email: z.string(),
@@ -27,26 +26,17 @@ export const GlobalPartyItemDTOSchema = z.object({
   metadata: z.record(z.unknown()).optional(),
   attributes: z.record(z.unknown()).optional(),
   preferences: z.object({
-    defaultAuth: z.enum(AUTH_METHODS),
-    defaultLocale: z.string().optional(),
-  }),
+    defaultAuth: z.string().optional(),
+    defaultLocale: z.string().optional()}),
   notificationPreferences: z.object({
     email: z.boolean(),
-    sms: z.boolean(),
-  }),
+    sms: z.boolean()}),
   stats: z.object({
     signedCount: z.number(),
     lastSignedAt: z.string().optional(),
-    totalEnvelopes: z.number(),
-  }),
+    totalEnvelopes: z.number()}),
   createdAt: z.string(),
-  updatedAt: z.string(),
-});
+  updatedAt: z.string()});
 
 export type GlobalPartyItemDTO = z.infer<typeof GlobalPartyItemDTOSchema>;
-
-
-
-
-
 

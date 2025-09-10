@@ -16,8 +16,7 @@ const RectSchema = z.object({
   y: z.number().min(0),
   width: z.number().positive(),
   height: z.number().positive(),
-  page: z.number().int().positive().optional(),
-});
+  page: z.number().int().positive().optional()});
 
 /**
  * Validates that each input references valid document and party IDs if applicable.
@@ -93,8 +92,7 @@ export const assertNoIllegalOverlap = (
 
   const rects = inputs.map((i) => ({
     id: i.inputId,
-    r: RectSchema.parse(i.position),
-  }));
+    r: RectSchema.parse(i.position)}));
 
   for (let a = 0; a < rects.length; a++) {
     for (let b = a + 1; b < rects.length; b++) {
@@ -117,5 +115,4 @@ export const assertNoIllegalOverlap = (
     }
   }
 };
-
 

@@ -17,17 +17,8 @@ export const GetPartyController = createQueryController<GetPartyAppInput, GetPar
   appServiceClass: PartiesQueryService,
   createDependencies: (c: any) => c.parties.queriesPort,
   extractParams: (path: any) => ({
-    tenantId: path.tenantId,
     envelopeId: path.envelopeId,
-    partyId: path.partyId,
-  }),
+    partyId: path.partyId}),
   responseType: "ok"
 });
-
-
-
-
-
-
-
 

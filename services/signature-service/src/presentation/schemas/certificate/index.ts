@@ -6,8 +6,3 @@
 
 export * from "./GetCertificate.schema";
 
-
-
-
-
-

@@ -25,8 +25,7 @@ describe('createController', () => {
     mockContainer = { get: jest.fn() };
     mockDependencies = { dep1: 'value1' };
     mockAppService = {
-      execute: jest.fn(),
-    };
+      execute: jest.fn()};
 
     mockConfig = {
       pathSchema: { type: 'object' },
@@ -37,14 +36,12 @@ describe('createController', () => {
       appServiceClass: jest.fn().mockReturnValue(mockAppService),
       extractParams: jest.fn().mockReturnValue({ param1: 'value1' }),
       transformResult: jest.fn(),
-      responseType: 'ok' as const,
-    };
+      responseType: 'ok' as const};
 
     mockValidateRequest.mockReturnValue({
       path: { id: '123' },
       query: {},
-      body: { name: 'test' },
-    });
+      body: { name: 'test' }});
     mockTenantFromCtx.mockReturnValue('tenant-123');
     mockActorFromCtx.mockReturnValue({ userId: 'user-123' });
     mockOk.mockReturnValue({ statusCode: 200, body: '{"data":"result"}' });
@@ -65,8 +62,7 @@ describe('createController', () => {
 
     expect(mockValidateRequest).toHaveBeenCalledWith({}, {
       path: mockConfig.pathSchema,
-      body: mockConfig.bodySchema,
-    });
+      body: mockConfig.bodySchema});
     expect(mockTenantFromCtx).toHaveBeenCalledWith({});
     expect(mockActorFromCtx).toHaveBeenCalledWith({});
     expect(mockConfig.getContainer).toHaveBeenCalled();
@@ -77,10 +73,8 @@ describe('createController', () => {
       { name: 'test' }
     );
     expect(mockAppService.execute).toHaveBeenCalledWith({
-      tenantId: 'tenant-123',
       actor: { userId: 'user-123' },
-      param1: 'value1',
-    });
+      param1: 'value1'});
     expect(mockConfig.transformResult).toHaveBeenCalledWith('test-result');
     expect(mockOk).toHaveBeenCalledWith({ data: 'transformed-result' });
     expect(result).toEqual({ statusCode: 200, body: '{"data":"result"}' });
@@ -118,10 +112,8 @@ describe('createController', () => {
 
     expect(mockActorFromCtx).not.toHaveBeenCalled();
     expect(mockAppService.execute).toHaveBeenCalledWith({
-      tenantId: 'tenant-123',
       actor: undefined,
-      param1: 'value1',
-    });
+      param1: 'value1'});
   });
 
   it('should create a controller without path schema', async () => {
@@ -132,8 +124,7 @@ describe('createController', () => {
     await controller({} as any);
 
     expect(mockValidateRequest).toHaveBeenCalledWith({}, {
-      body: mockConfig.bodySchema,
-    });
+      body: mockConfig.bodySchema});
   });
 
   it('should create a controller without body schema', async () => {
@@ -144,8 +135,7 @@ describe('createController', () => {
     await controller({} as any);
 
     expect(mockValidateRequest).toHaveBeenCalledWith({}, {
-      path: mockConfig.pathSchema,
-    });
+      path: mockConfig.pathSchema});
   });
 
   it('should create a controller without transformResult', async () => {

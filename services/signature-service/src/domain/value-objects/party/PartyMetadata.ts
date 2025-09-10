@@ -27,16 +27,10 @@ export const PartyMetadataSchema = z
       return jsonSize <= 10000; // 10KB limit
     },
     {
-      message: "Party metadata too large (max 10KB)",
-    }
+      message: "Party metadata too large (max 10KB)"}
   )
   .transform((v) => v as PartyMetadata);
 
 // Helper functions removed - use PartyMetadataSchema.parse() for validation
 // Metadata operations can be done directly with object spread and property access
-
-
-
-
-
 

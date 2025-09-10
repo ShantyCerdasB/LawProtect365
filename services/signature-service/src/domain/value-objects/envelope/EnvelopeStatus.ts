@@ -16,5 +16,3 @@ import { ENVELOPE_STATUSES } from "../../values/enums";
 export const EnvelopeStatusSchema = z.enum(ENVELOPE_STATUSES);
 export type EnvelopeStatus = z.infer<typeof EnvelopeStatusSchema>;
 
-
-

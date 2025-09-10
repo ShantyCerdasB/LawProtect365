@@ -19,22 +19,12 @@ export const UpdatePartyController = createCommandController<UpdatePartyControll
   appServiceClass: PartiesCommandService,
   createDependencies: (c: any) => c.parties.commandsPort,
   extractParams: (path: any, body: any) => ({
-    tenantId: path.tenantId,
     envelopeId: path.envelopeId,
     partyId: path.partyId,
     name: body.name,
     email: body.email,
     role: body.role,
-    sequence: body.sequence,
-  }),
+    sequence: body.sequence}),
   responseType: "ok",
-  includeActor: true,
-});
-
-
-
-
-
-
-
+  includeActor: true});
 

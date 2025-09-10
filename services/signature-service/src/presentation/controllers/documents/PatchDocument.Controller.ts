@@ -16,8 +16,7 @@ import type { UpdateDocumentCommand, UpdateDocumentResult } from "../../../app/p
  */
 const PatchDocumentBody = z.object({
   name: z.string().min(1).optional(),
-  metadata: z.record(z.unknown()).optional(),
-});
+  metadata: z.record(z.unknown()).optional()});
 
 /**
  * @description Patch Document controller
@@ -33,9 +32,7 @@ export const PatchDocumentController = createCommandController<UpdateDocumentCom
     s3Service: c.documents.s3Service,
     s3Config: {
       evidenceBucket: c.config.s3.evidenceBucket,
-      signedBucket: c.config.s3.signedBucket,
-    },
-  }),
+      signedBucket: c.config.s3.signedBucket}}),
   extractParams: (path: any, body: any) => ({
     documentId: path.id,
     name: body.name,
@@ -45,20 +42,10 @@ export const PatchDocumentController = createCommandController<UpdateDocumentCom
       email: path.actor?.email,
       ip: path.actor?.ip,
       userAgent: path.actor?.userAgent,
-      role: path.actor?.role,
-    },
-  }),
+      role: path.actor?.role}}),
   responseType: "ok",
-  includeActor: true,
-});
+  includeActor: true});
 
 // Export handler for backward compatibility
 export const handler = PatchDocumentController;
-
-
-
-
-
-
-
 

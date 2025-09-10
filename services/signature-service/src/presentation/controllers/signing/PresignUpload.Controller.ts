@@ -20,22 +20,13 @@ export const PresignUploadController = createCommandController<PresignUploadCont
   appServiceClass: SigningCommandService,
   createDependencies: createSigningDependenciesWithS3,
   extractParams: (path: any, body: any) => ({
-    tenantId: path.tenantId,
     envelopeId: path.id,
     filename: body.filename,
     contentType: body.contentType,
     token: "", // Will be injected by factory
   }),
-  responseType: "ok",
-});
+  responseType: "ok"});
 
 // Export handler for backward compatibility
 export const handler = PresignUploadController;
-
-
-
-
-
-
-
 

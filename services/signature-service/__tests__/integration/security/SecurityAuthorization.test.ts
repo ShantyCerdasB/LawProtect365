@@ -1,73 +1,73 @@
 /**
  * @file SecurityAuthorization.test.ts
  * @summary Security and authorization integration tests
- * @description Tests critical security validations including cross-tenant access,
+ * @description Tests critical security validations including cross-owner access,
  * unauthorized operations, and authentication/authorization edge cases
+ * Updated for Rocket Lawyer model without tenantId
  */
 
 import { getContainer } from '@/core/Container';
 import { CreateEnvelopeController } from '@/presentation/controllers/envelopes/CreateEnvelope.Controller';
 import { CreateDocumentController } from '@/presentation/controllers/documents/CreateDocument.Controller';
 import { CreatePartyController } from '@/presentation/controllers/parties/CreateParty.Controller';
+import { CreateInputsController } from '@/presentation/controllers/inputs/CreateInputs.Controller';
 import { InvitePartiesController } from '@/presentation/controllers/requests/InviteParties.Controller';
-import { RecordConsentController } from '@/presentation/controllers/signing/RecordConsent.Controller';
 import { CompleteSigningController } from '@/presentation/controllers/signing/CompleteSigning.Controller';
 import { DownloadSignedDocumentController } from '@/presentation/controllers/signing/DownloadSignedDocument.Controller';
-import { mockAwsServices } from '../helpers/awsMocks';
+// Using real repositories with DynamoDB Local - no need for repository mocks
 import {
   generateTestPdf,
   calculatePdfDigest,
-  generateTestTenantId,
   createTestRequestContext,
   createTestPathParams,
-  createApiGatewayEvent
+  createApiGatewayEvent,
+  generateTestJwtToken
 } from '../helpers/testHelpers';
-import type { ApiResponseStructured } from '@lawprotect/shared-ts';
-
-mockAwsServices();
+// Using real repositories with DynamoDB Local - no need to mock AWS services
 
 describe('Security and Authorization', () => {
-  let tenantIdA: string;
-  let tenantIdB: string;
+  let ownerEmailA: string;
+  let ownerEmailB: string;
   let envelopeId: string;
   let partyId: string;
 
-  const assertResponse = (response: any): ApiResponseStructured => {
-    return response as ApiResponseStructured;
-  };
-
   beforeAll(async () => {
     getContainer();
-    tenantIdA = generateTestTenantId();
-    tenantIdB = generateTestTenantId();
+    ownerEmailA = 'owner-a@example.com';
+    ownerEmailB = 'owner-b@example.com';
   });
 
   beforeEach(async () => {
-    // Create envelope in tenant A
-    const createEnvelopeResult = await CreateEnvelopeController(createApiGatewayEvent({
-      pathParameters: createTestPathParams({ tenantId: tenantIdA }),
+    // Create envelope for owner A
+    const authToken = await generateTestJwtToken({
+      sub: 'user-owner-a',
+      email: ownerEmailA,
+      roles: ['customer'],
+      scopes: []
+    });
+    
+    const createEnvelopeResult = await CreateEnvelopeController(await createApiGatewayEvent({
+      pathParameters: createTestPathParams({ }),
       body: {
-        ownerId: '550e8400-e29b-41d4-a716-446655440000',
-        name: 'Security Test Contract',
-        description: 'Contract for security testing'
+        ownerEmail: ownerEmailA,
+        name: 'Security Test Contract'
       },
-        requestContext: createTestRequestContext({
-          userId: 'user-tenant-a',
-          email: 'owner@tenant-a.com',
-          tenantId: tenantIdA
-        })
+      requestContext: createTestRequestContext({
+        userId: 'user-owner-a',
+        email: ownerEmailA
+      }),
+      authToken: authToken
     }));
 
-    const envelopeResponse = assertResponse(createEnvelopeResult);
-    console.log('CreateEnvelope response:', envelopeResponse);
-    envelopeId = JSON.parse(envelopeResponse.body!).data.envelope.envelopeId;
+    console.log('CreateEnvelope response:', createEnvelopeResult);
+    envelopeId = JSON.parse((createEnvelopeResult as any).body!).data.envelope.envelopeId;
 
     // Create document
     const testPdf = generateTestPdf();
     const pdfDigest = calculatePdfDigest(testPdf);
 
-    const createDocumentResult = await CreateDocumentController(createApiGatewayEvent({
-      pathParameters: { tenantId: tenantIdA, id: envelopeId },
+    const createDocumentResult = await CreateDocumentController(await createApiGatewayEvent({
+      pathParameters: { id: envelopeId },
       body: {
         name: 'Security Test Document.pdf',
         contentType: 'application/pdf',
@@ -77,58 +77,102 @@ describe('Security and Authorization', () => {
         key: `documents/${envelopeId}/security-test-document.pdf`
       },
         requestContext: createTestRequestContext({
-          userId: 'user-tenant-a',
-          email: 'owner@tenant-a.com',
-          tenantId: tenantIdA
+          userId: 'user-owner-a',
+          email: ownerEmailA
         })
     }));
 
-    assertResponse(createDocumentResult);
+    console.log('CreateDocument response:', createDocumentResult);
+    // Document created successfully
 
     // Create party
-    const createPartyResult = await CreatePartyController(createApiGatewayEvent({
-      pathParameters: { tenantId: tenantIdA, envelopeId },
+    const createPartyResult = await CreatePartyController(await createApiGatewayEvent({
+      pathParameters: { envelopeId },
       body: {
         name: 'Test Signer',
         email: 'signer@test.com',
         role: 'signer',
         sequence: 1
       },
-        requestContext: createTestRequestContext({
-          userId: 'user-tenant-a',
-          email: 'owner@tenant-a.com',
-          tenantId: tenantIdA
-        })
+      headers: {
+        'Authorization': `Bearer ${authToken}`
+      },
+      requestContext: createTestRequestContext({
+        userId: 'user-owner-a',
+        email: ownerEmailA
+      })
     }));
 
-    const partyResponse = assertResponse(createPartyResult);
-    partyId = JSON.parse(partyResponse.body!).data.partyId;
+    console.log('CreateParty response:', createPartyResult);
+    partyId = JSON.parse((createPartyResult as any).body!).data.party.partyId;
+
+    // Create input field for signing (required before inviting parties)
+    await CreateInputsController(await createApiGatewayEvent({
+      pathParameters: { envelopeId },
+      body: {
+        documentId: JSON.parse((createDocumentResult as any).body!).data.documentId,
+        inputs: [{
+          type: 'signature',
+          x: 100,
+          y: 100,
+          width: 200,
+          height: 50,
+          page: 1,
+          partyId: partyId
+        }]
+      },
+      headers: {
+        'Authorization': `Bearer ${authToken}`
+      },
+      requestContext: createTestRequestContext({
+        userId: 'user-owner-a',
+        email: ownerEmailA
+      })
+    }));
+
+    // Input created successfully
   });
 
-  describe('Cross-Tenant Access Prevention', () => {
-    it('should prevent cross-tenant envelope access', async () => {
-      const result = await CreateEnvelopeController(createApiGatewayEvent({
-        pathParameters: createTestPathParams({ tenantId: tenantIdB }),
+  describe('Cross-Owner Access Prevention', () => {
+    it('should prevent cross-owner envelope access', async () => {
+      // Generate token for owner A (who should not be able to create envelopes for owner B)
+      const authToken = await generateTestJwtToken({
+        sub: 'user-owner-a',
+        email: ownerEmailA,
+        roles: ['customer'],
+        scopes: []
+      });
+
+      const result = await CreateEnvelopeController(await createApiGatewayEvent({
+        pathParameters: createTestPathParams({ }),
         body: {
-          ownerId: '550e8400-e29b-41d4-a716-446655440000',
+          ownerEmail: ownerEmailB,
           name: 'Unauthorized Contract',
-          description: 'This should be rejected'
+        },
+        headers: {
+          'Authorization': `Bearer ${authToken}`
         },
         requestContext: createTestRequestContext({
-          userId: 'user-tenant-a',
-          email: 'owner@tenant-a.com',
-          tenantId: tenantIdA
+          userId: 'user-owner-a',
+          email: ownerEmailA
         })
       }));
 
-      const response = assertResponse(result);
-      // This should succeed since we're just creating an envelope
-      expect(response.statusCode).toBe(201);
+      // This should fail due to cross-owner access prevention
+      expect((result as any).statusCode).toBe(403);
     });
 
-    it('should prevent cross-tenant document access', async () => {
-      const result = await CreateDocumentController(createApiGatewayEvent({
-        pathParameters: { tenantId: tenantIdB, id: envelopeId },
+    it('should prevent cross-owner document access', async () => {
+      // Generate token for owner B (who should not be able to create documents in owner A's envelope)
+      const authToken = await generateTestJwtToken({
+        sub: 'user-owner-b',
+        email: ownerEmailB,
+        roles: ['customer'],
+        scopes: []
+      });
+
+      const result = await CreateDocumentController(await createApiGatewayEvent({
+        pathParameters: { id: envelopeId },
         body: {
           name: 'Unauthorized Document.pdf',
           contentType: 'application/pdf',
@@ -137,65 +181,95 @@ describe('Security and Authorization', () => {
           bucket: 'test-evidence-bucket',
           key: 'unauthorized-document.pdf'
         },
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        },
         requestContext: createTestRequestContext({
-          userId: 'user-tenant-a',
-          email: 'owner@tenant-a.com',
-          tenantId: tenantIdA
+          userId: 'user-owner-b',
+          email: ownerEmailB
         })
       }));
 
-      const response = assertResponse(result);
-      // This should fail due to cross-tenant access
-      expect(response.statusCode).toBe(403);
+      // This should fail due to cross-owner access
+      expect((result as any).statusCode).toBe(403);
     });
 
-    it('should prevent cross-tenant party access', async () => {
-      const result = await CreatePartyController(createApiGatewayEvent({
-        pathParameters: { tenantId: tenantIdB, envelopeId },
+    it('should prevent cross-owner party access', async () => {
+      // Generate token for owner B (who should not be able to create parties in owner A's envelope)
+      const authToken = await generateTestJwtToken({
+        sub: 'user-owner-b',
+        email: ownerEmailB,
+        roles: ['customer'],
+        scopes: []
+      });
+
+      const result = await CreatePartyController(await createApiGatewayEvent({
+        pathParameters: { envelopeId },
         body: {
           name: 'Unauthorized Signer',
           email: 'unauthorized@test.com',
           role: 'signer',
           sequence: 1
         },
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        },
         requestContext: createTestRequestContext({
-          userId: 'user-tenant-a',
-          email: 'owner@tenant-a.com',
-          tenantId: tenantIdA
+          userId: 'user-owner-b',
+          email: ownerEmailB
         })
       }));
 
-      const response = assertResponse(result);
-      // This should fail due to cross-tenant access
-      expect(response.statusCode).toBe(403);
+      // This should fail due to cross-owner access
+      expect((result as any).statusCode).toBe(403);
     });
   });
 
   describe('Unauthorized Operations', () => {
     it('should reject unauthorized envelope access', async () => {
-      const result = await CreateEnvelopeController(createApiGatewayEvent({
-        pathParameters: createTestPathParams({ tenantId: tenantIdA }),
+      // Generate token for unauthorized user
+      const authToken = await generateTestJwtToken({
+        sub: 'unauthorized-user',
+        email: 'unauthorized@test.com',
+        roles: ['customer'],
+        scopes: []
+      });
+
+      const result = await CreateEnvelopeController(await createApiGatewayEvent({
+        pathParameters: createTestPathParams({ }),
         body: {
-          ownerId: '550e8400-e29b-41d4-a716-446655440000',
+          ownerEmail: 'different-owner@test.com', // Different from auth context
           name: 'Unauthorized Contract',
-          description: 'This should be rejected'
+        },
+        headers: {
+          'Authorization': `Bearer ${authToken}`
         },
         requestContext: createTestRequestContext({
           userId: 'unauthorized-user',
-          email: 'unauthorized@test.com'
+          email: 'unauthorized@test.com' // Different from ownerEmail
         })
       }));
 
-      const response = assertResponse(result);
-      // This should succeed since we're just creating an envelope
-      expect(response.statusCode).toBe(201);
+      // This should fail due to unauthorized access
+      expect((result as any).statusCode).toBe(403);
     });
 
     it('should reject unauthorized document downloads', async () => {
-      const result = await DownloadSignedDocumentController(createApiGatewayEvent({
-        pathParameters: { tenantId: tenantIdA, id: envelopeId },
+      // Generate token for unauthorized user (different from envelope owner)
+      const authToken = await generateTestJwtToken({
+        sub: 'unauthorized-user',
+        email: 'unauthorized@test.com',
+        roles: ['customer'],
+        scopes: []
+      });
+
+      const result = await DownloadSignedDocumentController(await createApiGatewayEvent({
+        pathParameters: { id: envelopeId },
         body: {
           envelopeId: envelopeId
+        },
+        headers: {
+          'Authorization': `Bearer ${authToken}`
         },
         requestContext: createTestRequestContext({
           userId: 'unauthorized-user',
@@ -203,14 +277,21 @@ describe('Security and Authorization', () => {
         })
       }));
 
-      const response = assertResponse(result);
       // This should fail due to unauthorized access
-      expect(response.statusCode).toBe(403);
+      expect((result as any).statusCode).toBe(403);
     });
 
     it('should reject unauthorized signing attempts', async () => {
-      const result = await CompleteSigningController(createApiGatewayEvent({
-        pathParameters: { tenantId: tenantIdA, id: envelopeId },
+      // Generate token for unauthorized user (different from envelope owner)
+      const authToken = await generateTestJwtToken({
+        sub: 'unauthorized-user',
+        email: 'unauthorized@test.com',
+        roles: ['customer'],
+        scopes: []
+      });
+
+      const result = await CompleteSigningController(await createApiGatewayEvent({
+        pathParameters: { id: envelopeId },
         body: {
           envelopeId: envelopeId,
           signerId: partyId,
@@ -222,45 +303,57 @@ describe('Security and Authorization', () => {
           keyId: 'test-key-id',
           otpCode: '123456'
         },
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        },
         requestContext: createTestRequestContext({
           userId: 'unauthorized-user',
           email: 'unauthorized@test.com'
         })
       }));
 
-      const response = assertResponse(result);
       // This should fail due to unauthorized access
-      expect(response.statusCode).toBe(403);
+      expect((result as any).statusCode).toBe(403);
     });
   });
 
   describe('Authentication and Authorization Edge Cases', () => {
     it('should handle missing authentication context', async () => {
-      const result = await CreateEnvelopeController(createApiGatewayEvent({
-        pathParameters: createTestPathParams({ tenantId: tenantIdA }),
+      // No token provided - should fail with 401
+      const result = await CreateEnvelopeController(await createApiGatewayEvent({
+        pathParameters: createTestPathParams({ }),
         body: {
-          ownerId: '550e8400-e29b-41d4-a716-446655440000',
+          ownerEmail: 'test@example.com',
           name: 'No Auth Contract',
-          description: 'Contract without auth context'
         },
+        includeAuth: false, // Explicitly disable auth token generation
         requestContext: createTestRequestContext({
           userId: '',
           email: ''
         })
       }));
 
-      const response = assertResponse(result);
       // This should fail due to missing auth context
-      expect(response.statusCode).toBe(401);
+      expect((result as any).statusCode).toBe(401);
     });
 
     it('should validate JWT token expiration', async () => {
-      const result = await CreateEnvelopeController(createApiGatewayEvent({
-        pathParameters: createTestPathParams({ tenantId: tenantIdA }),
+      // Generate expired token
+      const expiredToken = await generateTestJwtToken({
+        sub: 'expired-user',
+        email: 'expired@test.com',
+        roles: ['customer'],
+        scopes: []
+      }, '-1h'); // Expired 1 hour ago
+
+      const result = await CreateEnvelopeController(await createApiGatewayEvent({
+        pathParameters: createTestPathParams({ }),
         body: {
-          ownerId: '550e8400-e29b-41d4-a716-446655440000',
+          ownerEmail: 'expired@test.com',
           name: 'Expired Token Contract',
-          description: 'Contract with expired token'
+        },
+        headers: {
+          'Authorization': `Bearer ${expiredToken}`
         },
         requestContext: createTestRequestContext({
           userId: 'expired-user',
@@ -268,18 +361,23 @@ describe('Security and Authorization', () => {
         })
       }));
 
-      const response = assertResponse(result);
       // This should fail due to expired token
-      expect(response.statusCode).toBe(401);
+      expect((result as any).statusCode).toBe(401);
+      expect((result as any).body).toContain('Token expired');
     });
 
     it('should handle invalid JWT tokens', async () => {
-      const result = await CreateEnvelopeController(createApiGatewayEvent({
-        pathParameters: createTestPathParams({ tenantId: tenantIdA }),
+      // Test with malformed token (not a valid JWT)
+      const malformedToken = 'invalid.jwt.token';
+
+      const result = await CreateEnvelopeController(await createApiGatewayEvent({
+        pathParameters: createTestPathParams({ }),
         body: {
-          ownerId: '550e8400-e29b-41d4-a716-446655440000',
+          ownerEmail: 'invalid@test.com',
           name: 'Invalid Token Contract',
-          description: 'Contract with invalid token'
+        },
+        headers: {
+          'Authorization': `Bearer ${malformedToken}`
         },
         requestContext: createTestRequestContext({
           userId: 'invalid-user',
@@ -287,64 +385,119 @@ describe('Security and Authorization', () => {
         })
       }));
 
-      const response = assertResponse(result);
-      // This should fail due to invalid token
-      expect(response.statusCode).toBe(401);
+      // This should fail due to invalid token format
+      expect((result as any).statusCode).toBe(401);
+      expect((result as any).body).toContain('Invalid token');
+    });
+
+    it('should reject tokens without valid Cognito roles', async () => {
+      // Generate token without any roles
+      const authToken = await generateTestJwtToken({
+        sub: 'no-roles-user',
+        email: 'noroles@test.com',
+        roles: [], // No roles
+        scopes: []
+      });
+
+      const result = await CreateEnvelopeController(await createApiGatewayEvent({
+        pathParameters: createTestPathParams({ }),
+        body: {
+          ownerEmail: 'noroles@test.com',
+          name: 'No Roles Contract',
+        },
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        },
+        requestContext: createTestRequestContext({
+          userId: 'no-roles-user',
+          email: 'noroles@test.com'
+        })
+      }));
+
+      expect((result as any).statusCode).toBe(403);
+      expect((result as any).body).toContain('Insufficient permissions');
+    });
+
+    it('should reject tokens with invalid Cognito roles', async () => {
+      // Generate token with invalid role
+      const authToken = await generateTestJwtToken({
+        sub: 'invalid-role-user',
+        email: 'invalidrole@test.com',
+        roles: ['invalid_role'], // Invalid role
+        scopes: []
+      });
+
+      const result = await CreateEnvelopeController(await createApiGatewayEvent({
+        pathParameters: createTestPathParams({ }),
+        body: {
+          ownerEmail: 'invalidrole@test.com',
+          name: 'Invalid Role Contract',
+        },
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        },
+        requestContext: createTestRequestContext({
+          userId: 'invalid-role-user',
+          email: 'invalidrole@test.com'
+        })
+      }));
+
+      expect((result as any).statusCode).toBe(403);
+      expect((result as any).body).toContain('Insufficient permissions');
     });
   });
 
-  describe('Role-Based Access Control', () => {
-    it('should enforce signer-only operations', async () => {
-      const result = await RecordConsentController(createApiGatewayEvent({
-        pathParameters: { tenantId: tenantIdA, id: envelopeId },
-        body: {
-          signerId: partyId,
-          consentGiven: true,
-          consentText: 'I agree to sign this document electronically'
-        },
-        requestContext: createTestRequestContext({
-          userId: 'viewer-user',
-          email: 'viewer@test.com'
-        })
-      }));
-
-      const response = assertResponse(result);
-      // This should fail due to insufficient role
-      expect(response.statusCode).toBe(403);
-    });
-
+  describe('Authorization Rules', () => {
     it('should enforce owner-only operations', async () => {
-      const result = await InvitePartiesController(createApiGatewayEvent({
-        pathParameters: { tenantId: tenantIdA, id: envelopeId },
+      // Generate token for non-owner user (should not be able to invite parties)
+      const authToken = await generateTestJwtToken({
+        sub: 'non-owner-user',
+        email: 'nonowner@test.com',
+        roles: ['customer'],
+        scopes: []
+      });
+
+      const result = await InvitePartiesController(await createApiGatewayEvent({
+        pathParameters: { id: envelopeId },
         body: {
           partyIds: [partyId]
         },
-        requestContext: createTestRequestContext({
-          userId: 'signer-user',
-          email: 'signer@test.com',
-        })
-      }));
-
-      const response = assertResponse(result);
-      // This should fail due to insufficient role
-      expect(response.statusCode).toBe(403);
-    });
-
-    it('should enforce viewer-only operations', async () => {
-      const result = await DownloadSignedDocumentController(createApiGatewayEvent({
-        pathParameters: { tenantId: tenantIdA, id: envelopeId },
-        body: {
-          envelopeId: envelopeId
+        headers: {
+          'Authorization': `Bearer ${authToken}`
         },
         requestContext: createTestRequestContext({
-          userId: 'signer-user',
-          email: 'signer@test.com',
-        })
+          userId: 'non-owner-user',
+          email: 'nonowner@test.com'})
       }));
 
-      const response = assertResponse(result);
-      // This should fail due to insufficient role
-      expect(response.statusCode).toBe(403);
+      // This should fail due to not being the owner
+      expect((result as any).statusCode).toBe(403);
+    });
+
+    it('should allow owner to access their own envelope', async () => {
+      // Generate token for the actual owner
+      const authToken = await generateTestJwtToken({
+        sub: 'user-owner-a',
+        email: ownerEmailA,
+        roles: ['customer'],
+        scopes: []
+      });
+
+      const result = await InvitePartiesController(await createApiGatewayEvent({
+        pathParameters: { id: envelopeId },
+        body: {
+          partyIds: [partyId]
+        },
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        },
+        requestContext: createTestRequestContext({
+          userId: 'user-owner-a',
+          email: ownerEmailA})
+      }));
+
+      // This should succeed because user is the owner
+      expect((result as any).statusCode).toBe(200);
     });
   });
 });

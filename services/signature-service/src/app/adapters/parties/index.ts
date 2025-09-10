@@ -7,5 +7,3 @@
 export * from "./MakePartiesCommandsPort";
 export * from "./MakePartiesQueriesPort";
 
-
-

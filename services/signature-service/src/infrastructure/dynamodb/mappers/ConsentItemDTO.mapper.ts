@@ -23,8 +23,7 @@ export const parseConsentItemDTO = (raw: unknown): ConsentItemDTO => {
   const parsed = ConsentItemDTOSchema.safeParse(raw);
   if (!parsed.success) {
     throw badRequest("Invalid Consent item shape from DynamoDB", "INPUT_TYPE_NOT_ALLOWED", {
-      issues: parsed.error.issues,
-    });
+      issues: parsed.error.issues});
   }
   return parsed.data;
 };
@@ -40,18 +39,11 @@ export const parseConsentItemDTO = (raw: unknown): ConsentItemDTO => {
 export const dtoToConsentRow = (dto: ConsentItemDTO): ConsentRepoRow => ({
   consentId: dto.consentId,
   envelopeId: dto.envelopeId,
-  tenantId: dto.tenantId,
   partyId: dto.partyId,
   consentType: dto.consentType,
   status: dto.status,
   createdAt: asISO(dto.createdAt),
   updatedAt: asISOOpt(dto.updatedAt),
   expiresAt: asISOOpt(dto.expiresAt),
-  metadata: dto.metadata,
-});
-
-
-
-
-
+  metadata: dto.metadata});
 

@@ -29,8 +29,7 @@ describe('EventBridge Utils', () => {
         time: new Date(mockTimestamp),
         region: 'us-east-1',
         resources: ['arn:aws:test:resource'],
-        traceHeader: 'test-trace',
-      };
+        traceHeader: 'test-trace'};
 
       const result = toEventBridgeEntry(metadata);
 
@@ -42,16 +41,14 @@ describe('EventBridge Utils', () => {
         Time: new Date(mockTimestamp),
         Region: 'us-east-1',
         Resources: ['arn:aws:test:resource'],
-        TraceHeader: 'test-trace',
-      });
+        TraceHeader: 'test-trace'});
     });
 
     it('should use current time when time is not provided', () => {
       const metadata: EventMetadataSchema = {
         source: 'test.source',
         detailType: 'TestEvent',
-        detail: { test: 'data' },
-      };
+        detail: { test: 'data' }};
 
       const result = toEventBridgeEntry(metadata);
 
@@ -68,8 +65,7 @@ describe('EventBridge Utils', () => {
         source: 'test.source',
         detailType: 'TestEvent',
         detail: { test: 'data' },
-        time: expect.any(Date),
-      });
+        time: expect.any(Date)});
     });
 
     it('should create event metadata with optional fields', () => {
@@ -77,8 +73,7 @@ describe('EventBridge Utils', () => {
         eventBusName: 'test-bus',
         region: 'us-east-1',
         resources: ['arn:aws:test:resource'],
-        traceHeader: 'test-trace',
-      };
+        traceHeader: 'test-trace'};
 
       const result = createEventMetadata('test.source', 'TestEvent', { test: 'data' }, options);
 
@@ -87,8 +82,7 @@ describe('EventBridge Utils', () => {
         detailType: 'TestEvent',
         detail: { test: 'data' },
         time: expect.any(Date),
-        ...options,
-      });
+        ...options});
     });
 
     it('should override default time when provided in options', () => {
@@ -104,8 +98,7 @@ describe('EventBridge Utils', () => {
       const metadata: EventMetadataSchema = {
         source: 'test.source',
         detailType: 'TestEvent',
-        detail: { test: 'data' },
-      };
+        detail: { test: 'data' }};
 
       const errors = validateEventMetadata(metadata);
 
@@ -116,8 +109,7 @@ describe('EventBridge Utils', () => {
       const metadata: EventMetadataSchema = {
         source: '',
         detailType: 'TestEvent',
-        detail: { test: 'data' },
-      };
+        detail: { test: 'data' }};
 
       const errors = validateEventMetadata(metadata);
 
@@ -128,8 +120,7 @@ describe('EventBridge Utils', () => {
       const metadata: EventMetadataSchema = {
         source: 'test.source',
         detailType: '',
-        detail: { test: 'data' },
-      };
+        detail: { test: 'data' }};
 
       const errors = validateEventMetadata(metadata);
 
@@ -140,8 +131,7 @@ describe('EventBridge Utils', () => {
       const metadata: EventMetadataSchema = {
         source: 'test.source',
         detailType: 'TestEvent',
-        detail: null as any,
-      };
+        detail: null as any};
 
       const errors = validateEventMetadata(metadata);
 
@@ -152,8 +142,7 @@ describe('EventBridge Utils', () => {
       const metadata: EventMetadataSchema = {
         source: '',
         detailType: '',
-        detail: null as any,
-      };
+        detail: null as any};
 
       const errors = validateEventMetadata(metadata);
 
@@ -185,8 +174,7 @@ describe('EventBridge Utils', () => {
         source: 'test.source',
         detailType: 'TestEvent',
         detail: { test: 'data' },
-        time: new Date(mockTimestamp),
-      };
+        time: new Date(mockTimestamp)};
 
       const result = formatEventForLogging(metadata);
 
@@ -197,8 +185,7 @@ describe('EventBridge Utils', () => {
       const metadata: EventMetadataSchema = {
         source: 'test.source',
         detailType: 'TestEvent',
-        detail: { test: 'data' },
-      };
+        detail: { test: 'data' }};
 
       const result = formatEventForLogging(metadata);
 

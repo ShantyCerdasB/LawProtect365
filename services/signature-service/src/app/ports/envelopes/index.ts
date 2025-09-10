@@ -7,5 +7,3 @@
 export * from "./EnvelopesCommandsPort";
 export * from "./EnvelopesQueriesPort";
 
-
-

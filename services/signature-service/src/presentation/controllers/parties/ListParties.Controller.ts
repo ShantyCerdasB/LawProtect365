@@ -18,20 +18,11 @@ export const ListPartiesController = createQueryController<ListPartiesAppInput, 
   appServiceClass: PartiesQueryService,
   createDependencies: (c: any) => c.parties.queriesPort,
   extractParams: (path: any, query: any) => ({
-    tenantId: path.tenantId,
     envelopeId: path.envelopeId,
     role: query.role,
     status: query.status,
     limit: query.limit,
-    cursor: query.cursor,
-  }),
+    cursor: query.cursor}),
   responseType: "ok"
 });
-
-
-
-
-
-
-
 

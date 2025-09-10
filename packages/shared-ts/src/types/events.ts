@@ -1,6 +1,5 @@
 import type { ISODateString } from "./common.js";
-import type { TenantId, UserId } from "./brand.js";
-
+import type {  UserId } from "./brand.js";
 
 /**
  * Metadata carried by domain and integration events.
@@ -14,8 +13,7 @@ export interface EventMeta {
   ts: ISODateString;
   /** Logical source of the event (service name). */
   source: string;
-  /** Multi-tenant hint when applicable. */
-  tenantId?: TenantId;
+
   /** Actor responsible if applicable. */
   actorId?: UserId;
   /** Arbitrary tags (e.g., region, env). */

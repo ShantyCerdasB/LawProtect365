@@ -16,8 +16,7 @@ import {
   partyItemMapper,
   partyPk,
   partySk,
-  PartyKey,
-} from "../../domain/types/infrastructure/dynamodb";
+  PartyKey} from "../../domain/types/infrastructure/dynamodb";
 import { requireQuery } from "@lawprotect/shared-ts";
 import { PARTY_ROLES, PARTY_STATUSES } from "../../domain/values/enums";
 
@@ -56,8 +55,7 @@ export class PartyRepositoryDdb
     try {
       const res = await this.ddb.get({
         TableName: this.tableName,
-        Key: { pk: partyPk(key.envelopeId), sk: partySk(key.partyId) },
-      });
+        Key: { pk: partyPk(key.envelopeId), sk: partySk(key.partyId) }});
       return res.Item ? partyItemMapper.fromDTO(res.Item as any) : null;
     } catch (err) {
       throw mapAwsError(err, "PartyRepositoryDdb.getById");
@@ -87,16 +85,14 @@ export class PartyRepositoryDdb
     if (!PARTY_ROLES.includes(entity.role as typeof PARTY_ROLES[number])) {
       throw new BadRequestError(`Invalid party role: ${entity.role}`, "INPUT_TYPE_NOT_ALLOWED", {
         validRoles: PARTY_ROLES,
-        providedRole: entity.role,
-      });
+        providedRole: entity.role});
     }
 
     // Validate party status
     if (!PARTY_STATUSES.includes(entity.status as typeof PARTY_STATUSES[number])) {
       throw new BadRequestError(`Invalid party status: ${entity.status}`, "INPUT_TYPE_NOT_ALLOWED", {
         validStatuses: PARTY_STATUSES,
-        providedStatus: entity.status,
-      });
+        providedStatus: entity.status});
     }
 
     try {
@@ -104,8 +100,7 @@ export class PartyRepositoryDdb
         TableName: this.tableName,
         Item: toDdbItem(partyItemMapper.toDTO(entity)),
         ConditionExpression:
-          "attribute_not_exists(pk) AND attribute_not_exists(sk)",
-      });
+          "attribute_not_exists(pk) AND attribute_not_exists(sk)"});
       return entity;
     } catch (err: any) {
       if (String(err?.name) === "ConditionalCheckFailedException") {
@@ -134,16 +129,14 @@ export class PartyRepositoryDdb
       if (patch.role && !PARTY_ROLES.includes(patch.role as typeof PARTY_ROLES[number])) {
         throw new BadRequestError(`Invalid party role: ${patch.role}`, "INPUT_TYPE_NOT_ALLOWED", {
           validRoles: PARTY_ROLES,
-          providedRole: patch.role,
-        });
+          providedRole: patch.role});
       }
 
       // Validate party status if provided
       if (patch.status && !PARTY_STATUSES.includes(patch.status as typeof PARTY_STATUSES[number])) {
         throw new BadRequestError(`Invalid party status: ${patch.status}`, "INPUT_TYPE_NOT_ALLOWED", {
           validStatuses: PARTY_STATUSES,
-          providedStatus: patch.status,
-        });
+          providedStatus: patch.status});
       }
 
       const next: Party = Object.freeze({
@@ -152,15 +145,13 @@ export class PartyRepositoryDdb
         role: patch.role ?? current.role,
         status: patch.status ?? current.status,
         signedAt: patch.signedAt ?? current.signedAt,
-        otpState: patch.otpState ?? current.otpState,
-      });
+});
 
       await this.ddb.put({
         TableName: this.tableName,
         Item: toDdbItem(partyItemMapper.toDTO(next)),
         ConditionExpression:
-          "attribute_exists(pk) AND attribute_exists(sk)",
-      });
+          "attribute_exists(pk) AND attribute_exists(sk)"});
 
       return next;
     } catch (err: any) {
@@ -184,8 +175,7 @@ export class PartyRepositoryDdb
         TableName: this.tableName,
         Key: { pk: partyPk(key.envelopeId), sk: partySk(key.partyId) },
         ConditionExpression:
-          "attribute_exists(pk) AND attribute_exists(sk)",
-      });
+          "attribute_exists(pk) AND attribute_exists(sk)"});
     } catch (err: any) {
       if (String(err?.name) === "ConditionalCheckFailedException") {
         throw new NotFoundError("Party not found");
@@ -200,7 +190,6 @@ export class PartyRepositoryDdb
    * @returns {Promise<object>} List result with parties and pagination info.
    */
   async listByEnvelope(input: {
-    tenantId: string;
     envelopeId: string;
     role?: string;
     status?: string;
@@ -215,10 +204,8 @@ export class PartyRepositoryDdb
         TableName: this.tableName,
         KeyConditionExpression: "pk = :pk",
         ExpressionAttributeValues: {
-          ":pk": partyPk(input.envelopeId),
-        },
-        Limit: input.limit || 20,
-      };
+          ":pk": partyPk(input.envelopeId)},
+        Limit: input.limit || 20};
 
       // Add filters if provided
       let filterExpressions: string[] = [];
@@ -260,8 +247,7 @@ export class PartyRepositoryDdb
         nextCursor: result.LastEvaluatedKey
           ? JSON.stringify(result.LastEvaluatedKey)
           : undefined,
-        total: parties.length,
-      };
+        total: parties.length};
     } catch (err) {
       throw mapAwsError(err, "PartyRepositoryDdb.listByEnvelope");
     }
@@ -273,7 +259,6 @@ export class PartyRepositoryDdb
    * @returns {Promise<object>} Search result with parties.
    */
   async getByEmail(input: {
-    tenantId: string;
     envelopeId: string;
     email: string;
   }): Promise<{ items: Party[] }> {
@@ -286,21 +271,17 @@ export class PartyRepositoryDdb
         KeyConditionExpression: "pk = :pk",
         FilterExpression: "#email = :email",
         ExpressionAttributeNames: {
-          "#email": "email",
-        },
+          "#email": "email"},
         ExpressionAttributeValues: {
           ":pk": partyPk(input.envelopeId),
-          ":email": input.email,
-        },
-      } as any);
+          ":email": input.email}} as any);
 
       const parties = (result.Items ?? []).map((item) =>
         partyItemMapper.fromDTO(item as any)
       );
 
       return {
-        items: parties,
-      };
+        items: parties};
     } catch (err) {
       throw mapAwsError(err, "PartyRepositoryDdb.getByEmail");
     }
@@ -339,5 +320,4 @@ export class PartyRepositoryDdb
     await this.delete({ envelopeId, partyId });
   }
 }
-
 

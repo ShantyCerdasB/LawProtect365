@@ -4,7 +4,7 @@
  * @description Defines the interface for certificate query operations
  */
 
-import type { EnvelopeId, TenantId } from "../../../domain/value-objects/ids";
+import type { EnvelopeId } from "../../../domain/value-objects/ids";
 import type { AuditEvent } from "../../../domain/value-objects/audit";
 
 // ============================================================================
@@ -17,7 +17,7 @@ import type { AuditEvent } from "../../../domain/value-objects/audit";
  */
 export interface GetCertificateQuery {
   /** Tenant identifier */
-  readonly tenantId: TenantId;
+  
   /** Envelope identifier */
   readonly envelopeId: EnvelopeId;
   /** Maximum number of events to return */

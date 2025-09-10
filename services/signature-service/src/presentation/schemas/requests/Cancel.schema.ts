@@ -12,14 +12,7 @@ import { z } from "@lawprotect/shared-ts";
  */
 export const CancelEnvelopeBody = z.object({
   /** Optional reason for canceling the envelope. */
-  reason: z.string().max(1000, "Reason must be 1000 characters or less").optional(),
-});
+  reason: z.string().max(1000, "Reason must be 1000 characters or less").optional()});
 
 export type CancelEnvelopeBody = z.infer<typeof CancelEnvelopeBody>;
-
-
-
-
-
-
 

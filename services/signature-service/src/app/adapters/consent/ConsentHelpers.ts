@@ -10,7 +10,7 @@ import type { CreateConsentAppInput, CreateConsentAppResult, UpdateConsentAppInp
 import type { ActorContext } from "@lawprotect/shared-ts";
 import { nowIso, asISO, asISOOpt } from "@lawprotect/shared-ts";
 import type { ConsentRepoRow } from "../../../domain/types/consent/ConsentTypes";
-import type { ConsentId, EnvelopeId, PartyId, TenantId } from "../../../domain/value-objects/ids";
+import type { ConsentId, EnvelopeId, PartyId } from "../../../domain/value-objects/ids";
 import type { ConsentType } from "../../../domain/values/enums";
 
 /**
@@ -33,33 +33,28 @@ export async function createConsentWithAudit(
 ): Promise<CreateConsentAppResult> {
   const row = await consentsRepo.create({
     consentId: ids.ulid(),
-    tenantId: input.tenantId,
     envelopeId: input.envelopeId,
     partyId: input.partyId,
     consentType: input.type,
     status: input.status,
     metadata: input.metadata,
     expiresAt: asISOOpt(input.expiresAt),
-    createdAt: asISO(nowIso()),
-  });
+    createdAt: asISO(nowIso())});
 
   const result = mapConsentRowToResult(row);
 
   // ✅ AUDIT: Log consent creation if audit service available
   if (auditService && actorContext) {
     await auditService.logBusinessEvent({
-      tenantId: input.tenantId,
       envelopeId: input.envelopeId,
-      actor: actorContext,
-    }, {
+      actor: actorContext}, {
       eventType: "consent.created",
       consentId: result.id,
       partyId: input.partyId,
       consentType: input.type,
       status: input.status,
       metadata: input.metadata,
-      expiresAt: input.expiresAt,
-    });
+      expiresAt: input.expiresAt});
   }
 
   return result;
@@ -82,17 +77,14 @@ export async function logConsentDeletionAudit(
 ): Promise<void> {
   if (auditService && actorContext && consentDetails) {
     await auditService.logBusinessEvent({
-      tenantId: consentDetails.tenantId as TenantId,
       envelopeId: input.envelopeId,
-      actor: actorContext,
-    }, {
+      actor: actorContext}, {
       eventType: "consent.deleted",
       consentId: input.consentId,
       partyId: consentDetails.partyId,
       consentType: consentDetails.consentType,
       status: consentDetails.status,
-      metadata: consentDetails.metadata,
-    });
+      metadata: consentDetails.metadata});
   }
 }
 
@@ -100,19 +92,16 @@ export async function logConsentDeletionAudit(
  * @summary Creates audit context for consent operations
  * @description Centralized audit context creation with fallback to system context
  * 
- * @param tenantId - Tenant ID
  * @param envelopeId - Envelope ID
  * @param actorContext - Optional actor context
  * @returns Audit context object
  */
 export function createConsentAuditContext(
-  tenantId: string,
   envelopeId: string,
   actorContext?: ActorContext,
   systemConfig?: { userId: string; email: string; name: string }
 ) {
   return {
-    tenantId,
     envelopeId,
     actor: actorContext || {
       userId: systemConfig?.userId || "system",
@@ -141,8 +130,7 @@ export async function updateConsentWithAudit(
     updatedAt: asISO(nowIso()),
     ...(input.status !== undefined && { status: input.status }),
     ...(input.expiresAt !== undefined && { expiresAt: asISOOpt(input.expiresAt) }),
-    ...(input.metadata !== undefined && { metadata: input.metadata }),
-  };
+    ...(input.metadata !== undefined && { metadata: input.metadata })};
 
   const row = await consentsRepo.update(
     { envelopeId: input.envelopeId, consentId: input.consentId },
@@ -154,10 +142,8 @@ export async function updateConsentWithAudit(
   // ✅ AUDIT: Log consent update if audit service available
   if (auditService && actorContext) {
     await auditService.logConsentUpdate({
-      tenantId: input.tenantId,
       envelopeId: input.envelopeId,
-      actor: actorContext,
-    }, {
+      actor: actorContext}, {
       consentId: input.consentId,
       previousStatus: row.status,
       newStatus: input.status || row.status,
@@ -166,13 +152,10 @@ export async function updateConsentWithAudit(
         changes: {
           status: input.status,
           expiresAt: input.expiresAt,
-          metadata: input.metadata,
-        },
+          metadata: input.metadata},
         previousStatus: row.status,
         previousExpiresAt: row.expiresAt,
-        previousMetadata: row.metadata,
-      },
-    });
+        previousMetadata: row.metadata}});
   }
 
   return result;
@@ -194,8 +177,7 @@ function mapConsentRowToResult(row: ConsentRepoRow): CreateConsentAppResult {
     status: row.status,
     metadata: row.metadata,
     expiresAt: row.expiresAt,
-    createdAt: row.createdAt,
-  };
+    createdAt: row.createdAt};
 }
 
 /**
@@ -215,8 +197,7 @@ function mapConsentRowToUpdateResult(row: ConsentRepoRow): UpdateConsentAppResul
     metadata: row.metadata,
     expiresAt: row.expiresAt,
     createdAt: row.createdAt,
-    updatedAt: row.updatedAt || nowIso(),
-  };
+    updatedAt: row.updatedAt || nowIso()};
 }
 
 /**
@@ -250,10 +231,8 @@ export async function submitConsentWithAudit(
   // ✅ AUDIT: Log consent submission if audit service available
   if (auditService && actorContext && previousConsent) {
     await auditService.logConsentUpdate({
-      tenantId: previousConsent.tenantId as TenantId,
       envelopeId: input.envelopeId,
-      actor: actorContext,
-    }, {
+      actor: actorContext}, {
       consentId: input.consentId,
       previousStatus: previousConsent.status,
       newStatus: "granted",
@@ -262,9 +241,7 @@ export async function submitConsentWithAudit(
         previousStatus: previousConsent.status,
         previousMetadata: previousConsent.metadata,
         previousExpiresAt: previousConsent.expiresAt,
-        submittedAt: result.submittedAt,
-      },
-    });
+        submittedAt: result.submittedAt}});
   }
 
   return result;
@@ -285,6 +262,5 @@ function mapConsentRowToSubmitResult(row: ConsentRepoRow): SubmitConsentAppResul
     type: row.consentType as ConsentType,
     status: row.status,
     metadata: row.metadata,
-    submittedAt: row.updatedAt || nowIso(),
-  };
+    submittedAt: row.updatedAt || nowIso()};
 }

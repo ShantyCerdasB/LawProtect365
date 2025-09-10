@@ -20,18 +20,10 @@ export const GetDocumentCertificateController = createQueryController<{ document
   appServiceClass: DefaultDocumentsQueryService,
   createDependencies: (c: any) => makeDocumentsQueriesPort(c.repos.documents),
   extractParams: (path: any) => ({
-    documentId: DocumentIdSchema.parse(path.id),
-  }),
+    documentId: DocumentIdSchema.parse(path.id)}),
   responseType: "ok"
 });
 
 // Export handler for backward compatibility
 export const handler = GetDocumentCertificateController;
-
-
-
-
-
-
-
 

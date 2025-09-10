@@ -10,8 +10,7 @@ import { RateLimitStoreDdb } from '../../../src/aws/ratelimit/RateLimitStoreDdb.
 jest.mock('../../../src/index.js', () => ({
   ...jest.requireActual('../../../src/index.js'),
   mapAwsError: jest.fn((err, op) => err),
-  nowIso: jest.fn(() => '2023-01-01T00:00:00.000Z'),
-}));
+  nowIso: jest.fn(() => '2023-01-01T00:00:00.000Z')}));
 
 describe('RateLimitStoreDdb', () => {
   let mockDdbClient: any;
@@ -22,8 +21,7 @@ describe('RateLimitStoreDdb', () => {
     jest.clearAllMocks();
     mockDdbClient = {
       update: jest.fn(),
-      put: jest.fn(),
-    };
+      put: jest.fn()};
     
     rateLimitStore = new RateLimitStoreDdb(tableName, mockDdbClient);
     
@@ -40,8 +38,7 @@ describe('RateLimitStoreDdb', () => {
     const testWindow = {
       windowSeconds: 60,
       maxRequests: 10,
-      ttlSeconds: 300,
-    };
+      ttlSeconds: 300};
 
     it('should increment existing record successfully', async () => {
       const mockItem = {
@@ -49,12 +46,10 @@ describe('RateLimitStoreDdb', () => {
         maxRequests: 10,
         windowStart: 1672531200,
         windowEnd: 1672531260,
-        updatedAt: '2023-01-01T00:00:00.000Z',
-      };
+        updatedAt: '2023-01-01T00:00:00.000Z'};
 
       mockDdbClient.update.mockResolvedValueOnce({
-        Attributes: mockItem,
-      });
+        Attributes: mockItem});
 
       const result = await rateLimitStore.incrementAndCheck(testKey, testWindow);
 
@@ -63,24 +58,20 @@ describe('RateLimitStoreDdb', () => {
         maxRequests: 10,
         windowStart: 1672531200,
         windowEnd: 1672531260,
-        resetInSeconds: 60,
-      });
+        resetInSeconds: 60});
 
       expect(mockDdbClient.update).toHaveBeenCalledWith({
         TableName: tableName,
         Key: {
           pk: 'RATE_LIMIT#test-key',
-          sk: 'WINDOW#1672531200',
-        },
+          sk: 'WINDOW#1672531200'},
         UpdateExpression: 'SET currentUsage = currentUsage + :inc, updatedAt = :updatedAt',
         ConditionExpression: 'currentUsage < :maxRequests',
         ExpressionAttributeValues: {
           ':inc': 1,
           ':maxRequests': 10,
-          ':updatedAt': '2023-01-01T00:00:00.000Z',
-        },
-        ReturnValues: 'ALL_NEW',
-      });
+          ':updatedAt': '2023-01-01T00:00:00.000Z'},
+        ReturnValues: 'ALL_NEW'});
     });
 
     it('should create new record when update fails with ConditionalCheckFailedException', async () => {
@@ -97,8 +88,7 @@ describe('RateLimitStoreDdb', () => {
         maxRequests: 10,
         windowStart: 1672531200,
         windowEnd: 1672531260,
-        resetInSeconds: 60,
-      });
+        resetInSeconds: 60});
 
       expect(mockDdbClient.put).toHaveBeenCalledWith({
         TableName: tableName,
@@ -113,10 +103,8 @@ describe('RateLimitStoreDdb', () => {
           maxRequests: 10,
           createdAt: '2023-01-01T00:00:00.000Z',
           updatedAt: '2023-01-01T00:00:00.000Z',
-          ttl: 1672531500,
-        },
-        ConditionExpression: 'attribute_not_exists(pk) AND attribute_not_exists(sk)',
-      });
+          ttl: 1672531500},
+        ConditionExpression: 'attribute_not_exists(pk) AND attribute_not_exists(sk)'});
     });
 
     it('should throw TooManyRequestsError when rate limit is exceeded', async () => {
@@ -154,8 +142,7 @@ describe('RateLimitStoreDdb', () => {
         maxRequests: 10,
         windowStart: 1672531200,
         windowEnd: 1672531260,
-        updatedAt: '2023-01-01T00:00:00.000Z',
-      };
+        updatedAt: '2023-01-01T00:00:00.000Z'};
 
       // First update fails
       mockDdbClient.update.mockRejectedValueOnce(conditionalCheckError);
@@ -165,8 +152,7 @@ describe('RateLimitStoreDdb', () => {
       
       // Retry increment succeeds
       mockDdbClient.update.mockResolvedValueOnce({
-        Attributes: mockItem,
-      });
+        Attributes: mockItem});
 
       const result = await rateLimitStore.incrementAndCheck(testKey, testWindow);
 
@@ -175,8 +161,7 @@ describe('RateLimitStoreDdb', () => {
         maxRequests: 10,
         windowStart: 1672531200,
         windowEnd: 1672531260,
-        resetInSeconds: 60,
-      });
+        resetInSeconds: 60});
 
       expect(mockDdbClient.update).toHaveBeenCalledTimes(2);
       expect(mockDdbClient.put).toHaveBeenCalledTimes(1);
@@ -191,17 +176,14 @@ describe('RateLimitStoreDdb', () => {
       const window60 = {
         windowSeconds: 60,
         maxRequests: 10,
-        ttlSeconds: 300,
-      };
+        ttlSeconds: 300};
 
       mockDdbClient.update.mockResolvedValueOnce({
         Attributes: {
           currentUsage: 1,
           maxRequests: 10,
           windowStart: 1672531200,
-          windowEnd: 1672531260,
-        },
-      });
+          windowEnd: 1672531260}});
 
       await rateLimitStore.incrementAndCheck(testKey, window60);
 
@@ -209,9 +191,7 @@ describe('RateLimitStoreDdb', () => {
         expect.objectContaining({
           Key: {
             pk: 'RATE_LIMIT#test-key',
-            sk: 'WINDOW#1672531200',
-          },
-        })
+            sk: 'WINDOW#1672531200'}})
       );
     });
 
@@ -220,8 +200,7 @@ describe('RateLimitStoreDdb', () => {
       const testWindow = {
         windowSeconds: 60,
         maxRequests: 10,
-        ttlSeconds: 300,
-      };
+        ttlSeconds: 300};
 
       // Mock different time
       jest.spyOn(Date, 'now').mockReturnValue(1672531230000); // 30 seconds later
@@ -231,9 +210,7 @@ describe('RateLimitStoreDdb', () => {
           currentUsage: 1,
           maxRequests: 10,
           windowStart: 1672531200,
-          windowEnd: 1672531260,
-        },
-      });
+          windowEnd: 1672531260}});
 
       await rateLimitStore.incrementAndCheck(testKey, testWindow);
 
@@ -242,8 +219,7 @@ describe('RateLimitStoreDdb', () => {
           Key: {
             pk: 'RATE_LIMIT#test-key',
             sk: 'WINDOW#1672531200', // Still same window
-          },
-        })
+          }})
       );
     });
   });
@@ -254,8 +230,7 @@ describe('RateLimitStoreDdb', () => {
       const testWindow = {
         windowSeconds: 60,
         maxRequests: 10,
-        ttlSeconds: 300,
-      };
+        ttlSeconds: 300};
 
       const conditionalCheckError = new Error('ConditionalCheckFailedException');
       conditionalCheckError.name = 'ConditionalCheckFailedException';
@@ -269,8 +244,7 @@ describe('RateLimitStoreDdb', () => {
         expect.objectContaining({
           Item: expect.objectContaining({
             ttl: 1672531500, // 1672531200 + 300
-          }),
-        })
+          })})
       );
     });
   });
@@ -281,17 +255,14 @@ describe('RateLimitStoreDdb', () => {
       const testWindow = {
         windowSeconds: 60,
         maxRequests: 10,
-        ttlSeconds: 300,
-      };
+        ttlSeconds: 300};
 
       mockDdbClient.update.mockResolvedValueOnce({
         Attributes: {
           currentUsage: 1,
           maxRequests: 10,
           windowStart: 1672531200,
-          windowEnd: 1672531260,
-        },
-      });
+          windowEnd: 1672531260}});
 
       await rateLimitStore.incrementAndCheck(testKey, testWindow);
 
@@ -299,9 +270,7 @@ describe('RateLimitStoreDdb', () => {
         expect.objectContaining({
           Key: {
             pk: 'RATE_LIMIT#user:123:otp',
-            sk: 'WINDOW#1672531200',
-          },
-        })
+            sk: 'WINDOW#1672531200'}})
       );
     });
   });
@@ -312,8 +281,7 @@ describe('RateLimitStoreDdb', () => {
       const testWindow = {
         windowSeconds: 60,
         maxRequests: 10,
-        ttlSeconds: 300,
-      };
+        ttlSeconds: 300};
 
       const otherError = new Error('SomeOtherError');
       mockDdbClient.update.mockRejectedValueOnce(otherError);
@@ -327,8 +295,7 @@ describe('RateLimitStoreDdb', () => {
       const testWindow = {
         windowSeconds: 60,
         maxRequests: 10,
-        ttlSeconds: 300,
-      };
+        ttlSeconds: 300};
 
       const conditionalCheckError = new Error('ConditionalCheckFailedException');
       conditionalCheckError.name = 'ConditionalCheckFailedException';
@@ -349,17 +316,14 @@ describe('RateLimitStoreDdb', () => {
       const testWindow = {
         windowSeconds: 0,
         maxRequests: 10,
-        ttlSeconds: 300,
-      };
+        ttlSeconds: 300};
 
       mockDdbClient.update.mockResolvedValueOnce({
         Attributes: {
           currentUsage: 1,
           maxRequests: 10,
           windowStart: 1672531200,
-          windowEnd: 1672531200,
-        },
-      });
+          windowEnd: 1672531200}});
 
       const result = await rateLimitStore.incrementAndCheck(testKey, testWindow);
 
@@ -371,17 +335,14 @@ describe('RateLimitStoreDdb', () => {
       const testWindow = {
         windowSeconds: 86400, // 24 hours
         maxRequests: 1000,
-        ttlSeconds: 300,
-      };
+        ttlSeconds: 300};
 
       mockDdbClient.update.mockResolvedValueOnce({
         Attributes: {
           currentUsage: 1,
           maxRequests: 1000,
           windowStart: 1672531200,
-          windowEnd: 1672617600,
-        },
-      });
+          windowEnd: 1672617600}});
 
       const result = await rateLimitStore.incrementAndCheck(testKey, testWindow);
 

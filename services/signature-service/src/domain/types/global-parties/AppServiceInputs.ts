@@ -4,7 +4,7 @@
  * @description Defines the input and output contracts for global party application services
  */
 
-import type { TenantId, PartyId } from "@/domain/value-objects/ids";
+import type { PartyId } from "@/domain/value-objects/ids";
 import type { GlobalPartyCommon, GlobalPartyPatch, GlobalPartyExtended } from "./GlobalPartiesTypes";
 
 /**
@@ -12,7 +12,6 @@ import type { GlobalPartyCommon, GlobalPartyPatch, GlobalPartyExtended } from ".
  */
 export interface GetGlobalPartyAppInput {
   /** Tenant identifier */
-  readonly tenantId: TenantId;
   /** Party identifier */
   readonly partyId: PartyId;
 }
@@ -30,7 +29,6 @@ export interface GetGlobalPartyAppResult {
  */
 export interface CreateGlobalPartyAppInput {
   /** Tenant identifier */
-  readonly tenantId: TenantId;
   /** Party identifier */
   readonly partyId: PartyId;
   /** Party name */
@@ -76,7 +74,6 @@ export interface CreateGlobalPartyAppResult {
  */
 export interface UpdateGlobalPartyAppInput {
   /** Tenant identifier */
-  readonly tenantId: TenantId;
   /** Party identifier */
   readonly partyId: PartyId;
   /** Updates to apply */
@@ -96,7 +93,6 @@ export interface UpdateGlobalPartyAppResult {
  */
 export interface DeleteGlobalPartyAppInput {
   /** Tenant identifier */
-  readonly tenantId: TenantId;
   /** Party identifier */
   readonly partyId: PartyId;
 }
@@ -114,7 +110,6 @@ export interface DeleteGlobalPartyAppResult {
  */
 export interface ListGlobalPartiesAppInput {
   /** Tenant identifier */
-  readonly tenantId: TenantId;
   /** Search term for name or email */
   readonly search?: string;
   /** Filter by tags */
@@ -148,7 +143,6 @@ export interface ListGlobalPartiesAppResult {
  */
 export interface SearchGlobalPartiesByEmailAppInput {
   /** Tenant identifier */
-  readonly tenantId: TenantId;
   /** Email to search for */
   readonly email: string;
   /** Maximum number of results */
@@ -168,7 +162,6 @@ export interface SearchGlobalPartiesByEmailAppResult {
  */
 export interface FindGlobalPartyByEmailAppInput {
   /** Tenant identifier */
-  readonly tenantId: TenantId;
   /** Email to search for */
   readonly email: string;
 }
@@ -180,9 +173,4 @@ export interface FindGlobalPartyByEmailAppResult {
   /** Found global party data */
   readonly party: GlobalPartyExtended | null;
 }
-
-
-
-
-
 

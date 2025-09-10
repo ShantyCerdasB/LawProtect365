@@ -27,7 +27,7 @@ import type { ApiResponseStructured } from '@lawprotect/shared-ts';
 mockAwsServices();
 
 describe('Event Publishing and Integration', () => {
-  let tenantId: string;
+  let container: any;
   let envelopeId: string;
   let documentId: string;
 
@@ -37,7 +37,7 @@ describe('Event Publishing and Integration', () => {
 
   beforeAll(async () => {
     getContainer();
-    tenantId = generateTestTenantId();
+     generateTestTenantId();
   });
 
   beforeEach(async () => {
@@ -48,7 +48,7 @@ describe('Event Publishing and Integration', () => {
   describe('Event Publishing for Core Operations', () => {
     it('should publish envelope.created event', async () => {
       const result = await CreateEnvelopeController(createApiGatewayEvent({
-        pathParameters: createTestPathParams({ tenantId }),
+        pathParameters: createTestPathParams({ }),
         body: {
           ownerId: '550e8400-e29b-41d4-a716-446655440000',
           name: 'Event Test Contract',
@@ -74,7 +74,7 @@ describe('Event Publishing and Integration', () => {
       const pdfDigest = calculatePdfDigest(testPdf);
 
       const result = await CreateDocumentController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
           name: 'Event Test Document.pdf',
           contentType: 'application/pdf',
@@ -100,7 +100,7 @@ describe('Event Publishing and Integration', () => {
     it('should publish party.invited event', async () => {
       // Create party first
       const createPartyResult = await CreatePartyController(createApiGatewayEvent({
-        pathParameters: { tenantId, envelopeId },
+        pathParameters: { envelopeId },
         body: {
           name: 'Event Test Signer',
           email: 'event-signer@test.com',
@@ -118,7 +118,7 @@ describe('Event Publishing and Integration', () => {
 
       // Invite party
       const result = await InvitePartiesController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
           partyIds: [partyId],
           message: 'Please sign this document'
@@ -138,7 +138,7 @@ describe('Event Publishing and Integration', () => {
 
     it('should publish consent.recorded event', async () => {
       const result = await RecordConsentController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
           signerId: 'test-signer-id',
           consentGiven: true,
@@ -159,7 +159,7 @@ describe('Event Publishing and Integration', () => {
 
     it('should publish signing.completed event', async () => {
       const result = await CompleteSigningController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
           signerId: 'test-signer-id',
           digest: 'test-digest',
@@ -182,7 +182,7 @@ describe('Event Publishing and Integration', () => {
 
     it('should publish document.signed event', async () => {
       const result = await DownloadSignedDocumentController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
           documentId: 'test-document-id'
         },
@@ -204,7 +204,7 @@ describe('Event Publishing and Integration', () => {
     it('should publish events for all operations in complete workflow', async () => {
       // Step 1: Create Envelope
       const createEnvelopeResult = await CreateEnvelopeController(createApiGatewayEvent({
-        pathParameters: createTestPathParams({ tenantId }),
+        pathParameters: createTestPathParams({ }),
         body: {
           ownerId: '550e8400-e29b-41d4-a716-446655440000',
           name: 'Complete Workflow Contract',
@@ -224,7 +224,7 @@ describe('Event Publishing and Integration', () => {
       const pdfDigest = calculatePdfDigest(testPdf);
 
       const createDocumentResult = await CreateDocumentController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: workflowEnvelopeId },
+        pathParameters: { id: workflowEnvelopeId },
         body: {
           name: 'Complete Workflow Document.pdf',
           contentType: 'application/pdf',
@@ -248,7 +248,7 @@ describe('Event Publishing and Integration', () => {
 
       for (const email of partyEmails) {
         const createPartyResult = await CreatePartyController(createApiGatewayEvent({
-          pathParameters: { tenantId, envelopeId: workflowEnvelopeId },
+          pathParameters: { envelopeId: workflowEnvelopeId },
           body: {
             name: `Workflow Signer ${partyEmails.indexOf(email) + 1}`,
             email,
@@ -267,7 +267,7 @@ describe('Event Publishing and Integration', () => {
 
       // Step 4: Invite Parties
       const invitePartiesResult = await InvitePartiesController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: workflowEnvelopeId },
+        pathParameters: { id: workflowEnvelopeId },
         body: {
           partyIds: workflowPartyIds,
           message: 'Please sign this document'
@@ -285,7 +285,7 @@ describe('Event Publishing and Integration', () => {
       for (let i = 0; i < workflowPartyIds.length; i++) {
         // Record Consent
         const recordConsentResult = await RecordConsentController(createApiGatewayEvent({
-          pathParameters: { tenantId, id: workflowEnvelopeId },
+          pathParameters: { id: workflowEnvelopeId },
           body: {
             signerId: workflowPartyIds[i],
             consentGiven: true,
@@ -302,7 +302,7 @@ describe('Event Publishing and Integration', () => {
 
         // Complete Signing
         const completeSigningResult = await CompleteSigningController(createApiGatewayEvent({
-          pathParameters: { tenantId, id: workflowEnvelopeId },
+          pathParameters: { id: workflowEnvelopeId },
           body: {
             signerId: workflowPartyIds[i],
             digest: 'test-digest',
@@ -333,7 +333,7 @@ describe('Event Publishing and Integration', () => {
       // Mock EventBridge failure
       
       const result = await CreateEnvelopeController(createApiGatewayEvent({
-        pathParameters: createTestPathParams({ tenantId }),
+        pathParameters: createTestPathParams({ }),
         body: {
           ownerId: '550e8400-e29b-41d4-a716-446655440000',
           name: 'EventBridge Failure Test',
@@ -353,7 +353,7 @@ describe('Event Publishing and Integration', () => {
     it('should retry failed event publishing', async () => {
       // Mock EventBridge retry scenario
       const result = await CreateEnvelopeController(createApiGatewayEvent({
-        pathParameters: createTestPathParams({ tenantId }),
+        pathParameters: createTestPathParams({ }),
         body: {
           ownerId: '550e8400-e29b-41d4-a716-446655440000',
           name: 'EventBridge Retry Test',
@@ -374,7 +374,7 @@ describe('Event Publishing and Integration', () => {
   describe('Audit Trail Maintenance', () => {
     it('should maintain audit trail with events', async () => {
       const result = await CreateEnvelopeController(createApiGatewayEvent({
-        pathParameters: createTestPathParams({ tenantId }),
+        pathParameters: createTestPathParams({ }),
         body: {
           ownerId: '550e8400-e29b-41d4-a716-446655440000',
           name: 'Audit Trail Test',
@@ -396,7 +396,7 @@ describe('Event Publishing and Integration', () => {
 
     it('should validate event metadata', async () => {
       const result = await CreateEnvelopeController(createApiGatewayEvent({
-        pathParameters: createTestPathParams({ tenantId }),
+        pathParameters: createTestPathParams({ }),
         body: {
           ownerId: '550e8400-e29b-41d4-a716-446655440000',
           name: 'Event Metadata Test',
@@ -418,7 +418,7 @@ describe('Event Publishing and Integration', () => {
 
     it('should maintain chronological order of events', async () => {
       const result = await CreateEnvelopeController(createApiGatewayEvent({
-        pathParameters: createTestPathParams({ tenantId }),
+        pathParameters: createTestPathParams({ }),
         body: {
           ownerId: '550e8400-e29b-41d4-a716-446655440000',
           name: 'Event Order Test',

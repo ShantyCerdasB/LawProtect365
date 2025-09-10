@@ -6,7 +6,7 @@
  */
 
 import type { RateLimitStore } from "@lawprotect/shared-ts";
-import type { TenantId, EnvelopeId } from "@/domain/value-objects/ids";
+import type { EnvelopeId } from "@/domain/value-objects/ids";
 import type { PartiesRateLimitConfig } from "../../../domain/types/parties/PartiesTypes";
 import { TooManyRequestsError, ErrorCodes } from "@lawprotect/shared-ts";
 
@@ -21,19 +21,17 @@ export class PartiesRateLimitService {
 
   /**
    * @description Checks if creating a new party would exceed rate limits
-   * @param tenantId Tenant identifier
    * @param envelopeId Envelope identifier
    * @throws {TooManyRequestsError} If rate limit is exceeded
    */
-  async checkCreatePartyLimit(tenantId: TenantId, envelopeId: EnvelopeId): Promise<void> {
-    const key = `parties:create:${tenantId}:${envelopeId}`;
+  async checkCreatePartyLimit(envelopeId: EnvelopeId): Promise<void> {
+    const key = `parties:create:${envelopeId}`;
     
     try {
       await this.rateLimitStore.incrementAndCheck(key, {
         maxRequests: this.config.maxPartiesPerEnvelope,
         windowSeconds: this.config.windowSeconds,
-        ttlSeconds: this.config.ttlSeconds,
-      });
+        ttlSeconds: this.config.ttlSeconds});
     } catch (error) {
       if (error instanceof TooManyRequestsError) {
         // Re-throw with more specific message
@@ -41,12 +39,10 @@ export class PartiesRateLimitService {
           `Rate limit exceeded: Cannot create more than ${this.config.maxPartiesPerEnvelope} parties per envelope within ${this.config.windowSeconds} seconds`,
           ErrorCodes.COMMON_TOO_MANY_REQUESTS,
           {
-            tenantId,
             envelopeId,
             maxPartiesPerEnvelope: this.config.maxPartiesPerEnvelope,
             windowSeconds: this.config.windowSeconds,
-            resetInSeconds: this.config.windowSeconds,
-          }
+            resetInSeconds: this.config.windowSeconds}
         );
       }
       throw error;
@@ -54,38 +50,33 @@ export class PartiesRateLimitService {
   }
 
   /**
-   * @description Gets current rate limit usage for an envelope
-   * @param tenantId Tenant identifier
-   * @param envelopeId Envelope identifier
+   * @description Gets current rate limit usage for an envelope   * @param envelopeId Envelope identifier
    * @returns Current usage information
    */
-  async getCurrentUsage(tenantId: TenantId, envelopeId: EnvelopeId): Promise<{
+  async getCurrentUsage(envelopeId: EnvelopeId): Promise<{
     currentUsage: number;
     maxRequests: number;
     resetInSeconds: number;
   }> {
-    const key = `parties:create:${tenantId}:${envelopeId}`;
+    const key = `parties:create:${envelopeId}`;
     
     try {
       const usage = await this.rateLimitStore.incrementAndCheck(key, {
         maxRequests: this.config.maxPartiesPerEnvelope,
         windowSeconds: this.config.windowSeconds,
-        ttlSeconds: this.config.ttlSeconds,
-      });
+        ttlSeconds: this.config.ttlSeconds});
       
       return {
         currentUsage: usage.currentUsage,
         maxRequests: usage.maxRequests,
-        resetInSeconds: usage.resetInSeconds,
-      };
+        resetInSeconds: usage.resetInSeconds};
     } catch (error) {
       if (error instanceof TooManyRequestsError) {
         // Return max usage when limit is exceeded
         return {
           currentUsage: this.config.maxPartiesPerEnvelope,
           maxRequests: this.config.maxPartiesPerEnvelope,
-          resetInSeconds: this.config.windowSeconds,
-        };
+          resetInSeconds: this.config.windowSeconds};
       }
       throw error;
     }

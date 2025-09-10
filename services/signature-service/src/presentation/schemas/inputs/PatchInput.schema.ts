@@ -30,8 +30,7 @@ export const PatchInputBody = z.object({
   /** Party ID assigned to this input (optional) */
   partyId: z.string().uuid().optional(),
   /** Value of the input (optional) */
-  value: z.string().optional(),
-});
+  value: z.string().optional()});
 export type PatchInputBody = z.infer<typeof PatchInputBody>;
 
 /**
@@ -42,12 +41,6 @@ export const PatchInputResponse = z.object({
   /** The unique identifier of the updated input */
   inputId: z.string(),
   /** ISO timestamp when the input was updated */
-  updatedAt: z.string().datetime(),
-});
+  updatedAt: z.string().datetime()});
 export type PatchInputResponse = z.infer<typeof PatchInputResponse>;
-
-
-
-
-
 

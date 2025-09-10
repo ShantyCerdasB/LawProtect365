@@ -36,8 +36,3 @@ export interface Signature {
   readonly signedAt: string;
 }
 
-
-
-
-
-

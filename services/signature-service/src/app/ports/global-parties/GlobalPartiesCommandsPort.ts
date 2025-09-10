@@ -5,7 +5,6 @@
  * Defines the contract for Global Party command operations.
  */
 
-import type { TenantId } from "../../../domain/value-objects/ids";
 import type { ActorContext } from "@lawprotect/shared-ts";
 import type { 
   GlobalPartyExtended,
@@ -15,18 +14,15 @@ import type {
 } from "../../../domain/types/global-parties";
 
 // Define command types that extend controller inputs with actor context
-export interface CreateGlobalPartyCommand extends CreateGlobalPartyControllerInput {
-  tenantId: TenantId;
+export interface CreateGlobalPartyCommand extends CreateGlobalPartyControllerInput { 
   actor: ActorContext;
 }
 
-export interface UpdateGlobalPartyCommand extends UpdateGlobalPartyControllerInput {
-  tenantId: TenantId;
+export interface UpdateGlobalPartyCommand extends UpdateGlobalPartyControllerInput { 
   actor: ActorContext;
 }
 
-export interface DeleteGlobalPartyCommand extends DeleteGlobalPartyControllerInput {
-  tenantId: TenantId;
+export interface DeleteGlobalPartyCommand extends DeleteGlobalPartyControllerInput { 
   actor: ActorContext;
 }
 

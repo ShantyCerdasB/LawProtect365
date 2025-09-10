@@ -20,8 +20,3 @@ export interface DelegationRepository {
   create(input: DelegationRepoCreateInput): Promise<DelegationRepoRow>;
 }
 
-
-
-
-
-

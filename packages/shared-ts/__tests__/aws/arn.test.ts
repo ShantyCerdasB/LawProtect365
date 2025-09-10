@@ -27,8 +27,7 @@ describe('parseArn', () => {
       service: 'lambda',
       region: 'us-east-1',
       accountId: '123456789012',
-      resource: 'function:my-fn',
-    });
+      resource: 'function:my-fn'});
   });
 
   it('handles services with empty region/account', () => {
@@ -53,8 +52,7 @@ describe('formatArn', () => {
       service: 'kms',
       region: 'us-gov-west-1',
       accountId: '111122223333',
-      resource: 'key/abcd-1234',
-    });
+      resource: 'key/abcd-1234'});
     expect(arn).toBe('arn:aws-us-gov:kms:us-gov-west-1:111122223333:key/abcd-1234');
   });
 });

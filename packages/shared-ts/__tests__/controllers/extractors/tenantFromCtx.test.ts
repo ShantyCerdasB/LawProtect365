@@ -6,10 +6,7 @@ describe('tenantFromCtx', () => {
     const mockEvent: APIGatewayProxyEvent = {
       requestContext: {
         authorizer: {
-          tenantId: 'tenant-123',
-        },
-      },
-    } as any;
+          }}} as any;
 
     const result = tenantFromCtx(mockEvent);
 
@@ -20,10 +17,7 @@ describe('tenantFromCtx', () => {
     const mockEvent: APIGatewayProxyEventV2 = {
       requestContext: {
         authorizer: {
-          tenantId: 'tenant-456',
-        },
-      },
-    } as any;
+          }}} as any;
 
     const result = tenantFromCtx(mockEvent);
 
@@ -33,9 +27,7 @@ describe('tenantFromCtx', () => {
   it('should throw error when tenant ID is not found in v1 event', () => {
     const mockEvent: APIGatewayProxyEvent = {
       requestContext: {
-        authorizer: {},
-      },
-    } as any;
+        authorizer: {}}} as any;
 
     expect(() => tenantFromCtx(mockEvent)).toThrow('Tenant ID not found in request context');
   });
@@ -43,9 +35,7 @@ describe('tenantFromCtx', () => {
   it('should throw error when tenant ID is not found in v2 event', () => {
     const mockEvent: APIGatewayProxyEventV2 = {
       requestContext: {
-        authorizer: {},
-      },
-    } as any;
+        authorizer: {}}} as any;
 
     expect(() => tenantFromCtx(mockEvent)).toThrow('Tenant ID not found in request context');
   });
@@ -53,9 +43,7 @@ describe('tenantFromCtx', () => {
   it('should throw error when authorizer is not an object in v1 event', () => {
     const mockEvent: APIGatewayProxyEvent = {
       requestContext: {
-        authorizer: 'invalid',
-      },
-    } as any;
+        authorizer: 'invalid'}} as any;
 
     expect(() => tenantFromCtx(mockEvent)).toThrow('Tenant ID not found in request context');
   });
@@ -63,9 +51,7 @@ describe('tenantFromCtx', () => {
   it('should throw error when authorizer is not an object in v2 event', () => {
     const mockEvent: APIGatewayProxyEventV2 = {
       requestContext: {
-        authorizer: 'invalid',
-      },
-    } as any;
+        authorizer: 'invalid'}} as any;
 
     expect(() => tenantFromCtx(mockEvent)).toThrow('Tenant ID not found in request context');
   });
@@ -78,8 +64,7 @@ describe('tenantFromCtx', () => {
 
   it('should throw error when authorizer is missing', () => {
     const mockEvent = {
-      requestContext: {},
-    } as any;
+      requestContext: {}} as any;
 
     expect(() => tenantFromCtx(mockEvent)).toThrow('Tenant ID not found in request context');
   });
@@ -89,10 +74,7 @@ describe('tenantFromCtx', () => {
       requestContext: {
         authorizer: {
           actor: { userId: 'user-123' },
-          otherProperty: 'value',
-        },
-      },
-    } as any;
+          otherProperty: 'value'}}} as any;
 
     expect(() => tenantFromCtx(mockEvent)).toThrow('Tenant ID not found in request context');
   });
@@ -102,10 +84,7 @@ describe('tenantFromCtx', () => {
       requestContext: {
         authorizer: {
           actor: { userId: 'user-123' },
-          otherProperty: 'value',
-        },
-      },
-    } as any;
+          otherProperty: 'value'}}} as any;
 
     expect(() => tenantFromCtx(mockEvent)).toThrow('Tenant ID not found in request context');
   });

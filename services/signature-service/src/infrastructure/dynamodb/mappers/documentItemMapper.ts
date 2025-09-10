@@ -13,11 +13,5 @@ export {
   isDdbDocumentItem,
   toDocumentItem,
   fromDocumentItem,
-  documentItemMapper,
-} from "../../../domain/types/infrastructure/DocumentDdbTypes";
-
-
-
-
-
+  documentItemMapper} from "../../../domain/types/infrastructure/DocumentDdbTypes";
 

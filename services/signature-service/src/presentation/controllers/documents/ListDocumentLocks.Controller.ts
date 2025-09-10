@@ -20,18 +20,10 @@ export const ListDocumentLocksController = createQueryController<{ documentId: D
   appServiceClass: DefaultDocumentsQueryService,
   createDependencies: (c: any) => makeDocumentsQueriesPort(c.repos.documents),
   extractParams: (path: any) => ({
-    documentId: DocumentIdSchema.parse(path.id),
-  }),
+    documentId: DocumentIdSchema.parse(path.id)}),
   responseType: "ok"
 });
 
 // Export handler for backward compatibility
 export const handler = ListDocumentLocksController;
-
-
-
-
-
-
-
 

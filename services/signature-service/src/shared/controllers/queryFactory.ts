@@ -17,9 +17,6 @@ import { getContainer } from "../../core/Container";
 export const createQueryController = <TInput, TOutput>(config: any) => {
   return createGenericQueryController<TInput, TOutput>({
     ...config,
-    getContainer,
-  });
+    getContainer});
 };
-
-
 

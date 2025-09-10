@@ -18,13 +18,7 @@ export type GetEnvelopeParams = z.infer<typeof GetEnvelopeParams>;
  */
 export const GetEnvelopeResponse = FullEnvelopeFields.extend({
   parties: z.array(z.string()),
-  documents: z.array(z.string()),
-});
+  documents: z.array(z.string())});
 
 export type GetEnvelopeResponse = z.infer<typeof GetEnvelopeResponse>;
-
-
-
-
-
 

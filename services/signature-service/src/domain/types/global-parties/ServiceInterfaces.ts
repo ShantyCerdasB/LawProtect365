@@ -5,7 +5,7 @@
  */
 
 import type { ActorContext } from "@lawprotect/shared-ts";
-import type { TenantId, PartyId } from "@/domain/value-objects/ids";
+import type { PartyId } from "@/domain/value-objects/ids";
 import type { 
   CreateGlobalPartyControllerInput,
   UpdateGlobalPartyControllerInput,
@@ -67,22 +67,22 @@ export interface GlobalPartiesAuditService {
   /**
    * Logs Global Party creation
    */
-  logCreate(partyId: PartyId, tenantId: TenantId, actor: ActorContext): Promise<void>;
+  logCreate(partyId: PartyId, actor: ActorContext): Promise<void>;
 
   /**
    * Logs Global Party update
    */
-  logUpdate(partyId: PartyId, tenantId: TenantId, actor: ActorContext): Promise<void>;
+  logUpdate(partyId: PartyId, actor: ActorContext): Promise<void>;
 
   /**
    * Logs Global Party deletion
    */
-  logDelete(partyId: PartyId, tenantId: TenantId, actor: ActorContext): Promise<void>;
+  logDelete(partyId: PartyId, actor: ActorContext): Promise<void>;
 
   /**
    * Logs Global Party access
    */
-  logAccess(partyId: PartyId, tenantId: TenantId, actor: ActorContext): Promise<void>;
+  logAccess(partyId: PartyId, actor: ActorContext): Promise<void>;
 }
 
 /**
@@ -92,17 +92,17 @@ export interface GlobalPartiesEventService {
   /**
    * Publishes Global Party created event
    */
-  publishCreated(partyId: PartyId, tenantId: TenantId, actor: ActorContext): Promise<void>;
+  publishCreated(partyId: PartyId, actor: ActorContext): Promise<void>;
 
   /**
    * Publishes Global Party updated event
    */
-  publishUpdated(partyId: PartyId, tenantId: TenantId, actor: ActorContext): Promise<void>;
+  publishUpdated(partyId: PartyId, actor: ActorContext): Promise<void>;
 
   /**
    * Publishes Global Party deleted event
    */
-  publishDeleted(partyId: PartyId, tenantId: TenantId, actor: ActorContext): Promise<void>;
+  publishDeleted(partyId: PartyId, actor: ActorContext): Promise<void>;
 }
 
 /**
@@ -144,9 +144,4 @@ export interface GlobalPartiesQueryService {
    */
   searchByEmail(input: SearchGlobalPartiesByEmailAppInput): Promise<SearchGlobalPartiesByEmailAppResult>;
 }
-
-
-
-
-
 

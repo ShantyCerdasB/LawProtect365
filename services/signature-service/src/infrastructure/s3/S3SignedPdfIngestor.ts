@@ -121,16 +121,12 @@ export class S3SignedPdfIngestor {
     });
 
     const httpUrl = toHttpUrl(bucket, input.key, region, {
-      virtualHosted: !pathStyle,
-    });
+      virtualHosted: !pathStyle});
 
     return {
       etag: put.etag,
       versionId: put.versionId,
-      httpUrl,
-    };
+      httpUrl};
   }
 }
-
-
 

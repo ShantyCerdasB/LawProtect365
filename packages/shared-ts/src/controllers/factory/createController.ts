@@ -7,7 +7,7 @@
 import type { HandlerFn } from "../../http/httpTypes.js";
 import { validateRequest } from "../../validation/requests.js";
 import { ok, created, noContent } from "../../http/responses.js";
-import { tenantFromCtx, actorFromCtx } from "../extractors/index.js";
+import { actorFromCtx } from "../extractors/index.js";
 import type { CommandControllerConfig } from "../../contracts/controllers/index.js";
 
 /**
@@ -26,16 +26,34 @@ export const createController = <TInput, TOutput>(
     if (config.bodySchema) validationSchemas.body = config.bodySchema;
     
     const validated = validateRequest(evt, validationSchemas);
-    const tenantId = tenantFromCtx(evt);
-    const actor = config.includeActor ? actorFromCtx(evt) : undefined;
+    
+    // Validate auth context if required
+    let actor = undefined;
+    if (config.includeActor) {
+      try {
+        actor = actorFromCtx(evt);
+      } catch (error) {
+        // If actor extraction fails, check if we have auth context from middleware
+        const auth = (evt as any).auth;
+        if (!auth || !auth.email) {
+          throw new Error("Missing authentication context");
+        }
+        actor = {
+          userId: auth.userId,
+          email: auth.email,
+          roles: auth.roles || [],
+          scopes: auth.scopes || []
+        };
+      }
+    }
     
     const c = config.getContainer();
     const dependencies = config.createDependencies(c);
     const appService = new config.appServiceClass(dependencies);
     
-    const params = config.extractParams(validated.path, validated.body, { tenantId, actor });
+    const params = config.extractParams(validated.path, validated.body, { actor });
     const methodName = config.methodName || 'execute';
-    const result = await appService[methodName]({ tenantId, actor, ...params });
+    const result = await appService[methodName]({ actor, ...params });
     
     const responseData = config.transformResult ? config.transformResult(result) : result;
     

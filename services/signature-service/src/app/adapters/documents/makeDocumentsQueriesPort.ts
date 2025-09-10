@@ -36,13 +36,11 @@ export const makeDocumentsQueriesPort = (documentsRepo: DocumentsRepository): Do
     const result = await documentsRepo.listByEnvelope({
       envelopeId: query.envelopeId,
       limit: query.limit ?? PAGINATION_LIMITS.DEFAULT_LIMIT,
-      cursor: query.cursor,
-    });
+      cursor: query.cursor});
 
     return {
       items: result.items,
-      nextCursor: result.nextCursor,
-    };
+      nextCursor: result.nextCursor};
   },
 
   /**
@@ -58,5 +56,4 @@ export const makeDocumentsQueriesPort = (documentsRepo: DocumentsRepository): Do
 
     const locks = document.metadata?.locks;
     return Array.isArray(locks) ? locks : [];
-  },
-});
+  }});

@@ -36,8 +36,7 @@ export const makeConsentQueryPort = (repo: ConsentQueryRepo): ConsentQueriesPort
   async getById(input: GetConsentAppInput): Promise<GetConsentAppResult | null> {
     const row = await repo.getById({
       envelopeId: input.envelopeId,
-      consentId: input.consentId,
-    });
+      consentId: input.consentId});
 
     if (!row) {
       return null;
@@ -56,14 +55,12 @@ export const makeConsentQueryPort = (repo: ConsentQueryRepo): ConsentQueriesPort
    */
   async listByEnvelope(input: ListConsentsAppInput): Promise<ListConsentsAppResult> {
     const out = await repo.listByEnvelope({
-      tenantId: input.tenantId,
       envelopeId: input.envelopeId,
       limit: input.limit ?? PAGINATION_LIMITS.DEFAULT_LIMIT,
       cursor: input.cursor,
       status: input.status,
       consentType: input.type,
-      partyId: input.partyId,
-    });
+      partyId: input.partyId});
 
     return {
       envelopeId: input.envelopeId,
@@ -72,7 +69,5 @@ export const makeConsentQueryPort = (repo: ConsentQueryRepo): ConsentQueriesPort
         limit: out.meta.limit, 
         nextCursor: out.meta.nextCursor, 
         total: out.meta.total 
-      },
-    };
-  },
-});
+      }};
+  }});

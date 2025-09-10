@@ -22,16 +22,8 @@ export const UploadDocumentController = createCommandController<UploadDocumentCo
   createDependencies: (c: any) => makeDocumentsCommandsPort(createDocumentDependencies(c)),
   extractParams: extractDocumentUploadParams,
   responseType: "created",
-  includeActor: true,
-});
+  includeActor: true});
 
 // Export handler for backward compatibility
 export const handler = UploadDocumentController;
-
-
-
-
-
-
-
 

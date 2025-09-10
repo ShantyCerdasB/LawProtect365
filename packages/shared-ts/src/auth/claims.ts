@@ -21,11 +21,6 @@ export const toJwtClaims = (payload: JWTPayload): JwtClaims => {
     (Array.isArray((payload as any)["roles"]) && (payload as any)["roles"]) ||
     [];
 
-  const tenantId =
-    (payload as any)["tenant_id"] ??
-    (payload as any)["custom:tenantId"] ??
-    (payload as any)["https://claims.example.com/tenant_id"];
-
   return {
     sub: String(payload.sub ?? ""),
     iss: String(payload.iss ?? ""),
@@ -42,7 +37,5 @@ export const toJwtClaims = (payload: JWTPayload): JwtClaims => {
 
     roles: roles.filter((r: unknown) => typeof r === "string"),
     scopes: scopeStr ? scopeStr.split(" ").filter(Boolean) : [],
-    tenantId: typeof tenantId === "string" ? tenantId : undefined,
-    raw: payload as Record<string, unknown>,
-  };
+    raw: payload as Record<string, unknown>};
 };

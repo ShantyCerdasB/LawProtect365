@@ -13,15 +13,13 @@ describe('EventBusPortAdapter', () => {
 
   beforeEach(() => {
     mockClient = {
-      putEvents: jest.fn(),
-    } as any;
+      putEvents: jest.fn()} as any;
 
     adapter = new EventBusPortAdapter({
       busName: 'test-bus',
       source: 'test-source',
       client: mockClient,
-      maxEntriesPerBatch: 5,
-    });
+      maxEntriesPerBatch: 5});
   });
 
   describe('constructor', () => {
@@ -29,8 +27,7 @@ describe('EventBusPortAdapter', () => {
       const adapter = new EventBusPortAdapter({
         busName: 'test-bus',
         source: 'test-source',
-        client: mockClient,
-      });
+        client: mockClient});
       expect(adapter).toBeDefined();
     });
 
@@ -39,16 +36,14 @@ describe('EventBusPortAdapter', () => {
         busName: 'test-bus',
         source: 'test-source',
         client: mockClient,
-        maxEntriesPerBatch: 0,
-      });
+        maxEntriesPerBatch: 0});
       expect(adapter1).toBeDefined();
 
       const adapter2 = new EventBusPortAdapter({
         busName: 'test-bus',
         source: 'test-source',
         client: mockClient,
-        maxEntriesPerBatch: 20,
-      });
+        maxEntriesPerBatch: 20});
       expect(adapter2).toBeDefined();
     });
 
@@ -57,8 +52,7 @@ describe('EventBusPortAdapter', () => {
         busName: 'test-bus',
         source: 'test-source',
         client: mockClient,
-        resources: ['resource1', 'resource2'],
-      });
+        resources: ['resource1', 'resource2']});
       expect(adapter).toBeDefined();
     });
   });
@@ -69,8 +63,7 @@ describe('EventBusPortAdapter', () => {
       type: 'TestEvent',
       occurredAt: '2023-01-01T00:00:00Z',
       payload: { test: 'data' },
-      metadata: { 'x-trace-id': 'trace-123' },
-    };
+      metadata: { 'x-trace-id': 'trace-123' }};
 
     it('should return early for empty events array', async () => {
       await adapter.publish([]);
@@ -85,8 +78,7 @@ describe('EventBusPortAdapter', () => {
     it('should publish single event successfully', async () => {
       mockClient.putEvents.mockResolvedValue({
         FailedEntryCount: 0,
-        Entries: [],
-      });
+        Entries: []});
 
       await adapter.publish([mockEvent]);
 
@@ -98,20 +90,17 @@ describe('EventBusPortAdapter', () => {
         DetailType: 'TestEvent',
         EventBusName: 'test-bus',
         Resources: undefined,
-        TraceHeader: 'trace-123',
-      });
+        TraceHeader: 'trace-123'});
     });
 
     it('should batch multiple events', async () => {
       const events = Array.from({ length: 7 }, (_, i) => ({
         ...mockEvent,
-        id: `event-${i}`,
-      }));
+        id: `event-${i}`}));
 
       mockClient.putEvents.mockResolvedValue({
         FailedEntryCount: 0,
-        Entries: [],
-      });
+        Entries: []});
 
       await adapter.publish(events);
 
@@ -127,8 +116,7 @@ describe('EventBusPortAdapter', () => {
         FailedEntries: [
           { Entry: {} as any, ErrorCode: 'ERROR1', ErrorMessage: 'Error 1' },
           { Entry: {} as any, ErrorCode: 'ERROR2', ErrorMessage: 'Error 2' },
-        ],
-      });
+        ]});
 
       await expect(adapter.publish([mockEvent])).rejects.toThrow();
     });
@@ -136,8 +124,7 @@ describe('EventBusPortAdapter', () => {
     it('should throw InternalError with singular message for single failure', async () => {
       mockClient.putEvents.mockResolvedValue({
         FailedEntryCount: 1,
-        FailedEntries: [{ Entry: {} as any, ErrorCode: 'ERROR1', ErrorMessage: 'Error 1' }],
-      });
+        FailedEntries: [{ Entry: {} as any, ErrorCode: 'ERROR1', ErrorMessage: 'Error 1' }]});
 
       await expect(adapter.publish([mockEvent])).rejects.toThrow();
     });
@@ -148,8 +135,7 @@ describe('EventBusPortAdapter', () => {
         FailedEntries: [
           { Entry: {} as any, ErrorCode: 'ERROR1', ErrorMessage: 'Error 1' },
           { Entry: {} as any, ErrorCode: 'ERROR2', ErrorMessage: 'Error 2' },
-        ],
-      });
+        ]});
 
       await expect(adapter.publish([mockEvent])).rejects.toThrow();
     });
@@ -166,13 +152,11 @@ describe('EventBusPortAdapter', () => {
         busName: 'test-bus',
         source: 'test-source',
         client: mockClient,
-        resources: ['resource1', 'resource2'],
-      });
+        resources: ['resource1', 'resource2']});
 
       mockClient.putEvents.mockResolvedValue({
         FailedEntryCount: 0,
-        Entries: [],
-      });
+        Entries: []});
 
       await adapterWithResources.publish([mockEvent]);
 
@@ -183,13 +167,11 @@ describe('EventBusPortAdapter', () => {
     it('should handle events without metadata', async () => {
       const eventWithoutMetadata = {
         ...mockEvent,
-        metadata: undefined,
-      };
+        metadata: undefined};
 
       mockClient.putEvents.mockResolvedValue({
         FailedEntryCount: 0,
-        Entries: [],
-      });
+        Entries: []});
 
       await adapter.publish([eventWithoutMetadata]);
 
@@ -200,13 +182,11 @@ describe('EventBusPortAdapter', () => {
     it('should handle events without trace header in metadata', async () => {
       const eventWithoutTrace = {
         ...mockEvent,
-        metadata: { other: 'data' },
-      };
+        metadata: { other: 'data' }};
 
       mockClient.putEvents.mockResolvedValue({
         FailedEntryCount: 0,
-        Entries: [],
-      });
+        Entries: []});
 
       await adapter.publish([eventWithoutTrace]);
 

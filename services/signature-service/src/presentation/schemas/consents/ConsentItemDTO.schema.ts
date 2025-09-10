@@ -14,7 +14,6 @@ export const ConsentItemDTOSchema = z.object({
   sk: z.string(),
   type: z.literal("Consent"),
   envelopeId: z.string(),
-  tenantId: z.string(),
   consentId: z.string(),
   partyId: z.string(),
   consentType: z.enum(CONSENT_TYPES),
@@ -22,13 +21,7 @@ export const ConsentItemDTOSchema = z.object({
   createdAt: z.string(),
   updatedAt: z.string(),
   expiresAt: z.string().optional(),
-  metadata: z.record(z.unknown()).optional(),
-});
+  metadata: z.record(z.unknown()).optional()});
 
 export type ConsentItemDTO = z.infer<typeof ConsentItemDTOSchema>;
-
-
-
-
-
 

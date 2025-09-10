@@ -18,10 +18,8 @@ import type { InputKey } from "../../domain/types/infrastructure/dynamodb";
 import {
   inputItemMapper,
   inputPk,
-  inputSk,
-} from "./mappers/inputItemMapper";
+  inputSk} from "./mappers/inputItemMapper";
 import { INPUT_VALUES } from "../../domain/values/enums";
-
 
 /**
  * @description DynamoDB implementation of `InputsRepository`.
@@ -47,8 +45,7 @@ export class InputRepositoryDdb implements InputsRepository {
     try {
       const res = await this.ddb.get({
         TableName: this.tableName,
-        Key: { pk: inputPk(inputKey.envelopeId), sk: inputSk(inputKey.inputId) },
-      });
+        Key: { pk: inputPk(inputKey.envelopeId), sk: inputSk(inputKey.inputId) }});
       return res.Item ? inputItemMapper.fromDTO(res.Item as any) : null;
     } catch (err) {
       throw mapAwsError(err, "InputRepositoryDdb.getById");
@@ -73,12 +70,12 @@ export class InputRepositoryDdb implements InputsRepository {
     value: any,
     attributeName: string
   ): void {
-    filterExpressions.push(`#${attributeName} = :${attributeName}`);
+    filterExpressions.push(`#${attributeName} = :attributeName`);
     if (!queryParams.ExpressionAttributeNames) {
       queryParams.ExpressionAttributeNames = {};
     }
     queryParams.ExpressionAttributeNames[`#${attributeName}`] = fieldName;
-    queryParams.ExpressionAttributeValues[`:${attributeName}`] = value;
+    queryParams.ExpressionAttributeValues[`:attributeName`] = value;
   }
 
   /**
@@ -145,10 +142,8 @@ export class InputRepositoryDdb implements InputsRepository {
         TableName: this.tableName,
         KeyConditionExpression: "pk = :pk",
         ExpressionAttributeValues: {
-          ":pk": inputPk(params.envelopeId),
-        },
-        Limit: limit,
-      };
+          ":pk": inputPk(params.envelopeId)},
+        Limit: limit};
 
       // Build filter expressions
       const filterExpressions = this.buildFilterExpressions(queryParams, params);
@@ -171,8 +166,7 @@ export class InputRepositoryDdb implements InputsRepository {
         items,
         nextCursor: res.LastEvaluatedKey 
           ? JSON.stringify(res.LastEvaluatedKey) 
-          : undefined,
-      };
+          : undefined};
     } catch (err) {
       throw mapAwsError(err, "InputRepositoryDdb.listByEnvelope");
     }
@@ -200,8 +194,7 @@ export class InputRepositoryDdb implements InputsRepository {
     if (!INPUT_VALUES.includes(entity.type as typeof INPUT_VALUES[number])) {
       throw new BadRequestError(`Invalid input type: ${entity.type}`, "INPUT_TYPE_NOT_ALLOWED", {
         validTypes: INPUT_VALUES,
-        providedType: entity.type,
-      });
+        providedType: entity.type});
     }
 
     try {
@@ -209,8 +202,7 @@ export class InputRepositoryDdb implements InputsRepository {
         TableName: this.tableName,
         Item: inputItemMapper.toDTO(entity) as Record<string, unknown>,
         ConditionExpression:
-          "attribute_not_exists(pk) AND attribute_not_exists(sk)",
-      });
+          "attribute_not_exists(pk) AND attribute_not_exists(sk)"});
       return entity;
     } catch (err: any) {
       if (String(err?.name) === "ConditionalCheckFailedException") {
@@ -239,8 +231,7 @@ export class InputRepositoryDdb implements InputsRepository {
       if (patch.type && !INPUT_VALUES.includes(patch.type as typeof INPUT_VALUES[number])) {
         throw new BadRequestError(`Invalid input type: ${patch.type}`, "INPUT_TYPE_NOT_ALLOWED", {
           validTypes: INPUT_VALUES,
-          providedType: patch.type,
-        });
+          providedType: patch.type});
       }
 
       const next: Input = Object.freeze({
@@ -249,15 +240,13 @@ export class InputRepositoryDdb implements InputsRepository {
         position: patch.position ?? current.position,
         value: patch.value ?? current.value,
         type: patch.type ?? current.type,
-        updatedAt: nowIso(),
-      });
+        updatedAt: nowIso()});
 
       await this.ddb.put({
         TableName: this.tableName,
         Item: inputItemMapper.toDTO(next) as Record<string, unknown>,
         ConditionExpression:
-          "attribute_exists(pk) AND attribute_exists(sk)",
-      });
+          "attribute_exists(pk) AND attribute_exists(sk)"});
 
       return next;
     } catch (err: any) {
@@ -281,8 +270,7 @@ export class InputRepositoryDdb implements InputsRepository {
         TableName: this.tableName,
         Key: { pk: inputPk(inputKey.envelopeId), sk: inputSk(inputKey.inputId) },
         ConditionExpression:
-          "attribute_exists(pk) AND attribute_exists(sk)",
-      });
+          "attribute_exists(pk) AND attribute_exists(sk)"});
     } catch (err: any) {
       if (String(err?.name) === "ConditionalCheckFailedException") {
         throw new NotFoundError("Input not found");
@@ -291,6 +279,4 @@ export class InputRepositoryDdb implements InputsRepository {
     }
   }
 }
-
-
 

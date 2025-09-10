@@ -4,7 +4,7 @@
  * @description Defines the input/output contracts for party application services
  */
 
-import type { TenantId, EnvelopeId, PartyId } from "@/domain/value-objects/ids";
+import type { EnvelopeId, PartyId } from "@/domain/value-objects/ids";
 import type { Party } from "../../../domain/entities/Party";
 import { PartyRole, PartyStatus } from "@/domain/values/enums";
 
@@ -18,7 +18,6 @@ import { PartyRole, PartyStatus } from "@/domain/values/enums";
  */
 export interface ListPartiesAppInput {
   /** Tenant identifier */
-  readonly tenantId: TenantId;
   /** Envelope identifier */
   readonly envelopeId: EnvelopeId;
   /** Optional role filter */
@@ -54,7 +53,6 @@ export interface ListPartiesAppResult {
  */
 export interface GetPartyAppInput {
   /** Tenant identifier */
-  readonly tenantId: TenantId;
   /** Envelope identifier */
   readonly envelopeId: EnvelopeId;
   /** Party identifier */
@@ -80,7 +78,6 @@ export interface GetPartyAppResult {
  */
 export interface SearchPartiesByEmailAppInput {
   /** Tenant identifier */
-  readonly tenantId: TenantId;
   /** Envelope identifier */
   readonly envelopeId: EnvelopeId;
   /** Email address to search for */
@@ -95,9 +92,4 @@ export interface SearchPartiesByEmailAppResult {
   /** Array of party entities matching the email */
   readonly parties: Party[];
 }
-
-
-
-
-
 

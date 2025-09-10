@@ -22,7 +22,8 @@ import type {
 } from "../../ports/documents/DocumentsCommandsPort";
 import type { DocumentLock } from "@lawprotect/shared-ts";
 import type { DocumentsRepository } from "@/domain/contracts/repositories/documents/DocumentsRepository";
-import { documentNotFound, envelopeNotFound, badRequest } from "@/shared/errors";
+import { documentNotFound, envelopeNotFound, badRequest, ForbiddenError } from "@/shared/errors";
+import { ErrorCodes } from "@/shared/errors";
 import { nowIso } from "@lawprotect/shared-ts";
 import { 
   assertDocumentMutable, 
@@ -69,14 +70,27 @@ export const makeDocumentsCommandsPort = (deps: Dependencies): DocumentsCommands
      */
     async create(command: CreateDocumentCommand): Promise<CreateDocumentResult> {
       // Apply generic rules - validate cross-tenant access
-      // Note: tenantId comes from request context, not from actor
       // The validation should be done at the service level
       
       // Get envelope to validate document creation rules (temporarily commented for tests)
-      // const envelope = await deps.envelopesRepo.getById(command.envelopeId);
-      // if (!envelope) {
-      //   throw envelopeNotFound({ envelopeId: command.envelopeId });
-      // }
+      const envelope = await deps.envelopesRepo.getById(command.envelopeId);
+      if (!envelope) {
+        throw envelopeNotFound({ envelopeId: command.envelopeId });
+    }
+      
+      // AUTHORIZATION VALIDATION - Only envelope owner can create documents
+      const actorEmail = (command as any).actorEmail || command.actor?.email;
+      if (actorEmail && envelope.ownerEmail !== actorEmail) {
+        throw new ForbiddenError(
+          "Unauthorized: Only envelope owner can create documents",
+          ErrorCodes.AUTH_FORBIDDEN,
+          { 
+            envelopeOwnerEmail: envelope.ownerEmail,
+            actorEmail: actorEmail,
+            envelopeId: command.envelopeId
+          }
+        );
+      }
       
       // Apply domain-specific rules (temporarily commented for tests)
       // assertEnvelopeDraftForDocumentModification(envelope);
@@ -89,7 +103,6 @@ export const makeDocumentsCommandsPort = (deps: Dependencies): DocumentsCommands
       const document: Document = {
         documentId,
         envelopeId: command.envelopeId,
-        tenantId: command.tenantId,
         name: command.name,
         status: DOCUMENT_STATUSES[3] as DocumentStatus, // "ready"
         contentType: command.contentType,
@@ -101,16 +114,13 @@ export const makeDocumentsCommandsPort = (deps: Dependencies): DocumentsCommands
         updatedAt: now,
         metadata: {
           createdBy: command.actor.userId,
-          createdByIp: command.actor.ip,
-        },
-      };
+          createdByIp: command.actor.ip}};
 
       await deps.documentsRepo.create(document);
 
       return {
         documentId,
-        createdAt: now,
-      };
+        createdAt: now};
     },
 
     /**
@@ -120,7 +130,6 @@ export const makeDocumentsCommandsPort = (deps: Dependencies): DocumentsCommands
      */
     async upload(command: UploadDocumentCommand): Promise<UploadDocumentResult> {
       // Apply generic rules - validate cross-tenant access
-      // Note: tenantId comes from request context, not from actor
       // The validation should be done at the service level
       
       // Get envelope to validate document upload rules
@@ -153,7 +162,6 @@ export const makeDocumentsCommandsPort = (deps: Dependencies): DocumentsCommands
       const document: Document = {
         documentId,
         envelopeId: command.envelopeId,
-        tenantId: command.tenantId,
         name: command.name,
         status: DOCUMENT_STATUSES[0] as DocumentStatus, // "pending"
         contentType: command.contentType,
@@ -161,17 +169,14 @@ export const makeDocumentsCommandsPort = (deps: Dependencies): DocumentsCommands
         digest: command.digest,
         s3Ref: {
           bucket: deps.s3Config.evidenceBucket,
-          key: objectKey,
-        },
+          key: objectKey},
         pageCount: command.pageCount,
         createdAt: now,
         updatedAt: now,
         metadata: {
           uploadedBy: command.actor.userId,
           uploadedByIp: command.actor.ip,
-          uploadStatus: "pending",
-        },
-      };
+          uploadStatus: "pending"}};
 
       await deps.documentsRepo.create(document);
 
@@ -180,8 +185,7 @@ export const makeDocumentsCommandsPort = (deps: Dependencies): DocumentsCommands
         uploadedAt: now,
         uploadUrl,
         objectKey,
-        expiresAt,
-      };
+        expiresAt};
     },
 
     /**
@@ -212,14 +216,11 @@ export const makeDocumentsCommandsPort = (deps: Dependencies): DocumentsCommands
           ...document.metadata,
           ...command.metadata,
           updatedBy: command.actor.userId,
-          updatedByIp: command.actor.ip,
-        },
-      });
+          updatedByIp: command.actor.ip}});
 
       return {
         documentId: updatedDocument.documentId,
-        updatedAt: updatedDocument.updatedAt,
-      };
+        updatedAt: updatedDocument.updatedAt};
     },
 
     /**
@@ -256,14 +257,11 @@ export const makeDocumentsCommandsPort = (deps: Dependencies): DocumentsCommands
         metadata: {
           ...document.metadata,
           updatedBy: command.actor.userId,
-          updatedByIp: command.actor.ip,
-        },
-      });
+          updatedByIp: command.actor.ip}});
 
       return {
         documentId: updatedDocument.documentId,
-        updatedAt: updatedDocument.updatedAt,
-      };
+        updatedAt: updatedDocument.updatedAt};
     },
 
     /**
@@ -295,8 +293,7 @@ export const makeDocumentsCommandsPort = (deps: Dependencies): DocumentsCommands
       const currentLocks = Array.isArray(document.metadata?.locks) ? document.metadata.locks : [];
       const updatedMetadata = {
         ...document.metadata,
-        locks: [...currentLocks, lock],
-      };
+        locks: [...currentLocks, lock]};
 
       await deps.documentsRepo.update(documentId, { metadata: updatedMetadata });
     },
@@ -317,10 +314,8 @@ export const makeDocumentsCommandsPort = (deps: Dependencies): DocumentsCommands
       
       const updatedMetadata = {
         ...document.metadata,
-        locks: updatedLocks,
-      };
+        locks: updatedLocks};
 
       await deps.documentsRepo.update(documentId, { metadata: updatedMetadata });
-    },
-  };
+    }};
 };

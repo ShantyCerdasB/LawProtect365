@@ -149,8 +149,7 @@ describe("retry", () => {
 
     const resultP = retry(fn, {
       retries: 5,
-      shouldRetry: (e) => (e as Error).message !== "fatal",
-    });
+      shouldRetry: (e) => (e as Error).message !== "fatal"});
     const pending = expect(resultP).rejects.toBe(err); // attach before flushing
 
     await Promise.resolve(); // flush microtasks

@@ -10,8 +10,7 @@ import {
   UuidV4,
   Ulid,
   OpaqueId,
-  S3Uri,
-} from "../../src/validation/ids.js";
+  S3Uri} from "../../src/validation/ids.js";
 
 describe("UuidV4", () => {
   it("accepts a valid v4 UUID", () => {

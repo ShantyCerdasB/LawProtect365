@@ -7,8 +7,7 @@ import {
   requireAuth,
   requireScopes,
   requirePermissions,
-  requireTenant,
-} from '../../src/auth/guard.js';
+  requireTenant} from '../../src/auth/guard.js';
 import type { ApiEvent } from '../../src/http/httpTypes.js';
 import type { AuthContext } from '../../src/types/auth.js';
 import type { Permission } from '../../src/types/security.js';
@@ -50,8 +49,7 @@ describe('requireAuth', () => {
       name: 'UnauthorizedError',
       statusCode: 401,
       code: ErrorCodes.AUTH_UNAUTHORIZED,
-      message: expect.stringMatching(/missing authentication/i),
-    });
+      message: expect.stringMatching(/missing authentication/i)});
   });
 });
 
@@ -68,8 +66,7 @@ describe('requireScopes', () => {
       name: 'ForbiddenError',
       statusCode: 403,
       code: ErrorCodes.AUTH_FORBIDDEN,
-      message: expect.stringMatching(/insufficient scopes/i),
-    });
+      message: expect.stringMatching(/insufficient scopes/i)});
   });
 
   it('treats undefined scopes as empty set (nullish branch)', () => {
@@ -78,8 +75,7 @@ describe('requireScopes', () => {
       name: 'ForbiddenError',
       statusCode: 403,
       code: ErrorCodes.AUTH_FORBIDDEN,
-      message: expect.stringMatching(/insufficient scopes/i),
-    });
+      message: expect.stringMatching(/insufficient scopes/i)});
   });
 });
 
@@ -96,8 +92,7 @@ describe('requirePermissions', () => {
       name: 'ForbiddenError',
       statusCode: 403,
       code: ErrorCodes.AUTH_FORBIDDEN,
-      message: expect.stringMatching(/insufficient permissions/i),
-    });
+      message: expect.stringMatching(/insufficient permissions/i)});
   });
 
   it('handles undefined permissions as empty set', () => {
@@ -105,34 +100,31 @@ describe('requirePermissions', () => {
     expectToThrowMatching(() => requirePermissions(evt, [P('payment:manage')]), {
       name: 'ForbiddenError',
       statusCode: 403,
-      code: ErrorCodes.AUTH_FORBIDDEN,
-    });
+      code: ErrorCodes.AUTH_FORBIDDEN});
   });
 });
 
 describe('requireTenant', () => {
   it('allows when tenant matches', () => {
-    const evt = evtWithAuth({ tenantId: T('t-1') });
+    const evt = evtWithAuth({ });
     const ctx = requireTenant(evt, 't-1');
-    expect(ctx.tenantId).toBe('t-1');
+    expect(ctx).toBe('t-1');
   });
 
   it('denies when tenant mismatches', () => {
-    const evt = evtWithAuth({ tenantId: T('t-1') });
+    const evt = evtWithAuth({ });
     expectToThrowMatching(() => requireTenant(evt, 't-2'), {
       name: 'ForbiddenError',
       statusCode: 403,
       code: ErrorCodes.AUTH_FORBIDDEN,
-      message: expect.stringMatching(/tenant mismatch/i),
-    });
+      message: expect.stringMatching(/tenant mismatch/i)});
   });
 
   it('denies when subject tenant is missing', () => {
-    const evt = evtWithAuth({ tenantId: undefined });
+    const evt = evtWithAuth({ });
     expectToThrowMatching(() => requireTenant(evt, 't-1'), {
       name: 'ForbiddenError',
       statusCode: 403,
-      code: ErrorCodes.AUTH_FORBIDDEN,
-    });
+      code: ErrorCodes.AUTH_FORBIDDEN});
   });
 });

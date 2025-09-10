@@ -26,8 +26,7 @@ const UTILS_MODULES = {
   security: '../../src/utils/security.js',
   audit: '../../src/utils/audit.js',
   idempotency: '../../src/utils/idempotency.js',
-  eventbridge: '../../src/utils/eventbridge.js',
-} as const;
+  eventbridge: '../../src/utils/eventbridge.js'} as const;
 
 type UtilsModuleExports = Record<string, unknown>;
 

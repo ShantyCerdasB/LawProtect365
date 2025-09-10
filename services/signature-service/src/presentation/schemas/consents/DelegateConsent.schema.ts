@@ -21,8 +21,7 @@ export const DelegateConsentBody = z.object({
   expiresAt: z.string().optional(),
   metadata: z.record(z.unknown()).optional(),
   idempotencyKey: z.string().optional(),
-  ttlSeconds: z.number().int().positive().max(3600).optional(),
-});
+  ttlSeconds: z.number().int().positive().max(3600).optional()});
 
 /** Response */
 export const DelegateConsentResponse = z.object({
@@ -33,19 +32,9 @@ export const DelegateConsentResponse = z.object({
   reason: z.string().optional(),
   expiresAt: z.string().optional(),
   metadata: z.record(z.unknown()).optional(),
-  createdAt: z.string(),
-});
+  createdAt: z.string()});
 
 export type DelegateConsentPathType = z.infer<typeof DelegateConsentPath>;
 export type DelegateConsentBodyType = z.infer<typeof DelegateConsentBody>;
 export type DelegateConsentResponseType = z.infer<typeof DelegateConsentResponse>;
-
-
-
-
-
-
-
-
-
 

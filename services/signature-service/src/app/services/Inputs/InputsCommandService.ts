@@ -15,7 +15,6 @@ import type {
   DeleteInputCommand
 } from "../../ports/inputs/InputsCommandsPort";
 // Input rules would need proper command structure integration
-import { assertTenantBoundary } from "@lawprotect/shared-ts";
 
 /**
  * @summary Command service for Input operations
@@ -31,8 +30,6 @@ export class InputsCommandService {
    */
   async create(command: CreateInputsCommand): Promise<CreateInputsResult> {
     // Apply generic rules
-    assertTenantBoundary(command.tenantId, command.tenantId);
-
     return this.commandsPort.create(command);
   }
 
@@ -43,8 +40,6 @@ export class InputsCommandService {
    */
   async update(command: UpdateInputCommand): Promise<UpdateInputResult> {
     // Apply generic rules
-    assertTenantBoundary(command.tenantId, command.tenantId);
-    
     return this.commandsPort.update(command);
   }
 
@@ -55,8 +50,6 @@ export class InputsCommandService {
    */
   async updatePositions(command: UpdateInputPositionsCommand): Promise<UpdateInputPositionsResult> {
     // Apply generic rules
-    assertTenantBoundary(command.tenantId, command.tenantId);
-
     return this.commandsPort.updatePositions(command);
   }
 
@@ -67,8 +60,6 @@ export class InputsCommandService {
    */
   async delete(command: DeleteInputCommand): Promise<void> {
     // Apply generic rules
-    assertTenantBoundary(command.tenantId, command.tenantId);
-    
     return this.commandsPort.delete(command);
   }
 };

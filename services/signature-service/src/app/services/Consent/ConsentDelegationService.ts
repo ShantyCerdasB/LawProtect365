@@ -65,7 +65,6 @@ export class ConsentDelegationService {
     // 1. VALIDATION (if validation service available)
     if (this.validationService) {
       await this.validationService.validateConsentDelegation({
-        tenantId: input.tenantId,
         envelopeId: input.envelopeId,
         consentId: input.consentId,
         delegateEmail: input.delegateEmail,
@@ -88,7 +87,6 @@ export class ConsentDelegationService {
       this.globalPartiesRepo,
       this.ids,
       {
-        tenantId: input.tenantId,
         email: input.delegateEmail,
         name: input.delegateName
       }
@@ -97,7 +95,6 @@ export class ConsentDelegationService {
     // 4. Create delegation record
     const delegation = await this.delegationsRepo.create({
       delegationId: this.ids.ulid(),
-      tenantId: input.tenantId,
       consentId: input.consentId,
       envelopeId: input.envelopeId,
       originalPartyId: currentConsent.partyId as PartyId,
@@ -105,8 +102,7 @@ export class ConsentDelegationService {
       reason: input.reason,
       status: "pending",
       expiresAt: input.expiresAt ? asISOOpt(input.expiresAt) : undefined,
-      metadata: input.metadata,
-    });
+      metadata: input.metadata});
 
     // 5. Update consent status to delegated
     await this.consentsRepo.update(
@@ -120,7 +116,6 @@ export class ConsentDelegationService {
     // 6. AUDIT - Use actor context if available, fallback to system context
     if (this.auditService) {
       const auditContext = createConsentAuditContext(
-        input.tenantId,
         input.envelopeId,
         actorContext
       ) as AuditContext;
@@ -132,8 +127,7 @@ export class ConsentDelegationService {
         delegationId: delegation.delegationId,
         reason: input.reason,
         expiresAt: input.expiresAt,
-        metadata: input.metadata,
-      });
+        metadata: input.metadata});
     }
 
     // 7. EVENTS
@@ -141,7 +135,6 @@ export class ConsentDelegationService {
       const consentDelegatedEvent = {
         type: "consent.delegated" as const,
         payload: {
-          tenantId: input.tenantId,
           consentId: input.consentId,
           envelopeId: input.envelopeId,
           originalPartyId: currentConsent.partyId as PartyId,
@@ -149,8 +142,7 @@ export class ConsentDelegationService {
           delegationId: delegation.delegationId,
           reason: input.reason,
           expiresAt: input.expiresAt,
-          metadata: input.metadata,
-        }
+          metadata: input.metadata}
       };
       
       await this.eventService.publishConsentDelegatedEvent(consentDelegatedEvent);
@@ -163,7 +155,6 @@ export class ConsentDelegationService {
       delegateEmail: input.delegateEmail,
       delegateName: input.delegateName,
       delegatedAt: delegation.createdAt,
-      metadata: input.metadata,
-    };
+      metadata: input.metadata};
   }
 };

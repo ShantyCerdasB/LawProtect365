@@ -23,19 +23,10 @@ export const RequestSignatureController = createCommandController<RequestSignatu
   extractParams: (path: any, body: any) => ({
     envelopeId: path.id,
     partyId: body.partyId,
-    message: body.message,
-  }),
+    message: body.message}),
   responseType: "ok",
-  includeActor: true,
-});
+  includeActor: true});
 
 // Export handler for backward compatibility
 export const handler = RequestSignatureController;
-
-
-
-
-
-
-
 

@@ -92,7 +92,7 @@ export const parseArn = (arn: string): ArnParts => {
  * // → "arn:aws:kms:us-east-1:111122223333:key/abcd"
  */
 export const formatArn = (parts: ArnParts): string =>
-  `arn:${parts.partition}:${parts.service}:${parts.region}:${parts.accountId}:${parts.resource}`;
+  `arn:${parts.partition}:${parts.service}:${parts.region}:${parts.accountId}:parts.resource`;
 
 /**
  * Extracts the resource identifier portion from a service-specific resource string.

@@ -24,9 +24,3 @@ export interface CertificateValidationService {
   validateGetCertificate(query: GetCertificateQuery): void;
 }
 
-
-
-
-
-
-

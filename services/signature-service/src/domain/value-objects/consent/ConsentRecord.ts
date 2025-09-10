@@ -20,10 +20,7 @@ export const ConsentRecordSchema = z.object({
   /** User agent string */
   userAgent: TrimmedString,
   /** Optional locale (2-35 characters) */
-  locale: TrimmedString.pipe(z.string().min(2)).pipe(z.string().max(35)).optional(),
-});
+  locale: TrimmedString.pipe(z.string().min(2)).pipe(z.string().max(35)).optional()});
 
 export type ConsentRecord = z.infer<typeof ConsentRecordSchema>;
-
-
 

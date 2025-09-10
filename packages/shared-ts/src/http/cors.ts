@@ -1,7 +1,6 @@
 import { CorsConfig } from "../types/corsConfig.js";
 import type { ApiEvent, ApiResponse, Headers } from "./httpTypes.js";
 
-
 /**
  * Builds CORS headers from configuration.
  *

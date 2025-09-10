@@ -61,8 +61,7 @@ export class OutboxProcessor {
       maxBatchSize: options.maxBatchSize ?? 10,
       maxWaitTimeMs: options.maxWaitTimeMs ?? 5000,
       maxRetries: options.maxRetries ?? 3,
-      retryDelayMs: options.retryDelayMs ?? 1000,
-    };
+      retryDelayMs: options.retryDelayMs ?? 1000};
   }
 
   /**
@@ -75,16 +74,14 @@ export class OutboxProcessor {
       // Get pending events from outbox
       const pendingEvents = await this.outboxRepository.findPendingEvents({
         limit: this.options.maxBatchSize,
-        maxAgeMs: this.options.maxWaitTimeMs,
-      });
+        maxAgeMs: this.options.maxWaitTimeMs});
 
       if (pendingEvents.length === 0) {
         return {
           totalEvents: 0,
           successfulEvents: 0,
           failedEvents: 0,
-          durationMs: Date.now() - startTime,
-        };
+          durationMs: Date.now() - startTime};
       }
 
       const results = await Promise.allSettled(
@@ -100,8 +97,7 @@ export class OutboxProcessor {
             return {
               eventId: pendingEvents[index].id,
               error: result.reason?.message || 'Unknown error',
-              retryCount: pendingEvents[index].retryCount || 0,
-            };
+              retryCount: pendingEvents[index].retryCount || 0};
           }
           return null;
         })
@@ -112,8 +108,7 @@ export class OutboxProcessor {
         successfulEvents,
         failedEvents,
         durationMs: Date.now() - startTime,
-        errors,
-      };
+        errors};
     } catch (error) {
       return {
         totalEvents: 0,
@@ -123,9 +118,7 @@ export class OutboxProcessor {
         errors: [{
           eventId: 'unknown',
           error: error instanceof Error ? error.message : 'Unknown error',
-          retryCount: 0,
-        }],
-      };
+          retryCount: 0}]};
     }
   }
 
@@ -141,9 +134,7 @@ export class OutboxProcessor {
         occurredAt: event.createdAt,
         metadata: {
           outboxId: event.id,
-          retryCount: event.retryCount || 0,
-        },
-      }]);
+          retryCount: event.retryCount || 0}}]);
 
       // Mark event as processed
       await this.outboxRepository.markAsProcessed(event.id);
@@ -155,8 +146,7 @@ export class OutboxProcessor {
         // Mark as failed after max retries
         await this.outboxRepository.markAsFailed(event.id, {
           error: error instanceof Error ? error.message : 'Unknown error',
-          retryCount: newRetryCount,
-        });
+          retryCount: newRetryCount});
       } else {
         // Mark for retry
         await this.outboxRepository.markForRetry(event.id, newRetryCount);

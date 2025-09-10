@@ -27,7 +27,7 @@ import type {
 import { InputsValidationService } from "../../services/Inputs/InputsValidationService";
 import { InputsAuditService } from "../../services/Inputs/InputsAuditService";
 import { InputsEventService } from "../../services/Inputs/InputsEventService";
-import { nowIso, assertTenantBoundary } from "@lawprotect/shared-ts";
+import { nowIso } from "@lawprotect/shared-ts";
 import { INPUT_DEFAULTS } from "../../../domain/values/enums";
 import { inputNotFound } from "../../../shared/errors";
 import { 
@@ -73,17 +73,12 @@ export const makeInputsCommandsPort = (
   
   // 🔍 FUNCIÓN INTERNA PARA IDEMPOTENCY
   const createInternal = async (command: CreateInputsCommand): Promise<CreateInputsResult> => {
-    // Apply generic rules - validate cross-tenant access
-    // Note: tenantId comes from request context, not from actor
-    // The validation should be done at the service level
-    
-    // Apply domain-specific rules
+
     // Get actual data from repositories for validation
     const documentIds = [command.documentId];
     
     // Get party IDs from parties repository
     const parties = await partiesRepo.listByEnvelope({ 
-      tenantId: command.tenantId, 
       envelopeId: command.envelopeId 
     });
     const partyIds = parties.items.map(p => p.partyId);
@@ -137,12 +132,10 @@ export const makeInputsCommandsPort = (
           x: inputData.x,
           y: inputData.y,
           width: inputData.width,
-          height: inputData.height,
-        },
+          height: inputData.height},
         value: inputData.value,
         createdAt: now,
-        updatedAt: now,
-      };
+        updatedAt: now};
 
       const createdInput = await inputsRepo.create(input);
       createdInputs.push(createdInput);
@@ -155,15 +148,12 @@ export const makeInputsCommandsPort = (
         page: input.position.page,
         position: { x: input.position.x, y: input.position.y },
         assignedPartyId: input.partyId as PartyId | undefined,
-        required: input.required,
-      })),
-      count: createdInputs.length,
-    };
+        required: input.required})),
+      count: createdInputs.length};
 
     // 3. AUDIT (opcional)
     if (auditService) {
       const auditContext = {
-        tenantId: command.tenantId,
         envelopeId: command.envelopeId,
         actor: command.actor
       };
@@ -174,7 +164,6 @@ export const makeInputsCommandsPort = (
     if (eventService) {
       await eventService.publishInputsCreatedEvent(
         createdInputs.map(input => input.inputId),
-        command.tenantId,
         command.envelopeId,
         command.documentId,
         command.actor
@@ -187,8 +176,6 @@ export const makeInputsCommandsPort = (
   // 🔍 FUNCIÓN INTERNA PARA IDEMPOTENCY
   const updateInternal = async (command: UpdateInputCommand): Promise<UpdateInputResult> => {
     // Apply generic rules
-    assertTenantBoundary(command.tenantId, command.tenantId);
-    
     // 1. VALIDATION (opcional)
     if (validationService) {
       await validationService.validateUpdate(command);
@@ -229,8 +216,7 @@ export const makeInputsCommandsPort = (
       ...(command.updates.required !== undefined && { required: command.updates.required }),
       ...(command.updates.partyId !== undefined && { partyId: command.updates.partyId }),
       ...(command.updates.value !== undefined && { value: command.updates.value }),
-      updatedAt: now,
-    };
+      updatedAt: now};
 
     const result = await inputsRepo.update(
       { envelopeId: command.envelopeId, inputId: command.inputId },
@@ -240,7 +226,6 @@ export const makeInputsCommandsPort = (
     // 3. AUDIT (opcional)
     if (auditService) {
       const auditContext = {
-        tenantId: command.tenantId,
         envelopeId: command.envelopeId,
         actor: command.actor
       };
@@ -252,7 +237,6 @@ export const makeInputsCommandsPort = (
       const updatedFields = Object.keys(command.updates);
       await eventService.publishInputUpdatedEvent(
         command.inputId,
-        command.tenantId,
         command.envelopeId,
         updatedFields,
         command.actor
@@ -261,15 +245,12 @@ export const makeInputsCommandsPort = (
 
     return {
       inputId: result.inputId as InputId,
-      updatedAt: result.updatedAt,
-    };
+      updatedAt: result.updatedAt};
   };
 
   // 🔍 FUNCIÓN INTERNA PARA IDEMPOTENCY
   const updatePositionsInternal = async (command: UpdateInputPositionsCommand): Promise<UpdateInputPositionsResult> => {
     // Apply generic rules
-    assertTenantBoundary(command.tenantId, command.tenantId);
-    
     // 1. VALIDATION (opcional)
     if (validationService) {
       await validationService.validateUpdatePositions(command);
@@ -293,10 +274,8 @@ export const makeInputsCommandsPort = (
             x: item.x,
             y: item.y,
             width: item.width,
-            height: item.height,
-          },
-          updatedAt: now,
-        };
+            height: item.height},
+          updatedAt: now};
 
         await inputsRepo.update(
           { envelopeId: command.envelopeId, inputId: item.inputId },
@@ -309,7 +288,6 @@ export const makeInputsCommandsPort = (
     // 3. AUDIT (opcional)
     if (auditService) {
       const auditContext = {
-        tenantId: command.tenantId,
         envelopeId: command.envelopeId,
         actor: command.actor
       };
@@ -320,7 +298,6 @@ export const makeInputsCommandsPort = (
     if (eventService) {
       await eventService.publishInputPositionsUpdatedEvent(
         command.items.map(item => item.inputId),
-        command.tenantId,
         command.envelopeId,
         command.actor
       );
@@ -332,8 +309,6 @@ export const makeInputsCommandsPort = (
   // 🔍 FUNCIÓN INTERNA PARA IDEMPOTENCY
   const deleteInternal = async (command: DeleteInputCommand): Promise<void> => {
     // Apply generic rules
-    assertTenantBoundary(command.tenantId, command.tenantId);
-    
     // 1. VALIDATION (opcional)
     if (validationService) {
       await validationService.validateDelete(command);
@@ -357,7 +332,6 @@ export const makeInputsCommandsPort = (
     // 3. AUDIT (opcional)
     if (auditService) {
       const auditContext = {
-        tenantId: command.tenantId,
         envelopeId: command.envelopeId,
         actor: command.actor
       };
@@ -368,7 +342,6 @@ export const makeInputsCommandsPort = (
     if (eventService) {
       await eventService.publishInputDeletedEvent(
         command.inputId,
-        command.tenantId,
         command.envelopeId,
         command.actor
       );
@@ -379,7 +352,7 @@ export const makeInputsCommandsPort = (
     async create(command: CreateInputsCommand): Promise<CreateInputsResult> {
       // 🔍 IDEMPOTENCY WRAPPER - PATRÓN REUTILIZABLE
       if (idempotencyRunner) {
-        const idempotencyKey = `create-inputs:${command.tenantId}:${command.envelopeId}:${command.documentId}`;
+        const idempotencyKey = `create-inputs:${command}:${command.envelopeId}:command.documentId`;
         return await idempotencyRunner.run(idempotencyKey, async () => {
           return await createInternal(command);
         });
@@ -392,7 +365,7 @@ export const makeInputsCommandsPort = (
     async update(command: UpdateInputCommand): Promise<UpdateInputResult> {
       // 🔍 IDEMPOTENCY WRAPPER - PATRÓN REUTILIZABLE
       if (idempotencyRunner) {
-        const idempotencyKey = `update-input:${command.tenantId}:${command.envelopeId}:${command.inputId}`;
+        const idempotencyKey = `update-input:${command}:${command.envelopeId}:command.inputId`;
         return await idempotencyRunner.run(idempotencyKey, async () => {
           return await updateInternal(command);
         });
@@ -405,7 +378,7 @@ export const makeInputsCommandsPort = (
     async updatePositions(command: UpdateInputPositionsCommand): Promise<UpdateInputPositionsResult> {
       // 🔍 IDEMPOTENCY WRAPPER - PATRÓN REUTILIZABLE
       if (idempotencyRunner) {
-        const idempotencyKey = `update-input-positions:${command.tenantId}:${command.envelopeId}`;
+        const idempotencyKey = `update-input-positions:${command}:command.envelopeId`;
         return await idempotencyRunner.run(idempotencyKey, async () => {
           return await updatePositionsInternal(command);
         });
@@ -418,7 +391,7 @@ export const makeInputsCommandsPort = (
     async delete(command: DeleteInputCommand): Promise<void> {
       // 🔍 IDEMPOTENCY WRAPPER - PATRÓN REUTILIZABLE
       if (idempotencyRunner) {
-        const idempotencyKey = `delete-input:${command.tenantId}:${command.envelopeId}:${command.inputId}`;
+        const idempotencyKey = `delete-input:${command}:${command.envelopeId}:command.inputId`;
         return await idempotencyRunner.run(idempotencyKey, async () => {
           return await deleteInternal(command);
         });
@@ -426,6 +399,5 @@ export const makeInputsCommandsPort = (
       
       // Fallback sin idempotency
       return await deleteInternal(command);
-    },
-  };
+    }};
 };

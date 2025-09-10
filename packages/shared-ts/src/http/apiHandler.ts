@@ -19,8 +19,6 @@ export interface ApiHandlerOptions {
   defaultHeaders?: Headers;
 }
 
-
-
 /**
  * Ensures a structured API Gateway response.
  * @param res Union response possibly being a string.

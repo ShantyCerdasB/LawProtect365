@@ -28,16 +28,13 @@ describe('auth barrel exports', () => {
       scope: 'a b',
       email: 'u@example.com',
       'cognito:groups': ['admin'],
-      'custom:tenantId': 't-1',
-    });
+      'custom:tenantId': 't-1'});
     expect(claims).toMatchObject({
       sub: 'u1',
       iss: 'https://issuer',
       scopes: ['a', 'b'],
       roles: ['admin'],
-      tenantId: 't-1',
-      email: 'u@example.com',
-    });
+      email: 'u@example.com'});
   });
 
   it('exposes scope helpers', () => {
@@ -99,13 +96,13 @@ describe('auth barrel exports', () => {
       .addRule('permOrScope', auth.allowPermissionOrScope);
 
     const superAdmin = { userId: 'u', roles: ['super_admin'], scopes: [], rawClaims: {} } as any;
-    const admin = { userId: 'a', roles: ['admin'], tenantId: 't1', scopes: [], rawClaims: {} } as any;
+    const admin = { userId: 'a', roles: ['admin'], scopes: [], rawClaims: {} } as any;
     const nonAdmin = { userId: 'n', roles: ['client'], scopes: ['document:read'], rawClaims: {} } as any;
 
     const r1 = await p.evaluate(superAdmin, 'manage', { resource: 'user' } as any);
     expect(r1).toEqual(expect.objectContaining({ effect: 'allow' }));
 
-    const r2 = await p.evaluate(admin, 'read', { resource: 'case', tenantId: 't1' } as any);
+    const r2 = await p.evaluate(admin, 'read', { resource: 'case'} as any);
     expect(r2).toEqual(expect.objectContaining({ effect: 'allow' }));
 
     const r3 = await p.evaluate(nonAdmin, 'read', { resource: 'document' } as any);

@@ -5,14 +5,15 @@
  */
 
 import type { ActorContext } from "@lawprotect/shared-ts";
-import type { EnvelopeId, PartyId, TenantId } from "@/domain/value-objects/ids";
+import type { EnvelopeId, PartyId } from "@/domain/value-objects/ids";
 import type { 
   CompleteSigningControllerInput,
   DeclineSigningControllerInput,
   PrepareSigningControllerInput,
   SigningConsentControllerInput,
   PresignUploadControllerInput,
-  DownloadSignedDocumentControllerInput
+  DownloadSignedDocumentControllerInput,
+  ValidateInvitationTokenControllerInput,
 } from "./ControllerInputs";
 import type { 
   CompleteSigningCommand,
@@ -21,12 +22,16 @@ import type {
   SigningConsentCommand,
   PresignUploadCommand,
   DownloadSignedDocumentCommand,
+  ValidateInvitationTokenCommand,
+  CompleteSigningWithTokenCommand,
   CompleteSigningResult,
   DeclineSigningResult,
   PrepareSigningResult,
   SigningConsentResult,
   PresignUploadResult,
-  DownloadSignedDocumentResult
+  DownloadSignedDocumentResult,
+  ValidateInvitationTokenResult,
+  CompleteSigningWithTokenResult
 } from "../../../app/ports/signing/SigningCommandsPort";
 
 // ============================================================================
@@ -67,6 +72,11 @@ export interface SigningValidationService {
    * Validates download signed document input
    */
   validateDownloadSignedDocument(input: DownloadSignedDocumentControllerInput): void;
+
+  /**
+   * Validates invitation token input
+   */
+  validateInvitationToken(input: ValidateInvitationTokenControllerInput): void;
 }
 
 // ============================================================================
@@ -107,6 +117,11 @@ export interface SigningCommandService {
    * Creates a presigned download URL
    */
   downloadSignedDocument(command: DownloadSignedDocumentCommand): Promise<DownloadSignedDocumentResult>;
+
+  /**
+   * Validates invitation token for unauthenticated signing
+   */
+  validateInvitationToken(command: ValidateInvitationTokenCommand): Promise<ValidateInvitationTokenResult>;
 }
 
 // ============================================================================
@@ -121,32 +136,32 @@ export interface SigningEventService {
   /**
    * Publishes signing completed event
    */
-  publishSigningCompleted(envelopeId: EnvelopeId, partyId: PartyId, tenantId: TenantId, actor: ActorContext): Promise<void>;
+  publishSigningCompleted(envelopeId: EnvelopeId, partyId: PartyId, actor: ActorContext): Promise<void>;
 
   /**
    * Publishes signing declined event
    */
-  publishSigningDeclined(envelopeId: EnvelopeId, partyId: PartyId, tenantId: TenantId, actor: ActorContext): Promise<void>;
+  publishSigningDeclined(envelopeId: EnvelopeId, partyId: PartyId, actor: ActorContext): Promise<void>;
 
   /**
    * Publishes signing prepared event
    */
-  publishSigningPrepared(envelopeId: EnvelopeId, partyId: PartyId, tenantId: TenantId, actor: ActorContext): Promise<void>;
+  publishSigningPrepared(envelopeId: EnvelopeId, partyId: PartyId, actor: ActorContext): Promise<void>;
 
   /**
    * Publishes signing consent recorded event
    */
-  publishSigningConsentRecorded(envelopeId: EnvelopeId, partyId: PartyId, tenantId: TenantId, actor: ActorContext): Promise<void>;
+  publishSigningConsentRecorded(envelopeId: EnvelopeId, partyId: PartyId, actor: ActorContext): Promise<void>;
 
   /**
    * Publishes presign upload event
    */
-  publishPresignUpload(envelopeId: EnvelopeId, tenantId: TenantId, actor: ActorContext): Promise<void>;
+  publishPresignUpload(envelopeId: EnvelopeId, actor: ActorContext): Promise<void>;
 
   /**
    * Publishes download signed document event
    */
-  publishDownloadSignedDocument(envelopeId: EnvelopeId, tenantId: TenantId, actor: ActorContext): Promise<void>;
+  publishDownloadSignedDocument(envelopeId: EnvelopeId, actor: ActorContext): Promise<void>;
 }
 
 // ============================================================================
@@ -161,32 +176,32 @@ export interface SigningAuditService {
   /**
    * Logs signing completion
    */
-  logSigningCompleted(envelopeId: EnvelopeId, partyId: PartyId, tenantId: TenantId, actor: ActorContext): Promise<void>;
+  logSigningCompleted(envelopeId: EnvelopeId, partyId: PartyId, actor: ActorContext): Promise<void>;
 
   /**
    * Logs signing decline
    */
-  logSigningDeclined(envelopeId: EnvelopeId, partyId: PartyId, tenantId: TenantId, actor: ActorContext): Promise<void>;
+  logSigningDeclined(envelopeId: EnvelopeId, partyId: PartyId, actor: ActorContext): Promise<void>;
 
   /**
    * Logs signing preparation
    */
-  logSigningPrepared(envelopeId: EnvelopeId, partyId: PartyId, tenantId: TenantId, actor: ActorContext): Promise<void>;
+  logSigningPrepared(envelopeId: EnvelopeId, partyId: PartyId, actor: ActorContext): Promise<void>;
 
   /**
    * Logs signing consent recorded
    */
-  logSigningConsentRecorded(envelopeId: EnvelopeId, partyId: PartyId, tenantId: TenantId, actor: ActorContext): Promise<void>;
+  logSigningConsentRecorded(envelopeId: EnvelopeId, partyId: PartyId, actor: ActorContext): Promise<void>;
 
   /**
    * Logs presign upload
    */
-  logPresignUpload(envelopeId: EnvelopeId, tenantId: TenantId, actor: ActorContext): Promise<void>;
+  logPresignUpload(envelopeId: EnvelopeId, actor: ActorContext): Promise<void>;
 
   /**
    * Logs download signed document
    */
-  logDownloadSignedDocument(envelopeId: EnvelopeId, tenantId: TenantId, actor: ActorContext): Promise<void>;
+  logDownloadSignedDocument(envelopeId: EnvelopeId, actor: ActorContext): Promise<void>;
 }
 
 // ============================================================================
@@ -201,12 +216,12 @@ export interface SigningRateLimitService {
   /**
    * Checks and enforces signing preparation rate limits
    */
-  checkPrepareSigningRateLimit(envelopeId: EnvelopeId, partyId: PartyId, tenantId: TenantId): Promise<void>;
+  checkPrepareSigningRateLimit(envelopeId: EnvelopeId, partyId: PartyId): Promise<void>;
 
   /**
    * Checks and enforces signing completion rate limits
    */
-  checkSigningRateLimit(envelopeId: EnvelopeId, partyId: PartyId, tenantId: TenantId): Promise<void>;
+  checkSigningRateLimit(envelopeId: EnvelopeId, partyId: PartyId): Promise<void>;
 }
 
 // ============================================================================
@@ -244,10 +259,7 @@ export interface SigningCommandService {
   recordSigningConsent(command: SigningConsentCommand): Promise<SigningConsentResult>;
   presignUpload(command: PresignUploadCommand): Promise<PresignUploadResult>;
   downloadSignedDocument(command: DownloadSignedDocumentCommand): Promise<DownloadSignedDocumentResult>;
+  validateInvitationToken(command: ValidateInvitationTokenCommand): Promise<ValidateInvitationTokenResult>;
+  completeSigningWithToken(command: CompleteSigningWithTokenCommand): Promise<CompleteSigningWithTokenResult>;
 }
-
-
-
-
-
 

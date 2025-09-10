@@ -4,7 +4,7 @@
  * @description Defines the input and output contracts for requests application services
  */
 
-import type { TenantId, EnvelopeId, PartyId } from "@/domain/value-objects/ids";
+import type { EnvelopeId, PartyId } from "@/domain/value-objects/ids";
 import type { 
   InvitePartiesResult,
   RemindPartiesResult,
@@ -20,7 +20,6 @@ import type {
  */
 export interface InvitePartiesAppInput {
   /** Tenant identifier */
-  readonly tenantId: TenantId;
   /** Envelope identifier */
   readonly envelopeId: EnvelopeId;
   /** Array of party IDs to invite */
@@ -40,7 +39,6 @@ export interface InvitePartiesAppResult {
  */
 export interface RemindPartiesAppInput {
   /** Tenant identifier */
-  readonly tenantId: TenantId;
   /** Envelope identifier */
   readonly envelopeId: EnvelopeId;
   /** Optional array of specific party IDs to remind */
@@ -62,7 +60,6 @@ export interface RemindPartiesAppResult {
  */
 export interface CancelEnvelopeAppInput {
   /** Tenant identifier */
-  readonly tenantId: TenantId;
   /** Envelope identifier */
   readonly envelopeId: EnvelopeId;
   /** Optional reason for cancellation */
@@ -82,7 +79,6 @@ export interface CancelEnvelopeAppResult {
  */
 export interface DeclineEnvelopeAppInput {
   /** Tenant identifier */
-  readonly tenantId: TenantId;
   /** Envelope identifier */
   readonly envelopeId: EnvelopeId;
   /** Optional reason for decline */
@@ -102,7 +98,6 @@ export interface DeclineEnvelopeAppResult {
  */
 export interface FinaliseEnvelopeAppInput {
   /** Tenant identifier */
-  readonly tenantId: TenantId;
   /** Envelope identifier */
   readonly envelopeId: EnvelopeId;
   /** Optional message for finalization */
@@ -122,7 +117,6 @@ export interface FinaliseEnvelopeAppResult {
  */
 export interface RequestSignatureAppInput {
   /** Tenant identifier */
-  readonly tenantId: TenantId;
   /** Envelope identifier */
   readonly envelopeId: EnvelopeId;
   /** Party identifier to request signature from */
@@ -146,7 +140,6 @@ export interface RequestSignatureAppResult {
  */
 export interface AddViewerAppInput {
   /** Tenant identifier */
-  readonly tenantId: TenantId;
   /** Envelope identifier */
   readonly envelopeId: EnvelopeId;
   /** Email address of the viewer */
@@ -164,9 +157,4 @@ export interface AddViewerAppResult {
   /** Add viewer result */
   readonly result: AddViewerResult;
 }
-
-
-
-
-
 

@@ -22,18 +22,10 @@ export const CreateGlobalPartyBody = z.object({
   tags: GlobalPartyCommonFields.tags,
   attributes: GlobalPartyCommonFields.attributes,
   preferences: GlobalPartyCommonFields.preferences,
-  notificationPreferences: GlobalPartyCommonFields.notificationPreferences,
-});
+  notificationPreferences: GlobalPartyCommonFields.notificationPreferences});
 
 /**
  * @description Type for CreateGlobalParty request body.
  */
 export type CreateGlobalPartyBody = z.infer<typeof CreateGlobalPartyBody>;
-
-
-
-
-
-
-
 

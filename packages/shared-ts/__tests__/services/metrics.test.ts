@@ -4,10 +4,8 @@ import { MetricsService, type MetricsServiceConfig, type MetricDataPoint } from 
 const mockSend = jest.fn();
 jest.mock('@aws-sdk/client-cloudwatch', () => ({
   CloudWatchClient: jest.fn().mockImplementation(() => ({
-    send: mockSend,
-  })),
-  PutMetricDataCommand: jest.fn(),
-}));
+    send: mockSend})),
+  PutMetricDataCommand: jest.fn()}));
 
 describe('MetricsService', () => {
   let metricsService: MetricsService;
@@ -17,8 +15,7 @@ describe('MetricsService', () => {
     mockConfig = {
       namespace: 'TestNamespace',
       region: 'us-east-1',
-      enabled: true,
-    };
+      enabled: true};
 
     metricsService = new MetricsService(mockConfig);
     
@@ -38,8 +35,7 @@ describe('MetricsService', () => {
     it('should create service with minimal config', () => {
       const minimalConfig: MetricsServiceConfig = {
         namespace: 'TestNamespace',
-        enabled: true,
-      };
+        enabled: true};
 
       const service = new MetricsService(minimalConfig);
       expect(service).toBeInstanceOf(MetricsService);
@@ -51,8 +47,7 @@ describe('MetricsService', () => {
       const metric: MetricDataPoint = {
         name: 'TestMetric',
         value: 100,
-        unit: 'Count',
-      };
+        unit: 'Count'};
 
       mockSend.mockResolvedValue({});
 
@@ -64,14 +59,12 @@ describe('MetricsService', () => {
     it('should not send metric when disabled', async () => {
       const disabledService = new MetricsService({
         ...mockConfig,
-        enabled: false,
-      });
+        enabled: false});
 
       const metric: MetricDataPoint = {
         name: 'TestMetric',
         value: 100,
-        unit: 'Count',
-      };
+        unit: 'Count'};
 
       await disabledService.putMetric(metric);
 
@@ -82,8 +75,7 @@ describe('MetricsService', () => {
       const metric: MetricDataPoint = {
         name: 'TestMetric',
         value: 100,
-        unit: 'Count',
-      };
+        unit: 'Count'};
 
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
       mockSend.mockRejectedValue(new Error('CloudWatch error'));
@@ -104,8 +96,7 @@ describe('MetricsService', () => {
         name: 'TestMetric',
         value: 100,
         unit: 'Count',
-        timestamp,
-      };
+        timestamp};
 
       mockSend.mockResolvedValue({});
 
@@ -123,8 +114,7 @@ describe('MetricsService', () => {
         name: 'TestMetric',
         value: 100,
         unit: 'Count',
-        dimensions,
-      };
+        dimensions};
 
       mockSend.mockResolvedValue({});
 
@@ -151,8 +141,7 @@ describe('MetricsService', () => {
     it('should not send metrics when disabled', async () => {
       const disabledService = new MetricsService({
         ...mockConfig,
-        enabled: false,
-      });
+        enabled: false});
 
       const metrics: MetricDataPoint[] = [
         { name: 'Metric1', value: 100, unit: 'Count' },

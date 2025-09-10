@@ -15,15 +15,11 @@ const U = (s: string) => s as unknown as UserId;
 const subject = (s: Partial<SecurityContext> = {}): SecurityContext => ({
   userId: (s.userId as UserId) ?? U('u-1'),
   roles: s.roles ?? [],
-  tenantId: (s.tenantId as TenantId | undefined) ?? s.tenantId,
   scopes: s.scopes,
-  permissions: s.permissions as Permission[] | undefined,
-});
+  permissions: s.permissions as Permission[] | undefined});
 
-const resource = (res: ResourceRef['resource'], tenantId?: string): ResourceRef => ({
-  resource: res,
-  tenantId: tenantId ? T(tenantId) : undefined,
-});
+const resource = (res: ResourceRef['resource'], ?: string): ResourceRef => ({
+  resource: res});
 
 describe('Policy', () => {
   it('evaluates rules in order and returns first allow', async () => {
@@ -68,18 +64,15 @@ describe('allowSuperAdmin', () => {
 describe('allowAdminSameTenant', () => {
   it('allows for admin in same tenant', () => {
     expect(
-      allowAdminSameTenant(subject({ roles: ['admin'], tenantId: T('t-1') }), 'read', resource('case', 't-1')),
-    ).toBe(true);
+      allowAdminSameTenant(subject({ roles: ['admin']}), 'read', resource('case', 't-1'))).toBe(true);
   });
 
   it('denies when tenant differs or is missing', () => {
     expect(
-      allowAdminSameTenant(subject({ roles: ['admin'], tenantId: T('t-1') }), 'read', resource('case', 't-2')),
-    ).toBe(false);
+      allowAdminSameTenant(subject({ roles: ['admin']}), 'read', resource('case', 't-2'))).toBe(false);
     expect(allowAdminSameTenant(subject({ roles: ['admin'] }), 'read', resource('case', 't-1'))).toBe(false);
-    expect(allowAdminSameTenant(subject({ roles: ['admin'], tenantId: T('t-1') }), 'read', resource('case'))).toBe(
-      false,
-    );
+    expect(allowAdminSameTenant(subject({ roles: ['admin']}), 'read', resource('case'))).toBe(
+      false);
   });
 });
 

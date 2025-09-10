@@ -13,16 +13,14 @@ describe('deepRedact', () => {
       APIKEY: 'k123',
       nested: {
         ToKeN: 't-1',
-        keep: 42,
-      },
+        keep: 42},
       arr: [
         { cvv: '999' },
         'plain',
         123,
         true,
         null,
-      ],
-    };
+      ]};
 
     const out = deepRedact(input);
 
@@ -52,8 +50,7 @@ describe('deepRedact', () => {
   it('honors custom fields and replacement; defaults are not merged when fields is provided', () => {
     const input = {
       authorization: 'should-not-redact-when-custom-fields-used',
-      custom: 'hide-me',
-    };
+      custom: 'hide-me'};
 
     const out = deepRedact(input, { fields: ['custom'], replacement: '***' });
 
@@ -67,10 +64,7 @@ describe('deepRedact', () => {
       level0: {
         level1: {
           token: 'deep-secret',
-          keep: 'v',
-        },
-      },
-    };
+          keep: 'v'}}};
 
     // With maxDepth=0, depth 1 objects are not traversed; nested token remains
     const out = deepRedact(input, { maxDepth: 0 });

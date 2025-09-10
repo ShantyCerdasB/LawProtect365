@@ -7,7 +7,6 @@
 import type { HandlerFn } from "../../http/httpTypes.js";
 import { validateRequest } from "../../validation/requests.js";
 import { ok, created, noContent } from "../../http/responses.js";
-import { tenantFromCtx } from "../extractors/index.js";
 import type { QueryControllerConfig } from "../../contracts/controllers/index.js";
 
 /**
@@ -26,14 +25,13 @@ export const createQueryController = <TInput, TOutput>(
     if (config.querySchema) validationSchemas.query = config.querySchema;
     
     const validated = validateRequest(evt, validationSchemas);
-    const tenantId = tenantFromCtx(evt);
     
     const c = config.getContainer();
     const dependencies = config.createDependencies(c);
     const appService = new config.appServiceClass(dependencies);
     
     const params = config.extractParams(validated.path, validated.query);
-    const result = await appService.execute({ tenantId, ...params });
+    const result = await appService.execute(params);
     
     const responseData = config.transformResult ? config.transformResult(result) : result;
     

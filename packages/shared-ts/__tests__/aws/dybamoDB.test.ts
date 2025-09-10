@@ -6,8 +6,7 @@
 import {
   requireUpdate,
   requireQuery,
-  type DdbClientLike,
-} from "../../src/aws";
+  type DdbClientLike} from "../../src/aws";
 
 describe("requireUpdate", () => {
   it("throws when update is missing", () => {
@@ -28,8 +27,7 @@ describe("requireUpdate", () => {
       get: jest.fn(async () => ({})),
       put: jest.fn(async () => undefined),
       delete: jest.fn(async () => undefined),
-      update: 123 as any,
-    } as DdbClientLike;
+      update: 123 as any} as DdbClientLike;
 
     expect(() => requireUpdate(client)).toThrow(
       "DdbClientLike.update is required by this operation but is undefined."
@@ -42,8 +40,7 @@ describe("requireUpdate", () => {
       get: jest.fn(async () => ({})),
       put: jest.fn(async () => undefined),
       delete: jest.fn(async () => undefined),
-      update,
-    };
+      update};
 
     // Call the guard directly so TypeScript narrows `client` in this scope
     requireUpdate(client);
@@ -55,8 +52,7 @@ describe("requireUpdate", () => {
       ExpressionAttributeNames: { "#s": "state" },
       ExpressionAttributeValues: { ":v": "ok" },
       ConditionExpression: "attribute_exists(pk)",
-      ReturnValues: "ALL_NEW",
-    });
+      ReturnValues: "ALL_NEW"});
 
     expect(update).toHaveBeenCalledTimes(1);
     expect(update).toHaveBeenCalledWith(
@@ -64,8 +60,7 @@ describe("requireUpdate", () => {
         TableName: "tbl",
         Key: { pk: "A", sk: "1" },
         UpdateExpression: "SET #s = :v",
-        ReturnValues: "ALL_NEW",
-      })
+        ReturnValues: "ALL_NEW"})
     );
     expect(res).toEqual({ Attributes: { ok: true } });
   });
@@ -90,8 +85,7 @@ describe("requireQuery", () => {
       get: jest.fn(async () => ({})),
       put: jest.fn(async () => undefined),
       delete: jest.fn(async () => undefined),
-      query: 123 as any,
-    } as DdbClientLike;
+      query: 123 as any} as DdbClientLike;
 
     expect(() => requireQuery(client)).toThrow(
       "DdbClientLike.query is required by this operation but is undefined."
@@ -107,8 +101,7 @@ describe("requireQuery", () => {
       get: jest.fn(async () => ({})),
       put: jest.fn(async () => undefined),
       delete: jest.fn(async () => undefined),
-      query,
-    };
+      query};
 
     // Call the guard directly so TypeScript narrows `client` in this scope
     requireQuery(client);
@@ -121,8 +114,7 @@ describe("requireQuery", () => {
       ExpressionAttributeValues: { ":pk": "A" },
       Limit: 10,
       ScanIndexForward: false,
-      ExclusiveStartKey: { pk: "A", sk: "0" },
-    });
+      ExclusiveStartKey: { pk: "A", sk: "0" }});
 
     expect(query).toHaveBeenCalledTimes(1);
     expect(query).toHaveBeenCalledWith(
@@ -131,8 +123,7 @@ describe("requireQuery", () => {
         IndexName: "gsi1",
         KeyConditionExpression: "pk = :pk",
         Limit: 10,
-        ScanIndexForward: false,
-      })
+        ScanIndexForward: false})
     );
     expect(res).toEqual({ 
       Items: [{ pk: "A", sk: "1" }], 

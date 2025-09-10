@@ -22,8 +22,7 @@ export const UpdateGlobalPartyController = createCommandController<UpdateGlobalP
     ids: c.ids,
     validationService: c.globalParties.validationService,
     auditService: c.globalParties.auditService,
-    eventService: c.globalParties.eventService,
-  }),
+    eventService: c.globalParties.eventService}),
   extractParams: (_: any, body: any) => ({
     partyId: body.partyId,
     updates: {
@@ -34,17 +33,7 @@ export const UpdateGlobalPartyController = createCommandController<UpdateGlobalP
       status: body.updates?.status,
       metadata: body.updates?.metadata,
       preferences: body.updates?.preferences,
-      notificationPreferences: body.updates?.notificationPreferences,
-    },
-  }),
+      notificationPreferences: body.updates?.notificationPreferences}}),
   responseType: "ok",
-  includeActor: true,
-});
-
-
-
-
-
-
-
+  includeActor: true});
 

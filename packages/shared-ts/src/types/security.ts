@@ -1,4 +1,4 @@
-import type { TenantId, UserId, Brand } from "./brand.js";
+import type {  UserId, Brand } from "./brand.js";
 
 /**
  * Resource identifiers used for permission modeling.
@@ -38,8 +38,7 @@ export interface ResourceRef {
   resource: Resource;
   /** Concrete resource id (opaque, domain-defined). */
   id?: string;
-  /** Tenant boundary if applicable. */
-  tenantId?: TenantId;
+
 }
 
 /**
@@ -48,7 +47,6 @@ export interface ResourceRef {
  */
 export interface SecurityContext {
   userId: UserId;
-  tenantId?: TenantId;
   roles: string[];
   scopes?: Scope[];
   permissions?: Permission[];

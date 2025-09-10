@@ -11,8 +11,3 @@ export * from "./PartyMetadata";
 export type { PartyId } from "../ids";
 export { PartyIdSchema } from "../ids";
 
-
-
-
-
-

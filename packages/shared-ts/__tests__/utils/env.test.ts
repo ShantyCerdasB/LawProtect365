@@ -12,8 +12,7 @@ import {
   getBoolean,
   getNumber,
   getEnum,
-  getByPrefix,
-} from "../../src/utils/env.js";
+  getByPrefix} from "../../src/utils/env.js";
 
 /**
  * Temporarily sets a group of environment variables for the duration of a callback,
@@ -152,8 +151,7 @@ describe("getByPrefix", () => {
         APP_FOO: "x",
         APP_BAR: "y",
         APP_BAZ: "", // included (non-null)
-        OTHER_Q: "z",
-      },
+        OTHER_Q: "z"},
       () => {
         const res = getByPrefix("APP_");
         expect(res).toEqual({ FOO: "x", BAR: "y", BAZ: "" });

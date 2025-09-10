@@ -8,4 +8,3 @@ export * from "./GetAuditEventApp.service";
 export * from "./GetAuditTrailApp.service";
 export * from "./RecordAuditEventApp.service";
 
-

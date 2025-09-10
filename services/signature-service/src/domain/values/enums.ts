@@ -18,7 +18,7 @@ export const GLOBAL_PARTY_STATUSES = ["active","inactive","deleted"] as const;
 export type GlobalPartyStatus = (typeof GLOBAL_PARTY_STATUSES)[number];
 
 // Authentication Methods
-export const AUTH_METHODS = ["otpViaEmail","otpViaSms"] as const;
+export const AUTH_METHODS = [] as const;
 export type AuthMethod = (typeof AUTH_METHODS)[number];
 
 // Envelopes
@@ -61,7 +61,7 @@ export const DOCUMENT_STATUSES = ["pending","uploaded","processing","ready","err
 export type DocumentStatus = (typeof DOCUMENT_STATUSES)[number];
 
 // Signature flows
-export const SIGNATURE_EVENTS = ["signing.completed","signing.declined","otp.requested","otp.verified"] as const;
+export const SIGNATURE_EVENTS = ["signing.completed","signing.declined"] as const;
 export type SignatureEvent = (typeof SIGNATURE_EVENTS)[number];
 
 export const SIGNATURE_ACTOR_FIELDS = ["userId","email","ip","userAgent","locale"] as const;
@@ -93,12 +93,10 @@ export const FILE_SIZE_LIMITS = {
 export const UPLOAD_RATE_LIMITS = {
   EVIDENCE_PER_DAY: 10,
   EVIDENCE_PER_HOUR: 5,
-  MULTIPART_PER_DAY: 20,
-} as const;
+  MULTIPART_PER_DAY: 20} as const;
 
 export const HASH_ALGORITHM = ["sha256", "sha384", "sha512"] as const; 
 export type HashAlgorithm = (typeof HASH_ALGORITHM)[number];
-
 
 export const INPUT_VALUES = ["signature", "initials", "text", "checkbox", "date", "email", "phone", "number", "file", "select", "radio"] as const; 
 export type InputType = (typeof INPUT_VALUES)[number];
@@ -115,16 +113,12 @@ export type InputValidationStatus = (typeof INPUT_VALIDATION_STATUS)[number];
 export const INPUT_COMPLETION_STATUS = ["not_started", "in_progress", "completed", "skipped"] as const;
 export type InputCompletionStatus = (typeof INPUT_COMPLETION_STATUS)[number];
 
-export const OTP_POLICY = { codeLength: 6, expiresInMinutes: 10, maxTries: 3, cooldownSeconds: 60, rateLimitPerMinute: 5, rateLimitPerDay: 10, } as const;
 
 export const KMS_ALGORITHMS = ["RSASSA_PSS_SHA_256", "RSASSA_PSS_SHA_384", "RSASSA_PSS_SHA_512", "RSASSA_PKCS1_V1_5_SHA_256", "RSASSA_PKCS1_V1_5_SHA_384", "RSASSA_PKCS1_V1_5_SHA_512", "ECDSA_SHA_256", "ECDSA_SHA_384", "ECDSA_SHA_512"] as const;
 export type KmsAlgorithm = (typeof KMS_ALGORITHMS)[number];
 
 
-export const OTP_CHANNELS = ["email", "sms"] as const;
-export type OtpChannel = (typeof OTP_CHANNELS)[number];
-
-export const PARTY_ROLES = ["signer", "approver", "viewer"] as const;
+export const PARTY_ROLES = ["signer"] as const;
 export type PartyRole = (typeof PARTY_ROLES)[number];
 
 export const REQUEST_TOKEN_SCOPES = ["signing", "presign", "download"] as const;
@@ -148,24 +142,20 @@ export const CONSENT_DEFAULTS = {
   DEFAULT_ROLE: "signer" as const,
   DEFAULT_SOURCE: "manual" as const,
   DEFAULT_STATUS: "active" as const,
-  DEFAULT_AUTH_METHOD: "otpViaEmail" as const,
-  DEFAULT_LOCALE: undefined,
-} as const;
+  DEFAULT_AUTH_METHOD: undefined} as const;
 
 // Consent Validation
 export const CONSENT_VALIDATION = {
   MAX_METADATA_SIZE: 10000,
   MAX_REASON_LENGTH: 1000,
   MAX_DELEGATE_NAME_LENGTH: 255,
-  MAX_DELEGATE_EMAIL_LENGTH: 255,
-} as const;
+  MAX_DELEGATE_EMAIL_LENGTH: 255} as const;
 
 // Consent Delegation Defaults
 export const CONSENT_DELEGATION_DEFAULTS = {
   DEFAULT_EXPIRATION_HOURS: 24,
   MAX_EXPIRATION_DAYS: 30,
-  MIN_EXPIRATION_HOURS: 1,
-} as const;
+  MIN_EXPIRATION_HOURS: 1} as const;
 
 // Global Party Updatable Fields
 export const GLOBAL_PARTY_UPDATABLE_FIELDS = [
@@ -193,8 +183,6 @@ export const AUDIT_EVENT_TYPES = [
   "document.removed",
   "party.added",
   "party.delegated",
-  "otp.requested",
-  "otp.verified",
   "consent.submitted",
   "signature.submitted",
   "upload.presigned",
@@ -224,25 +212,20 @@ export const EVENT_PATTERNS = {
     UPDATED: "Consent.Updated",
     DELETED: "Consent.Deleted",
     DELEGATED: "Consent.Delegated",
-    REVOKED: "Consent.Revoked",
-  },
+    REVOKED: "Consent.Revoked"},
   ENVELOPE: {
     CREATED: "Envelope.Created",
     SENT: "Envelope.Sent",
     SIGNED: "Envelope.Signed",
     COMPLETED: "Envelope.Completed",
-    CANCELLED: "Envelope.Cancelled",
-  },
+    CANCELLED: "Envelope.Cancelled"},
   PARTY: {
     CREATED: "Party.Created",
     UPDATED: "Party.Updated",
-    VERIFIED: "Party.Verified",
-  },
+    VERIFIED: "Party.Verified"},
   AUDIT: {
     EVENT_RECORDED: "Audit.EventRecorded",
-    ACCESS_ATTEMPTED: "Audit.AccessAttempted",
-  },
-} as const;
+    ACCESS_ATTEMPTED: "Audit.AccessAttempted"}} as const;
 
 /**
  * Event source constants.
@@ -251,8 +234,7 @@ export const EVENT_SOURCES = {
   SIGNATURE_SERVICE: "signature-service",
   CONSENT_SERVICE: "consent-service",
   PARTY_SERVICE: "party-service",
-  AUDIT_SERVICE: "audit-service",
-} as const;
+  AUDIT_SERVICE: "audit-service"} as const;
 
 /**
  * Default retry configuration for EventBridge operations.
@@ -260,28 +242,25 @@ export const EVENT_SOURCES = {
 export const DEFAULT_RETRY_CONFIG = {
   maxAttempts: 3,
   baseDelayMs: 1000,
-  maxDelayMs: 10000,
-} as const;
+  maxDelayMs: 10000} as const;
 
 /**
  * Default batch configuration for EventBridge operations.
  */
 export const DEFAULT_BATCH_CONFIG = {
   maxSize: 10,
-  maxDelayMs: 5000,
-} as const;
+  maxDelayMs: 5000} as const;
 
 // Input Defaults
 export const INPUT_DEFAULTS = {
   DEFAULT_PAGE_SIZE: { width: 612, height: 792 }, // Default letter size (8.5" x 11" at 72 DPI)
   DEFAULT_SEQUENCE: 1,
-  DEFAULT_REQUIRED: false,
-} as const;
+  DEFAULT_REQUIRED: false} as const;
 
 // Party Defaults
 export const PARTY_DEFAULTS = {
   DEFAULT_STATUS: "pending" as const,
-  DEFAULT_AUTH_METHODS: ["otpViaEmail"] as const,
+  DEFAULT_AUTH_METHODS: [] as const,
   DEFAULT_SEQUENCE: 1,
   DEFAULT_COOLDOWN_MS: 30000, // 30 seconds
 } as const;
@@ -290,22 +269,19 @@ export const PARTY_DEFAULTS = {
 export const PARTY_RATE_LIMITS = {
   MIN_COOLDOWN_MS: 30000, // 30 seconds
   DAILY_LIMIT: 50,
-  HOURLY_LIMIT: 10,
-} as const;
+  HOURLY_LIMIT: 10} as const;
 
 // Request Defaults
 export const REQUEST_DEFAULTS = {
   INVITE_COOLDOWN_MS: 60000, // 1 minute
   INVITE_DAILY_LIMIT: 10,
   URL_EXPIRATION_DAYS: 7,
-  VIEWER_SEQUENCE: 0,
-} as const;
+  VIEWER_SEQUENCE: 0} as const;
 
 // S3 Configuration
 export const S3_BUCKETS = {
   ENVELOPE_ARTIFACTS: "envelope-artifacts",
-  SIGNING_DOCUMENTS: "signing-documents",
-} as const;
+  SIGNING_DOCUMENTS: "signing-documents"} as const;
 
 // Request Timeouts
 export const REQUEST_TIMEOUTS = {
@@ -319,17 +295,34 @@ export const SIGNING_DEFAULTS = {
   DEFAULT_FILE_SIZE_MB: 10,
   DEFAULT_FILENAME: "signed-document.pdf",
   DEFAULT_CONTENT_TYPE: "application/pdf",
-  EVENT_SOURCE: "signature-service",
-} as const;
+  EVENT_SOURCE: "signature-service"} as const;
 
 // Signing File Limits
 export const SIGNING_FILE_LIMITS = {
   MAX_FILE_SIZE_BYTES: 10 * 1024 * 1024, // 10MB
-  MAX_FILE_SIZE_MB: 10,
-} as const;
+  MAX_FILE_SIZE_MB: 10} as const;
 
+// Invitation Status
+export const INVITATION_STATUSES = ["pending", "used", "expired"] as const;
+export type InvitationStatus = (typeof INVITATION_STATUSES)[number];
 
+// Invitation Roles
+export const INVITATION_ROLES = ["signer", "viewer"] as const;
+export type InvitationRole = (typeof INVITATION_ROLES)[number];
 
+// Consent Status (for invitation flow)
+export const INVITATION_CONSENT_STATUSES = ["recorded"] as const;
+export type InvitationConsentStatus = (typeof INVITATION_CONSENT_STATUSES)[number];
 
+// Invitation Defaults
+export const INVITATION_DEFAULTS = {
+  EXPIRATION_DAYS: 7,
+  MAX_INVITATIONS_PER_ENVELOPE: 50,
+  TOKEN_LENGTH: 64} as const;
 
+// Invitation Validation
+export const INVITATION_VALIDATION = {
+  MAX_EMAIL_LENGTH: 255,
+  MAX_NAME_LENGTH: 255,
+  MIN_NAME_LENGTH: 1} as const;
 

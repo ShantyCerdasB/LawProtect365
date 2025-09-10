@@ -17,8 +17,7 @@ import { randomBytes } from "crypto";
  */
 const CreateDocumentLockBody = z.object({
   ttlSeconds: z.number().int().positive().optional(),
-  metadata: z.record(z.unknown()).optional(),
-});
+  metadata: z.record(z.unknown()).optional()});
 
 /**
  * @description Create Document Lock controller
@@ -34,9 +33,7 @@ export const CreateDocumentLockController = createCommandController<{ documentId
     s3Service: c.documents.s3Service,
     s3Config: {
       evidenceBucket: c.config.s3.evidenceBucket,
-      signedBucket: c.config.s3.signedBucket,
-    },
-  }),
+      signedBucket: c.config.s3.signedBucket}}),
   extractParams: (path: any, body: any) => ({
     documentId: path.id,
     lock: {
@@ -46,20 +43,10 @@ export const CreateDocumentLockController = createCommandController<{ documentId
       ownerEmail: path.actor?.email || "",
       expiresAt: new Date(Date.now() + (body.ttlSeconds || 3600) * 1000).toISOString(),
       createdAt: new Date().toISOString(),
-      metadata: body.metadata,
-    },
-  }),
+      metadata: body.metadata}}),
   responseType: "created",
-  includeActor: true,
-});
+  includeActor: true});
 
 // Export handler for backward compatibility
 export const handler = CreateDocumentLockController;
-
-
-
-
-
-
-
 

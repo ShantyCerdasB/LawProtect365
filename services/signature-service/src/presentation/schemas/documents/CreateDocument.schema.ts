@@ -25,8 +25,7 @@ export const CreateDocumentBody = z.object({
   /** S3 object key */
   key: z.string().min(1),
   /** Optional number of pages in the document */
-  pageCount: z.number().int().positive().optional(),
-});
+  pageCount: z.number().int().positive().optional()});
 export type CreateDocumentBody = z.infer<typeof CreateDocumentBody>;
 
 /**
@@ -37,12 +36,6 @@ export const CreateDocumentResponse = z.object({
   /** Created document identifier (UUID v4) */
   id: UuidV4,
   /** Creation timestamp (ISO datetime string) */
-  createdAt: z.string().datetime(),
-});
+  createdAt: z.string().datetime()});
 export type CreateDocumentResponse = z.infer<typeof CreateDocumentResponse>;
-
-
-
-
-
 

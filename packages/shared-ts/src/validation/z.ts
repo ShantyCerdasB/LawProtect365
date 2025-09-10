@@ -29,16 +29,13 @@ z.setErrorMap((issue, ctx) => {
   switch (issue.code) {
     case "invalid_type":
       return {
-        message: `Expected ${issue.expected}, received ${issue.received}`,
-      };
+        message: `Expected ${issue.expected}, received ${issue.received}`};
     case "too_small":
       return {
-        message: "Value is too small",
-      };
+        message: "Value is too small"};
     case "too_big":
       return {
-        message: "Value is too large",
-      };
+        message: "Value is too large"};
     case "invalid_string":
       if (issue.validation === "uuid") {
         return { message: "Invalid UUID format" };

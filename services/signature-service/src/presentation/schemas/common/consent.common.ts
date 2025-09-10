@@ -16,8 +16,7 @@ export const MetadataSchema = z.record(z.unknown());
 export const Timestamps = z.object({
   createdAt: ISODateStringSchema,
   updatedAt: ISODateStringSchema.optional(),
-  expiresAt: ISODateStringSchema.optional(),
-});
+  expiresAt: ISODateStringSchema.optional()});
 
 /** Core de un Consent (respuesta/entidad completa) */
 export const ConsentCore = z
@@ -27,8 +26,7 @@ export const ConsentCore = z
     partyId:    PartyId,
     consentType: ConsentType,
     status:      ConsentStatus,
-    metadata:    MetadataSchema.optional(),
-  })
+    metadata:    MetadataSchema.optional()})
   .merge(Timestamps);
 
 /** Paths reusables */
@@ -40,17 +38,10 @@ export const EnvelopeConsentPath = EnvelopePath.merge(ConsentPath);
 export const PaginationMeta = z.object({
   limit: z.number(),
   nextCursor: z.string().optional(),
-  total: z.number().optional(),
-});
+  total: z.number().optional()});
 
 /** Query base de paginación */
 export const PaginationQuery = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(50),
-  cursor: z.string().optional(),
-});
-
-
-
-
-
+  cursor: z.string().optional()});
 

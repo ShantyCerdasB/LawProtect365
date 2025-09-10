@@ -11,7 +11,7 @@ import type {
 } from "../../ports/audit/AuditCommandsPort";
 import type { AuditCommandsPortDependencies } from "../../../domain/types/audit";
 import type { AuditEventType } from "../../../domain/values/enums";
-import { assertTenantBoundary, nowIso } from "@lawprotect/shared-ts";
+import { nowIso } from "@lawprotect/shared-ts";
 
 /**
  * @description Creates an implementation of AuditCommandsPort
@@ -28,22 +28,18 @@ export const makeAuditCommandsPort = (
      * @returns Promise resolving to the recorded audit event
      */
     async recordAuditEvent(input: RecordAuditEventInput): Promise<RecordAuditEventResult> {
-      // Apply generic rules
-      assertTenantBoundary(input.tenantId, input.tenantId);
-      
+
       // Apply domain-specific rules
       // Note: Audit event validation would need proper integration
 
       // Create audit event candidate
       const occurredAt = nowIso();
       const candidate = {
-        tenantId: input.tenantId,
         envelopeId: input.envelopeId,
         type: input.type,
         occurredAt,
         actor: input.actor,
-        metadata: input.metadata,
-      };
+        metadata: input.metadata};
 
       // Record the audit event
       const savedEvent = await deps.auditRepo.record(candidate);
@@ -55,8 +51,6 @@ export const makeAuditCommandsPort = (
         occurredAt: savedEvent.occurredAt,
         type: savedEvent.type as AuditEventType, // Cast since it was validated when saved
         actor: savedEvent.actor as any, // Type assertion needed due to branded types mismatch
-        metadata: savedEvent.metadata,
-      };
-    },
-  };
+        metadata: savedEvent.metadata};
+    }};
 };

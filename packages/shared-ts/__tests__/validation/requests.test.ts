@@ -28,9 +28,7 @@ jest.doMock("@errors/AppError.js", () => ({ AppError: MockAppError }));
 jest.doMock("@errors/codes.js", () => ({
   ErrorCodes: {
     COMMON_BAD_REQUEST: "COMMON_BAD_REQUEST",
-    COMMON_UNPROCESSABLE_ENTITY: "COMMON_UNPROCESSABLE_ENTITY",
-  },
-}));
+    COMMON_UNPROCESSABLE_ENTITY: "COMMON_UNPROCESSABLE_ENTITY"}}));
 
 let validateRequest: typeof import("../../src/validation/requests.js").validateRequest;
 
@@ -53,8 +51,7 @@ const mkEvt = (overrides: Partial<{
   queryStringParameters: undefined,
   body: undefined,
   isBase64Encoded: false,
-  ...overrides,
-});
+  ...overrides});
 
 describe("validateRequest()", () => {
   it("validates path, query (with transforms), and body", () => {
@@ -66,16 +63,13 @@ describe("validateRequest()", () => {
           .string()
           .default("1")
           .transform((s) => Number(s))
-          .pipe(z.number().int().min(1)),
-      }),
-      body: z.object({ name: z.string().min(1), age: z.number().int().min(0) }),
-    };
+          .pipe(z.number().int().min(1))}),
+      body: z.object({ name: z.string().min(1), age: z.number().int().min(0) })};
 
     const evt = mkEvt({
       pathParameters: { id: "11111111-2222-4333-8444-555555555555" },
       queryStringParameters: { q: "hello", page: "3" },
-      body: JSON.stringify({ name: "Ana", age: 30 }),
-    });
+      body: JSON.stringify({ name: "Ana", age: 30 })});
 
     const out = validateRequest(evt as any, schemas);
     expect(out.path).toEqual({ id: "11111111-2222-4333-8444-555555555555" });

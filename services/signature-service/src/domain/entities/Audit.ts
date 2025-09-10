@@ -19,8 +19,6 @@ export interface DdbAuditItem {
 
   /** Event identifier */
   readonly id: string;
-  /** Tenant identifier */
-  readonly tenantId: string;
   /** Envelope identifier */
   readonly envelopeId: string;
   /** Event occurrence timestamp in ISO-8601 format */
@@ -60,7 +58,6 @@ export function isDdbAuditItem(value: unknown): value is DdbAuditItem {
     typeof o.sk === "string" &&
     typeof o.type === "string" &&
     typeof o.id === "string" &&
-    typeof o.tenantId === "string" &&
     typeof o.envelopeId === "string" &&
     typeof o.occurredAt === "string" &&
     typeof o.eventType === "string" &&
@@ -69,9 +66,4 @@ export function isDdbAuditItem(value: unknown): value is DdbAuditItem {
     typeof o.gsi2pk === "string"
   );
 }
-
-
-
-
-
 

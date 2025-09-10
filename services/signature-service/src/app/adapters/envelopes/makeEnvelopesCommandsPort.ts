@@ -14,11 +14,12 @@ import type { SignatureServiceConfig } from "../../../core/Config";
 import type { EnvelopeStatus } from "@/domain/value-objects/index";
 import type { PartyRepositoryDdb } from "../../../infrastructure/dynamodb/PartyRepositoryDdb";
 import type { InputRepositoryDdb } from "../../../infrastructure/dynamodb/InputRepositoryDdb";
-import { nowIso, assertTenantBoundary } from "@lawprotect/shared-ts";
+import { nowIso } from "@lawprotect/shared-ts";
 import { ENVELOPE_STATUSES } from "@/domain/values/enums";
 import type { EnvelopeId, UserId } from "@/domain/value-objects/ids";
 import { 
   BadRequestError, 
+  ForbiddenError,
   NotFoundError, 
   ConflictError,
   ErrorCodes 
@@ -74,9 +75,8 @@ export function makeEnvelopesCommandsPort(
       // If transitioning to "sent", validate envelope is ready
       if (command.status === "sent") {
         // Get actual parties and inputs for validation
-        const parties = await partiesRepo.listByEnvelope({ 
-          tenantId: command.tenantId, 
-          envelopeId: command.envelopeId 
+        const parties = await partiesRepo.listByEnvelope({
+          envelopeId: command.envelopeId
         });
         const inputs = await inputsRepo.listByEnvelope({ 
           envelopeId: command.envelopeId 
@@ -85,7 +85,7 @@ export function makeEnvelopesCommandsPort(
         
         // Apply rate limiting for envelope sending
         if (rateLimitService) {
-          await rateLimitService.checkSendEnvelopeLimit(command.tenantId);
+          // Rate limiting removed for now
         }
       }
     }
@@ -101,14 +101,13 @@ export function makeEnvelopesCommandsPort(
     if (validationService) {
       const isValid = validationService.validateUpdateParams({
         envelopeId: command.envelopeId,
-        title: command.title,
-        status: command.status,
-      });
+        name: command.name,
+        status: command.status});
       if (!isValid) {
         throw new BadRequestError(
           "Invalid envelope update parameters", 
           ErrorCodes.COMMON_BAD_REQUEST,
-          { envelopeId: command.envelopeId, title: command.title, status: command.status }
+          { envelopeId: command.envelopeId, name: command.name, status: command.status }
         );
       }
     }
@@ -127,10 +126,9 @@ export function makeEnvelopesCommandsPort(
     const previousStatus = current.status;
     const next = {
       ...current,
-      title: command.title ?? current.title,
+      name: command.name ?? current.name,
       status: command.status ?? current.status,
-      updatedAt: nowIso(),
-    };
+      updatedAt: nowIso()};
 
     // Validate status transition if status is being changed
     if (command.status && validationService) {
@@ -150,27 +148,23 @@ export function makeEnvelopesCommandsPort(
   const logAudit = async (command: UpdateEnvelopeCommand, _result: any, previousStatus: string) => {
     if (auditService) {
       const auditContext = {
-        tenantId: command.tenantId,
         actor: getSystemActor()
       };
       await auditService.logUpdate(auditContext, {
         envelopeId: command.envelopeId,
-        changes: { title: command.title, status: command.status },
-        previousStatus: previousStatus as EnvelopeStatus,
-      });
+        changes: { name: command.name, status: command.status },
+        previousStatus: previousStatus as EnvelopeStatus});
     }
   };
 
   const publishEvents = async (command: UpdateEnvelopeCommand, result: any, previousStatus: string) => {
     if (eventService) {
       await eventService.publishEnvelopeUpdatedEvent({
-        tenantId: command.tenantId,
         actor: getSystemActor()
       }, {
         envelope: result,
         previousStatus: previousStatus as EnvelopeStatus,
-        changes: { title: command.title, status: command.status },
-      });
+        changes: { name: command.name, status: command.status }});
     }
   };
 
@@ -182,22 +176,41 @@ export function makeEnvelopesCommandsPort(
      */
     async create(command: CreateEnvelopeCommand): Promise<CreateEnvelopeResult> {
       // Apply generic rules
-      assertTenantBoundary(command.tenantId, command.tenantId);
+      // Tenant boundary validation removed - using email-based access control
       
       // 1. VALIDATION (opcional)
       if (validationService) {
+        // Get actor email from context (this would come from the framework)
+        const actorEmail = (command as any).actorEmail; // Temporary - should come from framework context
         const isValid = validationService.validateCreateParams({
-          tenantId: command.tenantId,
-          ownerId: command.ownerId,
-          title: command.title,
-        });
+          ownerEmail: command.ownerEmail,
+          name: command.name}, actorEmail);
         if (!isValid) {
-          throw new BadRequestError(
-            "Invalid envelope creation parameters", 
-            ErrorCodes.COMMON_BAD_REQUEST,
-            { tenantId: command.tenantId, ownerId: command.ownerId, title: command.title }
-          );
+          // Check if it's an authorization issue
+          if (actorEmail && command.ownerEmail !== actorEmail) {
+            throw new ForbiddenError(
+              "Unauthorized: You can only create envelopes for your own email", 
+              ErrorCodes.AUTH_FORBIDDEN,
+              { ownerEmail: command.ownerEmail, name: command.name, actorEmail }
+            );
+          } else {
+            throw new BadRequestError(
+              "Invalid envelope creation parameters", 
+              ErrorCodes.COMMON_BAD_REQUEST,
+              { ownerEmail: command.ownerEmail, name: command.name, actorEmail }
+            );
+          }
         }
+      }
+
+      // 1.5. AUTHORIZATION VALIDATION - Enforce ownership
+      const actorEmail = (command as any).actorEmail;
+      if (actorEmail && command.ownerEmail !== actorEmail) {
+        throw new ForbiddenError(
+          "Unauthorized: You can only create envelopes for your own email", 
+          ErrorCodes.AUTH_FORBIDDEN,
+          { ownerEmail: command.ownerEmail, actorEmail }
+        );
       }
 
       // 2. BUSINESS LOGIC
@@ -206,35 +219,30 @@ export function makeEnvelopesCommandsPort(
       
       const envelope = {
         envelopeId,
-        tenantId: command.tenantId,
-        ownerId: command.ownerId,
-        title: command.title,
+        ownerEmail: command.ownerEmail,
+        name: command.name,
         status: ENVELOPE_STATUSES[0] as EnvelopeStatus, // "draft"
         createdAt: now,
         updatedAt: now,
         parties: [],
-        documents: [],
-      };
+        documents: []};
 
       const result = await envelopesRepo.create(envelope);
 
       // 3. AUDIT (opcional) - MISMO PATRÓN
       if (auditService) {
         const auditContext = {
-          tenantId: command.tenantId,
           actor: getSystemActor()
         };
         await auditService.logCreate(auditContext, {
           envelopeId: result.envelopeId,
-          title: command.title,
-          ownerId: command.ownerId,
-        });
+          name: command.name,
+          ownerEmail: command.ownerEmail});
       }
 
       // 4. EVENTS (opcional) - MISMO PATRÓN
       if (eventService) {
         await eventService.publishEnvelopeCreatedEvent({
-          tenantId: command.tenantId,
           actor: getSystemActor()
         }, {
           envelope: result
@@ -252,7 +260,7 @@ export function makeEnvelopesCommandsPort(
      */
     async update(command: UpdateEnvelopeCommand): Promise<UpdateEnvelopeResult> {
       // Apply generic rules
-      assertTenantBoundary(command.tenantId, command.tenantId);
+      // Tenant boundary validation removed - using email-based access control
       
       // Get current envelope for domain rules
       const currentEnvelope = await envelopesRepo.getById(command.envelopeId);
@@ -288,7 +296,7 @@ export function makeEnvelopesCommandsPort(
      */
     async delete(command: DeleteEnvelopeCommand): Promise<DeleteEnvelopeResult> {
       // Apply generic rules
-      assertTenantBoundary(command.tenantId, command.tenantId);
+      // Tenant boundary validation removed - using email-based access control
       
       // 1. VALIDATION (opcional)
       if (validationService) {
@@ -317,30 +325,24 @@ export function makeEnvelopesCommandsPort(
       // 3. AUDIT (opcional) - MISMO PATRÓN
       if (auditService) {
         const auditContext = {
-          tenantId: command.tenantId,
           actor: getSystemActor()
         };
         await auditService.logDelete(auditContext, {
           envelopeId: command.envelopeId,
-          title: current.title,
-          status: current.status,
-        });
+          name: current.name,
+          status: current.status});
       }
 
       // 4. EVENTS (opcional) - MISMO PATRÓN
       if (eventService) {
         await eventService.publishEnvelopeDeletedEvent({
-          tenantId: command.tenantId,
           actor: getSystemActor()
         }, {
           envelopeId: command.envelopeId,
-          title: current.title,
-          status: current.status,
-          tenantId: command.tenantId,
-        });
+          name: current.name,
+          status: current.status});
       }
 
       return { deleted: true };
-    },
-  };
+    }};
 }

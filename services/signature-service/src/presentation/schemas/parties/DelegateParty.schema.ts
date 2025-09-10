@@ -16,8 +16,7 @@ import { PartyMetadataSchema } from "../../../domain/value-objects/party/PartyMe
  * Path parameters for POST /parties/:partyId/delegate
  */
 export const DelegatePartyPath = z.object({
-  partyId: z.string().min(1, "Party ID is required"),
-});
+  partyId: z.string().min(1, "Party ID is required")});
 
 /**
  * Request body for delegating a global party
@@ -28,8 +27,7 @@ export const DelegatePartyBody = z.object({
   reason: z.string().min(1, "Reason is required").max(500, "Reason too long"),
   type: z.enum(DELEGATION_TYPES).default("temporary"),
   expiresAt: z.string().datetime().optional(),
-  metadata: PartyMetadataSchema.optional(),
-});
+  metadata: PartyMetadataSchema.optional()});
 
 /**
  * Response schema for party delegation
@@ -45,15 +43,9 @@ export const DelegatePartyResponse = z.object({
   status: z.enum(DELEGATION_STATUSES),
   createdAt: z.string(),
   expiresAt: z.string().optional(),
-  metadata: z.record(z.unknown()).optional(),
-});
+  metadata: z.record(z.unknown()).optional()});
 
 export type DelegatePartyPathType = z.infer<typeof DelegatePartyPath>;
 export type DelegatePartyBodyType = z.infer<typeof DelegatePartyBody>;
 export type DelegatePartyResponseType = z.infer<typeof DelegatePartyResponse>;
-
-
-
-
-
 

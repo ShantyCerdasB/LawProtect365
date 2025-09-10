@@ -4,14 +4,13 @@
  * @description Defines the input types used by envelope controllers
  */
 
-import type { TenantId, EnvelopeId, UserId } from "@/domain/value-objects/ids";
+import type { EnvelopeId, UserId } from "@/domain/value-objects/ids";
 import type { EnvelopeStatus } from "@/domain/value-objects/index";
 
 /**
  * @summary Input for creating an envelope
  */
 export interface CreateEnvelopeControllerInput {
-  readonly tenantId: TenantId;
   readonly ownerId: UserId;
   readonly title: string;
   readonly description?: string;
@@ -21,7 +20,6 @@ export interface CreateEnvelopeControllerInput {
  * @summary Input for getting an envelope by ID
  */
 export interface GetEnvelopeControllerInput {
-  readonly tenantId: TenantId;
   readonly envelopeId: EnvelopeId;
 }
 
@@ -29,7 +27,6 @@ export interface GetEnvelopeControllerInput {
  * @summary Input for listing envelopes
  */
 export interface ListEnvelopesControllerInput {
-  readonly tenantId: TenantId;
   readonly limit: number;
   readonly cursor?: string;
 }
@@ -38,7 +35,6 @@ export interface ListEnvelopesControllerInput {
  * @summary Input for updating an envelope
  */
 export interface UpdateEnvelopeControllerInput {
-  readonly tenantId: TenantId;
   readonly envelopeId: EnvelopeId;
   readonly title?: string;
   readonly status?: EnvelopeStatus;
@@ -48,7 +44,6 @@ export interface UpdateEnvelopeControllerInput {
  * @summary Input for deleting an envelope
  */
 export interface DeleteEnvelopeControllerInput {
-  readonly tenantId: TenantId;
   readonly envelopeId: EnvelopeId;
 }
 
@@ -56,12 +51,6 @@ export interface DeleteEnvelopeControllerInput {
  * @summary Input for getting envelope status
  */
 export interface GetEnvelopeStatusControllerInput {
-  readonly tenantId: TenantId;
   readonly envelopeId: EnvelopeId;
 }
-
-
-
-
-
 

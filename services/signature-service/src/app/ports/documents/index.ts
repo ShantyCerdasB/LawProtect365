@@ -6,5 +6,3 @@
 export * from "./DocumentsCommandsPort";
 export * from "./DocumentsQueriesPort";
 
-
-

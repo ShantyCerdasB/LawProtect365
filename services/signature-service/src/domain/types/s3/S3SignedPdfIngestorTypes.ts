@@ -65,8 +65,3 @@ export interface S3SignedPdfIngestorOptions {
   defaultPathStyleUrl?: boolean;
 } 
 
-
-
-
-
-

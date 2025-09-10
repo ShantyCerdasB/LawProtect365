@@ -5,14 +5,11 @@ import { logger } from '../../../src/index.js';
 jest.mock('../../../src/index.js', () => ({
   logger: {
     info: jest.fn(),
-    error: jest.fn(),
-  },
-}));
+    error: jest.fn()}}));
 
 describe('OutboxWorker', () => {
   const mockContext = {
-    awsRequestId: 'test-request-id',
-  };
+    awsRequestId: 'test-request-id'};
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -37,16 +34,13 @@ describe('OutboxWorker', () => {
         timestamp: expect.any(String),
         config: {
           maxBatchSize: 100,
-          continueOnError: true,
-        },
-      });
+          continueOnError: true}});
 
       expect(logger.error).toHaveBeenCalledWith('Outbox processing failed', {
         requestId: 'test-request-id',
         error: 'OutboxWorker implementation needs to be customized per service',
         duration: expect.any(Number),
-        timestamp: expect.any(String),
-      });
+        timestamp: expect.any(String)});
     });
 
     it('should return error response when continueOnError is true', async () => {
@@ -82,9 +76,7 @@ describe('OutboxWorker', () => {
         timestamp: expect.any(String),
         config: {
           maxBatchSize: 100,
-          continueOnError: true,
-        },
-      });
+          continueOnError: true}});
     });
   });
 

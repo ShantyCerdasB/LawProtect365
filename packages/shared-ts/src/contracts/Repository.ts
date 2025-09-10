@@ -8,7 +8,7 @@ export interface Repository<T, Id = string, Ctx = unknown> {
   /**
    * Loads an entity by id.
    * @param id Entity identifier.
-   * @param ctx Optional repository context (transaction, tenant).
+   * @param ctx Optional repository context (transaction
    * @returns Entity or null when not found.
    */
   getById(id: Id, ctx?: Ctx): Promise<T | null>;

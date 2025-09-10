@@ -7,5 +7,3 @@
 export { makeEnvelopesCommandsPort } from "./makeEnvelopesCommandsPort";
 export { makeEnvelopesQueriesPort } from "./MakeEnvelopesQueriesPort";
 
-
-

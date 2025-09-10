@@ -10,8 +10,7 @@ import {
   EmailStringSchema,
   PositiveIntSchema,
   JsonUnknownSchema,
-  JsonObjectSchema,
-} from "../../src/validation";
+  JsonObjectSchema} from "../../src/validation";
 
 describe("validation/schemas", () => {
   describe("NonEmptyStringSchema", () => {

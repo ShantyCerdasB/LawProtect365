@@ -20,16 +20,16 @@ import type {
   RequestSignatureCommand,
   RequestSignatureResult,
   AddViewerCommand,
-  AddViewerResult,
-} from "../../ports/requests/RequestsCommandsPort";
+  AddViewerResult} from "../../ports/requests/RequestsCommandsPort";
 import type { Repository, S3Presigner } from "@lawprotect/shared-ts";
-import { nowIso, NotFoundError, ConflictError, BadRequestError, ErrorCodes, assertTenantBoundary } from "@lawprotect/shared-ts";
-import { PARTY_DEFAULTS, ENVELOPE_STATUSES, PARTY_ROLES, PARTY_STATUSES, REQUEST_DEFAULTS, S3_BUCKETS, REQUEST_TIMEOUTS } from "../../../domain/values/enums";
+import type { InvitationTokenRepositoryDdb } from "../../../infrastructure/dynamodb/InvitationTokenRepositoryDdb";
+import { nowIso, NotFoundError, ConflictError, BadRequestError, ForbiddenError, ErrorCodes } from "@lawprotect/shared-ts";
+import { PARTY_DEFAULTS, ENVELOPE_STATUSES, PARTY_ROLES, PARTY_STATUSES, REQUEST_DEFAULTS, S3_BUCKETS, REQUEST_TIMEOUTS, PartyStatus } from "../../../domain/values/enums";
 import type { Envelope } from "../../../domain/entities/Envelope";
 import type { Party } from "../../../domain/entities/Party";
 import type { Input } from "../../../domain/entities/Input";
 import type { EnvelopeId, PartyId } from "../../../domain/value-objects/ids";
-import type { PartyStatus, PartyRole, EnvelopeStatus } from "../../../domain/values/enums";
+import type { PartyRole, EnvelopeStatus } from "../../../domain/values/enums";
 import type { PartyKey, InputKey } from "../../../domain/types/infrastructure/dynamodb";
 import { RequestsValidationService } from "../../services/Requests/RequestsValidationService";
 import { RequestsAuditService } from "../../services/Requests/RequestsAuditService";
@@ -212,7 +212,7 @@ async function publishAuditAndEvents(
       await (auditService as any)[auditMethod](
         result,
         command.envelopeId,
-        command.tenantId,
+        command,
         command.actor
       );
     }
@@ -225,7 +225,7 @@ async function publishAuditAndEvents(
       await (eventService as any)[eventMethod](
         result,
         command.envelopeId,
-        command.tenantId,
+        command,
         command.actor
       );
     }
@@ -242,24 +242,22 @@ async function publishAuditAndEvents(
 async function createNewParty(
   partyId: PartyId,
   command: InvitePartiesCommand,
-  partiesRepo: Repository<Party, PartyKey, undefined>
+  partiesRepo: Repository<Party, PartyKey, undefined>,
+  sequence: number = PARTY_DEFAULTS.DEFAULT_SEQUENCE
 ): Promise<void> {
   const now = nowIso();
   const newParty: Party = {
-    tenantId: command.tenantId,
     partyId,
     envelopeId: command.envelopeId,
     name: `Party ${partyId}`,
     email: `party-${partyId}@example.com`,
     role: PARTY_ROLES[0] as PartyRole,
-    status: PARTY_DEFAULTS.DEFAULT_STATUS as PartyStatus,
-    sequence: PARTY_DEFAULTS.DEFAULT_SEQUENCE,
-    invitedAt: now,
+    status: "pending" as PartyStatus, // Create as pending first
+    sequence,
+    invitedAt: undefined, // Not invited yet
     createdAt: now,
     updatedAt: now,
-    auth: { methods: [...PARTY_DEFAULTS.DEFAULT_AUTH_METHODS] },
-    otpState: undefined,
-  };
+    auth: { methods: [...PARTY_DEFAULTS.DEFAULT_AUTH_METHODS] }};
 
   await partiesRepo.create(newParty);
 }
@@ -271,23 +269,75 @@ async function createNewParty(
  * @param ids - Optional ID generation service
  * @returns Promise resolving to invitation results with invited, already pending, and skipped party IDs
  */
+/**
+ * Invites an existing party by updating its status and creating invitation token
+ */
+async function inviteExistingParty(
+  party: Party,
+  command: InvitePartiesCommand,
+  partiesRepo: Repository<Party, PartyKey, undefined>,
+  invitationTokensRepo: InvitationTokenRepositoryDdb,
+  sequence: number
+): Promise<string> {
+  // Update party status to invited
+  await partiesRepo.update(
+    { envelopeId: party.envelopeId, partyId: party.partyId },
+    {
+      status: "invited" as PartyStatus,
+      invitedAt: nowIso(),
+      sequence: sequence,
+      updatedAt: nowIso()
+    }
+  );
+  
+  // Create invitation token
+  const invitationToken = await invitationTokensRepo.create({
+    envelopeId: command.envelopeId,
+    partyId: party.partyId,
+    email: party.email,
+    name: party.name,
+    role: party.role,
+    invitedBy: (command as any).actorEmail || "unknown",
+    invitedByName: (command as any).actor?.email || "unknown",
+    message: command.message,
+    signByDate: command.signByDate,
+    signingOrder: command.signingOrder,
+    expiresInDays: 7 // 7 days
+  });
+  
+  return invitationToken.token;
+}
+
 async function processPartyInvitations(
   command: InvitePartiesCommand,
   partiesRepo: Repository<Party, PartyKey, undefined>,
+  invitationTokensRepo: InvitationTokenRepositoryDdb,
   ids?: { ulid(): string }
-): Promise<{ invited: PartyId[]; alreadyPending: PartyId[]; skipped: PartyId[] }> {
+): Promise<{ invited: PartyId[]; alreadyPending: PartyId[]; skipped: PartyId[]; tokens: string[] }> {
   const invited: PartyId[] = [];
   const alreadyPending: PartyId[] = [];
   const skipped: PartyId[] = [];
+  const tokens: string[] = [];
 
-  for (const partyId of command.partyIds) {
+  // Calculate sequences based on signing order
+  const sequences = calculatePartySequences(command.partyIds.length, command.signingOrder);
+
+  for (let i = 0; i < command.partyIds.length; i++) {
+    const partyId = command.partyIds[i];
     const partyKey = { envelopeId: command.envelopeId, partyId };
     const existingParty = await partiesRepo.getById(partyKey);
     
     if (existingParty) {
-      if (existingParty.status === PARTY_STATUSES[0] || existingParty.status === "invited") {
+      if (existingParty.status === "invited") {
+        // Party already invited, skip
         alreadyPending.push(partyId);
+      } else if (existingParty.status === "pending") {
+        // Party exists but not invited yet, invite now
+        const token = await inviteExistingParty(existingParty, command, partiesRepo, invitationTokensRepo, sequences[i]);
+        invited.push(partyId);
+        tokens.push(token);
       } else {
+        // Party in other state (signed, declined, etc.), skip
         skipped.push(partyId);
       }
     } else {
@@ -299,12 +349,51 @@ async function processPartyInvitations(
       }
 
       const newPartyId = ids.ulid() as PartyId;
-      await createNewParty(newPartyId, command, partiesRepo);
-      invited.push(newPartyId);
+      await createNewParty(newPartyId, command, partiesRepo, sequences[i]);
+      
+      // Get the newly created party and invite it
+      const newParty = await partiesRepo.getById({ envelopeId: command.envelopeId, partyId: newPartyId });
+      if (newParty) {
+        const token = await inviteExistingParty(newParty, command, partiesRepo, invitationTokensRepo, sequences[i]);
+        invited.push(newPartyId);
+        tokens.push(token);
+      }
     }
   }
 
-  return { invited, alreadyPending, skipped };
+  return { invited, alreadyPending, skipped, tokens };
+}
+
+/**
+ * Calculates party sequences based on signing order preference
+ * @param partyCount - Number of parties being invited
+ * @param signingOrder - Optional signing order preference
+ * @returns Array of sequence numbers for each party
+ */
+function calculatePartySequences(
+  partyCount: number, 
+  signingOrder?: "owner_first" | "invitees_first"
+): number[] {
+  const sequences: number[] = [];
+  
+  if (!signingOrder || partyCount === 1) {
+    // Default: all parties get sequence 1 (parallel signing)
+    for (let i = 0; i < partyCount; i++) {
+      sequences.push(1);
+    }
+  } else if (signingOrder === "owner_first") {
+    // Owner signs first (sequence 1), then invitees (sequence 2)
+    for (let i = 0; i < partyCount; i++) {
+      sequences.push(2); // Invitees get sequence 2
+    }
+  } else if (signingOrder === "invitees_first") {
+    // Invitees sign first (sequence 1), then owner (sequence 2)
+    for (let i = 0; i < partyCount; i++) {
+      sequences.push(1); // Invitees get sequence 1
+    }
+  }
+  
+  return sequences;
 }
 
 /**
@@ -470,6 +559,7 @@ interface RequestsCommandsPortConfig {
     envelopes: Repository<Envelope, EnvelopeId, undefined>;
     parties: Repository<Party, PartyKey, undefined>;
     inputs: Repository<Input, InputKey, undefined>;
+    invitationTokens: InvitationTokenRepositoryDdb;
   };
   services?: {
     validation?: RequestsValidationService;
@@ -490,7 +580,7 @@ interface RequestsCommandsPortConfig {
  */
 export function makeRequestsCommandsPort(config: RequestsCommandsPortConfig): RequestsCommandsPort {
   const {
-    repositories: { envelopes: envelopesRepo, parties: partiesRepo, inputs: _inputsRepo },
+    repositories: { envelopes: envelopesRepo, parties: partiesRepo, inputs: _inputsRepo, invitationTokens: invitationTokensRepo },
     services: { 
       validation: validationService, 
       audit: auditService, 
@@ -505,13 +595,21 @@ export function makeRequestsCommandsPort(config: RequestsCommandsPortConfig): Re
   return {
     async inviteParties(command: InvitePartiesCommand): Promise<InvitePartiesResult> {
       // Apply generic rules
-      assertTenantBoundary(command.tenantId, command.tenantId);
-      
       // Execute common services (validation and rate limiting)
       await executeCommonServices(validationService, rateLimitService, auditService, eventService, command, "InviteParties");
 
       // Get and validate envelope
       const envelope = await validateAndGetEnvelope(envelopesRepo, command.envelopeId);
+      
+      // AUTHORIZATION VALIDATION - Only envelope owner can invite parties
+      const actorEmail = (command as any).actorEmail;
+      if (actorEmail && envelope.ownerEmail !== actorEmail) {
+        throw new ForbiddenError(
+          "Unauthorized: Only envelope owner can invite parties", 
+          ErrorCodes.AUTH_FORBIDDEN,
+          { envelopeId: command.envelopeId, ownerEmail: envelope.ownerEmail, actorEmail }
+        );
+      }
       
       // Validate envelope is in draft state using domain rules
       assertDraft(envelope);
@@ -526,7 +624,7 @@ export function makeRequestsCommandsPort(config: RequestsCommandsPortConfig): Re
       });
 
       // Process party invitations
-      const { invited, alreadyPending, skipped } = await processPartyInvitations(command, partiesRepo, ids);
+      const { invited, alreadyPending, skipped, tokens } = await processPartyInvitations(command, partiesRepo, invitationTokensRepo, ids);
 
       // Update envelope status if needed
       const statusChanged = await updateEnvelopeStatusIfNeeded(envelope, invited.length, command.envelopeId, envelopesRepo, partiesRepo, _inputsRepo);
@@ -535,19 +633,30 @@ export function makeRequestsCommandsPort(config: RequestsCommandsPortConfig): Re
         invited,
         alreadyPending,
         skipped,
-        statusChanged
+        statusChanged,
+        tokens
       };
 
       // Publish audit and events
       await publishAuditAndEvents(auditService, eventService, command, result.invited, "InviteParties");
+      
+      // Publish invitation event with signing order
+      if (eventService && result.invited.length > 0 && command.actor) {
+        await eventService.publishInviteParties(
+          result.invited,
+          command.envelopeId,
+          command.actor,
+          command.message,
+          command.signByDate,
+          command.signingOrder
+        );
+      }
 
       return result;
     },
 
     async remindParties(command: RemindPartiesCommand): Promise<RemindPartiesResult> {
       // Apply generic rules
-      assertTenantBoundary(command.tenantId, command.tenantId);
-      
       // Execute common services (validation and rate limiting)
       await executeCommonServices(validationService, rateLimitService, auditService, eventService, command, "RemindParties");
 
@@ -597,8 +706,6 @@ export function makeRequestsCommandsPort(config: RequestsCommandsPortConfig): Re
 
     async cancelEnvelope(command: CancelEnvelopeCommand): Promise<CancelEnvelopeResult> {
       // Apply generic rules
-      assertTenantBoundary(command.tenantId, command.tenantId);
-      
       // Execute common services (validation and rate limiting)
       await executeCommonServices(validationService, rateLimitService, auditService, eventService, command, "CancelEnvelope");
 
@@ -610,8 +717,6 @@ export function makeRequestsCommandsPort(config: RequestsCommandsPortConfig): Re
 
     async declineEnvelope(command: DeclineEnvelopeCommand): Promise<DeclineEnvelopeResult> {
       // Apply generic rules
-      assertTenantBoundary(command.tenantId, command.tenantId);
-      
       // Execute common services (validation and rate limiting)
       await executeCommonServices(validationService, rateLimitService, auditService, eventService, command, "DeclineEnvelope");
 
@@ -623,8 +728,6 @@ export function makeRequestsCommandsPort(config: RequestsCommandsPortConfig): Re
 
     async finaliseEnvelope(command: FinaliseEnvelopeCommand): Promise<FinaliseEnvelopeResult> {
       // Apply generic rules
-      assertTenantBoundary(command.tenantId, command.tenantId);
-      
       // Execute common services (validation and rate limiting)
       await executeCommonServices(validationService, rateLimitService, auditService, eventService, command, "FinaliseEnvelope");
 
@@ -663,8 +766,6 @@ export function makeRequestsCommandsPort(config: RequestsCommandsPortConfig): Re
 
     async requestSignature(command: RequestSignatureCommand): Promise<RequestSignatureResult> {
       // Apply generic rules
-      assertTenantBoundary(command.tenantId, command.tenantId);
-      
       // Execute common services (validation and rate limiting)
       await executeCommonServices(validationService, rateLimitService, auditService, eventService, command, "RequestSignature");
 
@@ -715,8 +816,6 @@ export function makeRequestsCommandsPort(config: RequestsCommandsPortConfig): Re
 
     async addViewer(command: AddViewerCommand): Promise<AddViewerResult> {
       // Apply generic rules
-      assertTenantBoundary(command.tenantId, command.tenantId);
-      
       // Execute common services (validation and rate limiting)
       await executeCommonServices(validationService, rateLimitService, auditService, eventService, command, "AddViewer");
 
@@ -736,21 +835,18 @@ export function makeRequestsCommandsPort(config: RequestsCommandsPortConfig): Re
 
       // Create party with "viewer" role
       const newParty: Party = {
-        tenantId: command.tenantId,
         partyId,
         envelopeId: command.envelopeId,
         name: command.name || `Viewer ${partyId}`,
         email: command.email,
-        role: PARTY_ROLES[2] as PartyRole,
+        role: PARTY_ROLES[0] as PartyRole, // "signer" - only role available
         status: "active" as PartyStatus,
         sequence: REQUEST_DEFAULTS.VIEWER_SEQUENCE,
         invitedAt: now,
         createdAt: now,
         updatedAt: now,
         auth: { methods: [...PARTY_DEFAULTS.DEFAULT_AUTH_METHODS] },
-        otpState: undefined,
-        locale: command.locale,
-      };
+        locale: command.locale};
 
       await partiesRepo.create(newParty);
 
@@ -767,9 +863,4 @@ export function makeRequestsCommandsPort(config: RequestsCommandsPortConfig): Re
     }
   };
 }
-
-
-
-
-
 

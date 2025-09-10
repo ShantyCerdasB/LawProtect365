@@ -4,8 +4,7 @@
  * @description Handles rate limiting for Signing operations using domain rules
  */
 
-
-import type { EnvelopeId, PartyId, TenantId } from "@/domain/value-objects/ids";
+import type { EnvelopeId, PartyId } from "@/domain/value-objects/ids";
 import type { SigningRateLimitService as ISigningRateLimitService } from "../../../domain/types/signing";
 import { TooManyRequestsError, RateLimitStore } from "@lawprotect/shared-ts";
 import { SignatureErrorCodes } from "../../../shared/errors";
@@ -21,16 +20,13 @@ export class SigningRateLimitService implements ISigningRateLimitService {
    * @summary Checks and enforces signing preparation rate limits
    * @description Enforces rate limits for signing preparation requests per party per envelope
    * @param envelopeId - Envelope identifier
-   * @param partyId - Party identifier
-   * @param tenantId - Tenant identifier
-   * @throws {TooManyRequestsError} When rate limit is exceeded
+   * @param partyId - Party identifier   * @throws {TooManyRequestsError} When rate limit is exceeded
    */
   async checkPrepareSigningRateLimit(
     envelopeId: EnvelopeId,
-    partyId: PartyId,
-    tenantId: TenantId
+    partyId: PartyId
   ): Promise<void> {
-    const rateLimitKey = `prepare:${tenantId}:${envelopeId}:${partyId}`;
+    const rateLimitKey = `prepare:${envelopeId}:${partyId}`;
     
     try {
       await this.rateLimitStore.incrementAndCheck(rateLimitKey, {
@@ -46,9 +42,7 @@ export class SigningRateLimitService implements ISigningRateLimitService {
           {
             envelopeId,
             partyId,
-            tenantId,
-            retryAfterSeconds: 60,
-          }
+            retryAfterSeconds: 60}
         );
       }
       throw error;
@@ -59,16 +53,13 @@ export class SigningRateLimitService implements ISigningRateLimitService {
    * @summary Checks and enforces signing completion rate limits
    * @description Enforces rate limits for signing completion attempts per party per envelope
    * @param envelopeId - Envelope identifier
-   * @param partyId - Party identifier
-   * @param tenantId - Tenant identifier
-   * @throws {TooManyRequestsError} When rate limit is exceeded
+   * @param partyId - Party identifier   * @throws {TooManyRequestsError} When rate limit is exceeded
    */
   async checkSigningRateLimit(
     envelopeId: EnvelopeId,
-    partyId: PartyId,
-    tenantId: TenantId
+    partyId: PartyId
   ): Promise<void> {
-    const rateLimitKey = `signing:${tenantId}:${envelopeId}:${partyId}`;
+    const rateLimitKey = `signing:${envelopeId}:${partyId}`;
     
     try {
       await this.rateLimitStore.incrementAndCheck(rateLimitKey, {
@@ -84,9 +75,7 @@ export class SigningRateLimitService implements ISigningRateLimitService {
           {
             envelopeId,
             partyId,
-            tenantId,
-            retryAfterSeconds: 300,
-          }
+            retryAfterSeconds: 300}
         );
       }
       throw error;

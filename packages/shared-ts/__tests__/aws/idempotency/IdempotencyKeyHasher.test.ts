@@ -9,9 +9,7 @@ describe('IdempotencyKeyHasher', () => {
   const baseInput: IdempotencyKeyInput = {
     method: 'POST',
     path: '/api/users',
-    tenantId: 'tenant-123',
-    userId: 'user-456',
-  };
+    userId: 'user-456'};
 
   describe('derive', () => {
     it('should generate consistent keys for identical inputs', () => {
@@ -109,13 +107,10 @@ describe('IdempotencyKeyHasher', () => {
         ...baseInput,
         query: {
           filters: { status: 'active', category: 'premium' },
-          sort: { field: 'created_at', order: 'desc' },
-        },
+          sort: { field: 'created_at', order: 'desc' }},
         body: {
           user: { name: 'John', profile: { age: 30, city: 'NYC' } },
-          metadata: { source: 'web', version: '1.0' },
-        },
-      };
+          metadata: { source: 'web', version: '1.0' }}};
       
       const result = IdempotencyKeyHasher.derive(complexInput);
       
@@ -128,8 +123,7 @@ describe('IdempotencyKeyHasher', () => {
         ...baseInput,
         path: '/api/users/123?test=value&empty=',
         query: { empty: '', special: '!@#$%^&*()' },
-        body: { unicode: '🚀', newline: 'line1\nline2' },
-      };
+        body: { unicode: '🚀', newline: 'line1\nline2' }};
       
       const result = IdempotencyKeyHasher.derive(specialInput);
       

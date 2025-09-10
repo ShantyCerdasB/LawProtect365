@@ -18,13 +18,7 @@ export type DeleteEnvelopeParams = z.infer<typeof DeleteEnvelopeParams>;
  */
 export const DeleteEnvelopeResponse = z.object({
   deleted: z.boolean(),
-  envelopeId: EnvelopeIdField,
-});
+  envelopeId: EnvelopeIdField});
 
 export type DeleteEnvelopeResponse = z.infer<typeof DeleteEnvelopeResponse>;
-
-
-
-
-
 

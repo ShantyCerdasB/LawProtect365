@@ -40,8 +40,7 @@ export function mapCreateInputToDto(input: OutboxRepoCreateInput): OutboxItemDTO
     gsi1pk: `${OUTBOX_STATUS_PK_PREFIX}${status}`,
     gsi1sk: `${typeof input.occurredAt === 'string' ? input.occurredAt : input.occurredAt.toISOString()}#${input.id}`,
     createdAt: now,
-    updatedAt: now,
-  };
+    updatedAt: now};
 }
 
 /**
@@ -59,14 +58,6 @@ export function mapDtoToRecord(dto: OutboxItemDTO): OutboxRecord {
     status: dto.status as OutboxRecord["status"],
     attempts: dto.attempts,
     lastError: dto.lastError,
-    traceId: dto.traceId,
-  };
+    traceId: dto.traceId};
 }
-
-
-
-
-
-
-
 

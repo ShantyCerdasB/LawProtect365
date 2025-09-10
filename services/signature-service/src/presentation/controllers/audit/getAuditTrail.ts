@@ -25,15 +25,7 @@ export const handler = createQueryController({
     format: query.format,
     locale: query.locale,
     limit: query.limit,
-    cursor: query.cursor,
-  }),
+    cursor: query.cursor}),
   responseType: RESPONSE_TYPES[0], // 'ok'
 });
-
-
-
-
-
-
-
 

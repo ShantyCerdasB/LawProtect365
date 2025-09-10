@@ -18,13 +18,12 @@ import type {
   DelegateConsentAppResult
 } from "../../../domain/types/consent/AppServiceInputs";
 import type {
-  ConsentRepoRow,
-} from "../../../domain/types/consent/ConsentTypes";
+  ConsentRepoRow} from "../../../domain/types/consent/ConsentTypes";
 import type { ConsentCommandRepo, Ids } from "../../../domain/types/consent/AdapterDependencies";
 import type { PartyId } from "@/domain/value-objects/ids";
 import type { ConsentStatus, PartyRole, PartySource, GlobalPartyStatus, AuthMethod } from "../../../domain/values/enums";
 import { CONSENT_DEFAULTS } from "../../../domain/values/enums";
-import { nowIso, asISO, asISOOpt, type ActorContext, type IdempotencyRunner, assertTenantBoundary } from "@lawprotect/shared-ts";
+import { nowIso, asISO, asISOOpt, type ActorContext, type IdempotencyRunner } from "@lawprotect/shared-ts";
 import type { DelegationRepositoryDdb } from "../../../infrastructure/dynamodb/DelegationRepositoryDdb";
 import type { ConsentValidationService } from "../../services/Consent/ConsentValidationService";
 import type { ConsentAuditService } from "../../services/Consent/ConsentAuditService";
@@ -33,8 +32,6 @@ import { createConsentWithAudit, logConsentDeletionAudit, updateConsentWithAudit
 import type { GlobalPartiesRepository } from "../../../domain/contracts/repositories/global-parties/GlobalPartiesRepository";
 import type { FindOrCreatePartyInput } from "../../../domain/types/global-parties";
 import { NotFoundError, BadRequestError } from "../../../shared/errors";
-
-
 
 /**
  * @summary Creates a ConsentCommandsPort implementation
@@ -79,7 +76,6 @@ export function makeConsentCommandsPort(
     // 1. VALIDATION (if validation service available)
     if (validationService) {
       await validationService.validateConsentDelegation({
-        tenantId: input.tenantId,
         envelopeId: input.envelopeId,
         consentId: input.consentId,
         delegateEmail: input.delegateEmail,
@@ -99,7 +95,6 @@ export function makeConsentCommandsPort(
 
     // 3. FIND OR CREATE DELEGATE PARTY
     const delegatePartyId = await findOrCreatePartyForDelegate({
-      tenantId: input.tenantId,
       email: input.delegateEmail,
       name: input.delegateName
     });
@@ -107,7 +102,6 @@ export function makeConsentCommandsPort(
     // 4. Create delegation record
     const delegation = await delegationsRepo.create({
       delegationId: ids.ulid(),
-      tenantId: input.tenantId,
       consentId: input.consentId,
       envelopeId: input.envelopeId,
       originalPartyId: currentConsent.partyId,
@@ -115,8 +109,7 @@ export function makeConsentCommandsPort(
       reason: input.reason,
       status: "pending",
       expiresAt: input.expiresAt ? asISOOpt(input.expiresAt) : undefined,
-      metadata: input.metadata,
-    });
+      metadata: input.metadata});
 
     // 5. Update consent status to delegated
     await consentsRepo.update(
@@ -130,7 +123,6 @@ export function makeConsentCommandsPort(
     // 6. AUDIT - Use actor context if available, fallback to system context
     if (auditService && actorContext) {
       const auditContext = {
-        tenantId: input.tenantId,
         envelopeId: input.envelopeId,
         actor: actorContext
       };
@@ -142,8 +134,7 @@ export function makeConsentCommandsPort(
         delegationId: delegation.delegationId,
         reason: input.reason,
         expiresAt: input.expiresAt,
-        metadata: input.metadata,
-      });
+        metadata: input.metadata});
     }
 
     // 7. EVENTS
@@ -151,7 +142,6 @@ export function makeConsentCommandsPort(
       const consentDelegatedEvent = {
         type: "consent.delegated" as const,
         payload: {
-          tenantId: input.tenantId,
           consentId: input.consentId,
           envelopeId: input.envelopeId,
           originalPartyId: currentConsent.partyId as PartyId,
@@ -159,8 +149,7 @@ export function makeConsentCommandsPort(
           delegationId: delegation.delegationId,
           reason: input.reason,
           expiresAt: input.expiresAt,
-          metadata: input.metadata,
-        }
+          metadata: input.metadata}
       };
       
       await eventService.publishConsentDelegatedEvent(consentDelegatedEvent);
@@ -173,8 +162,7 @@ export function makeConsentCommandsPort(
       delegateEmail: input.delegateEmail,
       delegateName: input.delegateName,
       delegatedAt: delegation.createdAt,
-      metadata: input.metadata,
-    };
+      metadata: input.metadata};
   }
 
   /**
@@ -192,7 +180,6 @@ export function makeConsentCommandsPort(
 
     // First, try to find existing party by email
     const existingParty = await globalPartiesRepo.findByEmail({
-      tenantId: input.tenantId,
       email: input.email
     });
 
@@ -205,7 +192,6 @@ export function makeConsentCommandsPort(
     
     await globalPartiesRepo.create({
       partyId: newPartyId,
-      tenantId: input.tenantId,
       email: input.email,
       name: input.name,
       role: CONSENT_DEFAULTS.DEFAULT_ROLE as PartyRole,
@@ -213,16 +199,13 @@ export function makeConsentCommandsPort(
       status: CONSENT_DEFAULTS.DEFAULT_STATUS as GlobalPartyStatus,
       preferences: {
         defaultAuth: CONSENT_DEFAULTS.DEFAULT_AUTH_METHOD as AuthMethod,
-        defaultLocale: CONSENT_DEFAULTS.DEFAULT_LOCALE,
-      },
+        defaultLocale: "en-US"},
       notificationPreferences: {
         email: true,
-        sms: false,
-      },
+        sms: false},
       stats: {
         signedCount: 0,
-        totalEnvelopes: 0,
-      },
+        totalEnvelopes: 0},
       metadata: {
         createdFor: "consent-delegation",
         originalEmail: input.email,
@@ -245,8 +228,6 @@ export function makeConsentCommandsPort(
      */
     async create(input: CreateConsentAppInput, actorContext?: ActorContext): Promise<CreateConsentAppResult> {
       // Apply generic rules
-      assertTenantBoundary(input.tenantId, input.tenantId);
-      
       // Apply idempotency rules
       if (input.idempotencyKey) {
         // assertIdempotencyFresh(input.idempotencyKey); // Note: Would need proper store integration
@@ -290,8 +271,6 @@ export function makeConsentCommandsPort(
      */
     async update(input: UpdateConsentAppInput, actorContext?: ActorContext): Promise<UpdateConsentAppResult> {
       // Apply generic rules
-      assertTenantBoundary(input.tenantId, input.tenantId);
-      
       // Apply idempotency rules
       if (input.idempotencyKey) {
         // assertIdempotencyFresh(input.idempotencyKey); // Note: Would need proper store integration
@@ -332,8 +311,6 @@ export function makeConsentCommandsPort(
      */
     async delete(input: DeleteConsentAppInput, actorContext?: ActorContext): Promise<void> {
       // Apply generic rules
-      assertTenantBoundary(input.tenantId, input.tenantId);
-      
       // Get consent details before deletion for audit
       let consentDetails: ConsentRepoRow | null = null;
       if (auditService && actorContext) {
@@ -341,8 +318,7 @@ export function makeConsentCommandsPort(
           // Use the existing getById method from the repository
           consentDetails = await consentsRepo.getById({
             envelopeId: input.envelopeId,
-            consentId: input.consentId,
-          });
+            consentId: input.consentId});
         } catch (error) {
           // If consent not found, proceed with deletion anyway
           console.warn('Consent not found during deletion:', error);
@@ -400,16 +376,13 @@ export function makeConsentCommandsPort(
      */
     async submit(input: SubmitConsentAppInput, actorContext?: ActorContext): Promise<SubmitConsentAppResult> {
       // Apply generic rules
-      assertTenantBoundary(input.tenantId, input.tenantId);
-      
       // Get consent details before submission for audit
       let previousConsent: ConsentRepoRow | null = null;
       if (auditService && actorContext) {
         try {
           previousConsent = await consentsRepo.getById({
             envelopeId: input.envelopeId,
-            consentId: input.consentId,
-          });
+            consentId: input.consentId});
         } catch (error) {
           // If consent not found, proceed with submission anyway
           console.warn('Consent not found during submission:', error);
@@ -453,8 +426,6 @@ export function makeConsentCommandsPort(
      */
     async delegate(input: DelegateConsentAppInput, actorContext?: ActorContext): Promise<DelegateConsentAppResult> {
       // Apply generic rules
-      assertTenantBoundary(input.tenantId, input.tenantId);
-      
       // Apply idempotency rules
       if (input.idempotencyKey) {
         // assertIdempotencyFresh(input.idempotencyKey); // Note: Would need proper store integration
@@ -473,6 +444,5 @@ export function makeConsentCommandsPort(
 
       // Fallback to non-idempotent delegation
       return performDelegation(input, actorContext);
-    },
-  };
+    }};
 }

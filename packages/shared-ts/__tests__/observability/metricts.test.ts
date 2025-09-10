@@ -49,9 +49,7 @@ describe('putMetrics', () => {
       Requests: 3,
       Latency: 123.4,
       _aws: {
-        Timestamp: FIXED_TS,
-      },
-    });
+        Timestamp: FIXED_TS}});
 
     // CloudWatchMetrics descriptor
     const cwm = obj._aws.CloudWatchMetrics;

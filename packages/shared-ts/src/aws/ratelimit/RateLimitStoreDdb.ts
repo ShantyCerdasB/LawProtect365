@@ -71,17 +71,14 @@ export class RateLimitStoreDdb implements RateLimitStore {
         TableName: this.tableName,
         Key: {
           pk: rateLimitPk(key),
-          sk: rateLimitSk(windowStart),
-        },
+          sk: rateLimitSk(windowStart)},
         UpdateExpression: "SET currentUsage = currentUsage + :inc, updatedAt = :updatedAt",
         ConditionExpression: "currentUsage < :maxRequests",
         ExpressionAttributeValues: {
           ":inc": 1,
           ":maxRequests": window.maxRequests,
-          ":updatedAt": nowIso(),
-        },
-        ReturnValues: "ALL_NEW",
-      });
+          ":updatedAt": nowIso()},
+        ReturnValues: "ALL_NEW"});
 
       const item = result.Attributes as unknown as DdbRateLimitItem;
       return {
@@ -89,8 +86,7 @@ export class RateLimitStoreDdb implements RateLimitStore {
         maxRequests: item.maxRequests,
         windowStart: item.windowStart,
         windowEnd: item.windowEnd,
-        resetInSeconds: item.windowEnd - Math.floor(now / 1000),
-      };
+        resetInSeconds: item.windowEnd - Math.floor(now / 1000)};
     } catch (err: any) {
       if (String(err?.name) === "ConditionalCheckFailedException") {
         // Try to create a new record - if it fails, rate limit is exceeded
@@ -105,8 +101,7 @@ export class RateLimitStoreDdb implements RateLimitStore {
               {
                 currentUsage: window.maxRequests,
                 maxRequests: window.maxRequests,
-                resetInSeconds: window.windowSeconds,
-              }
+                resetInSeconds: window.windowSeconds}
             );
           }
           throw createErr;
@@ -136,23 +131,20 @@ export class RateLimitStoreDdb implements RateLimitStore {
       maxRequests: window.maxRequests,
       createdAt: nowIso(),
       updatedAt: nowIso(),
-      ttl,
-    };
+      ttl};
 
     try {
       await this.ddb.put({
         TableName: this.tableName,
         Item: toDdbItem(item),
-        ConditionExpression: "attribute_not_exists(pk) AND attribute_not_exists(sk)",
-      });
+        ConditionExpression: "attribute_not_exists(pk) AND attribute_not_exists(sk)"});
 
       return {
         currentUsage: 1,
         maxRequests: window.maxRequests,
         windowStart,
         windowEnd,
-        resetInSeconds: windowEnd - Math.floor(now / 1000),
-      };
+        resetInSeconds: windowEnd - Math.floor(now / 1000)};
     } catch (err: any) {
       if (String(err?.name) === "ConditionalCheckFailedException") {
         // Record was created by another request, try to increment
@@ -162,11 +154,5 @@ export class RateLimitStoreDdb implements RateLimitStore {
     }
   }
 
-
 }
-
-
-
-
-
 

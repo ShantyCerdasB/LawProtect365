@@ -9,12 +9,6 @@ import { z, UuidV4 } from "@lawprotect/shared-ts";
 export const AttachEnvelopeDocumentBody = z.object({
   documentId: UuidV4,
   name: z.string().min(1).max(255),
-  contentType: z.string().min(1),
-});
+  contentType: z.string().min(1)});
 export type AttachEnvelopeDocumentBody = z.infer<typeof AttachEnvelopeDocumentBody>;
-
-
-
-
-
 

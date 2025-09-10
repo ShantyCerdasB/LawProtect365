@@ -4,7 +4,7 @@
  * @description Handles signing completion requests
  */
 
-import { createCommandController, createSigningDependenciesWithS3 } from "../../../shared/controllers/controllerFactory";
+import { createCommandController } from "../../../shared/controllers/controllerFactory";
 import { SigningCommandService } from "../../../app/services/Signing";
 import { CompleteSigningBody } from "../../../presentation/schemas/signing/CompleteSigning.schema";
 import { EnvelopeIdPath } from "../../../presentation/schemas/common/path";
@@ -18,28 +18,22 @@ export const CompleteSigningController = createCommandController<CompleteSigning
   bodySchema: CompleteSigningBody,
   pathSchema: EnvelopeIdPath,
   appServiceClass: SigningCommandService,
-  createDependencies: createSigningDependenciesWithS3,
-  extractParams: (path: any, body: any) => ({
-    tenantId: path.tenantId,
+  createDependencies: (c: any) => c.signing.command, // Use the service from container
+  extractParams: (path: any, body: any, context: any) => ({
     envelopeId: path.id,
     signerId: body.signerId,
     digest: body.digest,
     algorithm: body.algorithm,
     keyId: body.keyId,
-    otpCode: body.otpCode,
     token: "", // Will be injected by factory
+    actorEmail: context?.actor?.email, // Add auth context
+    ip: context?.identity?.sourceIp, // IP for security validation
+    userAgent: context?.identity?.userAgent // User Agent for security validation
   }),
   responseType: "ok",
-  methodName: "completeSigning",
-});
+  includeActor: true, // Enable auth validation
+  methodName: "completeSigning"});
 
 // Export handler for backward compatibility
 export const handler = CompleteSigningController;
-
-
-
-
-
-
-
 

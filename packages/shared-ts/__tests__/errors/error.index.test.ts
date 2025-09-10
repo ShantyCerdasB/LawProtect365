@@ -14,9 +14,7 @@ import {
   ServiceUnavailableError,
   TooManyRequestsError,
   mapError,
-  mapAwsError,
-} from "../../src/errors";
-
+  mapAwsError} from "../../src/errors";
 
 describe("errors index re-exports", () => {
   it("re-exports error codes", () => {

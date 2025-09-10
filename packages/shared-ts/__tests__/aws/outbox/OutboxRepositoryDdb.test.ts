@@ -14,8 +14,7 @@ describe('OutboxRepositoryDdb', () => {
       get: jest.fn(),
       put: jest.fn(),
       update: jest.fn(),
-      query: jest.fn(),
-    } as any;
+      query: jest.fn()} as any;
 
     // Ensure methods are properly mocked
     (mockDdb.update as jest.Mock) = jest.fn();
@@ -25,9 +24,7 @@ describe('OutboxRepositoryDdb', () => {
       tableName,
       client: mockDdb,
       indexes: {
-        byStatus: indexName,
-      },
-    });
+        byStatus: indexName}});
   });
 
   afterEach(() => {
@@ -39,8 +36,7 @@ describe('OutboxRepositoryDdb', () => {
       id: 'test-event-id',
       type: 'TestEvent',
       payload: { test: 'data' },
-      occurredAt: '2023-01-01T00:00:00.000Z',
-    };
+      occurredAt: '2023-01-01T00:00:00.000Z'};
 
     it('should successfully save a new event', async () => {
       mockDdb.put.mockResolvedValue({});
@@ -59,10 +55,8 @@ describe('OutboxRepositoryDdb', () => {
           traceId: 'test-trace-id',
           status: 'pending',
           gsi1pk: 'STATUS#pending',
-          gsi1sk: expect.stringMatching(/^2023-01-01T00:00:00\.000Z#test-event-id$/),
-        }),
-        ConditionExpression: 'attribute_not_exists(pk) AND attribute_not_exists(sk)',
-      });
+          gsi1sk: expect.stringMatching(/^2023-01-01T00:00:00\.000Z#test-event-id$/)}),
+        ConditionExpression: 'attribute_not_exists(pk) AND attribute_not_exists(sk)'});
     });
 
     it('should save event without payload', async () => {
@@ -74,10 +68,8 @@ describe('OutboxRepositoryDdb', () => {
       expect(mockDdb.put).toHaveBeenCalledWith({
         TableName: tableName,
         Item: expect.objectContaining({
-          payload: undefined,
-        }),
-        ConditionExpression: 'attribute_not_exists(pk) AND attribute_not_exists(sk)',
-      });
+          payload: undefined}),
+        ConditionExpression: 'attribute_not_exists(pk) AND attribute_not_exists(sk)'});
     });
 
     it('should throw ConflictError when record already exists', async () => {
@@ -111,16 +103,13 @@ describe('OutboxRepositoryDdb', () => {
           '#gpk': 'gsi1pk',
           '#updatedAt': 'updatedAt',
           '#attempts': 'attempts',
-          '#lastError': 'lastError',
-        },
+          '#lastError': 'lastError'},
         ExpressionAttributeValues: {
           ':s': 'dispatched',
           ':g': 'STATUS#dispatched',
           ':now': expect.any(String),
-          ':zero': 0,
-        },
-        ReturnValues: 'NONE',
-      });
+          ':zero': 0},
+        ReturnValues: 'NONE'});
     });
 
     it('should throw mapped error when update fails', async () => {
@@ -146,18 +135,15 @@ describe('OutboxRepositoryDdb', () => {
           '#gpk': 'gsi1pk',
           '#updatedAt': 'updatedAt',
           '#attempts': 'attempts',
-          '#lastError': 'lastError',
-        },
+          '#lastError': 'lastError'},
         ExpressionAttributeValues: {
           ':s': 'failed',
           ':g': 'STATUS#failed',
           ':now': expect.any(String),
           ':zero': 0,
           ':one': 1,
-          ':err': 'Test error message',
-        },
-        ReturnValues: 'NONE',
-      });
+          ':err': 'Test error message'},
+        ReturnValues: 'NONE'});
     });
 
     it('should throw mapped error when update fails', async () => {
@@ -182,8 +168,7 @@ describe('OutboxRepositoryDdb', () => {
           gsi1pk: 'STATUS#pending',
           gsi1sk: '2023-01-01T00:00:00.000Z#event-1',
           createdAt: '2023-01-01T00:00:00.000Z',
-          updatedAt: '2023-01-01T00:00:00.000Z',
-        },
+          updatedAt: '2023-01-01T00:00:00.000Z'},
         {
           pk: 'OUTBOX',
           sk: 'ID#event-2',
@@ -195,8 +180,7 @@ describe('OutboxRepositoryDdb', () => {
           gsi1pk: 'STATUS#pending',
           gsi1sk: '2023-01-01T00:01:00.000Z#event-2',
           createdAt: '2023-01-01T00:01:00.000Z',
-          updatedAt: '2023-01-01T00:01:00.000Z',
-        },
+          updatedAt: '2023-01-01T00:01:00.000Z'},
       ];
 
       (mockDdb.query as jest.Mock).mockResolvedValue({ Items: mockItems });
@@ -212,8 +196,7 @@ describe('OutboxRepositoryDdb', () => {
         status: 'pending',
         attempts: undefined,
         lastError: undefined,
-        traceId: undefined,
-      });
+        traceId: undefined});
 
       expect(mockDdb.query).toHaveBeenCalledWith({
         TableName: tableName,
@@ -222,8 +205,7 @@ describe('OutboxRepositoryDdb', () => {
         ExpressionAttributeNames: { '#pk': 'gsi1pk' },
         ExpressionAttributeValues: { ':pk': 'STATUS#pending' },
         Limit: 10,
-        ScanIndexForward: true,
-      });
+        ScanIndexForward: true});
     });
 
     it('should return empty array when no pending records', async () => {
@@ -256,8 +238,7 @@ describe('OutboxRepositoryDdb', () => {
     it('should use default index name when not provided', () => {
       const repo = new OutboxRepositoryDdb({
         tableName: 'test-table',
-        client: mockDdb,
-      });
+        client: mockDdb});
 
       expect(repo['idxByStatus']).toBe('GSI1');
     });
@@ -267,9 +248,7 @@ describe('OutboxRepositoryDdb', () => {
         tableName: 'test-table',
         client: mockDdb,
         indexes: {
-          byStatus: 'custom-index',
-        },
-      });
+          byStatus: 'custom-index'}});
 
       expect(repo['idxByStatus']).toBe('custom-index');
     });

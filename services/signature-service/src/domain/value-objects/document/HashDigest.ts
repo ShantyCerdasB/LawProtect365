@@ -21,9 +21,5 @@ export const HashDigestSchema = z.object({
   /** Hashing algorithm */
   alg: z.enum(HASH_ALGORITHM),
   /** Base64url encoded hash value */
-  value: TrimmedString.pipe(z.string().regex(Base64UrlNoPad, "Expected base64url")),
-});
-
-
-
+  value: TrimmedString.pipe(z.string().regex(Base64UrlNoPad, "Expected base64url"))});
 

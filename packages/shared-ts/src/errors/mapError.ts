@@ -3,7 +3,6 @@ import { AppError } from "./AppError.js";
 import { ErrorCodes } from "./codes.js";
 import { MapErrorOptions } from "../types/mapErrorOptions.js";
 
-
 /**
  * Renders any thrown error into a consistent API Gateway response.
  * Applies safe defaults, maps common provider failures, and sets CORS elsewhere.

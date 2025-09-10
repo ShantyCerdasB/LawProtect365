@@ -2,7 +2,7 @@
  * @file SigningCommandsPort.ts
  * @summary Port for signing command operations
  * @description Defines the interface for write operations on signing processes.
- * This port provides methods to handle OTP verification, signing completion,
+ * This port provides methods to handle signing completion,
  * and other signing-related operations with proper business rule validation.
  */
 
@@ -11,7 +11,7 @@ import type { EventEnvelope } from "@lawprotect/shared-ts";
 import type { EnvelopeId, PartyId, IpAddress } from "../../../domain/value-objects/index";
 
 /**
- * Input for signing consent operation (replaces OTP verification)
+ * Input for signing consent operation
  */
 export interface SigningConsentCommand {
   /** The envelope ID */
@@ -42,7 +42,7 @@ export interface SigningConsentResult {
 }
 
 /**
- * Input for signing preparation operation (replaces OTP request)
+ * Input for signing preparation operation
  */
 export interface PrepareSigningCommand {
   /** The envelope ID */
@@ -273,4 +273,135 @@ export interface SigningCommandsPort {
    * @returns Promise resolving to download result
    */
   downloadSignedDocument(command: DownloadSignedDocumentCommand): Promise<DownloadSignedDocumentResult>;
+
+  /**
+   * @summary Validates an invitation token for unauthenticated signing
+   * @description Validates an invitation token and returns party information
+   * @param command - The validate invitation token command
+   * @returns Promise resolving to validation result
+   */
+  validateInvitationToken(command: ValidateInvitationTokenCommand): Promise<ValidateInvitationTokenResult>;
+
+  /**
+   * @summary Completes signing using an invitation token (unauthenticated)
+   * @description Allows unauthenticated users to sign documents using invitation tokens
+   * @param command - The complete signing with token command
+   * @returns Promise resolving to signing result
+   */
+  completeSigningWithToken(command: CompleteSigningWithTokenCommand): Promise<CompleteSigningWithTokenResult>;
+
+  /**
+   * @summary Records signing consent using an invitation token (unauthenticated)
+   * @description Allows unauthenticated users to record consent using invitation tokens
+   * @param command - The signing consent with token command
+   * @returns Promise resolving to consent result
+   */
+  recordSigningConsentWithToken(command: SigningConsentWithTokenCommand): Promise<SigningConsentResult>;
 };
+
+/**
+ * @summary Command for validating invitation tokens
+ */
+export interface ValidateInvitationTokenCommand {
+  /** The invitation token to validate */
+  token: string;
+  /** IP address of the requester */
+  ip?: string;
+  /** User agent of the requester */
+  userAgent?: string;
+}
+
+/**
+ * @summary Result of invitation token validation
+ */
+export interface ValidateInvitationTokenResult {
+  /** Whether the token is valid */
+  valid: boolean;
+  /** Token ID if valid */
+  tokenId?: string;
+  /** Envelope ID if valid */
+  envelopeId?: string;
+  /** Party ID if valid */
+  partyId?: string;
+  /** Email of the invited party */
+  email?: string;
+  /** Name of the invited party */
+  name?: string;
+  /** Role of the invited party */
+  role?: string;
+  /** Email of the person who created the invitation */
+  invitedBy?: string;
+  /** Name of the person who created the invitation */
+  invitedByName?: string;
+  /** Custom message for the invitation */
+  message?: string;
+  /** Deadline for signing */
+  signByDate?: string;
+  /** Signing order preference */
+  signingOrder?: string;
+  /** When the token expires */
+  expiresAt?: string;
+  /** Error message if validation failed */
+  error?: string;
+}
+
+/**
+ * @summary Command for completing signing with invitation token
+ */
+export interface CompleteSigningWithTokenCommand {
+  /** The envelope ID */
+  envelopeId: EnvelopeId;
+  /** The signer/party ID */
+  signerId: PartyId;
+  /** The invitation token for authentication */
+  token: string;
+  /** Document digest information */
+  digest: {
+    alg: HashAlgorithm;
+    value: string;
+  };
+  /** Signing algorithm */
+  algorithm: KmsAlgorithm;
+  /** Optional key ID */
+  keyId?: string;
+  /** IP address of the signer */
+  ip?: string;
+  /** User agent of the signer */
+  userAgent?: string;
+}
+
+/**
+ * @summary Result of completing signing with invitation token
+ */
+export interface CompleteSigningWithTokenResult {
+  /** Whether the signing was completed successfully */
+  signed: boolean;
+  /** Signature ID if successful */
+  signatureId?: string;
+  /** Envelope status after signing */
+  envelopeStatus?: string;
+  /** Timestamp when signing was completed */
+  signedAt?: string;
+  /** Error message if signing failed */
+  error?: string;
+}
+
+/**
+ * @summary Command for recording consent with invitation token
+ */
+export interface SigningConsentWithTokenCommand {
+  /** The envelope ID */
+  envelopeId: EnvelopeId;
+  /** The signer/party ID */
+  signerId: PartyId;
+  /** The invitation token for authentication */
+  token: string;
+  /** Whether consent was given */
+  consentGiven: boolean;
+  /** The consent text that was shown */
+  consentText: string;
+  /** IP address of the requester */
+  ip?: string;
+  /** User agent of the requester */
+  userAgent?: string;
+}

@@ -36,13 +36,11 @@ export class ConsentAuditService extends BaseAuditService {
     }
 
     await this.auditRepo.record({
-      tenantId: context.tenantId,
       envelopeId: context.envelopeId as EnvelopeId,
       type: details.eventType as string,
       occurredAt: nowIso(),
       actor: context.actor,
-      metadata: details,
-    });
+      metadata: details});
   }
 
   /**
@@ -63,8 +61,7 @@ export class ConsentAuditService extends BaseAuditService {
       delegationId: details.delegationId,
       reason: details.reason,
       expiresAt: details.expiresAt,
-      metadata: details.metadata,
-    });
+      metadata: details.metadata});
   }
 
   /**
@@ -83,7 +80,6 @@ export class ConsentAuditService extends BaseAuditService {
       previousStatus: details.previousStatus,
       newStatus: details.newStatus,
       reason: details.reason,
-      metadata: details.metadata,
-    });
+      metadata: details.metadata});
   }
 };

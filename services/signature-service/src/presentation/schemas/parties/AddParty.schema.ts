@@ -6,10 +6,8 @@
  * Handles path parameters and request body validation with proper error messages.
  */
 
-
 import { PARTY_ROLES, PARTY_STATUSES } from "@/domain/values/enums";
 import { z } from "zod";
-
 
 /**
  * @description Path parameters schema for POST /envelopes/:envelopeId/parties.
@@ -17,8 +15,7 @@ import { z } from "zod";
  */
 export const AddPartyPath = z.object({
   /** Envelope identifier (required, non-empty) */
-  envelopeId: z.string().min(1, "Envelope ID is required"),
-});
+  envelopeId: z.string().min(1, "Envelope ID is required")});
 
 /**
  * @description Request body schema for adding a party.
@@ -40,9 +37,7 @@ export const AddPartyBody = z.object({
     /** Email notifications enabled (default: true) */
     email: z.boolean().default(true),
     /** SMS notifications enabled (default: false) */
-    sms: z.boolean().default(false),
-  }).optional(),
-});
+    sms: z.boolean().default(false)}).optional()});
 
 /**
  * @description Response schema for party addition.
@@ -72,16 +67,9 @@ export const AddPartyResponse = z.object({
     /** Email notifications enabled */
     email: z.boolean(),
     /** SMS notifications enabled */
-    sms: z.boolean(),
-  }).optional(),
-});
+    sms: z.boolean()}).optional()});
 
 export type AddPartyPathType = z.infer<typeof AddPartyPath>;
 export type AddPartyBodyType = z.infer<typeof AddPartyBody>;
 export type AddPartyResponseType = z.infer<typeof AddPartyResponse>;
-
-
-
-
-
 

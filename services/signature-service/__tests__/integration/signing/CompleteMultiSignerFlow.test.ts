@@ -31,7 +31,7 @@ import type { ApiResponseStructured } from '@lawprotect/shared-ts';
 mockAwsServices();
 
 describe('Complete Multi-Signer Signing Flow', () => {
-  let tenantId: string;
+  let container: any;
   let envelopeId: string;
   let documentId: string;
   let partyIds: string[];
@@ -43,13 +43,13 @@ describe('Complete Multi-Signer Signing Flow', () => {
   beforeAll(async () => {
     setupInMemoryDatabase(); // Clear in-memory database before each test
     getContainer();
-    tenantId = generateTestTenantId(); // Use dynamic ID with in-memory database
+     generateTestTenantId(); // Use dynamic ID with in-memory database
   });
 
   it('should complete the entire signing workflow with 3 signers', async () => {
     // Step 1: Create Envelope
     const createEnvelopeResult = await CreateEnvelopeController(createApiGatewayEvent({
-      pathParameters: createTestPathParams({ tenantId }),
+      pathParameters: createTestPathParams({ }),
       body: {
         ownerId: '550e8400-e29b-41d4-a716-446655440000',
         name: 'Test Contract',
@@ -70,7 +70,7 @@ describe('Complete Multi-Signer Signing Flow', () => {
     const pdfDigest = calculatePdfDigest(testPdf);
 
     const createDocumentResult = await CreateDocumentController(createApiGatewayEvent({
-      pathParameters: { tenantId, id: envelopeId },
+      pathParameters: { id: envelopeId },
       body: {
         name: 'Test Document.pdf',
         contentType: 'application/pdf',
@@ -95,7 +95,7 @@ describe('Complete Multi-Signer Signing Flow', () => {
 
     for (const email of partyEmails) {
       const createPartyResult = await CreatePartyController(createApiGatewayEvent({
-        pathParameters: { tenantId, envelopeId },
+        pathParameters: { envelopeId },
         body: {
           name: `Signer ${partyEmails.indexOf(email) + 1}`,
           email,
@@ -118,7 +118,7 @@ describe('Complete Multi-Signer Signing Flow', () => {
 
             // Step 4: Create Input Fields (without party assignments first)
             const createInputsResult = await CreateInputsController(createApiGatewayEvent({
-              pathParameters: { tenantId, envelopeId },
+              pathParameters: { envelopeId },
               body: {
                 documentId,
                 inputs: partyIds.map((_, index) => ({
@@ -144,7 +144,7 @@ describe('Complete Multi-Signer Signing Flow', () => {
 
     // Step 5: Invite Parties
     const invitePartiesResult = await InvitePartiesController(createApiGatewayEvent({
-      pathParameters: { tenantId, id: envelopeId },
+      pathParameters: { id: envelopeId },
       body: {
         partyIds
       },
@@ -160,7 +160,7 @@ describe('Complete Multi-Signer Signing Flow', () => {
     // Step 6: Record Consent (for each party)
     for (let i = 0; i < partyIds.length; i++) {
       const recordConsentResult = await RecordConsentController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
           signerId: partyIds[i],
           consentGiven: true,
@@ -179,7 +179,7 @@ describe('Complete Multi-Signer Signing Flow', () => {
     // Step 7: Prepare Signing (for each party)
     for (let i = 0; i < partyIds.length; i++) {
       const prepareSigningResult = await PrepareSigningController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
           signerId: partyIds[i]
         },
@@ -196,7 +196,7 @@ describe('Complete Multi-Signer Signing Flow', () => {
     // Step 8: Complete Signing (for each party)
     for (let i = 0; i < partyIds.length; i++) {
       const completeSigningResult = await CompleteSigningController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
           envelopeId: envelopeId,
           signerId: partyIds[i],
@@ -221,7 +221,7 @@ describe('Complete Multi-Signer Signing Flow', () => {
     // Step 9: Download Signed Document
     console.log('Attempting download for envelopeId:', envelopeId);
     const downloadResult = await DownloadSignedDocumentController(createApiGatewayEvent({
-      pathParameters: { tenantId, id: envelopeId },
+      pathParameters: { id: envelopeId },
       body: {
         envelopeId
       },
@@ -239,7 +239,7 @@ describe('Complete Multi-Signer Signing Flow', () => {
   describe('Security Validations', () => {
     it('should reject unauthorized envelope access', async () => {
       const result = await CreateEnvelopeController(createApiGatewayEvent({
-        pathParameters: createTestPathParams({ tenantId }),
+        pathParameters: createTestPathParams({ }),
         body: {
           ownerId: '550e8400-e29b-41d4-a716-446655440000',
           name: 'Unauthorized Contract',
@@ -261,7 +261,7 @@ describe('Complete Multi-Signer Signing Flow', () => {
       const pdfDigest = calculatePdfDigest(testPdf);
 
       const result = await CreateDocumentController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
           name: 'Integrity Test Document.pdf',
           contentType: 'application/pdf',
@@ -288,7 +288,7 @@ describe('Complete Multi-Signer Signing Flow', () => {
       // For now, we just verify that operations complete successfully
       
       const result = await CreateEnvelopeController(createApiGatewayEvent({
-        pathParameters: createTestPathParams({ tenantId }),
+        pathParameters: createTestPathParams({ }),
         body: {
           ownerId: '550e8400-e29b-41d4-a716-446655440000',
           name: 'Audit Test Contract',

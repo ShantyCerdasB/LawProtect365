@@ -108,8 +108,7 @@ export const toInputItem = (src: Input): DdbInputItem => ({
 
   value: src.value,
   createdAt: src.createdAt,
-  updatedAt: src.updatedAt,
-});
+  updatedAt: src.updatedAt});
 
 /**
  * Maps DynamoDB item to domain Input entity
@@ -138,8 +137,7 @@ export const fromInputItem = (item: unknown): Input => {
 
     value: item.value,
     createdAt: item.createdAt,
-    updatedAt: item.updatedAt,
-  });
+    updatedAt: item.updatedAt});
 };
 
 /**
@@ -147,11 +145,5 @@ export const fromInputItem = (item: unknown): Input => {
  */
 export const inputItemMapper: Mapper<Input, DdbInputItem> = {
   toDTO: toInputItem,
-  fromDTO: fromInputItem,
-};
-
-
-
-
-
+  fromDTO: fromInputItem};
 

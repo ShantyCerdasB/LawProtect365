@@ -6,7 +6,7 @@
  * Used by application services to query input information.
  */
 
-import type { TenantId, EnvelopeId, InputId, PartyId } from "../../../domain/value-objects/ids";
+import type { EnvelopeId, InputId, PartyId } from "../../../domain/value-objects/ids";
 import type { ActorContext } from "@lawprotect/shared-ts";
 import { InputType } from "../../../domain/values/enums";
 
@@ -14,8 +14,6 @@ import { InputType } from "../../../domain/values/enums";
  * Query parameters for getting a single input by ID
  */
 export interface GetInputQuery {
-  /** The tenant ID that owns the input */
-  tenantId: TenantId;
   /** The envelope ID that contains the input */
   envelopeId: EnvelopeId;
   /** The unique identifier of the input */
@@ -28,8 +26,6 @@ export interface GetInputQuery {
  * Query parameters for listing inputs by envelope
  */
 export interface ListInputsQuery {
-  /** The tenant ID that owns the inputs */
-  tenantId: TenantId;
   /** The envelope ID to filter inputs by */
   envelopeId: EnvelopeId;
   /** Maximum number of inputs to return (optional) */

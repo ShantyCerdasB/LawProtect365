@@ -33,7 +33,7 @@ export interface GlobalPartiesRepository {
   /**
    * Gets a Global Party by ID
    */
-  getById(tenantId: string, partyId: string): Promise<GlobalPartyExtended | null>;
+  getById(partyId: string): Promise<GlobalPartyExtended | null>;
 
   /**
    * Lists Global Parties with optional filters
@@ -54,14 +54,8 @@ export interface GlobalPartiesRepository {
    * Finds an existing party by email or creates a new one for delegation
    */
   findOrCreatePartyForDelegate(input: { 
-    tenantId: string; 
     email: string; 
     name: string 
   }): Promise<string>;
 }
-
-
-
-
-
 

@@ -23,16 +23,8 @@ export const handler = createCommandController({
     envelopeId: body.envelopeId,
     type: body.type,
     actor: body.actor,
-    metadata: body.metadata,
-  }),
+    metadata: body.metadata}),
   responseType: RESPONSE_TYPES[1], // 'created'
   includeActor: true, // Include actor context from JWT
 });
-
-
-
-
-
-
-
 

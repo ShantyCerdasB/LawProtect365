@@ -28,8 +28,7 @@ const importMappings = {
   '@contracts/': '../contracts/',
   '@events/': '../events/',
   '@messaging/': '../messaging/',
-  '@storage/': '../storage/',
-};
+  '@storage/': '../storage/'};
 
 function fixImportsInFile(filePath) {
   const content = fs.readFileSync(filePath, 'utf8');

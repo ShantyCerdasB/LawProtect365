@@ -15,7 +15,7 @@ import {
 } from "@lawprotect/shared-ts";
 
 import type { Envelope } from "../../domain/entities/Envelope";
-import type { EnvelopeId, TenantId } from "@/domain/value-objects/ids";
+import type { EnvelopeId } from "@/domain/value-objects/ids";
 import { 
   envelopeItemMapper, 
   envelopePk, 
@@ -60,8 +60,7 @@ export class EnvelopeRepositoryDdb
     try {
       const res = await this.ddb.get({
         TableName: this.tableName,
-        Key: { pk: envelopePk(envelopeId as unknown as string), sk: envelopeMetaSk() },
-      });
+        Key: { pk: envelopePk(envelopeId as unknown as string), sk: envelopeMetaSk() }});
       return res.Item ? envelopeItemMapper.fromDTO(res.Item as any) : null;
     } catch (err) {
       throw mapAwsError(err, "EnvelopeRepositoryDdb.getById");
@@ -78,8 +77,7 @@ export class EnvelopeRepositoryDdb
         TableName: this.tableName,
         Item: envelopeItemMapper.toDTO(entity) as any,
         ConditionExpression:
-          "attribute_not_exists(pk) AND attribute_not_exists(sk)",
-      });
+          "attribute_not_exists(pk) AND attribute_not_exists(sk)"});
       return entity;
     } catch (err: any) {
       if (String(err?.name) === "ConditionalCheckFailedException") {
@@ -102,18 +100,16 @@ export class EnvelopeRepositoryDdb
 
       const next: Envelope = Object.freeze({
         ...current,
-        title: patch.title ?? current.title,
+        name: patch.name ?? current.name,
         status: patch.status ?? current.status,
         parties: patch.parties ?? current.parties,
         documents: patch.documents ?? current.documents,
-        updatedAt: new Date().toISOString(),
-      });
+        updatedAt: new Date().toISOString()});
 
       await this.ddb.put({
         TableName: this.tableName,
         Item: envelopeItemMapper.toDTO(next) as any,
-        ConditionExpression: "attribute_exists(pk) AND attribute_exists(sk)",
-      });
+        ConditionExpression: "attribute_exists(pk) AND attribute_exists(sk)"});
 
       return next;
     } catch (err: any) {
@@ -133,8 +129,7 @@ export class EnvelopeRepositoryDdb
       await this.ddb.delete({
         TableName: this.tableName,
         Key: { pk: envelopePk(envelopeId as unknown as string), sk: envelopeMetaSk() },
-        ConditionExpression: "attribute_exists(pk) AND attribute_exists(sk)",
-      });
+        ConditionExpression: "attribute_exists(pk) AND attribute_exists(sk)"});
     } catch (err: any) {
       if (String(err?.name) === "ConditionalCheckFailedException") {
         throw new NotFoundError(
@@ -148,11 +143,10 @@ export class EnvelopeRepositoryDdb
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // listByTenant with forward-only cursor
+  // listAll with forward-only cursor
   // ─────────────────────────────────────────────────────────────────────────────
 
-  async listByTenant(params: {
-    tenantId: TenantId;
+  async listAll(params: {
     limit: number;
     cursor?: string;
   }): Promise<{ items: Envelope[]; nextCursor?: string }> {
@@ -168,13 +162,13 @@ export class EnvelopeRepositoryDdb
         TableName: this.tableName,
         IndexName: this.indexName,
         KeyConditionExpression:
-          "#gsi1pk = :tenant" + (c ? " AND #gsi1sk > :after" : ""),
+          "#gsi1pk = :envelope" + (c ? " AND #gsi1sk > :after" : ""),
         ExpressionAttributeNames: {
           "#gsi1pk": "gsi1pk",
           "#gsi1sk": "gsi1sk",
         },
         ExpressionAttributeValues: {
-          ":tenant": `TENANT#${params.tenantId}`,
+          ":envelope": "ENVELOPE#",
           ...(c ? { ":after": `${c.createdAt}#${c.envelopeId}` } : {}),
         },
         Limit: take,
@@ -204,5 +198,6 @@ export class EnvelopeRepositoryDdb
     }
   }
 }
+
 
 

@@ -27,30 +27,26 @@ export const SigningToken = OpaqueId;
  * Path parameter schema for envelope ID
  */
 export const EnvelopeIdPath = z.object({
-  id: UuidV4,
-});
+  id: UuidV4});
 
 /**
  * Path parameter schema for document ID
  */
 export const DocumentIdPath = z.object({
-  id: UuidV4,
-});
+  id: UuidV4});
 
 /**
  * Path parameter schema for party ID
  */
 export const PartyIdPath = z.object({
-  id: UuidV4,
-});
+  id: UuidV4});
 
 /**
  * Path parameter schema for envelope and document IDs
  */
 export const EnvelopeDocPath = z.object({
   envelopeId: UuidV4,
-  docId: UuidV4,
-});
+  docId: UuidV4});
 
 /**
  * Path parameter schema for envelope, document, and page numbers
@@ -58,8 +54,7 @@ export const EnvelopeDocPath = z.object({
 export const EnvelopeDocPagePath = z.object({
   envelopeId: UuidV4,
   docId: UuidV4,
-  pageNo: z.coerce.number().int().positive(),
-});
+  pageNo: z.coerce.number().int().positive()});
 
 /** /envelopes/{id}/inputs/{inputId} */
 export const EnvelopeInputPath = z.object({ id: EnvelopeId, inputId: InputId });
@@ -72,8 +67,7 @@ export type EnvelopePartyPath = z.infer<typeof EnvelopePartyPath>;
 /** /envelopes/{envelopeId}/consents/{consentId} */
 export const EnvelopeConsentPath = z.object({
   envelopeId: EnvelopeId,
-  consentId: ConsentId,
-});
+  consentId: ConsentId});
 export type EnvelopeConsentPath = z.infer<typeof EnvelopeConsentPath>;
 
 /** /envelopes/{id}/parties/{partyId}/delegate */
@@ -87,9 +81,4 @@ export type SigningTokenPath = z.infer<typeof SigningTokenPath>;
 /** /documents/{id}/certificate */
 export const StandaloneDocumentIdPath = z.object({ id: DocumentId });
 export type StandaloneDocumentIdPath = z.infer<typeof StandaloneDocumentIdPath>;
-
-
-
-
-
 

@@ -5,7 +5,6 @@
 
 import { AppError, ErrorCodes } from "../index.js";
 
-
 /**
  * Converts array value to string, taking the first element
  */
@@ -30,8 +29,7 @@ function convertSingleValue(value: unknown): string | undefined {
 /** Returns the header value (case-insensitive). If array, returns the first item. */
 export function getHeaders(
   headers: Record<string, unknown> | undefined,
-  name: string,
-): string | undefined {
+  name: string): string | undefined {
   if (!headers) return undefined;
   
   const want = name.toLowerCase();
@@ -50,8 +48,7 @@ export function getHeaders(
 export function extractHeaderToken(
   headers: Record<string, unknown> | undefined,
   name = "x-request-token",
-  minLen = 16,
-): string | null {
+  minLen = 16): string | null {
   const raw = getHeaders(headers, name);
   if (!raw) return null;
   const tok = raw.trim();
@@ -66,13 +63,11 @@ export function extractHeaderToken(
 export function requireHeaderToken(
   headers: Record<string, unknown> | undefined,
   name = "x-request-token",
-  minLen = 16,
-): string {
+  minLen = 16): string {
   const tok = extractHeaderToken(headers, name, minLen);
   if (tok) return tok;
   throw new AppError(
     ErrorCodes.AUTH_FORBIDDEN,
     403,
-    `Missing/invalid header: ${name}`,
-  );
+    `Missing/invalid header: ${name}`);
 }

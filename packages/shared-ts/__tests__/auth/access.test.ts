@@ -10,50 +10,42 @@ import type {
   SecurityContext,
   ResourceRef,
   Permission,
-  Scope,
-} from '../../src/types/security';
-import type { TenantId, UserId } from '../../src/types/brand';
+  Scope} from '../../src/types/security';
+import type { UserId } from '../../src/types/brand';
 
 const P = (s: string) => s as unknown as Permission;
 const S = (s: string) => s as unknown as Scope;
-const T = (s: string) => s as unknown as TenantId;
+
 const U = (s: string) => s as unknown as UserId;
 
 // Make all fields optional (including roles) and allow tenantId as string or TenantId
-type PartialSubject = Partial<Omit<SecurityContext, 'userId' | 'tenantId'>> & {
-  tenantId?: string | TenantId;
+type PartialSubject = Partial<Omit<SecurityContext, 'userId' | 'tenantId'>> & { ?: string | TenantId;
 };
 
 const subject = (s: PartialSubject = {}): SecurityContext => {
   let tenant: TenantId | undefined;
-  if (s.tenantId != null) {
-    tenant = typeof s.tenantId === 'string' ? T(s.tenantId) : s.tenantId;
+  if (s != null) {
+    tenant = typeof s === 'string' ? T(s) : s;
   }
 
   return {
     userId: U('user-1'),
     roles: s.roles ?? [],
     scopes: s.scopes,
-    permissions: s.permissions,
-    tenantId: tenant,
-  };
+    permissions: s.permissions};
 };
 
 const resource = (
-  r: ResourceRef['resource'],
-  tenantId?: string | TenantId,
-  id?: string,
-): ResourceRef => {
+  r: ResourceRef['resource'], ?: string | TenantId,
+  id?: string): ResourceRef => {
   let t: TenantId | undefined;
   if (tenantId != null) {
-    t = typeof tenantId === 'string' ? T(tenantId) : tenantId;
+    t = typeof == 'string' ? T() : tenantId;
   }
 
   return {
     resource: r,
-    tenantId: t,
-    id,
-  };
+    id};
 };
 
 describe('can', () => {
@@ -72,7 +64,7 @@ describe('can', () => {
 
   describe('admin', () => {
     it('allows within the same tenant', () => {
-      const sub = subject({ roles: ['admin'], tenantId: 't-1' });
+      const sub = subject({ roles: ['admin']});
       expect(can(sub, 'read', resource('case', 't-1'))).toBe(true);
     });
 
@@ -82,17 +74,17 @@ describe('can', () => {
     });
 
     it('denies when resource tenant is missing', () => {
-      const sub = subject({ roles: ['admin'], tenantId: 't-1' });
+      const sub = subject({ roles: ['admin']});
       expect(can(sub, 'read', resource('case'))).toBe(false);
     });
 
     it('denies across tenants', () => {
-      const sub = subject({ roles: ['admin'], tenantId: 't-1' });
+      const sub = subject({ roles: ['admin']});
       expect(can(sub, 'read', resource('case', 't-2'))).toBe(false);
     });
 
     it('accepts mixed-case role strings via normalization', () => {
-      const sub = subject({ roles: ['ADMIN'], tenantId: 'x' });
+      const sub = subject({ roles: ['ADMIN']});
       expect(can(sub, 'write', resource('document', 'x'))).toBe(true);
     });
   });
@@ -101,24 +93,21 @@ describe('can', () => {
     it('allows with an exact Permission match', () => {
       const sub = subject({
         roles: ['lawyer'],
-        permissions: [P('document:read')],
-      });
+        permissions: [P('document:read')]});
       expect(can(sub, 'read', resource('document', 't-1'))).toBe(true);
     });
 
     it('denies when Permission does not match', () => {
       const sub = subject({
         roles: ['lawyer'],
-        permissions: [P('document:write')],
-      });
+        permissions: [P('document:write')]});
       expect(can(sub, 'read', resource('document', 't-1'))).toBe(false);
     });
 
     it('allows with an exact Scope match', () => {
       const sub = subject({
         roles: ['client'],
-        scopes: [S('payment:approve')],
-      });
+        scopes: [S('payment:approve')]});
       expect(can(sub, 'approve', resource('payment'))).toBe(true);
     });
 
@@ -126,8 +115,7 @@ describe('can', () => {
       const sub = subject({
         roles: ['client'],
         scopes: [S('user:read')],
-        permissions: [P('report:read')],
-      });
+        permissions: [P('report:read')]});
       expect(can(sub, 'write', resource('document'))).toBe(false);
     });
 
@@ -139,9 +127,7 @@ describe('can', () => {
     it('ignores tenant boundary for non-admins (permission/scope solely decides)', () => {
       const sub = subject({
         roles: ['lawyer'],
-        permissions: [P('case:delete')],
-        tenantId: 't-1',
-      });
+        permissions: [P('case:delete')]});
       expect(can(sub, 'delete', resource('case', 't-2'))).toBe(true);
     });
   });

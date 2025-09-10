@@ -10,4 +10,3 @@ export * from "./GlobalPartiesEventService";
 export * from "./GlobalPartiesQueryService";
 export * from "./GlobalPartiesValidationService";
 
-

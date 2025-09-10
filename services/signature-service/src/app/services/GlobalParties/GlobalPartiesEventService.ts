@@ -7,7 +7,7 @@
 
 import { BaseEventService } from "../../../domain/services/BaseEventService";
 import type { DomainEvent, ActorContext } from "@lawprotect/shared-ts";
-import type { TenantId, PartyId } from "@/domain/value-objects/ids";
+import type { PartyId } from "@/domain/value-objects/ids";
 
 /**
  * @summary Event service for Global Parties domain events
@@ -18,20 +18,17 @@ export class GlobalPartiesEventService extends BaseEventService {
   /**
    * @summary Publishes a Global Party created domain event
    * @description Publishes a Global Party creation event using the outbox pattern
-   * @param partyId - Global Party identifier
-   * @param tenantId - Tenant identifier
-   * @param actor - Actor context for audit purposes
+   * @param partyId - Global Party identifier   * @param actor - Actor context for audit purposes
    * @param traceId - Optional trace ID for observability
    */
   async publishGlobalPartyCreatedEvent(
     partyId: PartyId,
-    tenantId: TenantId,
     actor: ActorContext,
     traceId?: string
   ): Promise<void> {
     await this.publishStandardizedEvent(
       "global_party.created",
-      { partyId, tenantId },
+      { partyId},
       actor,
       traceId
     );
@@ -40,22 +37,19 @@ export class GlobalPartiesEventService extends BaseEventService {
   /**
    * @summary Publishes a Global Party updated domain event
    * @description Publishes a Global Party update event using the outbox pattern
-   * @param partyId - Global Party identifier
-   * @param tenantId - Tenant identifier
-   * @param updatedFields - Fields that were updated
+   * @param partyId - Global Party identifier   * @param updatedFields - Fields that were updated
    * @param actor - Actor context for audit purposes
    * @param traceId - Optional trace ID for observability
    */
   async publishGlobalPartyUpdatedEvent(
     partyId: PartyId,
-    tenantId: TenantId,
     updatedFields: Record<string, unknown>,
     actor: ActorContext,
     traceId?: string
   ): Promise<void> {
     await this.publishStandardizedEvent(
       "global_party.updated",
-      { partyId, tenantId, updatedFields },
+      { partyId, updatedFields },
       actor,
       traceId
     );
@@ -64,20 +58,17 @@ export class GlobalPartiesEventService extends BaseEventService {
   /**
    * @summary Publishes a Global Party deleted domain event
    * @description Publishes a Global Party deletion event using the outbox pattern
-   * @param partyId - Global Party identifier
-   * @param tenantId - Tenant identifier
-   * @param actor - Actor context for audit purposes
+   * @param partyId - Global Party identifier   * @param actor - Actor context for audit purposes
    * @param traceId - Optional trace ID for observability
    */
   async publishGlobalPartyDeletedEvent(
     partyId: PartyId,
-    tenantId: TenantId,
     actor: ActorContext,
     traceId?: string
   ): Promise<void> {
     await this.publishStandardizedEvent(
       "global_party.deleted",
-      { partyId, tenantId },
+      { partyId},
       actor,
       traceId
     );
@@ -97,15 +88,15 @@ export class GlobalPartiesEventService extends BaseEventService {
   }
 
   // Implementation of GlobalPartiesEventService interface methods
-  async publishCreated(partyId: PartyId, tenantId: TenantId, actor: ActorContext): Promise<void> {
-    await this.publishGlobalPartyCreatedEvent(partyId, tenantId, actor);
+  async publishCreated(partyId: PartyId, actor: ActorContext): Promise<void> {
+    await this.publishGlobalPartyCreatedEvent(partyId, actor);
   }
 
-  async publishUpdated(partyId: PartyId, tenantId: TenantId, actor: ActorContext): Promise<void> {
-    await this.publishGlobalPartyUpdatedEvent(partyId, tenantId, {}, actor);
+  async publishUpdated(partyId: PartyId, actor: ActorContext): Promise<void> {
+    await this.publishGlobalPartyUpdatedEvent(partyId, {}, actor);
   }
 
-  async publishDeleted(partyId: PartyId, tenantId: TenantId, actor: ActorContext): Promise<void> {
-    await this.publishGlobalPartyDeletedEvent(partyId, tenantId, actor);
+  async publishDeleted(partyId: PartyId, actor: ActorContext): Promise<void> {
+    await this.publishGlobalPartyDeletedEvent(partyId, actor);
   }
 };

@@ -9,3 +9,4 @@ export * from "./guard.js";
 export * from "./middleware.js";
 export * from "./jwtVerifier.js";
 export * from "./policy.js";
+export * from "./validRoles.js";

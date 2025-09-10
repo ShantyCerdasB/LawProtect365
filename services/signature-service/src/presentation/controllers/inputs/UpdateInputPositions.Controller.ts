@@ -20,16 +20,7 @@ export const UpdateInputPositionsController = createCommandController<UpdateInpu
   createDependencies: (c: any) => c.inputs.commandsPort,
   extractParams: (path: any, body: any) => ({
     envelopeId: path.envelopeId,
-    items: body.items,
-  }),
+    items: body.items}),
   responseType: "ok",
-  includeActor: true,
-});
-
-
-
-
-
-
-
+  includeActor: true});
 

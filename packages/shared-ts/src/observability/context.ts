@@ -11,7 +11,7 @@ export interface RequestContext {
   traceId: string;
   /** Optional parent span id for tracing trees. */
   parentSpanId?: string;
-  /** Arbitrary context fields (tenant, user, etc.). */
+  /** Arbitrary context fields , user, etc.). */
   fields?: Record<string, unknown>;
 }
 

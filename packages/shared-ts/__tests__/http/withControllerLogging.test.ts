@@ -6,23 +6,17 @@ describe('withControllerLogging', () => {
 
   beforeEach(() => {
     mockLogger = {
-      info: jest.fn(),
-    };
+      info: jest.fn()};
 
     mockEvent = {
       requestContext: {
         http: {
           method: 'GET',
-          path: '/test',
-        },
-      },
+          path: '/test'}},
       headers: {
-        'x-request-id': 'test-request-id',
-      },
+        'x-request-id': 'test-request-id'},
       ctx: {
-        logger: mockLogger,
-      },
-    };
+        logger: mockLogger}};
 
     jest.spyOn(Date, 'now')
       .mockReturnValueOnce(1000) // start time
@@ -49,8 +43,7 @@ describe('withControllerLogging', () => {
 
     expect(mockLogger.info).toHaveBeenCalledWith('http:start', {
       method: 'GET',
-      path: '/test',
-    });
+      path: '/test'});
   });
 
   it('should log finish information in after middleware', () => {
@@ -62,8 +55,7 @@ describe('withControllerLogging', () => {
 
     expect(mockLogger.info).toHaveBeenCalledWith('http:finish', {
       status: 200,
-      ms: 1000,
-    });
+      ms: 1000});
     expect(result).toBe(mockResponse);
   });
 
@@ -76,8 +68,7 @@ describe('withControllerLogging', () => {
 
     expect(mockLogger.info).toHaveBeenCalledWith('http:finish', {
       status: 200,
-      ms: 1000,
-    });
+      ms: 1000});
     expect(result).toBe(stringResponse);
   });
 
@@ -90,8 +81,7 @@ describe('withControllerLogging', () => {
 
     expect(mockLogger.info).toHaveBeenCalledWith('http:finish', {
       status: 200,
-      ms: 1000,
-    });
+      ms: 1000});
     expect(result).toBe(mockResponse);
   });
 
@@ -103,8 +93,7 @@ describe('withControllerLogging', () => {
     const result = middleware.after(mockEvent, mockResponse);
 
     expect((result as any).headers).toEqual({
-      'x-request-id': 'test-request-id',
-    });
+      'x-request-id': 'test-request-id'});
   });
 
   it('should preserve existing headers when adding x-request-id', () => {
@@ -112,16 +101,14 @@ describe('withControllerLogging', () => {
     const mockResponse = {
       statusCode: 200,
       body: 'test',
-      headers: { 'content-type': 'application/json' },
-    };
+      headers: { 'content-type': 'application/json' }};
 
     middleware.before(mockEvent);
     const result = middleware.after(mockEvent, mockResponse);
 
     expect((result as any).headers).toEqual({
       'content-type': 'application/json',
-      'x-request-id': 'test-request-id',
-    });
+      'x-request-id': 'test-request-id'});
   });
 
   it('should handle missing x-request-id header', () => {
@@ -134,8 +121,7 @@ describe('withControllerLogging', () => {
     const result = middleware.after(eventWithoutRequestId, mockResponse);
 
     expect((result as any).headers).toEqual({
-      'x-request-id': '',
-    });
+      'x-request-id': ''});
   });
 
   it('should not add headers to string response', () => {
@@ -162,8 +148,7 @@ describe('withControllerLogging', () => {
     const middleware = withControllerLogging();
     const eventWithoutLogger = {
       ...mockEvent,
-      ctx: {},
-    };
+      ctx: {}};
 
     expect(() => middleware.before(eventWithoutLogger)).not.toThrow();
     expect(() => middleware.after(eventWithoutLogger, { statusCode: 200 })).not.toThrow();

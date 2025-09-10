@@ -8,5 +8,3 @@
 export * from "./MakeConsentCommandsPort";
 export * from "./MakeConsentQueryPort";
 
-
-

@@ -19,17 +19,8 @@ export const GetInputController = createQueryController<GetInputQueryControllerI
   appServiceClass: InputsQueryService,
   createDependencies: (c: any) => c.inputs.queriesPort,
   extractParams: (path: any) => ({
-    tenantId: path.tenantId,
     envelopeId: path.envelopeId,
-    inputId: path.inputId,
-  }),
+    inputId: path.inputId}),
   responseType: "ok"
 });
-
-
-
-
-
-
-
 

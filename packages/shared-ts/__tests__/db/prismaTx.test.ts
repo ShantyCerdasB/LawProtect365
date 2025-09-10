@@ -36,8 +36,7 @@ describe('withTransaction', () => {
     expect(opts).toEqual({
       maxWait: 5000,
       timeout: 15000,
-      isolationLevel: undefined,
-    });
+      isolationLevel: undefined});
 
     expect(userFn).toHaveBeenCalledTimes(1);
     expect(userFn).toHaveBeenCalledWith(tx);
@@ -57,8 +56,7 @@ describe('withTransaction', () => {
     const result = await withTransaction(prisma as any, userFn, {
       maxWaitMs: 100,
       timeoutMs: 200,
-      isolationLevel: iso,
-    });
+      isolationLevel: iso});
 
     expect(result).toBe('ok');
 
@@ -66,8 +64,7 @@ describe('withTransaction', () => {
     expect(opts).toEqual({
       maxWait: 100,
       timeout: 200,
-      isolationLevel: iso,
-    });
+      isolationLevel: iso});
   });
 
   /**

@@ -56,8 +56,3 @@ export type HeadResult =
       metadata?: Record<string, string>;
     }; 
 
-
-
-
-
-

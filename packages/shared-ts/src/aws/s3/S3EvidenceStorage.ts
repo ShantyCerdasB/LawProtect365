@@ -46,8 +46,7 @@ import {
   GetObjectCommand,
   HeadObjectCommand,
   DeleteObjectCommand,
-  type GetObjectCommandOutput,
-} from "@aws-sdk/client-s3";
+  type GetObjectCommandOutput} from "@aws-sdk/client-s3";
 
 import type { S3Port, S3PutObjectInput, S3GetObjectOutput } from "../ports.js";
 import { shouldRetry, isAwsRetryable, mapAwsError, sleep } from "../../index.js";
@@ -135,10 +134,8 @@ export class S3EvidenceStorage implements S3Port {
           ...(kmsKeyId
             ? {
                 ServerSideEncryption: "aws:kms",
-                SSEKMSKeyId: kmsKeyId,
-              }
-            : {}),
-        })
+                SSEKMSKeyId: kmsKeyId}
+            : {})})
       );
       return { etag: res.ETag, versionId: res.VersionId };
     });
@@ -165,8 +162,7 @@ export class S3EvidenceStorage implements S3Port {
         new GetObjectCommand({
           Bucket: b,
           Key: key,
-          Range: rangeBytes,
-        })
+          Range: rangeBytes})
       );
       // `Body` is a stream in Node in most environments; surfaced as-is.
       return {
@@ -174,8 +170,7 @@ export class S3EvidenceStorage implements S3Port {
         contentType: res.ContentType ?? undefined,
         metadata: res.Metadata,
         etag: res.ETag ?? undefined,
-        lastModified: res.LastModified ?? undefined,
-      };
+        lastModified: res.LastModified ?? undefined};
     });
   }
 
@@ -202,16 +197,14 @@ export class S3EvidenceStorage implements S3Port {
         const res = await this.s3.send(
           new HeadObjectCommand({
             Bucket: b,
-            Key: key,
-          })
+            Key: key})
         );
         return {
           exists: true,
           size: res.ContentLength ?? undefined,
           etag: res.ETag ?? undefined,
           lastModified: res.LastModified ?? undefined,
-          metadata: res.Metadata,
-        };
+          metadata: res.Metadata};
       },
       async (err) => {
         // 404 should not be mapped as an exception here; return exists=false.
@@ -244,8 +237,7 @@ export class S3EvidenceStorage implements S3Port {
       await this.s3.send(
         new DeleteObjectCommand({
           Bucket: b,
-          Key: key,
-        })
+          Key: key})
       );
     });
   }
@@ -288,9 +280,4 @@ export class S3EvidenceStorage implements S3Port {
     throw mapAwsError(lastErr, op);
   }
 }
-
-
-
-
-
 

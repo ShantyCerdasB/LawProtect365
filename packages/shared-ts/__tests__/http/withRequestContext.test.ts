@@ -3,8 +3,7 @@ import { ulid } from 'ulid';
 
 // Mock ulid
 jest.mock('ulid', () => ({
-  ulid: jest.fn(),
-}));
+  ulid: jest.fn()}));
 
 const mockUlid = ulid as jest.MockedFunction<typeof ulid>;
 
@@ -14,8 +13,7 @@ describe('withRequestContext', () => {
   beforeEach(() => {
     mockEvent = {
       headers: {},
-      requestContext: {},
-    };
+      requestContext: {}};
 
     mockUlid.mockReturnValue('mock-ulid-123');
   });

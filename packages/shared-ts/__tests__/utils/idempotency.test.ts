@@ -69,8 +69,7 @@ describe('Idempotency Utils', () => {
       const input = {
         id: '123',
         metadata: { created: '2023-01-01', tags: ['tag1', 'tag2'] },
-        count: 42,
-      };
+        count: 42};
       const result = toDdbItem(input);
       expect(result).toEqual(input);
     });
@@ -81,8 +80,7 @@ describe('Idempotency Utils', () => {
         undefinedValue: undefined,
         emptyString: '',
         zero: 0,
-        falseValue: false,
-      };
+        falseValue: false};
       const result = toDdbItem(input);
       expect(result).toEqual(input);
     });

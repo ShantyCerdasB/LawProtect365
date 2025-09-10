@@ -18,17 +18,7 @@ export const DeleteEnvelopeController = createCommandController<DeleteEnvelopeCo
   appServiceClass: EnvelopesCommandService,
   createDependencies: (c: any) => c.envelopes.commandsPort,
   extractParams: (path: any) => ({
-    tenantId: path.tenantId,
-    envelopeId: path.envelopeId,
-  }),
+    envelopeId: path.envelopeId}),
   responseType: "ok",
-  includeActor: true,
-});
-
-
-
-
-
-
-
+  includeActor: true});
 

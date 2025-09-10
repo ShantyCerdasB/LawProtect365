@@ -2,8 +2,7 @@ import { requireRequestToken } from '../../src/middleware/requestToken.js';
 
 // Mock the requireHeaderToken function
 jest.mock('../../src/http/headers.js', () => ({
-  requireHeaderToken: jest.fn(),
-}));
+  requireHeaderToken: jest.fn()}));
 
 describe('requireRequestToken', () => {
   const mockRequireHeaderToken = require('../../src/http/headers.js').requireHeaderToken as jest.Mock;
@@ -15,9 +14,7 @@ describe('requireRequestToken', () => {
   describe('with ApiEvent', () => {
     const mockEvent = {
       headers: {
-        'x-request-token': 'test-token-123',
-      },
-    } as any;
+        'x-request-token': 'test-token-123'}} as any;
 
     it('should call requireHeaderToken with default header name', () => {
       mockRequireHeaderToken.mockReturnValue('test-token-123');
@@ -74,8 +71,7 @@ describe('requireRequestToken', () => {
 
   describe('error handling', () => {
     const mockEvent = {
-      headers: {},
-    } as any;
+      headers: {}} as any;
 
     it('should propagate errors from requireHeaderToken', () => {
       const error = new Error('Token not found');
@@ -127,8 +123,7 @@ describe('requireRequestToken', () => {
 
     it('should handle empty string header name', () => {
       const mockEvent = {
-        headers: { '': 'empty-header-token' },
-      } as any;
+        headers: { '': 'empty-header-token' }} as any;
       mockRequireHeaderToken.mockReturnValue('empty-header-token');
 
       const result = requireRequestToken(mockEvent, '');
@@ -143,8 +138,7 @@ describe('requireRequestToken', () => {
 
     it('should handle zero min length', () => {
       const mockEvent = {
-        headers: { 'x-request-token': 'any-token' },
-      } as any;
+        headers: { 'x-request-token': 'any-token' }} as any;
       mockRequireHeaderToken.mockReturnValue('any-token');
 
       const result = requireRequestToken(mockEvent, 'x-request-token', 0);

@@ -16,19 +16,12 @@ export const SigningConsentBody = z.object({
   /** Whether consent was given */
   consentGiven: z.boolean(),
   /** The consent text that was shown */
-  consentText: z.string().min(1),
-});
+  consentText: z.string().min(1)});
 
 /**
  * @description Path schema for signing consent request
  */
 export const SigningConsentParams = z.object({
   /** The envelope ID */
-  id: EnvelopeIdSchema,
-});
-
-
-
-
-
+  id: EnvelopeIdSchema});
 

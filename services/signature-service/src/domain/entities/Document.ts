@@ -8,7 +8,7 @@
  * This aggregate is intentionally minimal and serializable.
  */
 
-import type { DocumentId, EnvelopeId, TenantId } from "@/domain/value-objects/ids";
+import type { DocumentId, EnvelopeId } from "@/domain/value-objects/ids";
 import type { DocumentStatus, S3ObjectRef, ContentType } from "@/domain/value-objects/index";
 
 /**
@@ -20,9 +20,6 @@ export interface Document {
 
   /** Envelope this document belongs to. */
   readonly envelopeId: EnvelopeId;
-
-  /** Tenant owning the resource (multitenancy boundary). */
-  readonly tenantId: TenantId;
 
   /** Human-friendly name of the document. */
   readonly name: string;
@@ -54,9 +51,4 @@ export interface Document {
   /** Optional metadata for extensibility. */
   readonly metadata?: Record<string, unknown>;
 }
-
-
-
-
-
 

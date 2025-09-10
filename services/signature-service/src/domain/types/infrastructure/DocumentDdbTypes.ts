@@ -4,7 +4,7 @@
  * @description Defines DynamoDB-specific types, constants, and utilities for Document entities
  */
 
-import { DocumentId, EnvelopeId, TenantId } from "@/domain/value-objects";
+import { DocumentId, EnvelopeId } from "@/domain/value-objects";
 import type { Document } from "../../../domain/entities/Document";
 import type { Mapper } from "@lawprotect/shared-ts";
 import { BadRequestError, ErrorCodes } from "@lawprotect/shared-ts";
@@ -39,7 +39,6 @@ export type DdbDocumentItem = {
 
   documentId: DocumentId;
   envelopeId: EnvelopeId;
-  tenantId: TenantId;
 
   name: string;
   status: Document["status"];
@@ -78,7 +77,6 @@ export const isDdbDocumentItem = (v: unknown): v is DdbDocumentItem => {
       o.type === DOCUMENT_ENTITY &&
       typeof o.documentId === "string" &&
       typeof o.envelopeId === "string" &&
-      typeof o.tenantId === "string" &&
       typeof o.name === "string" &&
       typeof o.status === "string" &&
       typeof o.contentType === "string" &&
@@ -96,36 +94,50 @@ export const isDdbDocumentItem = (v: unknown): v is DdbDocumentItem => {
  * @param src - Domain Document entity
  * @returns DynamoDB item
  */
-export const toDocumentItem = (src: Document): DdbDocumentItem => ({
-  pk: documentPk(src.envelopeId),
-  sk: documentSk(src.documentId),
-  type: DOCUMENT_ENTITY,
+export const toDocumentItem = (src: Document): DdbDocumentItem => {
+  const item: DdbDocumentItem = {
+    pk: documentPk(src.envelopeId),
+    sk: documentSk(src.documentId),
+    type: DOCUMENT_ENTITY,
 
-  documentId: src.documentId as DocumentId,
-  envelopeId: src.envelopeId as EnvelopeId,
-  tenantId: src.tenantId as TenantId,
+    documentId: src.documentId as DocumentId,
+    envelopeId: src.envelopeId as EnvelopeId,
 
-  name: src.name,
-  status: src.status,
-  contentType: src.contentType,
+    name: src.name,
+    status: src.status,
+    contentType: src.contentType,
 
-  size: src.size,
-  digest: src.digest,
+    size: src.size,
+    digest: src.digest,
 
-  s3Bucket: src.s3Ref.bucket,
-  s3Key: src.s3Ref.key,
+    s3Bucket: src.s3Ref.bucket,
+    s3Key: src.s3Ref.key,
 
-  pageCount: src.pageCount,
+    createdAt: src.createdAt,
+    updatedAt: src.updatedAt,
 
-  createdAt: src.createdAt,
-  updatedAt: src.updatedAt,
+    // GSI fields for efficient document lookup
+    gsi1pk: `DOCUMENT#${src.documentId}`,
+    gsi1sk: src.createdAt
+  };
 
-  metadata: src.metadata,
+  // Only include optional fields if they have values
+  if (src.pageCount !== undefined) {
+    item.pageCount = src.pageCount;
+  }
 
-  // GSI fields for efficient document lookup
-  gsi1pk: `DOCUMENT#${src.documentId}`,
-  gsi1sk: src.createdAt,
-});
+  if (src.metadata !== undefined && Object.keys(src.metadata).length > 0) {
+    // Filter out undefined values from metadata
+    const cleanMetadata = Object.fromEntries(
+      Object.entries(src.metadata).filter(([_, value]) => value !== undefined)
+    );
+    if (Object.keys(cleanMetadata).length > 0) {
+      item.metadata = cleanMetadata;
+    }
+  }
+
+  return item;
+};
 
 /**
  * Maps DynamoDB item to domain Document entity
@@ -145,7 +157,6 @@ export const fromDocumentItem = (item: unknown): Document => {
   return Object.freeze<Document>({
     documentId: item.documentId,
     envelopeId: item.envelopeId,
-    tenantId: item.tenantId,
 
     name: item.name,
     status: item.status,
@@ -156,16 +167,14 @@ export const fromDocumentItem = (item: unknown): Document => {
 
     s3Ref: {
       bucket: item.s3Bucket,
-      key: item.s3Key,
-    },
+      key: item.s3Key},
 
     pageCount: item.pageCount,
 
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,
 
-    metadata: item.metadata,
-  });
+    metadata: item.metadata});
 };
 
 /**
@@ -173,11 +182,5 @@ export const fromDocumentItem = (item: unknown): Document => {
  */
 export const documentItemMapper: Mapper<Document, DdbDocumentItem> = {
   toDTO: toDocumentItem,
-  fromDTO: fromDocumentItem,
-};
-
-
-
-
-
+  fromDTO: fromDocumentItem};
 

@@ -4,7 +4,6 @@
  * @description Shared types for AWS services and operations used across the application
  */
 
-
 /**
  * @summary AWS service name type
  * @description Represents supported AWS service names.
@@ -53,7 +52,6 @@ export interface AwsError {
   /** Whether the error is retryable */
   readonly retryable?: boolean;
 }
-
 
 /**
  * @summary AWS pagination result
@@ -107,6 +105,4 @@ export interface AwsResourceMetadata {
   /** Last update timestamp */
   readonly updatedAt?: string;
 }
-
-
 

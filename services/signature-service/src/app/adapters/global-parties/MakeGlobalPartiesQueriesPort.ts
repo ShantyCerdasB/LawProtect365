@@ -16,7 +16,6 @@ import type {
   MakeGlobalPartiesQueriesPortDeps
 } from "../../../domain/types/global-parties";
 import { PAGINATION_LIMITS } from "@/domain/values/enums";
-import { assertTenantBoundary } from "@lawprotect/shared-ts";
 
 /**
  * @description Creates GlobalPartiesQueriesPort implementation.
@@ -30,30 +29,24 @@ export const makeGlobalPartiesQueriesPort = (
   return {
     async list(query: ListGlobalPartiesAppInput): Promise<ListGlobalPartiesAppResult> {
       // Apply generic rules
-      assertTenantBoundary(query.tenantId, query.tenantId);
-      
       const globalParties = await deps.globalParties.list({
-        tenantId: query.tenantId,
         search: query.search,
         tags: query.tags,
         role: query.role,
         source: query.source,
         status: query.status,
         limit: query.limit ?? PAGINATION_LIMITS.DEFAULT_LIMIT,
-        cursor: query.cursor,
-      });
+        cursor: query.cursor});
 
       return globalParties;
     },
 
     async getById(query: GetGlobalPartyAppInput): Promise<GetGlobalPartyAppResult> {
       // Apply generic rules
-      assertTenantBoundary(query.tenantId, query.tenantId);
-      
-      const globalParty = await deps.globalParties.getById(query.tenantId, query.partyId);
+      const globalParty = await deps.globalParties.getById(query.partyId);
       
       // Filter by tenant for security
-      if (globalParty && globalParty.tenantId !== query.tenantId) {
+      if (globalParty && globalParty !== query) {
         return { party: null };
       }
 
@@ -62,15 +55,10 @@ export const makeGlobalPartiesQueriesPort = (
 
     async searchByEmail(query: SearchGlobalPartiesByEmailAppInput): Promise<SearchGlobalPartiesByEmailAppResult> {
       // Apply generic rules
-      assertTenantBoundary(query.tenantId, query.tenantId);
-      
       const globalParties = await deps.globalParties.searchByEmail({
-        tenantId: query.tenantId,
         email: query.email,
-        limit: query.limit ?? PAGINATION_LIMITS.DEFAULT_LIMIT,
-      });
+        limit: query.limit ?? PAGINATION_LIMITS.DEFAULT_LIMIT});
 
       return globalParties;
-    },
-  };
+    }};
 };

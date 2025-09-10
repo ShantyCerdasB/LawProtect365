@@ -11,8 +11,3 @@ import { EnvelopeNameFields, EnvelopeStatusFields } from "./common";
 export const PatchEnvelopeBody = EnvelopeNameFields.merge(EnvelopeStatusFields);
 export type PatchEnvelopeBody = z.infer<typeof PatchEnvelopeBody>;
 
-
-
-
-
-

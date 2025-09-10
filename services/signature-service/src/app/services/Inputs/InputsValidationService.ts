@@ -27,17 +27,10 @@ import {
  */
 export class InputsValidationService {
   /**
-   * @summary Validates common base fields (tenantId, envelopeId)
+   * @summary Validates common base fields (envelopeId)
    * @description Helper method to validate common fields across all operations
    */
-  private validateBaseFields(tenantId: string, envelopeId: string, context: any): void {
-    if (!tenantId || tenantId.trim().length === 0) {
-      throw new BadRequestError(
-        "Tenant ID is required",
-        ErrorCodes.COMMON_BAD_REQUEST,
-        context
-      );
-    }
+  private validateBaseFields(envelopeId: string, context: any): void {
     if (!envelopeId || envelopeId.trim().length === 0) {
       throw new BadRequestError(
         "Envelope ID is required",
@@ -104,9 +97,9 @@ export class InputsValidationService {
    * @description Ensures all required fields are present and valid
    */
   async validateCreate(command: CreateInputsCommand): Promise<void> {
-    if (!command.tenantId || command.tenantId.trim().length === 0) {
+    if (!command) {
       throw new BadRequestError(
-        "Tenant ID is required",
+        "Command is required",
         ErrorCodes.COMMON_BAD_REQUEST,
         { command }
       );
@@ -148,7 +141,7 @@ export class InputsValidationService {
    * @description Ensures at least one field is provided for update
    */
   async validateUpdate(command: UpdateInputCommand): Promise<void> {
-    this.validateBaseFields(command.tenantId, command.envelopeId, { command });
+    this.validateBaseFields(command.envelopeId, { command });
     this.validateInputId(command.inputId, { command });
 
     const hasUpdates = command.updates.type !== undefined ||
@@ -186,7 +179,7 @@ export class InputsValidationService {
    * @description Ensures all positions are valid
    */
   async validateUpdatePositions(command: UpdateInputPositionsCommand): Promise<void> {
-    this.validateBaseFields(command.tenantId, command.envelopeId, { command });
+    this.validateBaseFields(command.envelopeId, { command });
 
     if (!command.items || command.items.length === 0) {
       throw new BadRequestError(
@@ -218,7 +211,7 @@ export class InputsValidationService {
    * @description Ensures required fields are present
    */
   async validateDelete(command: DeleteInputCommand): Promise<void> {
-    this.validateBaseFields(command.tenantId, command.envelopeId, { command });
+    this.validateBaseFields(command.envelopeId, { command });
     this.validateInputId(command.inputId, { command });
   }
 
@@ -227,7 +220,7 @@ export class InputsValidationService {
    * @description Ensures required fields are present for query
    */
   async validateGetById(query: GetInputQuery): Promise<void> {
-    this.validateBaseFields(query.tenantId, query.envelopeId, { query });
+    this.validateBaseFields(query.envelopeId, { query });
     this.validateInputId(query.inputId, { query });
   }
 
@@ -236,7 +229,7 @@ export class InputsValidationService {
    * @description Ensures required fields are present and pagination limits are valid
    */
   async validateListByEnvelope(query: ListInputsQuery): Promise<void> {
-    this.validateBaseFields(query.tenantId, query.envelopeId, { query });
+    this.validateBaseFields(query.envelopeId, { query });
 
     // Validate pagination limits
     if (query.limit !== undefined) {

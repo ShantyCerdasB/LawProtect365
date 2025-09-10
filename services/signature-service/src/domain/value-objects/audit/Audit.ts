@@ -9,7 +9,7 @@
 
 import { z, UuidV4, TrimmedString } from "@lawprotect/shared-ts";
 import type { Brand } from "@lawprotect/shared-ts";
-import { TenantIdSchema, EnvelopeIdSchema } from "../ids";
+import { EnvelopeIdSchema } from "../ids";
 
 /** @description Branded identifier for audit events */
 export type AuditEventId = Brand<string, "AuditEventId">;
@@ -25,8 +25,6 @@ export const AuditEventIdSchema = UuidV4.transform((v) => v as AuditEventId);
 export const AuditEventSchema = z.object({
   /** Unique audit event identifier */
   id: AuditEventIdSchema,
-  /** Tenant identifier */
-  tenantId: TenantIdSchema,
   /** Envelope identifier */
   envelopeId: EnvelopeIdSchema,
   /** Event type (e.g., "envelope.created") */
@@ -48,8 +46,7 @@ export const AuditEventSchema = z.object({
       /** User role */
       role: TrimmedString.optional(),
       /** User locale preference */
-      locale: TrimmedString.optional(),
-    })
+      locale: TrimmedString.optional()})
     .optional(),
 
   /** Optional metadata for additional context */
@@ -58,10 +55,7 @@ export const AuditEventSchema = z.object({
   /** Hash-chain (previous link) for tamper detection */
   prevHash: TrimmedString.optional(),
   /** Event payload hash (current link) for integrity verification */
-  hash: TrimmedString.optional(),
-});
+  hash: TrimmedString.optional()});
 
 export type AuditEvent = z.infer<typeof AuditEventSchema>;
-
-
 

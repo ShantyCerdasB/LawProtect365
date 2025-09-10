@@ -12,14 +12,7 @@ import { z } from "@lawprotect/shared-ts";
  */
 export const FinaliseEnvelopeBody = z.object({
   /** Optional message for the finalization process. */
-  message: z.string().max(500, "Message must be 500 characters or less").optional(),
-});
+  message: z.string().max(500, "Message must be 500 characters or less").optional()});
 
 export type FinaliseEnvelopeBody = z.infer<typeof FinaliseEnvelopeBody>;
-
-
-
-
-
-
 

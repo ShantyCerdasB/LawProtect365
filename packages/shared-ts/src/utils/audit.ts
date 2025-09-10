@@ -5,7 +5,6 @@
  */
 
 import type { ActorContext } from "../types/actor.js";
-import type { TenantId } from "../types/brand.js";
 
 /**
  * @description Generic audit actor interface for microservices
@@ -18,8 +17,6 @@ export interface AuditActor extends ActorContext {}
  * Context information required for audit event logging
  */
 export interface AuditContext {
-  /** Tenant identifier */
-  readonly tenantId: TenantId;
   /** Envelope identifier (optional for non-envelope operations) */
   readonly envelopeId?: string;
   /** Actor information */

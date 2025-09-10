@@ -14,8 +14,7 @@ export const PatchDocumentBody = z.object({
   /** Optional new name for the document (1-255 characters) */
   name: z.string().min(1).max(255).optional(),
   /** Optional metadata to update */
-  metadata: z.record(z.unknown()).optional(),
-});
+  metadata: z.record(z.unknown()).optional()});
 export type PatchDocumentBody = z.infer<typeof PatchDocumentBody>;
 
 /**
@@ -26,12 +25,6 @@ export const PatchDocumentResponse = z.object({
   /** Updated document identifier */
   id: z.string().min(1),
   /** Update timestamp (ISO datetime string) */
-  updatedAt: z.string().datetime(),
-});
+  updatedAt: z.string().datetime()});
 export type PatchDocumentResponse = z.infer<typeof PatchDocumentResponse>;
-
-
-
-
-
 

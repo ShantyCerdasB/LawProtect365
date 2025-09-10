@@ -7,8 +7,7 @@
 jest.mock('../../src/db/cursor.js', () => ({
   encodeCursor: jest.fn(),
   decodeCursor: jest.fn(),
-  cursorFromRecord: jest.fn(() => 'CURSOR'),
-}));
+  cursorFromRecord: jest.fn(() => 'CURSOR')}));
 
 import { pageFromRows, idCursorFromRow, getIdFromCursor } from '../../src/db/pagination.js';
 import * as CursorMod from '../../src/db/cursor.js';

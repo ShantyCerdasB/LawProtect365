@@ -17,9 +17,7 @@ jest.mock('@errors/mapError.js', () => ({
     statusCode: e?.statusCode ?? 500,
     code: e?.code,
     message: e?.message ?? String(e),
-    name: e?.name,
-  })),
-}));
+    name: e?.name}))}));
 import { mapError } from '../../src/errors/mapError.js';
 
 const makeEvent = (headers: Record<string, string> = {}): ApiEvent =>
@@ -30,8 +28,7 @@ const makeEvent = (headers: Record<string, string> = {}): ApiEvent =>
     rawQueryString: '',
     headers,
     requestContext: {} as any,
-    isBase64Encoded: false,
-  } as unknown as ApiEvent);
+    isBase64Encoded: false} as unknown as ApiEvent);
 
 const okResponse = (body: unknown): ApiResponse =>
   ({ statusCode: 200, body: JSON.stringify(body) } as ApiResponse);
@@ -50,8 +47,7 @@ describe('withAuth', () => {
     expect(mapError).toHaveBeenCalled();
     expect(res1).toMatchObject({
       statusCode: 401,
-      message: expect.stringMatching(/missing bearer token/i),
-    });
+      message: expect.stringMatching(/missing bearer token/i)});
 
     const res2 = await handler(makeEvent({ authorization: 'Basic x' }));
     expect(res2).toMatchObject({ statusCode: 401 });
@@ -63,13 +59,10 @@ describe('withAuth', () => {
       payload: {},
       claims: {
         sub: 'user-1',
-        tenantId: 't-1',
         roles: ['lawyer'],
         scopes: ['case:read'],
         raw: { foo: 'bar' },
-        email: 'u@example.com',
-      },
-    });
+        email: 'u@example.com'}});
 
     const inner: HandlerFn = jest.fn(async (evt: ApiEvent) => okResponse({ received: true }));
     const handler = withAuth(inner, { issuer: 'https://issuer', audience: 'client' });
@@ -80,12 +73,10 @@ describe('withAuth', () => {
     const authedEvt = (inner as jest.Mock).mock.calls[0][0] as any;
     expect(authedEvt.auth).toMatchObject({
       userId: 'user-1',
-      tenantId: 't-1',
       roles: ['lawyer'],
       scopes: ['case:read'],
       email: 'u@example.com',
-      token: 'token-abc',
-    });
+      token: 'token-abc'});
   });
 
   it('uses uppercase Authorization header and defaults roles/scopes when absent', async () => {
@@ -94,13 +85,10 @@ describe('withAuth', () => {
       payload: {},
       claims: {
         sub: 'user-2',
-        tenantId: undefined,
         roles: undefined,
         scopes: undefined,
         raw: {},
-        email: undefined,
-      },
-    });
+        email: undefined}});
 
     const inner: HandlerFn = jest.fn(async (evt: ApiEvent) => okResponse({ ok: true, auth: (evt as any).auth }));
     const handler = withAuth(inner);
@@ -111,11 +99,9 @@ describe('withAuth', () => {
     const authedEvt = (inner as jest.Mock).mock.calls[0][0] as any;
     expect(authedEvt.auth).toMatchObject({
       userId: 'user-2',
-      tenantId: undefined,
       roles: [],
       scopes: [],
-      token: 'TOK',
-    });
+      token: 'TOK'});
   });
 
   // 🔥 Nuevo: cubre el caso donde 'authorization' existe pero es '' (no nullish),
@@ -125,15 +111,12 @@ describe('withAuth', () => {
     const res = await handler(
       makeEvent({
         authorization: '',             // existe pero es cadena vacía
-        Authorization: 'Bearer SHOULD_NOT_BE_USED',
-      }),
-    );
+        Authorization: 'Bearer SHOULD_NOT_BE_USED'}));
 
     expect(verifyJwtMock).not.toHaveBeenCalled();
     expect(res).toMatchObject({
       statusCode: 401,
-      message: expect.stringMatching(/missing bearer token/i),
-    });
+      message: expect.stringMatching(/missing bearer token/i)});
   });
 
   it('maps JWTExpired to 401 Unauthorized', async () => {
@@ -152,8 +135,7 @@ describe('withAuth', () => {
 
       const res = await handler(makeEvent({ authorization: 'Bearer tok' }));
       expect(res).toMatchObject({ statusCode: 401, message: expect.stringMatching(/invalid token/i) });
-    },
-  );
+    });
 
   it('delegates unexpected errors to mapError', async () => {
     const unknown = Object.assign(new Error('boom'), { name: 'SomethingElse', statusCode: 503, code: 'X' });

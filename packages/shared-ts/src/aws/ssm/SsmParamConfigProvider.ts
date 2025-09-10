@@ -13,8 +13,7 @@
 import {
   SSMClient,
   GetParameterCommand,
-  type GetParameterCommandOutput,
-} from "@aws-sdk/client-ssm";
+  type GetParameterCommandOutput} from "@aws-sdk/client-ssm";
 
 import type { SsmPort } from "../ports.js";
 import { mapAwsError, shouldRetry, isAwsRetryable, parseJson, getEnv, getNumber, sleep } from "../../index.js";
@@ -180,9 +179,4 @@ export class SsmParamConfigProvider implements SsmPort {
     return getEnv(key);
   }
 }
-
-
-
-
-
 

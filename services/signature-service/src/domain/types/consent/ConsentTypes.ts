@@ -5,10 +5,10 @@
  */
 
 import type { ISODateString } from "@lawprotect/shared-ts";
-import type { ConsentId, EnvelopeId, PartyId, TenantId } from "@/domain/value-objects/ids";
+import type { ConsentId, EnvelopeId, PartyId } from "@/domain/value-objects/ids";
 import type { ConsentStatus, ConsentType } from "../../../domain/values/enums";
 
-import type { WithTimestamps, WithMetadata, EnvelopeScoped, TenantScoped, ConsentKey } from "../common/base";
+import type { WithTimestamps, WithMetadata, EnvelopeScoped, ConsentKey } from "../common/base";
 
 /**
  * @summary Minimal consent head used across app flows
@@ -22,7 +22,6 @@ export type ConsentHead = {
   /** The party ID this consent is for */
   readonly partyId: PartyId;
   /** The tenant ID that owns the consent */
-  readonly tenantId: TenantId;
   /** The type of consent */
   readonly consentType: ConsentType;
   /** The current status of the consent */
@@ -83,7 +82,6 @@ export type ConsentRow = {
   /** The party ID this consent is for */
   readonly partyId: PartyId;
   /** The tenant ID that owns the consent */
-  readonly tenantId: TenantId;
   /** The type of consent */
   readonly consentType: ConsentType;
   /** The current status of the consent */
@@ -112,7 +110,6 @@ export type ConsentRepoKey = ConsentKey;
  */
 export type ConsentRepoRow =
   & EnvelopeScoped
-  & TenantScoped
   & WithTimestamps
   & WithMetadata
   & {
@@ -151,7 +148,6 @@ export type ConsentRepoUpdateInput = Partial<
  */
 export type ConsentRepoListInput = {
   /** Tenant identifier */
-  readonly tenantId: TenantId;
   /** Envelope identifier */
   readonly envelopeId: EnvelopeId;
   /** Maximum number of results */
@@ -200,8 +196,7 @@ export const mapConsentRowToResult = (r: ConsentRepoRow) => ({
   createdAt: r.createdAt || "",
   updatedAt: r.updatedAt,
   expiresAt: r.expiresAt,
-  metadata: r.metadata,
-});
+  metadata: r.metadata});
 
 /**
  * @summary Maps a repository row to a consent list item
@@ -218,13 +213,5 @@ export const mapConsentRowToListItem = (r: ConsentRepoRow) => ({
   createdAt: r.createdAt || "",
   updatedAt: r.updatedAt,
   expiresAt: r.expiresAt,
-  metadata: r.metadata,
-});
-
-
-
-
-
-
-
+  metadata: r.metadata});
 

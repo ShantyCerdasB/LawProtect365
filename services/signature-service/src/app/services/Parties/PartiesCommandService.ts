@@ -13,14 +13,19 @@ import type {
   DeletePartyCommand,
   DeletePartyResult
 } from "../../ports/parties";
-// Party invitation rules would need proper command structure integration
+import type { EnvelopesRepository } from "../../../domain/contracts/repositories/envelopes/EnvelopesRepository";
+import { ForbiddenError } from "../../../shared/errors";
+import { ErrorCodes } from "../../../shared/errors";
 
 /**
  * @summary Command service for Parties operations
- * @description Simple wrapper around PartiesCommandsPort
+ * @description Simple wrapper around PartiesCommandsPort with authorization validation
  */
 export class PartiesCommandService {
-  constructor(private readonly commandsPort: PartiesCommandsPort) {}
+  constructor(
+    private readonly commandsPort: PartiesCommandsPort,
+    private readonly envelopesRepo?: EnvelopesRepository
+  ) {}
 
   /**
    * @summary Creates a new Party in an envelope
@@ -28,10 +33,23 @@ export class PartiesCommandService {
    * @returns Promise resolving to creation result
    */
   async create(command: CreatePartyCommand): Promise<CreatePartyResult> {
-    // Apply generic rules - validate cross-tenant access
-    // Note: The tenantId validation should be done at the controller level
-    // where we have access to both the context tenantId and the resource tenantId
-
+    // Authorization validation: only envelope owner can create parties
+    const actorEmail = (command as any).actorEmail || command.actor?.email;
+    if (actorEmail && this.envelopesRepo) {
+      const envelope = await this.envelopesRepo.getById(command.envelopeId);
+      if (envelope && envelope.ownerEmail !== actorEmail) {
+        throw new ForbiddenError(
+          "Unauthorized: Only envelope owner can create parties", 
+          ErrorCodes.AUTH_FORBIDDEN, 
+          { 
+            actorEmail, 
+            envelopeOwnerEmail: envelope.ownerEmail, 
+            envelopeId: command.envelopeId 
+          }
+        );
+      }
+    }
+    
     return this.commandsPort.create(command);
   }
 
@@ -41,10 +59,6 @@ export class PartiesCommandService {
    * @returns Promise resolving to update result
    */
   async update(command: UpdatePartyCommand): Promise<UpdatePartyResult> {
-    // Apply generic rules - validate cross-tenant access
-    // Note: The tenantId validation should be done at the controller level
-    // where we have access to both the context tenantId and the resource tenantId
-
     return this.commandsPort.update(command);
   }
 
@@ -54,10 +68,6 @@ export class PartiesCommandService {
    * @returns Promise resolving to deletion result
    */
   async delete(command: DeletePartyCommand): Promise<DeletePartyResult> {
-    // Apply generic rules - validate cross-tenant access
-    // Note: The tenantId validation should be done at the controller level
-    // where we have access to both the context tenantId and the resource tenantId
-
     return this.commandsPort.delete(command);
   }
 };

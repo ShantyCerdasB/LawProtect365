@@ -21,17 +21,8 @@ export const CreateInputsController = createCommandController<CreateInputsContro
   extractParams: (path: any, body: any) => ({
     envelopeId: path.envelopeId,
     documentId: body.documentId,
-    inputs: body.inputs,
-  }),
+    inputs: body.inputs}),
   responseType: "created",
   includeActor: true,
-  methodName: "create",
-});
-
-
-
-
-
-
-
+  methodName: "create"});
 

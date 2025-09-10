@@ -15,7 +15,6 @@ import type { Brand } from "@lawprotect/shared-ts";
  */
 export type PaginationCursor = Brand<string, "PaginationCursor">;
 
-
 /**
  * @description Pagination cursor schema with validation.
  * Validates base64url format and transforms to branded type.
@@ -23,6 +22,4 @@ export type PaginationCursor = Brand<string, "PaginationCursor">;
 export const PaginationCursorSchema = TrimmedString
   .pipe(z.string().regex(Base64UrlNoPad, "Expected base64url"))
   .transform((v) => v as PaginationCursor);
-
-
 

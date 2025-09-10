@@ -32,8 +32,7 @@ const mockCrypto = (values: number[]) => {
       if (i >= values.length) throw new Error("Mock RNG exhausted");
       buf[0] = values[i++]!;
       return buf;
-    },
-  } satisfies CryptoLike;
+    }} satisfies CryptoLike;
 };
 
 describe("backoffDelay", () => {
@@ -68,8 +67,7 @@ describe("backoffDelay", () => {
   it("throws when secure RNG is unavailable and jitter requires randomness", () => {
     (globalThis as any).crypto = undefined;
     expect(() => backoffDelay(0, { jitter: "full" })).toThrow(
-      "Secure RNG unavailable",
-    );
+      "Secure RNG unavailable");
 
     // With no jitter, RNG is not needed.
     expect(() => backoffDelay(0, { jitter: "none" })).not.toThrow();
@@ -113,19 +111,16 @@ describe("shouldRetry", () => {
   it("returns {retry:false} when attempt reaches the last allowed try", () => {
     // maxAttempts is total tries; attempt is zero-based
     expect(
-      shouldRetry(0, 1, () => true, new Error("x"), { jitter: "none" }),
-    ).toEqual({ retry: false, delayMs: 0 });
+      shouldRetry(0, 1, () => true, new Error("x"), { jitter: "none" })).toEqual({ retry: false, delayMs: 0 });
 
     expect(
-      shouldRetry(1, 2, () => true, new Error("x"), { jitter: "none" }),
-    ).toEqual({ retry: false, delayMs: 0 });
+      shouldRetry(1, 2, () => true, new Error("x"), { jitter: "none" })).toEqual({ retry: false, delayMs: 0 });
   });
 
   it("returns {retry:false} when error is not retryable", () => {
     const nonRetryable = (e: unknown) => (e as Error).message !== "retry";
     expect(
-      shouldRetry(0, 5, nonRetryable, new Error("retry"), { jitter: "none" }),
-    ).toEqual({ retry: false, delayMs: 0 });
+      shouldRetry(0, 5, nonRetryable, new Error("retry"), { jitter: "none" })).toEqual({ retry: false, delayMs: 0 });
   });
 
   it("returns {retry:true, delayMs:N} otherwise (delegates to backoffDelay)", () => {
@@ -133,8 +128,7 @@ describe("shouldRetry", () => {
     const res = shouldRetry(2, 5, () => true, new Error("x"), {
       baseMs: 50,
       capMs: 10000,
-      jitter: "none",
-    });
+      jitter: "none"});
     // base=50, attempt=2 => exp = 50 * 4 = 200
     expect(res).toEqual({ retry: true, delayMs: 200 });
   });
@@ -144,8 +138,7 @@ describe("shouldRetry", () => {
     mockCrypto([123]);
     const res = shouldRetry(1, 5, () => true, new Error("x"), {
       baseMs: 100,
-      jitter: "full",
-    });
+      jitter: "full"});
     // With full jitter in [0, 200], the mocked value maps directly to 123.
     expect(res.retry).toBe(true);
     expect(res.delayMs).toBe(123);
@@ -165,8 +158,7 @@ describe("shouldRetry", () => {
     const res = shouldRetry(0, 5, () => true, new Error("x"), {
       baseMs: 1,
       capMs: 1,
-      jitter: "full",
-    });
+      jitter: "full"});
     expect(res.retry).toBe(true);
     expect(res.delayMs).toBe(0);
   });
@@ -180,5 +172,4 @@ describe("shouldRetry", () => {
     }).not.toThrow();
   });
 });
-
 

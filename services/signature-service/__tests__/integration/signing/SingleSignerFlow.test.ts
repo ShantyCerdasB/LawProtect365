@@ -29,7 +29,7 @@ import type { ApiResponseStructured } from '@lawprotect/shared-ts';
 mockAwsServices();
 
 describe('Single Signer Flow', () => {
-  let tenantId: string;
+  let container: any;
   let envelopeId: string;
   let documentId: string;
   let partyId: string;
@@ -40,13 +40,13 @@ describe('Single Signer Flow', () => {
 
   beforeAll(async () => {
     getContainer();
-    tenantId = generateTestTenantId();
+     generateTestTenantId();
   });
 
   beforeEach(async () => {
     // Create envelope for each test
     const createEnvelopeResult = await CreateEnvelopeController(createApiGatewayEvent({
-      pathParameters: createTestPathParams({ tenantId }),
+      pathParameters: createTestPathParams({ }),
       body: {
         ownerId: '550e8400-e29b-41d4-a716-446655440000',
         name: 'Single Signer Test Contract',
@@ -66,7 +66,7 @@ describe('Single Signer Flow', () => {
     const pdfDigest = calculatePdfDigest(testPdf);
 
     const createDocumentResult = await CreateDocumentController(createApiGatewayEvent({
-      pathParameters: { tenantId, id: envelopeId },
+      pathParameters: { id: envelopeId },
       body: {
         name: 'Single Signer Test Document.pdf',
         contentType: 'application/pdf',
@@ -86,7 +86,7 @@ describe('Single Signer Flow', () => {
 
     // Create party
     const createPartyResult = await CreatePartyController(createApiGatewayEvent({
-      pathParameters: { tenantId, envelopeId },
+      pathParameters: { envelopeId },
       body: {
         name: 'Single Test Signer',
         email: 'single-signer@test.com',
@@ -107,10 +107,9 @@ describe('Single Signer Flow', () => {
     it('should complete single signer workflow', async () => {
       // Step 1: Invite Party
       const invitePartiesResult = await InvitePartiesController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
-          partyIds: [partyId],
-        },
+          partyIds: [partyId]},
         requestContext: createTestRequestContext({
           userId: 'user-123',
           email: 'owner@test.com'
@@ -122,7 +121,7 @@ describe('Single Signer Flow', () => {
 
       // Step 2: Record Consent
       const recordConsentResult = await RecordConsentController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
           signerId: partyId,
           consentGiven: true,
@@ -139,7 +138,7 @@ describe('Single Signer Flow', () => {
 
       // Step 3: Prepare Signing
       const prepareSigningResult = await PrepareSigningController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
           signerId: partyId
         },
@@ -154,7 +153,7 @@ describe('Single Signer Flow', () => {
 
       // Step 4: Complete Signing
       const completeSigningResult = await CompleteSigningController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
           signerId: partyId,
           digest: 'test-digest',
@@ -173,7 +172,7 @@ describe('Single Signer Flow', () => {
 
       // Step 5: Download Signed Document
       const downloadResult = await DownloadSignedDocumentController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
           documentId
         },
@@ -193,10 +192,9 @@ describe('Single Signer Flow', () => {
     it('should handle signer decline', async () => {
       // Step 1: Invite Party
       const invitePartiesResult = await InvitePartiesController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
-          partyIds: [partyId],
-        },
+          partyIds: [partyId]},
         requestContext: createTestRequestContext({
           userId: 'user-123',
           email: 'owner@test.com'
@@ -208,7 +206,7 @@ describe('Single Signer Flow', () => {
 
       // Step 2: Record Consent (decline)
       const recordConsentResult = await RecordConsentController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
           signerId: partyId,
           consentGiven: false,
@@ -225,7 +223,7 @@ describe('Single Signer Flow', () => {
 
       // Step 3: Decline Signing
       const declineSigningResult = await DeclineSigningController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
           signerId: partyId,
           reason: 'I do not agree with the terms'
@@ -243,10 +241,9 @@ describe('Single Signer Flow', () => {
     it('should handle signer decline with reason', async () => {
       // Step 1: Invite Party
       const invitePartiesResult = await InvitePartiesController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
-          partyIds: [partyId],
-        },
+          partyIds: [partyId]},
         requestContext: createTestRequestContext({
           userId: 'user-123',
           email: 'owner@test.com'
@@ -258,7 +255,7 @@ describe('Single Signer Flow', () => {
 
       // Step 2: Decline Signing with detailed reason
       const declineSigningResult = await DeclineSigningController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
           signerId: partyId,
           reason: 'I need to review the document with my legal team before signing'
@@ -278,10 +275,9 @@ describe('Single Signer Flow', () => {
     it('should handle signer timeout', async () => {
       // Step 1: Invite Party
       const invitePartiesResult = await InvitePartiesController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
-          partyIds: [partyId],
-        },
+          partyIds: [partyId]},
         requestContext: createTestRequestContext({
           userId: 'user-123',
           email: 'owner@test.com'
@@ -302,7 +298,7 @@ describe('Single Signer Flow', () => {
     it('should handle document access timeout', async () => {
       // Step 1: Prepare Signing
       const prepareSigningResult = await PrepareSigningController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
           signerId: partyId
         },
@@ -327,10 +323,9 @@ describe('Single Signer Flow', () => {
     it('should handle document modifications during signing', async () => {
       // Step 1: Invite Party
       const invitePartiesResult = await InvitePartiesController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
-          partyIds: [partyId],
-        },
+          partyIds: [partyId]},
         requestContext: createTestRequestContext({
           userId: 'user-123',
           email: 'owner@test.com'
@@ -342,7 +337,7 @@ describe('Single Signer Flow', () => {
 
       // Step 2: Record Consent
       const recordConsentResult = await RecordConsentController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
           signerId: partyId,
           consentGiven: true,
@@ -359,7 +354,7 @@ describe('Single Signer Flow', () => {
 
       // Step 3: Prepare Signing
       const prepareSigningResult = await PrepareSigningController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
           signerId: partyId
         },
@@ -383,10 +378,9 @@ describe('Single Signer Flow', () => {
     it('should handle document replacement during signing', async () => {
       // Step 1: Invite Party
       const invitePartiesResult = await InvitePartiesController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
-          partyIds: [partyId],
-        },
+          partyIds: [partyId]},
         requestContext: createTestRequestContext({
           userId: 'user-123',
           email: 'owner@test.com'
@@ -401,7 +395,7 @@ describe('Single Signer Flow', () => {
       const newPdfDigest = calculatePdfDigest(newTestPdf);
 
       const replaceDocumentResult = await CreateDocumentController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
           name: 'Updated Single Signer Test Document.pdf',
           contentType: 'application/pdf',
@@ -427,7 +421,7 @@ describe('Single Signer Flow', () => {
   describe('Error Handling', () => {
     it('should handle invalid signer ID', async () => {
       const result = await RecordConsentController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
           signerId: 'invalid-signer-id',
           consentGiven: true,
@@ -446,7 +440,7 @@ describe('Single Signer Flow', () => {
 
     it('should handle invalid envelope ID', async () => {
       const result = await RecordConsentController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: 'invalid-envelope-id' },
+        pathParameters: { id: 'invalid-envelope-id' },
         body: {
           signerId: partyId,
           consentGiven: true,
@@ -465,7 +459,7 @@ describe('Single Signer Flow', () => {
 
     it('should handle missing consent text', async () => {
       const result = await RecordConsentController(createApiGatewayEvent({
-        pathParameters: { tenantId, id: envelopeId },
+        pathParameters: { id: envelopeId },
         body: {
           signerId: partyId,
           consentGiven: true,

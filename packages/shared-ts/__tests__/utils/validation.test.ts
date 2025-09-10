@@ -13,8 +13,7 @@ import {
   isNonEmptyString,
   parseIntStrict,
   isEmail,
-  isUuidV4,
-} from "../../src/utils/validation.js";
+  isUuidV4} from "../../src/utils/validation.js";
 
 /** assert */
 describe("assert", () => {

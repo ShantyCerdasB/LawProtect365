@@ -6,7 +6,6 @@
  */
 
 import { z } from "@lawprotect/shared-ts";
-import { TenantIdValidationSchema } from "@/domain/value-objects/ids";
 import { ENVELOPE_STATUSES, ENVELOPE_VALIDATION_RULES, PAGINATION_LIMITS } from "../../../domain/values/enums";
 
 // Re-export commonly used enums and constants
@@ -17,19 +16,10 @@ export { ENVELOPE_STATUSES, ENVELOPE_VALIDATION_RULES, PAGINATION_LIMITS };
  * ────────────────────────────────────────────────────────────────────────────*/
 
 /**
- * @description Path parameters schema for operations requiring tenantId and envelopeId
+ * @description Path parameters schema for operations requiring  envelopeId
  */
 export const EnvelopeWithIdParams = z.object({
-  tenantId: TenantIdValidationSchema,
-  envelopeId: z.string().min(1),
-});
-
-/**
- * @description Path parameters schema for operations requiring only tenantId
- */
-export const TenantOnlyParams = z.object({
-  tenantId: TenantIdValidationSchema,
-});
+  envelopeId: z.string().min(1)});
 
 /* ────────────────────────────────────────────────────────────────────────────
  * COMMON FIELDS
@@ -64,9 +54,9 @@ export const EnvelopeDescriptionField = z.string()
   .max(ENVELOPE_VALIDATION_RULES.MAX_DESCRIPTION_LENGTH);
 
 /**
- * @description Envelope owner identifier field
+ * @description Envelope owner email field
  */
-export const EnvelopeOwnerIdField = z.string();
+export const EnvelopeOwnerEmailField = z.string().email();
 
 /**
  * @description Creation timestamp field
@@ -88,8 +78,7 @@ export const UpdatedAtField = z.string();
 export const BaseEnvelopeFields = z.object({
   id: EnvelopeIdField,
   status: EnvelopeStatusField,
-  updatedAt: UpdatedAtField,
-});
+  updatedAt: UpdatedAtField});
 
 /**
  * @description Full envelope fields including all common properties
@@ -97,37 +86,28 @@ export const BaseEnvelopeFields = z.object({
 export const FullEnvelopeFields = BaseEnvelopeFields.extend({
   title: EnvelopeTitleField,
   createdAt: CreatedAtField,
-  ownerId: EnvelopeOwnerIdField,
-});
+  ownerEmail: EnvelopeOwnerEmailField});
 
 /**
  * @description Envelope name and description fields
  */
 export const EnvelopeNameFields = z.object({
   name: EnvelopeNameField,
-  description: EnvelopeDescriptionField.optional(),
-});
+  description: EnvelopeDescriptionField.optional()});
 
 /**
  * @description Envelope status field with enum validation
  */
 export const EnvelopeStatusFields = z.object({
-  status: z.enum(ENVELOPE_STATUSES).optional(),
-});
+  status: z.enum(ENVELOPE_STATUSES).optional()});
 
 /* ────────────────────────────────────────────────────────────────────────────
  * TYPE EXPORTS
  * ────────────────────────────────────────────────────────────────────────────*/
 
 export type EnvelopeWithIdParams = z.infer<typeof EnvelopeWithIdParams>;
-export type TenantOnlyParams = z.infer<typeof TenantOnlyParams>;
 export type BaseEnvelopeFields = z.infer<typeof BaseEnvelopeFields>;
 export type FullEnvelopeFields = z.infer<typeof FullEnvelopeFields>;
 export type EnvelopeNameFields = z.infer<typeof EnvelopeNameFields>;
 export type EnvelopeStatusFields = z.infer<typeof EnvelopeStatusFields>;
-
-
-
-
-
 

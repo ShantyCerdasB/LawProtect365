@@ -47,14 +47,12 @@
 import {
   S3Client,
   GetObjectCommand,
-  PutObjectCommand,
-} from "@aws-sdk/client-s3";
+  PutObjectCommand} from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 import type {
   PresignGetObjectInput,
-  PresignPutObjectInput,
-} from "../s3Presign.js";
+  PresignPutObjectInput} from "../s3Presign.js";
 import { mapAwsError } from "../../index.js";
 import type { S3PresignerOptions } from "./types.js";
 
@@ -119,11 +117,9 @@ export class S3Presigner {
         Bucket: input.bucket,
         Key: input.key,
         ResponseContentType: input.responseContentType,
-        ResponseContentDisposition: input.responseContentDisposition,
-      });
+        ResponseContentDisposition: input.responseContentDisposition});
       return await getSignedUrl(this.s3, cmd, {
-        expiresIn: Math.max(1, input.expiresInSeconds ?? this.defaultTtl),
-      });
+        expiresIn: Math.max(1, input.expiresInSeconds ?? this.defaultTtl)});
     } catch (err) {
       throw mapAwsError(err, ctx);
     }
@@ -163,21 +159,13 @@ export class S3Presigner {
         ...(kmsKeyId
           ? {
               ServerSideEncryption: "aws:kms",
-              SSEKMSKeyId: kmsKeyId,
-            }
-          : {}),
-      });
+              SSEKMSKeyId: kmsKeyId}
+          : {})});
       return await getSignedUrl(this.s3, cmd, {
-        expiresIn: Math.max(1, input.expiresInSeconds ?? this.defaultTtl),
-      });
+        expiresIn: Math.max(1, input.expiresInSeconds ?? this.defaultTtl)});
     } catch (err) {
       throw mapAwsError(err, ctx);
     }
   }
 }
-
-
-
-
-
 

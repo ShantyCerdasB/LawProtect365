@@ -8,18 +8,13 @@ describe('actorFromCtx', () => {
         authorizer: {
           actor: {
             userId: 'user-123',
-            email: 'user@example.com',
-          },
-        },
-      },
-    } as any;
+            email: 'user@example.com'}}}} as any;
 
     const result = actorFromCtx(mockEvent);
 
     expect(result).toEqual({
       userId: 'user-123',
-      email: 'user@example.com',
-    });
+      email: 'user@example.com'});
   });
 
   it('should extract actor from API Gateway v2 event', () => {
@@ -28,26 +23,19 @@ describe('actorFromCtx', () => {
         authorizer: {
           actor: {
             userId: 'user-456',
-            email: 'user2@example.com',
-          },
-        },
-      },
-    } as any;
+            email: 'user2@example.com'}}}} as any;
 
     const result = actorFromCtx(mockEvent);
 
     expect(result).toEqual({
       userId: 'user-456',
-      email: 'user2@example.com',
-    });
+      email: 'user2@example.com'});
   });
 
   it('should throw error when actor is not found in v1 event', () => {
     const mockEvent: APIGatewayProxyEvent = {
       requestContext: {
-        authorizer: {},
-      },
-    } as any;
+        authorizer: {}}} as any;
 
     expect(() => actorFromCtx(mockEvent)).toThrow('Actor context not found in request context');
   });
@@ -55,9 +43,7 @@ describe('actorFromCtx', () => {
   it('should throw error when actor is not found in v2 event', () => {
     const mockEvent: APIGatewayProxyEventV2 = {
       requestContext: {
-        authorizer: {},
-      },
-    } as any;
+        authorizer: {}}} as any;
 
     expect(() => actorFromCtx(mockEvent)).toThrow('Actor context not found in request context');
   });
@@ -65,9 +51,7 @@ describe('actorFromCtx', () => {
   it('should throw error when authorizer is not an object in v1 event', () => {
     const mockEvent: APIGatewayProxyEvent = {
       requestContext: {
-        authorizer: 'invalid',
-      },
-    } as any;
+        authorizer: 'invalid'}} as any;
 
     expect(() => actorFromCtx(mockEvent)).toThrow('Actor context not found in request context');
   });
@@ -75,9 +59,7 @@ describe('actorFromCtx', () => {
   it('should throw error when authorizer is not an object in v2 event', () => {
     const mockEvent: APIGatewayProxyEventV2 = {
       requestContext: {
-        authorizer: 'invalid',
-      },
-    } as any;
+        authorizer: 'invalid'}} as any;
 
     expect(() => actorFromCtx(mockEvent)).toThrow('Actor context not found in request context');
   });
@@ -90,8 +72,7 @@ describe('actorFromCtx', () => {
 
   it('should throw error when authorizer is missing', () => {
     const mockEvent = {
-      requestContext: {},
-    } as any;
+      requestContext: {}} as any;
 
     expect(() => actorFromCtx(mockEvent)).toThrow('Actor context not found in request context');
   });
@@ -100,11 +81,7 @@ describe('actorFromCtx', () => {
     const mockEvent: APIGatewayProxyEvent = {
       requestContext: {
         authorizer: {
-          tenantId: 'tenant-123',
-          otherProperty: 'value',
-        },
-      },
-    } as any;
+          otherProperty: 'value'}}} as any;
 
     expect(() => actorFromCtx(mockEvent)).toThrow('Actor context not found in request context');
   });
@@ -113,11 +90,7 @@ describe('actorFromCtx', () => {
     const mockEvent: APIGatewayProxyEventV2 = {
       requestContext: {
         authorizer: {
-          tenantId: 'tenant-123',
-          otherProperty: 'value',
-        },
-      },
-    } as any;
+          otherProperty: 'value'}}} as any;
 
     expect(() => actorFromCtx(mockEvent)).toThrow('Actor context not found in request context');
   });

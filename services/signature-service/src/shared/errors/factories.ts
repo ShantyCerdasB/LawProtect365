@@ -22,8 +22,7 @@ import {
   NotFoundError,
   TooManyRequestsError,
   UnauthorizedError,
-  UnprocessableEntityError,
-} from "@lawprotect/shared-ts";
+  UnprocessableEntityError} from "@lawprotect/shared-ts";
 import { SignatureErrorCodes, type AnyErrorCode } from "./codes";
 
 /**
@@ -201,23 +200,6 @@ export const signatureFailed = (details?: unknown) =>
 export const signatureHashMismatch = (details?: unknown) =>
   new UnprocessableEntityError("Signature hash mismatch", SignatureErrorCodes.SIGNATURE_HASH_MISMATCH, details);
 
-/**
- * @description Creates an UnauthorizedError for invalid OTP (401).
- *
- * @param {unknown} details - Optional additional error details
- * @returns {UnauthorizedError} Error instance for invalid OTP
- */
-export const otpInvalid = (details?: unknown) =>
-  new UnauthorizedError("Invalid OTP", SignatureErrorCodes.OTP_INVALID, details);
-
-/**
- * @description Creates an UnauthorizedError for expired OTP (401).
- *
- * @param {unknown} details - Optional additional error details
- * @returns {UnauthorizedError} Error instance for expired OTP
- */
-export const otpExpired = (details?: unknown) =>
-  new UnauthorizedError("OTP expired", SignatureErrorCodes.OTP_EXPIRED, details);
 
 /**
  * @description Creates an UnauthorizedError for invalid request token (401).
@@ -264,8 +246,6 @@ export const rateLimitEnvelopeSend = (retryAfterSeconds = 60, details?: unknown)
   return err;
 };
 
-
-
 /**
  * @description Creates a TooManyRequestsError for party invitation rate limiting (429).
  *
@@ -282,5 +262,4 @@ export const rateLimitPartyInvite = (retryAfterSeconds = 60, details?: unknown) 
   (err as any).retryAfterSeconds = retryAfterSeconds;
   return err;
 };
-
 

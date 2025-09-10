@@ -9,9 +9,7 @@ describe('getHeader', () => {
       headers: {
         'content-type': 'application/json',
         'Authorization': 'Bearer token123',
-        'X-Custom-Header': 'custom-value',
-      },
-    };
+        'X-Custom-Header': 'custom-value'}};
   });
 
   it('should return header value for exact match', () => {
@@ -71,9 +69,7 @@ describe('getPathParam', () => {
     mockEvent = {
       pathParameters: {
         id: '123',
-        userId: 'user-456',
-      },
-    };
+        userId: 'user-456'}};
   });
 
   it('should return path parameter value when it exists', () => {
@@ -128,9 +124,7 @@ describe('getQueryParam', () => {
       queryStringParameters: {
         page: '1',
         limit: '10',
-        search: 'test query',
-      },
-    };
+        search: 'test query'}};
   });
 
   it('should return query parameter value when it exists', () => {
@@ -183,8 +177,7 @@ describe('getJsonBody', () => {
   beforeEach(() => {
     mockEvent = {
       body: '{"name": "test", "value": 123}',
-      isBase64Encoded: false,
-    };
+      isBase64Encoded: false};
   });
 
   it('should parse valid JSON body', () => {

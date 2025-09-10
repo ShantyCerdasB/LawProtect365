@@ -1,7 +1,7 @@
 /**
  * @file ControllerInputs.ts
- * @summary Inputs for party controllers (without tenantId)
- * @description Defines the input contracts for party controllers, tenantId is injected by the factory
+ * @summary Inputs for party controllers (without )
+ * @description Defines the input contracts for party controllers, is injected by the factory
  */
 
 import { PartyRole } from "@/domain/values/enums";
@@ -13,7 +13,7 @@ import type { EnvelopeId, PartyId } from "@/domain/value-objects/ids";
 
 /**
  * @summary Input for creating a party (controller level)
- * @description Parameters for creating a new party, tenantId is injected by factory
+ * @description Parameters for creating a new party, is injected by factory
  */
 export interface CreatePartyControllerInput {
   /** Envelope identifier */
@@ -34,7 +34,7 @@ export interface CreatePartyControllerInput {
 
 /**
  * @summary Input for updating a party (controller level)
- * @description Parameters for updating an existing party, tenantId is injected by factory
+ * @description Parameters for updating an existing party, is injected by factory
  */
 export interface UpdatePartyControllerInput {
   /** Envelope identifier */
@@ -57,7 +57,7 @@ export interface UpdatePartyControllerInput {
 
 /**
  * @summary Input for deleting a party (controller level)
- * @description Parameters for deleting a party, tenantId is injected by factory
+ * @description Parameters for deleting a party, is injected by factory
  */
 export interface DeletePartyControllerInput {
   /** Envelope identifier */
@@ -65,9 +65,4 @@ export interface DeletePartyControllerInput {
   /** Party identifier */
   readonly partyId: PartyId;
 }
-
-
-
-
-
 

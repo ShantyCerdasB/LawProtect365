@@ -26,9 +26,7 @@ export class GetAuditEventAppService {
    */
   async execute(input: GetAuditEventAppInput): Promise<GetAuditEventAppResult | null> {
     const result = await this.auditQueries.getAuditEvent({
-      eventId: input.eventId,
-      tenantId: input.tenantId,
-    });
+      eventId: input.eventId});
 
     if (!result) {
       return null;
@@ -41,7 +39,6 @@ export class GetAuditEventAppService {
       actor: result.actorDisplay,
       action: result.actionDisplay,
       payload: result.event.metadata || {},
-      metadata: result.event.metadata || {},
-    };
+      metadata: result.event.metadata || {}};
   }
 };

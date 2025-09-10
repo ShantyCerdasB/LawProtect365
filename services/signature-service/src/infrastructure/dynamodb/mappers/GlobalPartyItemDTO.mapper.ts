@@ -6,6 +6,7 @@
 
 import type { GlobalPartyItemDTO } from "../../../presentation/schemas/global-parties/GlobalPartyItemDTO.schema";
 import type { GlobalPartyExtended } from "../../../domain/types/global-parties/GlobalPartiesTypes";
+import { PartyId } from "@/domain";
 
 /**
  * @summary Maps DynamoDB DTO to domain row
@@ -14,8 +15,7 @@ import type { GlobalPartyExtended } from "../../../domain/types/global-parties/G
  */
 export function dtoToGlobalPartyExtended(dto: GlobalPartyItemDTO): GlobalPartyExtended {
   return {
-    partyId: dto.partyId as any, // Cast to PartyId branded type
-    tenantId: dto.tenantId as any, // Cast to TenantId branded type
+    partyId: dto.partyId as PartyId,
     name: dto.name,
     email: dto.email,
     emails: dto.emails,
@@ -28,21 +28,17 @@ export function dtoToGlobalPartyExtended(dto: GlobalPartyItemDTO): GlobalPartyEx
     metadata: dto.metadata,
     attributes: dto.attributes,
     preferences: {
-      defaultAuth: dto.preferences.defaultAuth,
-      defaultLocale: dto.preferences.defaultLocale,
-    },
+      defaultAuth: dto.preferences.defaultAuth as any,
+      defaultLocale: dto.preferences.defaultLocale},
     notificationPreferences: {
       email: dto.notificationPreferences.email,
-      sms: dto.notificationPreferences.sms,
-    },
+      sms: dto.notificationPreferences.sms},
     stats: {
       signedCount: dto.stats.signedCount,
       lastSignedAt: dto.stats.lastSignedAt,
-      totalEnvelopes: dto.stats.totalEnvelopes,
-    },
+      totalEnvelopes: dto.stats.totalEnvelopes},
     createdAt: dto.createdAt,
-    updatedAt: dto.updatedAt,
-  };
+    updatedAt: dto.updatedAt};
 }
 
 /**
@@ -61,7 +57,6 @@ export function globalPartyRowToDto(
     pk,
     sk,
     type: "GlobalParty",
-    tenantId: row.tenantId as string,
     partyId: row.partyId as string,
     name: row.name,
     email: row.email,
@@ -78,12 +73,6 @@ export function globalPartyRowToDto(
     notificationPreferences: row.notificationPreferences,
     stats: row.stats,
     createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
-  };
+    updatedAt: row.updatedAt};
 }
-
-
-
-
-
 

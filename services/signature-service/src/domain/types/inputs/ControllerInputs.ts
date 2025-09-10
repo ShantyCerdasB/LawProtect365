@@ -1,7 +1,7 @@
 /**
  * @file ControllerInputs.ts
- * @summary Inputs for input controllers (without tenantId and actor)
- * @description Defines the input contracts for input controllers, tenantId and actor are injected by the factory
+ * @summary Inputs for input controllers 
+ * @description Defines the input contracts for input controllers, and actor are injected by the factory
  */
 
 import type { EnvelopeId, InputId, PartyId } from "@/domain/value-objects/ids";
@@ -35,7 +35,7 @@ export interface InputWithIdControllerInput extends BaseInputControllerInput {
 
 /**
  * @summary Input for creating inputs (controller level)
- * @description Parameters for creating new inputs, tenantId and actor are injected by factory
+ * @description Parameters for creating new inputs, and actor are injected by factory
  */
 export interface CreateInputsControllerInput extends BaseInputControllerInput {
   /** Document identifier */
@@ -50,7 +50,7 @@ export interface CreateInputsControllerInput extends BaseInputControllerInput {
 
 /**
  * @summary Input for updating an input (controller level)
- * @description Parameters for updating an existing input, tenantId and actor are injected by factory
+ * @description Parameters for updating an existing input, and actor are injected by factory
  */
 export interface UpdateInputControllerInput extends InputWithIdControllerInput {
   /** Updates to apply to the input */
@@ -63,7 +63,7 @@ export interface UpdateInputControllerInput extends InputWithIdControllerInput {
 
 /**
  * @summary Input for updating input positions (controller level)
- * @description Parameters for updating positions of multiple inputs, tenantId and actor are injected by factory
+ * @description Parameters for updating positions of multiple inputs, and actor are injected by factory
  */
 export interface UpdateInputPositionsControllerInput extends BaseInputControllerInput {
   /** Array of items with position updates */
@@ -76,7 +76,7 @@ export interface UpdateInputPositionsControllerInput extends BaseInputController
 
 /**
  * @summary Input for deleting an input (controller level)
- * @description Parameters for deleting an input, tenantId and actor are injected by factory
+ * @description Parameters for deleting an input, and actor are injected by factory
  */
 export interface DeleteInputControllerInput extends InputWithIdControllerInput {
   // No additional fields needed for DELETE
@@ -88,7 +88,7 @@ export interface DeleteInputControllerInput extends InputWithIdControllerInput {
 
 /**
  * @summary Input for getting an input by ID (query controller)
- * @description Parameters for retrieving a single input, tenantId and actor are injected by factory
+ * @description Parameters for retrieving a single input, and actor are injected by factory
  */
 export interface GetInputQueryControllerInput extends InputWithIdControllerInput {
   // No additional fields needed for GET
@@ -96,7 +96,7 @@ export interface GetInputQueryControllerInput extends InputWithIdControllerInput
 
 /**
  * @summary Input for listing inputs (query controller)
- * @description Parameters for listing inputs with optional filters, tenantId and actor are injected by factory
+ * @description Parameters for listing inputs with optional filters, and actor are injected by factory
  */
 export interface ListInputsQueryControllerInput extends BaseInputControllerInput {
   /** Maximum number of items to return */
@@ -112,9 +112,4 @@ export interface ListInputsQueryControllerInput extends BaseInputControllerInput
   /** Filter by required status */
   readonly required?: boolean;
 }
-
-
-
-
-
 

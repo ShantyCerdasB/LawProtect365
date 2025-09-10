@@ -8,8 +8,7 @@ jest.mock("../../src/aws/errors.js", () => ({
   isAwsAccessDenied: jest.fn(() => false),
   isAwsRetryable: jest.fn(() => false),
   isAwsServiceUnavailable: jest.fn(() => false),
-  isAwsThrottling: jest.fn(() => false),
-}));
+  isAwsThrottling: jest.fn(() => false)}));
 
 import { mapAwsError, ErrorCodes } from "../../src/errors";
 import * as AwsErr from "../../src/aws/errors.js";
@@ -65,8 +64,7 @@ describe("mapAwsError", () => {
     // Conflict
     (AwsErr.extractAwsError as jest.Mock).mockReturnValueOnce({
       name: "ConditionalCheckFailedException",
-      code: undefined,
-    });
+      code: undefined});
     let err = mapAwsError(new Error("x"), ctx) as any;
     expect(err.code).toBe(ErrorCodes.COMMON_CONFLICT);
     expect(String(err.message)).toContain(`${ctx}: conflict`);
@@ -74,8 +72,7 @@ describe("mapAwsError", () => {
     // Not found (alternate name)
     (AwsErr.extractAwsError as jest.Mock).mockReturnValueOnce({
       name: "NoSuchKey",
-      code: undefined,
-    });
+      code: undefined});
     err = mapAwsError(new Error("x"), ctx) as any;
     expect(err.code).toBe(ErrorCodes.COMMON_NOT_FOUND);
     expect(String(err.message)).toContain(`${ctx}: not found`);
@@ -83,8 +80,7 @@ describe("mapAwsError", () => {
     // Bad request (alternate name)
     (AwsErr.extractAwsError as jest.Mock).mockReturnValueOnce({
       name: "InvalidParameterException",
-      code: undefined,
-    });
+      code: undefined});
     err = mapAwsError(new Error("x"), ctx) as any;
     expect(err.code).toBe(ErrorCodes.COMMON_BAD_REQUEST);
     expect(String(err.message)).toContain(`${ctx}: bad request`);
@@ -93,8 +89,7 @@ describe("mapAwsError", () => {
   it("falls back to InternalError when nothing matches", () => {
     (AwsErr.extractAwsError as jest.Mock).mockReturnValue({
       name: undefined,
-      code: undefined,
-    });
+      code: undefined});
 
     const err = mapAwsError(new Error("x"), ctx) as any;
 
@@ -105,8 +100,7 @@ describe("mapAwsError", () => {
   it("uses error.code when name is undefined in lookup", () => {
     (AwsErr.extractAwsError as jest.Mock).mockReturnValue({
       name: undefined,
-      code: "ResourceNotFoundException",
-    });
+      code: "ResourceNotFoundException"});
 
     const err = mapAwsError(new Error("x"), ctx) as any;
 

@@ -18,17 +18,8 @@ export const SearchPartiesByEmailController = createQueryController<SearchPartie
   appServiceClass: PartiesQueryService,
   createDependencies: (c: any) => c.parties.queriesPort,
   extractParams: (path: any, query: any) => ({
-    tenantId: path.tenantId,
     envelopeId: path.envelopeId,
-    email: query.email,
-  }),
+    email: query.email}),
   responseType: "ok"
 });
-
-
-
-
-
-
-
 

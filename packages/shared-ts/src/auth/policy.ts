@@ -52,18 +52,13 @@ export class Policy {
  */
 export const allowSuperAdmin: PolicyRule = (s) => hasRole(s.roles, "super_admin");
 
-/**
- * Allows admins within the same tenant.
- */
-export const allowAdminSameTenant: PolicyRule = (s, _a, r) =>
-  hasRole(s.roles, "admin") && Boolean(s.tenantId && r.tenantId && s.tenantId === r.tenantId);
 
 /**
  * Allows when explicit permission or scope is present.
  * Builds "resource:action" and checks in subject permissions/scopes.
  */
-export const allowPermissionOrScope: PolicyRule = (s, action, resource) => {
-  const perm = `${resource.resource}:${action}` as Permission;
+export const allowPermissionOrScope: PolicyRule = (s, _action, resource) => {
+  const perm = `${resource.resource}:action` as Permission;
   const hasPerm = Boolean(s.permissions?.includes(perm));
   const hasScope = Boolean(s.scopes?.includes(perm as unknown as Scope));
   return hasPerm || hasScope;

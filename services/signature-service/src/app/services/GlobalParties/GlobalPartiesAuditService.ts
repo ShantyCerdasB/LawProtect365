@@ -8,7 +8,7 @@
 import { BaseAuditService } from "../../../domain/services/BaseAuditService";
 import type { AuditContext, ActorContext } from "@lawprotect/shared-ts";
 import { nowIso } from "@lawprotect/shared-ts";
-import type {  PartyId, EnvelopeId, TenantId } from "@/domain/value-objects/ids";
+import type {  PartyId, EnvelopeId } from "@/domain/value-objects/ids";
 
 /**
  * @summary Audit service for Global Parties business logic
@@ -33,13 +33,11 @@ export class GlobalPartiesAuditService extends BaseAuditService {
     }
 
     await this.auditRepo.record({
-      tenantId: context.tenantId,
       envelopeId: context.envelopeId as EnvelopeId,
       type: details.eventType as string,
       occurredAt: nowIso(),
       actor: context.actor,
-      metadata: details,
-    });
+      metadata: details});
   }
 
   /**
@@ -57,8 +55,7 @@ export class GlobalPartiesAuditService extends BaseAuditService {
     await this.logBusinessEvent(context, {
       eventType: "global_party.created",
       partyId,
-      ...details,
-    });
+      ...details});
   }
 
   /**
@@ -76,8 +73,7 @@ export class GlobalPartiesAuditService extends BaseAuditService {
     await this.logBusinessEvent(context, {
       eventType: "global_party.updated",
       partyId,
-      ...details,
-    });
+      ...details});
   }
 
   /**
@@ -95,8 +91,7 @@ export class GlobalPartiesAuditService extends BaseAuditService {
     await this.logBusinessEvent(context, {
       eventType: "global_party.deleted",
       partyId,
-      ...details,
-    });
+      ...details});
   }
 
   /**
@@ -114,58 +109,40 @@ export class GlobalPartiesAuditService extends BaseAuditService {
     await this.logBusinessEvent(context, {
       eventType: "global_party.accessed",
       partyId,
-      ...details,
-    });
+      ...details});
   }
 
   // Implementation of GlobalPartiesAuditService interface methods
-  async logCreate(partyId: PartyId, tenantId: TenantId, actor: ActorContext): Promise<void> {
+  async logCreate(partyId: PartyId, actor: ActorContext): Promise<void> {
     await this.logBusinessEvent({
-      tenantId,
       actor,
-      envelopeId: undefined,
-    }, {
+      envelopeId: undefined}, {
       eventType: "global_party.created",
-      partyId,
-    });
+      partyId});
   }
 
-  async logUpdate(partyId: PartyId, tenantId: TenantId, actor: ActorContext): Promise<void> {
+  async logUpdate(partyId: PartyId, actor: ActorContext): Promise<void> {
     await this.logBusinessEvent({
-      tenantId,
       actor,
-      envelopeId: undefined,
-    }, {
+      envelopeId: undefined}, {
       eventType: "global_party.updated",
-      partyId,
-    });
+      partyId});
   }
 
-  async logDelete(partyId: PartyId, tenantId: TenantId, actor: ActorContext): Promise<void> {
+  async logDelete(partyId: PartyId, actor: ActorContext): Promise<void> {
     await this.logBusinessEvent({
-      tenantId,
       actor,
-      envelopeId: undefined,
-    }, {
+      envelopeId: undefined}, {
       eventType: "global_party.deleted",
-      partyId,
-    });
+      partyId});
   }
 
-  async logAccess(partyId: PartyId, tenantId: TenantId, actor: ActorContext): Promise<void> {
+  async logAccess(partyId: PartyId, actor: ActorContext): Promise<void> {
     await this.logBusinessEvent({
-      tenantId,
       actor,
-      envelopeId: undefined,
-    }, {
+      envelopeId: undefined}, {
       eventType: "global_party.accessed",
-      partyId,
-    });
+      partyId});
   }
 }
-
-
-
-
-
 

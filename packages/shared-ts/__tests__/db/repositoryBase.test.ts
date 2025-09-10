@@ -29,16 +29,14 @@ class TestRepository extends RepositoryBase<TestDomain, string, TestSpec> {
     return {
       id: data.id,
       name: data.name,
-      value: data.value,
-    };
+      value: data.value};
   }
 
   protected toModel(entity: Partial<TestDomain>): unknown {
     return {
       id: entity.id,
       name: entity.name,
-      value: entity.value,
-    };
+      value: entity.value};
   }
 
   protected whereById(id: string): unknown {
@@ -64,8 +62,7 @@ class TestRepository extends RepositoryBase<TestDomain, string, TestSpec> {
     const entity = {
       id: data.id || 'new-id',
       name: data.name || 'New Entity',
-      value: data.value || 0,
-    };
+      value: data.value || 0};
     return this.toDomain(entity);
   }
 
@@ -73,8 +70,7 @@ class TestRepository extends RepositoryBase<TestDomain, string, TestSpec> {
     const entity = {
       id,
       name: patch.name || 'Updated Entity',
-      value: patch.value || 0,
-    };
+      value: patch.value || 0};
     return this.toDomain(entity);
   }
 
@@ -120,8 +116,7 @@ describe('RepositoryBase', () => {
       expect(result).toEqual({
         id: 'test',
         name: 'Test',
-        value: 123,
-      });
+        value: 123});
     });
 
     it('implements toModel method', () => {
@@ -130,8 +125,7 @@ describe('RepositoryBase', () => {
       expect(result).toEqual({
         id: 'test',
         name: 'Test',
-        value: 123,
-      });
+        value: 123});
     });
 
     it('implements whereById method', () => {
@@ -144,8 +138,7 @@ describe('RepositoryBase', () => {
       const result = (repository as any).whereFromSpec(spec);
       expect(result).toEqual({
         name: 'test',
-        value: { gte: 10 },
-      });
+        value: { gte: 10 }});
     });
 
     it('handles empty spec in whereFromSpec', () => {
@@ -167,8 +160,7 @@ describe('RepositoryBase', () => {
       expect(result).toEqual({
         id: 'existing',
         name: 'Test Entity',
-        value: 42,
-      });
+        value: 42});
     });
 
     it('returns null for non-existing entity', async () => {
@@ -182,8 +174,7 @@ describe('RepositoryBase', () => {
       expect(result).toEqual({
         id: 'new-id',
         name: 'New Test',
-        value: 100,
-      });
+        value: 100});
     });
 
     it('creates entity with provided id', async () => {
@@ -192,8 +183,7 @@ describe('RepositoryBase', () => {
       expect(result).toEqual({
         id: 'custom-id',
         name: 'Custom',
-        value: 50,
-      });
+        value: 50});
     });
 
     it('updates existing entity', async () => {
@@ -202,8 +192,7 @@ describe('RepositoryBase', () => {
       expect(result).toEqual({
         id: 'test-id',
         name: 'Updated Name',
-        value: 200,
-      });
+        value: 200});
     });
 
     it('deletes entity without throwing', async () => {

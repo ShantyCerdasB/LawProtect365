@@ -15,8 +15,7 @@ const inMemoryDb = {
   documents: new Map<string, any>(),
   parties: new Map<string, any>(),
   consents: new Map<string, any>(),
-  audit: new Map<string, any>(),
-};
+  audit: new Map<string, any>()};
 
 // Mock repositories directly with in-memory database
 jest.mock('@/infrastructure/dynamodb/InputRepositoryDdb', () => ({
@@ -27,8 +26,7 @@ jest.mock('@/infrastructure/dynamodb/InputRepositoryDdb', () => ({
       console.log('InputRepositoryDdb.listByEnvelope for envelopeId:', envelopeId, 'found:', inputs.length, 'inputs');
       return {
         items: inputs,
-        count: inputs.length,
-      };
+        count: inputs.length};
     }),
     create: jest.fn().mockImplementation(async (input) => {
       inMemoryDb.inputs.set(input.inputId, input);
@@ -45,9 +43,7 @@ jest.mock('@/infrastructure/dynamodb/InputRepositoryDdb', () => ({
     }),
     getById: jest.fn().mockImplementation(async ({ inputId }) => {
       return inMemoryDb.inputs.get(inputId) || null;
-    }),
-  })),
-}));
+    })}))}));
 
 jest.mock('@/infrastructure/dynamodb/EnvelopeRepositoryDdb', () => ({
   EnvelopeRepositoryDdb: jest.fn().mockImplementation(() => ({
@@ -76,9 +72,7 @@ jest.mock('@/infrastructure/dynamodb/EnvelopeRepositoryDdb', () => ({
         return updated;
       }
       return null;
-    }),
-  })),
-}));
+    })}))}));
 
 jest.mock('@/infrastructure/dynamodb/DocumentRepositoryDdb', () => ({
   DocumentRepositoryDdb: jest.fn().mockImplementation(() => ({
@@ -95,11 +89,8 @@ jest.mock('@/infrastructure/dynamodb/DocumentRepositoryDdb', () => ({
         .filter(document => document.envelopeId === envelopeId);
       return {
         items: documents,
-        count: documents.length,
-      };
-    }),
-  })),
-}));
+        count: documents.length};
+    })}))}));
 
 jest.mock('@/infrastructure/dynamodb/PartyRepositoryDdb', () => ({
   PartyRepositoryDdb: jest.fn().mockImplementation(() => ({
@@ -126,10 +117,49 @@ jest.mock('@/infrastructure/dynamodb/PartyRepositoryDdb', () => ({
         .filter(party => party.envelopeId === envelopeId);
       return {
         items: parties,
-        count: parties.length,
+        count: parties.length};
+    })}))}));
+
+// Mock AuditRepositoryDdb with in-memory database
+jest.mock('@/infrastructure/dynamodb/AuditRepositoryDdb', () => ({
+  AuditRepositoryDdb: jest.fn().mockImplementation(() => ({
+    record: jest.fn().mockImplementation(async (candidate) => {
+      console.log('=== AUDIT REPOSITORY DEBUG ===');
+      console.log('Candidate received:', JSON.stringify(candidate, null, 2));
+      console.log('Candidate type:', typeof candidate);
+      console.log('Candidate keys:', Object.keys(candidate || {}));
+      console.log('=== END AUDIT REPOSITORY DEBUG ===');
+      
+      const auditEvent = {
+        id: `audit-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        envelopeId: candidate.envelopeId,
+        type: candidate.type,
+        occurredAt: candidate.occurredAt,
+        actor: candidate.actor,
+        metadata: candidate.metadata,
+        hash: `hash-${Date.now()}`,
+        prevHash: candidate.prevHash
       };
+      inMemoryDb.audit.set(auditEvent.id, auditEvent);
+      console.log('AuditRepositoryDdb.record:', auditEvent.id);
+      return auditEvent;
     }),
-  })),
+    getById: jest.fn().mockImplementation(async ({ id }) => {
+      return inMemoryDb.audit.get(id) || null;
+    }),
+    listByEnvelope: jest.fn().mockImplementation(async ({ envelopeId, limit = 10, cursor }) => {
+      const audits = Array.from(inMemoryDb.audit.values())
+        .filter(audit => audit.envelopeId === envelopeId)
+        .slice(0, limit);
+      return {
+        items: audits,
+        meta: {
+          hasNext: false,
+          nextCursor: undefined
+        }
+      };
+    })
+  }))
 }));
 
 // Mock Rate Limit Store and Idempotency Store FIRST - before any other code
@@ -141,53 +171,40 @@ jest.mock('@lawprotect/shared-ts', () => {
       incrementAndCheck: jest.fn().mockResolvedValue({
         currentUsage: 1,
         maxRequests: 100,
-        resetInSeconds: 3600,
-      }),
-    })),
+        resetInSeconds: 3600})})),
     IdempotencyStoreDdb: jest.fn().mockImplementation(() => ({
       get: jest.fn().mockResolvedValue(null),
       getRecord: jest.fn().mockResolvedValue(null),
       putPending: jest.fn().mockResolvedValue(undefined),
-      putCompleted: jest.fn().mockResolvedValue(undefined),
-    })),
+      putCompleted: jest.fn().mockResolvedValue(undefined)})),
     KmsSigner: jest.fn().mockImplementation(() => ({
       sign: jest.fn().mockResolvedValue({
         signature: new Uint8Array([1, 2, 3, 4, 5]),
         keyId: 'test-key-id',
-        signingAlgorithm: 'RSASSA_PSS_SHA_256',
-      }),
+        signingAlgorithm: 'RSASSA_PSS_SHA_256'}),
       verify: jest.fn().mockResolvedValue({
         signatureValid: true,
         keyId: 'test-key-id',
-        signingAlgorithm: 'RSASSA_PSS_SHA_256',
-      }),
-    })),
+        signingAlgorithm: 'RSASSA_PSS_SHA_256'})})),
     S3Presigner: jest.fn().mockImplementation(() => ({
       getObjectUrl: jest.fn().mockResolvedValue('https://test-bucket.s3.amazonaws.com/test-key?presigned-url'),
-      putObjectUrl: jest.fn().mockResolvedValue('https://test-bucket.s3.amazonaws.com/test-key?presigned-url'),
-    })),
-  };
+      putObjectUrl: jest.fn().mockResolvedValue('https://test-bucket.s3.amazonaws.com/test-key?presigned-url')}))};
 });
 
 // Mock AWS SDK clients - simplified since we're mocking repositories directly
 jest.mock('@aws-sdk/client-dynamodb', () => ({
   DynamoDBClient: jest.fn().mockImplementation(() => ({
-    send: jest.fn().mockResolvedValue({}),
-  })),
-}));
+    send: jest.fn().mockResolvedValue({})}))}));
 
 jest.mock('@aws-sdk/lib-dynamodb', () => ({
   DynamoDBDocumentClient: {
     from: jest.fn().mockImplementation(() => ({
-      send: jest.fn().mockResolvedValue({}),
-    })),
-  },
+      send: jest.fn().mockResolvedValue({})}))},
   GetCommand: jest.fn(),
   PutCommand: jest.fn(),
   UpdateCommand: jest.fn(),
   DeleteCommand: jest.fn(),
-  QueryCommand: jest.fn(),
-}));
+  QueryCommand: jest.fn()}));
 
 // Mock S3 Client - return successful responses
 jest.mock('@aws-sdk/client-s3', () => ({
@@ -199,11 +216,9 @@ jest.mock('@aws-sdk/client-s3', () => ({
       if (command.constructor.name === 'GetObjectCommand') {
         return {
           Body: {
-            transformToByteArray: jest.fn().mockResolvedValue(new Uint8Array([1, 2, 3, 4]) as any),
-          },
+            transformToByteArray: jest.fn().mockResolvedValue(new Uint8Array([1, 2, 3, 4]) as any)},
           ContentType: 'application/pdf',
-          ContentLength: 1024,
-        };
+          ContentLength: 1024};
       }
       if (command.constructor.name === 'DeleteObjectCommand') {
         return {};
@@ -212,17 +227,14 @@ jest.mock('@aws-sdk/client-s3', () => ({
         return {
           ContentType: 'application/pdf',
           ContentLength: 1024,
-          LastModified: new Date(),
-        };
+          LastModified: new Date()};
       }
       return {};
-    }),
-  })),
+    })})),
   PutObjectCommand: jest.fn(),
   GetObjectCommand: jest.fn(),
   DeleteObjectCommand: jest.fn(),
-  HeadObjectCommand: jest.fn(),
-}));
+  HeadObjectCommand: jest.fn()}));
 
 // Mock KMS Client - return successful signing responses
 jest.mock('@aws-sdk/client-kms', () => ({
@@ -232,41 +244,33 @@ jest.mock('@aws-sdk/client-kms', () => ({
         return {
           Signature: new Uint8Array([1, 2, 3, 4, 5]),
           KeyId: 'test-key-id',
-          SigningAlgorithm: 'RSASSA_PSS_SHA_256',
-        };
+          SigningAlgorithm: 'RSASSA_PSS_SHA_256'};
       }
       if (command.constructor.name === 'VerifyCommand') {
         return {
           SignatureValid: true,
           KeyId: 'test-key-id',
-          SigningAlgorithm: 'RSASSA_PSS_SHA_256',
-        };
+          SigningAlgorithm: 'RSASSA_PSS_SHA_256'};
       }
       if (command.constructor.name === 'GetPublicKeyCommand') {
         return {
           PublicKey: new Uint8Array([1, 2, 3, 4, 5]),
           KeyId: 'test-key-id',
-          KeyUsage: 'SIGN_VERIFY',
-        };
+          KeyUsage: 'SIGN_VERIFY'};
       }
       return {};
-    }),
-  })),
+    })})),
   SignCommand: jest.fn(),
   VerifyCommand: jest.fn(),
-  GetPublicKeyCommand: jest.fn(),
-}));
+  GetPublicKeyCommand: jest.fn()}));
 
 // Mock EventBridge Client - return successful event publishing
 jest.mock('@aws-sdk/client-eventbridge', () => ({
   EventBridgeClient: jest.fn().mockImplementation(() => ({
     send: jest.fn().mockResolvedValue({
       FailedEntryCount: 0,
-      Entries: [{ EventId: 'test-event-id' }],
-    } as any),
-  })),
-  PutEventsCommand: jest.fn(),
-}));
+      Entries: [{ EventId: 'test-event-id' }]} as any)})),
+  PutEventsCommand: jest.fn()}));
 
 // Mock SSM Client - return configuration values
 jest.mock('@aws-sdk/client-ssm', () => ({
@@ -277,24 +281,19 @@ jest.mock('@aws-sdk/client-ssm', () => ({
           Parameter: {
             Name: command.input.Name,
             Value: 'test-value',
-            Type: 'String',
-          },
-        };
+            Type: 'String'}};
       }
       if (command.constructor.name === 'GetParametersCommand') {
         return {
           Parameters: [
             { Name: 'test-param-1', Value: 'test-value-1', Type: 'String' },
             { Name: 'test-param-2', Value: 'test-value-2', Type: 'String' },
-          ],
-        };
+          ]};
       }
       return {};
-    }),
-  })),
+    })})),
   GetParameterCommand: jest.fn(),
-  GetParametersCommand: jest.fn(),
-}));
+  GetParametersCommand: jest.fn()}));
 
 /**
  * Setup function to initialize the in-memory database
@@ -332,43 +331,36 @@ export const mockDynamoDbData = {
     PK: 'TENANT#tenant-123#ENVELOPE#envelope-123',
     SK: 'ENVELOPE#envelope-123',
     id: 'envelope-123',
-    tenantId: 'tenant-123',
     status: 'draft',
     title: 'Test Contract',
     description: 'Test contract description',
     ownerId: 'owner-123',
     createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z',
-  },
+    updatedAt: '2024-01-01T00:00:00Z'},
   party: {
     PK: 'TENANT#tenant-123#ENVELOPE#envelope-123',
     SK: 'PARTY#party-123',
     id: 'party-123',
     envelopeId: 'envelope-123',
-    tenantId: 'tenant-123',
     name: 'Test Signer',
     email: 'signer@test.com',
     role: 'signer',
     sequence: 1,
     status: 'pending',
     createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z',
-  },
+    updatedAt: '2024-01-01T00:00:00Z'},
   document: {
     PK: 'TENANT#tenant-123#ENVELOPE#envelope-123',
     SK: 'DOCUMENT#document-123',
     id: 'document-123',
     envelopeId: 'envelope-123',
-    tenantId: 'tenant-123',
     name: 'contract.pdf',
     contentType: 'application/pdf',
     size: 1024,
     digest: { alg: 'sha256', value: 'test-hash' },
     s3Key: 'documents/tenant-123/envelope-123/document-123.pdf',
     createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z',
-  },
-};
+    updatedAt: '2024-01-01T00:00:00Z'}};
 
 /**
  * Mock responses for S3 operations
@@ -376,22 +368,17 @@ export const mockDynamoDbData = {
 export const mockS3Responses = {
   putObject: {
     ETag: '"test-etag"',
-    VersionId: 'test-version-id',
-  },
+    VersionId: 'test-version-id'},
   getObject: {
     Body: {
-      transformToByteArray: jest.fn().mockResolvedValue(new Uint8Array([1, 2, 3, 4]) as any),
-    },
+      transformToByteArray: jest.fn().mockResolvedValue(new Uint8Array([1, 2, 3, 4]) as any)},
     ContentType: 'application/pdf',
     ContentLength: 1024,
-    LastModified: new Date('2024-01-01T00:00:00Z'),
-  },
+    LastModified: new Date('2024-01-01T00:00:00Z')},
   headObject: {
     ContentType: 'application/pdf',
     ContentLength: 1024,
-    LastModified: new Date('2024-01-01T00:00:00Z'),
-  },
-};
+    LastModified: new Date('2024-01-01T00:00:00Z')}};
 
 /**
  * Mock responses for KMS operations
@@ -400,19 +387,15 @@ export const mockKmsResponses = {
   sign: {
     Signature: new Uint8Array([1, 2, 3, 4, 5]),
     KeyId: 'test-key-id',
-    SigningAlgorithm: 'RSA_SHA_256',
-  },
+    SigningAlgorithm: 'RSA_SHA_256'},
   verify: {
     SignatureValid: true,
     KeyId: 'test-key-id',
-    SigningAlgorithm: 'RSA_SHA_256',
-  },
+    SigningAlgorithm: 'RSA_SHA_256'},
   getPublicKey: {
     PublicKey: new Uint8Array([1, 2, 3, 4, 5]),
     KeyId: 'test-key-id',
-    KeyUsage: 'SIGN_VERIFY',
-  },
-};
+    KeyUsage: 'SIGN_VERIFY'}};
 
 /**
  * Mock responses for EventBridge operations
@@ -422,11 +405,8 @@ export const mockEventBridgeResponses = {
     FailedEntryCount: 0,
     Entries: [
       {
-        EventId: 'test-event-id',
-      },
-    ],
-  },
-};
+        EventId: 'test-event-id'},
+    ]}};
 
 /**
  * Mock responses for SSM operations
@@ -436,24 +416,18 @@ export const mockSsmResponses = {
     Parameter: {
       Name: 'test-parameter',
       Value: 'test-value',
-      Type: 'String',
-    },
-  },
+      Type: 'String'}},
   getParameters: {
     Parameters: [
       {
         Name: 'test-parameter-1',
         Value: 'test-value-1',
-        Type: 'String',
-      },
+        Type: 'String'},
       {
         Name: 'test-parameter-2',
         Value: 'test-value-2',
-        Type: 'String',
-      },
-    ],
-  },
-};
+        Type: 'String'},
+    ]}};
 
 /**
  * Mock responses for Cognito operations
@@ -465,20 +439,14 @@ export const mockCognitoResponses = {
     UserAttributes: [
       {
         Name: 'email',
-        Value: 'test@example.com',
-      },
+        Value: 'test@example.com'},
       {
         Name: 'sub',
-        Value: 'test-user-id',
-      },
-    ],
-  },
+        Value: 'test-user-id'},
+    ]},
   adminListGroupsForUser: {
     Groups: [
       {
         GroupName: 'test-group',
-        Description: 'Test group',
-      },
-    ],
-  },
-};
+        Description: 'Test group'},
+    ]}};

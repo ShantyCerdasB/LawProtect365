@@ -32,28 +32,23 @@ export const makeAuditQueriesPort = (
      */
     async getAuditTrail(input: GetAuditTrailInput): Promise<GetAuditTrailResult> {
       const result = await deps.auditRepo.listByEnvelope({
-        tenantId: input.tenantId,
         envelopeId: input.envelopeId,
         cursor: input.cursor,
-        limit: input.limit ?? deps.defaultPageSize ?? AUDIT_PAGINATION_DEFAULTS.DEFAULT_LIMIT,
-      });
+        limit: input.limit ?? deps.defaultPageSize ?? AUDIT_PAGINATION_DEFAULTS.DEFAULT_LIMIT});
 
       // Transform audit events to the expected format using CursorPage structure
       const items = result.items.map((event) => ({
         at: event.occurredAt,
         actor: event.actor?.email || event.actor?.userId || SYSTEM_ACTOR,
         action: event.type,
-        metadata: event.metadata,
-      }));
+        metadata: event.metadata}));
 
       return {
         envelopeId: input.envelopeId,
         items,
         meta: {
           hasNext: !!result.meta?.nextCursor,
-          nextCursor: result.meta?.nextCursor,
-        },
-      };
+          nextCursor: result.meta?.nextCursor}};
     },
 
     /**
@@ -67,16 +62,9 @@ export const makeAuditQueriesPort = (
         return null;
       }
 
-      // Validate tenant access
-      if (event.tenantId !== input.tenantId) {
-        return null;
-      }
-
       return {
         event,
         actorDisplay: event.actor?.email || event.actor?.userId || SYSTEM_ACTOR,
-        actionDisplay: event.type,
-      };
-    },
-  };
+        actionDisplay: event.type};
+    }};
 };

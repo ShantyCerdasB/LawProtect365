@@ -14,9 +14,6 @@ export const IdempotencyKeyInputSchema = z.object({
   /** API route/path (as received). */
   path: z.string().min(1, "API path is required"),
   
-  /** Tenant or organization id. */
-  tenantId: z.string().min(1, "Tenant ID is required"),
-  
   /** End user id. */
   userId: z.string().min(1, "User ID is required"),
   
@@ -27,7 +24,7 @@ export const IdempotencyKeyInputSchema = z.object({
   body: z.record(z.unknown()).nullable(),
   
   /** Optional logical scope (service/feature). */
-  scope: z.string().optional(),
+  scope: z.string().optional()
 });
 
 /** Type inference from the schema. */

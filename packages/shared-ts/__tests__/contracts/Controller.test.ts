@@ -5,15 +5,13 @@
  */
 
 import {
-  composeController,
-} from '../../src/contracts/index.js';
+  composeController} from '../../src/contracts/index.js';
 import type {
   Controller,
   ControllerMiddleware,
   CtrBeforeMiddleware,
   CtrAfterMiddleware,
-  CtrOnErrorMiddleware,
-} from '../../src/contracts/index.js';
+  CtrOnErrorMiddleware} from '../../src/contracts/index.js';
 
 describe('composeController', () => {
   /**
@@ -85,8 +83,7 @@ describe('composeController', () => {
     const composed = composeController(core, {
       middlewares: [m1, m2, m3],
       before: [b1, b2],
-      after: [a1, a2],
-    });
+      after: [a1, a2]});
 
     const out = await composed('X');
 
@@ -126,8 +123,7 @@ describe('composeController', () => {
       (next) => async (n, ctx) =>
         next(n + 1, {
           add: ctx?.add ?? 0,
-          tag: [...(ctx?.tag ?? []), 'mw'],
-        });
+          tag: [...(ctx?.tag ?? []), 'mw']});
 
     const middlewares = Object.freeze([mAdd] as const);
 
@@ -177,7 +173,7 @@ describe('composeController', () => {
     const oe2: CtrOnErrorMiddleware<number, string> = async (err, req) => {
       order.push('oe2');
       expect(req).toBe(7);
-      return `recovered:${String((err as Error).message)}`;
+      return `recovered:String((err as Error).message)`;
     };
 
     const oe3: CtrOnErrorMiddleware<number, string> = async () => {

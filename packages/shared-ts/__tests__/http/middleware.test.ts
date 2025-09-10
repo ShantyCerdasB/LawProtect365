@@ -10,8 +10,7 @@ const makeEvent = (over: Partial<ApiEvent> = {}): ApiEvent =>
   ({
     headers: {},
     requestContext: { http: { method: 'GET' } },
-    ...over,
-  } as any);
+    ...over} as any);
 
 describe('compose', () => {
   it('returns base result when no middlewares provided (defaults to empty arrays)', async () => {
@@ -47,14 +46,12 @@ describe('compose', () => {
     const a1 = jest.fn(async (_evt, res) => ({
       ...res,
       body: (res.body as string) + 'B',
-      headers: { ...(res.headers ?? {}), A1: 'x' },
-    }));
+      headers: { ...(res.headers ?? {}), A1: 'x' }}));
     const a2 = jest.fn(async (_evt, res) => ({
       ...res,
       statusCode: 201,
       body: (res.body as string) + 'C',
-      headers: { ...(res.headers ?? {}), A2: 'y' },
-    }));
+      headers: { ...(res.headers ?? {}), A2: 'y' }}));
 
     const handler = compose(base, { after: [a1, a2] });
 
@@ -62,8 +59,7 @@ describe('compose', () => {
     expect(res).toEqual({
       statusCode: 201,
       body: 'ABC',
-      headers: { H: '1', A1: 'x', A2: 'y' },
-    });
+      headers: { H: '1', A1: 'x', A2: 'y' }});
 
     expect(a1).toHaveBeenCalledTimes(1);
     expect(a2).toHaveBeenCalledTimes(1);

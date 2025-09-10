@@ -19,8 +19,7 @@ jest.mock('../../../src/index.js', () => ({
     const value = process.env[key];
     return value ? Number(value) : defaultValue;
   }),
-  sleep: jest.fn(() => Promise.resolve()),
-}));
+  sleep: jest.fn(() => Promise.resolve())}));
 
 describe('SsmParamConfigProvider', () => {
   let mockSsmClient: any;
@@ -29,14 +28,12 @@ describe('SsmParamConfigProvider', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockSsmClient = {
-      send: jest.fn(),
-    };
+      send: jest.fn()};
     
     ssmProvider = new SsmParamConfigProvider(mockSsmClient, {
       maxAttempts: 3,
       defaultTtlMs: 30000,
-      envFallbackPrefix: 'TEST_SSM',
-    });
+      envFallbackPrefix: 'TEST_SSM'});
   });
 
   describe('constructor', () => {
@@ -49,8 +46,7 @@ describe('SsmParamConfigProvider', () => {
       const options = {
         maxAttempts: 5,
         defaultTtlMs: 60000,
-        envFallbackPrefix: 'CUSTOM_SSM',
-      };
+        envFallbackPrefix: 'CUSTOM_SSM'};
       const provider = new SsmParamConfigProvider(mockSsmClient, options);
       expect(provider).toBeInstanceOf(SsmParamConfigProvider);
     });
@@ -73,8 +69,7 @@ describe('SsmParamConfigProvider', () => {
   describe('getParameter', () => {
     it('should get parameter with decryption by default', async () => {
       mockSsmClient.send.mockResolvedValueOnce({
-        Parameter: { Value: 'test-value' },
-      });
+        Parameter: { Value: 'test-value' }});
 
       const result = await ssmProvider.getParameter('/test/param');
 
@@ -86,8 +81,7 @@ describe('SsmParamConfigProvider', () => {
 
     it('should get parameter without decryption when specified', async () => {
       mockSsmClient.send.mockResolvedValueOnce({
-        Parameter: { Value: 'test-value' },
-      });
+        Parameter: { Value: 'test-value' }});
 
       const result = await ssmProvider.getParameter('/test/param', false);
 
@@ -99,8 +93,7 @@ describe('SsmParamConfigProvider', () => {
 
     it('should return undefined when parameter not found', async () => {
       mockSsmClient.send.mockResolvedValueOnce({
-        Parameter: undefined,
-      });
+        Parameter: undefined});
 
       const result = await ssmProvider.getParameter('/test/param');
 
@@ -111,8 +104,7 @@ describe('SsmParamConfigProvider', () => {
   describe('getString', () => {
     it('should get string parameter from SSM', async () => {
       mockSsmClient.send.mockResolvedValueOnce({
-        Parameter: { Value: 'test-value' },
-      });
+        Parameter: { Value: 'test-value' }});
 
       const result = await ssmProvider.getString('/test/param');
 
@@ -126,8 +118,7 @@ describe('SsmParamConfigProvider', () => {
 
     it('should cache parameter values', async () => {
       mockSsmClient.send.mockResolvedValueOnce({
-        Parameter: { Value: 'test-value' },
-      });
+        Parameter: { Value: 'test-value' }});
 
       // First call
       const result1 = await ssmProvider.getString('/test/param');
@@ -144,11 +135,9 @@ describe('SsmParamConfigProvider', () => {
     it('should respect custom TTL', async () => {
       mockSsmClient.send
         .mockResolvedValueOnce({
-          Parameter: { Value: 'test-value' },
-        })
+          Parameter: { Value: 'test-value' }})
         .mockResolvedValueOnce({
-          Parameter: { Value: 'test-value' },
-        });
+          Parameter: { Value: 'test-value' }});
 
       await ssmProvider.getString('/test/param', { ttlMs: 0 });
 
@@ -170,8 +159,7 @@ describe('SsmParamConfigProvider', () => {
     it('should parse JSON parameter', async () => {
       const jsonValue = { key: 'value', number: 42 };
       mockSsmClient.send.mockResolvedValueOnce({
-        Parameter: { Value: JSON.stringify(jsonValue) },
-      });
+        Parameter: { Value: JSON.stringify(jsonValue) }});
 
       const result = await ssmProvider.getJson('/test/param');
 
@@ -180,8 +168,7 @@ describe('SsmParamConfigProvider', () => {
 
     it('should return undefined when parameter not found', async () => {
       mockSsmClient.send.mockResolvedValueOnce({
-        Parameter: undefined,
-      });
+        Parameter: undefined});
 
       const result = await ssmProvider.getJson('/test/param');
 
@@ -195,8 +182,7 @@ describe('SsmParamConfigProvider', () => {
       });
 
       mockSsmClient.send.mockResolvedValueOnce({
-        Parameter: { Value: 'invalid-json' },
-      });
+        Parameter: { Value: 'invalid-json' }});
 
       await expect(ssmProvider.getJson('/test/param')).rejects.toThrow('Invalid JSON');
     });
@@ -213,8 +199,7 @@ describe('SsmParamConfigProvider', () => {
       
       for (const value of truthyValues) {
         mockSsmClient.send.mockResolvedValueOnce({
-          Parameter: { Value: value },
-        });
+          Parameter: { Value: value }});
 
         const result = await ssmProvider.getBool('/test/param');
         expect(result).toBe(true);
@@ -226,8 +211,7 @@ describe('SsmParamConfigProvider', () => {
       
       for (const value of falsyValues) {
         mockSsmClient.send.mockResolvedValueOnce({
-          Parameter: { Value: value },
-        });
+          Parameter: { Value: value }});
 
         const result = await ssmProvider.getBool('/test/param');
         expect(result).toBe(false);
@@ -236,8 +220,7 @@ describe('SsmParamConfigProvider', () => {
 
     it('should handle case insensitive boolean values', async () => {
       mockSsmClient.send.mockResolvedValueOnce({
-        Parameter: { Value: 'TRUE' },
-      });
+        Parameter: { Value: 'TRUE' }});
 
       const result = await ssmProvider.getBool('/test/param');
       expect(result).toBe(true);
@@ -245,8 +228,7 @@ describe('SsmParamConfigProvider', () => {
 
     it('should return undefined for unrecognized boolean values', async () => {
       mockSsmClient.send.mockResolvedValueOnce({
-        Parameter: { Value: 'maybe' },
-      });
+        Parameter: { Value: 'maybe' }});
 
       const result = await ssmProvider.getBool('/test/param');
       expect(result).toBeUndefined();
@@ -254,8 +236,7 @@ describe('SsmParamConfigProvider', () => {
 
     it('should return undefined when parameter not found', async () => {
       mockSsmClient.send.mockResolvedValueOnce({
-        Parameter: undefined,
-      });
+        Parameter: undefined});
 
       const result = await ssmProvider.getBool('/test/param');
       expect(result).toBeUndefined();
@@ -270,8 +251,7 @@ describe('SsmParamConfigProvider', () => {
   describe('getInt', () => {
     it('should parse valid integer values', async () => {
       mockSsmClient.send.mockResolvedValueOnce({
-        Parameter: { Value: '42' },
-      });
+        Parameter: { Value: '42' }});
 
       const result = await ssmProvider.getInt('/test/param');
       expect(result).toBe(42);
@@ -279,8 +259,7 @@ describe('SsmParamConfigProvider', () => {
 
     it('should parse negative integers', async () => {
       mockSsmClient.send.mockResolvedValueOnce({
-        Parameter: { Value: '-42' },
-      });
+        Parameter: { Value: '-42' }});
 
       const result = await ssmProvider.getInt('/test/param');
       expect(result).toBe(-42);
@@ -288,8 +267,7 @@ describe('SsmParamConfigProvider', () => {
 
     it('should parse zero', async () => {
       mockSsmClient.send.mockResolvedValueOnce({
-        Parameter: { Value: '0' },
-      });
+        Parameter: { Value: '0' }});
 
       const result = await ssmProvider.getInt('/test/param');
       expect(result).toBe(0);
@@ -297,8 +275,7 @@ describe('SsmParamConfigProvider', () => {
 
     it('should return undefined for non-numeric values', async () => {
       mockSsmClient.send.mockResolvedValueOnce({
-        Parameter: { Value: 'not-a-number' },
-      });
+        Parameter: { Value: 'not-a-number' }});
 
       const result = await ssmProvider.getInt('/test/param');
       expect(result).toBeUndefined();
@@ -306,8 +283,7 @@ describe('SsmParamConfigProvider', () => {
 
     it('should return undefined for infinite values', async () => {
       mockSsmClient.send.mockResolvedValueOnce({
-        Parameter: { Value: 'Infinity' },
-      });
+        Parameter: { Value: 'Infinity' }});
 
       const result = await ssmProvider.getInt('/test/param');
       expect(result).toBeUndefined();
@@ -315,8 +291,7 @@ describe('SsmParamConfigProvider', () => {
 
     it('should return undefined when parameter not found', async () => {
       mockSsmClient.send.mockResolvedValueOnce({
-        Parameter: undefined,
-      });
+        Parameter: undefined});
 
       const result = await ssmProvider.getInt('/test/param');
       expect(result).toBeUndefined();
@@ -342,8 +317,7 @@ describe('SsmParamConfigProvider', () => {
     it('should not use environment fallback when prefix is not configured', async () => {
       const providerWithoutPrefix = new SsmParamConfigProvider(mockSsmClient);
       mockSsmClient.send.mockResolvedValueOnce({
-        Parameter: { Value: 'ssm-value' },
-      });
+        Parameter: { Value: 'ssm-value' }});
 
       const result = await providerWithoutPrefix.getString('/test/param');
 

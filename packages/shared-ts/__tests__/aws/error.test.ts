@@ -8,8 +8,7 @@ import {
   isAwsThrottling,
   isAwsAccessDenied,
   isAwsServiceUnavailable,
-  isAwsRetryable,
-} from '../../src/aws/errors.js';
+  isAwsRetryable} from '../../src/aws/errors.js';
 
 describe('extractAwsError', () => {
   it('reads smithy $metadata.httpStatusCode', () => {
@@ -18,8 +17,7 @@ describe('extractAwsError', () => {
       name: 'Foo',
       code: 'Bar',
       message: 'boom',
-      statusCode: 503,
-    });
+      statusCode: 503});
   });
 
   it('falls back to statusCode and string properties', () => {
@@ -32,8 +30,7 @@ describe('extractAwsError', () => {
       name: undefined,
       code: undefined,
       message: undefined,
-      statusCode: undefined,
-    });
+      statusCode: undefined});
   });
 });
 

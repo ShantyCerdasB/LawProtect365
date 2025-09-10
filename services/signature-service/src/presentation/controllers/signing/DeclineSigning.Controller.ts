@@ -25,16 +25,8 @@ export const DeclineSigningController = createCommandController<DeclineSigningCo
     reason: body.reason,
     token: "", // Will be injected by factory
   }),
-  responseType: "ok",
-});
+  responseType: "ok"});
 
 // Export handler for backward compatibility
 export const handler = DeclineSigningController;
-
-
-
-
-
-
-
 

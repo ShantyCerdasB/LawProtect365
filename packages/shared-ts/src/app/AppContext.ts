@@ -47,6 +47,6 @@ export interface AppContext {
   metrics: MetricsLike;
   /** Tracer implementation. */
   tracer: TracerLike;
-  /** Arbitrary bag for tenant/auth/flags or other per-request data. */
+  /** Arbitrary bag auth/flags or other per-request data. */
   bag?: Record<string, unknown>;
 }

@@ -13,14 +13,12 @@
 import {
   mapAwsError,
   ConflictError,
-  nowIso,
-} from "@lawprotect/shared-ts";
+  nowIso} from "@lawprotect/shared-ts";
 import type { DdbClientLike } from "@lawprotect/shared-ts";
 
 import type {
   DelegationRepoCreateInput,
-  DelegationRepoRow,
-} from "../../domain/types/delegation";
+  DelegationRepoRow} from "../../domain/types/delegation";
 import { DELEGATION_STATUSES } from "../../domain/values/enums";
 
 /** Local alias mirroring domain values; used only for the stored DTO. */
@@ -61,7 +59,6 @@ export class DelegationRepositoryDdb {
       pk: pk(input.envelopeId),
       sk: sk(input.delegationId),
       type: "Delegation",
-      tenantId: input.tenantId,
       consentId: input.consentId,
       envelopeId: input.envelopeId,
       originalPartyId: input.originalPartyId,
@@ -71,15 +68,13 @@ export class DelegationRepositoryDdb {
       createdAt: now,
       updatedAt: now,
       expiresAt: input.expiresAt,
-      metadata: input.metadata,
-    };
+      metadata: input.metadata};
 
     try {
       await this.ddb.put({
         TableName: this.tableName,
         Item: dto as unknown as Record<string, unknown>,
-        ConditionExpression: "attribute_not_exists(pk) AND attribute_not_exists(sk)",
-      });
+        ConditionExpression: "attribute_not_exists(pk) AND attribute_not_exists(sk)"});
 
       // Map back to standardized repo row using mapper
       return dtoToDelegationRow(dto);
@@ -91,6 +86,4 @@ export class DelegationRepositoryDdb {
     }
   }
 }
-
-
 

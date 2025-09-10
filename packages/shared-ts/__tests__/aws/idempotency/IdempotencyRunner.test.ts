@@ -15,8 +15,7 @@ describe('IdempotencyRunner', () => {
     mockStore = {
       get: jest.fn(),
       putPending: jest.fn(),
-      putCompleted: jest.fn(),
-    } as any;
+      putCompleted: jest.fn()} as any;
 
     runner = new IdempotencyRunner(mockStore);
   });

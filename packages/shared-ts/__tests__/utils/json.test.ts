@@ -16,8 +16,7 @@ import {
   deepClone,
   jsonEquals,
   isJsonObject,
-  stringifyCompact,
-} from "../../src/utils/json.js";
+  stringifyCompact} from "../../src/utils/json.js";
 
 describe("parseJson", () => {
   it("parses valid JSON", () => {
@@ -82,8 +81,7 @@ describe("stableStringify", () => {
 
   it("preserves array order while sorting object keys inside arrays", () => {
   const value: { arr: Array<Record<string, number>> } = {
-    arr: [{ b: 2, a: 1 }, { d: 4, c: 3 }],
-  };
+    arr: [{ b: 2, a: 1 }, { d: 4, c: 3 }]};
   const s = stableStringify(value);
   expect(s).toBe('{"arr":[{"a":1,"b":2},{"c":3,"d":4}]}');
 });

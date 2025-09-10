@@ -25,16 +25,8 @@ export const PrepareSigningController = createCommandController<PrepareSigningCo
     token: "", // Will be injected by factory
   }),
   responseType: "ok",
-  methodName: "prepareSigning",
-});
+  methodName: "prepareSigning"});
 
 // Export handler for backward compatibility
 export const handler = PrepareSigningController;
-
-
-
-
-
-
-
 

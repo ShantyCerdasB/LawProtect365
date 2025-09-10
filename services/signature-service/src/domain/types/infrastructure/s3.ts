@@ -150,5 +150,3 @@ export type HeadResult = {
   readonly error?: string;
 };
 
-
-

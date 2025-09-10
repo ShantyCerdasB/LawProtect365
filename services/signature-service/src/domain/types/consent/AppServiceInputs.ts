@@ -4,7 +4,7 @@
  * @description Defines the input and output contracts for consent application services
  */
 
-import type { TenantId, EnvelopeId, PartyId, ConsentId } from "@/domain/value-objects/ids";
+import type { EnvelopeId, PartyId, ConsentId } from "@/domain/value-objects/ids";
 import type { ConsentStatus, ConsentType } from "../../../domain/values/enums";
 import type { ActorContext } from "@lawprotect/shared-ts";
 
@@ -14,7 +14,6 @@ import type { ActorContext } from "@lawprotect/shared-ts";
  */
 export interface GetConsentAppInput {
   /** Tenant identifier */
-  readonly tenantId: TenantId;
   /** Envelope identifier */
   readonly envelopeId: EnvelopeId;
   /** Consent identifier */
@@ -52,7 +51,6 @@ export interface GetConsentAppResult {
  */
 export interface CreateConsentAppInput {
   /** Tenant identifier */
-  readonly tenantId: TenantId;
   /** Envelope identifier */
   readonly envelopeId: EnvelopeId;
   /** Party identifier */
@@ -100,7 +98,6 @@ export interface CreateConsentAppResult {
  */
 export interface UpdateConsentAppInput {
   /** Tenant identifier */
-  readonly tenantId: TenantId;
   /** Envelope identifier */
   readonly envelopeId: EnvelopeId;
   /** Consent identifier */
@@ -148,7 +145,6 @@ export interface UpdateConsentAppResult {
  */
 export interface ListConsentsAppInput {
   /** Tenant identifier */
-  readonly tenantId: TenantId;
   /** Envelope identifier */
   readonly envelopeId: EnvelopeId;
   /** Maximum number of items to return */
@@ -206,7 +202,6 @@ export interface ListConsentsAppResult {
  */
 export interface DeleteConsentAppInput {
   /** Tenant identifier */
-  readonly tenantId: TenantId;
   /** Envelope identifier */
   readonly envelopeId: EnvelopeId;
   /** Consent identifier */
@@ -223,7 +218,6 @@ export interface DeleteConsentAppInput {
  */
 export interface SubmitConsentAppInput {
   /** Tenant identifier */
-  readonly tenantId: TenantId;
   /** Envelope identifier */
   readonly envelopeId: EnvelopeId;
   /** Consent identifier */
@@ -263,7 +257,6 @@ export interface SubmitConsentAppResult {
  */
 export interface DelegateConsentAppInput {
   /** Tenant identifier */
-  readonly tenantId: TenantId;
   /** Envelope identifier */
   readonly envelopeId: EnvelopeId;
   /** Consent identifier */
@@ -306,9 +299,4 @@ export interface DelegateConsentAppResult {
   /** Delegation metadata */
   readonly metadata?: Record<string, unknown>;
 }
-
-
-
-
-
 

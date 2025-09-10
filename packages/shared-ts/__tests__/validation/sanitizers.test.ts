@@ -9,8 +9,7 @@
 import {
   TrimmedString,
   NormalizedEmail,
-  CollapsedWhitespace,
-} from "../../src/validation/sanitizers.js";
+  CollapsedWhitespace} from "../../src/validation/sanitizers.js";
 
 describe("TrimmedString", () => {
   it("trims leading/trailing spaces and returns the trimmed value", () => {

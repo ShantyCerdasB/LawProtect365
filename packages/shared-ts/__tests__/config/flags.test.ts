@@ -50,8 +50,7 @@ describe('loadFeatureFlags', () => {
       OFF: false,
       ZERO: false,
       DISABLED: false,
-      RANDOM: false,
-    });
+      RANDOM: false});
 
     expect(Object.keys(flags)).not.toContain('OTHER_VAR');
   });

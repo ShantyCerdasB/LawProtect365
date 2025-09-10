@@ -14,4 +14,3 @@ export * from "./AuditRepositoryDdb";
 export * from "./DocumentRepositoryDdb";
 export * from "./DelegationRepositoryDdb";
 
-

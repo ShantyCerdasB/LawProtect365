@@ -5,7 +5,7 @@
  */
 
 import type { Envelope } from "../../../domain/entities/Envelope";
-import type { EnvelopeId, TenantId, UserId } from "../../../domain/value-objects/ids";
+import type { EnvelopeId } from "../../../domain/value-objects/ids";
 import type { EnvelopeStatus } from "../../../domain/value-objects/index";
 
 /**
@@ -13,8 +13,7 @@ import type { EnvelopeStatus } from "../../../domain/value-objects/index";
  * @description Common attributes shared across envelope operations
  */
 interface BaseEnvelopeCommand {
-  readonly tenantId: TenantId;
-  readonly ownerId: UserId;
+  readonly ownerEmail: string;
 }
 
 /**
@@ -22,7 +21,7 @@ interface BaseEnvelopeCommand {
  * @description Common attributes for update operations
  */
 interface BaseEnvelopeUpdate {
-  readonly title?: string;
+  readonly name?: string;
   readonly status?: EnvelopeStatus;
   readonly parties?: string[];
   readonly documents?: string[];
@@ -33,7 +32,7 @@ interface BaseEnvelopeUpdate {
  * @description Required data to create a new envelope
  */
 export interface CreateEnvelopeCommand extends BaseEnvelopeCommand {
-  readonly title: string;
+  readonly name: string;
   readonly status?: EnvelopeStatus;
   readonly parties?: string[];
   readonly documents?: string[];

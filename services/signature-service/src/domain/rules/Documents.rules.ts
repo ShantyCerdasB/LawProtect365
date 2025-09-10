@@ -56,8 +56,7 @@ export const assertDocumentMutable = (doc: Pick<Document, "status" | "documentId
     throw invalidDocumentState({
       documentId: doc.documentId,
       status: doc.status,
-      reason: "Document is currently being processed and cannot be modified",
-    });
+      reason: "Document is currently being processed and cannot be modified"});
   }
 };
 
@@ -71,8 +70,7 @@ export const assertSupportedContentType = (contentType: string): void => {
   if (!ALLOWED_CONTENT_TYPES.includes(contentType as any)) {
     throw invalidDocumentContent({
       contentType,
-      reason: `Content type '${contentType}' is not supported. Allowed types: ${ALLOWED_CONTENT_TYPES.join(", ")}`,
-    });
+      reason: `Content type '${contentType}' is not supported. Allowed types: ${ALLOWED_CONTENT_TYPES.join(", ")}`});
   }
 };
 
@@ -87,8 +85,7 @@ export const assertDocumentSizeLimit = (size: number, maxSize: number = 50 * 102
   if (size > maxSize) {
     throw invalidDocumentContent({
       size,
-      reason: `Document size ${size} bytes exceeds maximum limit of ${maxSize} bytes`,
-    });
+      reason: `Document size ${size} bytes exceeds maximum limit of ${maxSize} bytes`});
   }
 };
 
@@ -106,8 +103,7 @@ export const assertDocumentBelongsToEnvelope = (
   if (doc.envelopeId !== envelopeId) {
     throw invalidDocumentState({
       documentId: doc.documentId,
-      reason: `Document does not belong to envelope ${envelopeId}`,
-    });
+      reason: `Document does not belong to envelope ${envelopeId}`});
   }
 };
 
@@ -123,8 +119,7 @@ export const assertEnvelopeDraftForDocumentModification = (
   if (envelope.status !== "draft") {
     throw invalidDocumentState({
       envelopeId: envelope.envelopeId,
-      reason: "Document modifications are only allowed when envelope is in draft state",
-    });
+      reason: "Document modifications are only allowed when envelope is in draft state"});
   }
 };
 
@@ -141,8 +136,7 @@ export const assertDocumentLockDeletable = (
 ): void => {
   if (lock.ownerId !== ownerId) {
     throw invalidDocumentState({
-      reason: `User ${ownerId} does not own lock ${lock.lockId}`,
-    });
+      reason: `User ${ownerId} does not own lock ${lock.lockId}`});
   }
 
   const lockExpiry = new Date(lock.expiresAt);
@@ -150,9 +144,7 @@ export const assertDocumentLockDeletable = (
   
   if (lockExpiry <= now) {
     throw invalidDocumentState({
-      reason: `Lock ${lock.lockId} has already expired`,
-    });
+      reason: `Lock ${lock.lockId} has already expired`});
   }
 };
-
 

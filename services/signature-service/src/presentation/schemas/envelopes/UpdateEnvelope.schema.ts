@@ -24,8 +24,7 @@ export type UpdateEnvelopeParams = z.infer<typeof UpdateEnvelopeParams>;
  */
 export const UpdateEnvelopeBody = z.object({
   title: EnvelopeTitleField.min(ENVELOPE_VALIDATION_RULES.MIN_TITLE_LENGTH).max(ENVELOPE_VALIDATION_RULES.MAX_TITLE_LENGTH).optional(),
-  status: z.enum(ENVELOPE_STATUSES).optional(),
-});
+  status: z.enum(ENVELOPE_STATUSES).optional()});
 
 export type UpdateEnvelopeBody = z.infer<typeof UpdateEnvelopeBody>;
 
@@ -33,13 +32,7 @@ export type UpdateEnvelopeBody = z.infer<typeof UpdateEnvelopeBody>;
  * @description Response schema for updated envelope
  */
 export const UpdateEnvelopeResponse = BaseEnvelopeFields.extend({
-  title: EnvelopeTitleField,
-});
+  title: EnvelopeTitleField});
 
 export type UpdateEnvelopeResponse = z.infer<typeof UpdateEnvelopeResponse>;
-
-
-
-
-
 

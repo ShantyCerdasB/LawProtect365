@@ -8,8 +8,7 @@
 
 import {
   paginationQuerySchema,
-  parsePaginationQuery,
-} from "../../src/validation/pagination.js";
+  parsePaginationQuery} from "../../src/validation/pagination.js";
 
 /** A minimal event shape for tests (only what the code reads). */
 type MiniEvent = { queryStringParameters?: Record<string, string | undefined> };

@@ -9,8 +9,7 @@ export {
   toHttpUrl,
   guessContentType,
   basename as s3Basename,
-  dirname as s3Dirname,
-} from "./s3.js";
+  dirname as s3Dirname} from "./s3.js";
 
 export {
   toPosix,
@@ -25,8 +24,7 @@ export {
   stripTrailingSlash,
   isSubpath,
   split,
-  Base64UrlNoPad,
-} from "./path.js";
+  Base64UrlNoPad} from "./path.js";
 export * from "./json.js";
 export * from "./date.js";
 export * from "./string.js";

@@ -1,10 +1,10 @@
 /**
  * @file ControllerInputs.ts
  * @summary Controller input types for certificate operations
- * @description Defines input types for certificate controllers, tenantId and actor are injected by factory
+ * @description Defines input types for certificate controllers, and actor are injected by factory
  */
 
-import type { EnvelopeId, TenantId } from "@/domain/value-objects/ids";
+import type { EnvelopeId } from "@/domain/value-objects/ids";
 
 // ============================================================================
 // BASE TYPES
@@ -16,7 +16,6 @@ import type { EnvelopeId, TenantId } from "@/domain/value-objects/ids";
  */
 export interface BaseCertificateControllerInput {
   /** Tenant identifier */
-  readonly tenantId: TenantId;
 }
 
 // ============================================================================
@@ -25,7 +24,7 @@ export interface BaseCertificateControllerInput {
 
 /**
  * @summary Input for getting certificate (controller level)
- * @description Parameters for retrieving certificate and audit trail, tenantId is injected by factory
+ * @description Parameters for retrieving certificate and audit trail, is injected by factory
  */
 export interface GetCertificateControllerInput extends BaseCertificateControllerInput {
   /** Envelope identifier */
@@ -35,9 +34,4 @@ export interface GetCertificateControllerInput extends BaseCertificateController
   /** Optional cursor for pagination */
   readonly cursor?: string;
 }
-
-
-
-
-
 

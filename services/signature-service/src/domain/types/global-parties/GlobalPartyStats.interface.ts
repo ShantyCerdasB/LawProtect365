@@ -17,9 +17,3 @@ export interface GlobalPartyStats {
   totalEnvelopes: number;
 }
 
-
-
-
-
-
-

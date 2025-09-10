@@ -29,7 +29,6 @@ export class InputsEventService extends BaseEventService {
    */
   async publishInputsCreatedEvent(
     inputIds: string[],
-    tenantId: string,
     envelopeId: string,
     documentId: string,
     actor: ActorContext
@@ -39,11 +38,9 @@ export class InputsEventService extends BaseEventService {
       type: "InputsCreated",
       payload: {
         inputIds,
-        tenantId,
         envelopeId,
         documentId,
-        actor: actor.email,
-      },
+        actor: actor.email},
       occurredAt: new Date().toISOString()
     };
 
@@ -56,7 +53,6 @@ export class InputsEventService extends BaseEventService {
    */
   async publishInputUpdatedEvent(
     inputId: string,
-    tenantId: string,
     envelopeId: string,
     updatedFields: string[],
     actor: ActorContext
@@ -66,11 +62,9 @@ export class InputsEventService extends BaseEventService {
       type: "InputUpdated",
       payload: {
         inputId,
-        tenantId,
         envelopeId,
         updatedFields,
-        actor: actor.email,
-      },
+        actor: actor.email},
       occurredAt: new Date().toISOString()
     };
 
@@ -83,7 +77,6 @@ export class InputsEventService extends BaseEventService {
    */
   async publishInputPositionsUpdatedEvent(
     inputIds: string[],
-    tenantId: string,
     envelopeId: string,
     actor: ActorContext
   ): Promise<void> {
@@ -92,10 +85,8 @@ export class InputsEventService extends BaseEventService {
       type: "InputPositionsUpdated",
       payload: {
         inputIds,
-        tenantId,
         envelopeId,
-        actor: actor.email,
-      },
+        actor: actor.email},
       occurredAt: new Date().toISOString()
     };
 
@@ -108,7 +99,6 @@ export class InputsEventService extends BaseEventService {
    */
   async publishInputDeletedEvent(
     inputId: string,
-    tenantId: string,
     envelopeId: string,
     actor: ActorContext
   ): Promise<void> {
@@ -117,10 +107,8 @@ export class InputsEventService extends BaseEventService {
       type: "InputDeleted",
       payload: {
         inputId,
-        tenantId,
         envelopeId,
-        actor: actor.email,
-      },
+        actor: actor.email},
       occurredAt: new Date().toISOString()
     };
 

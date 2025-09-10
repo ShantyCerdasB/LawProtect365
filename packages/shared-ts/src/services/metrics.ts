@@ -44,8 +44,7 @@ export class MetricsService {
   constructor(config: MetricsServiceConfig) {
     this.config = config;
     this.client = new CloudWatchClient({
-      region: config.region,
-    });
+      region: config.region});
   }
 
   /**
@@ -62,9 +61,7 @@ export class MetricsService {
           Value: metric.value,
           Unit: metric.unit,
           Timestamp: metric.timestamp ?? new Date(),
-          Dimensions: metric.dimensions,
-        }],
-      };
+          Dimensions: metric.dimensions}]};
 
       await this.client.send(new PutMetricDataCommand(input));
     } catch (error) {
@@ -87,9 +84,7 @@ export class MetricsService {
           Value: metric.value,
           Unit: metric.unit,
           Timestamp: metric.timestamp ?? new Date(),
-          Dimensions: metric.dimensions,
-        })),
-      };
+          Dimensions: metric.dimensions}))};
 
       await this.client.send(new PutMetricDataCommand(input));
     } catch (error) {
@@ -106,8 +101,7 @@ export class MetricsService {
       name,
       value: 1,
       unit: "Count",
-      dimensions,
-    });
+      dimensions});
   }
 
   /**
@@ -118,8 +112,7 @@ export class MetricsService {
       name,
       value: durationMs,
       unit: "Milliseconds",
-      dimensions,
-    });
+      dimensions});
   }
 
   /**
@@ -130,11 +123,9 @@ export class MetricsService {
       name,
       value: sizeBytes,
       unit: "Bytes",
-      dimensions,
-    });
+      dimensions});
   }
 }
-
 
 
 

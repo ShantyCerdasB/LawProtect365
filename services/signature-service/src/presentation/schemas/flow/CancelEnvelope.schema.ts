@@ -7,12 +7,6 @@ import { z } from "@lawprotect/shared-ts";
 
 /** Body payload for canceling an envelope. */
 export const CancelEnvelopeBody = z.object({
-  reason: z.string().max(500).optional(),
-});
+  reason: z.string().max(500).optional()});
 export type CancelEnvelopeBody = z.infer<typeof CancelEnvelopeBody>;
-
-
-
-
-
 

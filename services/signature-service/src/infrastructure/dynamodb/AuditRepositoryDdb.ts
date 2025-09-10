@@ -4,7 +4,7 @@
  *
  * @description
  * Persists immutable audit events using a single-table layout and two GSIs:
- * - GSI#1 (by envelope): lists events for `(tenantId, envelopeId)` in ascending time order.
+ * - GSI#1 (by envelope): lists events for `(envelopeId)` in ascending time order.
  * - GSI#2 (by id): fetches a single event by its identifier.
  *
  * The adapter:
@@ -26,8 +26,7 @@ import {
   decodeCursor,
   requireQuery,
   randomToken,
-  toJsonObject,
-} from "@lawprotect/shared-ts";
+  toJsonObject} from "@lawprotect/shared-ts";
 
 import type { AuditRepository, ListByEnvelopeInput } from "../../domain/contracts/repositories/audit";
 import type { AuditEvent } from "@/domain/value-objects/audit";
@@ -38,8 +37,7 @@ import {
   auditSk,
   gsi1Pk,
   gsi1Sk,
-  gsi2Pk,
-} from "./mappers/AuditItemMapper";
+  gsi2Pk} from "./mappers/AuditItemMapper";
 import { DEFAULT_ENTITY_INDEX, DEFAULT_ID_INDEX } from "../../domain/types/infrastructure/constants";
 import { AUDIT_ENTITY_TYPE } from "../../domain/types/infrastructure/enums";
 
@@ -86,8 +84,7 @@ export class AuditRepositoryDdb implements AuditRepository {
         KeyConditionExpression: "#pk = :pk",
         ExpressionAttributeNames: { "#pk": "gsi2pk" },
         ExpressionAttributeValues: { ":pk": gsi2Pk(String(id)) },
-        Limit: 1,
-      });
+        Limit: 1});
 
       const raw = res.Items?.[0] as Record<string, unknown> | undefined;
       return raw ? auditItemFromRaw(raw) : null;
@@ -97,8 +94,8 @@ export class AuditRepositoryDdb implements AuditRepository {
   }
 
   /**
-   * @summary Lists audit events for `(tenantId, envelopeId)` with forward-only cursor pagination
-   * @description Lists audit events for `(tenantId, envelopeId)` with forward-only cursor pagination.
+   * @summary Lists audit events for `(envelopeId)` with forward-only cursor pagination
+   * @description Lists audit events for `(envelopeId)` with forward-only cursor pagination.
    * Results are ordered by `occurredAt` ascending (stable by `id` as tiebreaker).
    * @param input - Scope and pagination hints
    * @returns A page of events and `meta` including the echoed `limit` and optional `nextCursor`
@@ -116,9 +113,8 @@ export class AuditRepositoryDdb implements AuditRepository {
         KeyConditionExpression: "#pk = :pk" + (afterSk ? " AND #sk > :after" : ""),
         ExpressionAttributeNames: { "#pk": "gsi1pk", "#sk": "gsi1sk" },
         ExpressionAttributeValues: {
-          ":pk": gsi1Pk(String(input.tenantId), String(input.envelopeId)),
-          ...(afterSk ? { ":after": afterSk } : {}),
-        },
+          ":pk": gsi1Pk(String(input.envelopeId)),
+          ...(afterSk ? { ":after": afterSk } : {})},
         Limit: limit + 1,            // lookahead to detect continuation
         ScanIndexForward: true,      // ASC by occurredAt
       });
@@ -135,9 +131,7 @@ export class AuditRepositoryDdb implements AuditRepository {
         items,
         meta: {
           hasNext: !!nextCursor,
-          nextCursor,
-        },
-      };
+          nextCursor}};
     } catch (err) {
       throw mapAwsError(err, "AuditRepositoryDdb.listByEnvelope");
     }
@@ -157,49 +151,44 @@ export class AuditRepositoryDdb implements AuditRepository {
 
       const prevHash =
         (candidate as any).prevHash ??
-        (await this.getLatestHash(String(candidate.tenantId), String(candidate.envelopeId)));
+        (await this.getLatestHash(String(candidate.envelopeId)));
 
       const payloadForHash: JsonObject = toJsonObject({
         id,
-        tenantId: String(candidate.tenantId),
         envelopeId: String(candidate.envelopeId),
         type: candidate.type,
         occurredAt: candidate.occurredAt,
         actor: candidate.actor ? toJsonObject(candidate.actor as Record<string, unknown>) : undefined,
         metadata: candidate.metadata ? toJsonObject(candidate.metadata as Record<string, unknown>) : undefined,
-        prevHash,
-      });
+        prevHash});
 
       const hash = candidate.hash ?? sha256Hex(stableStringify(payloadForHash));
 
       const item = {
         // table keys
-        pk: auditPk(String(candidate.tenantId)),
+        pk: auditPk(),
         sk: auditSk(String(candidate.envelopeId), candidate.occurredAt, id),
         type: AUDIT_ENTITY_TYPE,
 
         // payload
         id,
-        tenantId: String(candidate.tenantId),
         envelopeId: String(candidate.envelopeId),
         occurredAt: candidate.occurredAt,
         eventType: candidate.type,
-        actor: candidate.actor ? toJsonObject(candidate.actor as Record<string, unknown>) : undefined,
-        metadata: candidate.metadata ? toJsonObject(candidate.metadata as Record<string, unknown>) : undefined,
-        prevHash: prevHash ?? undefined,
+        ...(candidate.actor && { actor: toJsonObject(candidate.actor as Record<string, unknown>) }),
+        ...(candidate.metadata && { metadata: toJsonObject(candidate.metadata as Record<string, unknown>) }),
+        ...(prevHash && { prevHash }),
         hash,
 
         // GSIs
-        gsi1pk: gsi1Pk(String(candidate.tenantId), String(candidate.envelopeId)),
+        gsi1pk: gsi1Pk(String(candidate.envelopeId)),
         gsi1sk: gsi1Sk(candidate.occurredAt, id),
-        gsi2pk: gsi2Pk(id),
-      };
+        gsi2pk: gsi2Pk(id)};
 
       await this.ddb.put({
         TableName: this.tableName,
         Item: item as unknown as Record<string, unknown>,
-        ConditionExpression: "attribute_not_exists(pk) AND attribute_not_exists(sk)",
-      });
+        ConditionExpression: "attribute_not_exists(pk) AND attribute_not_exists(sk)"});
 
       return auditItemMapper.fromDTO(item);
     } catch (err: any) {
@@ -211,20 +200,19 @@ export class AuditRepositoryDdb implements AuditRepository {
   }
 
   /**
-   * @summary Retrieves the latest `hash` for a `(tenantId, envelopeId)` pair, if any
-   * @description Retrieves the latest `hash` for a `(tenantId, envelopeId)` pair, if any.
-   * @param tenantId - Tenant identifier
+   * @summary Retrieves the latest `hash` for a `(envelopeId)` pair, if any
+   * @description Retrieves the latest `hash` for a `(envelopeId)` pair, if any.
    * @param envelopeId - Envelope identifier
    * @returns The latest hash or `undefined` when no prior events exist
    */
-  private async getLatestHash(tenantId: string, envelopeId: string): Promise<string | undefined> {
+  private async getLatestHash(envelopeId: string): Promise<string | undefined> {
     requireQuery(this.ddb);
     const res = await this.ddb.query({
       TableName: this.tableName,
       IndexName: this.idxByEnvelope,
       KeyConditionExpression: "#pk = :pk",
       ExpressionAttributeNames: { "#pk": "gsi1pk" },
-      ExpressionAttributeValues: { ":pk": gsi1Pk(tenantId, envelopeId) },
+      ExpressionAttributeValues: { ":pk": gsi1Pk(envelopeId) },
       Limit: 1,
       ScanIndexForward: false, // DESC → newest first
     });
@@ -234,5 +222,4 @@ export class AuditRepositoryDdb implements AuditRepository {
     return typeof h === "string" && h.length > 0 ? h : undefined;
   }
 }
-
 

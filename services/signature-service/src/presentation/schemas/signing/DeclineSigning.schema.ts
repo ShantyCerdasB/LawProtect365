@@ -9,12 +9,6 @@ import { z, UuidV4 } from "@lawprotect/shared-ts";
 export const DeclineSigningBody = z.object({
   envelopeId: UuidV4,
   signerId: UuidV4,
-  reason: z.string().max(500),
-});
+  reason: z.string().max(500)});
 export type DeclineSigningBody = z.infer<typeof DeclineSigningBody>;
-
-
-
-
-
 

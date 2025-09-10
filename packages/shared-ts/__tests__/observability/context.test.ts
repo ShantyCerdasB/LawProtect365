@@ -8,8 +8,7 @@ import {
   getRequestContext,
   getRequestId,
   getTraceId,
-  setContextFields,
-} from '../../src/observability/context.js';
+  setContextFields} from '../../src/observability/context.js';
 
 describe('withRequestContexts', () => {
   it('runs function with provided context', () => {
@@ -25,8 +24,7 @@ describe('withRequestContexts', () => {
     expect(capturedContext).toEqual({
       requestId: 'test-request',
       traceId: 'test-trace',
-      fields: {},
-    });
+      fields: {}});
   });
 
   it('auto-generates missing requestId', () => {
@@ -102,8 +100,7 @@ describe('withRequestContexts', () => {
     
     expect(capturedContext?.fields).toEqual({
       tenant: 'test-tenant',
-      user: 'test-user',
-    });
+      user: 'test-user'});
   });
 
   it('isolates context between different calls', () => {
@@ -218,8 +215,7 @@ describe('setContextFields', () => {
     expect(capturedContext?.fields).toEqual({
       existing: 'value',
       new: 'value',
-      another: 'field',
-    });
+      another: 'field'});
   });
 
   it('creates fields object when none exists', () => {
@@ -257,7 +253,6 @@ describe('setContextFields', () => {
     
     expect(capturedContext?.fields).toEqual({
       key1: 'new-value1',
-      key2: 'value2',
-    });
+      key2: 'value2'});
   });
 });

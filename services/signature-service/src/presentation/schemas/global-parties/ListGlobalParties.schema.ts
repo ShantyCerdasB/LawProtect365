@@ -16,27 +16,16 @@ export const ListGlobalPartiesQuery = z.object({
     .max(10, "Too many tags")
     .optional(),
   role: z.enum(["signer", "approver", "viewer"], {
-    errorMap: () => ({ message: "Role must be signer, approver, or viewer" }),
-  }).optional(),
+    errorMap: () => ({ message: "Role must be signer, approver, or viewer" })}).optional(),
   source: z.enum(["manual", "import", "api"], {
-    errorMap: () => ({ message: "Source must be manual, import, or api" }),
-  }).optional(),
+    errorMap: () => ({ message: "Source must be manual, import, or api" })}).optional(),
   status: z.enum(["active", "inactive", "deleted"], {
-    errorMap: () => ({ message: "Status must be active, inactive, or deleted" }),
-  }).optional(),
+    errorMap: () => ({ message: "Status must be active, inactive, or deleted" })}).optional(),
   limit: z.coerce.number().min(1, "Limit must be at least 1").max(100, "Limit cannot exceed 100").optional(),
-  cursor: z.string().optional(),
-});
+  cursor: z.string().optional()});
 
 /**
  * @description Type for ListGlobalParties query parameters.
  */
 export type ListGlobalPartiesQuery = z.infer<typeof ListGlobalPartiesQuery>;
-
-
-
-
-
-
-
 

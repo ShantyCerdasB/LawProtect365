@@ -8,4 +8,3 @@ export * from "./Ids";
 export * from "./EnvelopeId.schema";
 export * from "./PartyId.schema";
 export * from "./ConsentId.schema";
-export * from "./TenantId.schema";

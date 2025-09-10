@@ -23,15 +23,7 @@ export const handler = createQueryController<ListConsentsControllerInput, ListCo
     cursor: query.cursor,
     status: query.status,
     type: query.consentType,
-    partyId: query.partyId,
-  }),
+    partyId: query.partyId}),
   responseType: "ok"
 });
-
-
-
-
-
-
-
 

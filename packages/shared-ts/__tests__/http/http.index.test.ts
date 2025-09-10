@@ -11,7 +11,6 @@ import * as ApiHandlerMod from '../../src/http/apiHandler.js';
 import * as RequestMod from '../../src/http/request.js';
 import * as MiddlewareMod from '../../src/http/middleware.js';
 
-
 describe('http index (barrel) re-exports', () => {
   it('re-exports selected runtime symbols with identity preserved', () => {
     // httpTypes

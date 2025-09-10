@@ -19,12 +19,9 @@ describe('apiHandler', () => {
     mockHandler = jest.fn();
     mockEvent = {
       requestContext: {
-        requestId: 'test-request-id',
-      },
+        requestId: 'test-request-id'},
       headers: {
-        'x-request-id': 'test-request-id',
-      },
-    };
+        'x-request-id': 'test-request-id'}};
 
     mockBuildCorsHeaders.mockReturnValue({ 'Access-Control-Allow-Origin': '*' });
     mockIsPreflight.mockReturnValue(false);
@@ -52,8 +49,7 @@ describe('apiHandler', () => {
     expect(mockHandler).toHaveBeenCalledWith(mockEvent);
     expect(result).toEqual({
       ...mockResponse,
-      headers: {},
-    });
+      headers: {}});
   });
 
   it('should handle string response', async () => {
@@ -66,8 +62,7 @@ describe('apiHandler', () => {
     expect(result).toEqual({
       statusCode: 200,
       body: stringResponse,
-      headers: {},
-    });
+      headers: {}});
   });
 
   it('should merge default headers', async () => {
@@ -75,15 +70,13 @@ describe('apiHandler', () => {
     mockHandler.mockResolvedValue(mockResponse);
 
     const options: ApiHandlerOptions = {
-      defaultHeaders: { 'X-Custom-Header': 'custom-value' },
-    };
+      defaultHeaders: { 'X-Custom-Header': 'custom-value' }};
 
     const wrappedHandler = apiHandler(mockHandler, options);
     const result = await wrappedHandler(mockEvent);
 
     expect((result as any).headers).toEqual({
-      'X-Custom-Header': 'custom-value',
-    });
+      'X-Custom-Header': 'custom-value'});
   });
 
   it('should merge CORS headers', async () => {
@@ -91,8 +84,7 @@ describe('apiHandler', () => {
     mockHandler.mockResolvedValue(mockResponse);
 
     const options: ApiHandlerOptions = {
-      cors: { allowOrigins: ['https://example.com'] },
-    };
+      cors: { allowOrigins: ['https://example.com'] }};
 
     const wrappedHandler = apiHandler(mockHandler, options);
     const result = await wrappedHandler(mockEvent);
@@ -100,25 +92,21 @@ describe('apiHandler', () => {
     expect(mockBuildCorsHeaders).toHaveBeenCalledWith({
       allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
       allowHeaders: ['*'],
-      allowOrigins: ['https://example.com'],
-    });
+      allowOrigins: ['https://example.com']});
     expect((result as any).headers).toEqual({
-      'Access-Control-Allow-Origin': '*',
-    });
+      'Access-Control-Allow-Origin': '*'});
   });
 
   it('should merge response headers with default and CORS headers', async () => {
     const mockResponse = {
       statusCode: 200,
       body: 'test',
-      headers: { 'X-Response-Header': 'response-value' },
-    };
+      headers: { 'X-Response-Header': 'response-value' }};
     mockHandler.mockResolvedValue(mockResponse);
 
     const options: ApiHandlerOptions = {
       defaultHeaders: { 'X-Default-Header': 'default-value' },
-      cors: { allowOrigins: ['https://example.com'] },
-    };
+      cors: { allowOrigins: ['https://example.com'] }};
 
     const wrappedHandler = apiHandler(mockHandler, options);
     const result = await wrappedHandler(mockEvent);
@@ -126,16 +114,14 @@ describe('apiHandler', () => {
     expect((result as any).headers).toEqual({
       'X-Default-Header': 'default-value',
       'Access-Control-Allow-Origin': '*',
-      'X-Response-Header': 'response-value',
-    });
+      'X-Response-Header': 'response-value'});
   });
 
   it('should handle preflight requests', async () => {
     mockIsPreflight.mockReturnValue(true);
 
     const options: ApiHandlerOptions = {
-      cors: { allowOrigins: ['https://example.com'] },
-    };
+      cors: { allowOrigins: ['https://example.com'] }};
 
     const wrappedHandler = apiHandler(mockHandler, options);
     const result = await wrappedHandler(mockEvent);
@@ -146,9 +132,7 @@ describe('apiHandler', () => {
       statusCode: 200,
       body: 'OK',
       headers: {
-        'Access-Control-Allow-Origin': '*',
-      },
-    });
+        'Access-Control-Allow-Origin': '*'}});
     expect(mockHandler).not.toHaveBeenCalled();
   });
 
@@ -163,8 +147,7 @@ describe('apiHandler', () => {
     expect(result).toEqual({
       statusCode: 500,
       body: 'Internal Server Error',
-      headers: {},
-    });
+      headers: {}});
   });
 
   it('should extract request id from headers when requestContext is missing', async () => {
@@ -173,8 +156,7 @@ describe('apiHandler', () => {
 
     const eventWithoutRequestContext = {
       ...mockEvent,
-      requestContext: {},
-    };
+      requestContext: {}};
 
     const wrappedHandler = apiHandler(mockHandler);
     await wrappedHandler(eventWithoutRequestContext);
@@ -189,8 +171,7 @@ describe('apiHandler', () => {
     const eventWithUpperCaseHeader = {
       ...mockEvent,
       headers: { 'X-Request-Id': 'upper-case-request-id' },
-      requestContext: {},
-    };
+      requestContext: {}};
 
     const wrappedHandler = apiHandler(mockHandler);
     await wrappedHandler(eventWithUpperCaseHeader);
@@ -205,8 +186,7 @@ describe('apiHandler', () => {
     const eventWithoutRequestId = {
       ...mockEvent,
       requestContext: {},
-      headers: {},
-    };
+      headers: {}};
 
     const wrappedHandler = apiHandler(mockHandler);
     await wrappedHandler(eventWithoutRequestId);
@@ -224,8 +204,7 @@ describe('apiHandler', () => {
     expect(result).toEqual({
       statusCode: 204,
       body: undefined,
-      headers: {},
-    });
+      headers: {}});
   });
 
   it('should handle response without headers', async () => {

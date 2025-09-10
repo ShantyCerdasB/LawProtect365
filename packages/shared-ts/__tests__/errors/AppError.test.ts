@@ -28,8 +28,7 @@ describe('AppError', () => {
       error: 'AUTH_UNAUTHORIZED',
       message: 'Nope',
       details,
-      statusCode: 401,
-    });
+      statusCode: 401});
   });
 
   it('defaults message to the code when message is not provided', () => {
@@ -40,8 +39,7 @@ describe('AppError', () => {
       error: 'SOME_CODE',
       message: 'SOME_CODE',
       details: undefined,
-      statusCode: 400,
-    });
+      statusCode: 400});
   });
 
   it('invokes Error.captureStackTrace when available with the subclass constructor', () => {

@@ -1,10 +1,11 @@
 /**
  * @file ControllerInputs.ts
- * @summary Inputs for request controllers (without tenantId and actor)
- * @description Defines the input contracts for request controllers, tenantId and actor are injected by the factory
+ * @summary Inputs for request controllers
+ * @description Defines the input contracts for request controllers, and actor are injected by the factory
  */
 
 import type { EnvelopeId, PartyId } from "@/domain/value-objects/index";
+import type { ActorContext } from "@lawprotect/shared-ts";
 
 // ============================================================================
 // BASE TYPES
@@ -17,6 +18,8 @@ import type { EnvelopeId, PartyId } from "@/domain/value-objects/index";
 export interface BaseRequestControllerInput {
   /** Envelope identifier */
   readonly envelopeId: EnvelopeId;
+  /** Actor context for authentication and audit */
+  readonly actor: ActorContext;
 }
 
 /**
@@ -26,6 +29,12 @@ export interface BaseRequestControllerInput {
 export interface RequestWithPartiesControllerInput extends BaseRequestControllerInput {
   /** Array of party IDs */
   readonly partyIds: PartyId[];
+  /** Optional custom message for invitations/reminders */
+  readonly message?: string;
+  /** Optional deadline for signing (ISO 8601 date string) */
+  readonly signByDate?: string;
+  /** Optional signing order preference - only applies when multiple parties are invited */
+  readonly signingOrder?: "owner_first" | "invitees_first";
 }
 
 // ============================================================================
@@ -34,7 +43,7 @@ export interface RequestWithPartiesControllerInput extends BaseRequestController
 
 /**
  * @summary Input for inviting parties (controller level)
- * @description Parameters for inviting parties to sign an envelope, tenantId and actor are injected by factory
+ * @description Parameters for inviting parties to sign an envelope, and actor are injected by factory
  */
 export interface InvitePartiesControllerInput extends RequestWithPartiesControllerInput {
   // No additional fields needed for INVITE
@@ -46,7 +55,7 @@ export interface InvitePartiesControllerInput extends RequestWithPartiesControll
 
 /**
  * @summary Input for reminding parties (controller level)
- * @description Parameters for sending reminders to parties, tenantId and actor are injected by factory
+ * @description Parameters for sending reminders to parties, and actor are injected by factory
  */
 export interface RemindPartiesControllerInput extends BaseRequestControllerInput {
   /** Optional array of specific party IDs to remind */
@@ -61,7 +70,7 @@ export interface RemindPartiesControllerInput extends BaseRequestControllerInput
 
 /**
  * @summary Input for canceling an envelope (controller level)
- * @description Parameters for canceling an envelope, tenantId and actor are injected by factory
+ * @description Parameters for canceling an envelope, and actor are injected by factory
  */
 export interface CancelEnvelopeControllerInput extends BaseRequestControllerInput {
   /** Optional reason for cancellation */
@@ -74,7 +83,7 @@ export interface CancelEnvelopeControllerInput extends BaseRequestControllerInpu
 
 /**
  * @summary Input for declining an envelope (controller level)
- * @description Parameters for declining an envelope, tenantId and actor are injected by factory
+ * @description Parameters for declining an envelope, and actor are injected by factory
  */
 export interface DeclineEnvelopeControllerInput extends BaseRequestControllerInput {
   /** Optional reason for declining */
@@ -87,7 +96,7 @@ export interface DeclineEnvelopeControllerInput extends BaseRequestControllerInp
 
 /**
  * @summary Input for finalizing an envelope (controller level)
- * @description Parameters for finalizing an envelope, tenantId and actor are injected by factory
+ * @description Parameters for finalizing an envelope, and actor are injected by factory
  */
 export interface FinaliseEnvelopeControllerInput extends BaseRequestControllerInput {
   // No additional fields needed for FINALISE
@@ -99,7 +108,7 @@ export interface FinaliseEnvelopeControllerInput extends BaseRequestControllerIn
 
 /**
  * @summary Input for requesting signature (controller level)
- * @description Parameters for requesting signature from a specific party, tenantId and actor are injected by factory
+ * @description Parameters for requesting signature from a specific party, and actor are injected by factory
  */
 export interface RequestSignatureControllerInput extends BaseRequestControllerInput {
   /** The party ID to request signature from */
@@ -114,7 +123,7 @@ export interface RequestSignatureControllerInput extends BaseRequestControllerIn
 
 /**
  * @summary Input for adding a viewer (controller level)
- * @description Parameters for adding a viewer to an envelope, tenantId and actor are injected by factory
+ * @description Parameters for adding a viewer to an envelope, and actor are injected by factory
  */
 export interface AddViewerControllerInput extends BaseRequestControllerInput {
   /** Email address of the viewer */
@@ -124,9 +133,4 @@ export interface AddViewerControllerInput extends BaseRequestControllerInput {
   /** Optional locale preference for the viewer */
   readonly locale?: string;
 }
-
-
-
-
-
 

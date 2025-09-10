@@ -18,16 +18,7 @@ export const GetEnvelopeStatusController = createQueryController<GetEnvelopeStat
   appServiceClass: EnvelopesQueryService,
   createDependencies: (c: any) => c.envelopes.queriesPort,
   extractParams: (path: any) => ({
-    tenantId: path.tenantId,
-    envelopeId: path.envelopeId,
-  }),
+    envelopeId: path.envelopeId}),
   responseType: "ok"
 });
-
-
-
-
-
-
-
 

@@ -10,37 +10,29 @@ describe('withObservability', () => {
   beforeEach(() => {
     mockLogger = {
       info: jest.fn(),
-      error: jest.fn(),
-    };
+      error: jest.fn()};
 
     mockMetrics = {
       increment: jest.fn(),
-      timing: jest.fn(),
-    };
+      timing: jest.fn()};
 
     mockTracer = {
       startSpan: jest.fn(),
-      endSpan: jest.fn(),
-    };
+      endSpan: jest.fn()};
 
     mockFactories = {
       logger: jest.fn().mockReturnValue(mockLogger),
       metrics: jest.fn().mockReturnValue(mockMetrics),
-      tracer: jest.fn().mockReturnValue(mockTracer),
-    };
+      tracer: jest.fn().mockReturnValue(mockTracer)};
 
     mockEvent = {
       headers: {
         'x-request-id': 'test-request-id',
-        'x-trace-id': 'test-trace-id',
-      },
+        'x-trace-id': 'test-trace-id'},
       requestContext: {
         http: {
           method: 'GET',
-          path: '/test',
-        },
-      },
-    };
+          path: '/test'}}};
 
     // Mock process.env.ENV
     process.env.ENV = 'test';
@@ -66,8 +58,7 @@ describe('withObservability', () => {
       requestId: 'test-request-id',
       traceId: 'test-trace-id',
       route: '/test',
-      method: 'GET',
-    });
+      method: 'GET'});
     expect(mockFactories.metrics).toHaveBeenCalled();
     expect(mockFactories.tracer).toHaveBeenCalled();
 
@@ -77,8 +68,7 @@ describe('withObservability', () => {
       logger: mockLogger,
       metrics: mockMetrics,
       tracer: mockTracer,
-      bag: {},
-    });
+      bag: {}});
   });
 
   it('should handle missing request id header', () => {
@@ -92,8 +82,7 @@ describe('withObservability', () => {
       requestId: undefined,
       traceId: 'test-trace-id',
       route: '/test',
-      method: 'GET',
-    });
+      method: 'GET'});
     expect((eventWithoutRequestId as any).ctx.requestId).toBeUndefined();
   });
 
@@ -108,8 +97,7 @@ describe('withObservability', () => {
       requestId: 'test-request-id',
       traceId: undefined,
       route: '/test',
-      method: 'GET',
-    });
+      method: 'GET'});
   });
 
   it('should handle case-insensitive request id header', () => {
@@ -117,9 +105,7 @@ describe('withObservability', () => {
     const eventWithUpperCaseHeader = {
       ...mockEvent,
       headers: {
-        'X-Request-Id': 'test-request-id-upper',
-      },
-    };
+        'X-Request-Id': 'test-request-id-upper'}};
 
     middleware(eventWithUpperCaseHeader);
 
@@ -127,8 +113,7 @@ describe('withObservability', () => {
       requestId: 'test-request-id-upper',
       traceId: undefined,
       route: '/test',
-      method: 'GET',
-    });
+      method: 'GET'});
   });
 
   it('should handle case-insensitive trace id header', () => {
@@ -136,9 +121,7 @@ describe('withObservability', () => {
     const eventWithUpperCaseHeader = {
       ...mockEvent,
       headers: {
-        'X-Trace-Id': 'test-trace-id-upper',
-      },
-    };
+        'X-Trace-Id': 'test-trace-id-upper'}};
 
     middleware(eventWithUpperCaseHeader);
 
@@ -146,16 +129,14 @@ describe('withObservability', () => {
       requestId: undefined,
       traceId: 'test-trace-id-upper',
       route: '/test',
-      method: 'GET',
-    });
+      method: 'GET'});
   });
 
   it('should handle missing headers object', () => {
     const middleware = withObservability(mockFactories);
     const eventWithoutHeaders = {
       ...mockEvent,
-      headers: undefined,
-    };
+      headers: undefined};
 
     middleware(eventWithoutHeaders);
 
@@ -163,16 +144,14 @@ describe('withObservability', () => {
       requestId: undefined,
       traceId: undefined,
       route: '/test',
-      method: 'GET',
-    });
+      method: 'GET'});
   });
 
   it('should handle missing request context', () => {
     const middleware = withObservability(mockFactories);
     const eventWithoutContext = {
       ...mockEvent,
-      requestContext: undefined,
-    };
+      requestContext: undefined};
 
     middleware(eventWithoutContext);
 
@@ -180,8 +159,7 @@ describe('withObservability', () => {
       requestId: 'test-request-id',
       traceId: 'test-trace-id',
       route: undefined,
-      method: undefined,
-    });
+      method: undefined});
   });
 
   it('should use default env when ENV is not set', () => {
@@ -197,8 +175,7 @@ describe('withObservability', () => {
     const middleware = withObservability(mockFactories);
     const eventWithEmptyHeaders = {
       ...mockEvent,
-      headers: {},
-    };
+      headers: {}};
 
     middleware(eventWithEmptyHeaders);
 
@@ -206,16 +183,14 @@ describe('withObservability', () => {
       requestId: undefined,
       traceId: undefined,
       route: '/test',
-      method: 'GET',
-    });
+      method: 'GET'});
   });
 
   it('should preserve existing ctx if present', () => {
     const middleware = withObservability(mockFactories);
     const eventWithExistingCtx = {
       ...mockEvent,
-      ctx: { existing: 'value' },
-    };
+      ctx: { existing: 'value' }};
 
     middleware(eventWithExistingCtx);
 
@@ -225,7 +200,6 @@ describe('withObservability', () => {
       logger: mockLogger,
       metrics: mockMetrics,
       tracer: mockTracer,
-      bag: {},
-    });
+      bag: {}});
   });
 });

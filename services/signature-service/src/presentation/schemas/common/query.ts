@@ -31,20 +31,13 @@ export type ListEnvelopesQuery = z.infer<typeof ListEnvelopesQuery>;
 /** Audit trail format/localization. */
 export const AuditTrailQuery = z.object({
   format: z.enum(["json", "pdf"]).default("json"),
-  locale: z.string().min(2).max(10).optional(),
-});
+  locale: z.string().min(2).max(10).optional()});
 export type AuditTrailQuery = z.infer<typeof AuditTrailQuery>;
 
 /** Page preview rendering hints for thumbnails. */
 export const PageRenderQuery = z.object({
   w: z.coerce.number().int().positive().max(4000).optional(),
   h: z.coerce.number().int().positive().max(4000).optional(),
-  quality: z.coerce.number().int().min(1).max(100).optional(),
-});
+  quality: z.coerce.number().int().min(1).max(100).optional()});
 export type PageRenderQuery = z.infer<typeof PageRenderQuery>;
-
-
-
-
-
 

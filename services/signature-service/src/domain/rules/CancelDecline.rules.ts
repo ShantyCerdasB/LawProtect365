@@ -23,4 +23,3 @@ export const assertCancelDeclineAllowed = (status: EnvelopeStatus): void => {
  */
 export const assertReasonValid = (reason: unknown): string => ReasonSchema.parse(reason);
 
-

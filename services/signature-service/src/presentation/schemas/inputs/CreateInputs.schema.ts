@@ -33,10 +33,8 @@ export const CreateInputsBody = z.object({
       /** Party ID assigned to this input (optional) */
       partyId: UuidV4.optional(),
       /** Initial value of the input (optional) */
-      value: z.string().optional(),
-    })
-  ),
-});
+      value: z.string().optional()})
+  )});
 export type CreateInputsBody = z.infer<typeof CreateInputsBody>;
 
 /**
@@ -56,21 +54,13 @@ export const CreateInputsResponse = z.object({
       /** Position of the input */
       position: z.object({
         x: z.number(),
-        y: z.number(),
-      }),
+        y: z.number()}),
       /** Party ID assigned to this input (optional) */
       assignedPartyId: z.string().optional(),
       /** Whether the input is required */
-      required: z.boolean(),
-    })
+      required: z.boolean()})
   ),
   /** Number of inputs created */
-  count: z.number(),
-});
+  count: z.number()});
 export type CreateInputsResponse = z.infer<typeof CreateInputsResponse>;
-
-
-
-
-
 

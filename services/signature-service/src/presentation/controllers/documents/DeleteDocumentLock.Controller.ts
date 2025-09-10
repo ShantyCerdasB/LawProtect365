@@ -15,8 +15,7 @@ import type { DocumentId } from "@/domain/value-objects/ids";
  */
 const DocumentLockPath = z.object({
   documentId: z.string().min(1),
-  lockId: z.string().min(1),
-});
+  lockId: z.string().min(1)});
 
 /**
  * @description Delete Document Lock controller
@@ -31,24 +30,13 @@ export const DeleteDocumentLockController = createCommandController<{ documentId
     s3Service: c.documents.s3Service,
     s3Config: {
       evidenceBucket: c.config.s3.evidenceBucket,
-      signedBucket: c.config.s3.signedBucket,
-    },
-  }),
+      signedBucket: c.config.s3.signedBucket}}),
   extractParams: (path: any) => ({
     documentId: path.documentId,
-    lockId: path.lockId,
-  }),
+    lockId: path.lockId}),
   responseType: "noContent",
-  includeActor: true,
-});
+  includeActor: true});
 
 // Export handler for backward compatibility
 export const handler = DeleteDocumentLockController;
-
-
-
-
-
-
-
 

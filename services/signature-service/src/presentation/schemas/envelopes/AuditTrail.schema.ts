@@ -10,22 +10,15 @@ import { AuditTrailQuery } from "../common/index";
 export const AuditEntry = z.object({
   at: z.string().datetime(),
   actor: z.string(),
-  action: z.string(),
-});
+  action: z.string()});
 export type AuditEntry = z.infer<typeof AuditEntry>;
 
 /** Response containing audit trail entries. */
 export const AuditTrailResponse = z.object({
   envelopeId: z.string(),
-  entries: z.array(AuditEntry),
-});
+  entries: z.array(AuditEntry)});
 export type AuditTrailResponse = z.infer<typeof AuditTrailResponse>;
 
 /** Query params for audit trail retrieval. */
 export { AuditTrailQuery };
-
-
-
-
-
 

@@ -11,8 +11,7 @@ describe('IdempotencyStoreDdb', () => {
     mockDdb = {
       get: jest.fn(),
       put: jest.fn(),
-      update: jest.fn(),
-    } as any;
+      update: jest.fn()} as any;
 
     // Ensure update method is properly mocked
     (mockDdb.update as jest.Mock) = jest.fn();
@@ -34,8 +33,7 @@ describe('IdempotencyStoreDdb', () => {
       expect(mockDdb.get).toHaveBeenCalledWith({
         TableName: tableName,
         Key: { pk: 'IDEMPOTENCY#test-key', sk: 'META' },
-        ConsistentRead: true,
-      });
+        ConsistentRead: true});
     });
 
     it('should return null when item is not a valid idempotency item', async () => {
@@ -54,8 +52,7 @@ describe('IdempotencyStoreDdb', () => {
         idempotencyKey: 'test-key',
         state: 'pending',
         createdAt: '2023-01-01T00:00:00.000Z',
-        updatedAt: '2023-01-01T00:00:00.000Z',
-      };
+        updatedAt: '2023-01-01T00:00:00.000Z'};
       mockDdb.get.mockResolvedValue({ Item: mockItem });
 
       const result = await store.get('test-key');
@@ -72,8 +69,7 @@ describe('IdempotencyStoreDdb', () => {
         state: 'completed',
         createdAt: '2023-01-01T00:00:00.000Z',
         updatedAt: '2023-01-01T00:00:00.000Z',
-        resultJson: '{"result": "success"}',
-      };
+        resultJson: '{"result": "success"}'};
       mockDdb.get.mockResolvedValue({ Item: mockItem });
 
       const result = await store.get('test-key');
@@ -128,8 +124,7 @@ describe('IdempotencyStoreDdb', () => {
         expiresAt: '2023-01-01T00:00:00.000Z',
         result: { result: 'success' },
         createdAt: '2023-01-01T00:00:00.000Z',
-        updatedAt: '2023-01-01T00:00:00.000Z',
-      });
+        updatedAt: '2023-01-01T00:00:00.000Z'});
     });
 
     it('should return record with default expiresAt when no TTL', async () => {
@@ -140,8 +135,7 @@ describe('IdempotencyStoreDdb', () => {
         idempotencyKey: 'test-key',
         state: 'pending',
         createdAt: '2023-01-01T00:00:00.000Z',
-        updatedAt: '2023-01-01T00:00:00.000Z',
-      };
+        updatedAt: '2023-01-01T00:00:00.000Z'};
       mockDdb.get.mockResolvedValue({ Item: mockItem });
 
       const result = await store.getRecord('test-key');
@@ -172,10 +166,8 @@ describe('IdempotencyStoreDdb', () => {
           type: 'Idempotency',
           idempotencyKey: 'test-key',
           state: 'pending',
-          ttl: expect.any(Number),
-        }),
-        ConditionExpression: 'attribute_not_exists(pk) AND attribute_not_exists(sk)',
-      });
+          ttl: expect.any(Number)}),
+        ConditionExpression: 'attribute_not_exists(pk) AND attribute_not_exists(sk)'});
     });
 
     it('should throw ConflictError when record already exists', async () => {
@@ -209,16 +201,13 @@ describe('IdempotencyStoreDdb', () => {
           '#state': 'state',
           '#resultJson': 'resultJson',
           '#updatedAt': 'updatedAt',
-          '#ttl': 'ttl',
-        },
+          '#ttl': 'ttl'},
         ExpressionAttributeValues: {
           ':completed': 'completed',
           ':resultJson': '{"result":"success"}',
           ':updatedAt': expect.any(String),
-          ':ttl': expect.any(Number),
-        },
-        ReturnValues: 'NONE',
-      });
+          ':ttl': expect.any(Number)},
+        ReturnValues: 'NONE'});
     });
 
     it('should update without TTL when ttlSeconds is 0', async () => {
@@ -234,15 +223,12 @@ describe('IdempotencyStoreDdb', () => {
         ExpressionAttributeNames: {
           '#state': 'state',
           '#resultJson': 'resultJson',
-          '#updatedAt': 'updatedAt',
-        },
+          '#updatedAt': 'updatedAt'},
         ExpressionAttributeValues: {
           ':completed': 'completed',
           ':resultJson': '{"result":"success"}',
-          ':updatedAt': expect.any(String),
-        },
-        ReturnValues: 'NONE',
-      });
+          ':updatedAt': expect.any(String)},
+        ReturnValues: 'NONE'});
     });
 
     it('should throw NotFoundError when record does not exist', async () => {

@@ -19,8 +19,7 @@ describe("makeEventPublisher", () => {
     const outbox = {
       pullPending: jest.fn<Promise<OutboxRecord[]>, [number]>(),
       markDispatched: jest.fn<Promise<void>, [string]>(),
-      markFailed: jest.fn<Promise<void>, [string, string]>(),
-    };
+      markFailed: jest.fn<Promise<void>, [string, string]>()};
     return { bus, outbox };
   };
 
@@ -63,8 +62,7 @@ describe("makeEventPublisher", () => {
           type: "E1",
           occurredAt: now,
           payload: { x: 1 },
-          metadata: undefined,
-        }),
+          metadata: undefined}),
       ]
     );
 
@@ -77,8 +75,7 @@ describe("makeEventPublisher", () => {
           type: "E2",
           occurredAt: now,
           payload: { y: 2 },
-          metadata: { "x-trace-id": "t-123" },
-        }),
+          metadata: { "x-trace-id": "t-123" }}),
       ]
     );
 

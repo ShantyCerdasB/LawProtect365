@@ -47,7 +47,6 @@ export function makeCertificateQueriesPort(
 
       // 3. GET AUDIT EVENTS
       const auditPage = await auditRepo.listByEnvelope({
-        tenantId: query.tenantId,
         envelopeId: query.envelopeId,
         limit: query.limit ?? PAGINATION_LIMITS.DEFAULT_LIMIT,
         cursor: query.cursor as PaginationCursor | undefined, // Type assertion for cursor compatibility
@@ -63,10 +62,8 @@ export function makeCertificateQueriesPort(
         status: envelope.status,
         events: auditPage.items,
         chainValid,
-        nextCursor: auditPage.meta.nextCursor,
-      };
-    },
-  };
+        nextCursor: auditPage.meta.nextCursor};
+    }};
 }
 
 /**

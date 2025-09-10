@@ -3,7 +3,6 @@
  * @summary DynamoDB-backed repository for the GlobalParty aggregate
  * @description DynamoDB-backed repository for the GlobalParty aggregate.
  * Single-table pattern (reusing the envelopes table):
- *   - PK = "TENANT#<tenantId>"
  *   - SK = "PARTY#<partyId>"
  * Exposes low-level CRUD and a paginated list used by app-layer adapters.
  * Validates runtime shapes (Zod) and delegates mapping to mappers/.
@@ -19,8 +18,7 @@ import {
   ConflictError,
   requireUpdate,
   requireQuery,
-  ulid,
-} from "@lawprotect/shared-ts";
+  ulid} from "@lawprotect/shared-ts";
 import type { DdbClientLike } from "@lawprotect/shared-ts";
 
 import { dtoToGlobalPartyExtended, globalPartyRowToDto } from "./mappers/GlobalPartyItemDTO.mapper";
@@ -29,8 +27,7 @@ import { GlobalPartyItemDTOSchema } from "../../presentation/schemas/global-part
 
 import type {
   GlobalPartyExtended,
-  GlobalPartyCommon,
-} from "../../domain/types/global-parties/GlobalPartiesTypes";
+  GlobalPartyCommon} from "../../domain/types/global-parties/GlobalPartiesTypes";
 import type { GlobalPartiesRepository } from "../../domain/contracts/repositories/global-parties/GlobalPartiesRepository";
 import type {
   CreateGlobalPartyAppInput,
@@ -40,10 +37,9 @@ import type {
   ListGlobalPartiesAppInput,
   ListGlobalPartiesAppResult,
   SearchGlobalPartiesByEmailAppInput,
-  SearchGlobalPartiesByEmailAppResult,
-} from "../../domain/types/global-parties/AppServiceInputs";
+  SearchGlobalPartiesByEmailAppResult} from "../../domain/types/global-parties/AppServiceInputs";
 
-const pk = (tenantId: string) => `TENANT#${tenantId}`;
+const pk = () => `GLOBAL_PARTY`;
 const sk = (partyId: string) => `PARTY#${partyId}`;
 
 /**
@@ -72,35 +68,30 @@ export class GlobalPartiesRepositoryDdb implements GlobalPartiesRepository {
     if (!PARTY_ROLES.includes(input.role as typeof PARTY_ROLES[number])) {
       throw new BadRequestError(`Invalid party role: ${input.role}`, "INPUT_TYPE_NOT_ALLOWED", {
         validRoles: PARTY_ROLES,
-        providedRole: input.role,
-      });
+        providedRole: input.role});
     }
     
     if (!PARTY_SOURCES.includes(input.source as typeof PARTY_SOURCES[number])) {
       throw new BadRequestError(`Invalid party source: ${input.source}`, "INPUT_TYPE_NOT_ALLOWED", {
         validSources: PARTY_SOURCES,
-        providedSource: input.source,
-      });
+        providedSource: input.source});
     }
 
     if (!GLOBAL_PARTY_STATUSES.includes(input.status as typeof GLOBAL_PARTY_STATUSES[number])) {
       throw new BadRequestError(`Invalid party status: ${input.status}`, "INPUT_TYPE_NOT_ALLOWED", {
         validStatuses: GLOBAL_PARTY_STATUSES,
-        providedStatus: input.status,
-      });
+        providedStatus: input.status});
     }
 
     if (!AUTH_METHODS.includes(input.preferences.defaultAuth as typeof AUTH_METHODS[number])) {
       throw new BadRequestError(`Invalid auth method: ${input.preferences.defaultAuth}`, "INPUT_TYPE_NOT_ALLOWED", {
         validAuthMethods: AUTH_METHODS,
-        providedAuthMethod: input.preferences.defaultAuth,
-      });
+        providedAuthMethod: input.preferences.defaultAuth});
     }
 
     const now = nowIso();
     const party: GlobalPartyExtended = {
       partyId: input.partyId,
-      tenantId: input.tenantId,
       name: input.name,
       email: input.email,
       emails: input.emails,
@@ -116,12 +107,11 @@ export class GlobalPartiesRepositoryDdb implements GlobalPartiesRepository {
       notificationPreferences: input.notificationPreferences,
       stats: input.stats,
       createdAt: now,
-      updatedAt: now,
-    };
+      updatedAt: now};
 
     const dto = globalPartyRowToDto(
       party,
-      pk(input.tenantId as string),
+      pk(),
       sk(input.partyId as string)
     );
 
@@ -132,14 +122,11 @@ export class GlobalPartiesRepositoryDdb implements GlobalPartiesRepository {
       await this.ddb.put({
         TableName: this.tableName,
         Item: validatedDto as Record<string, unknown>,
-        ConditionExpression: "attribute_not_exists(pk) AND attribute_not_exists(sk)",
-      });
+        ConditionExpression: "attribute_not_exists(pk) AND attribute_not_exists(sk)"});
     } catch (error) {
       if (error && typeof error === 'object' && 'name' in error && error.name === "ConditionalCheckFailedException") {
         throw new ConflictError(`Global party already exists: ${input.partyId}`, "GLOBAL_PARTY_ALREADY_EXISTS", {
-          partyId: input.partyId,
-          tenantId: input.tenantId,
-        });
+          partyId: input.partyId});
       }
       throw mapAwsError(error, "Failed to create global party");
     }
@@ -147,21 +134,18 @@ export class GlobalPartiesRepositoryDdb implements GlobalPartiesRepository {
 
   /**
    * @summary Retrieves a global party by ID
-   * @description Retrieves a global party record by tenant ID and party ID.
+   * @description Retrieves a global party record by party ID.
    * 
-   * @param {string} tenantId - Tenant identifier
    * @param {string} partyId - Party identifier
    * @returns {Promise<GlobalPartyExtended | null>} Promise resolving to the global party record or null if not found
    */
-  async getById(tenantId: string, partyId: string): Promise<GlobalPartyExtended | null> {
+  async getById(partyId: string): Promise<GlobalPartyExtended | null> {
     try {
       const result = await this.ddb.get({
         TableName: this.tableName,
         Key: {
-          pk: pk(tenantId),
-          sk: sk(partyId),
-        },
-      });
+          pk: pk(),
+          sk: sk(partyId)}});
 
       if (!result.Item) {
         return null;
@@ -178,7 +162,7 @@ export class GlobalPartiesRepositoryDdb implements GlobalPartiesRepository {
    * @summary Updates an existing global party record
    * @description Updates a global party record with partial data, validating enum values.
    * 
-   * @param {UpdateGlobalPartyAppInput} input - Update input with tenantId, partyId, and updates
+   * @param {UpdateGlobalPartyAppInput} input - Update input with partyId, and updates
    * @returns {Promise<void>} Promise resolving when update is complete
    * @throws {NotFoundError} When global party is not found
    * @throws {BadRequestError} When update data is invalid
@@ -188,29 +172,25 @@ export class GlobalPartiesRepositoryDdb implements GlobalPartiesRepository {
     if (input.updates.role && !PARTY_ROLES.includes(input.updates.role as typeof PARTY_ROLES[number])) {
       throw new BadRequestError(`Invalid party role: ${input.updates.role}`, "INPUT_TYPE_NOT_ALLOWED", {
         validRoles: PARTY_ROLES,
-        providedRole: input.updates.role,
-      });
+        providedRole: input.updates.role});
     }
 
     if (input.updates.source && !PARTY_SOURCES.includes(input.updates.source as typeof PARTY_SOURCES[number])) {
       throw new BadRequestError(`Invalid party source: ${input.updates.source}`, "INPUT_TYPE_NOT_ALLOWED", {
         validSources: PARTY_SOURCES,
-        providedSource: input.updates.source,
-      });
+        providedSource: input.updates.source});
     }
 
     if (input.updates.status && !GLOBAL_PARTY_STATUSES.includes(input.updates.status as typeof GLOBAL_PARTY_STATUSES[number])) {
       throw new BadRequestError(`Invalid party status: ${input.updates.status}`, "INPUT_TYPE_NOT_ALLOWED", {
         validStatuses: GLOBAL_PARTY_STATUSES,
-        providedStatus: input.updates.status,
-      });
+        providedStatus: input.updates.status});
     }
 
     if (input.updates.preferences?.defaultAuth && !AUTH_METHODS.includes(input.updates.preferences.defaultAuth as typeof AUTH_METHODS[number])) {
       throw new BadRequestError(`Invalid auth method: ${input.updates.preferences.defaultAuth}`, "INPUT_TYPE_NOT_ALLOWED", {
         validAuthMethods: AUTH_METHODS,
-        providedAuthMethod: input.updates.preferences.defaultAuth,
-      });
+        providedAuthMethod: input.updates.preferences.defaultAuth});
     }
 
     const now = nowIso();
@@ -222,7 +202,7 @@ export class GlobalPartiesRepositoryDdb implements GlobalPartiesRepository {
     Object.entries(input.updates).forEach(([key, value]) => {
       if (value !== undefined) {
         const attrName = `#${key}`;
-        const attrValue = `:${key}`;
+        const attrValue = `:key`;
         updateExpression.push(`${attrName} = ${attrValue}`);
         expressionAttributeNames[attrName] = key;
         expressionAttributeValues[attrValue] = value;
@@ -239,20 +219,16 @@ export class GlobalPartiesRepositoryDdb implements GlobalPartiesRepository {
       const result = await this.ddb.update({
         TableName: this.tableName,
         Key: {
-          pk: pk(input.tenantId as string),
-          sk: sk(input.partyId as string),
-        },
+          pk: pk(),
+          sk: sk(input.partyId as string)},
         UpdateExpression: `SET ${updateExpression.join(", ")}`,
         ExpressionAttributeNames: expressionAttributeNames,
         ExpressionAttributeValues: expressionAttributeValues,
-        ReturnValues: "ALL_NEW",
-      });
+        ReturnValues: "ALL_NEW"});
 
       if (!result.Attributes) {
         throw new NotFoundError(`Global party not found: ${input.partyId}`, "GLOBAL_PARTY_NOT_FOUND", {
-          partyId: input.partyId,
-          tenantId: input.tenantId,
-        });
+          partyId: input.partyId});
       }
     } catch (error) {
       if (error && typeof error === 'object' && 'name' in error && error.name === "NotFoundError") {
@@ -264,30 +240,24 @@ export class GlobalPartiesRepositoryDdb implements GlobalPartiesRepository {
 
   /**
    * @summary Deletes a global party record
-   * @description Deletes a global party record by tenant ID and party ID.
+   * @description Deletes a global party record by party ID.
    * 
-   * @param {string} tenantId - Tenant identifier
    * @param {string} partyId - Party identifier
    * @returns {Promise<GlobalPartyExtended>} Promise resolving to the deleted global party record
    * @throws {NotFoundError} When global party is not found
    */
-  async delete(tenantId: string, partyId: string): Promise<GlobalPartyExtended> {
+  async delete(partyId: string): Promise<GlobalPartyExtended> {
     try {
-      // First get the item to return it - we need to implement a proper getById with tenantId
-      // For now, we'll do a direct query to get the item
+      // First get the item to return it
       const result = await this.ddb.get({
         TableName: this.tableName,
         Key: {
-          pk: pk(tenantId),
-          sk: sk(partyId),
-        },
-      });
+          pk: pk(),
+          sk: sk(partyId)}});
 
       if (!result.Item) {
         throw new NotFoundError(`Global party not found: ${partyId}`, "GLOBAL_PARTY_NOT_FOUND", {
-          partyId,
-          tenantId,
-        });
+          partyId});
       }
 
       const validatedDto = GlobalPartyItemDTOSchema.parse(result.Item);
@@ -296,10 +266,8 @@ export class GlobalPartiesRepositoryDdb implements GlobalPartiesRepository {
       await this.ddb.delete({
         TableName: this.tableName,
         Key: {
-          pk: pk(tenantId),
-          sk: sk(partyId),
-        },
-      });
+          pk: pk(),
+          sk: sk(partyId)}});
 
       return existingItem;
     } catch (error) {
@@ -314,7 +282,7 @@ export class GlobalPartiesRepositoryDdb implements GlobalPartiesRepository {
    * @summary Lists global parties with pagination
    * @description Lists global parties for a tenant with optional filtering and pagination.
    * 
-   * @param {ListGlobalPartiesAppInput} input - List input with tenantId and filters
+   * @param {ListGlobalPartiesAppInput} input - List input with filters
    * @returns {Promise<ListGlobalPartiesAppResult>} Promise resolving to paginated results
    */
   async list(input: ListGlobalPartiesAppInput): Promise<ListGlobalPartiesAppResult> {
@@ -323,7 +291,7 @@ export class GlobalPartiesRepositoryDdb implements GlobalPartiesRepository {
     let filterExpression = "pk = :pk";
     const expressionAttributeNames: Record<string, string> = {};
     const expressionAttributeValues: Record<string, any> = {
-      ":pk": pk(input.tenantId as string),
+      ":pk": "GLOBAL_PARTY"
     };
 
     // Add filters
@@ -364,8 +332,7 @@ export class GlobalPartiesRepositoryDdb implements GlobalPartiesRepository {
       FilterExpression: filterExpression,
       ExpressionAttributeNames: expressionAttributeNames,
       ExpressionAttributeValues: expressionAttributeValues,
-      Limit: limit,
-    };
+      Limit: limit};
 
     if (cursor) {
       queryParams.ExclusiveStartKey = decodeCursor(cursor);
@@ -408,7 +375,7 @@ export class GlobalPartiesRepositoryDdb implements GlobalPartiesRepository {
    * @summary Searches global parties by email
    * @description Searches for global parties by email address within a tenant.
    * 
-   * @param {SearchGlobalPartiesByEmailAppInput} input - Search input with tenantId, email, and limit
+   * @param {SearchGlobalPartiesByEmailAppInput} input - Search input with  email, and limit
    * @returns {Promise<SearchGlobalPartiesByEmailAppResult>} Promise resolving to search results
    */
   async searchByEmail(input: SearchGlobalPartiesByEmailAppInput): Promise<SearchGlobalPartiesByEmailAppResult> {
@@ -420,14 +387,11 @@ export class GlobalPartiesRepositoryDdb implements GlobalPartiesRepository {
         FilterExpression: "contains(#email, :email) OR contains(#emails, :email)",
         ExpressionAttributeNames: {
           "#email": "email",
-          "#emails": "emails",
-        },
+          "#emails": "emails"},
         ExpressionAttributeValues: {
-          ":pk": pk(input.tenantId as string),
-          ":email": input.email,
-        },
-        Limit: input.limit || 10,
-      });
+          ":pk": pk(),
+          ":email": input.email},
+        Limit: input.limit || 10});
 
       const parties: GlobalPartyCommon[] = [];
 
@@ -454,7 +418,7 @@ export class GlobalPartiesRepositoryDdb implements GlobalPartiesRepository {
    * @summary Finds a global party by email
    * @description Finds a single global party by email address within a tenant.
    * 
-   * @param {FindGlobalPartyByEmailAppInput} input - Find input with tenantId and email
+   * @param {FindGlobalPartyByEmailAppInput} input - Find input with email
    * @returns {Promise<FindGlobalPartyByEmailAppResult | null>} Promise resolving to found party or null
    */
   async findByEmail(input: FindGlobalPartyByEmailAppInput): Promise<FindGlobalPartyByEmailAppResult | null> {
@@ -466,14 +430,11 @@ export class GlobalPartiesRepositoryDdb implements GlobalPartiesRepository {
         FilterExpression: "contains(#email, :email) OR contains(#emails, :email)",
         ExpressionAttributeNames: {
           "#email": "email",
-          "#emails": "emails",
-        },
+          "#emails": "emails"},
         ExpressionAttributeValues: {
-          ":pk": pk(input.tenantId as string),
-          ":email": input.email,
-        },
-        Limit: 1,
-      });
+          ":pk": pk(),
+          ":email": input.email},
+        Limit: 1});
 
       if (!result.Items?.length) {
         return null;
@@ -498,21 +459,17 @@ export class GlobalPartiesRepositoryDdb implements GlobalPartiesRepository {
    * @description This method is used for delegation scenarios where we need to find or create a party.
    * 
    * @param {Object} input - Input parameters
-   * @param {string} input.tenantId - Tenant identifier
    * @param {string} input.email - Email address
    * @param {string} input.name - Party name
    * @returns {Promise<string>} Promise resolving to the party ID
    */
   async findOrCreatePartyForDelegate(input: { 
-    tenantId: string; 
     email: string; 
     name: string 
   }): Promise<string> {
     // First try to find existing party
     const findResult = await this.findByEmail({
-      tenantId: input.tenantId as any,
-      email: input.email,
-    });
+      email: input.email});
     
     if (findResult?.party) {
       return findResult.party.partyId as string;
@@ -522,30 +479,23 @@ export class GlobalPartiesRepositoryDdb implements GlobalPartiesRepository {
     const partyId = `party_${ulid()}`;
     const partyInput: CreateGlobalPartyAppInput = {
       partyId: partyId as any,
-      tenantId: input.tenantId as any,
       name: input.name,
       email: input.email,
       role: "signer" as typeof PARTY_ROLES[number],
       source: "manual" as typeof PARTY_SOURCES[number],
       status: "active" as typeof GLOBAL_PARTY_STATUSES[number],
       preferences: {
-        defaultAuth: "otpViaEmail" as typeof AUTH_METHODS[number],
-        defaultLocale: undefined,
-      },
+        defaultAuth: undefined as any,
+        defaultLocale: undefined},
       notificationPreferences: {
         email: true,
-        sms: false,
-      },
+        sms: false},
       stats: {
         signedCount: 0,
-        totalEnvelopes: 0,
-      },
-    };
+        totalEnvelopes: 0}};
 
     await this.create(partyInput);
     return partyId;
   }
 }
-
-
 

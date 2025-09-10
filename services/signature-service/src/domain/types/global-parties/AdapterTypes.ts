@@ -30,8 +30,3 @@ export type MakeGlobalPartiesQueriesPortDeps = {
   globalParties: GlobalPartiesRepository;
 };
 
-
-
-
-
-

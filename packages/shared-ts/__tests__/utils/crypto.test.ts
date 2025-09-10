@@ -6,8 +6,7 @@ import {
   timingSafeEqual,
   createHash,
   base64urlToBytes,
-  pickMessageType,
-} from '../../src/utils/crypto.js';
+  pickMessageType} from '../../src/utils/crypto.js';
 
 describe('Crypto Utils', () => {
   describe('sha256Hex', () => {

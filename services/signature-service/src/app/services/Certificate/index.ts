@@ -7,4 +7,3 @@
 export { DefaultCertificateQueryService } from "./CertificateQueryService";
 export { DefaultCertificateValidationService } from "./CertificateValidationService";
 
-

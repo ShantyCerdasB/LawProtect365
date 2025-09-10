@@ -32,15 +32,12 @@ export {
 
   // Shared codes
   ErrorCodes,
-  type ErrorCode,
-} from "@lawprotect/shared-ts";
+  type ErrorCode} from "@lawprotect/shared-ts";
 
 export {
   SignatureErrorCodes,
   type SignatureErrorCode,
-  type AnyErrorCode,
-} from "./codes";
+  type AnyErrorCode} from "./codes";
 
 export * from "./factories";
-
 

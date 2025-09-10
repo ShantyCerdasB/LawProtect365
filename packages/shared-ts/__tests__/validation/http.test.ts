@@ -32,9 +32,7 @@ jest.doMock("@errors/AppError.js", () => ({ AppError: MockAppError }));
 jest.doMock("@errors/codes.js", () => ({
   ErrorCodes: {
     COMMON_BAD_REQUEST: "COMMON_BAD_REQUEST",
-    COMMON_UNPROCESSABLE_ENTITY: "COMMON_UNPROCESSABLE_ENTITY",
-  },
-}));
+    COMMON_UNPROCESSABLE_ENTITY: "COMMON_UNPROCESSABLE_ENTITY"}}));
 
 // Bindings with accurate types: accept any Zod schema and return z.infer<S>.
 let validatePath: <S extends z.ZodTypeAny>(evt: any, schema: S) => z.infer<S>;
@@ -64,8 +62,7 @@ const mkEvt = (overrides: Partial<{
   queryStringParameters: undefined,
   body: undefined,
   isBase64Encoded: false,
-  ...overrides,
-});
+  ...overrides});
 
 describe("validatePath()", () => {
   it("returns typed params on success", () => {
@@ -100,8 +97,7 @@ describe("validateQuery()", () => {
         .string()
         .default("1")
         .transform((s) => Number(s))
-        .pipe(z.number().int().min(1)),
-    });
+        .pipe(z.number().int().min(1))});
 
     const evt = mkEvt({ queryStringParameters: { q: "hello", page: "3" } });
     const out = validateQuery(evt as any, schema);
@@ -140,8 +136,7 @@ describe("validateJsonBody()", () => {
     const raw = JSON.stringify({ ping: "pong" });
     const evt = mkEvt({
       body: Buffer.from(raw, "utf8").toString("base64"),
-      isBase64Encoded: true,
-    });
+      isBase64Encoded: true});
     const out = validateJsonBody(evt as any, schema);
     expect(out).toEqual({ ping: "pong" });
   });

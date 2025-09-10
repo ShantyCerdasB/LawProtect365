@@ -20,15 +20,7 @@ export const handler = createQueryController({
   appServiceClass: GetAuditEventAppService,
   createDependencies: (container: any) => makeAuditQueriesPort(container.repos.audit),
   extractParams: (path: any) => ({
-    eventId: path.id,
-  }),
+    eventId: path.id}),
   responseType: RESPONSE_TYPES[0], // 'ok'
 });
-
-
-
-
-
-
-
 

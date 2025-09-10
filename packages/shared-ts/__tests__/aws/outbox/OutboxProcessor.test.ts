@@ -12,26 +12,22 @@ describe('OutboxProcessor', () => {
     mockOutboxRepository = {
       pullPending: jest.fn(),
       markDispatched: jest.fn(),
-      markFailed: jest.fn(),
-    } as any;
+      markFailed: jest.fn()} as any;
 
     mockEventBus = {
-      publish: jest.fn(),
-    } as any;
+      publish: jest.fn()} as any;
 
     mockMetrics = {
       incrementCounter: jest.fn(),
       recordDuration: jest.fn(),
-      putMetrics: jest.fn(),
-    } as any;
+      putMetrics: jest.fn()} as any;
 
     mockOptions = {
       maxBatchSize: 10,
       maxWaitTimeMs: 1000,
       maxRetries: 3,
       retryDelayMs: 100,
-      debug: false,
-    };
+      debug: false};
 
     processor = new OutboxProcessor(
       mockOutboxRepository,
@@ -106,8 +102,7 @@ describe('OutboxProcessor', () => {
         successfulEvents: 0,
         failedEvents: 0,
         results: [],
-        totalDurationMs: expect.any(Number),
-      });
+        totalDurationMs: expect.any(Number)});
     });
 
     it('should process single event successfully', async () => {
@@ -128,8 +123,7 @@ describe('OutboxProcessor', () => {
         type: event.type,
         payload: event.payload,
         id: event.id,
-        occurredAt: event.occurredAt,
-      }]);
+        occurredAt: event.occurredAt}]);
       expect(mockOutboxRepository.markDispatched).toHaveBeenCalledWith('1');
     });
 
@@ -273,7 +267,6 @@ describe('OutboxProcessor', () => {
       payload: { test: 'data' },
       occurredAt: '2023-01-01T00:00:00.000Z',
       status: 'pending',
-      attempts: 0,
-    };
+      attempts: 0};
   }
 });

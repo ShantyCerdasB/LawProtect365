@@ -24,8 +24,7 @@ const mapDomainEventToOutboxInput = (
   eventType: event.type,
   payload: event.payload as Record<string, unknown> || {},
   occurredAt: event.occurredAt,
-  traceId,
-});
+  traceId});
 
 /**
  * @summary Creates a standardized actor object from ActorContext
@@ -38,8 +37,7 @@ const createEventActor = (actor: ActorContext) => ({
   email: actor.email,
   ip: actor.ip,
   userAgent: actor.userAgent,
-  role: actor.role,
-});
+  role: actor.role});
 
 /**
  * @summary Creates trace headers for domain events
@@ -73,8 +71,7 @@ export abstract class BaseEventService {
        id: outboxInput.id,
        type: outboxInput.eventType,
        payload: outboxInput.payload,
-       occurredAt: typeof outboxInput.occurredAt === 'string' ? outboxInput.occurredAt : outboxInput.occurredAt.toISOString(),
-     }, outboxInput.traceId);
+       occurredAt: typeof outboxInput.occurredAt === 'string' ? outboxInput.occurredAt : outboxInput.occurredAt.toISOString()}, outboxInput.traceId);
   }
 
   /**
@@ -97,8 +94,7 @@ export abstract class BaseEventService {
       {
         ...payload,
         actor: createEventActor(actor),
-        occurredAt: new Date().toISOString(),
-      },
+        occurredAt: new Date().toISOString()},
       createTraceHeaders(traceId)
     );
   }
@@ -132,9 +128,4 @@ export abstract class BaseEventService {
     traceId?: string
   ): Promise<void>;
 }
-
-
-
-
-
 

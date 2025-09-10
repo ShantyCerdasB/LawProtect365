@@ -31,8 +31,7 @@ const makeJwks = (issuer: string, jwksUri?: string) => {
   const url = new URL(jwksUri ?? `${trimmed}/.well-known/jwks.json`);
   return createRemoteJWKSet(url, {
     cacheMaxAge: getNumber("JWKS_CACHE_SECONDS", 600) * 1000,
-    cooldownDuration: 1000,
-  });
+    cooldownDuration: 1000});
 };
 
 /**
@@ -55,12 +54,10 @@ export const verifyJwt = async (
     issuer,
     audience,
     algorithms: ["RS256"],
-    clockTolerance: opts.clockToleranceSec ?? 5,
-  });
+    clockTolerance: opts.clockToleranceSec ?? 5});
 
   return {
     header: protectedHeader as JWSHeaderParameters,
     payload: payload as Record<string, unknown>,
-    claims: toJwtClaims(payload as JWTPayload),
-  };
+    claims: toJwtClaims(payload as JWTPayload)};
 };

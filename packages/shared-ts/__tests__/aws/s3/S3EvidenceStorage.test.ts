@@ -14,8 +14,7 @@ jest.mock('../../../src/index.js', () => ({
   mapAwsError: jest.fn((err, op) => err),
   shouldRetry: jest.fn(() => ({ retry: false, delayMs: 0 })),
   isAwsRetryable: jest.fn(() => false),
-  sleep: jest.fn(() => Promise.resolve()),
-}));
+  sleep: jest.fn(() => Promise.resolve())}));
 
 describe('S3EvidenceStorage', () => {
   let mockS3Client: any;
@@ -24,16 +23,14 @@ describe('S3EvidenceStorage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockS3Client = {
-      send: jest.fn(),
-    };
+      send: jest.fn()};
     
     s3Storage = new S3EvidenceStorage(mockS3Client, {
       maxAttempts: 3,
       defaultBucket: 'test-bucket',
       defaultKmsKeyId: 'test-kms-key',
       defaultCacheControl: 'max-age=300',
-      defaultAcl: 'private' as const,
-    });
+      defaultAcl: 'private' as const});
   });
 
   describe('constructor', () => {
@@ -48,8 +45,7 @@ describe('S3EvidenceStorage', () => {
         defaultBucket: 'custom-bucket',
         defaultKmsKeyId: 'custom-kms-key',
         defaultCacheControl: 'max-age=600',
-        defaultAcl: 'public-read' as const,
-      };
+        defaultAcl: 'public-read' as const};
       const storage = new S3EvidenceStorage(mockS3Client, options);
       expect(storage).toBeInstanceOf(S3EvidenceStorage);
     });
@@ -58,19 +54,16 @@ describe('S3EvidenceStorage', () => {
   describe('putObject', () => {
     it('should put object successfully', async () => {
       mockS3Client.send.mockResolvedValueOnce({
-        ETag: '"test-etag"',
-      });
+        ETag: '"test-etag"'});
 
       const result = await s3Storage.putObject({
         bucket: 'test-bucket',
         key: 'test-key',
         body: Buffer.from('test data'),
-        contentType: 'text/plain',
-      });
+        contentType: 'text/plain'});
 
       expect(result).toEqual({
-        etag: '"test-etag"',
-      });
+        etag: '"test-etag"'});
       expect(mockS3Client.send).toHaveBeenCalledWith(
         expect.any(PutObjectCommand)
       );
@@ -84,8 +77,7 @@ describe('S3EvidenceStorage', () => {
         bucket: 'test-bucket',
         key: 'test-key',
         body: Buffer.from('test data'),
-        contentType: 'text/plain',
-      })).rejects.toThrow(awsError);
+        contentType: 'text/plain'})).rejects.toThrow(awsError);
     });
   });
 
@@ -109,8 +101,7 @@ describe('S3EvidenceStorage', () => {
       mockS3Client.send.mockResolvedValueOnce({
         ContentLength: 100,
         ETag: '"test-etag"',
-        LastModified: new Date('2023-01-01T00:00:00.000Z'),
-      });
+        LastModified: new Date('2023-01-01T00:00:00.000Z')});
 
       const result = await s3Storage.headObject('test-bucket', 'test-key');
 
@@ -118,8 +109,7 @@ describe('S3EvidenceStorage', () => {
         exists: true,
         size: 100,
         etag: '"test-etag"',
-        lastModified: new Date('2023-01-01T00:00:00.000Z'),
-      });
+        lastModified: new Date('2023-01-01T00:00:00.000Z')});
       expect(mockS3Client.send).toHaveBeenCalledWith(
         expect.any(HeadObjectCommand)
       );
@@ -133,8 +123,7 @@ describe('S3EvidenceStorage', () => {
       const result = await s3Storage.headObject('test-bucket', 'test-key');
 
       expect(result).toEqual({
-        exists: false,
-      });
+        exists: false});
     });
 
     it('should handle other AWS errors', async () => {
@@ -181,19 +170,16 @@ describe('S3EvidenceStorage', () => {
       mockS3Client.send
         .mockRejectedValueOnce(awsError)
         .mockResolvedValueOnce({
-          ETag: '"test-etag"',
-        });
+          ETag: '"test-etag"'});
 
       const result = await s3Storage.putObject({
         bucket: 'test-bucket',
         key: 'test-key',
         body: Buffer.from('test data'),
-        contentType: 'text/plain',
-      });
+        contentType: 'text/plain'});
 
       expect(result).toEqual({
-        etag: '"test-etag"',
-      });
+        etag: '"test-etag"'});
       expect(mockS3Client.send).toHaveBeenCalledTimes(2);
       expect(sleep).toHaveBeenCalledWith(100);
     });
@@ -211,8 +197,7 @@ describe('S3EvidenceStorage', () => {
         bucket: 'test-bucket',
         key: 'test-key',
         body: Buffer.from('test data'),
-        contentType: 'text/plain',
-      })).rejects.toThrow(awsError);
+        contentType: 'text/plain'})).rejects.toThrow(awsError);
       
       expect(mockS3Client.send).toHaveBeenCalledTimes(1);
     });

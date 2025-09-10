@@ -13,8 +13,7 @@ import {
   isPlainObject,
   deepMerge,
   getPath,
-  setPath,
-} from "../../src/utils/object.js";
+  setPath} from "../../src/utils/object.js";
 
 /** pick */
 describe("pick", () => {
@@ -72,7 +71,6 @@ describe("deepMerge", () => {
   // source is not mutated
   expect(a).toEqual({ x: 1, o: { a: 1, b: 2 } });
 });
-
 
   it("replaces arrays wholesale (no concatenation)", () => {
     const a = { arr: [1, 2, 3], o: { k: [1] } };

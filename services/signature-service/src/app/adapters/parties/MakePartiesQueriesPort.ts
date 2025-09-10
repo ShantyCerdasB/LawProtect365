@@ -10,7 +10,7 @@ import type { Repository } from "@lawprotect/shared-ts";
 import type { Party } from "../../../domain/entities/Party";
 import type { PartyKey } from "../../../domain/types/infrastructure/dynamodb";
 import { PAGINATION_LIMITS } from "../../../domain/values/enums";
-import { assertTenantBoundary } from "@lawprotect/shared-ts";
+// 
 import { 
   ListPartiesAppInput,
   ListPartiesAppResult,
@@ -20,7 +20,6 @@ import {
   GetPartyAppResult
 } from "../../../domain/types/parties";
 
-
 /**
  * @description Creates PartiesQueriesPort implementation.
  * 
@@ -29,43 +28,34 @@ import {
  * @returns PartiesQueriesPort implementation
  */
 export function makePartiesQueriesPort(
-  partiesRepo: Repository<Party, PartyKey, undefined>,
-): PartiesQueriesPort {
+  partiesRepo: Repository<Party, PartyKey, undefined>): PartiesQueriesPort {
   return {
     async list(query: ListPartiesAppInput): Promise<ListPartiesAppResult> {
-      // Apply generic rules
-      assertTenantBoundary(query.tenantId, query.tenantId);
-      
+
       // Use the existing repository method
       const result = await (partiesRepo as any).listByEnvelope({
-        tenantId: query.tenantId,
         envelopeId: query.envelopeId,
         role: query.role,
         status: query.status,
         limit: query.limit ?? PAGINATION_LIMITS.DEFAULT_LIMIT,
-        cursor: query.cursor,
-      });
+        cursor: query.cursor});
 
       return {
         parties: result.items,
         nextCursor: result.nextCursor,
-        total: result.total,
-      };
+        total: result.total};
     },
 
     async getById(query: GetPartyAppInput): Promise<GetPartyAppResult> {
       // Apply generic rules
-      assertTenantBoundary(query.tenantId, query.tenantId);
+      // Tenant boundary check removed
       
       const party = await partiesRepo.getById({ 
         envelopeId: query.envelopeId, 
         partyId: query.partyId 
       });
       
-      // Filter by tenant for security
-      if (party && party.tenantId !== query.tenantId) {
-        return { party: null };
-      }
+      // Filter by tenant for security - removed
 
       return { 
         party: party
@@ -74,24 +64,16 @@ export function makePartiesQueriesPort(
 
     async searchByEmail(query: SearchPartiesByEmailAppInput): Promise<SearchPartiesByEmailAppResult> {
       // Apply generic rules
-      assertTenantBoundary(query.tenantId, query.tenantId);
+      // Tenant boundary check removed
       
       // Use the existing repository method
       const result = await (partiesRepo as any).getByEmail({
-        tenantId: query.tenantId,
         envelopeId: query.envelopeId,
-        email: query.email,
-      });
+        email: query.email});
 
       return { 
         parties: result.items
       };
-    },
-  };
+    }};
 }
-
-
-
-
-
 

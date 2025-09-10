@@ -11,8 +11,3 @@ export * from "./PatchInput.schema";
 export * from "./PatchInputPositions.schema";
 export * from "./EnvelopeInputPath.schema";
 
-
-
-
-
-

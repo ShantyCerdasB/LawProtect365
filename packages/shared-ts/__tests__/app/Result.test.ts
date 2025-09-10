@@ -12,8 +12,7 @@ import {
   resultAndThen,
   resultUnwrap,
   resultUnwrapOr,
-  type Result,
-} from '../../src/app/Result';
+  type Result} from '../../src/app/Result';
 
 describe('Result', () => {
   it('creates Ok results', () => {
@@ -47,7 +46,7 @@ describe('Result', () => {
   });
 
   it('maps only Err values', () => {
-    const fn = jest.fn((s: string) => `E:${s}`);
+    const fn = jest.fn((s: string) => `E:s`);
 
     const e = resultErr('fail');
     const r1 = resultMapErr<number, string, string>(e, fn);
@@ -64,7 +63,7 @@ describe('Result', () => {
 
   it('chains with andThen', () => {
     const next = (n: number): Result<string, string> =>
-      n % 2 === 0 ? resultOk(`even:${n}`) : resultErr('odd not allowed');
+      n % 2 === 0 ? resultOk(`even:n`) : resultErr('odd not allowed');
 
     const r1 = resultAndThen(resultOk(4), next);
     expect(r1.ok).toBe(true);

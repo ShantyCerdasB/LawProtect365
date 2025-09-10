@@ -15,8 +15,7 @@ import { PARTY_ROLES, PARTY_STATUSES } from "../../../domain/values/enums";
  */
 export const PatchPartyPath = z.object({
   envelopeId: z.string().min(1, "Envelope ID is required"),
-  partyId: z.string().min(1, "Party ID is required"),
-});
+  partyId: z.string().min(1, "Party ID is required")});
 
 /**
  * Request body for patching a party (partial update)
@@ -29,11 +28,8 @@ export const PatchPartyBody = z.object({
   metadata: z.record(z.unknown()).optional(),
   notificationPreferences: z.object({
     email: z.boolean(),
-    sms: z.boolean(),
-  }).optional(),
-}).refine((data) => Object.keys(data).length > 0, {
-  message: "At least one field must be provided for update",
-});
+    sms: z.boolean()}).optional()}).refine((data) => Object.keys(data).length > 0, {
+  message: "At least one field must be provided for update"});
 
 /**
  * Response schema for party update
@@ -51,16 +47,9 @@ export const PatchPartyResponse = z.object({
   metadata: z.record(z.unknown()).optional(),
   notificationPreferences: z.object({
     email: z.boolean(),
-    sms: z.boolean(),
-  }).optional(),
-});
+    sms: z.boolean()}).optional()});
 
 export type PatchPartyPathType = z.infer<typeof PatchPartyPath>;
 export type PatchPartyBodyType = z.infer<typeof PatchPartyBody>;
 export type PatchPartyResponseType = z.infer<typeof PatchPartyResponse>;
-
-
-
-
-
 

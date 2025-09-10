@@ -48,14 +48,12 @@ export class SigningS3Service implements ISigningS3Service {
       contentType,
       expiresInSeconds: this.uploadTtlSeconds,
       acl: "private",
-      cacheControl: "max-age=3600",
-    });
+      cacheControl: "max-age=3600"});
 
     return {
       uploadUrl,
       objectKey,
-      expiresAt,
-    };
+      expiresAt};
   }
 
   /**
@@ -80,13 +78,11 @@ export class SigningS3Service implements ISigningS3Service {
       key: objectKey,
       expiresInSeconds: this.downloadTtlSeconds,
       responseContentType: "application/pdf",
-      responseContentDisposition: `attachment; filename="signed-document-${envelopeId}.pdf"`,
-    });
+      responseContentDisposition: `attachment; filename="signed-document-${envelopeId}.pdf"`});
 
     return {
       downloadUrl,
       objectKey,
-      expiresAt,
-    };
+      expiresAt};
   }
 };

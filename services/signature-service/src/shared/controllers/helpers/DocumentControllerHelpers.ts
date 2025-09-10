@@ -4,7 +4,6 @@
  * @description Provides reusable patterns for document-related controllers
  */
 
-
 /**
  * Common dependencies factory for document controllers
  */
@@ -16,9 +15,7 @@ export function createDocumentDependencies(c: any) {
     s3Service: c.documents.s3Service,
     s3Config: {
       evidenceBucket: c.config.s3.evidenceBucket,
-      signedBucket: c.config.s3.signedBucket,
-    },
-  };
+      signedBucket: c.config.s3.signedBucket}};
 }
 
 /**
@@ -37,9 +34,7 @@ export function extractDocumentParams(path: Record<string, unknown>, body: Recor
       email: (path.actor as any)?.email,
       ip: (path.actor as any)?.ip,
       userAgent: (path.actor as any)?.userAgent,
-      role: (path.actor as any)?.role,
-    },
-  };
+      role: (path.actor as any)?.role}};
 }
 
 /**
@@ -48,8 +43,7 @@ export function extractDocumentParams(path: Record<string, unknown>, body: Recor
 export function extractDocumentUploadParams(path: Record<string, unknown>, body: Record<string, unknown>) {
   return {
     ...extractDocumentParams(path, body),
-    ipAddress: body.ipAddress,
-  };
+    ipAddress: body.ipAddress};
 }
 
 /**
@@ -57,10 +51,8 @@ export function extractDocumentUploadParams(path: Record<string, unknown>, body:
  */
 export function extractDocumentCreateParams(path: Record<string, unknown>, body: Record<string, unknown>) {
   // Note: Cross-tenant access validation should be done at the controller level
-  // where we have access to both the context tenantId and the resource tenantId
   
   return {
     ...extractDocumentParams(path, body),
-    s3Ref: { bucket: body.bucket, key: body.key },
-  };
+    s3Ref: { bucket: body.bucket, key: body.key }};
 }

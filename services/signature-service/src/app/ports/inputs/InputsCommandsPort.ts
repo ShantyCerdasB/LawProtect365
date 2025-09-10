@@ -6,7 +6,7 @@
  * Used by application services to modify input data.
  */
 
-import type { TenantId, EnvelopeId, InputId, PartyId } from "../../../domain/value-objects/ids";
+import type { EnvelopeId, InputId, PartyId } from "../../../domain/value-objects/ids";
 import type { ActorContext } from "@lawprotect/shared-ts";
 import { InputType } from "../../../domain/values/enums";
 
@@ -15,8 +15,6 @@ import { InputType } from "../../../domain/values/enums";
  * Contains all required data for input creation.
  */
 export interface CreateInputsCommand {
-  /** The tenant ID that owns the inputs */
-  tenantId: TenantId;
   /** The envelope ID that contains the inputs */
   envelopeId: EnvelopeId;
   /** The document ID that contains the inputs */
@@ -75,8 +73,6 @@ export interface CreateInputsResult {
  * Contains the input identifier and fields to update.
  */
 export interface UpdateInputCommand {
-  /** The tenant ID that owns the input */
-  tenantId: TenantId;
   /** The envelope ID that contains the input */
   envelopeId: EnvelopeId;
   /** The unique identifier of the input to update */
@@ -118,8 +114,6 @@ export interface UpdateInputResult {
  * Contains array of input positions to update.
  */
 export interface UpdateInputPositionsCommand {
-  /** The tenant ID that owns the inputs */
-  tenantId: TenantId;
   /** The envelope ID that contains the inputs */
   envelopeId: EnvelopeId;
   /** Array of input positions to update */
@@ -155,8 +149,6 @@ export interface UpdateInputPositionsResult {
  * Contains the input identifier to delete.
  */
 export interface DeleteInputCommand {
-  /** The tenant ID that owns the input */
-  tenantId: TenantId;
   /** The envelope ID that contains the input */
   envelopeId: EnvelopeId;
   /** The unique identifier of the input to delete */

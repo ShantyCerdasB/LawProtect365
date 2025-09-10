@@ -20,22 +20,19 @@ export const InvitePartiesController = createCommandController<InvitePartiesCont
   pathSchema: EnvelopeIdPath,
   appServiceClass: RequestsCommandService,
   createDependencies: (c: any) => makeRequestsCommandsPort(createRequestsDependencies(c)),
-  extractParams: (path: any, body: any) => ({
+  extractParams: (path: any, body: any, context: any) => ({
     envelopeId: path.id,
     partyIds: body.partyIds,
+    message: body.message,
+    signByDate: body.signByDate,
+    signingOrder: body.signingOrder,
+    actorEmail: context.actor?.email,
+    actor: context.actor
   }),
   responseType: "ok",
   includeActor: true,
-  methodName: "inviteParties",
-});
+  methodName: "inviteParties"});
 
 // Export handler for backward compatibility
 export const handler = InvitePartiesController;
-
-
-
-
-
-
-
 

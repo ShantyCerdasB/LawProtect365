@@ -8,8 +8,7 @@ import * as jose from 'jose';
 
 jest.mock('jose', () => ({
   createRemoteJWKSet: jest.fn(),
-  jwtVerify: jest.fn(),
-}));
+  jwtVerify: jest.fn()}));
 
 jest.mock('../../src/utils/env.js', () => ({
   getEnv: jest.fn((name: string) => {
@@ -17,8 +16,7 @@ jest.mock('../../src/utils/env.js', () => ({
     if (name === 'JWT_AUDIENCE') return 'env-client';
     return undefined;
   }),
-  getNumber: jest.fn((_name: string, def: number) => def),
-}));
+  getNumber: jest.fn((_name: string, def: number) => def)}));
 
 describe('bearerFromAuthHeader', () => {
   it('extracts token with "Bearer" (any case)', () => {
@@ -65,20 +63,17 @@ describe('verifyJwt', () => {
       email_verified: true,
       exp: 123,
       iat: 100,
-      jti: 'j1',
-    };
+      jti: 'j1'};
 
     jwtVerifyMock.mockResolvedValueOnce({
       payload,
-      protectedHeader: { alg: 'RS256', kid: 'kid-1' },
-    });
+      protectedHeader: { alg: 'RS256', kid: 'kid-1' }});
 
     const res = await verifyJwt('token-123', {
       issuer: 'https://issuer-x',
       audience: 'client-x',
       jwksUri: 'https://issuer-x/custom/jwks.json',
-      clockToleranceSec: 7,
-    });
+      clockToleranceSec: 7});
 
     expect(createRemoteJWKSetMock).toHaveBeenCalledTimes(1);
     const urlArg = createRemoteJWKSetMock.mock.calls[0][0] as URL;
@@ -91,16 +86,14 @@ describe('verifyJwt', () => {
         issuer: 'https://issuer-x',
         audience: 'client-x',
         algorithms: ['RS256'],
-        clockTolerance: 7,
-      }),
-    );
+        clockTolerance: 7}));
 
     expect(res.header).toEqual({ alg: 'RS256', kid: 'kid-1' });
     expect(res.payload).toMatchObject(payload);
     expect(res.claims.sub).toBe('u-1');
     expect(res.claims.roles).toEqual(['admin']);
     expect(res.claims.scopes).toEqual(['a', 'b']);
-    expect(res.claims.tenantId).toBe('t-1');
+    expect(res.claims).toBe('t-1');
     expect(res.claims.email).toBe('a@b.c');
     expect(res.claims.emailVerified).toBe(true);
   });
@@ -109,8 +102,7 @@ describe('verifyJwt', () => {
     createRemoteJWKSetMock.mockReturnValueOnce({ jwks: true });
     jwtVerifyMock.mockResolvedValueOnce({
       payload: { sub: 's', iss: 'i' },
-      protectedHeader: {},
-    });
+      protectedHeader: {}});
 
     const res = await verifyJwt('tkn', {});
 
@@ -125,9 +117,7 @@ describe('verifyJwt', () => {
         issuer: 'https://env-issuer.example',
         audience: 'env-client',
         algorithms: ['RS256'],
-        clockTolerance: 5,
-      }),
-    );
+        clockTolerance: 5}));
 
     expect(res.claims.sub).toBe('s');
   });
@@ -136,13 +126,11 @@ describe('verifyJwt', () => {
     createRemoteJWKSetMock.mockReturnValueOnce({ jwks: true });
     jwtVerifyMock.mockResolvedValueOnce({
       payload: { sub: 's', iss: 'i' },
-      protectedHeader: {},
-    });
+      protectedHeader: {}});
 
     await verifyJwt('tkn', {
       issuer: 'https://issuer.example.com///',
-      jwksUri: 'https://custom.example.com/jwks.json',
-    });
+      jwksUri: 'https://custom.example.com/jwks.json'});
 
     expect(createRemoteJWKSetMock).toHaveBeenCalledTimes(1);
     const urlArg = createRemoteJWKSetMock.mock.calls[0][0] as URL;
@@ -153,12 +141,10 @@ describe('verifyJwt', () => {
     createRemoteJWKSetMock.mockReturnValueOnce({ jwks: true });
     jwtVerifyMock.mockResolvedValueOnce({
       payload: { sub: 's', iss: 'i' },
-      protectedHeader: {},
-    });
+      protectedHeader: {}});
 
     await verifyJwt('tkn', {
-      issuer: 'https://issuer.example.com/',
-    });
+      issuer: 'https://issuer.example.com/'});
 
     expect(createRemoteJWKSetMock).toHaveBeenCalledTimes(1);
     const urlArg = createRemoteJWKSetMock.mock.calls[0][0] as URL;

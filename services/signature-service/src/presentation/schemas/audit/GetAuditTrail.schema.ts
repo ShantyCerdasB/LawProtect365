@@ -8,7 +8,6 @@ import { z } from "zod";
 import { EnvelopeIdValidationSchema } from "@/domain/value-objects/ids";
 import { OptionalPaginationCursorValidationSchema, OptionalUploadFormatValidationSchema } from "@/domain/value-objects/common";
 
-
 /**
  * @description Query parameters for getting audit trail
  */
@@ -20,16 +19,14 @@ export const GetAuditTrailQuerySchema = z.object({
   /** Page size limit */
   limit: z.coerce.number().int().min(1).max(100).optional(),
   /** Pagination cursor */
-  cursor: OptionalPaginationCursorValidationSchema,
-});
+  cursor: OptionalPaginationCursorValidationSchema});
 
 /**
  * @description Path parameters for getting audit trail
  */
 export const GetAuditTrailPathSchema = z.object({
   /** Envelope identifier */
-  id: EnvelopeIdValidationSchema,
-});
+  id: EnvelopeIdValidationSchema});
 
 /**
  * @description Type for query parameters
@@ -40,10 +37,4 @@ export type GetAuditTrailQuery = z.infer<typeof GetAuditTrailQuerySchema>;
  * @description Type for path parameters
  */
 export type GetAuditTrailPath = z.infer<typeof GetAuditTrailPathSchema>;
-
-
-
-
-
-
 

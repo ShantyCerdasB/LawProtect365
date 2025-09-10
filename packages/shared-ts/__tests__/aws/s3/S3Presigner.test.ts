@@ -13,8 +13,7 @@ jest.mock('@aws-sdk/client-s3');
 jest.mock('@aws-sdk/s3-request-presigner');
 jest.mock('../../../src/index.js', () => ({
   ...jest.requireActual('../../../src/index.js'),
-  mapAwsError: jest.fn((err, op) => err),
-}));
+  mapAwsError: jest.fn((err, op) => err)}));
 
 describe('S3Presigner', () => {
   let mockS3Client: any;
@@ -28,8 +27,7 @@ describe('S3Presigner', () => {
       defaultTtl: 600,
       defaultAcl: 'private',
       defaultCacheControl: 'max-age=300',
-      defaultKmsKeyId: 'arn:aws:kms:us-east-1:123456789012:key/test-key',
-    });
+      defaultKmsKeyId: 'arn:aws:kms:us-east-1:123456789012:key/test-key'});
   });
 
   describe('constructor', () => {
@@ -43,8 +41,7 @@ describe('S3Presigner', () => {
         defaultTtl: 1200,
         defaultAcl: 'public-read' as const,
         defaultCacheControl: 'max-age=600',
-        defaultKmsKeyId: 'arn:aws:kms:us-east-1:123456789012:key/custom-key',
-      };
+        defaultKmsKeyId: 'arn:aws:kms:us-east-1:123456789012:key/custom-key'};
       const presigner = new S3Presigner(mockS3Client, options);
       expect(presigner).toBeInstanceOf(S3Presigner);
     });
@@ -63,8 +60,7 @@ describe('S3Presigner', () => {
 
       const result = await s3Presigner.getObjectUrl({
         bucket: 'test-bucket',
-        key: 'test-key',
-      });
+        key: 'test-key'});
 
       expect(result).toBe(mockUrl);
       expect(getSignedUrl).toHaveBeenCalledWith(
@@ -82,8 +78,7 @@ describe('S3Presigner', () => {
         key: 'test-key',
         responseContentType: 'text/plain',
         responseContentDisposition: 'attachment; filename="test.txt"',
-        expiresInSeconds: 300,
-      });
+        expiresInSeconds: 300});
 
       expect(result).toBe(mockUrl);
       expect(getSignedUrl).toHaveBeenCalledWith(
@@ -98,8 +93,7 @@ describe('S3Presigner', () => {
 
       await s3Presigner.getObjectUrl({
         bucket: 'test-bucket',
-        key: 'test-key',
-      });
+        key: 'test-key'});
 
       expect(getSignedUrl).toHaveBeenCalledWith(
         mockS3Client,
@@ -114,8 +108,7 @@ describe('S3Presigner', () => {
       await s3Presigner.getObjectUrl({
         bucket: 'test-bucket',
         key: 'test-key',
-        expiresInSeconds: 0,
-      });
+        expiresInSeconds: 0});
 
       expect(getSignedUrl).toHaveBeenCalledWith(
         mockS3Client,
@@ -130,8 +123,7 @@ describe('S3Presigner', () => {
 
       await expect(s3Presigner.getObjectUrl({
         bucket: 'test-bucket',
-        key: 'test-key',
-      })).rejects.toThrow(awsError);
+        key: 'test-key'})).rejects.toThrow(awsError);
     });
   });
 
@@ -143,8 +135,7 @@ describe('S3Presigner', () => {
 
       const result = await s3Presigner.putObjectUrl({
         bucket: 'test-bucket',
-        key: 'test-key',
-      });
+        key: 'test-key'});
 
       expect(result).toBe(mockUrl);
       expect(getSignedUrl).toHaveBeenCalledWith(
@@ -165,8 +156,7 @@ describe('S3Presigner', () => {
         cacheControl: 'max-age=3600',
         metadata: { purpose: 'test' },
         kmsKeyId: 'arn:aws:kms:us-east-1:123456789012:key/custom-key',
-        expiresInSeconds: 300,
-      });
+        expiresInSeconds: 300});
 
       expect(result).toBe(mockUrl);
       expect(getSignedUrl).toHaveBeenCalledWith(
@@ -182,8 +172,7 @@ describe('S3Presigner', () => {
       await s3Presigner.putObjectUrl({
         bucket: 'test-bucket',
         key: 'test-key',
-        contentType: 'text/plain',
-      });
+        contentType: 'text/plain'});
 
       expect(getSignedUrl).toHaveBeenCalledWith(
         mockS3Client,
@@ -194,16 +183,14 @@ describe('S3Presigner', () => {
 
     it('should not include KMS settings when kmsKeyId is not provided', async () => {
       const presignerWithoutKms = new S3Presigner(mockS3Client, {
-        defaultTtl: 600,
-      });
+        defaultTtl: 600});
       
       (getSignedUrl as jest.Mock).mockResolvedValueOnce(mockUrl);
 
       await presignerWithoutKms.putObjectUrl({
         bucket: 'test-bucket',
         key: 'test-key',
-        contentType: 'text/plain',
-      });
+        contentType: 'text/plain'});
 
       expect(getSignedUrl).toHaveBeenCalledWith(
         mockS3Client,
@@ -219,8 +206,7 @@ describe('S3Presigner', () => {
         bucket: 'test-bucket',
         key: 'test-key',
         contentType: 'text/plain',
-        kmsKeyId: 'arn:aws:kms:us-east-1:123456789012:key/custom-key',
-      });
+        kmsKeyId: 'arn:aws:kms:us-east-1:123456789012:key/custom-key'});
 
       expect(getSignedUrl).toHaveBeenCalledWith(
         mockS3Client,
@@ -234,8 +220,7 @@ describe('S3Presigner', () => {
 
       await s3Presigner.putObjectUrl({
         bucket: 'test-bucket',
-        key: 'test-key',
-      });
+        key: 'test-key'});
 
       expect(getSignedUrl).toHaveBeenCalledWith(
         mockS3Client,
@@ -250,8 +235,7 @@ describe('S3Presigner', () => {
       await s3Presigner.putObjectUrl({
         bucket: 'test-bucket',
         key: 'test-key',
-        expiresInSeconds: 0,
-      });
+        expiresInSeconds: 0});
 
       expect(getSignedUrl).toHaveBeenCalledWith(
         mockS3Client,
@@ -266,8 +250,7 @@ describe('S3Presigner', () => {
 
       await expect(s3Presigner.putObjectUrl({
         bucket: 'test-bucket',
-        key: 'test-key',
-      })).rejects.toThrow(awsError);
+        key: 'test-key'})).rejects.toThrow(awsError);
     });
   });
 
@@ -279,8 +262,7 @@ describe('S3Presigner', () => {
       await minimalPresigner.putObjectUrl({
         bucket: 'test-bucket',
         key: 'test-key',
-        contentType: 'text/plain',
-      });
+        contentType: 'text/plain'});
 
       expect(getSignedUrl).toHaveBeenCalledWith(
         mockS3Client,
@@ -296,8 +278,7 @@ describe('S3Presigner', () => {
         bucket: 'test-bucket',
         key: 'test-key',
         contentType: 'text/plain',
-        metadata: {},
-      });
+        metadata: {}});
 
       expect(getSignedUrl).toHaveBeenCalledWith(
         mockS3Client,

@@ -82,10 +82,8 @@ export const assertCompletionAllowed = (stats: {
       {
         reason: "incomplete_signatures",
         requiredSigners: stats.requiredSigners,
-        signedCount: stats.signedCount,
-      }
+        signedCount: stats.signedCount}
     );
   }
 };
-
 

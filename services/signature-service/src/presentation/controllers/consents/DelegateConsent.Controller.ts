@@ -27,16 +27,7 @@ export const handler = createCommandController<DelegateConsentControllerInput, D
     expiresAt: body.expiresAt,
     metadata: body.metadata,
     idempotencyKey: body.idempotencyKey,
-    ttlSeconds: body.ttlSeconds || 300,
-  }),
+    ttlSeconds: body.ttlSeconds || 300}),
   responseType: "ok",
-  includeActor: true,
-});
-
-
-
-
-
-
-
+  includeActor: true});
 

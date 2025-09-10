@@ -4,7 +4,7 @@
  * @description Defines the contract for audit event recording operations
  */
 
-import type { TenantId, EnvelopeId } from "../../../domain/value-objects/ids";
+import type { EnvelopeId } from "../../../domain/value-objects/ids";
 import type { AuditEventId } from "../../../domain/value-objects/audit";
 import type { AuditEventType } from "../../../domain/values/enums";
 import type { AuditActor } from "@lawprotect/shared-ts";
@@ -14,8 +14,6 @@ import type { AuditActor } from "@lawprotect/shared-ts";
  * @description Parameters required to record a new audit event
  */
 export interface RecordAuditEventInput {
-  /** Tenant identifier */
-  readonly tenantId: TenantId;
   /** Envelope identifier */
   readonly envelopeId: EnvelopeId;
   /** Event type */

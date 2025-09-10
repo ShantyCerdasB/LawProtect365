@@ -17,5 +17,3 @@ export * from "./controllers";
 // - Domain contracts: domain/contracts/
 // - Infrastructure contracts: infrastructure/contracts/
 
-
-

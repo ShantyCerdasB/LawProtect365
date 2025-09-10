@@ -9,7 +9,7 @@
  */
 
 import type { AuditEvent, AuditEventId } from "@/domain/value-objects/audit";
-import type { EnvelopeId, TenantId, PaginationCursor } from "../../../../domain/value-objects";
+import type { EnvelopeId, PaginationCursor } from "../../../../domain/value-objects";
 import type { CursorPage } from "@lawprotect/shared-ts";
 
 /**
@@ -18,7 +18,6 @@ import type { CursorPage } from "@lawprotect/shared-ts";
  */
 export interface ListByEnvelopeInput {
   /** Tenant identifier */
-  readonly tenantId: TenantId;
   /** Envelope identifier */
   readonly envelopeId: EnvelopeId;
   /** Maximum number of results */

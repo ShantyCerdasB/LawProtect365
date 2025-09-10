@@ -5,18 +5,22 @@
  * This port provides methods to handle invitation, reminder, cancellation, and other request operations.
  */
 
-import type { EnvelopeId, PartyId, TenantId } from "../../../domain/value-objects/ids";
+import type { EnvelopeId, PartyId } from "../../../domain/value-objects/ids";
 import type { ActorContext } from "@lawprotect/shared-ts";
 /**
  * @description Command for inviting parties to sign an envelope.
  */
 export interface InvitePartiesCommand {
-  /** The tenant ID */
-  tenantId: TenantId;
   /** The envelope ID to invite parties to */
   envelopeId: EnvelopeId;
   /** Array of party IDs to invite */
   partyIds: PartyId[];
+  /** Optional custom message to include in the invitation email */
+  message?: string;
+  /** Optional deadline for signing (ISO 8601 date string) */
+  signByDate?: string;
+  /** Optional signing order preference - only applies when multiple parties are invited */
+  signingOrder?: "owner_first" | "invitees_first";
   /** Context information about the actor (optional) */
   actor?: ActorContext;
 }
@@ -33,14 +37,14 @@ export interface InvitePartiesResult {
   skipped: PartyId[];
   /** Whether the envelope status was changed to 'sent' */
   statusChanged: boolean;
+  /** Array of invitation tokens created for the invited parties */
+  tokens: string[];
 }
 
 /**
  * @description Command for sending reminders to parties.
  */
 export interface RemindPartiesCommand {
-  /** The tenant ID */
-  tenantId: TenantId;
   /** The envelope ID to send reminders for */
   envelopeId: EnvelopeId;
   /** Optional array of specific party IDs to remind */
@@ -65,8 +69,6 @@ export interface RemindPartiesResult {
  * @description Command for canceling an envelope.
  */
 export interface CancelEnvelopeCommand {
-  /** The tenant ID */
-  tenantId: TenantId;
   /** The envelope ID to cancel */
   envelopeId: EnvelopeId;
   /** Optional reason for cancellation */
@@ -91,8 +93,6 @@ export interface CancelEnvelopeResult {
  * @description Command for declining an envelope.
  */
 export interface DeclineEnvelopeCommand {
-  /** The tenant ID */
-  tenantId: TenantId;
   /** The envelope ID to decline */
   envelopeId: EnvelopeId;
   /** Optional reason for decline */
@@ -117,8 +117,6 @@ export interface DeclineEnvelopeResult {
  * @description Command for finalizing an envelope.
  */
 export interface FinaliseEnvelopeCommand {
-  /** The tenant ID */
-  tenantId: TenantId;
   /** The envelope ID to finalize */
   envelopeId: EnvelopeId;
   /** Optional message for finalization */
@@ -143,8 +141,6 @@ export interface FinaliseEnvelopeResult {
  * @description Command for requesting a signature from a specific party.
  */
 export interface RequestSignatureCommand {
-  /** The tenant ID */
-  tenantId: TenantId;
   /** The envelope ID to request signature for */
   envelopeId: EnvelopeId;
   /** The party ID to request signature from */
@@ -175,8 +171,6 @@ export interface RequestSignatureResult {
  * @description Command for adding a viewer to an envelope.
  */
 export interface AddViewerCommand {
-  /** The tenant ID */
-  tenantId: TenantId;
   /** The envelope ID to add the viewer to */
   envelopeId: EnvelopeId;
   /** Email address of the viewer */

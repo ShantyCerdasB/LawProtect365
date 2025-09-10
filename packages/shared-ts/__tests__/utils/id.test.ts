@@ -7,8 +7,7 @@
 
 /// Mock ULID deterministically before loading the SUT.
 jest.mock("ulid", () => ({
-  ulid: () => "01ARZ3NDEKTSV4RRFFQ69G5FAV",
-}));
+  ulid: () => "01ARZ3NDEKTSV4RRFFQ69G5FAV"}));
 
 // Helper functions to reduce nesting
 const createCryptoMock = (overrides: any) => {
@@ -18,8 +17,7 @@ const createCryptoMock = (overrides: any) => {
 
 const createRandomBytesMock = (toStringImpl: (enc: BufferEncoding | "base64url") => string) => {
   return jest.fn(() => ({
-    toString: toStringImpl,
-  })) as any;
+    toString: toStringImpl})) as any;
 };
 
 const testWithIsolatedModules = async (testFn: () => Promise<void>) => {
@@ -35,8 +33,7 @@ describe("utils/id", () => {
 
   it("uuid() uses crypto.randomUUID when available", async () => {
     jest.doMock("node:crypto", () => createCryptoMock({
-      randomUUID: jest.fn(() => "11111111-2222-4333-8444-555555555555"),
-    }));
+      randomUUID: jest.fn(() => "11111111-2222-4333-8444-555555555555")}));
 
     await testWithIsolatedModules(async () => {
       const { uuid } = await import("../../src/utils/id.js");
@@ -50,8 +47,7 @@ describe("utils/id", () => {
   it("uuid() falls back to manual v4 when crypto.randomUUID is absent", async () => {
     jest.doMock("node:crypto", () => createCryptoMock({
       randomUUID: undefined, // simulate absence
-      randomBytes: jest.fn(() => Buffer.alloc(16, 0)),
-    }));
+      randomBytes: jest.fn(() => Buffer.alloc(16, 0))}));
 
     await testWithIsolatedModules(async () => {
       const { uuid } = await import("../../src/utils/id.js");
@@ -78,8 +74,7 @@ describe("utils/id", () => {
     };
 
     jest.doMock("node:crypto", () => createCryptoMock({
-      randomBytes: createRandomBytesMock(toStringImpl),
-    }));
+      randomBytes: createRandomBytesMock(toStringImpl)}));
 
     await testWithIsolatedModules(async () => {
       const spyIsEnc = jest.spyOn(Buffer as any, "isEncoding").mockReturnValue(true);
@@ -98,8 +93,7 @@ describe("utils/id", () => {
     const toStringImpl = (enc: BufferEncoding) => (enc === "base64" ? base64WithSymbols : "");
 
     jest.doMock("node:crypto", () => createCryptoMock({
-      randomBytes: createRandomBytesMock(toStringImpl),
-    }));
+      randomBytes: createRandomBytesMock(toStringImpl)}));
 
     await testWithIsolatedModules(async () => {
       jest.spyOn(Buffer as any, "isEncoding").mockReturnValue(false);
@@ -117,8 +111,7 @@ describe("utils/id", () => {
     const toStringImpl = (enc: BufferEncoding) => (enc === "base64" ? "aaaa" : "");
 
     jest.doMock("node:crypto", () => createCryptoMock({
-      randomBytes: createRandomBytesMock(toStringImpl),
-    }));
+      randomBytes: createRandomBytesMock(toStringImpl)}));
 
     await testWithIsolatedModules(async () => {
       jest.spyOn(Buffer as any, "isEncoding").mockReturnValue(false);

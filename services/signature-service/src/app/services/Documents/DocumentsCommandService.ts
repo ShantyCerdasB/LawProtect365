@@ -20,6 +20,7 @@ import {
   assertSupportedContentType, 
   assertDocumentSizeLimit
 } from "../../../domain/rules/Documents.rules";
+// Authorization validation is handled by middleware in controllers
 
 /**
  * @description Service interface for Documents command operations
@@ -80,13 +81,12 @@ export interface DocumentsCommandService {
  * @description Default implementation of DocumentsCommandService
  */
 export class DefaultDocumentsCommandService implements DocumentsCommandService {
-  constructor(private readonly commandsPort: DocumentsCommandsPort) {}
-
+  constructor(
+    private readonly commandsPort: DocumentsCommandsPort
+  ) {}
 
   async create(command: CreateDocumentCommand): Promise<CreateDocumentResult> {
-    // Apply generic rules - validate cross-tenant access
-    // Note: The tenantId validation should be done at the controller level
-    // where we have access to both the context tenantId and the resource tenantId
+    // Authorization validation is handled by middleware in the controller
     
     // Apply domain-specific rules
     assertSupportedContentType(command.contentType);
@@ -96,11 +96,7 @@ export class DefaultDocumentsCommandService implements DocumentsCommandService {
   }
 
   async upload(command: UploadDocumentCommand): Promise<UploadDocumentResult> {
-    // Apply generic rules - validate cross-tenant access
-    // Note: The tenantId validation should be done at the controller level
-    // where we have access to both the context tenantId and the resource tenantId
-    
-    // Apply domain-specific rules
+
     assertSupportedContentType(command.contentType);
     assertDocumentSizeLimit(command.size);
 

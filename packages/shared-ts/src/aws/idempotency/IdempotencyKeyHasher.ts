@@ -17,8 +17,6 @@ export interface IdempotencyKeyInput {
   method: string;
   /** Request path */
   path: string;
-  /** Tenant identifier */
-  tenantId: string;
   /** User identifier */
   userId: string;
   /** Query parameters */
@@ -65,7 +63,6 @@ export class IdempotencyKeyHasher {
     return {
       m: i.method.toUpperCase(),
       p: i.path,
-      t: i.tenantId,
       u: i.userId,
       q: i.query ?? null,
       b: i.body ?? null,
@@ -73,9 +70,4 @@ export class IdempotencyKeyHasher {
     };
   }
 }
-
-
-
-
-
 

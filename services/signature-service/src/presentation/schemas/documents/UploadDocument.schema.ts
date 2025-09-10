@@ -24,13 +24,7 @@ export const UploadDocumentBody = z.object({
   digest: z.string().length(64),
   
   /** Optional number of pages in the document */
-  pageCount: z.number().int().positive().optional(),
-});
+  pageCount: z.number().int().positive().optional()});
 
 export type UploadDocumentBody = z.infer<typeof UploadDocumentBody>;
-
-
-
-
-
 

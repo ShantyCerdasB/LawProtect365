@@ -4,7 +4,7 @@
  * @description Handles rate limiting for Documents operations using domain rules
  */
 
-import type { EnvelopeId, TenantId } from "../../../domain/value-objects/ids";
+import type { EnvelopeId } from "../../../domain/value-objects/ids";
 import { TooManyRequestsError, RateLimitStore } from "@lawprotect/shared-ts";
 import { SignatureErrorCodes } from "../../../shared/errors";
 import { UPLOAD_RATE_LIMITS } from "../../../domain/values/enums";
@@ -14,53 +14,41 @@ import { UPLOAD_RATE_LIMITS } from "../../../domain/values/enums";
  */
 export interface DocumentsRateLimitService {
   /**
-   * Checks and enforces document upload rate limits
-   * @param tenantId - Tenant identifier
-   * @param envelopeId - Envelope identifier
+   * Checks and enforces document upload rate limits   * @param envelopeId - Envelope identifier
    * @param actorUserId - Actor user identifier
    * @throws {TooManyRequestsError} When rate limit is exceeded
    */
   checkDocumentUploadRateLimit(
-    tenantId: TenantId,
     envelopeId: EnvelopeId,
     actorUserId: string
   ): Promise<void>;
 
   /**
-   * Checks and enforces document creation rate limits
-   * @param tenantId - Tenant identifier
-   * @param envelopeId - Envelope identifier
+   * Checks and enforces document creation rate limits   * @param envelopeId - Envelope identifier
    * @param actorUserId - Actor user identifier
    * @throws {TooManyRequestsError} When rate limit is exceeded
    */
   checkDocumentCreationRateLimit(
-    tenantId: TenantId,
     envelopeId: EnvelopeId,
     actorUserId: string
   ): Promise<void>;
 
   /**
-   * Checks and enforces document update rate limits
-   * @param tenantId - Tenant identifier
-   * @param envelopeId - Envelope identifier
+   * Checks and enforces document update rate limits   * @param envelopeId - Envelope identifier
    * @param actorUserId - Actor user identifier
    * @throws {TooManyRequestsError} When rate limit is exceeded
    */
   checkDocumentUpdateRateLimit(
-    tenantId: TenantId,
     envelopeId: EnvelopeId,
     actorUserId: string
   ): Promise<void>;
 
   /**
-   * Checks and enforces document deletion rate limits
-   * @param tenantId - Tenant identifier
-   * @param envelopeId - Envelope identifier
+   * Checks and enforces document deletion rate limits   * @param envelopeId - Envelope identifier
    * @param actorUserId - Actor user identifier
    * @throws {TooManyRequestsError} When rate limit is exceeded
    */
   checkDocumentDeletionRateLimit(
-    tenantId: TenantId,
     envelopeId: EnvelopeId,
     actorUserId: string
   ): Promise<void>;
@@ -74,18 +62,15 @@ export class DefaultDocumentsRateLimitService implements DocumentsRateLimitServi
 
   /**
    * @summary Checks and enforces document upload rate limits
-   * @description Enforces rate limits for document upload requests per user per envelope
-   * @param tenantId - Tenant identifier
-   * @param envelopeId - Envelope identifier
+   * @description Enforces rate limits for document upload requests per user per envelope   * @param envelopeId - Envelope identifier
    * @param actorUserId - Actor user identifier
    * @throws {TooManyRequestsError} When rate limit is exceeded
    */
   async checkDocumentUploadRateLimit(
-    tenantId: TenantId,
     envelopeId: EnvelopeId,
     actorUserId: string
   ): Promise<void> {
-    const key = `documents:upload:${tenantId}:${envelopeId}:${actorUserId}`;
+    const key = `documents:upload:${envelopeId}:${actorUserId}`;
     const limit = UPLOAD_RATE_LIMITS.EVIDENCE_PER_HOUR;
     const windowMs = 60 * 60 * 1000; // 1 hour
 
@@ -101,31 +86,26 @@ export class DefaultDocumentsRateLimitService implements DocumentsRateLimitServi
         `Document upload rate limit exceeded. Maximum ${limit} uploads per hour allowed.`,
         SignatureErrorCodes.RATE_LIMIT_ENVELOPE_SEND,
         {
-          tenantId,
           envelopeId,
           actorUserId,
           current,
           limit,
-          windowMs,
-        }
+          windowMs}
       );
     }
   }
 
   /**
    * @summary Checks and enforces document creation rate limits
-   * @description Enforces rate limits for document creation requests per user per envelope
-   * @param tenantId - Tenant identifier
-   * @param envelopeId - Envelope identifier
+   * @description Enforces rate limits for document creation requests per user per envelope   * @param envelopeId - Envelope identifier
    * @param actorUserId - Actor user identifier
    * @throws {TooManyRequestsError} When rate limit is exceeded
    */
   async checkDocumentCreationRateLimit(
-    tenantId: TenantId,
     envelopeId: EnvelopeId,
     actorUserId: string
   ): Promise<void> {
-    const key = `documents:create:${tenantId}:${envelopeId}:${actorUserId}`;
+    const key = `documents:create:${envelopeId}:${actorUserId}`;
     const limit = UPLOAD_RATE_LIMITS.EVIDENCE_PER_HOUR;
     const windowMs = 60 * 60 * 1000; // 1 hour
 
@@ -141,31 +121,26 @@ export class DefaultDocumentsRateLimitService implements DocumentsRateLimitServi
         `Document creation rate limit exceeded. Maximum ${limit} creations per hour allowed.`,
         SignatureErrorCodes.RATE_LIMIT_ENVELOPE_SEND,
         {
-          tenantId,
           envelopeId,
           actorUserId,
           current,
           limit,
-          windowMs,
-        }
+          windowMs}
       );
     }
   }
 
   /**
    * @summary Checks and enforces document update rate limits
-   * @description Enforces rate limits for document update requests per user per envelope
-   * @param tenantId - Tenant identifier
-   * @param envelopeId - Envelope identifier
+   * @description Enforces rate limits for document update requests per user per envelope   * @param envelopeId - Envelope identifier
    * @param actorUserId - Actor user identifier
    * @throws {TooManyRequestsError} When rate limit is exceeded
    */
   async checkDocumentUpdateRateLimit(
-    tenantId: TenantId,
     envelopeId: EnvelopeId,
     actorUserId: string
   ): Promise<void> {
-    const key = `documents:update:${tenantId}:${envelopeId}:${actorUserId}`;
+    const key = `documents:update:${envelopeId}:${actorUserId}`;
     const limit = UPLOAD_RATE_LIMITS.EVIDENCE_PER_HOUR;
     const windowMs = 60 * 60 * 1000; // 1 hour
 
@@ -181,31 +156,26 @@ export class DefaultDocumentsRateLimitService implements DocumentsRateLimitServi
         `Document update rate limit exceeded. Maximum ${limit} updates per hour allowed.`,
         SignatureErrorCodes.RATE_LIMIT_ENVELOPE_SEND,
         {
-          tenantId,
           envelopeId,
           actorUserId,
           current,
           limit,
-          windowMs,
-        }
+          windowMs}
       );
     }
   }
 
   /**
    * @summary Checks and enforces document deletion rate limits
-   * @description Enforces rate limits for document deletion requests per user per envelope
-   * @param tenantId - Tenant identifier
-   * @param envelopeId - Envelope identifier
+   * @description Enforces rate limits for document deletion requests per user per envelope   * @param envelopeId - Envelope identifier
    * @param actorUserId - Actor user identifier
    * @throws {TooManyRequestsError} When rate limit is exceeded
    */
   async checkDocumentDeletionRateLimit(
-    tenantId: TenantId,
     envelopeId: EnvelopeId,
     actorUserId: string
   ): Promise<void> {
-    const key = `documents:delete:${tenantId}:${envelopeId}:${actorUserId}`;
+    const key = `documents:delete:${envelopeId}:${actorUserId}`;
     const limit = UPLOAD_RATE_LIMITS.EVIDENCE_PER_HOUR;
     const windowMs = 60 * 60 * 1000; // 1 hour
 
@@ -221,13 +191,11 @@ export class DefaultDocumentsRateLimitService implements DocumentsRateLimitServi
         `Document deletion rate limit exceeded. Maximum ${limit} deletions per hour allowed.`,
         SignatureErrorCodes.RATE_LIMIT_ENVELOPE_SEND,
         {
-          tenantId,
           envelopeId,
           actorUserId,
           current,
           limit,
-          windowMs,
-        }
+          windowMs}
       );
     }
   }

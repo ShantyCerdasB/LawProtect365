@@ -21,19 +21,10 @@ export const FinaliseEnvelopeController = createCommandController<FinaliseEnvelo
   appServiceClass: RequestsCommandService,
   createDependencies: (c: any) => makeRequestsCommandsPort(createRequestsDependencies(c)),
   extractParams: (path: any, _body: any) => ({
-    envelopeId: path.id,
-  }),
+    envelopeId: path.id}),
   responseType: "ok",
-  includeActor: true,
-});
+  includeActor: true});
 
 // Export handler for backward compatibility
 export const handler = FinaliseEnvelopeController;
-
-
-
-
-
-
-
 

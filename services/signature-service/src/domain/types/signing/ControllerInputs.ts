@@ -1,10 +1,10 @@
 /**
  * @file ControllerInputs.ts
  * @summary Controller input types for signing operations
- * @description Defines input types for signing controllers, tenantId and actor are injected by factory
+ * @description Defines input types for signing controllers, and actor are injected by factory
  */
 
-import type { EnvelopeId, PartyId, TenantId } from "@/domain/value-objects/ids";
+import type { EnvelopeId, PartyId } from "@/domain/value-objects/ids";
 import type { HashAlgorithm, KmsAlgorithm } from "../../../domain/values/enums";
 
 // ============================================================================
@@ -13,11 +13,10 @@ import type { HashAlgorithm, KmsAlgorithm } from "../../../domain/values/enums";
 
 /**
  * @summary Base input for signing controllers
- * @description Base input that all signing controllers extend, tenantId is injected by factory
+ * @description Base input that all signing controllers extend, is injected by factory
  */
 export interface BaseSigningControllerInput {
   /** Tenant identifier (injected by factory) */
-  readonly tenantId: TenantId;
 }
 
 // ============================================================================
@@ -26,7 +25,7 @@ export interface BaseSigningControllerInput {
 
 /**
  * @summary Input for completing signing (controller level)
- * @description Parameters for completing the signing process, tenantId is injected by factory
+ * @description Parameters for completing the signing process, is injected by factory
  */
 export interface CompleteSigningControllerInput extends BaseSigningControllerInput {
   /** Envelope identifier */
@@ -52,7 +51,7 @@ export interface CompleteSigningControllerInput extends BaseSigningControllerInp
 
 /**
  * @summary Input for declining signing (controller level)
- * @description Parameters for declining the signing process, tenantId is injected by factory
+ * @description Parameters for declining the signing process, is injected by factory
  */
 export interface DeclineSigningControllerInput extends BaseSigningControllerInput {
   /** Envelope identifier */
@@ -71,7 +70,7 @@ export interface DeclineSigningControllerInput extends BaseSigningControllerInpu
 
 /**
  * @summary Input for preparing signing (controller level)
- * @description Parameters for preparing the signing process, tenantId is injected by factory
+ * @description Parameters for preparing the signing process, is injected by factory
  */
 export interface PrepareSigningControllerInput extends BaseSigningControllerInput {
   /** Envelope identifier */
@@ -88,7 +87,7 @@ export interface PrepareSigningControllerInput extends BaseSigningControllerInpu
 
 /**
  * @summary Input for recording signing consent (controller level)
- * @description Parameters for recording signing consent, tenantId is injected by factory
+ * @description Parameters for recording signing consent, is injected by factory
  */
 export interface SigningConsentControllerInput extends BaseSigningControllerInput {
   /** Envelope identifier */
@@ -109,7 +108,7 @@ export interface SigningConsentControllerInput extends BaseSigningControllerInpu
 
 /**
  * @summary Input for presigning upload (controller level)
- * @description Parameters for creating a presigned upload URL, tenantId is injected by factory
+ * @description Parameters for creating a presigned upload URL, is injected by factory
  */
 export interface PresignUploadControllerInput extends BaseSigningControllerInput {
   /** Envelope identifier */
@@ -128,7 +127,7 @@ export interface PresignUploadControllerInput extends BaseSigningControllerInput
 
 /**
  * @summary Input for downloading signed document (controller level)
- * @description Parameters for creating a presigned download URL, tenantId is injected by factory
+ * @description Parameters for creating a presigned download URL, is injected by factory
  */
 export interface DownloadSignedDocumentControllerInput extends BaseSigningControllerInput {
   /** Envelope identifier */
@@ -137,8 +136,70 @@ export interface DownloadSignedDocumentControllerInput extends BaseSigningContro
   readonly token: string;
 }
 
+// ============================================================================
+// VALIDATE INVITATION TOKEN
+// ============================================================================
 
+/**
+ * @summary Input for validating invitation token (controller level)
+ * @description Parameters for validating invitation token for unauthenticated signing
+ */
+export interface ValidateInvitationTokenControllerInput extends BaseSigningControllerInput {
+  /** Invitation token to validate */
+  readonly token: string;
+  /** IP address of the requester */
+  readonly ip?: string;
+  /** User agent of the requester */
+  readonly userAgent?: string;
+}
 
+/**
+ * @summary Input for completing signing with invitation token
+ */
+export interface CompleteSigningWithTokenControllerInput {
+  /** The envelope ID */
+  readonly envelopeId: string;
+  /** The signer/party ID */
+  readonly signerId: string;
+  /** The invitation token for authentication */
+  readonly token: string;
+  /** Document digest information */
+  readonly digest: {
+    alg: string;
+    value: string;
+  };
+  /** Signing algorithm */
+  readonly algorithm: string;
+  /** Optional key ID */
+  readonly keyId?: string;
+  /** IP address of the signer */
+  readonly ip?: string;
+  /** User agent of the signer */
+  readonly userAgent?: string;
+}
 
+// ============================================================================
+// SIGNING CONSENT WITH TOKEN
+// ============================================================================
 
+/**
+ * @summary Input for recording consent with invitation token (controller level)
+ * @description Parameters for recording consent using invitation tokens, no authentication required
+ */
+export interface SigningConsentWithTokenControllerInput extends BaseSigningControllerInput {
+  /** Envelope identifier */
+  readonly envelopeId: EnvelopeId;
+  /** Signer/party identifier */
+  readonly signerId: PartyId;
+  /** The invitation token for authentication */
+  readonly token: string;
+  /** Whether consent was given */
+  readonly consentGiven: boolean;
+  /** The consent text that was shown */
+  readonly consentText: string;
+  /** IP address of the requester */
+  readonly ip?: string;
+  /** User agent of the requester */
+  readonly userAgent?: string;
+}
 

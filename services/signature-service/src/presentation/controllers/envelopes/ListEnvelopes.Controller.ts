@@ -18,18 +18,9 @@ export const ListEnvelopesController = createQueryController<ListEnvelopesContro
   querySchema: ListEnvelopesQuery,
   appServiceClass: EnvelopesQueryService,
   createDependencies: (c: any) => c.envelopes.queriesPort,
-  extractParams: (path: any, query: any) => ({
-    tenantId: path.tenantId,
+  extractParams: (_path: any, query: any) => ({
     limit: query.limit,
-    cursor: query.cursor,
-  }),
+    cursor: query.cursor}),
   responseType: "ok"
 });
-
-
-
-
-
-
-
 

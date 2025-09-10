@@ -60,8 +60,7 @@ describe('tracing utilities', () => {
         span: 'work',
         spanId: expect.any(String),
         event: 'checkpoint',
-        b: 2,
-      })
+        b: 2})
     );
     expect(infoSpy).toHaveBeenCalledWith(
       'span.end',
@@ -70,8 +69,7 @@ describe('tracing utilities', () => {
         spanId: expect.any(String),
         durationMs: 250,
         a: 1,
-        c: 3,
-      })
+        c: 3})
     );
 
     // Returned span shape

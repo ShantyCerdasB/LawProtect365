@@ -7,7 +7,7 @@
 
 import { BaseEventService } from "../../../domain/services/BaseEventService";
 import type { DomainEvent, ActorContext } from "@lawprotect/shared-ts";
-import type { EnvelopeId, PartyId, TenantId } from "@/domain/value-objects/ids";
+import type { EnvelopeId, PartyId } from "@/domain/value-objects/ids";
 import type { SigningEventService as ISigningEventService } from "../../../domain/types/signing";
 
 /**
@@ -20,21 +20,18 @@ export class SigningEventService extends BaseEventService implements ISigningEve
    * @summary Publishes a signing completed domain event
    * @description Publishes a signing completion event using the outbox pattern
    * @param envelopeId - Envelope identifier
-   * @param partyId - Party identifier
-   * @param tenantId - Tenant identifier
-   * @param actor - Actor context for audit purposes
+   * @param partyId - Party identifier   * @param actor - Actor context for audit purposes
    * @param traceId - Optional trace ID for observability
    */
   async publishSigningCompleted(
     envelopeId: EnvelopeId,
     partyId: PartyId,
-    tenantId: TenantId,
     actor: ActorContext,
     traceId?: string
   ): Promise<void> {
     await this.publishStandardizedEvent(
       "signing.completed",
-      { envelopeId, partyId, tenantId },
+      { envelopeId, partyId},
       actor,
       traceId
     );
@@ -44,91 +41,38 @@ export class SigningEventService extends BaseEventService implements ISigningEve
    * @summary Publishes a signing declined domain event
    * @description Publishes a signing decline event using the outbox pattern
    * @param envelopeId - Envelope identifier
-   * @param partyId - Party identifier
-   * @param tenantId - Tenant identifier
-   * @param actor - Actor context for audit purposes
+   * @param partyId - Party identifier   * @param actor - Actor context for audit purposes
    * @param traceId - Optional trace ID for observability
    */
   async publishSigningDeclined(
     envelopeId: EnvelopeId,
     partyId: PartyId,
-    tenantId: TenantId,
     actor: ActorContext,
     traceId?: string
   ): Promise<void> {
     await this.publishStandardizedEvent(
       "signing.declined",
-      { envelopeId, partyId, tenantId },
+      { envelopeId, partyId},
       actor,
       traceId
     );
   }
 
-  /**
-   * @summary Publishes an OTP requested domain event
-   * @description Publishes an OTP request event using the outbox pattern
-   * @param envelopeId - Envelope identifier
-   * @param partyId - Party identifier
-   * @param tenantId - Tenant identifier
-   * @param actor - Actor context for audit purposes
-   * @param traceId - Optional trace ID for observability
-   */
-  async publishOtpRequested(
-    envelopeId: EnvelopeId,
-    partyId: PartyId,
-    tenantId: TenantId,
-    actor: ActorContext,
-    traceId?: string
-  ): Promise<void> {
-    await this.publishStandardizedEvent(
-      "otp.requested",
-      { envelopeId, partyId, tenantId },
-      actor,
-      traceId
-    );
-  }
-
-  /**
-   * @summary Publishes an OTP verified domain event
-   * @description Publishes an OTP verification event using the outbox pattern
-   * @param envelopeId - Envelope identifier
-   * @param partyId - Party identifier
-   * @param tenantId - Tenant identifier
-   * @param actor - Actor context for audit purposes
-   * @param traceId - Optional trace ID for observability
-   */
-  async publishOtpVerified(
-    envelopeId: EnvelopeId,
-    partyId: PartyId,
-    tenantId: TenantId,
-    actor: ActorContext,
-    traceId?: string
-  ): Promise<void> {
-    await this.publishStandardizedEvent(
-      "otp.verified",
-      { envelopeId, partyId, tenantId },
-      actor,
-      traceId
-    );
-  }
 
   /**
    * @summary Publishes a presign upload domain event
    * @description Publishes a presign upload event using the outbox pattern
-   * @param envelopeId - Envelope identifier
-   * @param tenantId - Tenant identifier
-   * @param actor - Actor context for audit purposes
+   * @param envelopeId - Envelope identifier   * @param actor - Actor context for audit purposes
    * @param traceId - Optional trace ID for observability
    */
   async publishPresignUpload(
     envelopeId: EnvelopeId,
-    tenantId: TenantId,
     actor: ActorContext,
     traceId?: string
   ): Promise<void> {
     await this.publishStandardizedEvent(
       "signing.presign_upload",
-      { envelopeId, tenantId },
+      { envelopeId},
       actor,
       traceId
     );
@@ -137,20 +81,17 @@ export class SigningEventService extends BaseEventService implements ISigningEve
   /**
    * @summary Publishes a download signed document domain event
    * @description Publishes a download signed document event using the outbox pattern
-   * @param envelopeId - Envelope identifier
-   * @param tenantId - Tenant identifier
-   * @param actor - Actor context for audit purposes
+   * @param envelopeId - Envelope identifier   * @param actor - Actor context for audit purposes
    * @param traceId - Optional trace ID for observability
    */
   async publishDownloadSignedDocument(
     envelopeId: EnvelopeId,
-    tenantId: TenantId,
     actor: ActorContext,
     traceId?: string
   ): Promise<void> {
     await this.publishStandardizedEvent(
       "signing.download_signed_document",
-      { envelopeId, tenantId },
+      { envelopeId},
       actor,
       traceId
     );
@@ -160,21 +101,18 @@ export class SigningEventService extends BaseEventService implements ISigningEve
    * @summary Publishes a signing prepared domain event
    * @description Publishes a signing preparation event using the outbox pattern
    * @param envelopeId - Envelope identifier
-   * @param partyId - Party identifier
-   * @param tenantId - Tenant identifier
-   * @param actor - Actor context for audit purposes
+   * @param partyId - Party identifier   * @param actor - Actor context for audit purposes
    * @param traceId - Optional trace ID for observability
    */
   async publishSigningPrepared(
     envelopeId: EnvelopeId,
     partyId: PartyId,
-    tenantId: TenantId,
     actor: ActorContext,
     traceId?: string
   ): Promise<void> {
     await this.publishStandardizedEvent(
       "signing.prepared",
-      { envelopeId, partyId, tenantId },
+      { envelopeId, partyId},
       actor,
       traceId
     );
@@ -184,21 +122,18 @@ export class SigningEventService extends BaseEventService implements ISigningEve
    * @summary Publishes a signing consent recorded domain event
    * @description Publishes a signing consent recorded event using the outbox pattern
    * @param envelopeId - Envelope identifier
-   * @param partyId - Party identifier
-   * @param tenantId - Tenant identifier
-   * @param actor - Actor context for audit purposes
+   * @param partyId - Party identifier   * @param actor - Actor context for audit purposes
    * @param traceId - Optional trace ID for observability
    */
   async publishSigningConsentRecorded(
     envelopeId: EnvelopeId,
     partyId: PartyId,
-    tenantId: TenantId,
     actor: ActorContext,
     traceId?: string
   ): Promise<void> {
     await this.publishStandardizedEvent(
       "signing.consent_recorded",
-      { envelopeId, partyId, tenantId },
+      { envelopeId, partyId },
       actor,
       traceId
     );

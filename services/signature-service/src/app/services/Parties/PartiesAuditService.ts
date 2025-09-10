@@ -32,13 +32,11 @@ export class PartiesAuditService extends BaseAuditService {
     }
 
     await this.auditRepo.record({
-      tenantId: context.tenantId,
       envelopeId: context.envelopeId as EnvelopeId,
       type: details.eventType as string,
       occurredAt: nowIso(),
       actor: context.actor,
-      metadata: details,
-    });
+      metadata: details});
   }
 
   /**
@@ -56,8 +54,7 @@ export class PartiesAuditService extends BaseAuditService {
     await this.logBusinessEvent(context, {
       eventType: "party.created",
       partyId,
-      ...details,
-    });
+      ...details});
   }
 
   /**
@@ -75,8 +72,7 @@ export class PartiesAuditService extends BaseAuditService {
     await this.logBusinessEvent(context, {
       eventType: "party.updated",
       partyId,
-      ...details,
-    });
+      ...details});
   }
 
   /**
@@ -94,24 +90,20 @@ export class PartiesAuditService extends BaseAuditService {
     await this.logBusinessEvent(context, {
       eventType: "party.deleted",
       partyId,
-      ...details,
-    });
+      ...details});
   }
 
   // Implementation of PartiesAuditService interface methods
   async logCreate(auditContext: AuditContext, input: any): Promise<void> {
-    // ✅ USANDO CORRECTAMENTE tenantId y actor del auditContext
     await this.logPartyCreated(auditContext, input.partyId || "unknown", {
       envelopeId: input.envelopeId,
       partyName: input.name,
       partyEmail: input.email,
       partyRole: input.role,
-      sequence: input.sequence,
-    });
+      sequence: input.sequence});
   }
 
   async logUpdate(auditContext: AuditContext, input: any): Promise<void> {
-    // ✅ USANDO CORRECTAMENTE tenantId y actor del auditContext
     await this.logPartyUpdated(auditContext, input.partyId, {
       envelopeId: input.envelopeId,
       updates: {
@@ -119,14 +111,11 @@ export class PartiesAuditService extends BaseAuditService {
         email: input.email,
         role: input.role,
         sequence: input.sequence
-      },
-    });
+      }});
   }
 
   async logDelete(auditContext: AuditContext, input: any): Promise<void> {
-    // ✅ USANDO CORRECTAMENTE tenantId y actor del auditContext
     await this.logPartyDeleted(auditContext, input.partyId, {
-      envelopeId: input.envelopeId,
-    });
+      envelopeId: input.envelopeId});
   }
 };

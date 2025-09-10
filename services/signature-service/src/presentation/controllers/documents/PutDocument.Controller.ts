@@ -21,8 +21,7 @@ const PutDocumentBody = z.object({
   digest: z.string().min(1),
   bucket: z.string().min(1),
   key: z.string().min(1),
-  pageCount: z.number().int().positive().optional(),
-});
+  pageCount: z.number().int().positive().optional()});
 
 /**
  * @description Put Document controller
@@ -38,9 +37,7 @@ export const PutDocumentController = createCommandController<UpdateDocumentBinar
     s3Service: c.documents.s3Service,
     s3Config: {
       evidenceBucket: c.config.s3.evidenceBucket,
-      signedBucket: c.config.s3.signedBucket,
-    },
-  }),
+      signedBucket: c.config.s3.signedBucket}}),
   extractParams: (path: any, body: any) => ({
     documentId: path.id,
     contentType: body.contentType,
@@ -53,20 +50,10 @@ export const PutDocumentController = createCommandController<UpdateDocumentBinar
       email: path.actor?.email,
       ip: path.actor?.ip,
       userAgent: path.actor?.userAgent,
-      role: path.actor?.role,
-    },
-  }),
+      role: path.actor?.role}}),
   responseType: "ok",
-  includeActor: true,
-});
+  includeActor: true});
 
 // Export handler for backward compatibility
 export const handler = PutDocumentController;
-
-
-
-
-
-
-
 

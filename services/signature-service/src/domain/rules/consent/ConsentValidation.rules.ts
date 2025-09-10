@@ -22,8 +22,7 @@ export const validateConsentStatus = (value: string): ConsentStatus => {
   if (!CONSENT_STATUSES.includes(value as any)) {
     throw badRequest(`Invalid consent status: ${value}`, "INPUT_TYPE_NOT_ALLOWED", {
       validStatuses: CONSENT_STATUSES,
-      providedStatus: value,
-    });
+      providedStatus: value});
   }
   return value as ConsentStatus;
 };

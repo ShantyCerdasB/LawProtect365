@@ -28,17 +28,8 @@ export const handler = createCommandController<CreateConsentControllerInput, Cre
     metadata: body.metadata,
     expiresAt: body.expiresAt,
     idempotencyKey: body.idempotencyKey,
-    ttlSeconds: body.ttlSeconds || 300,
-  }),
+    ttlSeconds: body.ttlSeconds || 300}),
   // Note: Middleware for rate limiting would need proper store integration
   responseType: "created",
-  includeActor: true,
-});
-
-
-
-
-
-
-
+  includeActor: true});
 

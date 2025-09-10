@@ -5,7 +5,7 @@
  */
 
 import { BaseEventService } from "../../../domain/services/BaseEventService";
-import type { EnvelopeId, TenantId, UserId } from "../../../domain/value-objects/ids";
+import type { EnvelopeId, UserId } from "../../../domain/value-objects/ids";
 import type { EnvelopeStatus } from "../../../domain/value-objects/index";
 import type { Envelope } from "../../../domain/entities/Envelope";
 import { makeEvent, type DomainEvent } from "@lawprotect/shared-ts";
@@ -33,12 +33,11 @@ export class EnvelopesEventService extends BaseEventService {
    * @param context - Event context
    * @param details - Envelope creation details
    */
-  async publishEnvelopeCreatedEvent(context: { tenantId: TenantId; actor: { userId: UserId; email: string } }, details: { envelope: Envelope }): Promise<void> {
+  async publishEnvelopeCreatedEvent(context: { actor: { userId: UserId; email: string } }, details: { envelope: Envelope }): Promise<void> {
     const event: DomainEvent = makeEvent("envelope.created", {
       envelopeId: details.envelope.envelopeId,
-      tenantId: details.envelope.tenantId,
-      ownerId: details.envelope.ownerId,
-      title: details.envelope.title,
+      ownerEmail: details.envelope.ownerEmail,
+      name: details.envelope.name,
       status: details.envelope.status,
       createdAt: details.envelope.createdAt,
       actor: context.actor
@@ -52,10 +51,10 @@ export class EnvelopesEventService extends BaseEventService {
    * @param context - Event context
    * @param details - Envelope update details
    */
-  async publishEnvelopeUpdatedEvent(context: { tenantId: TenantId; actor: { userId: UserId; email: string } }, details: { envelope: Envelope; previousStatus?: EnvelopeStatus; changes: Partial<Envelope> }): Promise<void> {
+  async publishEnvelopeUpdatedEvent(context: { actor: { userId: UserId; email: string } }, details: { envelope: Envelope; previousStatus?: EnvelopeStatus; changes: Partial<Envelope> }): Promise<void> {
     const event: DomainEvent = makeEvent("envelope.updated", {
       envelopeId: details.envelope.envelopeId,
-      tenantId: details.envelope.tenantId,
+      ownerEmail: details.envelope.ownerEmail,
       previousStatus: details.previousStatus,
       currentStatus: details.envelope.status,
       changes: details.changes,
@@ -71,11 +70,10 @@ export class EnvelopesEventService extends BaseEventService {
    * @param context - Event context
    * @param details - Envelope deletion details
    */
-  async publishEnvelopeDeletedEvent(context: { tenantId: TenantId; actor: { userId: UserId; email: string } }, details: { envelopeId: EnvelopeId; title: string; status: EnvelopeStatus; tenantId: TenantId }): Promise<void> {
+  async publishEnvelopeDeletedEvent(context: { actor: { userId: UserId; email: string } }, details: { envelopeId: EnvelopeId; name: string; status: EnvelopeStatus }): Promise<void> {
     const event: DomainEvent = makeEvent("envelope.deleted", {
       envelopeId: details.envelopeId,
-      tenantId: details.tenantId,
-      title: details.title,
+      name: details.name,
       status: details.status,
       deletedAt: new Date().toISOString(),
       actor: context.actor
@@ -89,10 +87,9 @@ export class EnvelopesEventService extends BaseEventService {
    * @param context - Event context
    * @param details - Status change details
    */
-  async publishEnvelopeStatusChangedEvent(context: { tenantId: TenantId; actor: { userId: UserId; email: string } }, details: { envelopeId: EnvelopeId; previousStatus: EnvelopeStatus; newStatus: EnvelopeStatus; reason?: string }): Promise<void> {
+  async publishEnvelopeStatusChangedEvent(context: { actor: { userId: UserId; email: string } }, details: { envelopeId: EnvelopeId; previousStatus: EnvelopeStatus; newStatus: EnvelopeStatus; reason?: string }): Promise<void> {
     const event: DomainEvent = makeEvent("envelope.status_changed", {
       envelopeId: details.envelopeId,
-      tenantId: context.tenantId,
       previousStatus: details.previousStatus,
       newStatus: details.newStatus,
       reason: details.reason,
@@ -108,10 +105,9 @@ export class EnvelopesEventService extends BaseEventService {
    * @param context - Event context
    * @param details - Party addition details
    */
-  async publishEnvelopePartyAddedEvent(context: { tenantId: TenantId; actor: { userId: UserId; email: string } }, details: { envelopeId: EnvelopeId; partyId: string; role: string }): Promise<void> {
+  async publishEnvelopePartyAddedEvent(context: { actor: { userId: UserId; email: string } }, details: { envelopeId: EnvelopeId; partyId: string; role: string }): Promise<void> {
     const event: DomainEvent = makeEvent("envelope.party_added", {
       envelopeId: details.envelopeId,
-      tenantId: context.tenantId,
       partyId: details.partyId,
       role: details.role,
       addedAt: new Date().toISOString(),
@@ -126,10 +122,9 @@ export class EnvelopesEventService extends BaseEventService {
    * @param context - Event context
    * @param details - Document addition details
    */
-  async publishEnvelopeDocumentAddedEvent(context: { tenantId: TenantId; actor: { userId: UserId; email: string } }, details: { envelopeId: EnvelopeId; documentId: string; documentName: string }): Promise<void> {
+  async publishEnvelopeDocumentAddedEvent(context: { actor: { userId: UserId; email: string } }, details: { envelopeId: EnvelopeId; documentId: string; documentName: string }): Promise<void> {
     const event: DomainEvent = makeEvent("envelope.document_added", {
       envelopeId: details.envelopeId,
-      tenantId: context.tenantId,
       documentId: details.documentId,
       documentName: details.documentName,
       addedAt: new Date().toISOString(),
@@ -144,10 +139,9 @@ export class EnvelopesEventService extends BaseEventService {
    * @param context - Event context
    * @param details - Envelope access details
    */
-  async publishEnvelopeAccessed(context: { tenantId: TenantId; envelopeId?: string; actor?: { userId?: UserId; email?: string } }, details: { envelopeId: EnvelopeId }): Promise<void> {
+  async publishEnvelopeAccessed(context: { envelopeId?: string; actor?: { userId?: UserId; email?: string } }, details: { envelopeId: EnvelopeId }): Promise<void> {
     const event: DomainEvent = makeEvent("envelope.accessed", {
       envelopeId: details.envelopeId,
-      tenantId: context.tenantId,
       operation: "getById",
       accessedAt: new Date().toISOString(),
       actor: context.actor
@@ -161,9 +155,8 @@ export class EnvelopesEventService extends BaseEventService {
    * @param context - Event context
    * @param details - Envelope list access details
    */
-  async publishEnvelopeListAccessed(context: { tenantId: TenantId; actor?: { userId?: UserId; email?: string } }, details: { limit?: number; cursor?: string; resultCount: number }): Promise<void> {
+  async publishEnvelopeListAccessed(context: { actor?: { userId?: UserId; email?: string } }, details: { limit?: number; cursor?: string; resultCount: number }): Promise<void> {
     const event: DomainEvent = makeEvent("envelope.list_accessed", {
-      tenantId: context.tenantId,
       operation: "list",
       limit: details.limit,
       cursor: details.cursor,
@@ -180,10 +173,9 @@ export class EnvelopesEventService extends BaseEventService {
    * @param context - Event context
    * @param details - Envelope status access details
    */
-  async publishEnvelopeStatusAccessed(context: { tenantId: TenantId; envelopeId?: string; actor?: { userId?: UserId; email?: string } }, details: { envelopeId: EnvelopeId; status: EnvelopeStatus }): Promise<void> {
+  async publishEnvelopeStatusAccessed(context: { envelopeId?: string; actor?: { userId?: UserId; email?: string } }, details: { envelopeId: EnvelopeId; status: EnvelopeStatus }): Promise<void> {
     const event: DomainEvent = makeEvent("envelope.status_accessed", {
       envelopeId: details.envelopeId,
-      tenantId: context.tenantId,
       status: details.status,
       operation: "getStatus",
       accessedAt: new Date().toISOString(),
