@@ -26,6 +26,7 @@ export const InvitePartiesController = createCommandController<InvitePartiesCont
   }),
   responseType: "ok",
   includeActor: true,
+  methodName: "inviteParties",
 });
 
 // Export handler for backward compatibility

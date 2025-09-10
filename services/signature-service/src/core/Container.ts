@@ -51,7 +51,6 @@ import {
   SsmParamConfigProvider,
   randomToken, 
   uuid, 
-  ulid, 
   DdbClientLike, 
   makeEventPublisher,
   OutboxRepositoryDdb, 
@@ -270,7 +269,7 @@ export const getContainer = (): Container => {
 
 
   const ids = {
-    ulid,
+    ulid: uuid, // Use UUID instead of ULID for production consistency
     uuid,
     token: (bytes = 32) => randomToken(bytes),
   };

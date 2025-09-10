@@ -14,7 +14,6 @@ import type {
   DeleteEnvelopeResult 
 } from "../../ports/envelopes/EnvelopesCommandsPort";
 // Envelope lifecycle rules would need proper command structure integration
-import { assertTenantBoundary } from "@lawprotect/shared-ts";
 
 /**
  * @summary Command service for envelope operations
@@ -30,8 +29,9 @@ export class EnvelopesCommandService {
    * @returns Promise resolving to the created envelope
    */
   async create(command: CreateEnvelopeCommand): Promise<CreateEnvelopeResult> {
-    // Apply generic rules
-    assertTenantBoundary(command.tenantId, command.tenantId);
+    // Apply generic rules - validate cross-tenant access
+    // Note: The tenantId validation should be done at the controller level
+    // where we have access to both the context tenantId and the resource tenantId
     
     return this.commandsPort.create(command);
   }
@@ -42,8 +42,9 @@ export class EnvelopesCommandService {
    * @returns Promise resolving to the updated envelope
    */
   async update(command: UpdateEnvelopeCommand): Promise<UpdateEnvelopeResult> {
-    // Apply generic rules
-    assertTenantBoundary(command.tenantId, command.tenantId);
+    // Apply generic rules - validate cross-tenant access
+    // Note: The tenantId validation should be done at the controller level
+    // where we have access to both the context tenantId and the resource tenantId
     
     return this.commandsPort.update(command);
   }
@@ -54,8 +55,9 @@ export class EnvelopesCommandService {
    * @returns Promise resolving to deletion confirmation
    */
   async delete(command: DeleteEnvelopeCommand): Promise<DeleteEnvelopeResult> {
-    // Apply generic rules
-    assertTenantBoundary(command.tenantId, command.tenantId);
+    // Apply generic rules - validate cross-tenant access
+    // Note: The tenantId validation should be done at the controller level
+    // where we have access to both the context tenantId and the resource tenantId
 
     return this.commandsPort.delete(command);
   }

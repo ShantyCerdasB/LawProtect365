@@ -30,6 +30,7 @@ export const CompleteSigningController = createCommandController<CompleteSigning
     token: "", // Will be injected by factory
   }),
   responseType: "ok",
+  methodName: "completeSigning",
 });
 
 // Export handler for backward compatibility

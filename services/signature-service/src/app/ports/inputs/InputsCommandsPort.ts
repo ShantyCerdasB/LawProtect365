@@ -31,6 +31,10 @@ export interface CreateInputsCommand {
     x: number;
     /** Y coordinate of the input */
     y: number;
+    /** Width of the input */
+    width: number;
+    /** Height of the input */
+    height: number;
     /** Whether the input is required */
     required: boolean;
     /** Party ID assigned to this input (optional) */
@@ -128,6 +132,10 @@ export interface UpdateInputPositionsCommand {
     x: number;
     /** Y coordinate of the input */
     y: number;
+    /** Width of the input */
+    width: number;
+    /** Height of the input */
+    height: number;
   }>;
   /** Context information about the actor updating the positions */
   actor: ActorContext;

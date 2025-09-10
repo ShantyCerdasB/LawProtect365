@@ -9,15 +9,16 @@
  * @summary Path parameter schemas for envelope and input operations.
  */
 
-import { z, UuidV4 } from "@lawprotect/shared-ts";
+import { z } from "@lawprotect/shared-ts";
+import { EnvelopeId, InputId } from "../common/path";
 
 /**
  * @description Path parameters schema for envelope operations.
  * Validates envelope ID in path parameters.
  */
 export const EnvelopePath = z.object({
-  /** Envelope identifier (UUID v4) */
-  envelopeId: UuidV4,
+  /** Envelope identifier */
+  envelopeId: EnvelopeId,
 });
 export type EnvelopePath = z.infer<typeof EnvelopePath>;
 
@@ -27,9 +28,9 @@ export type EnvelopePath = z.infer<typeof EnvelopePath>;
  */
 export const EnvelopeInputPath = z.object({
   /** Envelope identifier (UUID v4) */
-  envelopeId: UuidV4,
+  envelopeId: EnvelopeId,
   /** Input identifier (UUID v4) */
-  inputId: UuidV4,
+  inputId: InputId,
 });
 export type EnvelopeInputPath = z.infer<typeof EnvelopeInputPath>;
 

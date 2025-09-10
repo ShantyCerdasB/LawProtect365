@@ -48,6 +48,8 @@ export type DdbInputItem = {
     page: number;
     x: number;
     y: number;
+    width: number;
+    height: number;
   };
 
   value?: string;
@@ -78,6 +80,8 @@ export const isDdbInputItem = (v: unknown): v is DdbInputItem => {
       typeof o.position.page === "number" &&
       typeof o.position.x === "number" &&
       typeof o.position.y === "number" &&
+      typeof o.position.width === "number" &&
+      typeof o.position.height === "number" &&
       typeof o.createdAt === "string" &&
       typeof o.updatedAt === "string"
   );

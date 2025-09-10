@@ -20,7 +20,6 @@ import {
   assertSupportedContentType, 
   assertDocumentSizeLimit
 } from "../../../domain/rules/Documents.rules";
-import { assertTenantBoundary } from "@lawprotect/shared-ts";
 
 /**
  * @description Service interface for Documents command operations
@@ -85,8 +84,9 @@ export class DefaultDocumentsCommandService implements DocumentsCommandService {
 
 
   async create(command: CreateDocumentCommand): Promise<CreateDocumentResult> {
-    // Apply generic rules
-    assertTenantBoundary(command.tenantId, command.tenantId);
+    // Apply generic rules - validate cross-tenant access
+    // Note: The tenantId validation should be done at the controller level
+    // where we have access to both the context tenantId and the resource tenantId
     
     // Apply domain-specific rules
     assertSupportedContentType(command.contentType);
@@ -96,8 +96,9 @@ export class DefaultDocumentsCommandService implements DocumentsCommandService {
   }
 
   async upload(command: UploadDocumentCommand): Promise<UploadDocumentResult> {
-    // Apply generic rules
-    assertTenantBoundary(command.tenantId, command.tenantId);
+    // Apply generic rules - validate cross-tenant access
+    // Note: The tenantId validation should be done at the controller level
+    // where we have access to both the context tenantId and the resource tenantId
     
     // Apply domain-specific rules
     assertSupportedContentType(command.contentType);

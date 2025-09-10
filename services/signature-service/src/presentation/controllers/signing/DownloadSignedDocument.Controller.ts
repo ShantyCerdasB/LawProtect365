@@ -25,6 +25,7 @@ export const DownloadSignedDocumentController = createCommandController<Download
     token: "", // Will be injected by factory
   }),
   responseType: "ok",
+  methodName: "downloadSignedDocument",
 });
 
 // Export handler for backward compatibility

@@ -10,9 +10,9 @@ import type { Repository, ISODateString } from "@lawprotect/shared-ts";
 import type { SigningCommandsPort, SigningConsentCommand, SigningConsentResult, PrepareSigningCommand, PrepareSigningResult, CompleteSigningCommand, CompleteSigningResult, DeclineSigningCommand, DeclineSigningResult, PresignUploadCommand, PresignUploadResult, DownloadSignedDocumentCommand, DownloadSignedDocumentResult } from "../../ports/signing/SigningCommandsPort";
 import type { Envelope } from "../../../domain/entities/Envelope";
 import type { EnvelopeId } from "../../../domain/value-objects/ids";
-import { IdempotencyRunner, KmsSigner, EventBusPortAdapter, NotFoundError, ErrorCodes } from "@lawprotect/shared-ts";
+import { IdempotencyRunner, KmsSigner, EventBusPortAdapter, NotFoundError, ConflictError, ErrorCodes } from "@lawprotect/shared-ts";
 import { badRequest, partyNotFound } from "../../../shared/errors";
-import { assertKmsAlgorithmAllowed, assertCompletionAllowed, assertPdfDigestMatches } from "../../../domain/rules/Signing.rules";
+import { assertKmsAlgorithmAllowed, assertPdfDigestMatches } from "../../../domain/rules/Signing.rules";
 import { assertDownloadAllowed } from "../../../domain/rules/Download.rules";
 import { assertCancelDeclineAllowed, assertReasonValid } from "../../../domain/rules/CancelDecline.rules";
 import { assertPresignPolicy, buildEvidencePath } from "../../../domain/rules/Evidence.rules";
@@ -170,27 +170,18 @@ export const makeSigningCommandsPort = (
         assertPdfDigestMatches(command.digest, targetDocument.digest);
       }
       
-      // Get actual signing stats from envelope for validation
-      const parties = await _partiesRepo.listByEnvelope({ 
-        tenantId: envelope.tenantId, 
-        envelopeId: command.envelopeId 
-      });
-      const requiredSigners = parties.items.filter((p: any) => p.role === PARTY_ROLES[0]).length;
-      const signedCount = parties.items.filter((p: any) => p.role === PARTY_ROLES[0] && p.status === "signed").length;
-      
-      const signingStats = {
-        requiredSigners,
-        signedCount
-      };
-      assertCompletionAllowed(signingStats);
-
-      // Get and validate party
+      // Get and validate party first
       const party = await _partiesRepo.getById({ 
         envelopeId: command.envelopeId, 
         partyId: command.signerId 
       });
       if (!party) {
         throw partyNotFound({ partyId: command.signerId, envelopeId: command.envelopeId });
+      }
+
+      // Check if party has already signed
+      if (party.status === "signed") {
+        throw new ConflictError("Party has already signed", ErrorCodes.COMMON_CONFLICT);
       }
 
       // Use KMS to sign the digest
@@ -203,11 +194,35 @@ export const makeSigningCommandsPort = (
       const signature = Buffer.from(signResult.signature).toString('base64');
       const completedAt = new Date().toISOString();
 
-      // Update envelope status to completed
-      await _envelopesRepo.update(command.envelopeId, {
-        status: ENVELOPE_STATUSES[3] as any,
+      // Update party status to signed
+      await _partiesRepo.update(command.signerId, {
+        status: "signed",
+        signedAt: completedAt,
         updatedAt: completedAt as ISODateString,
       });
+
+      // Check if all required signers have now signed
+      const parties = await _partiesRepo.listByEnvelope({ 
+        tenantId: envelope.tenantId, 
+        envelopeId: command.envelopeId 
+      });
+      const requiredSigners = parties.items.filter((p: any) => p.role === PARTY_ROLES[0]).length;
+      const signedCount = parties.items.filter((p: any) => p.role === PARTY_ROLES[0] && p.status === "signed").length;
+      
+      // Update envelope status based on signing progress
+      if (signedCount >= requiredSigners) {
+        // All signers have signed - mark as completed
+        await _envelopesRepo.update(command.envelopeId, {
+          status: ENVELOPE_STATUSES[3] as any, // completed
+          updatedAt: completedAt as ISODateString,
+        });
+      } else if (signedCount > 0) {
+        // Some signers have signed - mark as in_progress
+        await _envelopesRepo.update(command.envelopeId, {
+          status: ENVELOPE_STATUSES[2] as any, // in_progress
+          updatedAt: completedAt as ISODateString,
+        });
+      }
 
       return {
         completed: true,

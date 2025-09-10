@@ -16,7 +16,7 @@ import { InputType } from "../values/enums";
 
 /**
  * @description Position of the input on a document page.
- * Defines the location coordinates and page number for placing inputs on documents.
+ * Defines the location coordinates, dimensions, and page number for placing inputs on documents.
  */
 export interface InputPosition {
   /** Page number (1-based) */
@@ -25,6 +25,10 @@ export interface InputPosition {
   readonly x: number;
   /** Y coordinate (normalized 0–1 or absolute) */
   readonly y: number;
+  /** Width of the input */
+  readonly width: number;
+  /** Height of the input */
+  readonly height: number;
 }
 
 /**

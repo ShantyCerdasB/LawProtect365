@@ -4,6 +4,7 @@
  * @description Provides reusable patterns for document-related controllers
  */
 
+
 /**
  * Common dependencies factory for document controllers
  */
@@ -55,6 +56,9 @@ export function extractDocumentUploadParams(path: Record<string, unknown>, body:
  * Common parameter extraction for document creation controllers
  */
 export function extractDocumentCreateParams(path: Record<string, unknown>, body: Record<string, unknown>) {
+  // Note: Cross-tenant access validation should be done at the controller level
+  // where we have access to both the context tenantId and the resource tenantId
+  
   return {
     ...extractDocumentParams(path, body),
     s3Ref: { bucket: body.bucket, key: body.key },

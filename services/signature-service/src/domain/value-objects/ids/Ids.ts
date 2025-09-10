@@ -9,24 +9,24 @@
  * zero-cost at runtime.
  */
 
-import { z, Ulid, UuidV4, TrimmedString } from "@lawprotect/shared-ts";
+import { z, UuidV4, TrimmedString } from "@lawprotect/shared-ts";
 import type { Brand } from "@lawprotect/shared-ts";
 
 /* ----------------------------------------------------------------------------
  * Brands
  * ----------------------------------------------------------------------------*/
 
-/** @description Envelope identifier (ULID/UUID) */
+/** @description Envelope identifier (UUID) */
 export type EnvelopeId = Brand<string, "EnvelopeId">;
-/** @description Document identifier (ULID/UUID) */
+/** @description Document identifier (UUID) */
 export type DocumentId = Brand<string, "DocumentId">;
-/** @description Party identifier (ULID/UUID) */
+/** @description Party identifier (UUID) */
 export type PartyId = Brand<string, "PartyId">;
-/** @description Input (field) identifier (ULID/UUID) */
+/** @description Input (field) identifier (UUID) */
 export type InputId = Brand<string, "InputId">;
-/** @description Signature record identifier (ULID/UUID) */
+/** @description Signature record identifier (UUID) */
 export type SignatureId = Brand<string, "SignatureId">;
-/** @description Consent identifier (ULID/UUID) */
+/** @description Consent identifier (UUID) */
 export type ConsentId = Brand<string, "ConsentId">;
 
 /** @description Tenant identifier (trimmed, non-empty) */
@@ -41,32 +41,32 @@ export type IpAddress = Brand<string, "IpAddress">;
  * ----------------------------------------------------------------------------*/
 
 /**
- * @description Generic schema for entity identifiers that accept either ULID or UUIDv4.
+ * @description Generic schema for entity identifiers using UUIDv4.
  * Useful for path/query params and shared VO usage.
  */
-export const EntityIdSchema = z.union([Ulid, UuidV4]);
+export const EntityIdSchema = UuidV4;
 
-/** @description EnvelopeId validator (ULID/UUID ? brand) */
+/** @description EnvelopeId validator (UUID ? brand) */
 export const EnvelopeIdSchema = EntityIdSchema.transform(
   (v: string) => v as EnvelopeId
 );
-/** @description DocumentId validator (ULID/UUID ? brand) */
+/** @description DocumentId validator (UUID ? brand) */
 export const DocumentIdSchema = EntityIdSchema.transform(
   (v: string) => v as DocumentId
 );
-/** @description PartyId validator (ULID/UUID ? brand) */
+/** @description PartyId validator (UUID ? brand) */
 export const PartyIdSchema = EntityIdSchema.transform(
   (v: string) => v as PartyId
 );
-/** @description InputId validator (ULID/UUID ? brand) */
+/** @description InputId validator (UUID ? brand) */
 export const InputIdSchema = EntityIdSchema.transform(
   (v: string) => v as InputId
 );
-/** @description SignatureId validator (ULID/UUID ? brand) */
+/** @description SignatureId validator (UUID ? brand) */
 export const SignatureIdSchema = EntityIdSchema.transform(
   (v: string) => v as SignatureId
 );
-/** @description ConsentId validator (ULID/UUID ? brand) */
+/** @description ConsentId validator (UUID ? brand) */
 export const ConsentIdSchema = EntityIdSchema.transform(
   (v: string) => v as ConsentId
 );

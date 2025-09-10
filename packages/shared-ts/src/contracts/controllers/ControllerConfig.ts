@@ -27,7 +27,7 @@ export interface QueryControllerConfig<TInput = any, TOutput = any> {
   getContainer: () => any;
   
   /** Function to extract parameters from validated request */
-  extractParams: (path?: any, query?: any) => TInput;
+  extractParams: (path?: any, query?: any, context?: any) => TInput;
   /** Function to transform result for response (optional) */
   transformResult?: (result: any) => TOutput;
   /** Type of HTTP response */
@@ -57,7 +57,7 @@ export interface CommandControllerConfig<TInput = any, TOutput = any> {
   getContainer: () => any;
   
   /** Function to extract parameters from validated request */
-  extractParams: (path?: any, body?: any) => TInput;
+  extractParams: (path?: any, body?: any, context?: any) => TInput;
   /** Function to transform result for response (optional) */
   transformResult?: (result: any) => TOutput;
   /** Type of HTTP response */

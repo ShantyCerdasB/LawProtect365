@@ -33,7 +33,7 @@ export const createController = <TInput, TOutput>(
     const dependencies = config.createDependencies(c);
     const appService = new config.appServiceClass(dependencies);
     
-    const params = config.extractParams(validated.path, validated.body);
+    const params = config.extractParams(validated.path, validated.body, { tenantId, actor });
     const methodName = config.methodName || 'execute';
     const result = await appService[methodName]({ tenantId, actor, ...params });
     

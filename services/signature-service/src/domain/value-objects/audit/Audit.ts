@@ -7,15 +7,15 @@
  * Events are chained via hashes and time-ordered for tamper-evidence.
  */
 
-import { z, Ulid, TrimmedString } from "@lawprotect/shared-ts";
+import { z, UuidV4, TrimmedString } from "@lawprotect/shared-ts";
 import type { Brand } from "@lawprotect/shared-ts";
 import { TenantIdSchema, EnvelopeIdSchema } from "../ids";
 
 /** @description Branded identifier for audit events */
 export type AuditEventId = Brand<string, "AuditEventId">;
 
-/** @description Validator for `AuditEventId` (ULID ? brand) */
-export const AuditEventIdSchema = Ulid.transform((v) => v as AuditEventId);
+/** @description Validator for `AuditEventId` (UUID ? brand) */
+export const AuditEventIdSchema = UuidV4.transform((v) => v as AuditEventId);
 
 /**
  * @description Minimal immutable audit event persisted in the store.

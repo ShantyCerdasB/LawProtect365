@@ -3,22 +3,22 @@
  * @summary Reusable Zod schemas for common path params.
  */
 
-import { z, UuidV4, Ulid, OpaqueId } from "@lawprotect/shared-ts";
+import { z, UuidV4, OpaqueId } from "@lawprotect/shared-ts";
 
-/** Envelope ids can be UUIDv4 or ULID. */
-export const EnvelopeId = z.union([UuidV4, Ulid]);
+/** Envelope ids use UUIDv4 for production consistency. */
+export const EnvelopeId = UuidV4;
 
-/** Document ids inside envelope — UUIDv4 or ULID. */
-export const DocumentId = z.union([UuidV4, Ulid]);
+/** Document ids inside envelope use UUIDv4 for production consistency. */
+export const DocumentId = UuidV4;
 
-/** Input id (field) — UUIDv4 or ULID. */
-export const InputId = z.union([UuidV4, Ulid]);
+/** Input id (field) use UUIDv4 for production consistency. */
+export const InputId = UuidV4;
 
-/** Party id — UUIDv4 or ULID. */
-export const PartyId = z.union([UuidV4, Ulid]);
+/** Party id use UUIDv4 for production consistency. */
+export const PartyId = UuidV4;
 
-/** Consent id — UUIDv4 or ULID. */
-export const ConsentId = z.union([UuidV4, Ulid]);
+/** Consent id use UUIDv4 for production consistency. */
+export const ConsentId = UuidV4;
 
 /** Public signing token (opaque). */
 export const SigningToken = OpaqueId;
@@ -27,37 +27,37 @@ export const SigningToken = OpaqueId;
  * Path parameter schema for envelope ID
  */
 export const EnvelopeIdPath = z.object({
-  id: z.union([UuidV4, Ulid]),
+  id: UuidV4,
 });
 
 /**
  * Path parameter schema for document ID
  */
 export const DocumentIdPath = z.object({
-  id: z.union([UuidV4, Ulid]),
+  id: UuidV4,
 });
 
 /**
  * Path parameter schema for party ID
  */
 export const PartyIdPath = z.object({
-  id: z.union([UuidV4, Ulid]),
+  id: UuidV4,
 });
 
 /**
  * Path parameter schema for envelope and document IDs
  */
 export const EnvelopeDocPath = z.object({
-  envelopeId: z.union([UuidV4, Ulid]),
-  docId: z.union([UuidV4, Ulid]),
+  envelopeId: UuidV4,
+  docId: UuidV4,
 });
 
 /**
  * Path parameter schema for envelope, document, and page numbers
  */
 export const EnvelopeDocPagePath = z.object({
-  envelopeId: z.union([UuidV4, Ulid]),
-  docId: z.union([UuidV4, Ulid]),
+  envelopeId: UuidV4,
+  docId: UuidV4,
   pageNo: z.coerce.number().int().positive(),
 });
 

@@ -23,7 +23,7 @@ import type {
 import type { DocumentLock } from "@lawprotect/shared-ts";
 import type { DocumentsRepository } from "@/domain/contracts/repositories/documents/DocumentsRepository";
 import { documentNotFound, envelopeNotFound, badRequest } from "@/shared/errors";
-import { nowIso, assertTenantBoundary } from "@lawprotect/shared-ts";
+import { nowIso } from "@lawprotect/shared-ts";
 import { 
   assertDocumentMutable, 
   assertSupportedContentType, 
@@ -68,8 +68,9 @@ export const makeDocumentsCommandsPort = (deps: Dependencies): DocumentsCommands
      * @returns Promise resolving to creation result
      */
     async create(command: CreateDocumentCommand): Promise<CreateDocumentResult> {
-      // Apply generic rules
-      assertTenantBoundary(command.tenantId, command.tenantId);
+      // Apply generic rules - validate cross-tenant access
+      // Note: tenantId comes from request context, not from actor
+      // The validation should be done at the service level
       
       // Get envelope to validate document creation rules (temporarily commented for tests)
       // const envelope = await deps.envelopesRepo.getById(command.envelopeId);
@@ -118,8 +119,9 @@ export const makeDocumentsCommandsPort = (deps: Dependencies): DocumentsCommands
      * @returns Promise resolving to upload result with presigned URL
      */
     async upload(command: UploadDocumentCommand): Promise<UploadDocumentResult> {
-      // Apply generic rules
-      assertTenantBoundary(command.tenantId, command.tenantId);
+      // Apply generic rules - validate cross-tenant access
+      // Note: tenantId comes from request context, not from actor
+      // The validation should be done at the service level
       
       // Get envelope to validate document upload rules
       const envelope = await deps.envelopesRepo.getById(command.envelopeId);

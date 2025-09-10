@@ -30,7 +30,7 @@ export const PatchDocumentController = createCommandController<UpdateDocumentCom
     documentsRepo: c.repos.documents,
     envelopesRepo: c.repos.envelopes,
     ids: c.ids,
-    s3Service: c.services.documentsS3,
+    s3Service: c.documents.s3Service,
     s3Config: {
       evidenceBucket: c.config.s3.evidenceBucket,
       signedBucket: c.config.s3.signedBucket,

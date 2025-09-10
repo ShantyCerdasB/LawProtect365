@@ -4,7 +4,7 @@
  * @description Helper functions for creating signature service specific controller configurations
  */
 
-import { createController as createGenericController } from "@lawprotect/shared-ts";
+import { createController as createGenericController, withAuth } from "@lawprotect/shared-ts";
 import { getContainer } from "../../core/Container";
 import type { Container } from "../../infrastructure/contracts/core";
 import { createConsentDependencies } from "./helpers/ConsentControllerHelpers";
@@ -12,15 +12,24 @@ import { createConsentDependencies } from "./helpers/ConsentControllerHelpers";
 /**
  * @summary Creates a command controller (POST/PUT/PATCH/DELETE operations)
  * @description Wrapper around the generic createController that provides signature service specific configuration
+ * with JWT authentication middleware applied (only in production)
  * 
  * @param config - Configuration for the controller
- * @returns HandlerFn for the command operation
+ * @returns HandlerFn for the command operation with JWT auth applied
  */
 export const createController = <TInput, TOutput>(config: any) => {
-  return createGenericController<TInput, TOutput>({
+  const baseController = createGenericController<TInput, TOutput>({
     ...config,
     getContainer,
   });
+  
+  // Apply JWT authentication middleware only in production
+  if (process.env.NODE_ENV === 'production') {
+    return withAuth(baseController);
+  }
+  
+  // In test/development, return controller without auth middleware
+  return baseController;
 };
 
 /**

@@ -13,8 +13,8 @@ import { invalidEnvelopeState } from "@/shared/errors";
  * @throws {InvalidEnvelopeStateError} If downloads are not allowed in the current state.
  */
 export const assertDownloadAllowed = (status: EnvelopeStatus): void => {
-  // Downloads are allowed only when the envelope is completed
-  const allowedStatuses: EnvelopeStatus[] = ["completed"];
+  // Downloads are allowed when the envelope is in_progress or completed
+  const allowedStatuses: EnvelopeStatus[] = ["in_progress", "completed"];
 
   if (!allowedStatuses.includes(status)) {
     throw invalidEnvelopeState({

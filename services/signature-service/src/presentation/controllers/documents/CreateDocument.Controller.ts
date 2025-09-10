@@ -11,6 +11,7 @@ import { CreateDocumentBody } from "../../../presentation/schemas/documents/Crea
 import { EnvelopeIdPath } from "../../../presentation/schemas/common/path";
 import type { CreateDocumentCommand, CreateDocumentResult } from "../../../app/ports/documents/DocumentsCommandsPort";
 import { createDocumentDependencies, extractDocumentCreateParams } from "../../../shared/controllers/helpers";
+import { assertTenantBoundary } from "@lawprotect/shared-ts";
 
 /**
  * @description Create Document controller
@@ -20,7 +21,12 @@ export const CreateDocumentController = createCommandController<CreateDocumentCo
   pathSchema: EnvelopeIdPath,
   appServiceClass: DefaultDocumentsCommandService,
   createDependencies: (c: any) => makeDocumentsCommandsPort(createDocumentDependencies(c)),
-  extractParams: extractDocumentCreateParams,
+  extractParams: (path: any, body: any, context: any) => {
+    // Validate cross-tenant access
+    assertTenantBoundary(context.tenantId, path.tenantId);
+    
+    return extractDocumentCreateParams(path, body);
+  },
   responseType: "created",
   includeActor: true,
   methodName: "create",

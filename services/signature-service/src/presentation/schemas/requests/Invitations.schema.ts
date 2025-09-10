@@ -4,7 +4,7 @@
  * @description Defines the request body structure for inviting parties to sign an envelope.
  */
 
-import { z } from "@lawprotect/shared-ts";
+import { z, UuidV4 } from "@lawprotect/shared-ts";
 
 /**
  * @description Body payload for sending invitations to parties.
@@ -12,7 +12,7 @@ import { z } from "@lawprotect/shared-ts";
  */
 export const InvitationsBody = z.object({
   /** Array of party IDs to invite for signing. Must be non-empty. */
-  partyIds: z.array(z.string().uuid()).nonempty("At least one party ID is required"),
+  partyIds: z.array(UuidV4).nonempty("At least one party ID is required"),
 });
 
 export type InvitationsBody = z.infer<typeof InvitationsBody>;

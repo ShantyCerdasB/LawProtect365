@@ -11,23 +11,27 @@ import { INPUT_VALUES } from "@/domain/values/enums";
  * Validates the required fields for input creation including document ID and input array.
  */
 export const CreateInputsBody = z.object({
-  /** Document identifier (UUID v4) */
+  /** Document identifier */
   documentId: UuidV4,
   /** Array of inputs to create */
   inputs: z.array(
     z.object({
       /** Type of input (signature, initials, text, date, checkbox) */
       type: z.enum(INPUT_VALUES),
-      /** Page number where the input is placed */
-      page: z.number().int().positive(),
       /** X coordinate of the input */
       x: z.number().min(0),
       /** Y coordinate of the input */
       y: z.number().min(0),
+      /** Width of the input */
+      width: z.number().positive(),
+      /** Height of the input */
+      height: z.number().positive(),
+      /** Page number where the input is placed (optional) */
+      page: z.number().int().positive().optional(),
       /** Whether the input is required */
       required: z.boolean().default(true),
       /** Party ID assigned to this input (optional) */
-      partyId: z.string().uuid().optional(),
+      partyId: UuidV4.optional(),
       /** Initial value of the input (optional) */
       value: z.string().optional(),
     })

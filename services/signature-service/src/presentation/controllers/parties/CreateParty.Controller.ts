@@ -9,6 +9,7 @@ import { PartiesCommandService } from "../../../app/services/Parties";
 import { CreatePartyBody, CreatePartyParams } from "../../../presentation/schemas/parties/CreateParty.schema";
 import type { CreatePartyControllerInput } from "../../../domain/types/parties/ControllerInputs";
 import type { CreatePartyResult } from "../../../app/ports/parties";
+import { assertTenantBoundary } from "@lawprotect/shared-ts";
 
 /**
  * @description Create Party controller
@@ -18,16 +19,22 @@ export const CreatePartyController = createCommandController<CreatePartyControll
   pathSchema: CreatePartyParams,
   appServiceClass: PartiesCommandService,
   createDependencies: (c: any) => c.parties.commandsPort,
-  extractParams: (path: any, body: any) => ({
-    tenantId: path.tenantId,
-    envelopeId: path.envelopeId,
-    name: body.name,
-    email: body.email,
-    role: body.role,
-    sequence: body.sequence,
-  }),
+  extractParams: (path: any, body: any, context: any) => {
+    // Validate cross-tenant access
+    assertTenantBoundary(context.tenantId, path.tenantId);
+    
+    return {
+      tenantId: path.tenantId,
+      envelopeId: path.envelopeId,
+      name: body.name,
+      email: body.email,
+      role: body.role,
+      sequence: body.sequence,
+    };
+  },
   responseType: "created",
   includeActor: true,
+  methodName: "create",
 });
 
 

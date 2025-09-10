@@ -14,7 +14,6 @@ import type {
   DeletePartyResult
 } from "../../ports/parties";
 // Party invitation rules would need proper command structure integration
-import { assertTenantBoundary } from "@lawprotect/shared-ts";
 
 /**
  * @summary Command service for Parties operations
@@ -29,8 +28,9 @@ export class PartiesCommandService {
    * @returns Promise resolving to creation result
    */
   async create(command: CreatePartyCommand): Promise<CreatePartyResult> {
-    // Apply generic rules
-    assertTenantBoundary(command.tenantId, command.tenantId);
+    // Apply generic rules - validate cross-tenant access
+    // Note: The tenantId validation should be done at the controller level
+    // where we have access to both the context tenantId and the resource tenantId
 
     return this.commandsPort.create(command);
   }
@@ -41,8 +41,9 @@ export class PartiesCommandService {
    * @returns Promise resolving to update result
    */
   async update(command: UpdatePartyCommand): Promise<UpdatePartyResult> {
-    // Apply generic rules
-    assertTenantBoundary(command.tenantId, command.tenantId);
+    // Apply generic rules - validate cross-tenant access
+    // Note: The tenantId validation should be done at the controller level
+    // where we have access to both the context tenantId and the resource tenantId
 
     return this.commandsPort.update(command);
   }
@@ -53,8 +54,9 @@ export class PartiesCommandService {
    * @returns Promise resolving to deletion result
    */
   async delete(command: DeletePartyCommand): Promise<DeletePartyResult> {
-    // Apply generic rules
-    assertTenantBoundary(command.tenantId, command.tenantId);
+    // Apply generic rules - validate cross-tenant access
+    // Note: The tenantId validation should be done at the controller level
+    // where we have access to both the context tenantId and the resource tenantId
 
     return this.commandsPort.delete(command);
   }

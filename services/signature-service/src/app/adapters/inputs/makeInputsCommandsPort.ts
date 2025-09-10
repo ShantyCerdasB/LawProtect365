@@ -73,8 +73,9 @@ export const makeInputsCommandsPort = (
   
   // 🔍 FUNCIÓN INTERNA PARA IDEMPOTENCY
   const createInternal = async (command: CreateInputsCommand): Promise<CreateInputsResult> => {
-    // Apply generic rules
-    assertTenantBoundary(command.tenantId, command.tenantId);
+    // Apply generic rules - validate cross-tenant access
+    // Note: tenantId comes from request context, not from actor
+    // The validation should be done at the service level
     
     // Apply domain-specific rules
     // Get actual data from repositories for validation
@@ -100,7 +101,7 @@ export const makeInputsCommandsPort = (
       envelopeId: command.envelopeId,
       documentId: command.documentId,
       type: input.type,
-      position: { page: input.page, x: input.x, y: input.y },
+      position: { page: input.page, x: input.x, y: input.y, width: input.width, height: input.height },
       required: input.required,
       partyId: input.partyId || ("" as PartyId),
       value: input.value,
@@ -135,6 +136,8 @@ export const makeInputsCommandsPort = (
           page: inputData.page,
           x: inputData.x,
           y: inputData.y,
+          width: inputData.width,
+          height: inputData.height,
         },
         value: inputData.value,
         createdAt: now,
@@ -289,6 +292,8 @@ export const makeInputsCommandsPort = (
             page: item.page,
             x: item.x,
             y: item.y,
+            width: item.width,
+            height: item.height,
           },
           updatedAt: now,
         };

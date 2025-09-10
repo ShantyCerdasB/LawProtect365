@@ -5,6 +5,7 @@
  */
 
 import { createHash } from 'crypto';
+import { randomUUID } from 'crypto';
 
 /**
  * Generate a simple test PDF buffer
@@ -100,21 +101,21 @@ export const generateTestTenantId = (): string => {
  * Generate test envelope ID
  */
 export const generateTestEnvelopeId = (): string => {
-  return `envelope-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  return randomUUID();
 };
 
 /**
  * Generate test party ID
  */
 export const generateTestPartyId = (): string => {
-  return `party-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  return randomUUID();
 };
 
 /**
  * Generate test document ID
  */
 export const generateTestDocumentId = (): string => {
-  return `document-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  return randomUUID();
 };
 
 /**

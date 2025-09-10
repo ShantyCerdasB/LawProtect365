@@ -30,7 +30,7 @@ export const RecordConsentController = createCommandController<SigningConsentCon
       rateLimit: c.rateLimitStore,
       signer: c.crypto.signer,
       idempotency: c.idempotency.runner,
-      s3Service: c.services.signingS3,
+      s3Service: c.signing.s3Service,
       signingConfig: {
         defaultKeyId: c.config.kms.signerKeyId,
         allowedAlgorithms: [c.config.kms.signingAlgorithm],
@@ -54,6 +54,7 @@ export const RecordConsentController = createCommandController<SigningConsentCon
     token: "", // Will be injected by factory
   }),
   responseType: "ok",
+  methodName: "recordSigningConsent",
 });
 
 // Export handler for backward compatibility
