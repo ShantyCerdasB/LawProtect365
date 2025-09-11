@@ -6,7 +6,9 @@
 
 import type { 
   SignHashCommand,
-  SignHashResult
+  SignHashResult,
+  SignHashWithContextCommand,
+  SignHashWithContextResult
 } from "../../../app/ports/signatures/SignaturesCommandsPort";
 import type { SignaturesCommandsPort } from "../../ports/signatures/SignaturesCommandsPort";
 
@@ -24,5 +26,14 @@ export class SignaturesCommandService {
    */
   async signHash(command: SignHashCommand): Promise<SignHashResult> {
     return this.commandsPort.signHash(command);
+  }
+
+  /**
+   * Signs a hash digest using KMS with complete context
+   * @param command - The hash signing command with context
+   * @returns Promise resolving to signing result with context
+   */
+  async signHashWithContext(command: SignHashWithContextCommand): Promise<SignHashWithContextResult> {
+    return this.commandsPort.signHashWithContext(command);
   }
 };

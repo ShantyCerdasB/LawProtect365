@@ -459,12 +459,23 @@ export const getContainer = (): Container => {
     config.s3.signedBucket
   );
 
+  // Signatures services - instantiate with correct dependencies
+  const signaturesCommands = makeSignaturesCommandsPort(
+    signer,
+    {
+      defaultKeyId: config.kms.signerKeyId,
+      allowedAlgorithms: [config.kms.signingAlgorithm]}
+  );
+
+  const signaturesCommand = new SignaturesCommandService(signaturesCommands);
+
   const signingOrchestration = new SigningOrchestrationService(
     signingValidation,
     signingEvent,
     signingAudit,
     signingPdf,
     signingRateLimit,
+    signaturesCommand,
     parties,
     envelopes,
     invitationTokens,
@@ -501,20 +512,11 @@ export const getContainer = (): Container => {
       validationService: signingValidation,
       eventService: signingEvent,
       auditService: signingAudit,
-      orchestrationService: signingOrchestration}
+      orchestrationService: signingOrchestration,
+      signaturesCommand: signaturesCommand}
   );
 
   const signingCommand = new SigningCommandService(signingCommands);
-
-  // Signatures services - instantiate with correct dependencies
-  const signaturesCommands = makeSignaturesCommandsPort(
-    signer,
-    {
-      defaultKeyId: config.kms.signerKeyId,
-      allowedAlgorithms: [config.kms.signingAlgorithm]}
-  );
-
-  const signaturesCommand = new SignaturesCommandService(signaturesCommands);
 
   singleton = {
     config,

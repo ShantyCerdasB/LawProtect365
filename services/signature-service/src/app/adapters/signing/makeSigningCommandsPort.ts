@@ -13,9 +13,10 @@ import type { Party } from "../../../domain/entities/Party";
 import type { EnvelopeId } from "../../../domain/value-objects/ids";
 import { IdempotencyRunner, KmsSigner, EventBusPortAdapter } from "@lawprotect/shared-ts";
 import { buildEvidencePath } from "../../../domain/rules/Evidence.rules";
-import { BadRequestError } from "@lawprotect/shared-ts";
+import { BadRequestError, ErrorCodes } from "@lawprotect/shared-ts";
 import type { SigningS3Service } from "../../../domain/types/signing/ServiceInterfaces";
 import { SigningRateLimitService } from "../../../app/services/Signing/SigningRateLimitService";
+import type { SignaturesCommandsPort } from "../../ports/signatures/SignaturesCommandsPort";
 import type { SigningPdfService } from "../../../app/services/Signing/SigningPdfService";
 import { SigningValidationService } from "../../../app/services/Signing/SigningValidationService";
 import { SigningEventService } from "../../../app/services/Signing/SigningEventService";
@@ -62,6 +63,7 @@ export const makeSigningCommandsPort = (
     eventService: SigningEventService;
     auditService: SigningAuditService;
     orchestrationService: SigningOrchestrationService;
+    signaturesCommand: SignaturesCommandsPort;
   }
 ): SigningCommandsPort => {
   
@@ -76,7 +78,7 @@ export const makeSigningCommandsPort = (
      * @param command - The signing consent command containing envelope ID, signer ID, and actor context
      * @returns Promise resolving to consent result with event data
      */
-     async recordSigningConsent(command: SigningConsentCommand): Promise<SigningConsentResult> {
+    async recordSigningConsent(command: SigningConsentCommand): Promise<SigningConsentResult> {
        return await deps.idempotency.run(
          `consent-${command.envelopeId}-${command.signerId}`,
          async () => {
@@ -108,26 +110,26 @@ export const makeSigningCommandsPort = (
              command.actor as any
            );
 
-           return {
-             consented: true,
+      return {
+        consented: true,
              envelopeId: command.envelopeId,
              partyId: command.signerId,
              consentedAt: new Date().toISOString(),
-             event: {
-               name: "signing.consent.recorded",
+        event: {
+          name: "signing.consent.recorded",
                meta: { id: deps.ids.ulid(), ts: new Date().toISOString() as ISODateString, source: SIGNING_DEFAULTS.EVENT_SOURCE },
-               data: {
-                 envelopeId: command.envelopeId,
-                 partyId: command.signerId,
+          data: {
+            envelopeId: command.envelopeId,
+            partyId: command.signerId,
                  consentedAt: new Date().toISOString(),
-                 metadata: {
-                   ip: command.actor?.ip,
-                   userAgent: command.actor?.userAgent,
-                   email: command.actor?.email,
-                   userId: command.actor?.userId}}}};
+            metadata: {
+              ip: command.actor?.ip,
+              userAgent: command.actor?.userAgent,
+              email: command.actor?.email,
+              userId: command.actor?.userId}}}};
          }
        );
-     },
+    },
 
     /**
      * Prepares signing process for a signer
@@ -200,23 +202,48 @@ export const makeSigningCommandsPort = (
       deps.validationService.validateEnvelopeExists(envelope);
       deps.validationService.validatePartyExists(party, command.signerId, command.envelopeId);
       await deps.validationService.validateCompleteSigningBusinessLogic(command, envelope, party);
-      deps.validationService.validateKmsAlgorithm(command.algorithm, deps.signingConfig?.allowedAlgorithms);
 
-      // Use KMS to sign the digest
-      const signResult = await deps.signer.sign({
-        message: Buffer.from(command.digest.value, 'hex'),
-        signingAlgorithm: command.algorithm,
-        keyId: command.keyId || deps.signingConfig?.defaultKeyId || SIGNING_DEFAULTS.DEFAULT_KEY_ID});
-
-      const signature = Buffer.from(signResult.signature).toString('base64');
-      const completedAt = new Date().toISOString();
-
-      // Validate signature completeness
-      if (!deps.validationService.validateSignatureCompleteness(signature, command.digest, command.algorithm)) {
-        throw new BadRequestError("Incomplete signature data");
+      if (!party) {
+        throw new BadRequestError("Party not found", ErrorCodes.COMMON_BAD_REQUEST);
       }
 
-      // Update party status to signed with signature data
+      const completedAt = new Date().toISOString();
+
+      // Use signatures module to sign with complete context
+      const signResult = await deps.signaturesCommand.signHashWithContext({
+        digest: command.digest,
+        algorithm: command.algorithm,
+        keyId: command.keyId,
+        signerEmail: party.email,
+        signerName: party.name,
+        signerId: command.signerId,
+        ipAddress: command.actor.ip || "unknown",
+        userAgent: command.actor.userAgent || "unknown",
+        timestamp: completedAt,
+        consentGiven: true,
+        consentTimestamp: party.invitedAt || completedAt,
+        consentText: "Consent given for signing",
+        invitedBy: undefined,
+        invitedByName: undefined,
+        invitationMessage: undefined,
+        envelopeId: command.envelopeId
+      });
+
+      const signature = signResult.signature;
+
+      // Verify the signature is valid
+      const verifyResult = await deps.signer.verify({
+        message: Buffer.from(command.digest.value + signResult.contextHash, 'hex'),
+        signature: Buffer.from(signResult.signature, 'base64'),
+        signingAlgorithm: command.algorithm,
+        keyId: signResult.keyId
+      });
+
+      if (!verifyResult.valid) {
+        throw new BadRequestError("Generated signature is invalid");
+      }
+
+      // Update party status to signed with signature data and context
       await _partiesRepo.update({ 
         envelopeId: command.envelopeId, 
         partyId: command.signerId 
@@ -227,7 +254,7 @@ export const makeSigningCommandsPort = (
         signature: signature,
         digest: command.digest.value,
         algorithm: command.algorithm,
-        keyId: command.keyId || deps.signingConfig?.defaultKeyId || SIGNING_DEFAULTS.DEFAULT_KEY_ID
+        keyId: signResult.keyId
       });
 
       // Get updated party and validate signature data
@@ -268,11 +295,15 @@ export const makeSigningCommandsPort = (
           updatedAt: completedAt as ISODateString});
       }
 
+      // Publish signing completed event
       await deps.eventService.publishSigningCompleted(
         command.envelopeId,
         command.signerId,
         command.actor as any
       );
+
+      // TODO: Implement signing progress events for multi-party flows
+      // This would notify remaining signers when someone signs in a multi-party flow
 
       await deps.auditService.logSigningCompleted(
         command.envelopeId,
@@ -317,10 +348,10 @@ export const makeSigningCommandsPort = (
         _partiesRepo
       );
       
-       const party = await _partiesRepo.getById({ 
-         envelopeId: command.envelopeId, 
-         partyId: command.signerId 
-       });
+      const party = await _partiesRepo.getById({ 
+        envelopeId: command.envelopeId, 
+        partyId: command.signerId 
+      });
        
        deps.validationService.validateDeclineOperation(envelope.status, command.reason);
        deps.validationService.validatePartyExists(party, command.signerId, command.envelopeId);
@@ -366,11 +397,11 @@ export const makeSigningCommandsPort = (
       );
       
        deps.validationService.validatePresignPolicy(command.contentType, 0, SIGNING_FILE_LIMITS.MAX_FILE_SIZE_BYTES);
-       
-       buildEvidencePath({
-         envelopeId: command.envelopeId,
-         file: command.filename
-       });
+      
+      buildEvidencePath({
+        envelopeId: command.envelopeId,
+        file: command.filename
+      });
 
        deps.validationService.validateServiceAvailable(deps.s3Service, "S3 service");
       
@@ -452,18 +483,18 @@ export const makeSigningCommandsPort = (
      */
     async validateInvitationToken(command: ValidateInvitationTokenCommand): Promise<ValidateInvitationTokenResult> {
       try {
-         const invitationToken = await _invitationTokensRepo.getByToken(command.token);
-         
+        const invitationToken = await _invitationTokensRepo.getByToken(command.token);
+        
          const validation = deps.validationService.validateInvitationTokenStatus(invitationToken, command);
          if (!validation.valid) {
-           return {
-             valid: false,
+          return {
+            valid: false,
              error: validation.error || "Failed to validate invitation token"
            };
          }
 
-         return {
-           valid: true,
+        return {
+          valid: true,
            tokenId: invitationToken!.tokenId,
            envelopeId: invitationToken!.envelopeId,
            partyId: invitationToken!.partyId,
@@ -476,7 +507,7 @@ export const makeSigningCommandsPort = (
            signByDate: invitationToken!.signByDate,
            signingOrder: invitationToken!.signingOrder,
            expiresAt: invitationToken!.expiresAt
-         };
+        };
 
       } catch (error) {
         return {

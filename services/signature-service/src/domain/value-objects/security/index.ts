@@ -5,3 +5,5 @@
  */
 
 export * from "./Kms";
+export * from "./SignatureContext";
+export * from "./SignatureContext.schema";

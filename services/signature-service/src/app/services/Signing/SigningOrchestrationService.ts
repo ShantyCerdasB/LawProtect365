@@ -18,6 +18,7 @@ import { SigningEventService } from "./SigningEventService";
 import { SigningAuditService } from "./SigningAuditService";
 import { SigningPdfService } from "./SigningPdfService";
 import { SigningRateLimitService } from "./SigningRateLimitService";
+import type { SignaturesCommandsPort } from "../../ports/signatures/SignaturesCommandsPort";
 import { PARTY_ROLES, ENVELOPE_STATUSES, SIGNING_DEFAULTS, INVITATION_STATUSES, PARTY_STATUSES } from "../../../domain/values/enums";
 import type { CompleteSigningWithTokenCommand, CompleteSigningWithTokenResult } from "../../ports/signing/SigningCommandsPort";
 
@@ -39,6 +40,7 @@ export class SigningOrchestrationService {
     private readonly auditService: SigningAuditService,
     private readonly pdfService: SigningPdfService,
     private readonly rateLimitService: SigningRateLimitService,
+    private readonly signaturesCommand: SignaturesCommandsPort,
     private readonly partiesRepo: PartyRepositoryDdb,
     private readonly envelopesRepo: Repository<Envelope, EnvelopeId>,
     private readonly invitationTokensRepo: InvitationTokenRepositoryDdb,
@@ -48,18 +50,39 @@ export class SigningOrchestrationService {
   ) {}
 
   /**
-   * Signs a document using KMS
+   * Signs a document using KMS with complete context
    * @param command - The signing command with digest and algorithm
-   * @returns Promise resolving to base64 signature
+   * @param party - The party information for context
+   * @param invitation - The invitation token information for context
+   * @returns Promise resolving to signature result with context
    */
-  async signWithKms(command: CompleteSigningWithTokenCommand): Promise<string> {
-    const signResult = await this.signer.sign({
-      message: Buffer.from(command.digest.value, 'hex'),
-      signingAlgorithm: command.algorithm,
-      keyId: command.keyId || this.signingConfig.defaultKeyId || SIGNING_DEFAULTS.DEFAULT_KEY_ID
+  async signWithKms(command: CompleteSigningWithTokenCommand, party: Party, invitation: any): Promise<{ signature: string; contextHash: string; keyId: string }> {
+    const completedAt = new Date().toISOString();
+    
+    const signResult = await this.signaturesCommand.signHashWithContext({
+      digest: command.digest,
+      algorithm: command.algorithm,
+      keyId: command.keyId,
+      signerEmail: party.email,
+      signerName: party.name,
+      signerId: command.signerId,
+      ipAddress: command.ip || "unknown",
+      userAgent: command.userAgent || "unknown",
+      timestamp: completedAt,
+      consentGiven: true,
+      consentTimestamp: party.invitedAt || completedAt,
+      consentText: "Consent given for signing",
+      invitedBy: invitation.invitedBy,
+      invitedByName: invitation.invitedByName,
+      invitationMessage: invitation.message,
+      envelopeId: command.envelopeId
     });
     
-    return Buffer.from(signResult.signature).toString('base64');
+    return {
+      signature: signResult.signature,
+      contextHash: signResult.contextHash,
+      keyId: signResult.keyId
+    };
   }
 
   /**
@@ -251,11 +274,23 @@ export class SigningOrchestrationService {
       
       await this.validationService.validateSigningPrerequisites(party, command, envelope);
       
-      // Sign with KMS
-      const signature = await this.signWithKms(command);
+      // Sign with KMS using complete context
+      const signResult = await this.signWithKms(command, party, invitation);
+      
+      // Verify the signature is valid
+      const verifyResult = await this.signer.verify({
+        message: Buffer.from(command.digest.value + signResult.contextHash, 'hex'),
+        signature: Buffer.from(signResult.signature, 'base64'),
+        signingAlgorithm: command.algorithm,
+        keyId: signResult.keyId
+      });
+
+      if (!verifyResult.valid) {
+        throw new Error("Generated signature is invalid");
+      }
       
       // Update states atomically
-      const result = await this.updateSigningStates(invitation, party, envelope, signature, command);
+      const result = await this.updateSigningStates(invitation, party, envelope, signResult.signature, command);
       
       // Publish events
       await this.publishSigningEvents(invitation, command);
