@@ -9,6 +9,7 @@
 import type { Repository, ISODateString } from "@lawprotect/shared-ts";
 import type { SigningCommandsPort, SigningConsentCommand, SigningConsentResult, PrepareSigningCommand, PrepareSigningResult, CompleteSigningCommand, CompleteSigningResult, DeclineSigningCommand, DeclineSigningResult, PresignUploadCommand, PresignUploadResult, DownloadSignedDocumentCommand, DownloadSignedDocumentResult, ValidateInvitationTokenCommand, ValidateInvitationTokenResult, CompleteSigningWithTokenCommand, CompleteSigningWithTokenResult, SigningConsentWithTokenCommand } from "../../ports/signing/SigningCommandsPort";
 import type { Envelope } from "../../../domain/entities/Envelope";
+import type { Party } from "../../../domain/entities/Party";
 import type { EnvelopeId } from "../../../domain/value-objects/ids";
 import { IdempotencyRunner, KmsSigner, EventBusPortAdapter } from "@lawprotect/shared-ts";
 import { buildEvidencePath } from "../../../domain/rules/Evidence.rules";
@@ -18,21 +19,22 @@ import type { SigningPdfService } from "../../../app/services/Signing/SigningPdf
 import { SigningValidationService } from "../../../app/services/Signing/SigningValidationService";
 import { SigningEventService } from "../../../app/services/Signing/SigningEventService";
 import { SigningAuditService } from "../../../app/services/Signing/SigningAuditService";
+import { PartyRepositoryDdb } from "../../../infrastructure/dynamodb/PartyRepositoryDdb";
+import { InvitationTokenRepositoryDdb } from "../../../infrastructure/dynamodb/InvitationTokenRepositoryDdb";
 import { PARTY_ROLES, ENVELOPE_STATUSES, SIGNING_DEFAULTS, SIGNING_FILE_LIMITS, INVITATION_STATUSES, PARTY_STATUSES } from "../../../domain/values/enums";
 
 /**
  * Creates a SigningCommandsPort implementation for document signing operations
  * @param _envelopesRepo - The envelope repository for data persistence
  * @param _partiesRepo - The parties repository for data persistence
- * @param _documentsRepo - The documents repository (deprecated - no longer used to prevent service coupling)
+ * @param _invitationTokensRepo - The invitation tokens repository for data persistence
  * @param deps - Dependencies including ID generators, time, events, and services
  * @returns Configured SigningCommandsPort implementation
  */
 export const makeSigningCommandsPort = (
   _envelopesRepo: Repository<Envelope, EnvelopeId>,
-  _partiesRepo: any, // PartyRepositoryDdb with listByEnvelope method
-  _documentsRepo: any, // DocumentRepositoryDdb (deprecated - no longer used to prevent service coupling)
-  _invitationTokensRepo: any, // InvitationTokenRepositoryDdb
+  _partiesRepo: PartyRepositoryDdb,
+  _invitationTokensRepo: InvitationTokenRepositoryDdb,
   deps: {
     events: EventBusPortAdapter;
     ids: { ulid(): string };
@@ -84,8 +86,8 @@ export const makeSigningCommandsPort = (
    */
   const updateEnvelopeStatus = async (envelopeId: string, completedAt: string): Promise<string> => {
     const parties = await _partiesRepo.listByEnvelope({ envelopeId });
-    const requiredSigners = parties.items.filter((p: any) => p.role === PARTY_ROLES[0]).length;
-    const signedCount = parties.items.filter((p: any) => p.role === PARTY_ROLES[0] && p.status === PARTY_STATUSES[2]).length;
+    const requiredSigners = parties.items.filter((p: Party) => p.role === PARTY_ROLES[0]).length;
+    const signedCount = parties.items.filter((p: Party) => p.role === PARTY_ROLES[0] && p.status === PARTY_STATUSES[2]).length;
     
     let newStatus: string;
     if (signedCount >= requiredSigners) {
@@ -123,7 +125,7 @@ export const makeSigningCommandsPort = (
     const completedAt = new Date().toISOString();
     
     // Update party status with signature data
-    await _partiesRepo.update(command.signerId, {
+    await _partiesRepo.update({ envelopeId: command.envelopeId, partyId: command.signerId }, {
       status: PARTY_STATUSES[2], // "signed"
       signedAt: completedAt,
       updatedAt: completedAt as ISODateString,
@@ -134,13 +136,16 @@ export const makeSigningCommandsPort = (
     });
     
     // Update invitation token status
-    await _invitationTokensRepo.update({
-      tokenId: invitation.tokenId,
-      status: INVITATION_STATUSES[1], // "used"
-      usedAt: completedAt,
-      usedFromIp: command.ip,
-      usedWithUserAgent: command.userAgent
-    });
+    await _invitationTokensRepo.update(
+      { tokenId: invitation.tokenId, envelopeId: invitation.envelopeId },
+      {
+        tokenId: invitation.tokenId,
+        status: INVITATION_STATUSES[1], // "used"
+        usedAt: completedAt,
+        usedFromIp: command.ip,
+        usedWithUserAgent: command.userAgent
+      }
+    );
     
     // Update envelope status based on signing progress
     const newEnvelopeStatus = await updateEnvelopeStatus(command.envelopeId, completedAt);
@@ -158,7 +163,7 @@ export const makeSigningCommandsPort = (
    * @param invitation - The invitation token data
    * @param command - The signing command
    */
-  const publishSigningEvents = async (invitation: any, command: CompleteSigningWithTokenCommand): Promise<void> => {
+  const publishSigningEvents = async (invitation: { email: string }, command: CompleteSigningWithTokenCommand): Promise<void> => {
     // Note: Event publishing would need to be injected as SigningEventService
     // For now, we'll use the event data in the response
     console.log('Signing completed event:', {
@@ -311,8 +316,8 @@ export const makeSigningCommandsPort = (
       const parties = await _partiesRepo.listByEnvelope({ 
         envelopeId: command.envelopeId 
       });
-      const requiredSigners = parties.items.filter((p: any) => p.role === PARTY_ROLES[0]).length;
-      const signedCount = parties.items.filter((p: any) => p.role === PARTY_ROLES[0] && p.status === "signed").length;
+      const requiredSigners = parties.items.filter((p: Party) => p.role === PARTY_ROLES[0]).length;
+      const signedCount = parties.items.filter((p: Party) => p.role === PARTY_ROLES[0] && p.status === "signed").length;
       
       // Update envelope status based on signing progress
       if (signedCount >= requiredSigners) {

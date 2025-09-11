@@ -461,7 +461,6 @@ export const getContainer = (): Container => {
   const signingCommands = makeSigningCommandsPort(
     envelopes,
     parties,
-    null, // documents moved to documents-service
     invitationTokens,
     {
       events: eventBus,
