@@ -65,8 +65,8 @@ const createDynamoDBDocumentClient = (dynamodbConfig: DynamoDBConfig): DynamoDBD
   return DynamoDBDocumentClient.from(client);
 };
 
-import { DocumentRepositoryDdb } from "../infrastructure/dynamodb/DocumentRepositoryDdb";
-import { InputRepositoryDdb } from "../infrastructure/dynamodb/InputRepositoryDdb";
+
+// import { InputRepositoryDdb } from "../infrastructure/dynamodb/InputRepositoryDdb"; // Moved to Documents Service
 import { PartyRepositoryDdb } from "../infrastructure/dynamodb/PartyRepositoryDdb";
 
 import { 
@@ -90,7 +90,7 @@ import {
   type PutEventsResponse
 } from "@lawprotect/shared-ts";
 import { AuditRepositoryDdb } from "../infrastructure/dynamodb/AuditRepositoryDdb";
-import { ConsentRepositoryDdb } from "../infrastructure/dynamodb/index";
+import { ConsentRepositoryDdb } from "../infrastructure/dynamodb/ConsentRepositoryDdb";
 import { GlobalPartiesRepositoryDdb } from "../infrastructure/dynamodb/GlobalPartiesRepositoryDdb";
 import { S3SignedPdfIngestor } from "../infrastructure/s3/S3SignedPdfIngestor";
 import { DelegationRepositoryDdb } from "../infrastructure/dynamodb/DelegationRepositoryDdb";
@@ -123,25 +123,17 @@ import { EnvelopesEventService } from "../app/services/envelopes/EnvelopesEventS
 import { makeEnvelopesCommandsPort } from "../app/adapters/envelopes/makeEnvelopesCommandsPort";
 import { makeEnvelopesQueriesPort } from "../app/adapters/envelopes/MakeEnvelopesQueriesPort";
 
-// Documents services
-import { DefaultDocumentsValidationService } from "../app/services/Documents/DocumentsValidationService";
-import { DefaultDocumentsAuditService } from "../app/services/Documents/DocumentsAuditService";
-import { DefaultDocumentsEventService } from "../app/services/Documents/DocumentsEventService";
-import { DefaultDocumentsRateLimitService } from "../app/services/Documents/DocumentsRateLimitService";
-import { DefaultDocumentsS3Service } from "../app/services/Documents/DocumentsS3Service";
-import { DefaultDocumentsCommandService } from "../app/services/Documents/DocumentsCommandService";
-import { makeDocumentsCommandsPort } from "../app/adapters/documents/makeDocumentsCommandsPort";
-import { makeDocumentsQueriesPort } from "../app/adapters/documents/makeDocumentsQueriesPort";
+// Documents services moved to documents-service
 
-// Inputs services
-import { InputsValidationService } from "../app/services/Inputs/InputsValidationService";
-import { InputsAuditService } from "../app/services/Inputs/InputsAuditService";
-import { InputsEventService } from "../app/services/Inputs/InputsEventService";
-import { makeInputsCommandsPort } from "../app/adapters/inputs/makeInputsCommandsPort";
-import { makeInputsQueriesPort } from "../app/adapters/inputs/makeInputsQueriesPort";
+// Inputs services - Moved to Documents Service
+// import { InputsValidationService } from "../app/services/Inputs/InputsValidationService";
+// import { InputsAuditService } from "../app/services/Inputs/InputsAuditService";
+// import { InputsEventService } from "../app/services/Inputs/InputsEventService";
+// import { makeInputsCommandsPort } from "../app/adapters/inputs/makeInputsCommandsPort";
+// import { makeInputsQueriesPort } from "../app/adapters/inputs/makeInputsQueriesPort";
 
 // Requests services
-import { RequestsValidationService } from "../app/services/Requests/RequestsValidationService";
+// import { RequestsValidationService } from "../app/services/Requests/RequestsValidationService"; // inputs moved to Documents Service
 import { RequestsAuditService } from "../app/services/Requests/RequestsAuditService";
 import { RequestsEventService } from "../app/services/Requests/RequestsEventService";
 import { RequestsRateLimitService } from "../app/services/Requests/RequestsRateLimitService";
@@ -163,7 +155,8 @@ import {
   SigningEventService,
   SigningAuditService,
   SigningRateLimitService,
-  SigningS3Service
+  SigningS3Service,
+  SigningPdfService
 } from "../app/services/Signing";
 
 // Signatures services
@@ -216,9 +209,9 @@ export const getContainer = (): Container => {
     }};
 
   // Repositories
-  const documents = new DocumentRepositoryDdb(config.ddb.documentsTable, ddbLike);
+  // const documents = new DocumentRepositoryDdb(config.ddb.documentsTable, ddbLike); // Moved to documents-service
   const envelopes = new EnvelopeRepositoryDdb(config.ddb.envelopesTable, ddbLike);
-  const inputs = new InputRepositoryDdb(config.ddb.inputsTable, ddbLike);
+  // const inputs = new InputRepositoryDdb(config.ddb.inputsTable, ddbLike); // Moved to Documents Service
   const parties = new PartyRepositoryDdb(config.ddb.partiesTable, ddbLike);
   const globalParties = new GlobalPartiesRepositoryDdb(config.ddb.envelopesTable, ddbLike);
   const audit = new AuditRepositoryDdb(
@@ -362,11 +355,7 @@ export const getContainer = (): Container => {
   const partiesQueries = makePartiesQueriesPort(parties);
   const partiesCommand = new PartiesCommandService(partiesCommands, envelopes);
 
-  // Documents services - instantiate with correct dependencies
-  const documentsValidation = new DefaultDocumentsValidationService();
-  const documentsAudit = new DefaultDocumentsAuditService(audit);
-  const documentsEvents = new DefaultDocumentsEventService(outbox);
-  const documentsRateLimit = new DefaultDocumentsRateLimitService(rateLimitStore);
+  // Documents services moved to documents-service
 
   // Envelopes services - instantiate with correct dependencies
   const envelopesValidation = new EnvelopesValidationService();
@@ -378,67 +367,40 @@ export const getContainer = (): Container => {
     ids,
     config,
     partiesRepo: parties,
-    inputsRepo: inputs,
+    // inputsRepo: inputs, // Moved to Documents Service
     validationService: envelopesValidation,
     auditService: envelopesAudit,
     eventService: envelopesEvents,
-    rateLimitService: documentsRateLimit // Use DocumentsRateLimitService for envelope operations
+    // rateLimitService: documentsRateLimit // Use DocumentsRateLimitService for envelope operations - moved to documents-service
   });
   const envelopesQueries = makeEnvelopesQueriesPort(envelopes);
 
-  // Inputs services - instantiate with correct dependencies
-  const inputsValidation = new InputsValidationService();
-  const inputsAudit = new InputsAuditService(audit);
-  const inputsEvents = new InputsEventService(outbox);
+  // Inputs services - Moved to Documents Service
+  // const inputsValidation = new InputsValidationService();
+  // const inputsAudit = new InputsAuditService(audit);
+  // const inputsEvents = new InputsEventService(outbox);
   
-  const inputsCommands = makeInputsCommandsPort({
-    inputsRepo: inputs,
-    ids,
-    partiesRepo: parties,
-    documentsRepo: documents,
-    envelopesRepo: envelopes,
-    validationService: inputsValidation,
-    auditService: inputsAudit,
-    eventService: inputsEvents,
-    idempotencyRunner: runner
-  });
-  const inputsQueries = makeInputsQueriesPort(
-    inputs,
-    inputsValidation,
-    inputsAudit
-  );
+  // const inputsCommands = makeInputsCommandsPort({
+  //   inputsRepo: inputs,
+  //   ids,
+  //   partiesRepo: parties,
+  //   // documentsRepo: documents, // Moved to documents-service
+  //   envelopesRepo: envelopes,
+  //   validationService: inputsValidation,
+  //   auditService: inputsAudit,
+  //   eventService: inputsEvents,
+  //   idempotencyRunner: runner
+  // });
+  // const inputsQueries = makeInputsQueriesPort(
+  //   inputs,
+  //   inputsValidation,
+  //   inputsAudit
+  // );
 
-  // Create S3 adapter for DocumentsS3Service
-  const documentsS3Adapter = {
-    putObjectUrl: async (bucket: string, key: string, contentType: string, expiresIn?: number) => {
-      return await presigner.putObjectUrl({
-        bucket,
-        key,
-        contentType,
-        expiresInSeconds: expiresIn});
-    },
-    getObjectUrl: async (bucket: string, key: string, expiresIn?: number) => {
-      return await presigner.getObjectUrl({
-        bucket,
-        key,
-        expiresInSeconds: expiresIn});
-    }};
-  
-  const documentsS3 = new DefaultDocumentsS3Service(documentsS3Adapter);
-  
-  const documentsCommands = makeDocumentsCommandsPort({
-    documentsRepo: documents,
-    envelopesRepo: envelopes,
-    ids,
-    s3Service: documentsS3,
-    s3Config: {
-      evidenceBucket: config.s3.evidenceBucket,
-      signedBucket: config.s3.signedBucket}});
-  const documentsQueries = makeDocumentsQueriesPort(documents);
-  const documentsCommand = new DefaultDocumentsCommandService(documentsCommands);
+  // Documents services moved to documents-service
 
   // Requests services - instantiate with correct dependencies
-  const requestsValidation = new RequestsValidationService(inputs);
+  // const requestsValidation = new RequestsValidationService(); // inputs moved to Documents Service
   const requestsAudit = new RequestsAuditService(audit);
   const requestsEvents = new RequestsEventService(outbox);
   const requestsRateLimit = new RequestsRateLimitService(rateLimitStore);
@@ -447,11 +409,11 @@ export const getContainer = (): Container => {
     repositories: {
       envelopes,
       parties,
-      inputs,
+      // inputs, // Moved to Documents Service
       invitationTokens
     },
     services: {
-      validation: requestsValidation,
+      // validation: requestsValidation, // inputs moved to Documents Service
       audit: requestsAudit,
       event: requestsEvents,
       rateLimit: requestsRateLimit
@@ -491,10 +453,15 @@ export const getContainer = (): Container => {
     config.s3.presignTtlSeconds
   );
 
+  const signingPdf = new SigningPdfService(
+    pdfIngestor,
+    config.s3.signedBucket
+  );
+
   const signingCommands = makeSigningCommandsPort(
     envelopes,
     parties,
-    documents,
+    null, // documents moved to documents-service
     invitationTokens,
     {
       events: eventBus,
@@ -512,7 +479,8 @@ export const getContainer = (): Container => {
       downloadConfig: {
         signedBucket: config.s3.signedBucket,
         downloadTtlSeconds: config.s3.presignTtlSeconds},
-      s3Service: signingS3}
+      s3Service: signingS3,
+      pdfService: signingPdf}
   );
 
   const signingCommand = new SigningCommandService(signingCommands);
@@ -530,7 +498,7 @@ export const getContainer = (): Container => {
   singleton = {
     config,
     aws: { ddb, s3, kms, evb, ssm },
-    repos: { documents, envelopes, inputs, parties, globalParties, audit, invitationTokens, idempotency: idempotencyStore, consents, delegations, outbox },
+    repos: { envelopes, parties, globalParties, audit, invitationTokens, idempotency: idempotencyStore, consents, delegations, outbox },
     idempotency: { hasher, runner },
     rateLimit: { store: rateLimitStore },
     storage: { evidence, presigner, pdfIngestor },
@@ -561,24 +529,10 @@ export const getContainer = (): Container => {
           validationService: envelopesValidation,
           auditService: envelopesAudit,
           eventService: envelopesEvents},
-        inputs: {
-          commandsPort: inputsCommands,
-          queriesPort: inputsQueries,
-          validationService: inputsValidation,
-          auditService: inputsAudit,
-          eventService: inputsEvents},
-        documents: {
-          commandsPort: documentsCommands,
-          queriesPort: documentsQueries,
-          command: documentsCommand,
-          validationService: documentsValidation,
-          auditService: documentsAudit,
-          eventService: documentsEvents,
-          rateLimitService: documentsRateLimit,
-          s3Service: documentsS3},
+        // documents: moved to documents-service
         requests: {
           commandsPort: requestsCommands,
-          validationService: requestsValidation,
+          // validationService: requestsValidation, // inputs moved to Documents Service
           auditService: requestsAudit,
           eventService: requestsEvents,
           rateLimitService: requestsRateLimit},
@@ -592,7 +546,8 @@ export const getContainer = (): Container => {
           eventService: signingEvent,
           auditService: signingAudit,
           rateLimitService: signingRateLimit,
-          s3Service: signingS3},
+          s3Service: signingS3,
+          pdfService: signingPdf},
         signatures: {
           commandsPort: signaturesCommands,
           command: signaturesCommand},

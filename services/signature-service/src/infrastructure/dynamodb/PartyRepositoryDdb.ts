@@ -145,7 +145,12 @@ export class PartyRepositoryDdb
         role: patch.role ?? current.role,
         status: patch.status ?? current.status,
         signedAt: patch.signedAt ?? current.signedAt,
-});
+        updatedAt: patch.updatedAt ?? current.updatedAt,
+        signature: patch.signature ?? current.signature,
+        digest: patch.digest ?? current.digest,
+        algorithm: patch.algorithm ?? current.algorithm,
+        keyId: patch.keyId ?? current.keyId
+      });
 
       await this.ddb.put({
         TableName: this.tableName,

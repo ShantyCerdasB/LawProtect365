@@ -26,6 +26,7 @@ export const InvitePartiesController = createCommandController<InvitePartiesCont
     message: body.message,
     signByDate: body.signByDate,
     signingOrder: body.signingOrder,
+    inputs: body.inputs,
     actorEmail: context.actor?.email,
     actor: context.actor
   }),

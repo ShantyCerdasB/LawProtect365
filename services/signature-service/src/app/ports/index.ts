@@ -9,7 +9,7 @@
 export * from "./audit";
 export * from "./certificate";
 export * from "./consent";
-export * from "./documents";
+// Documents moved to documents-service
 export * from "./envelopes";
 
 // Party management ports
@@ -17,7 +17,7 @@ export * from "./global-parties";
 export * from "./parties";
 
 // Document and input ports
-export * from "./inputs";
+// export * from "./inputs"; // Moved to Documents Service
 
 // Request and signing ports
 export * from "./requests";

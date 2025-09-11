@@ -21,15 +21,23 @@ import type { UserRole } from "../types/auth.js";
 export const withAuth = (fn: HandlerFn, opts: JwtVerifyOptions = {}): HandlerFn => {
   return async (evt: ApiEvent) => {
     try {
+      console.log('🔍 [AUTH DEBUG] Starting JWT verification...');
+      console.log('🔍 [AUTH DEBUG] Headers:', evt.headers);
+      
       // Step 1: Extract and verify JWT token
       const token =
         bearerFromAuthHeader(evt.headers?.authorization ?? evt.headers?.Authorization);
 
+      console.log('🔍 [AUTH DEBUG] Extracted token:', token ? token.substring(0, 50) + '...' : 'null');
+
       if (!token) {
+        console.log('❌ [AUTH DEBUG] No token found in headers');
         return mapError(makeUnauthorized("Missing bearer token"));
       }
 
+      console.log('🔍 [AUTH DEBUG] About to verify JWT with opts:', opts);
       const { claims } = await verifyJwt(token, opts);
+      console.log('🔍 [AUTH DEBUG] JWT verification successful, claims:', claims);
 
       // Step 2: Create auth object
       const auth = {

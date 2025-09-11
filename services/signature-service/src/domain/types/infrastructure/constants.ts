@@ -17,4 +17,3 @@ export const DEFAULT_ENTITY_INDEX = "gsi1";
  * Used across all repositories for consistent ID-based queries in single-table design.
  */
 export const DEFAULT_ID_INDEX = "gsi2";
-

@@ -63,5 +63,4 @@ export interface S3SignedPdfIngestorOptions {
   defaultCacheControl?: string;
   /** Default path-style URL preference (if true, use path-style). */
   defaultPathStyleUrl?: boolean;
-} 
-
+}

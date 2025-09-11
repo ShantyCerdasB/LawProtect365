@@ -80,6 +80,8 @@ export interface CompleteSigningCommand {
   envelopeId: EnvelopeId;
   /** The signer/party ID */
   signerId: PartyId;
+  /** URL of the final PDF from Documents Service */
+  finalPdfUrl: string;
   /** The request token for authentication */
   token: string;
   /** Precomputed digest to sign (base64url, no padding) */

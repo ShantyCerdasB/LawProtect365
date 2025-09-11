@@ -485,7 +485,7 @@ export class GlobalPartiesRepositoryDdb implements GlobalPartiesRepository {
       source: "manual" as typeof PARTY_SOURCES[number],
       status: "active" as typeof GLOBAL_PARTY_STATUSES[number],
       preferences: {
-        defaultAuth: undefined as any,
+        defaultAuth: "otpViaEmail" as typeof AUTH_METHODS[number],
         defaultLocale: undefined},
       notificationPreferences: {
         email: true,

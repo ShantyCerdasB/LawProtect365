@@ -4,10 +4,10 @@
  * @description Provides validation logic for all request operations
  */
 
-import { BadRequestError, ConflictError, ErrorCodes, isEmail } from "@lawprotect/shared-ts";
-import type { Input } from "../../../domain/entities/Input";
-import type { EnvelopeId, PartyId } from "@/domain/value-objects/ids";
-import type { InputsRepository } from "../../../domain/contracts/repositories/inputs/InputsRepository";
+import { BadRequestError, ErrorCodes, isEmail } from "@lawprotect/shared-ts";
+// import type { Input } from "../../../domain/entities/Input"; // Moved to Documents Service
+import type { PartyId } from "@/domain/value-objects/ids";
+// import type { InputsRepository } from "../../../domain/contracts/repositories/inputs/InputsRepository"; // Moved to Documents Service
 import type { RequestsValidationService as IRequestsValidationService } from "../../../domain/types/requests/ServiceInterfaces";
 import type { 
   InvitePartiesCommand,
@@ -25,7 +25,7 @@ import type {
  */
 export class RequestsValidationService implements IRequestsValidationService {
   
-  constructor(private readonly inputsRepo?: InputsRepository) {}
+  constructor() {} // inputsRepo moved to Documents Service
 
   /**
    * Helper function to validate envelope operations (cancel/decline)
@@ -146,19 +146,14 @@ export class RequestsValidationService implements IRequestsValidationService {
   /**
    * @summary Validates that envelope has at least one input field
    * @description Ensures document has input fields before inviting parties
+   * @param inputs - Input information from Documents Service
    */
-  async validateEnvelopeHasInputs(envelopeId: EnvelopeId): Promise<void> {
-    if (!this.inputsRepo) return; // Skip validation if repo not available
-    
-    const documentInputs = await this.inputsRepo.listByEnvelope({
-      envelopeId
-    });
-    
-    if (documentInputs.items.length === 0) {
+  validateEnvelopeHasInputs(inputs: { hasInputs: boolean; inputCount: number }): void {
+    if (!inputs.hasInputs) {
       throw new BadRequestError(
         "Document must have at least one input field before inviting parties",
         ErrorCodes.COMMON_BAD_REQUEST,
-        { envelopeId }
+        { inputCount: inputs.inputCount }
       );
     }
   }
@@ -166,25 +161,22 @@ export class RequestsValidationService implements IRequestsValidationService {
   /**
    * @summary Validates that all required input fields are completed
    * @description Ensures all required fields have values before finalizing envelope
+   * @param inputs - Input information from Documents Service
    */
-  async validateRequiredInputsComplete(envelopeId: EnvelopeId): Promise<void> {
-    if (!this.inputsRepo) return; // Skip validation if repo not available
+  validateRequiredInputsComplete(inputs: { hasInputs: boolean; inputCount: number }): void {
+    if (!inputs.hasInputs) {
+      throw new BadRequestError(
+        "Cannot finalize envelope: no input fields defined",
+        ErrorCodes.COMMON_BAD_REQUEST,
+        { inputCount: inputs.inputCount }
+      );
+    }
     
-    const requiredInputs = await this.inputsRepo.listByEnvelope({
-      envelopeId,
-      required: true
-    });
-    
-    const incompleteInputs = requiredInputs.items.filter((input: Input) => !input.value);
-    if (incompleteInputs.length > 0) {
-      throw new ConflictError(
-        `Cannot finalize envelope with ${incompleteInputs.length} incomplete required fields`,
-        ErrorCodes.COMMON_CONFLICT,
-        { 
-          envelopeId, 
-          incompleteInputs: incompleteInputs.map((i: Input) => i.inputId),
-          missingCount: incompleteInputs.length
-        }
+    if (inputs.inputCount === 0) {
+      throw new BadRequestError(
+        "Cannot finalize envelope: no input fields completed",
+        ErrorCodes.COMMON_BAD_REQUEST,
+        { inputCount: inputs.inputCount }
       );
     }
   }
@@ -192,39 +184,21 @@ export class RequestsValidationService implements IRequestsValidationService {
   /**
    * @summary Validates that party has assigned input fields
    * @description Ensures party has fields to complete before requesting signature
+   * @param partyId - Party ID to validate
+   * @param inputs - Input information from Documents Service
    */
-  async validatePartyHasAssignedInputs(envelopeId: EnvelopeId, partyId: PartyId): Promise<void> {
-    if (!this.inputsRepo) return; // Skip validation if repo not available
+  validatePartyHasAssignedInputs(partyId: PartyId, inputs: { assignedSigners: string[] }): void {
+    // Extract email from partyId (format: "envelopeId:email")
+    const partyEmail = partyId.split(':')[1];
     
-    const partyInputs = await this.inputsRepo.listByEnvelope({
-      envelopeId,
-      partyId
-    });
-    
-    if (partyInputs.items.length === 0) {
+    if (!inputs.assignedSigners.includes(partyEmail)) {
       throw new BadRequestError(
         "Party has no assigned input fields",
         ErrorCodes.COMMON_BAD_REQUEST,
-        { envelopeId, partyId }
+        { partyId, partyEmail, assignedSigners: inputs.assignedSigners }
       );
     }
   }
 
-  /**
-   * @summary Validates that party has incomplete required fields
-   * @description Checks if party has incomplete required fields for reminders
-   */
-  async validatePartyHasIncompleteRequiredFields(envelopeId: EnvelopeId, partyId: PartyId): Promise<boolean> {
-    if (!this.inputsRepo) return false; // Skip validation if repo not available
-    
-    const requiredInputs = await this.inputsRepo.listByEnvelope({
-      envelopeId,
-      partyId,
-      required: true
-    });
-    
-    const incompleteInputs = requiredInputs.items.filter((input: Input) => !input.value);
-    return incompleteInputs.length > 0;
-  }
 };
 

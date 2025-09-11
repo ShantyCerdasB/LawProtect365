@@ -20,8 +20,12 @@ export const FinaliseEnvelopeController = createCommandController<FinaliseEnvelo
   pathSchema: EnvelopeIdPath,
   appServiceClass: RequestsCommandService,
   createDependencies: (c: any) => makeRequestsCommandsPort(createRequestsDependencies(c)),
-  extractParams: (path: any, _body: any) => ({
-    envelopeId: path.id}),
+  extractParams: (path: any, body: any, context: any) => ({
+    envelopeId: path.id,
+    message: body.message,
+    inputs: body.inputs,
+    actor: context.actor
+  }),
   responseType: "ok",
   includeActor: true});
 

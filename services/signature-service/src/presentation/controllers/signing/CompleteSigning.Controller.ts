@@ -19,17 +19,37 @@ export const CompleteSigningController = createCommandController<CompleteSigning
   pathSchema: EnvelopeIdPath,
   appServiceClass: SigningCommandService,
   createDependencies: (c: any) => c.signing.command, // Use the service from container
-  extractParams: (path: any, body: any, context: any) => ({
-    envelopeId: path.id,
-    signerId: body.signerId,
-    digest: body.digest,
-    algorithm: body.algorithm,
-    keyId: body.keyId,
-    token: "", // Will be injected by factory
-    actorEmail: context?.actor?.email, // Add auth context
-    ip: context?.identity?.sourceIp, // IP for security validation
-    userAgent: context?.identity?.userAgent // User Agent for security validation
-  }),
+  extractParams: (path: any, body: any, context: any) => {
+    const params = {
+      envelopeId: path.id,
+      signerId: body.signerId,
+      digest: body.digest,
+      algorithm: body.algorithm,
+      keyId: body.keyId,
+      token: "", // Will be injected by factory
+      actorEmail: context?.actor?.email, // Add auth context
+      ip: context?.identity?.sourceIp, // IP for security validation
+      userAgent: context?.identity?.userAgent // User Agent for security validation
+    };
+    
+    console.log('🔍 [DEBUG] CompleteSigningController extractParams:', {
+      path,
+      body: {
+        signerId: body.signerId,
+        digest: body.digest,
+        algorithm: body.algorithm,
+        keyId: body.keyId
+      },
+      context: {
+        actorEmail: context?.actor?.email,
+        ip: context?.identity?.sourceIp,
+        userAgent: context?.identity?.userAgent
+      },
+      extractedParams: params
+    });
+    
+    return params;
+  },
   responseType: "ok",
   includeActor: true, // Enable auth validation
   methodName: "completeSigning"});

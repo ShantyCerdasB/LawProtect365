@@ -22,11 +22,6 @@ export const ENVELOPE_ENTITY_TYPE = "Envelope" as const;
  */
 export const PARTY_ENTITY_TYPE = "Party" as const;
 
-/**
- * @summary Document entity type constant
- * @description Stable entity marker for document items in DynamoDB
- */
-export const DOCUMENT_ENTITY_TYPE = "Document" as const;
 
 /**
  * @summary Input entity type constant

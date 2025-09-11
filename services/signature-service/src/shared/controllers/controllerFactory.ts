@@ -71,11 +71,11 @@ export const createRequestsDependencies = (c: Container) => ({
   repositories: {
     envelopes: c.repos.envelopes,
     parties: c.repos.parties,
-    inputs: c.repos.inputs,
+    // inputs: c.repos.inputs, // Moved to Documents Service
     invitationTokens: c.repos.invitationTokens
   },
   services: {
-    validation: c.requests.validationService,
+    // validation: c.requests.validationService, // inputs moved to Documents Service
     audit: c.requests.auditService,
     event: c.requests.eventService,
     rateLimit: c.requests.rateLimitService

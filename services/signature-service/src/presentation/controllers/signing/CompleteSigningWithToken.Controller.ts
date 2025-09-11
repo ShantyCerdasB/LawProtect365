@@ -25,6 +25,7 @@ const baseController = createGenericController<CompleteSigningWithTokenControlle
   extractParams: (path: any, body: any, context: any) => ({
     envelopeId: path.id,
     signerId: body.signerId,
+    finalPdfUrl: body.finalPdfUrl,
     token: body.token,
     digest: body.digest,
     algorithm: body.algorithm,

@@ -12,7 +12,7 @@
 export * from "./audit";
 export * from "./consent";
 export * from "./delegation";
-export * from "./documents";
+// Documents moved to documents-service
 export * from "./envelopes";
 export * from "./global-parties";
-export * from "./inputs";
+// export * from "./inputs"; // Moved to Documents Service

@@ -46,18 +46,38 @@ export const verifyJwt = async (
   token: string,
   opts: JwtVerifyOptions
 ): Promise<JwtVerificationResult> => {
+  console.log('🔍 [JWT VERIFIER DEBUG] Starting JWT verification...');
+  console.log('🔍 [JWT VERIFIER DEBUG] Token (first 50 chars):', token.substring(0, 50) + '...');
+  console.log('🔍 [JWT VERIFIER DEBUG] Options:', opts);
+  
   const issuer = opts.issuer ?? getEnv("JWT_ISSUER")!;
   const audience = opts.audience ?? getEnv("JWT_AUDIENCE");
-  const jwks = makeJwks(issuer, opts.jwksUri ?? process.env.JWKS_URI);
+  
+  console.log('🔍 [JWT VERIFIER DEBUG] Issuer:', issuer);
+  console.log('🔍 [JWT VERIFIER DEBUG] Audience:', audience);
+  const jwksUri = opts.jwksUri ?? process.env.JWKS_URI;
+  console.log('🔍 [JWT VERIFIER DEBUG] JWKS URI:', jwksUri);
+  
+  const jwks = makeJwks(issuer, jwksUri);
+  console.log('🔍 [JWT VERIFIER DEBUG] JWKS created, about to verify...');
 
-  const { payload, protectedHeader } = await jwtVerify(token, jwks, {
-    issuer,
-    audience,
-    algorithms: ["RS256"],
-    clockTolerance: opts.clockToleranceSec ?? 5});
+  try {
+    const { payload, protectedHeader } = await jwtVerify(token, jwks, {
+      issuer,
+      audience,
+      algorithms: ["RS256"],
+      clockTolerance: opts.clockToleranceSec ?? 5});
+    
+    console.log('🔍 [JWT VERIFIER DEBUG] JWT verification successful!');
+    console.log('🔍 [JWT VERIFIER DEBUG] Payload:', payload);
+    console.log('🔍 [JWT VERIFIER DEBUG] Protected header:', protectedHeader);
 
-  return {
-    header: protectedHeader as JWSHeaderParameters,
-    payload: payload as Record<string, unknown>,
-    claims: toJwtClaims(payload as JWTPayload)};
+    return {
+      header: protectedHeader as JWSHeaderParameters,
+      payload: payload as Record<string, unknown>,
+      claims: toJwtClaims(payload as JWTPayload)};
+  } catch (error) {
+    console.log('❌ [JWT VERIFIER DEBUG] JWT verification failed:', error);
+    throw error;
+  }
 };

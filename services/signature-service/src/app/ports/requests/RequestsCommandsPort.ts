@@ -21,6 +21,17 @@ export interface InvitePartiesCommand {
   signByDate?: string;
   /** Optional signing order preference - only applies when multiple parties are invited */
   signingOrder?: "owner_first" | "invitees_first";
+  /** Input information from Documents Service */
+  inputs: {
+    /** Whether the envelope has inputs */
+    hasInputs: boolean;
+    /** Total number of inputs */
+    inputCount: number;
+    /** Number of signature inputs */
+    signatureInputs: number;
+    /** Email addresses of assigned signers */
+    assignedSigners: string[];
+  };
   /** Context information about the actor (optional) */
   actor?: ActorContext;
 }
@@ -121,6 +132,13 @@ export interface FinaliseEnvelopeCommand {
   envelopeId: EnvelopeId;
   /** Optional message for finalization */
   message?: string;
+  /** Input information from Documents Service */
+  inputs: {
+    /** Whether the envelope has inputs */
+    hasInputs: boolean;
+    /** Total number of inputs */
+    inputCount: number;
+  };
   /** Context information about the actor (optional) */
   actor?: ActorContext;
 }

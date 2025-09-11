@@ -246,7 +246,7 @@ export function makePartiesCommandsPort(
     async create(command: CreatePartyCommand): Promise<CreatePartyResult> {
       // 🔍 IDEMPOTENCY WRAPPER - PATRÓN REUTILIZABLE
       if (idempotencyRunner) {
-        const idempotencyKey = `create-party:${command}:${command.envelopeId}:command.email`;
+        const idempotencyKey = `create-party:${command.envelopeId}:${command.email}`;
         return await idempotencyRunner.run(idempotencyKey, async () => {
           return await createInternal(command);
         });
@@ -259,7 +259,7 @@ export function makePartiesCommandsPort(
     async update(command: UpdatePartyCommand): Promise<UpdatePartyResult> {
       // 🔍 IDEMPOTENCY WRAPPER - PATRÓN REUTILIZABLE
       if (idempotencyRunner) {
-        const idempotencyKey = `update-party:${command}:${command.envelopeId}:command.partyId`;
+        const idempotencyKey = `update-party:${command.envelopeId}:${command.partyId}`;
         return await idempotencyRunner.run(idempotencyKey, async () => {
           return await updateInternal(command);
         });
@@ -272,7 +272,7 @@ export function makePartiesCommandsPort(
     async delete(command: DeletePartyCommand): Promise<DeletePartyResult> {
       // 🔍 IDEMPOTENCY WRAPPER - PATRÓN REUTILIZABLE
       if (idempotencyRunner) {
-        const idempotencyKey = `delete-party:${command}:${command.envelopeId}:command.partyId`;
+        const idempotencyKey = `delete-party:${command.envelopeId}:${command.partyId}`;
         return await idempotencyRunner.run(idempotencyKey, async () => {
           return await deleteInternal(command);
         });

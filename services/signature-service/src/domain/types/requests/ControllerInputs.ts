@@ -46,7 +46,17 @@ export interface RequestWithPartiesControllerInput extends BaseRequestController
  * @description Parameters for inviting parties to sign an envelope, and actor are injected by factory
  */
 export interface InvitePartiesControllerInput extends RequestWithPartiesControllerInput {
-  // No additional fields needed for INVITE
+  /** Input information from Documents Service */
+  readonly inputs: {
+    /** Whether the envelope has inputs */
+    readonly hasInputs: boolean;
+    /** Total number of inputs */
+    readonly inputCount: number;
+    /** Number of signature inputs */
+    readonly signatureInputs: number;
+    /** Email addresses of assigned signers */
+    readonly assignedSigners: string[];
+  };
 }
 
 // ============================================================================
@@ -99,7 +109,15 @@ export interface DeclineEnvelopeControllerInput extends BaseRequestControllerInp
  * @description Parameters for finalizing an envelope, and actor are injected by factory
  */
 export interface FinaliseEnvelopeControllerInput extends BaseRequestControllerInput {
-  // No additional fields needed for FINALISE
+  /** Optional message for finalization */
+  readonly message?: string;
+  /** Input information from Documents Service */
+  readonly inputs: {
+    /** Whether the envelope has inputs */
+    readonly hasInputs: boolean;
+    /** Total number of inputs */
+    readonly inputCount: number;
+  };
 }
 
 // ============================================================================

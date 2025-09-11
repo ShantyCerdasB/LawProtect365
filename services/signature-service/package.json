@@ -18,7 +18,12 @@
     "dynamodb:create-tables": "tsx scripts/createLocalTables.ts",
     "dynamodb:delete-tables": "tsx scripts/deleteLocalTables.ts",
     "dynamodb:setup": "tsx scripts/setupDynamoDB.ts",
-    "dynamodb:reset": "npm run dynamodb:stop && npm run dynamodb:setup"
+    "dynamodb:reset": "npm run dynamodb:stop && npm run dynamodb:setup",
+    "localstack:start": "tsx scripts/startLocalStack.ts",
+    "localstack:stop": "tsx scripts/stopLocalStack.ts",
+    "localstack:setup": "tsx scripts/setupLocalStack.ts",
+    "localstack:reset": "npm run localstack:stop && npm run localstack:setup",
+    "test:localstack": "npm run localstack:start && npm test && npm run localstack:stop"
   },
   "dependencies": {
     "@aws-sdk/client-cloudwatch": "^3.883.0",
@@ -32,11 +37,13 @@
     "@lawprotect/shared-ts": "^0.1.0",
     "@types/jsonwebtoken": "^9.0.10",
     "dotenv": "^16.4.5",
-    "jsonwebtoken": "^9.0.2"
+    "jsonwebtoken": "^9.0.2",
+    "pdf-lib": "^1.17.1"
   },
   "devDependencies": {
     "@types/express": "^5.0.3",
     "@types/jest": "^29.5.12",
+    "aws-sdk": "^2.1691.0",
     "dynamodb-local": "^0.0.35",
     "express": "^5.1.0",
     "jest": "^29.7.0",

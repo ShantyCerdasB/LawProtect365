@@ -5,7 +5,7 @@
  * rate limits, and cooldown policies for envelope operations.
  */
 
-import type { Party, Input } from "../entities";
+import type { Party } from "../entities";
 import { BadRequestError, TooManyRequestsError, ErrorCodes } from "@lawprotect/shared-ts";
 
 /**
@@ -13,23 +13,23 @@ import { BadRequestError, TooManyRequestsError, ErrorCodes } from "@lawprotect/s
  *
  * Requirements:
  * - At least one party with role "signer".
- * - At least one input.
+ * - At least one input (validated by Documents Service).
  *
  * Throws a 400 Bad Request when requirements are not met.
  *
  * @param parties - Parties associated with the envelope.
- * @param inputs - Inputs associated with the envelope.
+ * @param hasInputs - Whether the envelope has inputs (from Documents Service).
  * @throws {BadRequestError} When there is no signer or no inputs.
  */
 export const assertReadyToSend = (
   parties: readonly Party[],
-  inputs: readonly Input[]
+  hasInputs: boolean
 ): void => {
   const hasSigner = parties.some((p) => p.role === "signer");
   if (!hasSigner) {
     throw new BadRequestError("At least one signer is required");
   }
-  if (inputs.length === 0) {
+  if (!hasInputs) {
     throw new BadRequestError("No inputs defined");
   }
 };

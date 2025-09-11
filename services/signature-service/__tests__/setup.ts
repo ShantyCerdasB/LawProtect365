@@ -1,8 +1,8 @@
 /**
  * @file setup.ts
- * @summary Jest setup for integration tests with DynamoDB Local
- * @description Global setup for integration tests using real DynamoDB Local instead of mocks.
- * This provides more realistic testing by using actual DynamoDB operations.
+ * @summary Jest setup for integration tests with DynamoDB Local and LocalStack
+ * @description Global setup for integration tests using real DynamoDB Local and LocalStack AWS services.
+ * This provides more realistic testing by using actual AWS services instead of mocks.
  */
 
 import { startMockJwksServer, stopMockJwksServer } from './integration/helpers/mockJwksServer';
@@ -14,6 +14,11 @@ process.env.AWS_ENDPOINT_URL = 'http://localhost:8000';
 process.env.AWS_REGION = 'us-east-1';
 process.env.AWS_ACCESS_KEY_ID = 'fake';
 process.env.AWS_SECRET_ACCESS_KEY = 'fake';
+
+// Set LocalStack environment variables
+process.env.LOCALSTACK_ENDPOINT = 'http://localhost:4566';
+process.env.LOCALSTACK_ACCESS_KEY_ID = 'test';
+process.env.LOCALSTACK_SECRET_ACCESS_KEY = 'test';
 
 // Set required shared-ts environment variables
 process.env.PROJECT_NAME = 'lawprotect365';
@@ -37,17 +42,16 @@ process.env.EVIDENCE_BUCKET = 'test-evidence';
 process.env.SIGNED_BUCKET = 'test-signed';
 process.env.EVENTS_BUS_NAME = 'test-bus';
 process.env.EVENTS_SOURCE = 'lawprotect365.signature-service.test';
-process.env.KMS_SIGNER_KEY_ID = 'test-kms-key';
 process.env.KMS_SIGNING_ALGORITHM = 'RSASSA_PSS_SHA_256';
 
-// Configure JWT for tests - use mock JWKS server
+// Configure JWT for tests - use improved mock JWKS server
 process.env.JWT_ISSUER = 'https://cognito-idp.us-east-1.amazonaws.com/us-east-1_test';
 process.env.JWT_AUDIENCE = 'test-client-id';
 process.env.JWKS_URI = 'http://localhost:3000/.well-known/jwks.json';
 
-// Start mock JWKS server before all tests
+// Start improved mock JWKS server before all tests
 beforeAll(async () => {
-  console.log('🔐 Starting mock JWKS server for tests...');
+  console.log('🔐 Starting improved mock JWKS server for tests...');
   await startMockJwksServer();
 }, 10000); // 10 second timeout for server startup
 

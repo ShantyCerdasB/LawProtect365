@@ -61,26 +61,5 @@ jest.mock('@aws-sdk/client-ssm', () => ({
   GetParametersCommand: jest.fn(),
 }));
 
-// Mock Cognito service (only if needed)
-// jest.mock('@aws-sdk/client-cognito-identity-provider', () => ({
-//   CognitoIdentityProviderClient: jest.fn().mockImplementation(() => ({
-//     send: jest.fn().mockResolvedValue({
-//       Username: 'test-user',
-//       UserStatus: 'CONFIRMED',
-//       UserAttributes: [
-//         {
-//           Name: 'email',
-//           Value: 'test@example.com',
-//         },
-//         {
-//           Name: 'sub',
-//           Value: 'test-user-id',
-//         },
-//       ],
-//     }),
-//   })),
-//   AdminGetUserCommand: jest.fn(),
-//   AdminListGroupsForUserCommand: jest.fn(),
-// }));
 
 console.log('🔧 Minimal AWS mocks loaded - using real repositories with DynamoDB Local');

@@ -11,17 +11,18 @@ import type { EventBridgeClient } from "@aws-sdk/client-eventbridge";
 import type { SSMClient } from "@aws-sdk/client-ssm";
 
 import type { SignatureServiceConfig } from "../../../core/Config";
-import type { DocumentRepositoryDdb } from "../../../infrastructure/dynamodb/DocumentRepositoryDdb";
-import type { InputRepositoryDdb } from "../../../infrastructure/dynamodb/InputRepositoryDdb";
+// import type { DocumentRepositoryDdb } from "../../../infrastructure/dynamodb/DocumentRepositoryDdb"; // Moved to documents-service
+// import type { InputRepositoryDdb } from "../../../infrastructure/dynamodb/InputRepositoryDdb"; // Moved to Documents Service
 import type { PartyRepositoryDdb } from "../../../infrastructure/dynamodb/PartyRepositoryDdb";
 import type { GlobalPartiesRepositoryDdb } from "../../../infrastructure/dynamodb/GlobalPartiesRepositoryDdb";
 import type { IdempotencyStoreDdb, EventPublisher, IdempotencyKeyHasher, IdempotencyRunner, RateLimitStoreDdb, S3EvidenceStorage, S3Presigner, KmsSigner, SsmParamConfigProvider, AuditContext, MetricsService } from "@lawprotect/shared-ts";
+import type { S3SignedPdfIngestor } from "../../../infrastructure/s3/S3SignedPdfIngestor";
 import type { AuditRepositoryDdb } from "../../../infrastructure/dynamodb/AuditRepositoryDdb";
 import type { InvitationTokenRepositoryDdb } from "../../../infrastructure/dynamodb/InvitationTokenRepositoryDdb";
 import type { ConsentRepositoryDdb } from "../../../infrastructure/dynamodb/ConsentRepositoryDdb";
 import type { DelegationRepositoryDdb } from "../../../infrastructure/dynamodb/DelegationRepositoryDdb";
 import type { OutboxPort } from "@lawprotect/shared-ts";
-import type { S3SignedPdfIngestor } from "../../../infrastructure/s3/S3SignedPdfIngestor";
+// import type { S3SignedPdfIngestor } from "../../../infrastructure/s3/S3SignedPdfIngestor"; // Moved to documents-service
 
 // Consent service types
 import type { ConsentValidationService } from "../../../app/services/Consent/ConsentValidationService";
@@ -51,23 +52,14 @@ import type { EnvelopesValidationService } from "../../../app/services/envelopes
 import type { EnvelopesAuditService } from "../../../app/services/envelopes/EnvelopesAuditService";
 import type { EnvelopesEventService } from "../../../app/services/envelopes/EnvelopesEventService";
 
-import type { InputsCommandsPort } from "../../../app/ports/inputs/InputsCommandsPort";
-import type { InputsQueriesPort } from "../../../app/ports/inputs/InputsQueriesPort";
-import type { InputsValidationService } from "../../../app/services/Inputs/InputsValidationService";
-import type { InputsAuditService } from "../../../app/services/Inputs/InputsAuditService";
-import type { InputsEventService } from "../../../app/services/Inputs/InputsEventService";
-
-import type { DocumentsCommandsPort } from "../../../app/ports/documents/DocumentsCommandsPort";
-import type { DocumentsQueriesPort } from "../../../app/ports/documents/DocumentsQueriesPort";
-import type { DefaultDocumentsCommandService } from "../../../app/services/Documents/DocumentsCommandService";
-import type { DefaultDocumentsValidationService } from "../../../app/services/Documents/DocumentsValidationService";
-import type { DefaultDocumentsAuditService } from "../../../app/services/Documents/DocumentsAuditService";
-import type { DefaultDocumentsEventService } from "../../../app/services/Documents/DocumentsEventService";
-import type { DefaultDocumentsRateLimitService } from "../../../app/services/Documents/DocumentsRateLimitService";
-import type { DefaultDocumentsS3Service } from "../../../app/services/Documents/DocumentsS3Service";
+// import type { InputsCommandsPort } from "../../../app/ports/inputs/InputsCommandsPort"; // Moved to Documents Service
+// import type { InputsQueriesPort } from "../../../app/ports/inputs/InputsQueriesPort"; // Moved to Documents Service
+// import type { InputsValidationService } from "../../../app/services/Inputs/InputsValidationService"; // Moved to Documents Service
+// import type { InputsAuditService } from "../../../app/services/Inputs/InputsAuditService"; // Moved to Documents Service
+// import type { InputsEventService } from "../../../app/services/Inputs/InputsEventService"; // Moved to Documents Service
 
 import type { RequestsCommandsPort } from "../../../app/ports/requests/RequestsCommandsPort";
-import type { RequestsValidationService } from "../../../app/services/Requests/RequestsValidationService";
+// import type { RequestsValidationService } from "../../../app/services/Requests/RequestsValidationService"; // inputs moved to Documents Service
 import type { RequestsAuditService } from "../../../app/services/Requests/RequestsAuditService";
 import type { RequestsEventService } from "../../../app/services/Requests/RequestsEventService";
 import type { RequestsRateLimitService } from "../../../app/services/Requests/RequestsRateLimitService";
@@ -76,7 +68,7 @@ import type { CertificateQueriesPort } from "../../../app/ports/certificate/Cert
 import type { DefaultCertificateValidationService } from "../../../app/services/Certificate";
 
 import type { SigningCommandsPort } from "../../../app/ports/signing/SigningCommandsPort";
-import type { SigningCommandService, SigningValidationService, SigningEventService, SigningAuditService, SigningRateLimitService, SigningS3Service } from "../../../app/services/Signing";
+import type { SigningCommandService, SigningValidationService, SigningEventService, SigningAuditService, SigningRateLimitService, SigningS3Service, SigningPdfService } from "../../../app/services/Signing";
 
 import type { SignaturesCommandsPort } from "../../../app/ports/signatures/SignaturesCommandsPort";
 import type { SignaturesCommandService } from "../../../app/services/Signatures";
@@ -103,9 +95,9 @@ export interface Container {
 
   /** DynamoDB repositories */
   readonly repos: {
-    readonly documents: DocumentRepositoryDdb;
+    // readonly documents: DocumentRepositoryDdb; // Moved to documents-service
     readonly envelopes: EnvelopeRepositoryDdb;
-    readonly inputs: InputRepositoryDdb;
+    // readonly inputs: InputRepositoryDdb; // Moved to Documents Service
     readonly parties: PartyRepositoryDdb;
     readonly globalParties: GlobalPartiesRepositoryDdb;
     readonly audit: AuditRepositoryDdb;
@@ -127,12 +119,12 @@ export interface Container {
     readonly store: RateLimitStoreDdb;
   };
 
-  /** S3 storage helpers */
-  readonly storage: {
-    readonly evidence: S3EvidenceStorage;
-    readonly presigner: S3Presigner;
-    readonly pdfIngestor: S3SignedPdfIngestor;
-  };
+       /** S3 storage helpers */
+       readonly storage: {
+         readonly evidence: S3EvidenceStorage;
+         readonly presigner: S3Presigner;
+         readonly pdfIngestor: S3SignedPdfIngestor;
+       };
 
   /** Cryptography helpers */
   readonly crypto: {
@@ -181,31 +173,20 @@ export interface Container {
     readonly eventService: EnvelopesEventService;
   };
 
-  /** Inputs services */
-  readonly inputs: {
-    readonly commandsPort: InputsCommandsPort;
-    readonly queriesPort: InputsQueriesPort;
-    readonly validationService: InputsValidationService;
-    readonly auditService: InputsAuditService;
-    readonly eventService: InputsEventService;
-  };
+  /** Inputs services - Moved to Documents Service */
+  // readonly inputs: {
+  //   readonly commandsPort: InputsCommandsPort;
+  //   readonly queriesPort: InputsQueriesPort;
+  //   readonly validationService: InputsValidationService;
+  //   readonly auditService: InputsAuditService;
+  //   readonly eventService: InputsEventService;
+  // };
 
-  /** Documents services */
-  readonly documents: {
-    readonly commandsPort: DocumentsCommandsPort;
-    readonly queriesPort: DocumentsQueriesPort;
-    readonly command: DefaultDocumentsCommandService;
-    readonly validationService: DefaultDocumentsValidationService;
-    readonly auditService: DefaultDocumentsAuditService;
-    readonly eventService: DefaultDocumentsEventService;
-    readonly rateLimitService: DefaultDocumentsRateLimitService;
-    readonly s3Service: DefaultDocumentsS3Service;
-  };
 
   /** Requests services */
   readonly requests: {
     readonly commandsPort: RequestsCommandsPort;
-    readonly validationService: RequestsValidationService;
+    // readonly validationService: RequestsValidationService; // inputs moved to Documents Service
     readonly auditService: RequestsAuditService;
     readonly eventService: RequestsEventService;
     readonly rateLimitService: RequestsRateLimitService;
@@ -217,16 +198,17 @@ export interface Container {
     readonly validationService: DefaultCertificateValidationService;
   };
 
-  /** Signing services */
-  readonly signing: {
-    readonly commandsPort: SigningCommandsPort;
-    readonly command: SigningCommandService;
-    readonly validationService: SigningValidationService;
-    readonly eventService: SigningEventService;
-    readonly auditService: SigningAuditService;
-    readonly rateLimitService: SigningRateLimitService;
-    readonly s3Service: SigningS3Service;
-  };
+       /** Signing services */
+       readonly signing: {
+         readonly commandsPort: SigningCommandsPort;
+         readonly command: SigningCommandService;
+         readonly validationService: SigningValidationService;
+         readonly eventService: SigningEventService;
+         readonly auditService: SigningAuditService;
+         readonly rateLimitService: SigningRateLimitService;
+         readonly s3Service: SigningS3Service;
+         readonly pdfService: SigningPdfService;
+       };
 
   /** Signatures services */
   readonly signatures: {

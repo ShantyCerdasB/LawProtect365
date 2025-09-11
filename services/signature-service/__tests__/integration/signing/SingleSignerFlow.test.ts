@@ -1,479 +1,318 @@
 /**
  * @file SingleSignerFlow.test.ts
  * @summary Single signer signing flow integration tests
- * @description Tests single signer workflows including decline scenarios,
- * timeout handling, and document modifications during signing
+ * @description Tests single signer workflows where the owner creates and signs the envelope.
+ * This test validates the complete flow for authenticated users who own the envelope.
  */
 
-import { getContainer } from '@/core/Container';
-import { CreateEnvelopeController } from '@/presentation/controllers/envelopes/CreateEnvelope.Controller';
-import { CreateDocumentController } from '@/presentation/controllers/documents/CreateDocument.Controller';
-import { CreatePartyController } from '@/presentation/controllers/parties/CreateParty.Controller';
-import { InvitePartiesController } from '@/presentation/controllers/requests/InviteParties.Controller';
-import { RecordConsentController } from '@/presentation/controllers/signing/RecordConsent.Controller';
-import { PrepareSigningController } from '@/presentation/controllers/signing/PrepareSigning.Controller';
-import { CompleteSigningController } from '@/presentation/controllers/signing/CompleteSigning.Controller';
-import { DeclineSigningController } from '@/presentation/controllers/signing/DeclineSigning.Controller';
-import { DownloadSignedDocumentController } from '@/presentation/controllers/signing/DownloadSignedDocument.Controller';
-import { mockAwsServices } from '../helpers/awsMocks';
-import {
-  generateTestPdf,
-  calculatePdfDigest,
-  generateTestTenantId,
-  createTestRequestContext,
-  createTestPathParams,
-  createApiGatewayEvent
-} from '../helpers/testHelpers';
-import type { ApiResponseStructured } from '@lawprotect/shared-ts';
+import '../helpers/awsMocksMinimal';
+import { 
+  createSingleSignerFlow,
+  type SigningFlowResult,
+  assertResponse
+} from '../helpers/signingFlowFactory';
+import { 
+  testUnauthorizedAccess,
+  testCrossUserAccess,
+  testInvalidEnvelopeId
+} from '../helpers/securityValidations';
+import { 
+  testInvalidDigest,
+  testUnsupportedAlgorithm,
+  testDocumentIntegrity,
+  testMissingConsent
+} from '../helpers/dataIntegrityValidations';
 
-mockAwsServices();
+// awsMocksMinimal is automatically loaded
 
-describe('Single Signer Flow', () => {
-  let container: any;
-  let envelopeId: string;
-  let documentId: string;
-  let partyId: string;
-
-  const assertResponse = (response: any): ApiResponseStructured => {
-    return response as ApiResponseStructured;
-  };
+describe('Single Signer Flow (Owner Autenticado)', () => {
+  let flowResult: SigningFlowResult;
 
   beforeAll(async () => {
-    getContainer();
-     generateTestTenantId();
+    // Test setup - no tenant ID needed
   });
 
   beforeEach(async () => {
-    // Create envelope for each test
-    const createEnvelopeResult = await CreateEnvelopeController(createApiGatewayEvent({
-      pathParameters: createTestPathParams({ }),
-      body: {
-        ownerId: '550e8400-e29b-41d4-a716-446655440000',
-        name: 'Single Signer Test Contract',
-        description: 'Contract for single signer testing'
-      },
-      requestContext: createTestRequestContext({
-        userId: 'user-123',
-        email: 'owner@test.com'
-      })
-    }));
-
-    const envelopeResponse = assertResponse(createEnvelopeResult);
-    envelopeId = JSON.parse(envelopeResponse.body!).data.envelope.envelopeId;
-
-    // Create document
-    const testPdf = generateTestPdf();
-    const pdfDigest = calculatePdfDigest(testPdf);
-
-    const createDocumentResult = await CreateDocumentController(createApiGatewayEvent({
-      pathParameters: { id: envelopeId },
-      body: {
-        name: 'Single Signer Test Document.pdf',
-        contentType: 'application/pdf',
-        size: testPdf.length,
-        digest: pdfDigest.value,
-        bucket: 'test-evidence-bucket',
-        key: `documents/${envelopeId}/single-signer-test-document.pdf`
-      },
-      requestContext: createTestRequestContext({
-        userId: 'user-123',
-        email: 'owner@test.com'
-      })
-    }));
-
-    const documentResponse = assertResponse(createDocumentResult);
-    documentId = JSON.parse(documentResponse.body!).data.documentId;
-
-    // Create party
-    const createPartyResult = await CreatePartyController(createApiGatewayEvent({
-      pathParameters: { envelopeId },
-      body: {
-        name: 'Single Test Signer',
-        email: 'single-signer@test.com',
-        role: 'signer',
-        sequence: 1
-      },
-      requestContext: createTestRequestContext({
-        userId: 'user-123',
-        email: 'owner@test.com'
-      })
-    }));
-
-    const partyResponse = assertResponse(createPartyResult);
-    partyId = JSON.parse(partyResponse.body!).data.partyId;
+    // Test isolation handled by DynamoDB Local
   });
 
   describe('Happy Path - Single Signer Workflow', () => {
-    it('should complete single signer workflow', async () => {
-      // Step 1: Invite Party
-      const invitePartiesResult = await InvitePartiesController(createApiGatewayEvent({
-        pathParameters: { id: envelopeId },
-        body: {
-          partyIds: [partyId]},
-        requestContext: createTestRequestContext({
-          userId: 'user-123',
-          email: 'owner@test.com'
-        })
-      }));
-
-      const inviteResponse = assertResponse(invitePartiesResult);
-      expect(inviteResponse.statusCode).toBe(200);
-
-      // Step 2: Record Consent
-      const recordConsentResult = await RecordConsentController(createApiGatewayEvent({
-        pathParameters: { id: envelopeId },
-        body: {
-          signerId: partyId,
-          consentGiven: true,
-          consentText: 'I agree to sign this document electronically'
-        },
-        requestContext: createTestRequestContext({
-          userId: 'single-signer',
-          email: 'single-signer@test.com'
-        })
-      }));
-
-      const consentResponse = assertResponse(recordConsentResult);
-      expect(consentResponse.statusCode).toBe(200);
-
-      // Step 3: Prepare Signing
-      const prepareSigningResult = await PrepareSigningController(createApiGatewayEvent({
-        pathParameters: { id: envelopeId },
-        body: {
-          signerId: partyId
-        },
-        requestContext: createTestRequestContext({
-          userId: 'single-signer',
-          email: 'single-signer@test.com'
-        })
-      }));
-
-      const prepareResponse = assertResponse(prepareSigningResult);
-      expect(prepareResponse.statusCode).toBe(200);
-
-      // Step 4: Complete Signing
-      const completeSigningResult = await CompleteSigningController(createApiGatewayEvent({
-        pathParameters: { id: envelopeId },
-        body: {
-          signerId: partyId,
-          digest: 'test-digest',
-          algorithm: 'RS256',
-          keyId: 'test-key-id',
-          otpCode: '123456'
-        },
-        requestContext: createTestRequestContext({
-          userId: 'single-signer',
-          email: 'single-signer@test.com'
-        })
-      }));
-
-      const signingResponse = assertResponse(completeSigningResult);
-      expect(signingResponse.statusCode).toBe(200);
-
-      // Step 5: Download Signed Document
-      const downloadResult = await DownloadSignedDocumentController(createApiGatewayEvent({
-        pathParameters: { id: envelopeId },
-        body: {
-          documentId
-        },
-        requestContext: createTestRequestContext({
-          userId: 'user-123',
-          email: 'owner@test.com'
-        })
-      }));
-
-      const downloadResponse = assertResponse(downloadResult);
-      expect(downloadResponse.statusCode).toBe(200);
-      expect(downloadResponse.body).toBeDefined();
-    });
-  });
-
-  describe('Signer Decline Scenarios', () => {
-    it('should handle signer decline', async () => {
-      // Step 1: Invite Party
-      const invitePartiesResult = await InvitePartiesController(createApiGatewayEvent({
-        pathParameters: { id: envelopeId },
-        body: {
-          partyIds: [partyId]},
-        requestContext: createTestRequestContext({
-          userId: 'user-123',
-          email: 'owner@test.com'
-        })
-      }));
-
-      const inviteResponse = assertResponse(invitePartiesResult);
-      expect(inviteResponse.statusCode).toBe(200);
-
-      // Step 2: Record Consent (decline)
-      const recordConsentResult = await RecordConsentController(createApiGatewayEvent({
-        pathParameters: { id: envelopeId },
-        body: {
-          signerId: partyId,
-          consentGiven: false,
-          consentText: 'I decline to sign this document'
-        },
-        requestContext: createTestRequestContext({
-          userId: 'single-signer',
-          email: 'single-signer@test.com'
-        })
-      }));
-
-      const consentResponse = assertResponse(recordConsentResult);
-      expect(consentResponse.statusCode).toBe(200);
-
-      // Step 3: Decline Signing
-      const declineSigningResult = await DeclineSigningController(createApiGatewayEvent({
-        pathParameters: { id: envelopeId },
-        body: {
-          signerId: partyId,
-          reason: 'I do not agree with the terms'
-        },
-        requestContext: createTestRequestContext({
-          userId: 'single-signer',
-          email: 'single-signer@test.com'
-        })
-      }));
-
-      const declineResponse = assertResponse(declineSigningResult);
-      expect(declineResponse.statusCode).toBe(200);
-    });
-
-    it('should handle signer decline with reason', async () => {
-      // Step 1: Invite Party
-      const invitePartiesResult = await InvitePartiesController(createApiGatewayEvent({
-        pathParameters: { id: envelopeId },
-        body: {
-          partyIds: [partyId]},
-        requestContext: createTestRequestContext({
-          userId: 'user-123',
-          email: 'owner@test.com'
-        })
-      }));
-
-      const inviteResponse = assertResponse(invitePartiesResult);
-      expect(inviteResponse.statusCode).toBe(200);
-
-      // Step 2: Decline Signing with detailed reason
-      const declineSigningResult = await DeclineSigningController(createApiGatewayEvent({
-        pathParameters: { id: envelopeId },
-        body: {
-          signerId: partyId,
-          reason: 'I need to review the document with my legal team before signing'
-        },
-        requestContext: createTestRequestContext({
-          userId: 'single-signer',
-          email: 'single-signer@test.com'
-        })
-      }));
-
-      const declineResponse = assertResponse(declineSigningResult);
-      expect(declineResponse.statusCode).toBe(200);
-    });
-  });
-
-  describe('Timeout Scenarios', () => {
-    it('should handle signer timeout', async () => {
-      // Step 1: Invite Party
-      const invitePartiesResult = await InvitePartiesController(createApiGatewayEvent({
-        pathParameters: { id: envelopeId },
-        body: {
-          partyIds: [partyId]},
-        requestContext: createTestRequestContext({
-          userId: 'user-123',
-          email: 'owner@test.com'
-        })
-      }));
-
-      const inviteResponse = assertResponse(invitePartiesResult);
-      expect(inviteResponse.statusCode).toBe(200);
-
-      // Simulate timeout scenario
-      // In a real implementation, this would be handled by a background job
-      // that checks for expired invitations and updates the envelope status
+    it('should complete single signer workflow with authenticated owner', async () => {
+      // Use the factory to create the complete flow
+      flowResult = await createSingleSignerFlow('Single Signer Test Contract');
       
-      // For now, we just verify that the invitation was sent successfully
-      expect(inviteResponse.statusCode).toBe(200);
-    });
-
-    it('should handle document access timeout', async () => {
-      // Step 1: Prepare Signing
-      const prepareSigningResult = await PrepareSigningController(createApiGatewayEvent({
-        pathParameters: { id: envelopeId },
-        body: {
-          signerId: partyId
-        },
-        requestContext: createTestRequestContext({
-          userId: 'single-signer',
-          email: 'single-signer@test.com'
-        })
-      }));
-
-      const prepareResponse = assertResponse(prepareSigningResult);
-      expect(prepareResponse.statusCode).toBe(200);
-
-      // Simulate timeout scenario where signer doesn't complete signing
-      // In a real implementation, this would be handled by session management
-      
-      // For now, we just verify that the preparation was successful
-      expect(prepareResponse.statusCode).toBe(200);
+      // Verify the flow was completed successfully
+      expect(flowResult.envelope.name).toBe('Single Signer Test Contract');
+      expect(flowResult.parties).toHaveLength(1);
+      expect(flowResult.parties[0].email).toBe('owner@test.com');
+      expect(flowResult.owner.email).toBe('owner@test.com');
+      expect(flowResult.invitedUsers).toHaveLength(0);
     });
   });
 
-  describe('Document Modification Scenarios', () => {
-    it('should handle document modifications during signing', async () => {
-      // Step 1: Invite Party
-      const invitePartiesResult = await InvitePartiesController(createApiGatewayEvent({
-        pathParameters: { id: envelopeId },
-        body: {
-          partyIds: [partyId]},
-        requestContext: createTestRequestContext({
-          userId: 'user-123',
-          email: 'owner@test.com'
-        })
-      }));
-
-      const inviteResponse = assertResponse(invitePartiesResult);
-      expect(inviteResponse.statusCode).toBe(200);
-
-      // Step 2: Record Consent
-      const recordConsentResult = await RecordConsentController(createApiGatewayEvent({
-        pathParameters: { id: envelopeId },
-        body: {
-          signerId: partyId,
-          consentGiven: true,
-          consentText: 'I agree to sign this document electronically'
-        },
-        requestContext: createTestRequestContext({
-          userId: 'single-signer',
-          email: 'single-signer@test.com'
-        })
-      }));
-
-      const consentResponse = assertResponse(recordConsentResult);
-      expect(consentResponse.statusCode).toBe(200);
-
-      // Step 3: Prepare Signing
-      const prepareSigningResult = await PrepareSigningController(createApiGatewayEvent({
-        pathParameters: { id: envelopeId },
-        body: {
-          signerId: partyId
-        },
-        requestContext: createTestRequestContext({
-          userId: 'single-signer',
-          email: 'single-signer@test.com'
-        })
-      }));
-
-      const prepareResponse = assertResponse(prepareSigningResult);
-      expect(prepareResponse.statusCode).toBe(200);
-
-      // Simulate document modification during signing
-      // In a real implementation, this would invalidate the signing session
-      // and require the signer to start over
+  describe('Security Validations', () => {
+    it('should reject unauthorized access to envelope', async () => {
+      // Create a flow first
+      flowResult = await createSingleSignerFlow('Security Test Contract');
       
-      // For now, we just verify that the preparation was successful
-      expect(prepareResponse.statusCode).toBe(200);
+      // Test unauthorized access
+      await testUnauthorizedAccess(flowResult.owner.token, async (token) => {
+        const { CreatePartyController } = await import('../../../src/presentation/controllers/parties/CreateParty.Controller');
+        const { createApiGatewayEvent, createTestRequestContext } = await import('../helpers/testHelpers');
+        
+        return await CreatePartyController(createApiGatewayEvent({
+          pathParameters: { envelopeId: flowResult.envelope.id },
+          body: {
+            name: 'Unauthorized User',
+            email: 'unauthorized@test.com',
+            role: 'signer',
+            sequence: 1
+          },
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+          requestContext: createTestRequestContext({
+            userId: 'unauthorized-user',
+            email: 'unauthorized@test.com'
+          })
+        }));
+      });
     });
 
-    it('should handle document replacement during signing', async () => {
-      // Step 1: Invite Party
-      const invitePartiesResult = await InvitePartiesController(createApiGatewayEvent({
-        pathParameters: { id: envelopeId },
-        body: {
-          partyIds: [partyId]},
-        requestContext: createTestRequestContext({
-          userId: 'user-123',
-          email: 'owner@test.com'
-        })
-      }));
+    it('should require valid JWT token', async () => {
+      await testUnauthorizedAccess('', async (token) => {
+        const { CreateEnvelopeController } = await import('../../../src/presentation/controllers/envelopes/CreateEnvelope.Controller');
+        const { createApiGatewayEvent, createTestRequestContext, createTestPathParams } = await import('../helpers/testHelpers');
+        
+        return await CreateEnvelopeController(createApiGatewayEvent({
+          pathParameters: createTestPathParams({}),
+          body: {
+            name: 'Invalid Token Test',
+            description: 'Test with invalid token',
+            ownerEmail: 'owner@test.com'
+          },
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+          requestContext: createTestRequestContext({
+            userId: 'owner-user-123',
+            email: 'owner@test.com'
+          })
+        }));
+      });
+    });
 
-      const inviteResponse = assertResponse(invitePartiesResult);
-      expect(inviteResponse.statusCode).toBe(200);
-
-      // Simulate document replacement
-      const newTestPdf = generateTestPdf();
-      const newPdfDigest = calculatePdfDigest(newTestPdf);
-
-      const replaceDocumentResult = await CreateDocumentController(createApiGatewayEvent({
-        pathParameters: { id: envelopeId },
-        body: {
-          name: 'Updated Single Signer Test Document.pdf',
-          contentType: 'application/pdf',
-          size: newTestPdf.length,
-          digest: newPdfDigest.value,
-          bucket: 'test-evidence-bucket',
-          key: `documents/${envelopeId}/updated-single-signer-test-document.pdf`
-        },
-        requestContext: createTestRequestContext({
-          userId: 'user-123',
-          email: 'owner@test.com'
-        })
-      }));
-
-      const replaceResponse = assertResponse(replaceDocumentResult);
-      expect(replaceResponse.statusCode).toBe(201);
-
-      // In a real implementation, this would invalidate any ongoing signing sessions
-      // and require the signer to start over with the new document
+    it('should validate owner permissions', async () => {
+      // Create a flow first
+      flowResult = await createSingleSignerFlow('Owner Permission Test');
+      
+      // Test cross-user access
+      await testCrossUserAccess(flowResult.owner.token, flowResult.owner.email, async (token, email) => {
+        const { CreatePartyController } = await import('../../../src/presentation/controllers/parties/CreateParty.Controller');
+        const { createApiGatewayEvent, createTestRequestContext } = await import('../helpers/testHelpers');
+        
+        return await CreatePartyController(createApiGatewayEvent({
+          pathParameters: { envelopeId: flowResult.envelope.id },
+          body: {
+            name: 'Other User',
+            email: email,
+            role: 'signer',
+            sequence: 1
+          },
+          headers: { 'Authorization': `Bearer ${token}` },
+          requestContext: createTestRequestContext({
+            userId: 'other-user-456',
+            email: email
+          })
+        }));
+      });
     });
   });
 
-  describe('Error Handling', () => {
-    it('should handle invalid signer ID', async () => {
-      const result = await RecordConsentController(createApiGatewayEvent({
-        pathParameters: { id: envelopeId },
-        body: {
-          signerId: 'invalid-signer-id',
-          consentGiven: true,
-          consentText: 'I agree to sign this document electronically'
-        },
-        requestContext: createTestRequestContext({
-          userId: 'single-signer',
-          email: 'single-signer@test.com'
-        })
-      }));
-
-      const response = assertResponse(result);
-      // This should fail due to invalid signer ID
-      expect(response.statusCode).toBe(404);
-    });
-
+  describe('Edge Cases', () => {
     it('should handle invalid envelope ID', async () => {
-      const result = await RecordConsentController(createApiGatewayEvent({
-        pathParameters: { id: 'invalid-envelope-id' },
-        body: {
-          signerId: partyId,
-          consentGiven: true,
-          consentText: 'I agree to sign this document electronically'
-        },
-        requestContext: createTestRequestContext({
-          userId: 'single-signer',
-          email: 'single-signer@test.com'
-        })
-      }));
-
-      const response = assertResponse(result);
-      // This should fail due to invalid envelope ID
-      expect(response.statusCode).toBe(404);
+      // Create a flow first to get the owner token
+      flowResult = await createSingleSignerFlow('Invalid Envelope ID Test');
+      
+      await testInvalidEnvelopeId(flowResult.owner.token, async (envelopeId, token) => {
+        const { CreatePartyController } = await import('../../../src/presentation/controllers/parties/CreateParty.Controller');
+        const { createApiGatewayEvent, createTestRequestContext } = await import('../helpers/testHelpers');
+        
+        return await CreatePartyController(createApiGatewayEvent({
+          pathParameters: { envelopeId },
+          body: {
+            name: 'Test Party',
+            email: 'test@test.com',
+            role: 'signer',
+            sequence: 1
+          },
+          headers: { 'Authorization': `Bearer ${token}` },
+          requestContext: createTestRequestContext({
+            userId: 'owner-user-123',
+            email: 'owner@test.com'
+          })
+        }));
+      });
     });
 
-    it('should handle missing consent text', async () => {
-      const result = await RecordConsentController(createApiGatewayEvent({
-        pathParameters: { id: envelopeId },
+    it('should handle missing consent', async () => {
+      // Create a flow first
+      flowResult = await createSingleSignerFlow('No Consent Test');
+      
+      // Create a separate party for this test to avoid conflict
+      const { CreatePartyController } = await import('../../../src/presentation/controllers/parties/CreateParty.Controller');
+      const { createApiGatewayEvent, createTestRequestContext } = await import('../helpers/testHelpers');
+      
+      const createPartyResult = await CreatePartyController(await createApiGatewayEvent({
+        pathParameters: { envelopeId: flowResult.envelope.id },
         body: {
-          signerId: partyId,
-          consentGiven: true,
-          consentText: ''
+          name: 'Test Party for Missing Consent',
+          email: 'test-missing-consent@test.com',
+          role: 'signer',
+          sequence: 2
         },
+        headers: { 'Authorization': `Bearer ${flowResult.owner.token}` },
         requestContext: createTestRequestContext({
-          userId: 'single-signer',
-          email: 'single-signer@test.com'
+          userId: 'owner-user-123',
+          email: 'owner@test.com'
+        }),
+        includeAuth: false,
+        authToken: flowResult.owner.token
+      }));
+      
+      const createPartyResponse = assertResponse(createPartyResult);
+      console.log('🔍 [DEBUG] CreateParty response:', {
+        statusCode: createPartyResponse.statusCode,
+        body: createPartyResponse.body
+      });
+      const responseData = JSON.parse(createPartyResponse.body!);
+      console.log('🔍 [DEBUG] CreateParty responseData:', responseData);
+      const testPartyId = responseData.data.party.id;
+      
+      // Test missing consent with the new party
+      await testMissingConsent(
+        flowResult.envelope.id,
+        testPartyId,
+        flowResult.owner.token
+      );
+    });
+
+    it('should handle invalid digest', async () => {
+      // Create a flow first
+      flowResult = await createSingleSignerFlow('Invalid Digest Test');
+      
+      // Create a separate party for this test to avoid conflict
+      const { CreatePartyController } = await import('../../../src/presentation/controllers/parties/CreateParty.Controller');
+      const { createApiGatewayEvent, createTestRequestContext } = await import('../helpers/testHelpers');
+      
+      const createPartyResult = await CreatePartyController(createApiGatewayEvent({
+        pathParameters: { envelopeId: flowResult.envelope.id },
+        body: {
+          name: 'Test Party for Invalid Digest',
+          email: 'test-invalid-digest@test.com',
+          role: 'signer',
+          sequence: 2
+        },
+        headers: { 'Authorization': `Bearer ${flowResult.owner.token}` },
+        requestContext: createTestRequestContext({
+          userId: 'owner-user-123',
+          email: 'owner@test.com'
         })
       }));
+      
+      const createPartyResponse = assertResponse(createPartyResult);
+      console.log('🔍 [DEBUG] CreateParty response:', {
+        statusCode: createPartyResponse.statusCode,
+        body: createPartyResponse.body
+      });
+      const responseData = JSON.parse(createPartyResponse.body!);
+      console.log('🔍 [DEBUG] CreateParty responseData:', responseData);
+      const testPartyId = responseData.data.party.id;
+      
+      // Test invalid digest with the new party
+      await testInvalidDigest(
+        flowResult.envelope.id,
+        testPartyId,
+        flowResult.owner.token
+      );
+    });
 
-      const response = assertResponse(result);
-      // This should fail due to missing consent text
-      expect(response.statusCode).toBe(400);
+    it('should handle unsupported algorithm', async () => {
+      // Create a flow first
+      flowResult = await createSingleSignerFlow('Unsupported Algorithm Test');
+      
+      // Create a separate party for this test to avoid conflict
+      const { CreatePartyController } = await import('../../../src/presentation/controllers/parties/CreateParty.Controller');
+      const { createApiGatewayEvent, createTestRequestContext } = await import('../helpers/testHelpers');
+      
+      const createPartyResult = await CreatePartyController(createApiGatewayEvent({
+        pathParameters: { envelopeId: flowResult.envelope.id },
+        body: {
+          name: 'Test Party for Unsupported Algorithm',
+          email: 'test-unsupported-algorithm@test.com',
+          role: 'signer',
+          sequence: 2
+        },
+        headers: { 'Authorization': `Bearer ${flowResult.owner.token}` },
+        requestContext: createTestRequestContext({
+          userId: 'owner-user-123',
+          email: 'owner@test.com'
+        })
+      }));
+      
+      const createPartyResponse = assertResponse(createPartyResult);
+      console.log('🔍 [DEBUG] CreateParty response:', {
+        statusCode: createPartyResponse.statusCode,
+        body: createPartyResponse.body
+      });
+      const responseData = JSON.parse(createPartyResponse.body!);
+      console.log('🔍 [DEBUG] CreateParty responseData:', responseData);
+      const testPartyId = responseData.data.party.id;
+      
+      // Test unsupported algorithm with the new party
+      await testUnsupportedAlgorithm(
+        flowResult.envelope.id,
+        testPartyId,
+        flowResult.owner.token
+      );
+    });
+  });
+
+  describe('Data Integrity Validations', () => {
+    it('should validate document integrity', async () => {
+      // Create a flow first
+      flowResult = await createSingleSignerFlow('Document Integrity Test');
+      
+      // Create a separate party for this test to avoid conflict
+      const { CreatePartyController } = await import('../../../src/presentation/controllers/parties/CreateParty.Controller');
+      const { createApiGatewayEvent, createTestRequestContext } = await import('../helpers/testHelpers');
+      
+      const createPartyResult = await CreatePartyController(createApiGatewayEvent({
+        pathParameters: { envelopeId: flowResult.envelope.id },
+        body: {
+          name: 'Test Party for Document Integrity',
+          email: 'test-document-integrity@test.com',
+          role: 'signer',
+          sequence: 2
+        },
+        headers: { 'Authorization': `Bearer ${flowResult.owner.token}` },
+        requestContext: createTestRequestContext({
+          userId: 'owner-user-123',
+          email: 'owner@test.com'
+        })
+      }));
+      
+      const createPartyResponse = assertResponse(createPartyResult);
+      console.log('🔍 [DEBUG] CreateParty response:', {
+        statusCode: createPartyResponse.statusCode,
+        body: createPartyResponse.body
+      });
+      const responseData = JSON.parse(createPartyResponse.body!);
+      console.log('🔍 [DEBUG] CreateParty responseData:', responseData);
+      const testPartyId = responseData.data.party.id;
+      
+      // Test document integrity with the new party
+      await testDocumentIntegrity(
+        flowResult.envelope.id,
+        testPartyId,
+        flowResult.owner.token
+      );
     });
   });
 });

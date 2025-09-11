@@ -32,6 +32,8 @@ export interface CompleteSigningControllerInput extends BaseSigningControllerInp
   readonly envelopeId: EnvelopeId;
   /** Signer/party identifier */
   readonly signerId: PartyId;
+  /** URL of the final PDF from Documents Service */
+  readonly finalPdfUrl: string;
   /** Precomputed digest to sign */
   readonly digest: {
     alg: HashAlgorithm;
@@ -161,6 +163,8 @@ export interface CompleteSigningWithTokenControllerInput {
   readonly envelopeId: string;
   /** The signer/party ID */
   readonly signerId: string;
+  /** URL of the final PDF from Documents Service */
+  readonly finalPdfUrl: string;
   /** The invitation token for authentication */
   readonly token: string;
   /** Document digest information */

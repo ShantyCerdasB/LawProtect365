@@ -129,4 +129,3 @@ export class S3SignedPdfIngestor {
       httpUrl};
   }
 }
-

@@ -104,7 +104,12 @@ export const validateJsonBody = <S extends z.ZodTypeAny>(
   let json: unknown;
   try {
     json = JSON.parse(raw);
-  } catch {
+    
+    // Fix: If the result is still a string, parse it again (double JSON encoding)
+    if (typeof json === 'string') {
+      json = JSON.parse(json);
+    }
+  } catch (error) {
     throw new AppError(ErrorCodes.COMMON_BAD_REQUEST, 400, "Invalid JSON");
   }
 

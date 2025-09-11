@@ -38,6 +38,14 @@ export interface Party {
   readonly invitedAt?: string;
   /** Optional signature completion timestamp (ISO 8601) */
   readonly signedAt?: string;
+  /** Optional signature data (base64 encoded) */
+  readonly signature?: string;
+  /** Optional digest of the signed document */
+  readonly digest?: string;
+  /** Optional signing algorithm used */
+  readonly algorithm?: string;
+  /** Optional KMS key ID used for signing */
+  readonly keyId?: string;
   /**
    * Signing sequence number used for ordered flows.
    * Must be a positive integer when the party participates in signing/approval.

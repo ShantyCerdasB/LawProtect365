@@ -16,6 +16,10 @@ export const CompleteSigningWithTokenPath = z.object({
 export const CompleteSigningWithTokenBody = z
   .object({
     signerId: UuidV4,
+    
+    /** URL of the final PDF from Documents Service (with embedded fields and signatures) */
+    finalPdfUrl: z.string().url(),
+    
     digest: z.object({
       alg: z.enum(HASH_ALGORITHM),
       value: z

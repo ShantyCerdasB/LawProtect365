@@ -1,37 +1,22 @@
 /**
  * @file index.ts
- * @summary Shared types exports
- * @description Central export file for all shared types used across the application
+ * @summary Domain types index
+ * @description Exports all domain types
  */
 
-// Infrastructure types
-export * from "./infrastructure/dynamodb";
-export * from "./infrastructure/aws";
-export * from "./infrastructure/s3";
-// KMS types moved to @lawprotect/shared-ts
-export * from "./infrastructure/eventbridge";
-export * from "./infrastructure/constants";
-export * from "./infrastructure/enums";
-
-// Common types
-export * from "./common";
-
-// Consent types
-export * from "./consent";
-
-// Inputs types
-export * from "./inputs";
-
-// Requests types
-export * from "./requests";
-export * from "./certificate";
-
-// Audit types
+export * from "./infrastructure";
 export * from "./audit";
-
-// Actor context moved to src/domain/entities/
-
-// Validation schemas moved to src/shared/validations/
-
-// Core types - moved to shared/contracts/core/Config.ts
-
+export * from "./certificate";
+export * from "./common";
+export * from "./consent";
+// export * from "./core"; // Empty directory
+// export * from "./delegation"; // Conflicts with common
+export * from "./envelopes";
+export * from "./global-parties";
+export * from "./idempotency";
+// export * from "./inputs"; // Moved to Documents Service
+export * from "./outbox";
+// export * from "./parties"; // Conflicts with consent
+export * from "./requests";
+export * from "./signing";
+export * from "./s3";

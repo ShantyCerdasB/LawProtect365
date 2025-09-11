@@ -18,7 +18,18 @@ export const InvitationsBody = z.object({
   /** Optional deadline for signing (ISO 8601 date string) */
   signByDate: z.string().datetime().optional(),
   /** Optional signing order preference - only applies when multiple parties are invited */
-  signingOrder: z.enum(["owner_first", "invitees_first"]).optional()
+  signingOrder: z.enum(["owner_first", "invitees_first"]).optional(),
+  /** Input information from Documents Service */
+  inputs: z.object({
+    /** Whether the envelope has inputs */
+    hasInputs: z.boolean(),
+    /** Total number of inputs */
+    inputCount: z.number().int().min(0),
+    /** Number of signature inputs */
+    signatureInputs: z.number().int().min(0),
+    /** Email addresses of assigned signers */
+    assignedSigners: z.array(z.string().email()).min(0)
+  })
 }).refine((data) => {
   // signingOrder only applies when there are multiple parties
   if (data.signingOrder && data.partyIds.length === 1) {

@@ -27,16 +27,16 @@ import { nowIso, NotFoundError, ConflictError, BadRequestError, ForbiddenError, 
 import { PARTY_DEFAULTS, ENVELOPE_STATUSES, PARTY_ROLES, PARTY_STATUSES, REQUEST_DEFAULTS, S3_BUCKETS, REQUEST_TIMEOUTS, PartyStatus } from "../../../domain/values/enums";
 import type { Envelope } from "../../../domain/entities/Envelope";
 import type { Party } from "../../../domain/entities/Party";
-import type { Input } from "../../../domain/entities/Input";
+// import type { Input } from "../../../domain/entities/Input"; // Moved to Documents Service
 import type { EnvelopeId, PartyId } from "../../../domain/value-objects/ids";
 import type { PartyRole, EnvelopeStatus } from "../../../domain/values/enums";
-import type { PartyKey, InputKey } from "../../../domain/types/infrastructure/dynamodb";
+import type { PartyKey } from "../../../domain/types/infrastructure/dynamodb";
 import { RequestsValidationService } from "../../services/Requests/RequestsValidationService";
 import { RequestsAuditService } from "../../services/Requests/RequestsAuditService";
 import { RequestsEventService } from "../../services/Requests/RequestsEventService";
 import { RequestsRateLimitService } from "../../services/Requests/RequestsRateLimitService";
 import { assertLifecycleTransition, assertDraft } from "../../../domain/rules/EnvelopeLifecycle.rules";
-import { assertReadyToSend, assertInvitePolicy } from "../../../domain/rules/Flow.rules";
+import { assertInvitePolicy } from "../../../domain/rules/Flow.rules";
 import { assertCancelDeclineAllowed, assertReasonValid } from "../../../domain/rules/CancelDecline.rules";
 
 // Helper function types
@@ -118,13 +118,19 @@ async function executeInputValidations(
 ): Promise<void> {
   switch (operation) {
     case "InviteParties":
-      await (validationService as any).validateEnvelopeHasInputs(command.envelopeId);
+      if (command.inputs) {
+        (validationService as any).validateEnvelopeHasInputs(command.inputs);
+      }
       break;
     case "FinaliseEnvelope":
-      await (validationService as any).validateRequiredInputsComplete(command.envelopeId);
+      if (command.inputs) {
+        (validationService as any).validateRequiredInputsComplete(command.inputs);
+      }
       break;
     case "RequestSignature":
-      await (validationService as any).validatePartyHasAssignedInputs(command.envelopeId, command.partyId);
+      if (command.inputs) {
+        (validationService as any).validatePartyHasAssignedInputs(command.partyId, command.inputs);
+      }
       break;
     // Add more cases as needed
   }
@@ -450,19 +456,21 @@ async function updateEnvelopeStatusIfNeeded(
   envelopeId: EnvelopeId,
   envelopesRepo: Repository<Envelope, EnvelopeId, undefined>,
   partiesRepo?: Repository<Party, PartyKey, undefined>,
-  inputsRepo?: Repository<Input, InputKey, undefined>
+  // inputsRepo?: Repository<Input, InputKey, undefined> // Moved to Documents Service
 ): Promise<boolean> {
   if (invitedCount > 0 && envelope.status === ENVELOPE_STATUSES[0]) {
     try {
       // Validate envelope is ready to send using domain rules
-      if (partiesRepo && inputsRepo) {
+      if (partiesRepo) {
         const parties = partiesRepo.query ? await partiesRepo.query({ 
           where: { envelopeId } 
         }) : [];
-        const inputs = inputsRepo.query ? await inputsRepo.query({ 
-          where: { envelopeId } 
-        }) : [];
-        assertReadyToSend(parties, inputs);
+        // Note: inputs validation is now handled in the invite command itself
+        // This automatic status update only validates parties
+        const hasSigner = parties.some((p) => p.role === "signer");
+        if (!hasSigner) {
+          throw new BadRequestError("At least one signer is required");
+        }
       }
       
       assertLifecycleTransition(envelope.status, ENVELOPE_STATUSES[1]);
@@ -558,7 +566,7 @@ interface RequestsCommandsPortConfig {
   repositories: {
     envelopes: Repository<Envelope, EnvelopeId, undefined>;
     parties: Repository<Party, PartyKey, undefined>;
-    inputs: Repository<Input, InputKey, undefined>;
+    // inputs: Repository<Input, InputKey, undefined>; // Moved to Documents Service
     invitationTokens: InvitationTokenRepositoryDdb;
   };
   services?: {
@@ -580,7 +588,7 @@ interface RequestsCommandsPortConfig {
  */
 export function makeRequestsCommandsPort(config: RequestsCommandsPortConfig): RequestsCommandsPort {
   const {
-    repositories: { envelopes: envelopesRepo, parties: partiesRepo, inputs: _inputsRepo, invitationTokens: invitationTokensRepo },
+    repositories: { envelopes: envelopesRepo, parties: partiesRepo, invitationTokens: invitationTokensRepo },
     services: { 
       validation: validationService, 
       audit: auditService, 
@@ -611,6 +619,35 @@ export function makeRequestsCommandsPort(config: RequestsCommandsPortConfig): Re
         );
       }
       
+      // Validate inputs information from Documents Service
+      if (!command.inputs.hasInputs) {
+        throw new BadRequestError("Cannot invite parties: envelope has no inputs");
+      }
+      
+      if (command.inputs.signatureInputs === 0) {
+        throw new BadRequestError("Cannot invite parties: envelope has no signature inputs");
+      }
+      
+      // Validate that invited parties are assigned to sign
+      // Get the actual emails of the invited parties from the database
+      const invitedParties = await Promise.all(
+        command.partyIds.map(partyId => 
+          partiesRepo.getById({ envelopeId: command.envelopeId, partyId })
+        )
+      );
+      
+      const invitedEmails = invitedParties
+        .filter(party => party !== null)
+        .map(party => party!.email);
+      
+      const hasAssignedSigners = invitedEmails.some(email => 
+        command.inputs.assignedSigners.includes(email)
+      );
+      
+      if (!hasAssignedSigners) {
+        throw new BadRequestError("Cannot invite parties: none of the invited parties are assigned to sign");
+      }
+      
       // Validate envelope is in draft state using domain rules
       assertDraft(envelope);
 
@@ -627,7 +664,7 @@ export function makeRequestsCommandsPort(config: RequestsCommandsPortConfig): Re
       const { invited, alreadyPending, skipped, tokens } = await processPartyInvitations(command, partiesRepo, invitationTokensRepo, ids);
 
       // Update envelope status if needed
-      const statusChanged = await updateEnvelopeStatusIfNeeded(envelope, invited.length, command.envelopeId, envelopesRepo, partiesRepo, _inputsRepo);
+      const statusChanged = await updateEnvelopeStatusIfNeeded(envelope, invited.length, command.envelopeId, envelopesRepo, partiesRepo);
 
       const result: InvitePartiesResult = {
         invited,

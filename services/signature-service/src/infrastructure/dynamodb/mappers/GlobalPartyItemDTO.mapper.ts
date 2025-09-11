@@ -6,7 +6,7 @@
 
 import type { GlobalPartyItemDTO } from "../../../presentation/schemas/global-parties/GlobalPartyItemDTO.schema";
 import type { GlobalPartyExtended } from "../../../domain/types/global-parties/GlobalPartiesTypes";
-import { PartyId } from "@/domain";
+import { PartyId } from "../../../domain/value-objects";
 
 /**
  * @summary Maps DynamoDB DTO to domain row

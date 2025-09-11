@@ -13,7 +13,7 @@ import type { EnvelopesEventService } from "../../services/envelopes/EnvelopesEv
 import type { SignatureServiceConfig } from "../../../core/Config";
 import type { EnvelopeStatus } from "@/domain/value-objects/index";
 import type { PartyRepositoryDdb } from "../../../infrastructure/dynamodb/PartyRepositoryDdb";
-import type { InputRepositoryDdb } from "../../../infrastructure/dynamodb/InputRepositoryDdb";
+// import type { InputRepositoryDdb } from "../../../infrastructure/dynamodb/InputRepositoryDdb"; // Moved to Documents Service
 import { nowIso } from "@lawprotect/shared-ts";
 import { ENVELOPE_STATUSES } from "@/domain/values/enums";
 import type { EnvelopeId, UserId } from "@/domain/value-objects/ids";
@@ -35,7 +35,7 @@ interface EnvelopesCommandsPortConfig {
   ids: { ulid(): string };
   config: SignatureServiceConfig;
   partiesRepo: PartyRepositoryDdb;
-  inputsRepo: InputRepositoryDdb;
+  // inputsRepo: InputRepositoryDdb; // Moved to Documents Service
   validationService?: EnvelopesValidationService;
   auditService?: EnvelopesAuditService;
   eventService?: EnvelopesEventService;
@@ -55,7 +55,7 @@ export function makeEnvelopesCommandsPort(
     ids,
     config: _config,
     partiesRepo,
-    inputsRepo,
+    // inputsRepo, // Moved to Documents Service
     validationService,
     auditService,
     eventService,
@@ -74,14 +74,13 @@ export function makeEnvelopesCommandsPort(
       
       // If transitioning to "sent", validate envelope is ready
       if (command.status === "sent") {
-        // Get actual parties and inputs for validation
+        // Get actual parties for validation
         const parties = await partiesRepo.listByEnvelope({
           envelopeId: command.envelopeId
         });
-        const inputs = await inputsRepo.listByEnvelope({ 
-          envelopeId: command.envelopeId 
-        });
-        assertReadyToSend(parties.items, inputs.items);
+        // Use hasInputs from command (provided by frontend from Documents Service)
+        const hasInputs = command.hasInputs ?? false;
+        assertReadyToSend(parties.items, hasInputs);
         
         // Apply rate limiting for envelope sending
         if (rateLimitService) {

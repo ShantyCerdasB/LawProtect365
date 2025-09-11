@@ -6,6 +6,9 @@ export const CompleteSigningBody = z
   .object({
     envelopeId: UuidV4,
     signerId: UuidV4,
+    
+    /** URL of the final PDF from Documents Service (with embedded fields and signatures) */
+    finalPdfUrl: z.string().url(),
 
     digest: z.object({
       alg: z.enum(HASH_ALGORITHM),

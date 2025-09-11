@@ -26,6 +26,12 @@ module.exports = {
   /** Test timeout for integration tests with DynamoDB Local */
   testTimeout: 60000,
 
+  /** Run tests in parallel with unique data isolation */
+  maxWorkers: '50%', // Use 50% of CPU cores for parallel execution
+
+  /** Ignore disabled tests */
+  testPathIgnorePatterns: ["<rootDir>/__tests__/integration/disabled/"],
+
   /**
    * Extend base moduleNameMapper with service-specific aliases.
    * Uses @/ as base alias for all service directories.

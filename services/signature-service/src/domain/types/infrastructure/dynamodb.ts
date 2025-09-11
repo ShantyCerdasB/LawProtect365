@@ -130,8 +130,6 @@ export interface DdbItemWithAudit extends DdbItem {
   readonly updatedBy?: string;
 }
 
-// DdbItemWithTenant interface removed - no longer needed
-
 /**
  * @summary Complete DynamoDB item with all common fields
  * @description Combines all common DynamoDB item interfaces
@@ -161,34 +159,16 @@ export interface DdbPartyItem extends DdbItem, DdbItemWithAudit {
   readonly invitedAt?: string;
   /** When the party signed (optional) */
   readonly signedAt?: string;
+  /** Optional signature data (base64 encoded) */
+  readonly signature?: string;
+  /** Optional digest of the signed document */
+  readonly digest?: string;
+  /** Optional signing algorithm used */
+  readonly algorithm?: string;
+  /** Optional KMS key ID used for signing */
+  readonly keyId?: string;
   /** Sequence number for signing order */
   readonly sequence: number;
-}
-
-/**
- * @summary DynamoDB Document item structure
- * @description Specific DynamoDB item structure for Document entities
- * in the single-table design pattern.
- */
-export interface DdbDocumentItem extends DdbItem, DdbItemWithAudit {
-  /** Document identifier */
-  readonly documentId: string;
-  /** Associated envelope identifier */
-  readonly envelopeId: string;
-  /** Document name */
-  readonly name: string;
-  /** Document status */
-  readonly status: string;
-  /** Document file size in bytes */
-  readonly size: number;
-  /** Document content type */
-  readonly contentType: string;
-  /** S3 object reference */
-  readonly s3Key: string;
-  /** Document page count */
-  readonly pageCount?: number;
-  /** Document hash for integrity */
-  readonly hash?: string;
 }
 
 /**
@@ -361,6 +341,11 @@ export const isDdbPartyItem = (v: unknown): v is DdbPartyItem => {
       typeof o.role === "string" &&
       typeof o.status === "string" &&
       (o.invitedAt === undefined || typeof o.invitedAt === "string") &&
+      (o.signedAt === undefined || typeof o.signedAt === "string") &&
+      (o.signature === undefined || typeof o.signature === "string") &&
+      (o.digest === undefined || typeof o.digest === "string") &&
+      (o.algorithm === undefined || typeof o.algorithm === "string") &&
+      (o.keyId === undefined || typeof o.keyId === "string") &&
       typeof o.sequence === "number" &&
       typeof o.createdAt === "string" &&
       typeof o.updatedAt === "string"
@@ -383,6 +368,10 @@ export const toPartyItem = (src: Party): DdbPartyItem => ({
 
   invitedAt: src.invitedAt,
   ...(src.signedAt !== undefined ? { signedAt: src.signedAt } : {}),
+  ...(src.signature !== undefined ? { signature: src.signature } : {}),
+  ...(src.digest !== undefined ? { digest: src.digest } : {}),
+  ...(src.algorithm !== undefined ? { algorithm: src.algorithm } : {}),
+  ...(src.keyId !== undefined ? { keyId: src.keyId } : {}),
 
   sequence: src.sequence,
 
@@ -411,6 +400,10 @@ export const fromPartyItem = (item: unknown): Party => {
 
     invitedAt: item.invitedAt,
     signedAt: item.signedAt,
+    signature: item.signature,
+    digest: item.digest,
+    algorithm: item.algorithm,
+    keyId: item.keyId,
 
     sequence: item.sequence,
 
@@ -744,4 +737,3 @@ export const invitationTokenItemMapper: Mapper<InvitationToken, DdbInvitationTok
   toDTO: toInvitationTokenItem,
   fromDTO: fromInvitationTokenItem
 };
-

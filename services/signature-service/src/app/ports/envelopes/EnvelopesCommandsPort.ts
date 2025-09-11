@@ -25,6 +25,8 @@ interface BaseEnvelopeUpdate {
   readonly status?: EnvelopeStatus;
   readonly parties?: string[];
   readonly documents?: string[];
+  /** Whether the envelope has inputs (from Documents Service) */
+  readonly hasInputs?: boolean;
 }
 
 /**

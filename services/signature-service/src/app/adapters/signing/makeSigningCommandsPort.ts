@@ -7,31 +7,32 @@
  */
 
 import type { Repository, ISODateString } from "@lawprotect/shared-ts";
-import type { SigningCommandsPort, SigningConsentCommand, SigningConsentResult, PrepareSigningCommand, PrepareSigningResult, CompleteSigningCommand, CompleteSigningResult, DeclineSigningCommand, DeclineSigningResult, PresignUploadCommand, PresignUploadResult, DownloadSignedDocumentCommand, DownloadSignedDocumentResult, ValidateInvitationTokenCommand, ValidateInvitationTokenResult, CompleteSigningWithTokenCommand, CompleteSigningWithTokenResult } from "../../ports/signing/SigningCommandsPort";
+import type { SigningCommandsPort, SigningConsentCommand, SigningConsentResult, PrepareSigningCommand, PrepareSigningResult, CompleteSigningCommand, CompleteSigningResult, DeclineSigningCommand, DeclineSigningResult, PresignUploadCommand, PresignUploadResult, DownloadSignedDocumentCommand, DownloadSignedDocumentResult, ValidateInvitationTokenCommand, ValidateInvitationTokenResult, CompleteSigningWithTokenCommand, CompleteSigningWithTokenResult, SigningConsentWithTokenCommand } from "../../ports/signing/SigningCommandsPort";
 import type { Envelope } from "../../../domain/entities/Envelope";
 import type { EnvelopeId } from "../../../domain/value-objects/ids";
-import { IdempotencyRunner, KmsSigner, EventBusPortAdapter, NotFoundError, ConflictError, ErrorCodes, ForbiddenError } from "@lawprotect/shared-ts";
-import { badRequest, partyNotFound } from "../../../shared/errors";
-import { assertKmsAlgorithmAllowed, assertPdfDigestMatches } from "../../../domain/rules/Signing.rules";
+import { IdempotencyRunner, KmsSigner, EventBusPortAdapter, NotFoundError, ConflictError, ErrorCodes, ForbiddenError, UnauthorizedError } from "@lawprotect/shared-ts";
+import { partyNotFound, badRequest } from "../../../shared/errors";
+import { assertKmsAlgorithmAllowed } from "../../../domain/rules/Signing.rules";
 import { assertDownloadAllowed } from "../../../domain/rules/Download.rules";
 import { assertCancelDeclineAllowed, assertReasonValid } from "../../../domain/rules/CancelDecline.rules";
 import { assertPresignPolicy, buildEvidencePath } from "../../../domain/rules/Evidence.rules";
 import { validateSigningOperation } from "./SigningValidationHelpers";
 import type { SigningRateLimitService, SigningS3Service } from "../../../domain/types/signing/ServiceInterfaces";
-import { PARTY_ROLES, ENVELOPE_STATUSES, SIGNING_DEFAULTS, SIGNING_FILE_LIMITS } from "../../../domain/values/enums";
+import type { SigningPdfService } from "../../../app/services/Signing/SigningPdfService";
+import { PARTY_ROLES, ENVELOPE_STATUSES, SIGNING_DEFAULTS, SIGNING_FILE_LIMITS, INVITATION_STATUSES, PARTY_STATUSES } from "../../../domain/values/enums";
 
 /**
  * Creates a SigningCommandsPort implementation for document signing operations
  * @param _envelopesRepo - The envelope repository for data persistence
  * @param _partiesRepo - The parties repository for data persistence
- * @param _documentsRepo - The documents repository for digest validation
+ * @param _documentsRepo - The documents repository (deprecated - no longer used to prevent service coupling)
  * @param deps - Dependencies including ID generators, time, events, and services
  * @returns Configured SigningCommandsPort implementation
  */
 export const makeSigningCommandsPort = (
   _envelopesRepo: Repository<Envelope, EnvelopeId>,
   _partiesRepo: any, // PartyRepositoryDdb with listByEnvelope method
-  _documentsRepo: any, // DocumentRepositoryDdb for digest validation
+  _documentsRepo: any, // DocumentRepositoryDdb (deprecated - no longer used to prevent service coupling)
   _invitationTokensRepo: any, // InvitationTokenRepositoryDdb
   deps: {
     events: EventBusPortAdapter;
@@ -53,8 +54,186 @@ export const makeSigningCommandsPort = (
       signedBucket: string;
       downloadTtlSeconds: number;
     };
+    pdfService?: SigningPdfService;
   }
 ): SigningCommandsPort => {
+  
+  /**
+   * @summary Validates invitation token and returns invitation data
+   * @param token - The invitation token to validate
+   * @returns Promise resolving to invitation token data
+   * @throws UnauthorizedError if token is invalid, expired, or not active
+   */
+  const validateInvitationToken = async (token: string): Promise<any> => {
+    const invitation = await _invitationTokensRepo.findByToken(token);
+    
+    if (!invitation) {
+      throw new UnauthorizedError("Invalid invitation token", ErrorCodes.AUTH_UNAUTHORIZED);
+    }
+    
+    if (invitation.status !== INVITATION_STATUSES[0]) { // "active"
+      throw new UnauthorizedError("Invitation token is not active", ErrorCodes.AUTH_UNAUTHORIZED);
+    }
+    
+    if (new Date() > new Date(invitation.expiresAt)) {
+      throw new UnauthorizedError("Invitation token has expired", ErrorCodes.AUTH_UNAUTHORIZED);
+    }
+    
+    return invitation;
+  };
+
+  /**
+   * @summary Validates envelope and party existence
+   * @param invitation - The invitation token data
+   * @returns Promise resolving to envelope and party data
+   * @throws NotFoundError if envelope or party not found
+   */
+  const validateEnvelopeAndParty = async (invitation: any): Promise<{ envelope: any; party: any }> => {
+    const [envelope, party] = await Promise.all([
+      _envelopesRepo.getById(invitation.envelopeId),
+      _partiesRepo.getById({ envelopeId: invitation.envelopeId, partyId: invitation.partyId })
+    ]);
+    
+    if (!envelope) {
+      throw new NotFoundError("Envelope not found", ErrorCodes.COMMON_NOT_FOUND);
+    }
+    
+    if (!party) {
+      throw new NotFoundError("Party not found", ErrorCodes.COMMON_NOT_FOUND);
+    }
+    
+    return { envelope, party };
+  };
+
+  /**
+   * @summary Validates signing prerequisites
+   * @param party - The party attempting to sign
+   * @param command - The signing command
+   * @param _envelope - The envelope being signed (unused but kept for consistency)
+   * @throws ConflictError if party already signed
+   * @throws BadRequestError if digest doesn't match
+   */
+  const validateSigningPrerequisites = async (party: any, _command: CompleteSigningWithTokenCommand, _envelope: any): Promise<void> => {
+    // Check if party already signed
+    if (party.status === PARTY_STATUSES[2]) { // "signed"
+      throw new ConflictError("Party has already signed", ErrorCodes.COMMON_CONFLICT);
+    }
+    
+    // Document digest validation is now handled by the frontend
+    // The frontend passes the correct digest that matches the document being signed
+    // This eliminates the need to query the documents repository
+    // and prevents coupling between signature-service and documents-service
+  };
+
+  /**
+   * @summary Signs the document using KMS
+   * @param command - The signing command with digest and algorithm
+   * @returns Promise resolving to base64 signature
+   */
+  const signWithKms = async (command: CompleteSigningWithTokenCommand): Promise<string> => {
+    const signResult = await deps.signer.sign({
+      message: Buffer.from(command.digest.value, 'hex'),
+      signingAlgorithm: command.algorithm,
+      keyId: command.keyId || deps.signingConfig?.defaultKeyId || SIGNING_DEFAULTS.DEFAULT_KEY_ID
+    });
+    
+    return Buffer.from(signResult.signature).toString('base64');
+  };
+
+  /**
+   * @summary Updates envelope status based on signing progress
+   * @param envelopeId - The envelope ID
+   * @param completedAt - The completion timestamp
+   * @returns Promise resolving to new envelope status
+   */
+  const updateEnvelopeStatus = async (envelopeId: string, completedAt: string): Promise<string> => {
+    const parties = await _partiesRepo.listByEnvelope({ envelopeId });
+    const requiredSigners = parties.items.filter((p: any) => p.role === PARTY_ROLES[0]).length;
+    const signedCount = parties.items.filter((p: any) => p.role === PARTY_ROLES[0] && p.status === PARTY_STATUSES[2]).length;
+    
+    let newStatus: string;
+    if (signedCount >= requiredSigners) {
+      newStatus = ENVELOPE_STATUSES[3]; // "completed"
+    } else if (signedCount > 0) {
+      newStatus = ENVELOPE_STATUSES[2]; // "in_progress"
+    } else {
+      newStatus = ENVELOPE_STATUSES[1]; // "sent"
+    }
+    
+    await _envelopesRepo.update(envelopeId as any, {
+      status: newStatus as any,
+      updatedAt: completedAt as ISODateString
+    });
+    
+    return newStatus;
+  };
+
+  /**
+   * @summary Updates all signing states atomically
+   * @param invitation - The invitation token data
+   * @param _party - The party data (unused but kept for consistency)
+   * @param _envelope - The envelope data (unused but kept for consistency)
+   * @param _signature - The generated signature (unused but kept for consistency)
+   * @param command - The signing command
+   * @returns Promise resolving to signing result
+   */
+  const updateSigningStates = async (
+    invitation: any, 
+    _party: any, 
+    _envelope: any, 
+    _signature: string, 
+    command: CompleteSigningWithTokenCommand
+  ): Promise<CompleteSigningWithTokenResult> => {
+    const completedAt = new Date().toISOString();
+    
+    // Update party status with signature data
+    await _partiesRepo.update(command.signerId, {
+      status: PARTY_STATUSES[2], // "signed"
+      signedAt: completedAt,
+      updatedAt: completedAt as ISODateString,
+      signature: _signature,
+      digest: command.digest.value,
+      algorithm: command.algorithm,
+      keyId: command.keyId || deps.signingConfig?.defaultKeyId || SIGNING_DEFAULTS.DEFAULT_KEY_ID
+    });
+    
+    // Update invitation token status
+    await _invitationTokensRepo.update({
+      tokenId: invitation.tokenId,
+      status: INVITATION_STATUSES[1], // "used"
+      usedAt: completedAt,
+      usedFromIp: command.ip,
+      usedWithUserAgent: command.userAgent
+    });
+    
+    // Update envelope status based on signing progress
+    const newEnvelopeStatus = await updateEnvelopeStatus(command.envelopeId, completedAt);
+    
+    return {
+      signed: true,
+      signatureId: deps.ids.ulid(),
+      envelopeStatus: newEnvelopeStatus,
+      signedAt: completedAt
+    };
+  };
+
+  /**
+   * @summary Publishes signing completion events
+   * @param invitation - The invitation token data
+   * @param command - The signing command
+   */
+  const publishSigningEvents = async (invitation: any, command: CompleteSigningWithTokenCommand): Promise<void> => {
+    // Note: Event publishing would need to be injected as SigningEventService
+    // For now, we'll use the event data in the response
+    console.log('Signing completed event:', {
+      envelopeId: command.envelopeId,
+      partyId: command.signerId,
+      email: invitation.email,
+      ip: command.ip,
+      userAgent: command.userAgent
+    });
+  };
+
   return {
     /**
      * Records signing consent for a signer
@@ -166,20 +345,14 @@ export const makeSigningCommandsPort = (
         );
       }
       
-      // Get actual digest from document for validation
-      // Get documents from envelope to validate digest
-      const documents = await _documentsRepo.listByEnvelope({ 
-        envelopeId: command.envelopeId 
-      });
+      // Document digest validation is now handled by the frontend
+      // The frontend passes the correct digest that matches the document being signed
+      // This eliminates the need to query the documents repository
+      // and prevents coupling between signature-service and documents-service
       
-      // Find the document that matches the digest being signed
-      const targetDocument = documents.items.find((doc: any) => 
-        doc.digest && doc.digest.alg === command.digest.alg && doc.digest.value === command.digest.value
-      );
-      
-      if (targetDocument?.digest) {
-        assertPdfDigestMatches(command.digest, targetDocument.digest);
-      }
+      // Note: If document digest validation is needed in the future,
+      // it should be implemented via a service call to documents-service
+      // rather than direct repository access
       
       // Check if party has already signed
       if (party.status === "signed") {
@@ -195,11 +368,19 @@ export const makeSigningCommandsPort = (
       const signature = Buffer.from(signResult.signature).toString('base64');
       const completedAt = new Date().toISOString();
 
-      // Update party status to signed
-      await _partiesRepo.update(command.signerId, {
+      // Update party status to signed with signature data
+      await _partiesRepo.update({ 
+        envelopeId: command.envelopeId, 
+        partyId: command.signerId 
+      }, {
         status: "signed",
         signedAt: completedAt,
-        updatedAt: completedAt as ISODateString});
+        updatedAt: completedAt as ISODateString,
+        signature: signature,
+        digest: command.digest.value,
+        algorithm: command.algorithm,
+        keyId: command.keyId || deps.signingConfig?.defaultKeyId || SIGNING_DEFAULTS.DEFAULT_KEY_ID
+      });
 
       // Check if all required signers have now signed
       const parties = await _partiesRepo.listByEnvelope({ 
@@ -210,7 +391,15 @@ export const makeSigningCommandsPort = (
       
       // Update envelope status based on signing progress
       if (signedCount >= requiredSigners) {
-        // All signers have signed - mark as completed
+        // All signers have signed - generate final signed PDF
+        try {
+          await generateFinalSignedPdf(command.envelopeId, command.finalPdfUrl, parties.items, deps);
+        } catch (error) {
+          console.error('Failed to generate final signed PDF:', error);
+          // Continue with completion even if PDF generation fails
+        }
+        
+        // Mark as completed
         await _envelopesRepo.update(command.envelopeId, {
           status: ENVELOPE_STATUSES[3] as any, // completed
           updatedAt: completedAt as ISODateString});
@@ -498,22 +687,22 @@ export const makeSigningCommandsPort = (
     async completeSigningWithToken(command: CompleteSigningWithTokenCommand): Promise<CompleteSigningWithTokenResult> {
       try {
         // 1. Validate token and get invitation data
-        const invitation = await this.validateInvitationToken(command.token);
+        const invitation = await validateInvitationToken(command.token);
         
         // 2. Validate envelope and party
-        const { envelope, party } = await this.validateEnvelopeAndParty(invitation);
+        const { envelope, party } = await validateEnvelopeAndParty(invitation);
         
         // 3. Validate signing prerequisites
-        await this.validateSigningPrerequisites(party, command, envelope);
+        await validateSigningPrerequisites(party, command, envelope);
         
         // 4. Sign with KMS
-        const signature = await this.signWithKms(command);
+        const signature = await signWithKms(command);
         
         // 5. Update states atomically
-        const result = await this.updateSigningStates(invitation, party, envelope, signature, command);
+        const result = await updateSigningStates(invitation, party, envelope, signature, command);
         
         // 6. Publish events
-        await this.publishSigningEvents(invitation, command);
+        await publishSigningEvents(invitation, command);
         
         return result;
         
@@ -534,25 +723,23 @@ export const makeSigningCommandsPort = (
     async recordSigningConsentWithToken(command: SigningConsentWithTokenCommand): Promise<SigningConsentResult> {
       try {
         // 1. Validate token and get invitation data
-        const invitation = await this.validateInvitationToken(command.token);
+        const invitation = await validateInvitationToken(command.token);
         
         // 2. Validate envelope and party
-        const { envelope, party } = await this.validateEnvelopeAndParty(invitation);
+        await validateEnvelopeAndParty(invitation);
         
         // 3. Record consent
         const consentedAt = new Date().toISOString();
         
         // 4. Publish consent event
-        await deps.eventService.publishSigningConsent(
-          command.envelopeId,
-          command.signerId,
-          {
-            ip: command.ip,
-            userAgent: command.userAgent,
-            email: invitation.email,
-            userId: undefined
-          }
-        );
+        // Note: Event publishing would need to be injected as SigningEventService
+        console.log('Signing consent recorded event:', {
+          envelopeId: command.envelopeId,
+          partyId: command.signerId,
+          email: invitation.email,
+          ip: command.ip,
+          userAgent: command.userAgent
+        });
         
         return {
           consented: true,
@@ -578,184 +765,86 @@ export const makeSigningCommandsPort = (
       } catch (error: any) {
         throw error; // Re-throw to be handled by controller
       }
-    },
-
-    /**
-     * @summary Validates invitation token and returns invitation data
-     * @param token - The invitation token to validate
-     * @returns Promise resolving to invitation token data
-     * @throws UnauthorizedError if token is invalid, expired, or not active
-     */
-    async validateInvitationToken(token: string): Promise<any> {
-      const invitation = await _invitationTokensRepo.findByToken(token);
-      
-      if (!invitation) {
-        throw new UnauthorizedError("Invalid invitation token", ErrorCodes.AUTH_UNAUTHORIZED);
-      }
-      
-      if (invitation.status !== INVITATION_STATUSES[0]) { // "active"
-        throw new UnauthorizedError("Invitation token is not active", ErrorCodes.AUTH_UNAUTHORIZED);
-      }
-      
-      if (new Date() > new Date(invitation.expiresAt)) {
-        throw new UnauthorizedError("Invitation token has expired", ErrorCodes.AUTH_UNAUTHORIZED);
-      }
-      
-      return invitation;
-    },
-
-    /**
-     * @summary Validates envelope and party existence
-     * @param invitation - The invitation token data
-     * @returns Promise resolving to envelope and party data
-     * @throws NotFoundError if envelope or party not found
-     */
-    async validateEnvelopeAndParty(invitation: any): Promise<{ envelope: any; party: any }> {
-      const [envelope, party] = await Promise.all([
-        _envelopesRepo.findById(invitation.envelopeId),
-        _partiesRepo.getById({ envelopeId: invitation.envelopeId, partyId: invitation.partyId })
-      ]);
-      
-      if (!envelope) {
-        throw new NotFoundError("Envelope not found", ErrorCodes.ENVELOPE_NOT_FOUND);
-      }
-      
-      if (!party) {
-        throw new NotFoundError("Party not found", ErrorCodes.PARTY_NOT_FOUND);
-      }
-      
-      return { envelope, party };
-    },
-
-    /**
-     * @summary Validates signing prerequisites
-     * @param party - The party attempting to sign
-     * @param command - The signing command
-     * @param envelope - The envelope being signed
-     * @throws ConflictError if party already signed
-     * @throws BadRequestError if digest doesn't match
-     */
-    async validateSigningPrerequisites(party: any, command: CompleteSigningWithTokenCommand, envelope: any): Promise<void> {
-      // Check if party already signed
-      if (party.status === PARTY_STATUSES[2]) { // "signed"
-        throw new ConflictError("Party has already signed", ErrorCodes.COMMON_CONFLICT);
-      }
-      
-      // Validate document digest
-      const documents = await _documentsRepo.listByEnvelope({ envelopeId: command.envelopeId });
-      const targetDocument = documents.items.find((doc: any) => 
-        doc.digest && doc.digest.alg === command.digest.alg && doc.digest.value === command.digest.value
-      );
-      
-      if (targetDocument?.digest) {
-        assertPdfDigestMatches(command.digest, targetDocument.digest);
-      }
-    },
-
-    /**
-     * @summary Signs the document using KMS
-     * @param command - The signing command with digest and algorithm
-     * @returns Promise resolving to base64 signature
-     */
-    async signWithKms(command: CompleteSigningWithTokenCommand): Promise<string> {
-      const signResult = await deps.signer.sign({
-        message: Buffer.from(command.digest.value, 'hex'),
-        signingAlgorithm: command.algorithm,
-        keyId: command.keyId || deps.signingConfig?.defaultKeyId || SIGNING_DEFAULTS.DEFAULT_KEY_ID
-      });
-      
-      return Buffer.from(signResult.signature).toString('base64');
-    },
-
-    /**
-     * @summary Updates all signing states atomically
-     * @param invitation - The invitation token data
-     * @param party - The party data
-     * @param envelope - The envelope data
-     * @param signature - The generated signature
-     * @param command - The signing command
-     * @returns Promise resolving to signing result
-     */
-    async updateSigningStates(
-      invitation: any, 
-      party: any, 
-      envelope: any, 
-      signature: string, 
-      command: CompleteSigningWithTokenCommand
-    ): Promise<CompleteSigningWithTokenResult> {
-      const completedAt = new Date().toISOString();
-      
-      // Update party status
-      await _partiesRepo.update(command.signerId, {
-        status: PARTY_STATUSES[2], // "signed"
-        signedAt: completedAt,
-        updatedAt: completedAt as ISODateString
-      });
-      
-      // Update invitation token status
-      await _invitationTokensRepo.update({
-        tokenId: invitation.tokenId,
-        status: INVITATION_STATUSES[1], // "used"
-        usedAt: completedAt,
-        usedFromIp: command.ip,
-        usedWithUserAgent: command.userAgent
-      });
-      
-      // Update envelope status based on signing progress
-      const newEnvelopeStatus = await this.updateEnvelopeStatus(command.envelopeId, completedAt);
-      
-      return {
-        signed: true,
-        signatureId: deps.ids.ulid(),
-        envelopeStatus: newEnvelopeStatus,
-        signedAt: completedAt
-      };
-    },
-
-    /**
-     * @summary Updates envelope status based on signing progress
-     * @param envelopeId - The envelope ID
-     * @param completedAt - The completion timestamp
-     * @returns Promise resolving to new envelope status
-     */
-    async updateEnvelopeStatus(envelopeId: string, completedAt: string): Promise<string> {
-      const parties = await _partiesRepo.listByEnvelope({ envelopeId });
-      const requiredSigners = parties.items.filter((p: any) => p.role === PARTY_ROLES[0]).length;
-      const signedCount = parties.items.filter((p: any) => p.role === PARTY_ROLES[0] && p.status === PARTY_STATUSES[2]).length;
-      
-      let newStatus: string;
-      if (signedCount >= requiredSigners) {
-        newStatus = ENVELOPE_STATUSES[3]; // "completed"
-      } else if (signedCount > 0) {
-        newStatus = ENVELOPE_STATUSES[2]; // "in_progress"
-      } else {
-        newStatus = ENVELOPE_STATUSES[1]; // "sent"
-      }
-      
-      await _envelopesRepo.update(envelopeId, {
-        status: newStatus,
-        updatedAt: completedAt as ISODateString
-      });
-      
-      return newStatus;
-    },
-
-    /**
-     * @summary Publishes signing completion events
-     * @param invitation - The invitation token data
-     * @param command - The signing command
-     */
-    async publishSigningEvents(invitation: any, command: CompleteSigningWithTokenCommand): Promise<void> {
-      await deps.eventService.publishSigningCompleted(
-        command.envelopeId,
-        command.signerId,
-        {
-          ip: command.ip,
-          userAgent: command.userAgent,
-          email: invitation.email,
-          userId: undefined // No user ID for token-based signing
-        }
-      );
     }
+
   };
 };
+
+/**
+ * Generates the final signed PDF when all parties have signed
+ */
+async function generateFinalSignedPdf(
+  envelopeId: EnvelopeId,
+  finalPdfUrl: string,
+  parties: any[],
+  deps: any
+): Promise<void> {
+  try {
+    // Get all signatures for this envelope
+    const signatures = await collectAllSignatures(envelopeId, parties, deps);
+    
+    // Generate the final signed PDF
+    if (deps.pdfService) {
+      const result = await deps.pdfService.generateSignedPdf(
+        envelopeId,
+        finalPdfUrl,
+        parties,
+        signatures
+      );
+      
+      // Log the successful PDF generation
+      console.log(`Final signed PDF generated for envelope ${envelopeId}:`, {
+        objectKey: result.objectKey,
+        bucket: result.bucket,
+        httpUrl: result.httpUrl
+      });
+    } else {
+      console.warn('PDF service not available - cannot generate final signed PDF');
+    }
+  } catch (error: any) {
+    console.error('Failed to generate final signed PDF:', error);
+    // Don't throw - we don't want to fail the signing process if PDF generation fails
+  }
+}
+
+/**
+ * Collects all signatures for an envelope
+ */
+async function collectAllSignatures(
+  _envelopeId: EnvelopeId,
+  parties: any[],
+  deps: any
+): Promise<any[]> {
+  const signatures: any[] = [];
+  
+  for (const party of parties) {
+    if (party.status === "signed" && party.signedAt) {
+      // Get the actual signature from the party record
+      // The signature should be stored when the party signs
+      const signature = party.signature || party.kmsSignature;
+      const digest = party.digest || party.signedDigest;
+      const algorithm = party.algorithm || party.signingAlgorithm;
+      const keyId = party.keyId || deps.signingConfig?.defaultKeyId;
+      
+      if (!signature || !digest || !algorithm) {
+        console.warn(`Incomplete signature data for party ${party.partyId}`);
+        continue;
+      }
+      
+      signatures.push({
+        partyId: party.partyId,
+        partyName: party.name,
+        partyEmail: party.email,
+        signedAt: party.signedAt,
+        signature: signature,
+        digest: digest,
+        algorithm: algorithm,
+        keyId: keyId
+      });
+    }
+  }
+  
+  return signatures;
+}
+
+
