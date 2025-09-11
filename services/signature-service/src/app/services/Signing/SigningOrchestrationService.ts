@@ -17,6 +17,7 @@ import { SigningValidationService } from "./SigningValidationService";
 import { SigningEventService } from "./SigningEventService";
 import { SigningAuditService } from "./SigningAuditService";
 import { SigningPdfService } from "./SigningPdfService";
+import { SigningRateLimitService } from "./SigningRateLimitService";
 import { PARTY_ROLES, ENVELOPE_STATUSES, SIGNING_DEFAULTS, INVITATION_STATUSES, PARTY_STATUSES } from "../../../domain/values/enums";
 import type { CompleteSigningWithTokenCommand, CompleteSigningWithTokenResult } from "../../ports/signing/SigningCommandsPort";
 
@@ -37,6 +38,7 @@ export class SigningOrchestrationService {
     private readonly eventService: SigningEventService,
     private readonly auditService: SigningAuditService,
     private readonly pdfService: SigningPdfService,
+    private readonly rateLimitService: SigningRateLimitService,
     private readonly partiesRepo: PartyRepositoryDdb,
     private readonly envelopesRepo: Repository<Envelope, EnvelopeId>,
     private readonly invitationTokensRepo: InvitationTokenRepositoryDdb,
@@ -237,6 +239,16 @@ export class SigningOrchestrationService {
     try {
       const invitation = await this.validationService.validateInvitationTokenWithRepo(command.token, this.invitationTokensRepo);
       const { envelope, party } = await this.validationService.validateEnvelopeAndParty(invitation, this.envelopesRepo, this.partiesRepo);
+      
+      // Rate limiting for token-based signing
+      await this.rateLimitService.checkSigningRateLimit(
+        command.envelopeId,
+        command.signerId
+      );
+      
+      // Validate actor IP (required for signing)
+      this.validationService.validateActorIp({ ip: command.ip });
+      
       await this.validationService.validateSigningPrerequisites(party, command, envelope);
       
       // Sign with KMS

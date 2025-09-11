@@ -13,7 +13,9 @@ import type { Party } from "../../../domain/entities/Party";
 import type { EnvelopeId } from "../../../domain/value-objects/ids";
 import { IdempotencyRunner, KmsSigner, EventBusPortAdapter } from "@lawprotect/shared-ts";
 import { buildEvidencePath } from "../../../domain/rules/Evidence.rules";
-import type { SigningRateLimitService, SigningS3Service } from "../../../domain/types/signing/ServiceInterfaces";
+import { BadRequestError } from "@lawprotect/shared-ts";
+import type { SigningS3Service } from "../../../domain/types/signing/ServiceInterfaces";
+import { SigningRateLimitService } from "../../../app/services/Signing/SigningRateLimitService";
 import type { SigningPdfService } from "../../../app/services/Signing/SigningPdfService";
 import { SigningValidationService } from "../../../app/services/Signing/SigningValidationService";
 import { SigningEventService } from "../../../app/services/Signing/SigningEventService";
@@ -39,7 +41,7 @@ export const makeSigningCommandsPort = (
     events: EventBusPortAdapter;
     ids: { ulid(): string };
     time: { now(): number };
-    rateLimit?: SigningRateLimitService;
+    rateLimit: SigningRateLimitService;
     signer: KmsSigner;
     idempotency: IdempotencyRunner;
     signingConfig?: {
@@ -78,6 +80,9 @@ export const makeSigningCommandsPort = (
        return await deps.idempotency.run(
          `consent-${command.envelopeId}-${command.signerId}`,
          async () => {
+           // Validate actor IP (required for consent)
+           deps.validationService.validateActorIp(command.actor);
+           
            const envelope = await _envelopesRepo.getById(command.envelopeId);
            const party = await _partiesRepo.getById({ 
              envelopeId: command.envelopeId, 
@@ -131,6 +136,12 @@ export const makeSigningCommandsPort = (
      */
     async prepareSigning(command: PrepareSigningCommand): Promise<PrepareSigningResult> {
       
+      // Rate limiting for signing preparation
+      await deps.rateLimit.checkPrepareSigningRateLimit(
+        command.envelopeId,
+        command.signerId
+      );
+      
       // Validate signing operation
       await deps.validationService.validateSigningOperation(
         command,
@@ -165,6 +176,15 @@ export const makeSigningCommandsPort = (
      */
     async completeSigning(command: CompleteSigningCommand): Promise<CompleteSigningResult> {
       
+      // Rate limiting for signing completion
+      await deps.rateLimit.checkSigningRateLimit(
+        command.envelopeId,
+        command.signerId
+      );
+      
+      // Validate actor IP (required for signing)
+      deps.validationService.validateActorIp(command.actor);
+      
       // Validate signing operation
       const { envelope } = await deps.validationService.validateSigningOperation(
         command,
@@ -191,6 +211,11 @@ export const makeSigningCommandsPort = (
       const signature = Buffer.from(signResult.signature).toString('base64');
       const completedAt = new Date().toISOString();
 
+      // Validate signature completeness
+      if (!deps.validationService.validateSignatureCompleteness(signature, command.digest, command.algorithm)) {
+        throw new BadRequestError("Incomplete signature data");
+      }
+
       // Update party status to signed with signature data
       await _partiesRepo.update({ 
         envelopeId: command.envelopeId, 
@@ -204,6 +229,16 @@ export const makeSigningCommandsPort = (
         algorithm: command.algorithm,
         keyId: command.keyId || deps.signingConfig?.defaultKeyId || SIGNING_DEFAULTS.DEFAULT_KEY_ID
       });
+
+      // Get updated party and validate signature data
+      const updatedParty = await _partiesRepo.getById({ 
+        envelopeId: command.envelopeId, 
+        partyId: command.signerId 
+      });
+      
+      if (!deps.validationService.validatePartySignatureData(updatedParty)) {
+        throw new BadRequestError("Invalid party signature data after update");
+      }
 
       // Check if all required signers have now signed
       const parties = await _partiesRepo.listByEnvelope({ 
@@ -381,6 +416,12 @@ export const makeSigningCommandsPort = (
       
        await deps.validationService.validateDownloadSignedDocumentBusinessLogic(command, envelope);
        deps.validationService.validateDownloadOperation(envelope.status);
+       
+       // Validate that envelope is in completed state for PDF download
+       if (envelope.status !== ENVELOPE_STATUSES[3]) { // ENVELOPE_STATUSES[3] = "completed"
+         throw new BadRequestError("Document can only be downloaded when envelope is completed");
+       }
+       
        deps.validationService.validateServiceAvailable(deps.s3Service, "S3 service");
       
       const s3Result = await deps.s3Service!.createPresignedDownloadUrl(
@@ -440,7 +481,7 @@ export const makeSigningCommandsPort = (
       } catch (error) {
         return {
           valid: false,
-          error: "Failed to validate invitation token"
+          error: error instanceof Error ? error.message : "Failed to validate invitation token"
         };
       }
     },

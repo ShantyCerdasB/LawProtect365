@@ -464,6 +464,7 @@ export const getContainer = (): Container => {
     signingEvent,
     signingAudit,
     signingPdf,
+    signingRateLimit,
     parties,
     envelopes,
     invitationTokens,
