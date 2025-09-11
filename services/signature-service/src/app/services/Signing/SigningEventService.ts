@@ -162,6 +162,52 @@ export class SigningEventService extends BaseEventService implements ISigningEve
   }
 
   /**
+   * @summary Publishes a signing progress event for multi-party flows
+   * @description Publishes a signing progress event when someone signs in a multi-party flow
+   * @param progressData - Signing progress data including signer info and remaining signers
+   * @param traceId - Optional trace ID for observability
+   */
+  async publishSigningProgress(
+    progressData: {
+      envelopeId: EnvelopeId;
+      signerId: PartyId;
+      signerName: string;
+      signerEmail: string;
+      remainingSigners: Array<{
+        id: PartyId;
+        name: string;
+        email: string;
+      }>;
+      eventType: string;
+      timestamp: string;
+      consentGiven: boolean;
+      consentTimestamp: string;
+    },
+    traceId?: string
+  ): Promise<void> {
+    await this.publishStandardizedEvent(
+      "signing.progress",
+      {
+        envelopeId: progressData.envelopeId,
+        signerId: progressData.signerId,
+        signerName: progressData.signerName,
+        signerEmail: progressData.signerEmail,
+        remainingSigners: progressData.remainingSigners,
+        totalSigners: progressData.remainingSigners.length + 1, // +1 for the current signer
+        progressPercentage: Math.round((1 / (progressData.remainingSigners.length + 1)) * 100),
+        consentGiven: progressData.consentGiven,
+        consentTimestamp: progressData.consentTimestamp
+      },
+      {
+        email: progressData.signerEmail,
+        ip: "unknown", // IP not available in this context
+        userAgent: "unknown" // User agent not available in this context
+      },
+      traceId
+    );
+  }
+
+  /**
    * @summary Publishes a module-specific domain event
    * @description Implementation of the abstract method from BaseEventService
    * @param event - Module-specific domain event

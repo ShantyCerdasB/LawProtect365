@@ -162,6 +162,25 @@ export interface SigningEventService {
    * Publishes download signed document event
    */
   publishDownloadSignedDocument(envelopeId: EnvelopeId, actor: ActorContext): Promise<void>;
+
+  /**
+   * Publishes signing progress event for multi-party flows
+   */
+  publishSigningProgress(progressData: {
+    envelopeId: EnvelopeId;
+    signerId: PartyId;
+    signerName: string;
+    signerEmail: string;
+    remainingSigners: Array<{
+      id: PartyId;
+      name: string;
+      email: string;
+    }>;
+    eventType: string;
+    timestamp: string;
+    consentGiven: boolean;
+    consentTimestamp: string;
+  }): Promise<void>;
 }
 
 // ============================================================================

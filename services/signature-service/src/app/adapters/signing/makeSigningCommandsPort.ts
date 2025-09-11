@@ -254,7 +254,9 @@ export const makeSigningCommandsPort = (
         signature: signature,
         digest: command.digest.value,
         algorithm: command.algorithm,
-        keyId: signResult.keyId
+        keyId: signResult.keyId,
+        // Store signature context for legal compliance
+        signingContext: signResult.context
       });
 
       // Get updated party and validate signature data
@@ -302,8 +304,28 @@ export const makeSigningCommandsPort = (
         command.actor as any
       );
 
-      // TODO: Implement signing progress events for multi-party flows
-      // This would notify remaining signers when someone signs in a multi-party flow
+      // Publish signing progress event only if there are multiple signers
+      const signers = parties.items.filter((p: Party) => p.role === PARTY_ROLES[0]);
+      const remainingSigners = signers.filter((p: Party) => p.status !== "signed");
+      
+      if (signers.length > 1 && remainingSigners.length > 0) {
+        // Emit progress event for notification service
+        await deps.eventService.publishSigningProgress({
+          envelopeId: command.envelopeId,
+          signerId: command.signerId,
+          signerName: party.name,
+          signerEmail: party.email,
+          remainingSigners: remainingSigners.map(p => ({
+            id: p.partyId,
+            name: p.name,
+            email: p.email
+          })),
+          eventType: 'signing.progress',
+          timestamp: completedAt,
+          consentGiven: true,
+          consentTimestamp: party.invitedAt || completedAt
+        });
+      }
 
       await deps.auditService.logSigningCompleted(
         command.envelopeId,

@@ -6,6 +6,7 @@
 
 import { EnvelopeId, PartyId } from "../value-objects";
 import { PartyRole, PartyStatus, AuthMethod } from "../values/enums";
+import type { SignatureContext } from "../value-objects/security/SignatureContext";
 
 
 /**
@@ -46,6 +47,8 @@ export interface Party {
   readonly algorithm?: string;
   /** Optional KMS key ID used for signing */
   readonly keyId?: string;
+  /** Optional signing context for legal compliance and audit trail */
+  readonly signingContext?: SignatureContext;
   /**
    * Signing sequence number used for ordered flows.
    * Must be a positive integer when the party participates in signing/approval.
