@@ -154,6 +154,7 @@ import {
   SigningCommandService,
   SigningEventService,
   SigningAuditService,
+  SigningOrchestrationService,
   SigningRateLimitService,
   SigningS3Service,
   SigningPdfService
@@ -458,6 +459,22 @@ export const getContainer = (): Container => {
     config.s3.signedBucket
   );
 
+  const signingOrchestration = new SigningOrchestrationService(
+    signingValidation,
+    signingEvent,
+    signingAudit,
+    signingPdf,
+    parties,
+    envelopes,
+    invitationTokens,
+    signer,
+    {
+      defaultKeyId: config.kms.signerKeyId,
+      allowedAlgorithms: [config.kms.signingAlgorithm]
+    },
+    ids
+  );
+
   const signingCommands = makeSigningCommandsPort(
     envelopes,
     parties,
@@ -482,7 +499,8 @@ export const getContainer = (): Container => {
       pdfService: signingPdf,
       validationService: signingValidation,
       eventService: signingEvent,
-      auditService: signingAudit}
+      auditService: signingAudit,
+      orchestrationService: signingOrchestration}
   );
 
   const signingCommand = new SigningCommandService(signingCommands);
