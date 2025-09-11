@@ -7,6 +7,7 @@
 export * from "./SigningAuditService";
 export * from "./SigningCommandService";
 export * from "./SigningEventService";
+export * from "./SigningOrchestrationService";
 export * from "./SigningRateLimitService";
 export * from "./SigningS3Service";
 export * from "./SigningValidationService";
