@@ -20,5 +20,6 @@
   },
 
   // Asegura que TS procese src y tests en este modo
-  "include": ["src", "__tests__"]
+  "include": ["src", "__tests__"],
+  "exclude": ["__tests__/integration/disabled", "__tests__/integration/helpers/cognitoTokenHelper.ts"]
 }

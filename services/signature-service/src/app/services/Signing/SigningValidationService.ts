@@ -16,7 +16,11 @@ import type {
 } from "../../../domain/types/signing";
 import { HashDigestSchema, KmsAlgorithmSchema } from "@/domain/value-objects/index";
 import { assertKmsAlgorithmAllowed } from "../../../domain/rules/Signing.rules";
+import { assertDownloadAllowed } from "../../../domain/rules/Download.rules";
+import { assertCancelDeclineAllowed, assertReasonValid } from "../../../domain/rules/CancelDecline.rules";
+import { assertPresignPolicy } from "../../../domain/rules/Evidence.rules";
 import { badRequest, unprocessable, signatureHashMismatch, kmsPermissionDenied } from "../../../shared/errors";
+import { ForbiddenError, ConflictError, ErrorCodes, UnauthorizedError, NotFoundError, BadRequestError } from "@lawprotect/shared-ts";
 
 /**
  * @summary Validation service for Signing operations
@@ -142,5 +146,301 @@ export class SigningValidationService implements ISigningValidationService {
       throw badRequest("Invitation token is required", "INVITATION_TOKEN_INVALID");
     }
     // IP and UserAgent are optional, no validation needed
+  }
+
+  /**
+   * @summary Validates consent recording business logic
+   * @description Validates ownership, consent status, and envelope state for consent recording
+   * @param command - Signing consent command
+   * @param envelope - Envelope entity
+   * @param party - Party entity
+   * @throws ForbiddenError if actor is not the invited party
+   * @throws ConflictError if consent already given
+   * @throws BadRequestError if envelope is not in valid state
+   */
+  async validateConsent(command: any, envelope: any, party: any): Promise<void> {
+    const actorEmail = command.actorEmail;
+    
+    // Validate ownership - only the invited party can give consent
+    if (actorEmail && party && party.email !== actorEmail) {
+      throw new ForbiddenError(
+        "Unauthorized: Only the invited party can give consent", 
+        ErrorCodes.AUTH_FORBIDDEN,
+        { envelopeId: command.envelopeId, partyId: command.signerId, partyEmail: party.email, actorEmail }
+      );
+    }
+    
+    // Validate consent not already given
+    if (party && party.status === "consented") {
+      throw new ConflictError(
+        "Party has already given consent",
+        ErrorCodes.COMMON_CONFLICT,
+        { envelopeId: command.envelopeId, partyId: command.signerId }
+      );
+    }
+    
+    // Validate envelope state - only draft or sent envelopes can receive consent
+    if (envelope.status !== "draft" && envelope.status !== "sent") {
+      throw badRequest(
+        "Cannot record consent: Envelope is not in a valid state",
+        "ENVELOPE_INVALID_STATE",
+        { envelopeId: command.envelopeId, currentStatus: envelope.status }
+      );
+    }
+  }
+
+  /**
+   * @summary Validates complete signing business logic
+   * @description Validates ownership, consent status, and duplicate signing for complete signing
+   * @param command - Complete signing command
+   * @param envelope - Envelope entity
+   * @param party - Party entity
+   * @throws ForbiddenError if actor is not the invited party or consent not given
+   * @throws ConflictError if party already signed
+   */
+  async validateCompleteSigningBusinessLogic(command: any, _envelope: any, party: any): Promise<void> {
+    const actorEmail = command.actorEmail;
+    
+    // Validate ownership - only the invited party can sign documents
+    if (actorEmail && party.email !== actorEmail) {
+      throw new ForbiddenError(
+        "Unauthorized: Only the invited party can sign documents", 
+        ErrorCodes.AUTH_FORBIDDEN,
+        { envelopeId: command.envelopeId, partyId: command.signerId, partyEmail: party.email, actorEmail }
+      );
+    }
+    
+    // Validate consent - party must have given consent or already signed
+    if (party.status !== "consented" && party.status !== "signed") {
+      throw new ForbiddenError(
+        "Unauthorized: Party has not given consent to sign",
+        ErrorCodes.AUTH_FORBIDDEN,
+        { envelopeId: command.envelopeId, partyId: command.signerId, currentStatus: party.status }
+      );
+    }
+    
+    // Validate no duplicate signing
+    if (party.status === "signed") {
+      throw new ConflictError(
+        "Party has already signed this document",
+        ErrorCodes.COMMON_CONFLICT,
+        { envelopeId: command.envelopeId, partyId: command.signerId }
+      );
+    }
+  }
+
+  /**
+   * @summary Validates download signed document business logic
+   * @description Validates ownership for downloading signed documents
+   * @param command - Download command
+   * @param envelope - Envelope entity
+   * @throws ForbiddenError if actor is not the envelope owner
+   */
+  async validateDownloadSignedDocumentBusinessLogic(command: any, envelope: any): Promise<void> {
+    const actorEmail = command.actorEmail;
+    
+    // Validate ownership - only envelope owner can download signed documents
+    if (actorEmail && envelope.ownerEmail !== actorEmail) {
+      throw new ForbiddenError(
+        "Unauthorized: Only envelope owner can download signed documents", 
+        ErrorCodes.AUTH_FORBIDDEN,
+        { envelopeId: command.envelopeId, ownerEmail: envelope.ownerEmail, actorEmail }
+      );
+    }
+  }
+
+  /**
+   * @summary Validates invitation token and returns invitation data
+   * @param token - The invitation token to validate
+   * @param invitationTokensRepo - Repository for invitation tokens
+   * @returns Promise resolving to invitation token data
+   * @throws UnauthorizedError if token is invalid, expired, or not active
+   */
+  async validateInvitationTokenWithRepo(token: string, invitationTokensRepo: any): Promise<any> {
+    const invitation = await invitationTokensRepo.findByToken(token);
+    
+    if (!invitation) {
+      throw new UnauthorizedError("Invalid invitation token", ErrorCodes.AUTH_UNAUTHORIZED);
+    }
+    
+    if (invitation.status !== "active") {
+      throw new UnauthorizedError("Invitation token is not active", ErrorCodes.AUTH_UNAUTHORIZED);
+    }
+    
+    if (new Date() > new Date(invitation.expiresAt)) {
+      throw new UnauthorizedError("Invitation token has expired", ErrorCodes.AUTH_UNAUTHORIZED);
+    }
+    
+    return invitation;
+  }
+
+  /**
+   * @summary Validates envelope and party existence
+   * @param invitation - The invitation token data
+   * @param envelopesRepo - Repository for envelopes
+   * @param partiesRepo - Repository for parties
+   * @returns Promise resolving to envelope and party data
+   * @throws NotFoundError if envelope or party not found
+   */
+  async validateEnvelopeAndParty(invitation: any, envelopesRepo: any, partiesRepo: any): Promise<{ envelope: any; party: any }> {
+    const [envelope, party] = await Promise.all([
+      envelopesRepo.getById(invitation.envelopeId),
+      partiesRepo.getById({ envelopeId: invitation.envelopeId, partyId: invitation.partyId })
+    ]);
+    
+    if (!envelope) {
+      throw new NotFoundError("Envelope not found", ErrorCodes.COMMON_NOT_FOUND);
+    }
+    
+    if (!party) {
+      throw new NotFoundError("Party not found", ErrorCodes.COMMON_NOT_FOUND);
+    }
+    
+    return { envelope, party };
+  }
+
+  /**
+   * @summary Validates signing prerequisites for token-based signing
+   * @param party - The party attempting to sign
+   * @param command - The signing command
+   * @param envelope - The envelope being signed
+   * @throws ConflictError if party already signed
+   */
+  async validateSigningPrerequisites(party: any, _command: any, _envelope: any): Promise<void> {
+    if (party.status === "signed") {
+      throw new ConflictError("Party has already signed", ErrorCodes.COMMON_CONFLICT);
+    }
+  }
+
+  /**
+   * @summary Validates envelope existence
+   * @param envelope - The envelope to validate
+   * @throws NotFoundError if envelope not found
+   */
+  validateEnvelopeExists(envelope: any): void {
+    if (!envelope) {
+      throw new NotFoundError("Envelope not found", ErrorCodes.COMMON_NOT_FOUND);
+    }
+  }
+
+  /**
+   * @summary Validates party existence
+   * @param party - The party to validate
+   * @param partyId - The party ID for error context
+   * @param envelopeId - The envelope ID for error context
+   * @throws NotFoundError if party not found
+   */
+  validatePartyExists(party: any, partyId: string, envelopeId: string): void {
+    if (!party) {
+      throw new NotFoundError("Party not found", ErrorCodes.COMMON_NOT_FOUND, { partyId, envelopeId });
+    }
+  }
+
+  /**
+   * @summary Validates service availability
+   * @param service - The service to validate
+   * @param serviceName - The service name for error context
+   * @throws BadRequestError if service not available
+   */
+  validateServiceAvailable(service: any, serviceName: string): void {
+    if (!service) {
+      throw new BadRequestError(`${serviceName} not available`, ErrorCodes.COMMON_BAD_REQUEST);
+    }
+  }
+
+  /**
+   * @summary Validates KMS algorithm
+   * @param algorithm - The algorithm to validate
+   * @param allowedAlgorithms - The allowed algorithms list
+   */
+  validateKmsAlgorithm(algorithm: string, allowedAlgorithms?: readonly string[]): void {
+    if (algorithm) {
+      assertKmsAlgorithmAllowed(algorithm, allowedAlgorithms);
+    }
+  }
+
+  /**
+   * @summary Validates decline operation
+   * @param envelopeStatus - The envelope status
+   * @param reason - The decline reason
+   */
+  validateDeclineOperation(envelopeStatus: string, reason: string): void {
+    assertCancelDeclineAllowed(envelopeStatus as any);
+    assertReasonValid(reason);
+  }
+
+  /**
+   * @summary Validates download operation
+   * @param envelopeStatus - The envelope status
+   */
+  validateDownloadOperation(envelopeStatus: string): void {
+    assertDownloadAllowed(envelopeStatus as any);
+  }
+
+  /**
+   * @summary Validates presign policy
+   * @param contentType - The content type
+   * @param fileSize - The file size
+   * @param maxFileSize - The maximum file size
+   */
+  validatePresignPolicy(contentType: string, fileSize: number, maxFileSize: number): void {
+    assertPresignPolicy(contentType, fileSize, maxFileSize);
+  }
+
+  /**
+   * @summary Validates invitation token status
+   * @param invitationToken - The invitation token to validate
+   * @param command - The command with IP and user agent
+   * @returns Validation result with validity and error message
+   */
+  validateInvitationTokenStatus(invitationToken: any, command: any): { valid: boolean; error?: string } {
+    if (!invitationToken) {
+      return { valid: false, error: "Invalid or expired invitation token" };
+    }
+
+    const now = new Date();
+    const expiresAt = new Date(invitationToken.expiresAt);
+    
+    if (now > expiresAt) {
+      return { valid: false, error: "Invitation token has expired" };
+    }
+
+    if (invitationToken.status === "used") {
+      return { valid: false, error: "Invitation token has already been used" };
+    }
+
+    if (invitationToken.status === "expired") {
+      return { valid: false, error: "Invitation token has expired" };
+    }
+
+    if (command.ip && invitationToken.usedFromIp && command.ip !== invitationToken.usedFromIp) {
+      return { valid: false, error: "Token validation failed: IP address mismatch" };
+    }
+
+    if (command.userAgent && invitationToken.usedWithUserAgent && command.userAgent !== invitationToken.usedWithUserAgent) {
+      return { valid: false, error: "Token validation failed: User agent mismatch" };
+    }
+
+    return { valid: true };
+  }
+
+  /**
+   * @summary Validates party signature data
+   * @param party - The party to validate
+   * @returns True if party has valid signature data
+   */
+  validatePartySignatureData(party: any): boolean {
+    return party.status === "signed" && party.signedAt;
+  }
+
+  /**
+   * @summary Validates signature completeness
+   * @param signature - The signature data
+   * @param digest - The digest data
+   * @param algorithm - The algorithm data
+   * @returns True if signature data is complete
+   */
+  validateSignatureCompleteness(signature: any, digest: any, algorithm: any): boolean {
+    return !!(signature && digest && algorithm);
   }
 };

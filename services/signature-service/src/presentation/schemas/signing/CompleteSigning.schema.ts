@@ -4,7 +4,6 @@ import { z, UuidV4 } from "@lawprotect/shared-ts";
 /** Body payload for completing signing. */
 export const CompleteSigningBody = z
   .object({
-    envelopeId: UuidV4,
     signerId: UuidV4,
     
     /** URL of the final PDF from Documents Service (with embedded fields and signatures) */

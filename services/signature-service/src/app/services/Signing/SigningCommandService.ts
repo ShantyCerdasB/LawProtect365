@@ -42,37 +42,10 @@ export class SigningCommandService implements ISigningCommandService {
    * @returns Promise resolving to completion result
    */
   async completeSigning(command: CompleteSigningCommand): Promise<CompleteSigningResult> {
-    console.log('🔍 [DEBUG] SigningCommandService.completeSigning called with:', {
-      envelopeId: command.envelopeId,
-      signerId: command.signerId,
-      digest: command.digest,
-      algorithm: command.algorithm,
-      keyId: command.keyId,
-      actorEmail: (command as any).actorEmail,
-      ip: (command as any).ip,
-      userAgent: (command as any).userAgent
-    });
-    
     try {
       const result = await this.commandsPort.completeSigning(command);
-      console.log('✅ [DEBUG] SigningCommandService.completeSigning result:', {
-        completed: result.completed,
-        completedAt: result.completedAt,
-        hasSignature: !!result.signature,
-        keyId: result.keyId,
-        algorithm: result.algorithm
-      });
       return result;
     } catch (error: any) {
-      console.log('❌ [DEBUG] SigningCommandService.completeSigning error:', {
-        errorName: error?.name,
-        errorMessage: error?.message,
-        errorCode: error?.code,
-        command: {
-          envelopeId: command.envelopeId,
-          signerId: command.signerId
-        }
-      });
       throw error;
     }
   }

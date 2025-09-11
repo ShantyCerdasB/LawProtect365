@@ -24,6 +24,7 @@ import { PartiesValidationService } from "../../services/Parties/PartiesValidati
 import { PartiesAuditService } from "../../services/Parties/PartiesAuditService";
 import { PartiesEventService } from "../../services/Parties/PartiesEventService";
 import { PartiesRateLimitService } from "../../services/Parties/PartiesRateLimitService";
+import { ConflictError, ErrorCodes } from "@lawprotect/shared-ts";
 import { toPartyRow } from "../../../domain/types/parties";
 import { nowIso,  } from "@lawprotect/shared-ts";
 import { PARTY_DEFAULTS, PARTY_RATE_LIMITS } from "../../../domain/values/enums";
@@ -43,7 +44,7 @@ import { assertInvitePolicy } from "../../../domain/rules/Flow.rules";
  * @returns PartiesCommandsPort implementation
  */
 export function makePartiesCommandsPort(
-  partiesRepo: Repository<Party, PartyKey, undefined>,
+  partiesRepo: Repository<Party, PartyKey, undefined> & { listByEnvelope(input: { envelopeId: string }): Promise<{ items: Party[] }> },
   ids: Ids,
   // ✅ SERVICIOS OPCIONALES - PATRÓN REUTILIZABLE
   validationService?: PartiesValidationService,
@@ -58,12 +59,27 @@ export function makePartiesCommandsPort(
   // 🔍 FUNCIÓN INTERNA PARA IDEMPOTENCY
   const createInternal = async (command: CreatePartyCommand): Promise<CreatePartyResult> => {
 
-    // AUTHORIZATION VALIDATION - Only envelope owner can create parties
-    const actorEmail = (command as any).actorEmail || command.actor?.email;
-    if (actorEmail) {
-      // We need to get the envelope to validate ownership
-      // For now, we'll skip this validation in the adapter and handle it at the service level
-      // This is a simplified approach - in production you'd inject the envelope repo
+    // CRITICAL VALIDATION: Check for duplicate email in same envelope
+    const existingParties = await partiesRepo.listByEnvelope({ envelopeId: command.envelopeId });
+    const duplicateEmail = existingParties.items.find((p: Party) => p.email === command.email);
+    if (duplicateEmail) {
+      throw new ConflictError(
+        "Party with this email already exists in the envelope",
+        ErrorCodes.COMMON_CONFLICT,
+        { envelopeId: command.envelopeId, email: command.email, existingPartyId: duplicateEmail.partyId }
+      );
+    }
+
+    // CRITICAL VALIDATION: Check for duplicate sequence in same envelope
+    if (command.sequence) {
+      const duplicateSequence = existingParties.items.find((p: Party) => p.sequence === command.sequence);
+      if (duplicateSequence) {
+        throw new ConflictError(
+          "Party with this sequence already exists in the envelope",
+          ErrorCodes.COMMON_CONFLICT,
+          { envelopeId: command.envelopeId, sequence: command.sequence, existingPartyId: duplicateSequence.partyId }
+        );
+      }
     }
     
     // Apply domain-specific rules

@@ -407,7 +407,6 @@ export async function completeSigningForAuthenticatedUser(
   const event = await createApiGatewayEvent({
     pathParameters: { id: envelopeId },
     body: {
-      envelopeId,
       signerId,
       finalPdfUrl: pdfUrl,
       digest: {

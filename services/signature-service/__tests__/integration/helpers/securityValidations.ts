@@ -55,9 +55,8 @@ export async function testCrossUserAccess(
   const result = await operation(otherUserToken, 'other@test.com');
   const response = assertResponse(result);
   
-  // This should succeed for CreateParty (no ownership validation)
-  // but fail for other operations that require ownership
-  expect([200, 201, 403]).toContain(response.statusCode);
+  // This should fail for operations that require ownership validation
+  expect(response.statusCode).toBe(403);
 }
 
 /**
@@ -79,7 +78,7 @@ export async function testInvalidEnvelopeId(
     body: response.body
   });
   
-  expect(response.statusCode).toBe(404);
+  expect(response.statusCode).toBe(400);
 }
 
 /**

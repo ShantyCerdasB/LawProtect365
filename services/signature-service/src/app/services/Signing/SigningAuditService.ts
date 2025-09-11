@@ -134,7 +134,8 @@ export class SigningAuditService extends BaseAuditService implements ISigningAud
    * @summary Logs a signing consent recorded event for audit purposes
    * @description Records signing consent in the audit trail
    * @param envelopeId - Envelope identifier
-   * @param partyId - Party identifier   * @param actor - Actor context for audit purposes
+   * @param partyId - Party identifier
+   * @param actor - Actor context for audit purposes
    */
   async logSigningConsentRecorded(
     envelopeId: EnvelopeId,
@@ -148,4 +149,5 @@ export class SigningAuditService extends BaseAuditService implements ISigningAud
       envelopeId,
       partyId});
   }
+
 };

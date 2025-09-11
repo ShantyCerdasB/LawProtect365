@@ -29,7 +29,7 @@ export function createDefaultPartyForDelegation(
     name,
     role: PARTY_ROLES[0], // "signer" - Default role for delegates
     source: PARTY_SOURCES[0], // "manual" - Default source
-    status: PARTY_STATUSES[4], // "active" - Default status
+    status: PARTY_STATUSES[5], // "active" - Default status
     preferences: {
       defaultAuth: undefined, // No default auth method
       defaultLocale: undefined},

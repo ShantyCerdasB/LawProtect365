@@ -10,7 +10,7 @@ export const DELEGATION_STATUSES = ["pending","accepted","declined","expired"] a
 export type DelegationStatus = (typeof DELEGATION_STATUSES)[number];
 
 // Parties
-export const PARTY_STATUSES = ["pending","invited","signed","declined","active"] as const;
+export const PARTY_STATUSES = ["pending","invited","consented","signed","declined","active"] as const;
 export type PartyStatus = (typeof PARTY_STATUSES)[number];
 
 // Global Parties (Contacts)

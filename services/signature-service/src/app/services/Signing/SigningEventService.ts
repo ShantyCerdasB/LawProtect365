@@ -140,6 +140,28 @@ export class SigningEventService extends BaseEventService implements ISigningEve
   }
 
   /**
+   * @summary Publishes a consent recorded domain event
+   * @description Publishes a consent recording event using the outbox pattern
+   * @param envelopeId - Envelope identifier
+   * @param partyId - Party identifier
+   * @param actor - Actor context for audit purposes
+   * @param traceId - Optional trace ID for observability
+   */
+  async publishConsentRecorded(
+    envelopeId: EnvelopeId,
+    partyId: PartyId,
+    actor: ActorContext,
+    traceId?: string
+  ): Promise<void> {
+    await this.publishStandardizedEvent(
+      "signing.consent.recorded",
+      { envelopeId, partyId },
+      actor,
+      traceId
+    );
+  }
+
+  /**
    * @summary Publishes a module-specific domain event
    * @description Implementation of the abstract method from BaseEventService
    * @param event - Module-specific domain event

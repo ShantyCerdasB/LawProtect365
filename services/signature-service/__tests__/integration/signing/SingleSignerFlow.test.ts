@@ -1,5 +1,5 @@
 /**
- * @file SingleSignerFlow.test.ts
+ * @file SingleSignerFlowNew.test.ts
  * @summary Single signer signing flow integration tests
  * @description Tests single signer workflows where the owner creates and signs the envelope.
  * This test validates the complete flow for authenticated users who own the envelope.
@@ -102,24 +102,30 @@ describe('Single Signer Flow (Owner Autenticado)', () => {
       // Create a flow first
       flowResult = await createSingleSignerFlow('Owner Permission Test');
       
-      // Test cross-user access
+      // Test cross-user access with CompleteSigningController which should validate ownership
       await testCrossUserAccess(flowResult.owner.token, flowResult.owner.email, async (token, email) => {
-        const { CreatePartyController } = await import('../../../src/presentation/controllers/parties/CreateParty.Controller');
+        const { CompleteSigningController } = await import('../../../src/presentation/controllers/signing/CompleteSigning.Controller');
         const { createApiGatewayEvent, createTestRequestContext } = await import('../helpers/testHelpers');
         
-        return await CreatePartyController(createApiGatewayEvent({
-          pathParameters: { envelopeId: flowResult.envelope.id },
+        return await CompleteSigningController(await createApiGatewayEvent({
+          pathParameters: { id: flowResult.envelope.id },
           body: {
-            name: 'Other User',
-            email: email,
-            role: 'signer',
-            sequence: 1
+            signerId: flowResult.parties[0].id,
+            finalPdfUrl: 'https://test-bucket.s3.amazonaws.com/test-document.pdf',
+            digest: {
+              alg: 'sha256',
+              value: 'test-digest'
+            },
+            algorithm: 'RSASSA_PSS_SHA_256',
+            keyId: 'test-key-id'
           },
           headers: { 'Authorization': `Bearer ${token}` },
           requestContext: createTestRequestContext({
             userId: 'other-user-456',
             email: email
-          })
+          }),
+          includeAuth: false,
+          authToken: token
         }));
       });
     });
@@ -131,22 +137,28 @@ describe('Single Signer Flow (Owner Autenticado)', () => {
       flowResult = await createSingleSignerFlow('Invalid Envelope ID Test');
       
       await testInvalidEnvelopeId(flowResult.owner.token, async (envelopeId, token) => {
-        const { CreatePartyController } = await import('../../../src/presentation/controllers/parties/CreateParty.Controller');
+        const { CompleteSigningController } = await import('../../../src/presentation/controllers/signing/CompleteSigning.Controller');
         const { createApiGatewayEvent, createTestRequestContext } = await import('../helpers/testHelpers');
         
-        return await CreatePartyController(createApiGatewayEvent({
-          pathParameters: { envelopeId },
+        return await CompleteSigningController(await createApiGatewayEvent({
+          pathParameters: { id: envelopeId },
           body: {
-            name: 'Test Party',
-            email: 'test@test.com',
-            role: 'signer',
-            sequence: 1
+            signerId: 'test-party-id',
+            finalPdfUrl: 'https://test-bucket.s3.amazonaws.com/test-document.pdf',
+            digest: {
+              alg: 'sha256',
+              value: 'test-digest'
+            },
+            algorithm: 'RSASSA_PSS_SHA_256',
+            keyId: 'test-key-id'
           },
           headers: { 'Authorization': `Bearer ${token}` },
           requestContext: createTestRequestContext({
             userId: 'owner-user-123',
             email: 'owner@test.com'
-          })
+          }),
+          includeAuth: false,
+          authToken: token
         }));
       });
     });
@@ -183,7 +195,7 @@ describe('Single Signer Flow (Owner Autenticado)', () => {
       });
       const responseData = JSON.parse(createPartyResponse.body!);
       console.log('🔍 [DEBUG] CreateParty responseData:', responseData);
-      const testPartyId = responseData.data.party.id;
+      const testPartyId = responseData.data.party.partyId;
       
       // Test missing consent with the new party
       await testMissingConsent(
@@ -201,7 +213,7 @@ describe('Single Signer Flow (Owner Autenticado)', () => {
       const { CreatePartyController } = await import('../../../src/presentation/controllers/parties/CreateParty.Controller');
       const { createApiGatewayEvent, createTestRequestContext } = await import('../helpers/testHelpers');
       
-      const createPartyResult = await CreatePartyController(createApiGatewayEvent({
+      const createPartyResult = await CreatePartyController(await createApiGatewayEvent({
         pathParameters: { envelopeId: flowResult.envelope.id },
         body: {
           name: 'Test Party for Invalid Digest',
@@ -213,7 +225,9 @@ describe('Single Signer Flow (Owner Autenticado)', () => {
         requestContext: createTestRequestContext({
           userId: 'owner-user-123',
           email: 'owner@test.com'
-        })
+        }),
+        includeAuth: false,
+        authToken: flowResult.owner.token
       }));
       
       const createPartyResponse = assertResponse(createPartyResult);
@@ -223,7 +237,7 @@ describe('Single Signer Flow (Owner Autenticado)', () => {
       });
       const responseData = JSON.parse(createPartyResponse.body!);
       console.log('🔍 [DEBUG] CreateParty responseData:', responseData);
-      const testPartyId = responseData.data.party.id;
+      const testPartyId = responseData.data.party.partyId;
       
       // Test invalid digest with the new party
       await testInvalidDigest(
@@ -241,7 +255,7 @@ describe('Single Signer Flow (Owner Autenticado)', () => {
       const { CreatePartyController } = await import('../../../src/presentation/controllers/parties/CreateParty.Controller');
       const { createApiGatewayEvent, createTestRequestContext } = await import('../helpers/testHelpers');
       
-      const createPartyResult = await CreatePartyController(createApiGatewayEvent({
+      const createPartyResult = await CreatePartyController(await createApiGatewayEvent({
         pathParameters: { envelopeId: flowResult.envelope.id },
         body: {
           name: 'Test Party for Unsupported Algorithm',
@@ -253,7 +267,9 @@ describe('Single Signer Flow (Owner Autenticado)', () => {
         requestContext: createTestRequestContext({
           userId: 'owner-user-123',
           email: 'owner@test.com'
-        })
+        }),
+        includeAuth: false,
+        authToken: flowResult.owner.token
       }));
       
       const createPartyResponse = assertResponse(createPartyResult);
@@ -263,7 +279,7 @@ describe('Single Signer Flow (Owner Autenticado)', () => {
       });
       const responseData = JSON.parse(createPartyResponse.body!);
       console.log('🔍 [DEBUG] CreateParty responseData:', responseData);
-      const testPartyId = responseData.data.party.id;
+      const testPartyId = responseData.data.party.partyId;
       
       // Test unsupported algorithm with the new party
       await testUnsupportedAlgorithm(
@@ -283,7 +299,7 @@ describe('Single Signer Flow (Owner Autenticado)', () => {
       const { CreatePartyController } = await import('../../../src/presentation/controllers/parties/CreateParty.Controller');
       const { createApiGatewayEvent, createTestRequestContext } = await import('../helpers/testHelpers');
       
-      const createPartyResult = await CreatePartyController(createApiGatewayEvent({
+      const createPartyResult = await CreatePartyController(await createApiGatewayEvent({
         pathParameters: { envelopeId: flowResult.envelope.id },
         body: {
           name: 'Test Party for Document Integrity',
@@ -295,7 +311,9 @@ describe('Single Signer Flow (Owner Autenticado)', () => {
         requestContext: createTestRequestContext({
           userId: 'owner-user-123',
           email: 'owner@test.com'
-        })
+        }),
+        includeAuth: false,
+        authToken: flowResult.owner.token
       }));
       
       const createPartyResponse = assertResponse(createPartyResult);
@@ -305,7 +323,7 @@ describe('Single Signer Flow (Owner Autenticado)', () => {
       });
       const responseData = JSON.parse(createPartyResponse.body!);
       console.log('🔍 [DEBUG] CreateParty responseData:', responseData);
-      const testPartyId = responseData.data.party.id;
+      const testPartyId = responseData.data.party.partyId;
       
       // Test document integrity with the new party
       await testDocumentIntegrity(

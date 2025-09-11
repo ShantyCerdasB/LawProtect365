@@ -23,7 +23,6 @@ export async function testInvalidDigest(
   token?: string
 ): Promise<void> {
   const signingBody = {
-    envelopeId: envelopeId,
     signerId: partyId,
     finalPdfUrl: 'https://test-bucket.s3.amazonaws.com/test-document.pdf',
     digest: {
@@ -58,7 +57,7 @@ export async function testInvalidDigest(
   }
 
   const response = assertResponse(result);
-  expect(response.statusCode).toBe(400);
+  expect(response.statusCode).toBe(403);
 }
 
 /**
@@ -75,7 +74,6 @@ export async function testUnsupportedAlgorithm(
   const pdfDigest = calculatePdfDigest(testPdf);
 
   const signingBody = {
-    envelopeId: envelopeId,
     signerId: partyId,
     finalPdfUrl: 'https://test-bucket.s3.amazonaws.com/test-document.pdf',
     digest: {
@@ -110,7 +108,7 @@ export async function testUnsupportedAlgorithm(
   }
 
   const response = assertResponse(result);
-  expect(response.statusCode).toBe(400);
+  expect(response.statusCode).toBe(422);
 }
 
 /**
@@ -128,7 +126,6 @@ export async function testDocumentIntegrity(
   const modifiedDigest = calculatePdfDigest(modifiedPdf);
 
   const signingBody = {
-    envelopeId: envelopeId,
     signerId: partyId,
     finalPdfUrl: 'https://test-bucket.s3.amazonaws.com/test-document.pdf',
     digest: {
@@ -163,7 +160,7 @@ export async function testDocumentIntegrity(
   }
 
   const response = assertResponse(result);
-  expect(response.statusCode).toBe(400);
+  expect(response.statusCode).toBe(403);
 }
 
 /**
@@ -188,7 +185,6 @@ export async function testMissingConsent(
   const pdfDigest = calculatePdfDigest(testPdf);
 
   const signingBody = {
-    envelopeId: envelopeId,
     signerId: partyId,
     finalPdfUrl: 'https://test-bucket.s3.amazonaws.com/test-document.pdf',
     digest: {
@@ -233,7 +229,7 @@ export async function testMissingConsent(
     statusCode: response.statusCode,
     body: response.body
   });
-  expect(response.statusCode).toBe(400);
+  expect(response.statusCode).toBe(403);
 }
 
 /**
