@@ -137,6 +137,7 @@ import { makeEnvelopesQueriesPort } from "../app/adapters/envelopes/MakeEnvelope
 import { RequestsAuditService } from "../app/services/Requests/RequestsAuditService";
 import { RequestsEventService } from "../app/services/Requests/RequestsEventService";
 import { RequestsRateLimitService } from "../app/services/Requests/RequestsRateLimitService";
+import { RequestsCommandService } from "../app/services/Requests/RequestsCommandService";
 import { makeRequestsCommandsPort } from "../app/adapters/requests/makeRequestsCommandsPort";
 import { makeSigningCommandsPort } from "../app/adapters/signing/makeSigningCommandsPort";
 import { makeSignaturesCommandsPort } from "../app/adapters/signatures/makeSignaturesCommandsPort";
@@ -425,6 +426,9 @@ export const getContainer = (): Container => {
     }
   });
 
+  // Requests Command Service - instantiate with correct dependencies
+  const requestsCommand = new RequestsCommandService(requestsCommands);
+
   // Certificate services - instantiate with correct dependencies
   const certificateValidation = new DefaultCertificateValidationService();
   
@@ -555,10 +559,11 @@ export const getContainer = (): Container => {
         // documents: moved to documents-service
         requests: {
           commandsPort: requestsCommands,
-          // validationService: requestsValidation, // inputs moved to Documents Service
+          command: requestsCommand,
+          validationService: requestsValidation,
           auditService: requestsAudit,
           eventService: requestsEvents,
-          rateLimitService: requestsRateLimit},
+          rateLimitService: requestsRateLimit} as any,
         certificate: {
           queriesPort: certificateQueries,
           validationService: certificateValidation},
