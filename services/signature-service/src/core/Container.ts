@@ -480,7 +480,10 @@ export const getContainer = (): Container => {
         signedBucket: config.s3.signedBucket,
         downloadTtlSeconds: config.s3.presignTtlSeconds},
       s3Service: signingS3,
-      pdfService: signingPdf}
+      pdfService: signingPdf,
+      validationService: signingValidation,
+      eventService: signingEvent,
+      auditService: signingAudit}
   );
 
   const signingCommand = new SigningCommandService(signingCommands);
