@@ -13,7 +13,6 @@ import type { Party } from "../../../domain/entities/Party";
 import type { EnvelopeId } from "../../../domain/value-objects/ids";
 import { IdempotencyRunner, KmsSigner, EventBusPortAdapter } from "@lawprotect/shared-ts";
 import { buildEvidencePath } from "../../../domain/rules/Evidence.rules";
-import { validateSigningOperation } from "./SigningValidationHelpers";
 import type { SigningRateLimitService, SigningS3Service } from "../../../domain/types/signing/ServiceInterfaces";
 import type { SigningPdfService } from "../../../app/services/Signing/SigningPdfService";
 import { SigningValidationService } from "../../../app/services/Signing/SigningValidationService";
@@ -133,7 +132,7 @@ export const makeSigningCommandsPort = (
     async prepareSigning(command: PrepareSigningCommand): Promise<PrepareSigningResult> {
       
       // Validate signing operation
-      await validateSigningOperation(
+      await deps.validationService.validateSigningOperation(
         command,
         _envelopesRepo,
         _partiesRepo,
@@ -167,7 +166,7 @@ export const makeSigningCommandsPort = (
     async completeSigning(command: CompleteSigningCommand): Promise<CompleteSigningResult> {
       
       // Validate signing operation
-      const { envelope } = await validateSigningOperation(
+      const { envelope } = await deps.validationService.validateSigningOperation(
         command,
         _envelopesRepo,
         _partiesRepo
@@ -277,7 +276,7 @@ export const makeSigningCommandsPort = (
     async declineSigning(command: DeclineSigningCommand): Promise<DeclineSigningResult> {
       
       // Validate signing operation
-      const { envelope } = await validateSigningOperation(
+      const { envelope } = await deps.validationService.validateSigningOperation(
         command,
         _envelopesRepo,
         _partiesRepo
@@ -325,7 +324,7 @@ export const makeSigningCommandsPort = (
     async presignUpload(command: PresignUploadCommand): Promise<PresignUploadResult> {
       
       // Validate signing operation
-      const { envelope: _envelope } = await validateSigningOperation(
+      const { envelope: _envelope } = await deps.validationService.validateSigningOperation(
         command,
         _envelopesRepo,
         _partiesRepo
@@ -374,7 +373,7 @@ export const makeSigningCommandsPort = (
     async downloadSignedDocument(command: DownloadSignedDocumentCommand): Promise<DownloadSignedDocumentResult> {
       
       // Validate signing operation
-      const { envelope } = await validateSigningOperation(
+      const { envelope } = await deps.validationService.validateSigningOperation(
         command,
         _envelopesRepo,
         _partiesRepo
