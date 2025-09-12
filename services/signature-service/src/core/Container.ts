@@ -62,7 +62,11 @@ const createDynamoDBClient = (dynamodbConfig: DynamoDBConfig): DynamoDBClient =>
  */
 const createDynamoDBDocumentClient = (dynamodbConfig: DynamoDBConfig): DynamoDBDocumentClient => {
   const client = createDynamoDBClient(dynamodbConfig);
-  return DynamoDBDocumentClient.from(client);
+  return DynamoDBDocumentClient.from(client, {
+    marshallOptions: {
+      removeUndefinedValues: true
+    }
+  });
 };
 
 
@@ -123,17 +127,9 @@ import { EnvelopesEventService } from "../app/services/envelopes/EnvelopesEventS
 import { makeEnvelopesCommandsPort } from "../app/adapters/envelopes/makeEnvelopesCommandsPort";
 import { makeEnvelopesQueriesPort } from "../app/adapters/envelopes/MakeEnvelopesQueriesPort";
 
-// Documents services moved to documents-service
-
-// Inputs services - Moved to Documents Service
-// import { InputsValidationService } from "../app/services/Inputs/InputsValidationService";
-// import { InputsAuditService } from "../app/services/Inputs/InputsAuditService";
-// import { InputsEventService } from "../app/services/Inputs/InputsEventService";
-// import { makeInputsCommandsPort } from "../app/adapters/inputs/makeInputsCommandsPort";
-// import { makeInputsQueriesPort } from "../app/adapters/inputs/makeInputsQueriesPort";
 
 // Requests services
-// import { RequestsValidationService } from "../app/services/Requests/RequestsValidationService"; // inputs moved to Documents Service
+import { RequestsValidationService } from "../app/services/Requests/RequestsValidationService";
 import { RequestsAuditService } from "../app/services/Requests/RequestsAuditService";
 import { RequestsEventService } from "../app/services/Requests/RequestsEventService";
 import { RequestsRateLimitService } from "../app/services/Requests/RequestsRateLimitService";
@@ -180,10 +176,25 @@ export const getContainer = (): Container => {
 
   // AWS SDK clients
   const ddb = createDynamoDBClient(config.dynamodb);
-  const s3 = new S3Client({ region: config.region });
-  const kms = new KMSClient({ region: config.region });
-  const evb = new EventBridgeClient({ region: config.region });
-  const ssm = new SSMClient({ region: config.region });
+  
+  // Configure AWS clients for LocalStack in test/local environments
+  const isLocalStack = config.environment === 'test' || config.environment === 'local';
+  const awsConfig = isLocalStack ? {
+    endpoint: process.env.AWS_ENDPOINT_URL || 'http://localhost:4566',
+    region: config.region,
+    credentials: {
+      accessKeyId: 'test',
+      secretAccessKey: 'test'
+    },
+    forcePathStyle: true
+  } : {
+    region: config.region
+  };
+  
+  const s3 = new S3Client(awsConfig);
+  const kms = new KMSClient(awsConfig);
+  const evb = new EventBridgeClient(awsConfig);
+  const ssm = new SSMClient(awsConfig);
 
   // DynamoDB Document wrapper
   const doc = createDynamoDBDocumentClient(config.dynamodb);
@@ -377,32 +388,8 @@ export const getContainer = (): Container => {
   });
   const envelopesQueries = makeEnvelopesQueriesPort(envelopes);
 
-  // Inputs services - Moved to Documents Service
-  // const inputsValidation = new InputsValidationService();
-  // const inputsAudit = new InputsAuditService(audit);
-  // const inputsEvents = new InputsEventService(outbox);
-  
-  // const inputsCommands = makeInputsCommandsPort({
-  //   inputsRepo: inputs,
-  //   ids,
-  //   partiesRepo: parties,
-  //   // documentsRepo: documents, // Moved to documents-service
-  //   envelopesRepo: envelopes,
-  //   validationService: inputsValidation,
-  //   auditService: inputsAudit,
-  //   eventService: inputsEvents,
-  //   idempotencyRunner: runner
-  // });
-  // const inputsQueries = makeInputsQueriesPort(
-  //   inputs,
-  //   inputsValidation,
-  //   inputsAudit
-  // );
-
-  // Documents services moved to documents-service
-
   // Requests services - instantiate with correct dependencies
-  // const requestsValidation = new RequestsValidationService(); // inputs moved to Documents Service
+  const requestsValidation = new RequestsValidationService();
   const requestsAudit = new RequestsAuditService(audit);
   const requestsEvents = new RequestsEventService(outbox);
   const requestsRateLimit = new RequestsRateLimitService(rateLimitStore);

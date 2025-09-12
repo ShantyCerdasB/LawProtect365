@@ -50,7 +50,7 @@ export const TEST_CONSENT = {
 
 export const TEST_SIGNING = {
   algorithm: 'ECDSA_SHA_256',
-  keyId: 'test-key-id',
+  keyId: 'alias/test-key-id',
   metadata: {
     testSigning: true,
     signingMethod: 'integration-test'

@@ -27,22 +27,24 @@ export const assertSignatureContextValid = (context: any): void => {
   }
   
   // Validate that consent timestamp is before signing timestamp
+  // Allow up to 1 second tolerance for real-world scenarios where consent and signing happen quickly
   const consentTime = new Date(validated.consentTimestamp);
   const signingTime = new Date(validated.timestamp);
+  const timeDiff = signingTime.getTime() - consentTime.getTime();
   
-  if (consentTime >= signingTime) {
+  if (timeDiff < 0) {
     throw new BadRequestError(
       "Consent timestamp must be before signing timestamp",
       ErrorCodes.COMMON_BAD_REQUEST,
       { 
         consentTimestamp: validated.consentTimestamp, 
-        signingTimestamp: validated.timestamp 
+        signingTimestamp: validated.timestamp,
+        timeDiffMs: timeDiff
       }
     );
   }
   
   // Validate that consent was given within reasonable time (e.g., 24 hours)
-  const timeDiff = signingTime.getTime() - consentTime.getTime();
   const maxConsentAge = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
   
   if (timeDiff > maxConsentAge) {

@@ -37,6 +37,8 @@ export interface Party {
   readonly status: PartyStatus;
   /** Optional invitation timestamp (ISO 8601) */
   readonly invitedAt?: string;
+  /** Optional consent timestamp (ISO 8601) */
+  readonly consentedAt?: string;
   /** Optional signature completion timestamp (ISO 8601) */
   readonly signedAt?: string;
   /** Optional signature data (base64 encoded) */

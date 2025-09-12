@@ -23,30 +23,16 @@ export const CompleteSigningController = createCommandController<CompleteSigning
     const params = {
       envelopeId: path.id,
       signerId: body.signerId,
+      finalPdfUrl: body.finalPdfUrl, // Extract finalPdfUrl from body
       digest: body.digest,
       algorithm: body.algorithm,
       keyId: body.keyId,
       token: "", // Will be injected by factory
       actorEmail: context?.actor?.email, // Add auth context
-      ip: context?.identity?.sourceIp, // IP for security validation
-      userAgent: context?.identity?.userAgent // User Agent for security validation
+      ip: context?.identity?.sourceIp || context?.actor?.ip, // IP for security validation
+      userAgent: context?.identity?.userAgent || context?.actor?.userAgent // User Agent for security validation
     };
     
-    console.log('🔍 [DEBUG] CompleteSigningController extractParams:', {
-      path,
-      body: {
-        signerId: body.signerId,
-        digest: body.digest,
-        algorithm: body.algorithm,
-        keyId: body.keyId
-      },
-      context: {
-        actorEmail: context?.actor?.email,
-        ip: context?.identity?.sourceIp,
-        userAgent: context?.identity?.userAgent
-      },
-      extractedParams: params
-    });
     
     return params;
   },

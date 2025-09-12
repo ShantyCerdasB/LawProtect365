@@ -30,7 +30,8 @@ async function startLocalStack() {
     // Create localstack data directory if it doesn't exist
     if (!existsSync(LOCALSTACK_DATA_DIR)) {
       console.log(`📁 Creating ${LOCALSTACK_DATA_DIR} directory...`);
-      execSync(`mkdir -p ${LOCALSTACK_DATA_DIR}`, { stdio: 'inherit' });
+      const { mkdirSync } = require('fs');
+      mkdirSync(LOCALSTACK_DATA_DIR, { recursive: true });
     }
 
     // Stop any existing LocalStack container
@@ -64,7 +65,7 @@ async function startLocalStack() {
   }
 }
 
-async function waitForLocalStack(maxRetries = 30, delay = 2000) {
+async function waitForLocalStack(maxRetries = 20, delay = 3000) {
   const { execSync } = require('child_process');
   
   for (let i = 0; i < maxRetries; i++) {
@@ -72,8 +73,9 @@ async function waitForLocalStack(maxRetries = 30, delay = 2000) {
       // Check if LocalStack health endpoint is responding
       execSync('curl -f http://localhost:4566/_localstack/health', { 
         stdio: 'ignore',
-        timeout: 5000 
+        timeout: 10000 
       });
+      console.log('✅ LocalStack is healthy!');
       return;
     } catch (error) {
       if (i === maxRetries - 1) {

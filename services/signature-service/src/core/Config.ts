@@ -250,11 +250,11 @@ export const createDynamoDBConfig = (environment: EnvironmentType): DynamoDBConf
   if (isLocal) {
     return {
       useLocal: true,
-      endpoint: process.env.AWS_ENDPOINT_URL || 'http://localhost:8000',
+      endpoint: process.env.DYNAMODB_ENDPOINT || 'http://localhost:8000',
       region: process.env.AWS_REGION || 'us-east-1',
       credentials: {
-        accessKeyId: 'fake',
-        secretAccessKey: 'fake'
+        accessKeyId: process.env.DYNAMODB_ACCESS_KEY_ID || 'fake',
+        secretAccessKey: process.env.DYNAMODB_SECRET_ACCESS_KEY || 'fake'
       }
     };
   }

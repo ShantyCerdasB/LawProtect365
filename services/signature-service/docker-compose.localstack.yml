@@ -3,50 +3,33 @@ version: '3.8'
 services:
   localstack:
     container_name: lawprotect365-localstack
-    image: localstack/localstack:latest
+    image: localstack/localstack:2.3.2
     ports:
-      - "4566:4566"            # LocalStack Gateway
-      - "4510-4559:4510-4559"  # External services port range
+      - "4566:4566"
     environment:
-      # LocalStack configuration
-      - DEBUG=1
-      - LAMBDA_EXECUTOR=docker
-      - DOCKER_HOST=unix:///var/run/docker.sock
+      # Services to enable (KMS, EventBridge, SSM, S3)
+      - SERVICES=kms,events,ssm,s3
       
-      # Services to enable (excluding dynamodb since we use DynamoDB Local)
-      - SERVICES=s3,kms,cognito-idp,eventbridge,ssm
-      
-      # Persistence
-      - PERSISTENCE=1
-      - DATA_DIR=/tmp/localstack/data
-      
-      # AWS credentials for LocalStack
+      # AWS credentials
       - AWS_ACCESS_KEY_ID=test
       - AWS_SECRET_ACCESS_KEY=test
       - AWS_DEFAULT_REGION=us-east-1
       
-      # DynamoDB configuration (disabled since we use DynamoDB Local)
-      # - DYNAMODB_SHARE_DB=1
-      # - DYNAMODB_IN_MEMORY=1
-      
-      # S3 configuration
-      - S3_SKIP_SIGNATURE_VALIDATION=1
+      # Disable persistence for faster startup
+      - PERSISTENCE=0
       
       # KMS configuration
       - KMS_PROVIDER=local-kms
       
-    volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock"
-      - "./localstack-data:/tmp/localstack"
-    networks:
-      - localstack-network
+      # Disable debug for faster startup
+      - DEBUG=0
+      
+      # Lambda executor
+      - LAMBDA_EXECUTOR=docker
+      
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
-      interval: 30s
-      timeout: 10s
+      interval: 10s
+      timeout: 5s
       retries: 5
       start_period: 30s
-
-networks:
-  localstack-network:
-    driver: bridge

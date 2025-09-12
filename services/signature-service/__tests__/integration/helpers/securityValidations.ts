@@ -102,7 +102,7 @@ export async function testTokenSecurity(
         value: 'test-digest'
       },
       algorithm: 'RSASSA_PSS_SHA_256',
-      keyId: 'test-key-id'
+      keyId: 'alias/test-key-id'
     }
   }));
 
@@ -142,7 +142,7 @@ export async function testTokenReuse(
         value: 'test-digest'
       },
       algorithm: 'RSASSA_PSS_SHA_256',
-      keyId: 'test-key-id'
+      keyId: 'alias/test-key-id'
     }
   }));
 
@@ -162,7 +162,7 @@ export async function testTokenReuse(
         value: 'test-digest'
       },
       algorithm: 'RSASSA_PSS_SHA_256',
-      keyId: 'test-key-id'
+      keyId: 'alias/test-key-id'
     }
   }));
 
@@ -211,7 +211,7 @@ export async function testCrossEnvelopeTokenUsage(
         value: 'test-digest'
       },
       algorithm: 'RSASSA_PSS_SHA_256',
-      keyId: 'test-key-id'
+      keyId: 'alias/test-key-id'
     }
   }));
 
@@ -240,7 +240,7 @@ export async function testSigningWithoutInvitation(
         value: 'test-digest'
       },
       algorithm: 'RSASSA_PSS_SHA_256',
-      keyId: 'test-key-id'
+      keyId: 'alias/test-key-id'
     },
     headers: { 'Authorization': `Bearer ${ownerToken}` },
     requestContext: createTestRequestContext({
@@ -272,7 +272,7 @@ export async function testSigningWithoutConsent(
         value: 'test-digest'
       },
       algorithm: 'RSASSA_PSS_SHA_256',
-      keyId: 'test-key-id'
+      keyId: 'alias/test-key-id'
     }
   }));
 
@@ -319,7 +319,7 @@ export async function testEnvelopeCancellation(
         value: 'test-digest'
       },
       algorithm: 'RSASSA_PSS_SHA_256',
-      keyId: 'test-key-id'
+      keyId: 'alias/test-key-id'
     }
   }));
 
@@ -351,7 +351,7 @@ export async function testConcurrentSigning(
           value: 'test-digest'
         },
         algorithm: 'RSASSA_PSS_SHA_256',
-        keyId: 'test-key-id'
+        keyId: 'alias/test-key-id'
       }
     }))
   );

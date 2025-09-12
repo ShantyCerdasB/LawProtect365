@@ -10,6 +10,7 @@
     "dev:local": "npm run dynamodb:start && npm run dev",
     "test": "jest --config ./jest.config.cjs",
     "test:local": "npm run dynamodb:start && npm test && npm run dynamodb:stop",
+    "test:localstack": "npm run localstack:start && npm run localstack:setup && npm run dynamodb:start && npm run dynamodb:create-tables && npm test && npm run dynamodb:stop && npm run localstack:stop",
     "test:watch": "jest --watch --config ./jest.config.cjs",
     "coverage": "jest --coverage --config ./jest.config.cjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -23,7 +24,8 @@
     "localstack:stop": "tsx scripts/stopLocalStack.ts",
     "localstack:setup": "tsx scripts/setupLocalStack.ts",
     "localstack:reset": "npm run localstack:stop && npm run localstack:setup",
-    "test:localstack": "npm run localstack:start && npm test && npm run localstack:stop"
+    "test:localstack": "npm run localstack:start && npm run localstack:setup && npm run dynamodb:start && npm run dynamodb:create-tables && npm test && npm run dynamodb:stop && npm run localstack:stop",
+    "test:cleanup": "tsx scripts/cleanupTestEnvironment.ts"
   },
   "dependencies": {
     "@aws-sdk/client-cloudwatch": "^3.883.0",

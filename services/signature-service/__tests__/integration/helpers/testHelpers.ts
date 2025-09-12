@@ -128,11 +128,16 @@ export const createTestRequestContext = (overrides: {
   sourceIp?: string;
   userAgent?: string;
   tenantId?: string;
+  role?: string;
 } = {}) => {
+  const userAgent = overrides.userAgent || 'test-agent/1.0';
+  const sourceIp = overrides.sourceIp || '192.168.1.100';
+  const role = overrides.role || 'customer'; // Default role for tests
+  
   return {
     identity: {
-      sourceIp: overrides.sourceIp || '192.168.1.100',
-      userAgent: overrides.userAgent || 'test-agent/1.0'
+      sourceIp: sourceIp,
+      userAgent: userAgent
     },
     authorizer: {
       userId: overrides.userId || 'test-user-123',
@@ -140,7 +145,9 @@ export const createTestRequestContext = (overrides: {
       actor: {
         userId: overrides.userId || 'test-user-123',
         email: overrides.email || 'test@example.com',
-        ip: overrides.sourceIp || '192.168.1.100',
+        ip: sourceIp,
+        userAgent: userAgent, // ✅ Agregar userAgent al actor
+        role: role, // ✅ Agregar role al actor para métricas
         roles: ['user'],
         scopes: []
       }

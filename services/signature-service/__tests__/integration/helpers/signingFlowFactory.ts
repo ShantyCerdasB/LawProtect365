@@ -26,6 +26,7 @@ import {
 } from './testHelpers';
 import { generateUniqueTestData } from './testIsolation';
 import type { ApiResponseStructured } from '@lawprotect/shared-ts';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 
 // Helper function to assert response type
 export const assertResponse = (response: any): ApiResponseStructured => {
@@ -34,6 +35,54 @@ export const assertResponse = (response: any): ApiResponseStructured => {
   }
   return response as ApiResponseStructured;
 };
+
+/**
+ * Creates a test PDF in LocalStack S3 for testing purposes
+ */
+export async function createTestPdfInLocalStackS3(
+  envelopeId: string,
+  bucketName: string = process.env.SIGNED_BUCKET || 'test-signed'
+): Promise<string> {
+  console.log('🔍 [PDF DEBUG] Starting createTestPdfInLocalStackS3...');
+  console.log('🔍 [PDF DEBUG] envelopeId:', envelopeId);
+  console.log('🔍 [PDF DEBUG] bucketName:', bucketName);
+  
+  const s3Client = new S3Client({
+    endpoint: 'http://localhost:4566',
+    region: 'us-east-1',
+    credentials: {
+      accessKeyId: 'test',
+      secretAccessKey: 'test'
+    },
+    forcePathStyle: true
+  });
+
+  console.log('🔍 [PDF DEBUG] S3Client created, generating test PDF...');
+  const testPdf = generateTestPdf();
+  const key = `signed-${envelopeId}.pdf`;
+  console.log('🔍 [PDF DEBUG] Test PDF generated, key:', key);
+  
+  console.log('🔍 [PDF DEBUG] Uploading to S3...');
+  
+  try {
+    const putCommand = new PutObjectCommand({
+      Bucket: bucketName,
+      Key: key,
+      Body: testPdf,
+      ContentType: 'application/pdf'
+    });
+    
+    const result = await s3Client.send(putCommand);
+    console.log('🔍 [PDF DEBUG] S3 upload completed successfully:', result);
+  } catch (error) {
+    console.error('🔍 [PDF DEBUG] S3 upload failed:', error);
+    throw error;
+  }
+
+  const pdfUrl = `http://localhost:4566/${bucketName}/${key}`;
+  console.log('🔍 [PDF DEBUG] Created test PDF in LocalStack S3:', pdfUrl);
+  return pdfUrl;
+}
 
 // Types for test data
 export interface TestUser {
@@ -217,6 +266,23 @@ export async function createTestParty(
 /**
  * Creates a test party using the provided JWT token
  */
+// Helper function to extract JWT claims
+export function extractJwtClaims(token: string): { userId: string; email: string } {
+  try {
+    const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+    return {
+      userId: payload.sub,
+      email: payload.email
+    };
+  } catch (error) {
+    // Fallback to default values if JWT parsing fails
+    return {
+      userId: 'owner-user-123',
+      email: 'owner@test.com'
+    };
+  }
+}
+
 export async function createTestPartyWithToken(
   envelopeId: string,
   name: string,
@@ -225,6 +291,9 @@ export async function createTestPartyWithToken(
   sequence: number,
   ownerToken: string
 ): Promise<TestParty> {
+  // Extract JWT claims to use in requestContext
+  const jwtClaims = extractJwtClaims(ownerToken);
+  
   const event = await createApiGatewayEvent({
     pathParameters: { envelopeId },
     body: {
@@ -235,8 +304,9 @@ export async function createTestPartyWithToken(
     },
     headers: { 'Authorization': `Bearer ${ownerToken}` },
     requestContext: createTestRequestContext({
-      userId: 'owner-user-123',
-      email: 'owner@test.com'
+      userId: jwtClaims.userId,
+      email: jwtClaims.email,
+      role: 'customer'
     })
   });
   
@@ -295,7 +365,8 @@ export async function inviteTestParties(
     headers: { 'Authorization': `Bearer ${ownerToken}` },
     requestContext: createTestRequestContext({
       userId: 'owner-user-123',
-      email: 'owner@test.com'
+      email: 'owner@test.com',
+      role: 'customer'
     })
   });
   
@@ -325,17 +396,11 @@ export async function inviteTestParties(
 export async function recordConsentForAuthenticatedUser(
   envelopeId: string,
   signerId: string,
-  _ownerToken: string,
+  ownerToken: string,
   consentText: string = 'I agree to sign this document electronically'
 ): Promise<void> {
-  // Always generate a valid JWT token using our Cognito mock
-  const { generateTestJwtToken } = await import('./testHelpers');
-  const validToken = await generateTestJwtToken({
-    sub: 'owner-user-123',
-    email: 'owner@test.com',
-    roles: ['customer'],
-    scopes: []
-  });
+  // Extract JWT claims to use in requestContext
+  const jwtClaims = extractJwtClaims(ownerToken);
 
   const event = await createApiGatewayEvent({
     pathParameters: { id: envelopeId },
@@ -344,10 +409,11 @@ export async function recordConsentForAuthenticatedUser(
       consentGiven: true,
       consentText
     },
-    headers: { 'Authorization': `Bearer ${validToken}` },
+    headers: { 'Authorization': `Bearer ${ownerToken}` },
     requestContext: createTestRequestContext({
-      userId: 'owner-user-123',
-      email: 'owner@test.com'
+      userId: jwtClaims.userId,
+      email: jwtClaims.email,
+      role: 'customer'
     })
   });
   
@@ -389,18 +455,20 @@ export async function recordConsentWithToken(
 export async function completeSigningForAuthenticatedUser(
   envelopeId: string,
   signerId: string,
-  _ownerToken: string,
-  pdfUrl: string = 'https://test-bucket.s3.amazonaws.com/test-document.pdf'
+  ownerToken: string,
+  pdfUrl?: string
 ): Promise<{ signed: boolean; error?: string }> {
-  // Always generate a valid JWT token using our Cognito mock
-  const { generateTestJwtToken } = await import('./testHelpers');
-  const validToken = await generateTestJwtToken({
-    sub: 'owner-user-123',
-    email: 'owner@test.com',
-    roles: ['customer'],
-    scopes: []
-  });
+  console.log('🔍 [FACTORY DEBUG] Starting completeSigningForAuthenticatedUser...');
+  
+  // Extract JWT claims to use in requestContext
+  const jwtClaims = extractJwtClaims(ownerToken);
+  console.log('🔍 [FACTORY DEBUG] JWT claims extracted:', jwtClaims);
 
+  // Use provided URL or create PDF in S3
+  console.log('🔍 [FACTORY DEBUG] pdfUrl provided:', pdfUrl);
+  const finalPdfUrl = pdfUrl || await createTestPdfInLocalStackS3(envelopeId);
+  console.log('🔍 [FACTORY DEBUG] finalPdfUrl:', finalPdfUrl);
+  
   const testPdf = generateTestPdf();
   const pdfDigest = calculatePdfDigest(testPdf);
   
@@ -408,18 +476,19 @@ export async function completeSigningForAuthenticatedUser(
     pathParameters: { id: envelopeId },
     body: {
       signerId,
-      finalPdfUrl: pdfUrl,
+      finalPdfUrl: finalPdfUrl,
       digest: {
         alg: 'sha256',
         value: pdfDigest.value
       },
       algorithm: 'RSASSA_PSS_SHA_256',
-      keyId: 'test-key-id'
+      keyId: 'alias/test-key-id'
     },
-    headers: { 'Authorization': `Bearer ${validToken}` },
+    headers: { 'Authorization': `Bearer ${ownerToken}` },
     requestContext: createTestRequestContext({
-      userId: 'owner-user-123',
-      email: 'owner@test.com'
+      userId: jwtClaims.userId,
+      email: jwtClaims.email,
+      role: 'customer'
     })
   });
   
@@ -468,7 +537,7 @@ export async function completeSigningWithToken(
         value: pdfDigest.value
       },
       algorithm: 'RSASSA_PSS_SHA_256',
-      keyId: 'test-key-id'
+      keyId: 'alias/test-key-id'
     }
   });
   
@@ -510,25 +579,20 @@ export async function validateInvitationToken(token: string): Promise<{ valid: b
  */
 export async function finaliseEnvelope(
   envelopeId: string,
-  _ownerToken: string,
+  ownerToken: string,
   message: string = 'All parties have signed'
 ): Promise<void> {
-  // Always generate a valid JWT token using our Cognito mock
-  const { generateTestJwtToken } = await import('./testHelpers');
-  const validToken = await generateTestJwtToken({
-    sub: 'owner-user-123',
-    email: 'owner@test.com',
-    roles: ['customer'],
-    scopes: []
-  });
+  // Extract JWT claims to use in requestContext
+  const jwtClaims = extractJwtClaims(ownerToken);
 
   const event = await createApiGatewayEvent({
     pathParameters: { id: envelopeId },
     body: { message },
-    headers: { 'Authorization': `Bearer ${validToken}` },
+    headers: { 'Authorization': `Bearer ${ownerToken}` },
     requestContext: createTestRequestContext({
-      userId: 'owner-user-123',
-      email: 'owner@test.com'
+      userId: jwtClaims.userId,
+      email: jwtClaims.email,
+      role: 'customer'
     })
   });
   
@@ -551,7 +615,8 @@ export async function downloadSignedDocument(
     headers: { 'Authorization': `Bearer ${ownerToken}` },
     requestContext: createTestRequestContext({
       userId: 'owner-user-123',
-      email: 'owner@test.com'
+      email: 'owner@test.com',
+      role: 'customer'
     })
   });
   
@@ -571,41 +636,62 @@ export async function createSingleSignerFlow(
   envelopeName: string,
   ownerEmail: string = 'owner@test.com'
 ): Promise<SigningFlowResult> {
-  // Generate owner token once for the entire flow
+  console.log('🔍 [FLOW DEBUG] Starting createSingleSignerFlow...');
+  console.log('🔍 [FLOW DEBUG] envelopeName:', envelopeName);
+  console.log('🔍 [FLOW DEBUG] ownerEmail:', ownerEmail);
+  
+  // Generate unique owner token for each flow
+  const uniqueUserId = `owner-user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  console.log('🔍 [FLOW DEBUG] uniqueUserId:', uniqueUserId);
+  
   const ownerToken = await generateTestJwtToken({
-    sub: 'owner-user-123',
+    sub: uniqueUserId,
     email: ownerEmail,
     roles: ['customer'],
     scopes: []
   });
+  console.log('🔍 [FLOW DEBUG] ownerToken generated');
 
   // Create envelope using the same token
+  console.log('🔍 [FLOW DEBUG] Creating envelope...');
   const envelope = await createTestEnvelopeWithToken(
     envelopeName,
     'Contract for single signer testing',
     ownerEmail,
     ownerToken
   );
+  console.log('🔍 [FLOW DEBUG] Envelope created:', envelope.id);
 
-  // Create owner party
+  // Create owner party with the same email as the authenticated user
+  console.log('🔍 [FLOW DEBUG] Creating owner party...');
   const ownerParty = await createTestPartyWithToken(
     envelope.id,
     'Owner Signer',
-    ownerEmail,
+    ownerEmail, // This matches the email in the JWT token
     'signer',
     1,
     ownerToken
   );
+  console.log('🔍 [FLOW DEBUG] Owner party created:', ownerParty.id);
 
   // Record consent
+  console.log('🔍 [FLOW DEBUG] Recording consent...');
   await recordConsentForAuthenticatedUser(envelope.id, ownerParty.id, ownerToken);
+  console.log('🔍 [FLOW DEBUG] Consent recorded');
+
+  // Add delay to ensure consent timestamp is before signing timestamp
+  console.log('🔍 [FLOW DEBUG] Adding delay...');
+  await new Promise(resolve => setTimeout(resolve, 100));
+  console.log('🔍 [FLOW DEBUG] Delay completed');
 
   // Complete signing
+  console.log('🔍 [FLOW DEBUG] Starting complete signing...');
   const signingResult = await completeSigningForAuthenticatedUser(
     envelope.id,
     ownerParty.id,
     ownerToken
   );
+  console.log('🔍 [FLOW DEBUG] Signing completed:', signingResult);
 
   expect(signingResult.signed).toBe(true);
 
@@ -613,7 +699,7 @@ export async function createSingleSignerFlow(
     envelope,
     parties: [ownerParty],
     owner: {
-      id: 'owner-user-123',
+      id: uniqueUserId,
       email: ownerEmail,
       token: ownerToken
     },

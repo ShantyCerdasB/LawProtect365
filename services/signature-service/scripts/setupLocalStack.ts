@@ -57,8 +57,8 @@ async function setupLocalStack() {
     // Wait a bit for services to be fully ready
     await new Promise(resolve => setTimeout(resolve, 5000));
     
-    // Setup Cognito User Pool
-    await setupCognitoUserPool();
+    // Skip Cognito setup (not available in free LocalStack)
+    console.log('⚠️  Skipping Cognito setup (not available in free LocalStack)');
     
     // Setup S3 buckets
     await setupS3Buckets();
@@ -275,18 +275,29 @@ async function setupS3Buckets() {
       name: 'lawprotect365-documents-test', 
       enableVersioning: true,
       enableEncryption: true
+    },
+    {
+      name: 'test-signed',
+      enableVersioning: false,
+      enableEncryption: false
     }
   ];
   
   for (const bucket of buckets) {
     try {
       // Create bucket
-      await s3.createBucket({
-        Bucket: bucket.name,
-        CreateBucketConfiguration: {
+      const createBucketParams: any = {
+        Bucket: bucket.name
+      };
+      
+      // Only add LocationConstraint for regions other than us-east-1
+      if (region !== 'us-east-1') {
+        createBucketParams.CreateBucketConfiguration = {
           LocationConstraint: region
-        }
-      }).promise();
+        };
+      }
+      
+      await s3.createBucket(createBucketParams).promise();
       
       console.log(`✅ S3 bucket created: ${bucket.name}`);
       
@@ -370,8 +381,16 @@ async function setupKMSKeys() {
     
     console.log(`✅ KMS alias created: alias/lawprotect365-sign-key-test`);
     
+    // Create alias for test-key-id (for tests)
+    await kms.createAlias({
+      AliasName: 'alias/test-key-id',
+      TargetKeyId: signingKeyId
+    }).promise();
+    
+    console.log(`✅ KMS alias created: alias/test-key-id`);
+    
     // Store key ID for tests
-    process.env.KMS_SIGNER_KEY_ID = signingKeyId;
+    process.env.KMS_SIGNER_KEY_ID = 'alias/lawprotect365-sign-key-test';
     process.env.KMS_SIGNER_KEY_ARN = `arn:aws:kms:${region}:000000000000:key/${signingKeyId}`;
     
   } catch (error) {
@@ -411,18 +430,6 @@ async function setupSSMParameters() {
   
   // Parameters matching Terraform configuration
   const parameters = [
-    {
-      Name: '/lawprotect365/test/cognito/user-pool-id',
-      Value: process.env.COGNITO_USER_POOL_ID || '',
-      Type: 'String',
-      Description: 'Cognito User Pool ID for testing'
-    },
-    {
-      Name: '/lawprotect365/test/cognito/client-id',
-      Value: process.env.COGNITO_CLIENT_ID || '',
-      Type: 'String',
-      Description: 'Cognito Client ID for testing'
-    },
     {
       Name: '/lawprotect365/test/kms/signer-key-arn',
       Value: process.env.KMS_SIGNER_KEY_ARN || '',

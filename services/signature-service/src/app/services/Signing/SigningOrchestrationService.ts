@@ -70,7 +70,7 @@ export class SigningOrchestrationService {
       userAgent: command.userAgent || "unknown",
       timestamp: completedAt,
       consentGiven: true,
-      consentTimestamp: party.invitedAt || completedAt,
+      consentTimestamp: party.consentedAt || party.invitedAt || completedAt,
       consentText: "Consent given for signing",
       invitedBy: invitation.invitedBy,
       invitedByName: invitation.invitedByName,
@@ -278,8 +278,12 @@ export class SigningOrchestrationService {
       const signResult = await this.signWithKms(command, party, invitation);
       
       // Verify the signature is valid
+      const documentDigestBuffer = Buffer.from(command.digest.value, 'hex');
+      const contextHashBuffer = Buffer.from(signResult.contextHash, 'hex');
+      const combinedMessage = Buffer.concat([documentDigestBuffer, contextHashBuffer]);
+      
       const verifyResult = await this.signer.verify({
-        message: Buffer.from(command.digest.value + signResult.contextHash, 'hex'),
+        message: combinedMessage,
         signature: Buffer.from(signResult.signature, 'base64'),
         signingAlgorithm: command.algorithm,
         keyId: signResult.keyId

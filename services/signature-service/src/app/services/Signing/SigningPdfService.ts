@@ -154,9 +154,11 @@ export class SigningPdfService {
       return Buffer.from(arrayBuffer);
       
     } catch (error) {
+      console.error('🔍 [PDF DEBUG] Error downloading PDF:', error);
       throw signatureFailed({ error: String(error) });
     }
   }
+
 
   /**
    * Adds signature metadata to the PDF (no visual signatures - already embedded by Documents Service)

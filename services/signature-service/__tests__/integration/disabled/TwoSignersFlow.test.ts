@@ -6,7 +6,7 @@
  * with invitation tokens and mixed authentication (owner authenticated, invited user with token).
  */
 
-import '../helpers/awsMocksMinimal';
+// Removed awsMocksMinimal import - using LocalStack instead
 import { 
   createTwoSignersFlow,
   type SigningFlowResult 

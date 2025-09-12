@@ -6,19 +6,21 @@
  */
 
 import { startMockJwksServer, stopMockJwksServer } from './integration/helpers/mockJwksServer';
-import './integration/helpers/awsMocksMinimal';
+import './integration/helpers/awsLocalStackConfig';
 
-// Set test environment variables for DynamoDB Local
+// Set test environment variables
 process.env.NODE_ENV = 'test';
-process.env.AWS_ENDPOINT_URL = 'http://localhost:8000';
 process.env.AWS_REGION = 'us-east-1';
-process.env.AWS_ACCESS_KEY_ID = 'fake';
-process.env.AWS_SECRET_ACCESS_KEY = 'fake';
 
-// Set LocalStack environment variables
-process.env.LOCALSTACK_ENDPOINT = 'http://localhost:4566';
-process.env.LOCALSTACK_ACCESS_KEY_ID = 'test';
-process.env.LOCALSTACK_SECRET_ACCESS_KEY = 'test';
+// DynamoDB Local configuration (separate from LocalStack)
+process.env.DYNAMODB_ENDPOINT = 'http://localhost:8000';
+process.env.DYNAMODB_ACCESS_KEY_ID = 'fake';
+process.env.DYNAMODB_SECRET_ACCESS_KEY = 'fake';
+
+// LocalStack configuration for other AWS services
+process.env.AWS_ENDPOINT_URL = 'http://localhost:4566';
+process.env.AWS_ACCESS_KEY_ID = 'test';
+process.env.AWS_SECRET_ACCESS_KEY = 'test';
 
 // Set required shared-ts environment variables
 process.env.PROJECT_NAME = 'lawprotect365';

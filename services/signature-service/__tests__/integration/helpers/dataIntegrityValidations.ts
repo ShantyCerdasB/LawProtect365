@@ -30,7 +30,7 @@ export async function testInvalidDigest(
       value: 'invalid-digest-value'
     },
     algorithm: 'RSASSA_PSS_SHA_256',
-    keyId: 'test-key-id'
+    keyId: 'alias/test-key-id'
   };
 
   let result;
@@ -81,7 +81,7 @@ export async function testUnsupportedAlgorithm(
       value: pdfDigest.value
     },
     algorithm: 'UNSUPPORTED_ALGORITHM',
-    keyId: 'test-key-id'
+    keyId: 'alias/test-key-id'
   };
 
   let result;
@@ -133,7 +133,7 @@ export async function testDocumentIntegrity(
       value: modifiedDigest.value // Using digest from different PDF
     },
     algorithm: 'RSASSA_PSS_SHA_256',
-    keyId: 'test-key-id'
+    keyId: 'alias/test-key-id'
   };
 
   let result;
@@ -192,7 +192,7 @@ export async function testMissingConsent(
       value: pdfDigest.value
     },
     algorithm: 'RSASSA_PSS_SHA_256',
-    keyId: 'test-key-id'
+    keyId: 'alias/test-key-id'
   };
 
   console.log('🔍 [DEBUG] testMissingConsent signingBody:', signingBody);
@@ -255,7 +255,7 @@ export async function testSigningOrder(
         value: pdfDigest.value
       },
       algorithm: 'RSASSA_PSS_SHA_256',
-      keyId: 'test-key-id'
+      keyId: 'alias/test-key-id'
     }
   }));
 

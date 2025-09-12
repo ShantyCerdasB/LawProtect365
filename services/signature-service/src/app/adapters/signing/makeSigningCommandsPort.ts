@@ -93,9 +93,13 @@ export const makeSigningCommandsPort = (
 
            await deps.validationService.validateConsent(command, envelope, party);
 
+           const consentedAt = new Date().toISOString();
            await _partiesRepo.update(
              { envelopeId: command.envelopeId, partyId: command.signerId },
-             { status: PARTY_STATUSES[2] } as any
+             { 
+               status: PARTY_STATUSES[2],
+               consentedAt: consentedAt
+             } as any
            );
 
            await deps.eventService.publishConsentRecorded(
@@ -114,14 +118,14 @@ export const makeSigningCommandsPort = (
         consented: true,
              envelopeId: command.envelopeId,
              partyId: command.signerId,
-             consentedAt: new Date().toISOString(),
+             consentedAt: consentedAt,
         event: {
           name: "signing.consent.recorded",
                meta: { id: deps.ids.ulid(), ts: new Date().toISOString() as ISODateString, source: SIGNING_DEFAULTS.EVENT_SOURCE },
           data: {
             envelopeId: command.envelopeId,
             partyId: command.signerId,
-                 consentedAt: new Date().toISOString(),
+                 consentedAt: consentedAt,
             metadata: {
               ip: command.actor?.ip,
               userAgent: command.actor?.userAgent,
@@ -221,7 +225,7 @@ export const makeSigningCommandsPort = (
         userAgent: command.actor.userAgent || "unknown",
         timestamp: completedAt,
         consentGiven: true,
-        consentTimestamp: party.invitedAt || completedAt,
+        consentTimestamp: party.consentedAt || party.invitedAt || completedAt,
         consentText: "Consent given for signing",
         invitedBy: undefined,
         invitedByName: undefined,
@@ -232,8 +236,12 @@ export const makeSigningCommandsPort = (
       const signature = signResult.signature;
 
       // Verify the signature is valid
+      const documentDigestBuffer = Buffer.from(command.digest.value, 'hex');
+      const contextHashBuffer = Buffer.from(signResult.contextHash, 'hex');
+      const combinedMessage = Buffer.concat([documentDigestBuffer, contextHashBuffer]);
+      
       const verifyResult = await deps.signer.verify({
-        message: Buffer.from(command.digest.value + signResult.contextHash, 'hex'),
+        message: combinedMessage,
         signature: Buffer.from(signResult.signature, 'base64'),
         signingAlgorithm: command.algorithm,
         keyId: signResult.keyId
@@ -280,7 +288,11 @@ export const makeSigningCommandsPort = (
       if (signedCount >= requiredSigners) {
         // All signers have signed - generate final signed PDF
         try {
-          await deps.orchestrationService.generateFinalSignedPdf(command.envelopeId, command.finalPdfUrl || `${deps.downloadConfig?.signedBucket}/signed-${command.envelopeId}.pdf`, parties.items);
+          // Use provided finalPdfUrl or generate a fallback URL
+          const finalPdfUrl = command.finalPdfUrl || 
+            `${deps.downloadConfig?.signedBucket}/signed-${command.envelopeId}.pdf`;
+          
+          await deps.orchestrationService.generateFinalSignedPdf(command.envelopeId, finalPdfUrl, parties.items);
         } catch (error) {
           console.error('Failed to generate final signed PDF:', error);
           // Continue with completion even if PDF generation fails

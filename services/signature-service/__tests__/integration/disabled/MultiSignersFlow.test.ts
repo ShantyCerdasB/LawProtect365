@@ -6,7 +6,7 @@
  * with multiple invitation tokens, concurrent signing, and PDF generation.
  */
 
-import '../helpers/awsMocksMinimal';
+// Removed awsMocksMinimal import - using LocalStack instead
 import { 
   createMultiSignersFlow,
   type SigningFlowResult 
