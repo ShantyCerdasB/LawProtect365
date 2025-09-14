@@ -22,3 +22,6 @@ export * from './infrastructure';
 
 // Signature types
 export * from './signature';
+
+// Signer types
+export * from './signer';

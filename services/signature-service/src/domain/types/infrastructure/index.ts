@@ -14,3 +14,4 @@ export * from './audit';
 export * from './outbox';
 export * from './consent';
 export * from './signature';
+export * from './signer';
