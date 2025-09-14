@@ -42,6 +42,9 @@ export const addMinutes = (d: Date, minutes: number): Date => addMs(d, minutes *
 /** Adds days to a date. */
 export const addDays = (d: Date, days: number): Date => addMs(d, days * 86_400_000);
 
+/** Adds hours to a date. */
+export const addHours = (d: Date, hours: number): Date => addMs(d, hours * 3_600_000);
+
 /**
  * Returns the UTC start of day (00:00:00.000) for the given date.
  * @param d Input date.
@@ -62,6 +65,20 @@ export const endOfDayUTC = (d: Date): Date =>
  * @param b Right date.
  */
 export const diffMs = (a: Date, b: Date): number => a.getTime() - b.getTime();
+
+/**
+ * Difference in hours between two dates: a - b.
+ * @param a Left date.
+ * @param b Right date.
+ */
+export const diffHours = (a: Date, b: Date): number => diffMs(a, b) / 3_600_000;
+
+/**
+ * Difference in minutes between two dates: a - b.
+ * @param a Left date.
+ * @param b Right date.
+ */
+export const diffMinutes = (a: Date, b: Date): number => diffMs(a, b) / 60_000;
 
 /**
  * Formats a date as YYYY-MM-DD using UTC components.

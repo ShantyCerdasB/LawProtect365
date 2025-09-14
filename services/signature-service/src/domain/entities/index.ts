@@ -1,16 +1,11 @@
 /**
- * @file index.ts
- * @summary Domain entities index
- * @description Exports all domain entities for the signature service
+ * @fileoverview Entities barrel export - Exports all domain entities
+ * @summary Centralized exports for all domain entities
+ * @description This barrel file exports all domain entities for easy importing
+ * throughout the application.
  */
 
-export * from "./Audit";
-export * from "./ConsentDelegatedEvent";
-export * from "./Envelope";
-// export * from "./Input"; // Moved to Documents Service
-export * from "./Invitation";
-export * from "./InvitationConsent";
-export * from "./InvitationToken";
-export * from "./Party";
-export * from "./RequestToken";
-export * from "./Signature";
+export { Envelope } from './Envelope';
+export { Signer } from './Signer';
+export { Signature } from './Signature';
+export { Consent } from './Consent';

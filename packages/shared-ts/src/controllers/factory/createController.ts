@@ -51,9 +51,20 @@ export const createController = <TInput, TOutput>(
     const dependencies = config.createDependencies(c);
     const appService = new config.appServiceClass(dependencies);
     
-    const params = config.extractParams(validated.path, validated.body, { actor });
+    const params = config.extractParams(validated.path, validated.body, { actor, requestContext: evt.requestContext });
+    
     const methodName = config.methodName || 'execute';
-    const result = await appService[methodName]({ actor, ...params });
+    
+    // Merge actor with requestContext information for IP and userAgent
+    const enhancedActor = {
+      ...actor,
+      ip: evt.requestContext?.identity?.sourceIp,
+      userAgent: evt.requestContext?.identity?.userAgent
+    };
+    
+    const command = { actor: enhancedActor, ...params };
+    
+    const result = await appService[methodName](command);
     
     const responseData = config.transformResult ? config.transformResult(result) : result;
     

@@ -5,7 +5,7 @@
  *     '{"ownerId":"user-1","name":"My envelope"}'
  *   tsx serverless.local.ts src/controllers/envelopes/getEnvelopes.ts GET /envelopes
  */
-
+/*
 import "dotenv/config";
 import "tsconfig-paths/register"; // enable TS path aliases at runtime
 
@@ -99,7 +99,7 @@ async function main() {
     body,
     // 👇 muchos controladores nuestros leen evt.ctx.auth
     // inyectamos un auth fake para desarrollo local
-    // @ts-expect-error: campo extendido por nuestro middleware
+
     ctx: {
       auth: {
         userId: "user-local",
@@ -123,4 +123,4 @@ async function main() {
 main().catch((e) => {
   console.error(e);
   process.exit(1);
-});
+});*/

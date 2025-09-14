@@ -1,10 +1,15 @@
 /**
- * @file index.ts
- * @summary Consent types exports
- * @description Central export file for all consent-related types
+ * @fileoverview Consent types - Barrel exports for consent types
+ * @summary Centralized exports for consent-related types
+ * @description Provides centralized access to all consent-related type definitions
+ * including request types and domain interfaces.
  */
 
-export * from "./AppServiceInputs";
-export * from "./AdapterDependencies";
-export * from "./ConsentTypes";
+// Request types
+export type {
+  CreateConsentRequest
+} from './CreateConsentRequest';
 
+export type {
+  UpdateConsentRequest
+} from './UpdateConsentRequest';

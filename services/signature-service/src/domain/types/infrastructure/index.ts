@@ -1,9 +1,16 @@
 /**
- * @file index.ts
- * @summary Infrastructure types index
- * @description Exports all infrastructure-related types
+ * @fileoverview Infrastructure types index - Exports all infrastructure type definitions
+ * @summary Central export point for DynamoDB and other infrastructure types
+ * @description Provides centralized access to all infrastructure-related type definitions
+ * including DynamoDB item structures, mappers, and utility functions.
  */
 
-export * from "./dynamodb";
-export * from "./constants";
-export * from "./enums";
+// Common infrastructure types
+export * from './common';
+
+// Entity-specific infrastructure types
+export * from './envelope';
+export * from './audit';
+export * from './outbox';
+export * from './consent';
+export * from './signature';

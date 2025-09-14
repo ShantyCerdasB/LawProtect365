@@ -1,22 +1,24 @@
 /**
- * @file index.ts
- * @summary Domain types index
- * @description Exports all domain types
+ * @fileoverview Types barrel export - Exports all domain types
+ * @summary Centralized exports for all domain types
+ * @description This barrel file exports all domain types for easy importing
+ * throughout the application.
  */
 
-export * from "./infrastructure";
-export * from "./audit";
-export * from "./certificate";
-export * from "./common";
-export * from "./consent";
-// export * from "./core"; // Empty directory
-// export * from "./delegation"; // Conflicts with common
-export * from "./envelopes";
-export * from "./global-parties";
-export * from "./idempotency";
-// export * from "./inputs"; // Moved to Documents Service
-export * from "./outbox";
-// export * from "./parties"; // Conflicts with consent
-export * from "./requests";
-export * from "./signing";
-export * from "./s3";
+// Audit types
+export * from './audit';
+
+// Envelope types
+export * from './envelope';
+
+// Signing types
+export * from './signing';
+
+// Workflow types
+export * from './WorkflowTypes';
+
+// Infrastructure types
+export * from './infrastructure';
+
+// Signature types
+export * from './signature';

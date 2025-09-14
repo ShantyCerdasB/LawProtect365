@@ -11,3 +11,4 @@ export * from "./actor.js";
 export * from "./documentLock.js";
 export * from "./outbox.js";
 export * from "./response.js";
+export * from "./valueObject.js";

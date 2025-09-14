@@ -1,14 +1,24 @@
 /**
- * @file index.ts
- * @summary Domain layer index
- * @description Exports all domain layer components
+ * @fileoverview Domain barrel export - Exports all domain components
+ * @summary Centralized exports for the entire domain layer
+ * @description This barrel file exports all domain components (entities, enums, 
+ * value objects, types, and schemas) for easy importing throughout the application.
  */
 
-export * from "./entities";
-export * from "./value-objects";
-export * from "./types";
-// export * from "./rules"; // No index.ts
-export * from "./contracts";
-export * from "./services";
-export * from "./constants";
-// export * from "./events"; // No index.ts
+// Entities
+export * from './entities';
+
+// Enums
+export * from './enums';
+
+// Value Objects
+export * from './value-objects';
+
+// Types
+export * from './types';
+
+// Schemas
+export * from './schemas';
+
+// Rules
+export * from './rules';

@@ -1,35 +1,13 @@
 /**
- * @file index.ts
- * @summary Value objects index
- * @description Exports all value objects for the signature service
+ * @fileoverview Value Objects barrel export - Exports all domain value objects
+ * @summary Centralized exports for all domain value objects
+ * @description This barrel file exports all domain value objects for easy importing
+ * throughout the application.
  */
 
-// IDs
-export * from "./ids";
-
-// Envelope
-export * from "./envelope";
-
-// Party
-export * from "./party";
-
-// Security
-export * from "./security";
-
-// Storage
-export * from "./storage";
-
-// Common
-export * from "./common";
-
-// Audit
-export * from "./audit";
-
-// Consent
-export * from "./consent";
-
-// Idempotency
-export * from "./idempotency";
-
-// Document (only what's needed for signature service)
-export * from "./document";
+export { EnvelopeId } from './EnvelopeId';
+export { SignerId } from './SignerId';
+export { SignatureId } from './SignatureId';
+export { ConsentId } from './ConsentId';
+export { Email } from './Email';
+export { SigningOrder } from './SigningOrder';

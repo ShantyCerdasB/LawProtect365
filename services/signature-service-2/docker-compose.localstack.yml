@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  localstack:
+    container_name: lawprotect365-localstack
+    image: localstack/localstack:2.3.2
+    ports:
+      - "4566:4566"
+    environment:
+      # Services to enable (KMS, EventBridge, SSM, S3)
+      - SERVICES=kms,events,ssm,s3
+      
+      # AWS credentials
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_DEFAULT_REGION=us-east-1
+      
+      # Disable persistence for faster startup
+      - PERSISTENCE=0
+      
+      # KMS configuration
+      - KMS_PROVIDER=local-kms
+      
+      # Disable debug for faster startup
+      - DEBUG=0
+      
+      # Lambda executor
+      - LAMBDA_EXECUTOR=docker
+      
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
