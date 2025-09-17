@@ -63,13 +63,6 @@ export function signatureToDdbItem(signature: Signature): SignatureDdbItem {
     status,
     reason: metadata.reason,
     location: metadata.location,
-    certificateInfo: metadata.certificateInfo ? {
-      issuer: metadata.certificateInfo.issuer,
-      subject: metadata.certificateInfo.subject,
-      validFrom: metadata.certificateInfo.validFrom.toISOString(),
-      validTo: metadata.certificateInfo.validTo.toISOString(),
-      certificateHash: metadata.certificateInfo.certificateHash
-    } : undefined,
     ipAddress: metadata.ipAddress,
     userAgent: metadata.userAgent,
     gsi1pk: SignatureKeyBuilders.buildGsi1Key(envelopeId, signatureId).gsi1pk,
@@ -92,13 +85,6 @@ export function signatureFromDdbItem(item: SignatureDdbItem): Signature {
   const metadata = {
     reason: item.reason,
     location: item.location,
-    certificateInfo: item.certificateInfo ? {
-      issuer: item.certificateInfo.issuer,
-      subject: item.certificateInfo.subject,
-      validFrom: new Date(item.certificateInfo.validFrom),
-      validTo: new Date(item.certificateInfo.validTo),
-      certificateHash: item.certificateInfo.certificateHash
-    } : undefined,
     ipAddress: item.ipAddress,
     userAgent: item.userAgent
   };
@@ -136,20 +122,12 @@ export function createSignatureFromRequest(request: {
   status: string;
   reason?: string;
   location?: string;
-  certificateInfo?: {
-    issuer: string;
-    subject: string;
-    validFrom: Date;
-    validTo: Date;
-    certificateHash: string;
-  };
   ipAddress?: string;
   userAgent?: string;
 }): Signature {
   const metadata = {
     reason: request.reason,
     location: request.location,
-    certificateInfo: request.certificateInfo,
     ipAddress: request.ipAddress,
     userAgent: request.userAgent
   };

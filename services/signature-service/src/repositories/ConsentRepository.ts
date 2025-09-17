@@ -6,7 +6,7 @@
  */
 
 import type { DdbClientLike } from '@lawprotect/shared-ts';
-import { mapAwsError, ConflictError, NotFoundError, ErrorCodes } from '@lawprotect/shared-ts';
+import { mapAwsError, ConflictError, NotFoundError, ErrorCodes, BadRequestError } from '@lawprotect/shared-ts';
 import { Consent } from '../domain/entities/Consent';
 import { ConsentId } from '../domain/value-objects/ConsentId';
 import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
@@ -91,7 +91,7 @@ export class ConsentRepository {
       }
 
       if (!isConsentDdbItem(result.Item)) {
-        throw new Error('Invalid consent item structure');
+        throw new BadRequestError('Invalid consent item structure', 'INVALID_CONSENT_DATA');
       }
 
       return consentFromDdbItem(result.Item);
@@ -130,7 +130,7 @@ export class ConsentRepository {
 
       const item = result.Items[0] as Record<string, unknown>;
       if (!isConsentDdbItem(item)) {
-        throw new Error('Invalid consent item structure');
+        throw new BadRequestError('Invalid consent item structure', 'INVALID_CONSENT_DATA');
       }
 
       return consentFromDdbItem(item as any);
@@ -198,6 +198,44 @@ export class ConsentRepository {
         .map(item => consentFromDdbItem(item as any));
     } catch (err) {
       throw mapAwsError(err, 'ConsentRepository.getBySigner');
+    }
+  }
+
+  /**
+   * Updates a consent record
+   * @param consentId - Consent ID
+   * @param request - Update request
+   * @returns Updated consent entity
+   */
+  async update(consentId: ConsentId, request: any): Promise<Consent> {
+    try {
+      const existingConsent = await this.getById(consentId);
+      if (!existingConsent) {
+        throw new NotFoundError('Consent not found', ErrorCodes.COMMON_NOT_FOUND);
+      }
+
+      // Create updated consent with new signature ID if provided
+      const updatedConsent = request.signatureId 
+        ? existingConsent.linkWithSignature(request.signatureId)
+        : existingConsent;
+
+      await this.ddb.update!({
+        TableName: this.tableName,
+        Key: ConsentKeyBuilders.buildPrimaryKey(consentId.getValue()),
+        UpdateExpression: 'SET #updatedAt = :updatedAt' + (request.signatureId ? ', #signatureId = :signatureId' : ''),
+        ExpressionAttributeNames: {
+          '#updatedAt': 'updatedAt',
+          ...(request.signatureId && { '#signatureId': 'signatureId' })
+        },
+        ExpressionAttributeValues: {
+          ':updatedAt': updatedConsent.getUpdatedAt().toISOString(),
+          ...(request.signatureId && { ':signatureId': request.signatureId.getValue() })
+        }
+      });
+
+      return updatedConsent;
+    } catch (err) {
+      throw mapAwsError(err, 'ConsentRepository.update');
     }
   }
 
@@ -296,7 +334,7 @@ export class ConsentRepository {
           ':gsi2pk': ConsentKeyBuilders.buildSignerGsi2Key(signerId, '').gsi2pk
         };
       } else {
-        throw new Error('Either envelopeId or signerId must be provided');
+        throw new BadRequestError('Either envelopeId or signerId must be provided', 'MISSING_REQUIRED_PARAMETER');
       }
 
       if (cursor) {

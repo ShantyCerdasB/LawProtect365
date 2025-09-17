@@ -4,58 +4,123 @@
  * @description This handler sends reminders to signers who haven't signed yet
  * or resends invitations to specific signers who may not have received them.
  */
-/*
-import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { apiHandler } from '@lawprotect/shared-ts';
+
+import { ControllerFactory, UserRole, VALID_COGNITO_ROLES } from '@lawprotect/shared-ts';
+import { EnvelopeService } from '../../services/EnvelopeService';
+import { SignerService } from '../../services/SignerService';
+import { InvitationTokenService } from '../../services/InvitationTokenService';
+import { ServiceFactory } from '../../infrastructure/factories/ServiceFactory';
+import { EnvelopeId } from '../../domain/value-objects/EnvelopeId';
+import { SendNotificationRequestSchema } from '../../domain/schemas/SendNotificationSchema';
 
 /**
- * TODO: SendNotificationHandler Responsibilities Analysis
+ * SendNotificationHandler - Production-ready handler using ControllerFactory
  * 
- * WHAT THIS HANDLER DOES:
- * ✅ Sends reminders to signers who haven't signed
- * ✅ Resends invitations to specific signers
- * ✅ Validates envelope exists and is sent
- * ✅ Validates user has permission to send notifications
- * ✅ Logs notification activity for audit
- * ✅ Tracks notification frequency and limits
+ * This handler sends reminders to signers who haven't signed yet or resends
+ * invitations to specific signers. It uses ControllerFactory with a comprehensive
+ * middleware pipeline.
  * 
- * WHAT THIS HANDLER DOES NOT DO:
- * ❌ Handle document signing (that's SignDocumentHandler)
- * ❌ Manage email delivery (that's Notification Service)
- * ❌ Handle user authentication (that's Auth Service)
- * ❌ Generate invitation tokens (that's CreateEnvelopeHandler)
+ * @middleware
+ * - JWT authentication: Validates user identity and token validity
+ * - Role validation: Ensures user has appropriate role permissions
+ * - Request validation: Validates request body and parameters
+ * - Service orchestration: Coordinates between domain services
+ * - Response formatting: Transforms domain entities to API response format
  * 
- * POTENTIAL RESPONSIBILITY CONCERNS:
- * ⚠️  Sends reminders AND resends invitations - could be split
- * ⚠️  Validates permissions AND sends notifications - could be separate
+ * @flow
+ * 1. Request Validation - Validates notification type and parameters
+ * 2. Envelope Access - Validates user has access to the envelope
+ * 3. Status Validation - Ensures envelope is sent (notifications only for sent envelopes)
+ * 4. Signer Retrieval - Gets signers to notify based on type
+ * 5. Notification Sending - Sends reminders or resends invitations
+ * 6. Response Assembly - Returns notification confirmation with details
  * 
- * RECOMMENDATION: Keep as single handler - notifications are atomic operations
+ * @responsibilities
+ * - Reminder Notifications: Sends reminders to pending signers
+ * - Invitation Resend: Resends invitations to specific signers
+ * - Access Control: Validates user permissions for notification sending
+ * - Status Validation: Ensures envelope is in correct state for notifications
+ * - Audit Logging: Logs all notification activities for compliance
+ * 
+ * @exclusions
+ * - Email Delivery: Handled by Notification Service
+ * - Template Management: Handled by Notification Service
+ * - Rate Limiting: Handled by middleware
+ * - User Management: Handled by User Service
+ * - Document Processing: Handled by Document Service
  */
-/*
-export const sendNotificationHandler = async (
-  event: APIGatewayProxyEvent
-): Promise<APIGatewayProxyResult> => {
-  return apiHandler(async () => {
-    // TODO: Implement notification sending logic
-    // 1. Parse and validate request body
-    // 2. Determine notification type (reminder or resend)
-    // 3. Validate envelope exists and is sent
-    // 4. Validate user has permission to send notifications
-    // 5. Send appropriate notifications
-    // 6. Log notification activity
-    // 7. Return notification confirmation
+export const sendNotificationHandler = ControllerFactory.createCommand({
+  // Validation schemas
+  bodySchema: SendNotificationRequestSchema,
+  
+  // Parameter extraction
+  extractParams: (_path: any, body: any, _query: any, context: any) => ({
+    requestBody: body,
+    envelopeId: _path.envelopeId,
+    userId: context.auth.userId,
+    securityContext: context.securityContext
+  }),
+  
+  // Service configuration - use domain services directly
+  appServiceClass: class {
+    constructor() {
+      this.envelopeService = ServiceFactory.createEnvelopeService();
+      this.signerService = ServiceFactory.createSignerService();
+      this.invitationTokenService = ServiceFactory.createInvitationTokenService();
+    }
     
-    return {
-      statusCode: 200,
-      body: JSON.stringify({
+    private envelopeService: EnvelopeService;
+    private signerService: SignerService;
+    private invitationTokenService: InvitationTokenService;
+    
+    async execute(params: { requestBody: any; envelopeId: string; userId: string; securityContext: any }) {
+      const { requestBody, envelopeId, userId, securityContext } = params;
+
+      // Get envelope and validate access
+      const envelope = await this.envelopeService.getEnvelope(
+        new EnvelopeId(envelopeId),
+        userId,
+        securityContext
+      );
+
+      // Validate envelope is sent (notifications only for sent envelopes)
+      if (envelope.getStatus() !== 'SENT') {
+        throw new Error('Notifications can only be sent for envelopes that have been sent');
+      }
+
+      // Send notifications based on type using existing services
+      if (requestBody.type === 'resend') {
+        // Use existing InvitationTokenService to resend invitations
+        await this.invitationTokenService.publishSignerInvitedEvents(
+          new EnvelopeId(envelopeId),
+          userId
+        );
+      } else if (requestBody.type === 'reminder') {
+        // Delegate to SignerService to send reminders and publish events
+        await this.signerService.sendReminders(
+          new EnvelopeId(envelopeId),
+          requestBody.signerIds,
+          securityContext
+        );
+      }
+
+      return {
         message: 'Notifications sent successfully',
         notifications: {
-          type: 'reminder', // or 'resend'
-          sent: 0,
-          recipients: []
+          type: requestBody.type,
+          sent: requestBody.type === 'resend' ? 'all' : 'pending',
+          envelopeId: envelopeId,
+          timestamp: new Date().toISOString()
         }
-      })
-    };
-  });
-};
-*/
+      };
+    }
+  },
+  
+  // Response configuration
+  responseType: 'ok',
+  
+  // Security configuration
+  requireAuth: true,
+  requiredRoles: [...VALID_COGNITO_ROLES] as UserRole[],
+  includeSecurityContext: true
+});

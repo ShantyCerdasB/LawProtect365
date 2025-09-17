@@ -157,6 +157,12 @@ export interface SignatureServiceConfig extends AppConfig {
     sseKmsKeyId?: string;
     /** Default TTL (in seconds) for presigned URLs */
     presignTtlSeconds: number;
+    /** Minimum TTL (in seconds) for presigned URLs */
+    minPresignTtlSeconds: number;
+    /** Maximum TTL (in seconds) for presigned URLs */
+    maxPresignTtlSeconds: number;
+    /** Default TTL (in seconds) for document viewing presigned URLs */
+    documentViewTtlSeconds: number;
     /** Optional default Cache-Control header value for uploads */
     defaultCacheControl?: string;
     /** Whether to apply a public ACL by default for specific operations */
@@ -434,6 +440,9 @@ export const loadConfig = (
       signedBucket: getEnv("SIGNED_BUCKET") ?? getRequired("EVIDENCE_BUCKET"),
       sseKmsKeyId: getEnv("S3_SSE_KMS_KEY_ID"),
       presignTtlSeconds: getNumber("PRESIGN_TTL_SECONDS", 900, { min: 60, max: 86_400 }),
+      minPresignTtlSeconds: getNumber("MIN_PRESIGN_TTL_SECONDS", 1, { min: 1, max: 3600 }),
+      maxPresignTtlSeconds: getNumber("MAX_PRESIGN_TTL_SECONDS", 604800, { min: 60, max: 604800 }),
+      documentViewTtlSeconds: getNumber("DOCUMENT_VIEW_TTL_SECONDS", 259200, { min: 3600, max: 604800 }), // 3 days default
       defaultCacheControl: getEnv("S3_DEFAULT_CACHE_CONTROL"),
       defaultPublicAcl: getBoolean("S3_DEFAULT_PUBLIC_ACL", false)
     },

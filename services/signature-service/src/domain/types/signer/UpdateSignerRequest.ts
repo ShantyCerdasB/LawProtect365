@@ -6,11 +6,22 @@
  */
 
 import type { SignerStatus } from '../../enums/SignerStatus';
+import type { Email } from '../../value-objects/Email';
 
 /**
  * Request to update an existing signer record
  */
 export interface UpdateSignerDomainRequest {
+  /**
+   * The signer's email address to update
+   */
+  email?: Email;
+
+  /**
+   * The signer's full name to update
+   */
+  fullName?: string;
+
   /**
    * The signer status to update
    */

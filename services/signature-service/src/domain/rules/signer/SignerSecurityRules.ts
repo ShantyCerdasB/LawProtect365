@@ -11,16 +11,8 @@ import {
   signerEmailRequired
 } from '@/signature-errors';
 import type { SignatureServiceConfig } from '@/config';
-
-/**
- * Signer security operation types
- */
-export enum SignerSecurityOperation {
-  SIGN = 'SIGN',
-  DECLINE = 'DECLINE',
-  VIEW = 'VIEW',
-  DOWNLOAD = 'DOWNLOAD'
-}
+import { SignerOperation, diffMs } from '@lawprotect/shared-ts';
+import { validateSignatureIpAddress, validateSignatureUserAgent } from '@lawprotect/shared-ts';
 
 /**
  * Validates signer access to envelope
@@ -80,32 +72,23 @@ export function validateSignerIdentity(signer: Signer, providedEmail: string): v
  * @throws {SignatureError} When signer does not have sufficient permissions
  * @returns void
  */
-export function validateSignerPermissions(signer: Signer, operation: SignerSecurityOperation): void {
+export function validateSignerPermissions(signer: Signer, operation: SignerOperation): void {
   switch (operation) {
-    case SignerSecurityOperation.SIGN:
+    case SignerOperation.SIGN:
       if (!signer.canSign()) {
         throw accessDenied('Signer does not have permission to sign at this time');
       }
       break;
 
-    case SignerSecurityOperation.DECLINE:
+    case SignerOperation.DECLINE:
       if (signer.hasSigned() || signer.hasDeclined()) {
         throw accessDenied('Signer cannot decline after signing or declining');
       }
       break;
 
-    case SignerSecurityOperation.VIEW:
-      // All signers can view their envelope
-      break;
-
-    case SignerSecurityOperation.DOWNLOAD:
-      if (!signer.hasSigned() && !signer.isOwner(signer.getEnvelopeId())) {
-        throw accessDenied('Signer can only download after signing or if owner');
-      }
-      break;
-
     default:
-      throw accessDenied(`Unknown operation: ${operation}`);
+      // For other operations (ADD, REMOVE), basic access validation is sufficient
+      break;
   }
 }
 
@@ -146,10 +129,10 @@ export function validateInvitationToken(
   const metadata = signer.getMetadata();
   if (metadata.consentTimestamp) {
     const now = new Date();
-    const tokenAge = now.getTime() - metadata.consentTimestamp.getTime();
+    const ageMs = diffMs(now, metadata.consentTimestamp);
     const maxAgeMs = maxTokenAgeHours * 60 * 60 * 1000;
 
-    if (tokenAge > maxAgeMs) {
+    if (ageMs > maxAgeMs) {
       throw accessDenied('Invitation token has expired');
     }
   }
@@ -172,8 +155,14 @@ export function validateSignerIpAddress(
   currentIpAddress: string, 
   allowedIpRanges: string[] = []
 ): void {
-  if (!currentIpAddress || typeof currentIpAddress !== 'string') {
-    throw accessDenied('IP address is required for security validation');
+  // Use centralized validator for basic IP format validation
+  try {
+    validateSignatureIpAddress(currentIpAddress);
+  } catch (error) {
+    if (error instanceof Error) {
+      throw accessDenied(`IP address validation failed: ${error.message}`);
+    }
+    throw error;
   }
 
   // If no IP ranges are specified, allow all IPs
@@ -209,8 +198,14 @@ export function validateSignerUserAgent(
   currentUserAgent: string, 
   blockedUserAgents: string[] = []
 ): void {
-  if (!currentUserAgent || typeof currentUserAgent !== 'string') {
-    throw accessDenied('User agent is required for security validation');
+  // Use centralized validator for basic user agent format validation
+  try {
+    validateSignatureUserAgent(currentUserAgent, 500);
+  } catch (error) {
+    if (error instanceof Error) {
+      throw accessDenied(`User agent validation failed: ${error.message}`);
+    }
+    throw error;
   }
 
   // Check if user agent is blocked
@@ -247,10 +242,10 @@ export function validateSignerSession(_signer: Signer, sessionData: {
 
   // Check session age
   const now = new Date();
-  const sessionAge = now.getTime() - lastActivity.getTime();
+  const ageMs = diffMs(now, lastActivity);
   const maxAgeMs = maxSessionAgeHours * 60 * 60 * 1000;
 
-  if (sessionAge > maxAgeMs) {
+  if (ageMs > maxAgeMs) {
     throw accessDenied('Session has expired');
   }
 }
@@ -272,7 +267,7 @@ export function validateSignerSecurity(
   securityData: {
     userId: string;
     envelopeId: string;
-    operation: SignerSecurityOperation;
+    operation: SignerOperation;
     providedEmail?: string;
     invitationToken?: string;
     ipAddress?: string;

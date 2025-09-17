@@ -6,6 +6,7 @@
  */
 
 import type { DdbClientLike } from '@lawprotect/shared-ts';
+import { BadRequestError } from '@lawprotect/shared-ts';
 
 /**
  * Common DynamoDB item structure
@@ -155,9 +156,10 @@ export function hasUpdateSupport(ddb: DdbClientLike): ddb is DdbClientWithUpdate
  */
 export function requireQuery(ddb: DdbClientLike): asserts ddb is DdbClientWithQuery {
   if (!hasQuerySupport(ddb)) {
-    throw new Error(
+    throw new BadRequestError(
       "The provided DDB client does not implement `query(...)`. " +
-      "Use a client compatible with DocumentClient.query or provide an adapter exposing it."
+      "Use a client compatible with DocumentClient.query or provide an adapter exposing it.",
+      'INVALID_DDB_CLIENT_QUERY'
     );
   }
 }
@@ -171,9 +173,10 @@ export function requireQuery(ddb: DdbClientLike): asserts ddb is DdbClientWithQu
  */
 export function requireUpdate(ddb: DdbClientLike): asserts ddb is DdbClientWithUpdate {
   if (!hasUpdateSupport(ddb)) {
-    throw new Error(
+    throw new BadRequestError(
       "The provided DDB client does not implement `update(...)`. " +
-      "Use a client compatible with DocumentClient.update or provide an adapter exposing it."
+      "Use a client compatible with DocumentClient.update or provide an adapter exposing it.",
+      'INVALID_DDB_CLIENT_UPDATE'
     );
   }
 }

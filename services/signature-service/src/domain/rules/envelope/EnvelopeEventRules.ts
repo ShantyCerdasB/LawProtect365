@@ -11,7 +11,7 @@ import { AuditEventType } from '@/domain/enums/AuditEventType';
 import { SigningOrder } from '@/domain/value-objects/SigningOrder';
 import { Envelope } from '@/domain/entities/Envelope';
 import { WorkflowTimingConfig, WorkflowEventData } from '@/domain/types/WorkflowTypes';
-import { diffMinutes } from '@lawprotect/shared-ts';
+import { diffMinutes, EVENT_TIMING } from '@lawprotect/shared-ts';
 import { eventGenerationFailed } from '@/signature-errors';
 import { validateSigningOrderWorkflow } from './EnvelopeSigningOrderRules';
 import { validateWorkflowTiming, validateExpirationWorkflow } from './EnvelopeTimingRules';
@@ -93,6 +93,9 @@ export function validateEventTypeForState(envelope: Envelope, eventType: AuditEv
     [EnvelopeStatus.DECLINED]: [
       AuditEventType.ENVELOPE_DECLINED,
       AuditEventType.SIGNER_DECLINED
+    ],
+    [EnvelopeStatus.CANCELLED]: [
+      AuditEventType.ENVELOPE_CANCELLED
     ]
   };
   
@@ -126,8 +129,8 @@ export function validateEventTiming(
   const minutesSinceLastEvent = diffMinutes(now, lastEventSent);
   
   // Prevent spam events (minimum 1 minute between same event types)
-  if (minutesSinceLastEvent < 1) {
-    throw eventGenerationFailed('Event sent too recently. Minimum 1 minute between same event types');
+  if (minutesSinceLastEvent < EVENT_TIMING.MIN_MINUTES_BETWEEN_EVENTS) {
+    throw eventGenerationFailed(`Event sent too recently. Minimum ${EVENT_TIMING.MIN_MINUTES_BETWEEN_EVENTS} minute between same event types`);
   }
 }
 

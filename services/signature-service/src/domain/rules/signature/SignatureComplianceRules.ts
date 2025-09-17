@@ -16,6 +16,18 @@ import {
   complianceViolation,
   documentIntegrityViolation
 } from '@/signature-errors';
+import { 
+  validateAlgorithmCompliance,
+  validateAlgorithmSecurityLevel,
+  SecurityLevel,
+  ComplianceLevel,
+  validateSignatureIpAddress,
+  validateSignatureUserAgent,
+  diffMs,
+  RetentionUnit,
+  retentionUnitToMs,
+  BUSINESS_TIME_PERIODS
+} from '@lawprotect/shared-ts';
 
 /**
  * Signature compliance operation types
@@ -40,30 +52,12 @@ export function validateSignatureLegalValidity(signature: Signature): void {
     throw signatureInvalid('Only signed signatures can be legally valid');
   }
 
-  // Validate signature has required legal information
-  const metadata = signature.getMetadata();
-  
-  if (!metadata.certificateInfo) {
-    throw complianceViolation('Certificate information is required for legal validity');
-  }
-
-  // Validate certificate is not expired
-  const cert = metadata.certificateInfo;
-  if (cert.validTo < new Date()) {
-    throw signatureInvalid('Certificate has expired, signature is not legally valid');
-  }
-
-  // Validate certificate is from a trusted issuer
-  if (!isTrustedCertificateIssuer(cert.issuer)) {
-    throw complianceViolation('Certificate issuer is not trusted for legal validity');
-  }
-
   // Validate signature timestamp is within legal bounds
   const signatureTime = signature.getTimestamp();
   const now = new Date();
-  const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+  const age = diffMs(now, signatureTime);
   
-  if (now.getTime() - signatureTime.getTime() > maxAge) {
+  if (age > BUSINESS_TIME_PERIODS.MAX_SIGNATURE_LEGAL_AGE_MS) {
     throw signatureInvalid('Signature is too old for legal validity');
   }
 }
@@ -75,8 +69,8 @@ export function validateSignatureAlgorithmCompliance(
   signature: Signature,
   config: { 
     allowedAlgorithms: SigningAlgorithm[]; 
-    minSecurityLevel: 'LOW' | 'MEDIUM' | 'HIGH';
-    complianceLevel: 'BASIC' | 'ADVANCED' | 'HIGH_SECURITY'
+    minSecurityLevel: SecurityLevel;
+    complianceLevel: ComplianceLevel
   }
 ): void {
   if (!signature) {
@@ -94,78 +88,27 @@ export function validateSignatureAlgorithmCompliance(
     throw complianceViolation(`Algorithm ${algorithm} is not compliant with current policy`);
   }
 
-  // Validate algorithm meets minimum security level
-  const algorithmLevel = getSigningAlgorithmSecurityLevel(algorithm as SigningAlgorithm);
-  const levelOrder = { 'LOW': 1, 'MEDIUM': 2, 'HIGH': 3 };
-  
-  if (levelOrder[algorithmLevel] < levelOrder[config.minSecurityLevel]) {
-    throw complianceViolation(`Algorithm ${algorithm} does not meet minimum security level ${config.minSecurityLevel}`);
+  // Validate algorithm meets minimum security level using shared utilities
+  try {
+    validateAlgorithmSecurityLevel(algorithm as SigningAlgorithm, config.minSecurityLevel);
+  } catch (error) {
+    if (error instanceof Error) {
+      throw complianceViolation(error.message);
+    }
+    throw error;
   }
 
   // Validate algorithm meets compliance level requirements
-  switch (config.complianceLevel) {
-    case 'BASIC':
-      // Basic compliance allows SHA-256 and above
-      if (algorithm === SigningAlgorithm.SHA256_RSA || algorithm === SigningAlgorithm.ECDSA_P256_SHA256) {
-        return; // Valid
-      }
-      break;
-    case 'ADVANCED':
-      // Advanced compliance requires SHA-384 and above
-      if (algorithm === SigningAlgorithm.SHA384_RSA || algorithm === SigningAlgorithm.ECDSA_P384_SHA384) {
-        return; // Valid
-      }
-      break;
-    case 'HIGH_SECURITY':
-      // High security compliance requires SHA-512 or ECDSA P-384
-      if (algorithm === SigningAlgorithm.SHA512_RSA || algorithm === SigningAlgorithm.ECDSA_P384_SHA384) {
-        return; // Valid
-      }
-      break;
-  }
-
-  throw complianceViolation(`Algorithm ${algorithm} does not meet compliance level ${config.complianceLevel}`);
-}
-
-/**
- * Validates signature certificate compliance
- */
-export function validateSignatureCertificateCompliance(signature: Signature): void {
-  if (!signature) {
-    throw signatureNotFound('Signature is required for certificate compliance validation');
-  }
-
-  const certificateInfo = signature.getCertificateInfo();
-  
-  if (!certificateInfo) {
-    throw complianceViolation('Certificate information is required for compliance');
-  }
-
-  // Validate certificate fields are present
-  if (!certificateInfo.issuer || !certificateInfo.subject || !certificateInfo.certificateHash) {
-    throw complianceViolation('Certificate information is incomplete for compliance');
-  }
-
-  // Validate certificate validity period
-  const now = new Date();
-  if (certificateInfo.validFrom > now) {
-    throw complianceViolation('Certificate is not yet valid');
-  }
-
-  if (certificateInfo.validTo < now) {
-    throw signatureInvalid('Certificate has expired');
-  }
-
-  // Validate certificate is from a trusted CA
-  if (!isTrustedCertificateAuthority(certificateInfo.issuer)) {
-    throw complianceViolation('Certificate is not from a trusted Certificate Authority');
-  }
-
-  // Validate certificate has required extensions for compliance
-  if (!hasRequiredCertificateExtensions(certificateInfo)) {
-    throw complianceViolation('Certificate does not have required extensions for compliance');
+  try {
+    validateAlgorithmCompliance(algorithm as SigningAlgorithm, config.complianceLevel);
+  } catch (error) {
+    if (error instanceof Error) {
+      throw complianceViolation(error.message);
+    }
+    throw error;
   }
 }
+
 
 /**
  * Validates signature retention policy
@@ -174,7 +117,7 @@ export function validateSignatureRetentionPolicy(
   signature: Signature,
   config: { 
     retentionPeriod: number; 
-    retentionUnit: 'DAYS' | 'MONTHS' | 'YEARS';
+    retentionUnit: RetentionUnit;
     archiveRequired: boolean;
     deleteAfterRetention: boolean
   }
@@ -186,23 +129,10 @@ export function validateSignatureRetentionPolicy(
   const signatureTime = signature.getTimestamp();
   const now = new Date();
   
-  // Calculate retention period in milliseconds
-  let retentionMs: number;
-  switch (config.retentionUnit) {
-    case 'DAYS':
-      retentionMs = config.retentionPeriod * 24 * 60 * 60 * 1000;
-      break;
-    case 'MONTHS':
-      retentionMs = config.retentionPeriod * 30 * 24 * 60 * 60 * 1000; // Approximate
-      break;
-    case 'YEARS':
-      retentionMs = config.retentionPeriod * 365 * 24 * 60 * 60 * 1000; // Approximate
-      break;
-    default:
-      throw complianceViolation('Invalid retention unit');
-  }
+  // Calculate retention period in milliseconds using shared utility
+  const retentionMs = retentionUnitToMs(config.retentionUnit, config.retentionPeriod);
 
-  const age = now.getTime() - signatureTime.getTime();
+  const age = diffMs(now, signatureTime);
   
   // Check if signature is within retention period
   if (age > retentionMs) {
@@ -241,18 +171,27 @@ export function validateSignatureAccessLogging(signature: Signature): void {
     throw complianceViolation('Signer ID is required for access logging');
   }
 
-  // Validate IP address is logged if present
+  // Validate IP address is logged if present using shared utilities
   if (metadata.ipAddress) {
-    const ipRegex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
-    if (!ipRegex.test(metadata.ipAddress)) {
-      throw complianceViolation('Invalid IP address format in access log');
+    try {
+      validateSignatureIpAddress(metadata.ipAddress);
+    } catch (error) {
+      if (error instanceof Error) {
+        throw complianceViolation(`Invalid IP address format in access log: ${error.message}`);
+      }
+      throw error;
     }
   }
 
-  // Validate user agent is logged if present
+  // Validate user agent is logged if present using shared utilities
   if (metadata.userAgent) {
-    if (typeof metadata.userAgent !== 'string' || metadata.userAgent.length > 500) {
-      throw complianceViolation('Invalid user agent format in access log');
+    try {
+      validateSignatureUserAgent(metadata.userAgent, 500);
+    } catch (error) {
+      if (error instanceof Error) {
+        throw complianceViolation(`Invalid user agent format in access log: ${error.message}`);
+      }
+      throw error;
     }
   }
 }
@@ -282,22 +221,7 @@ export function validateSignatureTamperEvidence(signature: Signature): void {
     throw documentIntegrityViolation('Signature timestamp is required for tamper evidence');
   }
 
-  // Validate hash formats are correct
-  const hashRegex = /^[a-f0-9]{64}$/i;
-  if (!hashRegex.test(signature.getDocumentHash())) {
-    throw signatureInvalid('Document hash format is invalid, possible tampering');
-  }
-
-  if (!hashRegex.test(signature.getSignatureHash())) {
-    throw signatureInvalid('Signature hash format is invalid, possible tampering');
-  }
-
-  // Validate timestamp is not in the future
-  if (signature.getTimestamp() > new Date()) {
-    throw signatureInvalid('Signature timestamp is in the future, possible tampering');
-  }
-
-  // Validate signature integrity
+  // Use entity's built-in validation which already includes hash, timestamp, and integrity validation
   if (!signature.validateIntegrity()) {
     throw signatureInvalid('Signature integrity validation failed, possible tampering');
   }
@@ -364,10 +288,10 @@ export function validateSignatureComplianceRules(
   operation: SignatureComplianceOperation,
   config: {
     allowedAlgorithms: SigningAlgorithm[];
-    minSecurityLevel: 'LOW' | 'MEDIUM' | 'HIGH';
-    complianceLevel: 'BASIC' | 'ADVANCED' | 'HIGH_SECURITY';
+    minSecurityLevel: SecurityLevel;
+    complianceLevel: ComplianceLevel;
     retentionPeriod: number;
-    retentionUnit: 'DAYS' | 'MONTHS' | 'YEARS';
+    retentionUnit: RetentionUnit;
     archiveRequired: boolean;
     deleteAfterRetention: boolean;
   }
@@ -376,7 +300,6 @@ export function validateSignatureComplianceRules(
     case SignatureComplianceOperation.VALIDATE:
       validateSignatureLegalValidity(signature);
       validateSignatureAlgorithmCompliance(signature, config);
-      validateSignatureCertificateCompliance(signature);
       validateSignatureRetentionPolicy(signature, config);
       validateSignatureAccessLogging(signature);
       validateSignatureTamperEvidence(signature);
@@ -403,65 +326,6 @@ export function validateSignatureComplianceRules(
   }
 }
 
-/**
- * Helper function to check if certificate issuer is trusted
- */
-function isTrustedCertificateIssuer(issuer: string): boolean {
-  const trustedIssuers = [
-    'DigiCert',
-    'VeriSign',
-    'GlobalSign',
-    'Comodo',
-    'Symantec',
-    'GoDaddy',
-    'Sectigo',
-    'Let\'s Encrypt'
-  ];
-  
-  return trustedIssuers.some(trusted => issuer.includes(trusted));
-}
 
-/**
- * Helper function to check if certificate authority is trusted
- */
-function isTrustedCertificateAuthority(issuer: string): boolean {
-  const trustedCAs = [
-    'DigiCert Global Root CA',
-    'VeriSign Class 3 Public Primary Certification Authority',
-    'GlobalSign Root CA',
-    'Comodo RSA Certification Authority',
-    'Symantec Class 3 Secure Server CA',
-    'GoDaddy Class 2 CA',
-    'Sectigo RSA Domain Validation Secure Server CA',
-    'Let\'s Encrypt Authority X3'
-  ];
-  
-  return trustedCAs.some(trusted => issuer.includes(trusted));
-}
 
-/**
- * Helper function to check if certificate has required extensions
- */
-function hasRequiredCertificateExtensions(_certificateInfo: any): boolean {
-  // This would typically check for specific certificate extensions
-  // For now, we'll assume all certificates have the required extensions
-  return true;
-}
 
-/**
- * Helper function to get signing algorithm security level
- */
-function getSigningAlgorithmSecurityLevel(algorithm: SigningAlgorithm): 'HIGH' | 'MEDIUM' | 'LOW' {
-  switch (algorithm) {
-    case SigningAlgorithm.SHA512_RSA:
-    case SigningAlgorithm.ECDSA_P384_SHA384:
-      return 'HIGH';
-    case SigningAlgorithm.SHA384_RSA:
-    case SigningAlgorithm.ECDSA_P256_SHA256:
-      return 'MEDIUM';
-    case SigningAlgorithm.SHA256_RSA:
-      return 'LOW';
-    default:
-      return 'LOW';
-  }
-}

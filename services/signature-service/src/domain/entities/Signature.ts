@@ -11,6 +11,7 @@ import {
   signatureFailed, 
   signatureAlreadyExists
 } from '../../signature-errors';
+import { validateSignatureHash, validateSignatureTimestamp } from '@lawprotect/shared-ts';
 
 /**
  * Signature entity representing a cryptographic signature on a document
@@ -33,13 +34,6 @@ export class Signature {
     private readonly metadata: {
       reason?: string;
       location?: string;
-      certificateInfo?: {
-        issuer: string;
-        subject: string;
-        validFrom: Date;
-        validTo: Date;
-        certificateHash: string;
-      };
       ipAddress?: string;
       userAgent?: string;
     }
@@ -136,12 +130,6 @@ export class Signature {
     return this.metadata.location;
   }
 
-  /**
-   * Gets certificate information if available
-   */
-  getCertificateInfo() {
-    return this.metadata.certificateInfo;
-  }
 
   /**
    * Gets the IP address of the signer
@@ -209,14 +197,18 @@ export class Signature {
       return false;
     }
 
-    // Validate hash formats (assuming SHA-256)
-    const hashRegex = /^[a-f0-9]{64}$/i;
-    if (!hashRegex.test(this.documentHash) || !hashRegex.test(this.signatureHash)) {
+    // Validate hash formats using shared utilities
+    try {
+      validateSignatureHash(this.documentHash, this.algorithm);
+      validateSignatureHash(this.signatureHash, this.algorithm);
+    } catch {
       return false;
     }
 
-    // Validate timestamp is not in the future
-    if (this.timestamp > new Date()) {
+    // Validate timestamp using shared utilities
+    try {
+      validateSignatureTimestamp(this.timestamp);
+    } catch {
       return false;
     }
 

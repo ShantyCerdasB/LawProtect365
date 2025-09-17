@@ -8,3 +8,6 @@
 export * from './EnvelopeMetadata';
 export * from './CreateEnvelopeMetadataRequest';
 export * from './UpdateEnvelopeMetadataRequest';
+export * from './CreateEnvelopeRequest';
+export * from './UpdateEnvelopeRequest';
+export * from './EnvelopeSecurityContext';

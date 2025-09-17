@@ -13,7 +13,7 @@ export * from './SignatureComplianceRules';
 export * from './SignatureWorkflowRules';
 
 // Export all signature rule enums
-export { SignatureOperation } from './SignatureBusinessRules';
+export { SignatureOperation } from '@lawprotect/shared-ts';
 export { SignatureSecurityOperation } from './SignatureSecurityRules';
 export { SignatureComplianceOperation } from './SignatureComplianceRules';
-export { SignatureWorkflowOperation } from './SignatureWorkflowRules';
+export { SignerWorkflowOperation } from '../../enums/SignerOperation';

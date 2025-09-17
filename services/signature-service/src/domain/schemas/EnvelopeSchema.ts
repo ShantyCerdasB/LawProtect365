@@ -6,27 +6,29 @@
  */
 
 import { z, UuidV4, NonEmptyStringSchema, JsonObjectSchema } from '@lawprotect/shared-ts';
-import { EnvelopeStatus, EnvelopeSortBy, SortOrder } from '@/domain/enums';
+import { EnvelopeStatus, EnvelopeSortBy, SortOrder, SigningOrderType } from '@/domain/enums';
+import { SignerDataSchema, EnvelopeMetadataSchema } from './CommonSchemas';
 
 /**
- * Schema for creating a new envelope
+ * Schema for creating a new envelope with signers
+ */
+export const CreateEnvelopeWithSignersSchema = z.object({
+  documentId: UuidV4,
+  s3Key: NonEmptyStringSchema,
+  ownerId: NonEmptyStringSchema,
+  signingOrder: z.nativeEnum(SigningOrderType),
+  metadata: EnvelopeMetadataSchema,
+  signers: z.array(SignerDataSchema).optional()
+});
+
+/**
+ * Schema for creating a new envelope (original, without signers)
  */
 export const CreateEnvelopeSchema = z.object({
   documentId: UuidV4,
   ownerId: NonEmptyStringSchema,
-  signingOrder: z.enum(['OWNER_FIRST', 'INVITEES_FIRST']),
-  metadata: z.object({
-    title: NonEmptyStringSchema.max(255, 'Title must be less than 255 characters'),
-    description: z.string().max(1000, 'Description must be less than 1000 characters').optional(),
-    expiresAt: z.date().optional(),
-    customFields: JsonObjectSchema.optional(),
-    tags: z.array(z.string()).optional(),
-    reminders: z.object({
-      daysBeforeExpiration: z.number().min(1).max(365).optional(),
-      firstReminderDays: z.number().min(1).max(30).optional(),
-      secondReminderDays: z.number().min(1).max(30).optional()
-    }).optional()
-  })
+  signingOrder: z.nativeEnum(SigningOrderType),
+  metadata: EnvelopeMetadataSchema
 });
 
 /**
@@ -74,6 +76,7 @@ export const EnvelopeQuerySchema = z.object({
 /**
  * Type inference from schemas
  */
+export type CreateEnvelopeWithSignersRequest = z.infer<typeof CreateEnvelopeWithSignersSchema>;
 export type CreateEnvelopeRequest = z.infer<typeof CreateEnvelopeSchema>;
 export type UpdateEnvelopeRequest = z.infer<typeof UpdateEnvelopeSchema>;
 export type EnvelopeIdParams = z.infer<typeof EnvelopeIdSchema>;

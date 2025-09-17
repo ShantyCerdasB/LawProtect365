@@ -9,3 +9,6 @@ export { Envelope } from './Envelope';
 export { Signer } from './Signer';
 export { Signature } from './Signature';
 export { Consent } from './Consent';
+export { AuditEvent } from './AuditEvent';
+export { OutboxRecord } from './OutboxRecord';
+export { InvitationToken } from './InvitationToken';

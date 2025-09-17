@@ -1,7 +1,8 @@
 /**
- * @file index.ts
- * @summary Constants barrel export
- * @description Exports all shared constants
+ * @fileoverview Constants barrel export
+ * @summary Centralized exports for all shared constants
+ * @description This barrel file exports all shared constants for easy importing
+ * throughout the application and across microservices.
  */
 
-export * from "./audit.js";
+export * from './time.js';

@@ -64,7 +64,15 @@ export enum EnvelopeStatus {
    * - Cannot be completed
    * - Owner can modify and resend
    */
-  DECLINED = 'DECLINED'
+  DECLINED = 'DECLINED',
+
+  /**
+   * Envelope has been cancelled
+   * - Cannot be completed
+   * - Cannot be modified
+   * - Final state
+   */
+  CANCELLED = 'CANCELLED'
 }
 
 /**
@@ -73,30 +81,35 @@ export enum EnvelopeStatus {
 export const ENVELOPE_STATUS_TRANSITIONS: Record<EnvelopeStatus, EnvelopeStatus[]> = {
   [EnvelopeStatus.DRAFT]: [
     EnvelopeStatus.SENT,
-    EnvelopeStatus.EXPIRED
+    EnvelopeStatus.EXPIRED,
+    EnvelopeStatus.CANCELLED
   ],
   [EnvelopeStatus.SENT]: [
     EnvelopeStatus.IN_PROGRESS,
     EnvelopeStatus.READY_FOR_SIGNATURE,
     EnvelopeStatus.COMPLETED,
     EnvelopeStatus.EXPIRED,
-    EnvelopeStatus.DECLINED
+    EnvelopeStatus.DECLINED,
+    EnvelopeStatus.CANCELLED
   ],
   [EnvelopeStatus.IN_PROGRESS]: [
     EnvelopeStatus.READY_FOR_SIGNATURE,
     EnvelopeStatus.COMPLETED,
     EnvelopeStatus.EXPIRED,
-    EnvelopeStatus.DECLINED
+    EnvelopeStatus.DECLINED,
+    EnvelopeStatus.CANCELLED
   ],
   [EnvelopeStatus.READY_FOR_SIGNATURE]: [
     EnvelopeStatus.COMPLETED,
-    EnvelopeStatus.EXPIRED
+    EnvelopeStatus.EXPIRED,
+    EnvelopeStatus.CANCELLED
   ],
   [EnvelopeStatus.COMPLETED]: [],
   [EnvelopeStatus.EXPIRED]: [],
   [EnvelopeStatus.DECLINED]: [
     EnvelopeStatus.DRAFT
-  ]
+  ],
+  [EnvelopeStatus.CANCELLED]: []
 };
 
 /**

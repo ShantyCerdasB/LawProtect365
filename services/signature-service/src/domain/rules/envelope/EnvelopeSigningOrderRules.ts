@@ -5,7 +5,7 @@
  * (owner first) and parallel signing (invitees first) workflows.
  */
 
-import { SignerStatus } from '@/domain/enums/SignerStatus';
+import { SignerStatus } from '@lawprotect/shared-ts';
 import { SigningOrder } from '@/domain/value-objects/SigningOrder';
 import { Envelope } from '@/domain/entities/Envelope';
 import { Signer } from '@/domain/entities/Signer';

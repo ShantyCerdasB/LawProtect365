@@ -139,6 +139,23 @@ export abstract class EventService {
   }
 
   /**
+   * Publishes a simple event (for backward compatibility)
+   * @param eventType - The event type
+   * @param payload - The event payload
+   * @param traceId - Optional trace ID for observability
+   */
+  async publishEvent(eventType: string, payload: Record<string, unknown>, traceId?: string): Promise<void> {
+    const domainEvent: DomainEvent = {
+      id: `${eventType}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      type: eventType,
+      payload,
+      occurredAt: new Date().toISOString()
+    };
+
+    await this.publishDomainEvent(domainEvent, traceId);
+  }
+
+  /**
    * Publishes a module-specific domain event
    * Abstract method that each module must implement for its specific events
    * @param event - Module-specific domain event

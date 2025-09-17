@@ -55,6 +55,12 @@ export enum DynamoDbPrefixes {
   TOKEN = 'TOKEN#',
 
   /**
+   * Invitation token prefix
+   * Used for invitation token entity keys
+   */
+  INVITATION_TOKEN = 'INVITATION_TOKEN#',
+
+  /**
    * Audit prefix
    * Used for audit event keys
    */

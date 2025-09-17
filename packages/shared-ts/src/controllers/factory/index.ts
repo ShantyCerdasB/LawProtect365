@@ -6,6 +6,7 @@
 
 export * from "./createController.js";
 export * from "./createQueryController.js";
+export * from "./ControllerFactory.js";
 
 
 

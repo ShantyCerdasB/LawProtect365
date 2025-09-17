@@ -5,7 +5,7 @@
  * including CRUD operations, queries, and data persistence.
  */
 
-import { DdbClientLike, mapAwsError, ConflictError, ErrorCodes, decodeCursor, encodeCursor, NotFoundError, requireUpdate } from '@lawprotect/shared-ts';
+import { DdbClientLike, mapAwsError, ConflictError, ErrorCodes, decodeCursor, encodeCursor, NotFoundError, requireUpdate, BadRequestError } from '@lawprotect/shared-ts';
 import { requireQuery } from '@lawprotect/shared-ts';
 
 import { Signer } from '../domain/entities/Signer';
@@ -115,7 +115,7 @@ export class SignerRepository {
       }
 
       if (!isSignerDdbItem(result.Item)) {
-        throw new Error('Invalid signer item structure');
+        throw new BadRequestError('Invalid signer item structure', 'INVALID_SIGNER_DATA');
       }
 
       return signerDdbMapper.fromDTO(result.Item);
@@ -203,7 +203,7 @@ export class SignerRepository {
       });
 
       if (!result.Attributes || !isSignerDdbItem(result.Attributes)) {
-        throw new Error('Invalid signer item structure');
+        throw new BadRequestError('Invalid signer item structure', 'INVALID_SIGNER_DATA');
       }
 
       return signerDdbMapper.fromDTO(result.Attributes);
@@ -354,7 +354,7 @@ export class SignerRepository {
 
       const item = items[0];
       if (!isSignerDdbItem(item)) {
-        throw new Error('Invalid signer item structure');
+        throw new BadRequestError('Invalid signer item structure', 'INVALID_SIGNER_DATA');
       }
 
       return signerDdbMapper.fromDTO(item);
@@ -454,7 +454,7 @@ export class SignerRepository {
 
       const item = items[0];
       if (!isSignerDdbItem(item)) {
-        throw new Error('Invalid signer item structure');
+        throw new BadRequestError('Invalid signer item structure', 'INVALID_SIGNER_DATA');
       }
 
       return signerDdbMapper.fromDTO(item);

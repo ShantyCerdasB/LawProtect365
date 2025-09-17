@@ -6,7 +6,7 @@
  */
 
 import type { DdbClientLike } from '@lawprotect/shared-ts';
-import { mapAwsError, ConflictError, NotFoundError, ErrorCodes } from '@lawprotect/shared-ts';
+import { mapAwsError, ConflictError, NotFoundError, ErrorCodes, BadRequestError } from '@lawprotect/shared-ts';
 import type { 
   OutboxRecord, 
   OutboxListResult, 
@@ -76,7 +76,7 @@ export class OutboxRepository {
       }
 
       if (!isOutboxDdbItem(result.Item)) {
-        throw new Error('Invalid outbox item structure');
+        throw new BadRequestError('Invalid outbox item structure', 'INVALID_OUTBOX_DATA');
       }
 
       return outboxFromDdbItem(result.Item);

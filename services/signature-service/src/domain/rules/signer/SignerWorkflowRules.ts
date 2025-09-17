@@ -6,25 +6,19 @@
  */
 
 import { Signer } from '@/domain/entities/Signer';
+import { Envelope } from '@/domain/entities/Envelope';
 import { SignerStatus, isValidSignerStatusTransition, getValidNextSignerStatuses } from '@/domain/enums/SignerStatus';
+import { SignerWorkflowOperation } from '@/domain/enums/SignerOperation';
 import { AuditEventType } from '@/domain/enums/AuditEventType';
 import { 
   invalidSignerState,
-  eventGenerationFailed,
-  signerAlreadySigned,
-  signerAlreadyDeclined
+  eventGenerationFailed
 } from '@/signature-errors';
 import { diffMinutes } from '@lawprotect/shared-ts';
+import { SignerValidator } from '@/domain/validators/SignerValidator';
+import { validateInvitationToken } from './SignerSecurityRules';
+import { shouldCancelEnvelopeOnDecline } from '../envelope/EnvelopeBusinessRules';
 
-/**
- * Signer workflow operation types
- */
-export enum SignerWorkflowOperation {
-  INVITE = 'INVITE',
-  CONSENT = 'CONSENT',
-  SIGN = 'SIGN',
-  DECLINE = 'DECLINE'
-}
 
 /**
  * Validates signer status transition for workflow operations
@@ -180,27 +174,20 @@ export function validateSignerInvitationWorkflow(
     maxInvitationAgeHours: number;
   }
 ): void {
-  const { invitationToken, invitationSentAt, maxInvitationAgeHours } = invitationData;
+  const { invitationToken, maxInvitationAgeHours } = invitationData;
 
   if (!signer.isExternal()) {
     return; // Internal signers don't need invitation validation
   }
 
-  if (!invitationToken || typeof invitationToken !== 'string') {
-    throw eventGenerationFailed('Invitation token is required for external signers');
-  }
-
-  if (signer.getInvitationToken() !== invitationToken) {
-    throw eventGenerationFailed('Invalid invitation token');
-  }
-
-  // Check invitation age
-  const now = new Date();
-  const invitationAge = now.getTime() - invitationSentAt.getTime();
-  const maxAgeMs = maxInvitationAgeHours * 60 * 60 * 1000;
-
-  if (invitationAge > maxAgeMs) {
-    throw eventGenerationFailed('Invitation has expired');
+  // Use centralized invitation token validation from SignerSecurityRules
+  try {
+    validateInvitationToken(signer, invitationToken, maxInvitationAgeHours);
+  } catch (error) {
+    if (error instanceof Error) {
+      throw eventGenerationFailed(`Invitation validation failed: ${error.message}`);
+    }
+    throw error;
   }
 }
 
@@ -216,7 +203,7 @@ export function validateSignerInvitationWorkflow(
  * @returns void
  */
 export function validateSignerConsentWorkflow(
-  _signer: Signer, 
+  signer: Signer, 
   consentData: {
     consentGiven: boolean;
     consentTimestamp: Date;
@@ -224,7 +211,7 @@ export function validateSignerConsentWorkflow(
     userAgent: string;
   }
 ): void {
-  const { consentGiven, consentTimestamp, ipAddress, userAgent } = consentData;
+  const { consentGiven, consentTimestamp } = consentData;
 
   if (!consentGiven) {
     throw eventGenerationFailed('Consent must be given before proceeding');
@@ -234,12 +221,14 @@ export function validateSignerConsentWorkflow(
     throw eventGenerationFailed('Invalid consent timestamp');
   }
 
-  if (!ipAddress || typeof ipAddress !== 'string') {
-    throw eventGenerationFailed('IP address is required for consent');
-  }
-
-  if (!userAgent || typeof userAgent !== 'string') {
-    throw eventGenerationFailed('User agent is required for consent');
+  // Use entity's built-in validation for consent
+  try {
+    signer.validateForSigning();
+  } catch (error) {
+    if (error instanceof Error) {
+      throw eventGenerationFailed(`Consent validation failed: ${error.message}`);
+    }
+    throw error;
   }
 }
 
@@ -263,34 +252,24 @@ export function validateSignerSigningWorkflow(
     timestamp: Date;
   }
 ): void {
-  const { signatureHash, documentHash, algorithm, timestamp } = signingData;
-
-  if (signer.hasSigned()) {
-    throw signerAlreadySigned('Signer has already signed');
+  // Validate signer can sign using entity's built-in validation
+  try {
+    signer.validateForSigning();
+  } catch (error) {
+    if (error instanceof Error) {
+      throw eventGenerationFailed(error.message);
+    }
+    throw error;
   }
 
-  if (signer.hasDeclined()) {
-    throw signerAlreadyDeclined('Signer has already declined');
-  }
-
-  if (!signer.hasConsent()) {
-    throw eventGenerationFailed('Signer must give consent before signing');
-  }
-
-  if (!signatureHash || typeof signatureHash !== 'string') {
-    throw eventGenerationFailed('Signature hash is required');
-  }
-
-  if (!documentHash || typeof documentHash !== 'string') {
-    throw eventGenerationFailed('Document hash is required');
-  }
-
-  if (!algorithm || typeof algorithm !== 'string') {
-    throw eventGenerationFailed('Signing algorithm is required');
-  }
-
-  if (!timestamp || timestamp > new Date()) {
-    throw eventGenerationFailed('Invalid signing timestamp');
+  // Validate signing data using centralized validator
+  try {
+    SignerValidator.validateSigningData(signer, signingData);
+  } catch (error) {
+    if (error instanceof Error) {
+      throw eventGenerationFailed(error.message);
+    }
+    throw error;
   }
 }
 
@@ -314,27 +293,68 @@ export function validateSignerDeclineWorkflow(
     userAgent: string;
   }
 ): void {
-  const { reason: _reason, timestamp, ipAddress, userAgent } = declineData;
-
-  if (signer.hasSigned()) {
-    throw signerAlreadySigned('Signer has already signed');
+  // Validate signer can decline using entity's built-in validation
+  try {
+    if (signer.hasSigned()) {
+      throw eventGenerationFailed('Cannot decline after signing');
+    }
+    if (signer.hasDeclined()) {
+      throw eventGenerationFailed('Signer has already declined');
+    }
+  } catch (error) {
+    if (error instanceof Error) {
+      throw eventGenerationFailed(error.message);
+    }
+    throw error;
   }
 
-  if (signer.hasDeclined()) {
-    throw signerAlreadyDeclined('Signer has already declined');
+  // Validate decline data using centralized validator
+  try {
+    SignerValidator.validateDeclineData(signer, declineData);
+  } catch (error) {
+    if (error instanceof Error) {
+      throw eventGenerationFailed(error.message);
+    }
+    throw error;
   }
+}
 
-  if (!timestamp || timestamp > new Date()) {
-    throw eventGenerationFailed('Invalid decline timestamp');
+/**
+ * Handles the complete signer decline workflow including envelope cancellation evaluation
+ * 
+ * This function orchestrates the entire decline workflow:
+ * 1. Validates the signer can decline
+ * 2. Evaluates if the envelope should be cancelled
+ * 3. Returns workflow result with cancellation recommendation
+ * 
+ * @param signer - The signer declining
+ * @param envelope - The envelope containing the signer
+ * @param declineData - Decline data for validation
+ * @returns Workflow result with cancellation recommendation
+ */
+export function handleSignerDeclineWorkflow(
+  signer: Signer,
+  envelope: Envelope,
+  declineData: {
+    reason?: string;
+    timestamp: Date;
+    ipAddress: string;
+    userAgent: string;
   }
+): {
+  shouldCancelEnvelope: boolean;
+  cancellationReason?: string;
+} {
+  // Validate decline workflow
+  validateSignerDeclineWorkflow(signer, declineData);
 
-  if (!ipAddress || typeof ipAddress !== 'string') {
-    throw eventGenerationFailed('IP address is required for decline');
-  }
-
-  if (!userAgent || typeof userAgent !== 'string') {
-    throw eventGenerationFailed('User agent is required for decline');
-  }
+  // Evaluate if envelope should be cancelled
+  const shouldCancel = shouldCancelEnvelopeOnDecline(envelope);
+  
+  return {
+    shouldCancelEnvelope: shouldCancel,
+    cancellationReason: shouldCancel ? 'Signer declined to sign' : undefined
+  };
 }
 
 /**

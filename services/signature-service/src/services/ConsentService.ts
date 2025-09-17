@@ -1,37 +1,151 @@
 /**
- * @fileoverview ConsentService - Service for consent management
- * @summary Manages consent validation and storage for legal compliance
- * @description This service handles all consent-related operations including
- * validation, storage, and compliance with ESIGN Act and UETA regulations.
+ * @fileoverview ConsentService - Business logic service for consent operations
+ * @summary Provides business logic for consent management
+ * @description This service handles all business logic for consent operations
+ * including creation, validation, and coordination with other services.
  */
+
+import { Consent } from '../domain/entities/Consent';
+import { SignerId } from '../domain/value-objects/SignerId';
+import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
+import { ConsentRepository } from '../repositories/ConsentRepository';
+import { SignerRepository } from '../repositories/SignerRepository';
+import { AuditService } from './AuditService';
+import { ConsentEventService } from './events/ConsentEventService';
+import { CreateConsentRequest } from '../domain/types/consent/CreateConsentRequest';
+import { AuditEventType } from '../domain/enums/AuditEventType';
+import { NotFoundError, BadRequestError, ForbiddenError, ConflictError, ErrorCodes } from '@lawprotect/shared-ts';
 
 /**
- * TODO: ConsentService Responsibilities Analysis
+ * ConsentService implementation
  * 
- * WHAT THIS SERVICE DOES:
- * ✅ Validates signer consent and intent
- * ✅ Manages consent storage and retrieval
- * ✅ Coordinates with ConsentRepository for data access
- * ✅ Coordinates with AuditService for audit logging
- * ✅ Validates consent business rules
- * ✅ Manages consent metadata and timestamps
- * ✅ Handles consent expiration and renewal
- * ✅ Provides consent verification and status checking
- * 
- * WHAT THIS SERVICE DOES NOT DO:
- * ❌ Direct database operations (that's ConsentRepository)
- * ❌ Signature creation (that's SignatureService)
- * ❌ Email notifications (that's NotificationService via events)
- * ❌ Document storage (that's S3Service)
- * ❌ Cryptographic operations (that's KmsService)
- * ❌ Audit event storage (that's AuditService)
- * ❌ Signer management (that's SignerService)
- * 
- * DEPENDENCIES:
- * - ConsentRepository (data access)
- * - AuditService (audit logging)
+ * Provides business logic for consent operations including validation,
+ * status management, and coordination with other services.
  */
-
 export class ConsentService {
-  // TODO: Implement consent service
+  constructor(
+    private readonly consentRepository: ConsentRepository,
+    private readonly signerRepository: SignerRepository,
+    private readonly auditService: AuditService,
+    private readonly eventService: ConsentEventService
+  ) {}
+
+  /**
+   * Creates a new consent
+   * @param request - The create consent request
+   * @param userId - The user creating the consent
+   * @returns The created consent
+   */
+  async createConsent(request: CreateConsentRequest, userId: string): Promise<Consent> {
+    // Validate business rules
+    await this.validateCreateConsentRequest(request, userId);
+
+    // Save consent
+    const createdConsent = await this.consentRepository.create(request);
+
+    // Create audit event
+    await this.auditService.createEvent({
+      type: AuditEventType.CONSENT_GIVEN,
+      envelopeId: request.envelopeId.getValue(),
+      userId,
+      description: `Consent given by signer ${request.signerId.getValue()}`,
+      metadata: {
+        consentId: createdConsent.getId().getValue(),
+        signerId: request.signerId.getValue(),
+        envelopeId: request.envelopeId.getValue(),
+        consentGiven: request.consentGiven
+      }
+    });
+
+    // Publish event
+    await this.eventService.publishEvent('consent.created', {
+      consentId: createdConsent.getId().getValue(),
+      signerId: request.signerId.getValue(),
+      envelopeId: request.envelopeId.getValue(),
+      userId,
+      consentGiven: request.consentGiven
+    });
+
+    return createdConsent;
+  }
+
+
+
+
+  /**
+   * Gets consent by signer and envelope
+   * @param signerId - The signer ID
+   * @param envelopeId - The envelope ID
+   * @param userId - The user requesting the consent
+   * @returns The consent or null if not found
+   */
+  async getConsentBySignerAndEnvelope(signerId: string, envelopeId: string, userId: string): Promise<Consent | null> {
+    // Create value objects
+    const signerIdVO = new SignerId(signerId);
+    const envelopeIdVO = new EnvelopeId(envelopeId);
+    
+    // Validate user has access to signer
+    const signer = await this.signerRepository.getById(signerIdVO);
+    if (!signer) {
+      throw new NotFoundError(
+        `Signer with ID ${signerId} not found`,
+        ErrorCodes.COMMON_NOT_FOUND
+      );
+    }
+
+    // Check if user is the signer themselves
+    if (signer.getEmail().getValue() !== userId) {
+      throw new ForbiddenError(
+        `User ${userId} is not authorized to access consent for signer ${signerId}`,
+        ErrorCodes.AUTH_FORBIDDEN
+      );
+    }
+
+    return this.consentRepository.getBySignerAndEnvelope(signerIdVO, envelopeIdVO);
+  }
+
+  /**
+   * Validates create consent request
+   * @param request - The create request
+   * @param userId - The user creating the consent
+   */
+  private async validateCreateConsentRequest(request: CreateConsentRequest, userId: string): Promise<void> {
+    // Validate signer exists and user has access
+    const signer = await this.signerRepository.getById(request.signerId);
+    if (!signer) {
+      throw new NotFoundError(
+        `Signer with ID ${request.signerId.getValue()} not found`,
+        ErrorCodes.COMMON_NOT_FOUND
+      );
+    }
+
+    // Check if user is the signer themselves
+    if (signer.getEmail().getValue() !== userId) {
+      throw new ForbiddenError(
+        `User ${userId} is not authorized to create consent for signer ${request.signerId.getValue()}`,
+        ErrorCodes.AUTH_FORBIDDEN
+      );
+    }
+
+    // Validate envelope matches signer's envelope
+    if (signer.getEnvelopeId() !== request.envelopeId.getValue()) {
+      throw new BadRequestError(
+        'Envelope ID does not match signer\'s envelope',
+        ErrorCodes.COMMON_BAD_REQUEST
+      );
+    }
+
+    // Check if consent already exists
+    const existingConsent = await this.consentRepository.getBySignerAndEnvelope(
+      request.signerId,
+      request.envelopeId
+    );
+    if (existingConsent) {
+      throw new ConflictError(
+        `Consent already exists for signer ${request.signerId.getValue()} and envelope ${request.envelopeId.getValue()}`,
+        ErrorCodes.COMMON_CONFLICT
+      );
+    }
+  }
+
 }

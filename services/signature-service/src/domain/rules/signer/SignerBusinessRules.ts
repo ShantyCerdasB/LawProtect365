@@ -6,7 +6,7 @@
  * These rules complement the entity validations and provide higher-level business constraints.
  */
 
-import { SignerStatus, isValidSignerStatusTransition, getValidNextSignerStatuses } from '@/domain/enums/SignerStatus';
+import { SignerStatus, isValidSignerStatusTransition, getValidNextSignerStatuses, SignerOperation } from '@lawprotect/shared-ts';
 import { Signer } from '@/domain/entities/Signer';
 import { Email } from '@/domain/value-objects/Email';
 import { 
@@ -20,19 +20,14 @@ import type { SignatureServiceConfig } from '@/config';
 import { 
   validateStringField
 } from '@lawprotect/shared-ts';
-
-/**
- * Signer operation types for business validation
- */
-export enum SignerOperation {
-  ADD = 'ADD',
-  REMOVE = 'REMOVE', 
-  SIGN = 'SIGN',
-  DECLINE = 'DECLINE'
-}
+import { SignerValidator } from '@/domain/validators/SignerValidator';
 
 /**
  * Validates the maximum number of signers per envelope
+ * @param signerCount - The number of signers to validate
+ * @param config - The signature service configuration
+ * @throws {SignatureError} When signer count exceeds maximum limit
+ * @returns void
  */
 export function validateMaxSignersPerEnvelope(signerCount: number, config: SignatureServiceConfig): void {
   if (signerCount > config.envelopeRules.maxSignersPerEnvelope) {
@@ -42,19 +37,15 @@ export function validateMaxSignersPerEnvelope(signerCount: number, config: Signa
   }
 }
 
-/**
- * Validates the maximum number of envelopes per signer
- */
-export function validateMaxEnvelopesPerSigner(envelopeCount: number, config: SignatureServiceConfig): void {
-  if (envelopeCount > config.envelopeRules.maxEnvelopesPerOwner) {
-    throw envelopeLimitExceeded(
-      `Signer cannot participate in more than ${config.envelopeRules.maxEnvelopesPerOwner} envelopes`
-    );
-  }
-}
 
 /**
  * Validates signer email uniqueness per envelope
+ * @param email - The email to validate for uniqueness
+ * @param _envelopeId - The envelope ID (unused parameter)
+ * @param existingEmails - Array of existing emails in the envelope
+ * @param config - The signature service configuration
+ * @throws {SignatureError} When email already exists in envelope
+ * @returns void
  */
 export function validateUniqueEmailPerEnvelope(
   email: Email, 
@@ -78,6 +69,10 @@ export function validateUniqueEmailPerEnvelope(
 
 /**
  * Validates signer full name using shared validation utilities
+ * @param fullName - The full name to validate
+ * @param _config - The signature service configuration (unused parameter)
+ * @throws {SignatureError} When full name is invalid
+ * @returns void
  */
 export function validateSignerFullName(fullName: string, _config: SignatureServiceConfig): void {
   if (!fullName || fullName.trim().length === 0) {
@@ -96,6 +91,11 @@ export function validateSignerFullName(fullName: string, _config: SignatureServi
 
 /**
  * Validates signer order within envelope
+ * @param order - The signer order to validate
+ * @param totalSigners - The total number of signers in the envelope
+ * @param config - The signature service configuration
+ * @throws {SignatureError} When signer order is invalid
+ * @returns void
  */
 export function validateSignerOrder(order: number, totalSigners: number, config: SignatureServiceConfig): void {
   if (order < 1 || order > totalSigners) {
@@ -111,6 +111,10 @@ export function validateSignerOrder(order: number, totalSigners: number, config:
 
 /**
  * Validates signer status transitions for business operations
+ * @param currentStatus - The current signer status
+ * @param targetStatus - The target signer status
+ * @throws {SignatureError} When status transition is invalid
+ * @returns void
  */
 export function validateSignerStatusForOperation(
   currentStatus: SignerStatus,
@@ -126,6 +130,12 @@ export function validateSignerStatusForOperation(
 
 /**
  * Validates signer can be added to envelope
+ * @param signer - The signer to validate for addition
+ * @param envelopeId - The envelope ID
+ * @param existingSigners - Array of existing signers in the envelope
+ * @param config - The signature service configuration
+ * @throws {SignatureError} When signer cannot be added
+ * @returns void
  */
 export function validateSignerCanBeAdded(
   signer: Signer,
@@ -146,34 +156,33 @@ export function validateSignerCanBeAdded(
 
 /**
  * Validates signer can be removed from envelope
+ * @param signer - The signer to validate for removal
+ * @throws {SignatureError} When signer cannot be removed
+ * @returns void
  */
 export function validateSignerCanBeRemoved(signer: Signer): void {
-  if (signer.hasSigned()) {
-    throw signerAlreadySigned('Cannot remove signer who has already signed');
-  }
-
-  if (signer.hasDeclined()) {
-    throw signerAlreadyDeclined('Cannot remove signer who has already declined');
-  }
+  SignerValidator.validateCanBeRemoved(signer);
 }
 
 /**
  * Validates signer can sign at this moment
+ * @param signer - The signer to validate for signing
+ * @throws {SignatureError} When signer cannot sign
+ * @returns void
  */
 export function validateSignerCanSign(signer: Signer): void {
-  if (!signer.canSign()) {
-    throw invalidSignerState('Signer cannot sign at this moment');
-  }
-
-  if (!signer.hasConsent()) {
-    throw invalidSignerState('Signer must give consent before signing');
-  }
+  // Use entity's built-in validation
+  signer.validateForSigning();
 }
 
 /**
  * Validates signer can decline
+ * @param signer - The signer to validate for declining
+ * @throws {SignatureError} When signer cannot decline
+ * @returns void
  */
 export function validateSignerCanDecline(signer: Signer): void {
+  // Use entity's built-in validation
   if (signer.hasSigned()) {
     throw signerAlreadySigned('Cannot decline after signing');
   }
@@ -185,6 +194,10 @@ export function validateSignerCanDecline(signer: Signer): void {
 
 /**
  * Comprehensive signer validation combining all business rules
+ * @param signerData - The signer data containing signer, envelope ID, existing signers, and operation
+ * @param config - The signature service configuration
+ * @throws {SignatureError} When any validation fails
+ * @returns void
  */
 export function validateSignerBusinessRules(
   signerData: {

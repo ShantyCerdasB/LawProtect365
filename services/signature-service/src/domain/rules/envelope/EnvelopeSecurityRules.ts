@@ -24,23 +24,10 @@ import {
   canPerformOperation,
   isValidAccessTypeForPermission,
   validateSecurity,
-  type RequestSecurityContext,
+  SecurityErrorCode,
   type SecurityConfig
 } from '@lawprotect/shared-ts';
-
-
-/**
- * Envelope-specific security context
- * Extends the generic RequestSecurityContext with envelope-specific fields
- */
-export interface EnvelopeSecurityContext extends RequestSecurityContext {
-  /** Access type (direct, shared link, invitation, system) */
-  accessType: AccessType;
-  /** User's permission level */
-  permission: PermissionLevel;
-  /** Envelope ID being accessed */
-  envelopeId?: string;
-}
+import type { EnvelopeSecurityContext } from '../../types/envelope/EnvelopeSecurityContext';
 
 /**
  * Validates access permissions for envelope operations
@@ -144,19 +131,19 @@ export async function validateEnvelopeSecurity(
   // Convert SecurityValidationResult to appropriate errors
   if (!result.isValid) {
     switch (result.errorCode) {
-      case 'IP_ADDRESS_BLOCKED':
+      case SecurityErrorCode.IP_ADDRESS_BLOCKED:
         throw ipAddressBlocked(result.errorMessage);
-      case 'USER_AGENT_BLOCKED':
+      case SecurityErrorCode.USER_AGENT_BLOCKED:
         throw userAgentBlocked(result.errorMessage);
-      case 'GEOLOCATION_BLOCKED':
+      case SecurityErrorCode.GEOLOCATION_BLOCKED:
         throw geolocationBlocked(result.errorMessage);
-      case 'DEVICE_NOT_TRUSTED':
+      case SecurityErrorCode.DEVICE_NOT_TRUSTED:
         throw deviceNotTrusted(result.errorMessage);
-      case 'RATE_LIMIT_EXCEEDED':
+      case SecurityErrorCode.RATE_LIMIT_EXCEEDED:
         throw rateLimitExceeded(result.errorMessage);
-      case 'INVALID_ACCESS_TOKEN':
+      case SecurityErrorCode.INVALID_ACCESS_TOKEN:
         throw invalidAccessToken(result.errorMessage);
-      case 'ACCESS_TOKEN_REQUIRED':
+      case SecurityErrorCode.ACCESS_TOKEN_REQUIRED:
         throw invalidAccessToken(result.errorMessage);
       default:
         throw accessDenied(result.errorMessage || 'Security validation failed');

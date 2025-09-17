@@ -37,6 +37,21 @@ export const AuditEventIdSchema = z.object({
 });
 
 /**
+ * Schema for document history path parameters
+ */
+export const DocumentHistoryPathSchema = z.object({
+  envelopeId: UuidV4
+});
+
+/**
+ * Schema for document history query parameters
+ */
+export const DocumentHistoryQuerySchema = z.object({
+  limit: z.number().min(1).max(100).default(25),
+  cursor: z.string().optional()
+});
+
+/**
  * Schema for audit trail query parameters
  */
 export const AuditTrailQuerySchema = z.object({
@@ -88,6 +103,8 @@ export const AuditTrailResponseSchema = z.object({
  */
 export type CreateAuditEventRequest = z.infer<typeof CreateAuditEventSchema>;
 export type AuditEventIdParams = z.infer<typeof AuditEventIdSchema>;
+export type DocumentHistoryPathParams = z.infer<typeof DocumentHistoryPathSchema>;
+export type DocumentHistoryQuery = z.infer<typeof DocumentHistoryQuerySchema>;
 export type AuditTrailQuery = z.infer<typeof AuditTrailQuerySchema>;
 export type AuditEventResponse = z.infer<typeof AuditEventResponseSchema>;
 export type AuditTrailResponse = z.infer<typeof AuditTrailResponseSchema>;

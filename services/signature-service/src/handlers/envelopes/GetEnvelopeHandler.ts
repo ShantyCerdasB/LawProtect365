@@ -4,62 +4,140 @@
  * @description This handler retrieves envelope details including signer status,
  * progress tracking, and metadata for the frontend dashboard.
  */
-/*  
-import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { HandlerFn } from '@lawprotect/shared-ts';
+
+import { ControllerFactory, UserRole, VALID_COGNITO_ROLES } from '@lawprotect/shared-ts';
+import { EnvelopeService } from '../../services/EnvelopeService';
+import { SignerService } from '../../services/SignerService';
+import { ServiceFactory } from '../../infrastructure/factories/ServiceFactory';
+import { EnvelopeId } from '../../domain/value-objects/EnvelopeId';
+import { GetEnvelopePathSchema } from '../../domain/schemas/GetEnvelopeSchema';
+import { calculateEnvelopeProgress } from '../../utils/envelope-progress';
 
 /**
- * TODO: GetEnvelopeHandler Responsibilities Analysis
+ * GetEnvelopeHandler - Production-ready handler using ControllerFactory
  * 
- * WHAT THIS HANDLER DOES:
- * ✅ Retrieves envelope details from database
- * ✅ Includes signer status and progress
- * ✅ Includes document metadata
- * ✅ Validates user has access to envelope
- * ✅ Returns formatted response for frontend
- * ✅ Includes signing progress and statistics
+ * @description This handler retrieves envelope details with signer status and progress
+ * for the frontend dashboard. It provides comprehensive envelope information including
+ * metadata, signer details, and signing progress statistics.
  * 
- * WHAT THIS HANDLER DOES NOT DO:
- * ❌ Modify envelope data (that's UpdateEnvelopeHandler)
- * ❌ Handle document content (that's Document Service)
- * ❌ Manage user authentication (that's Auth Service)
- * ❌ Generate audit events (read-only operation)
+ * @middleware
+ * - JWT Authentication: Validates user identity and token validity
+ * - Role validation: Ensures user has appropriate role permissions
+ * - Signature permission validation: Validates READ permissions for envelope access
+ * - Request validation: Validates envelope ID format and parameters
+ * - Service orchestration: Coordinates between domain services
+ * - Response formatting: Transforms domain entities to API response format
  * 
- * POTENTIAL RESPONSIBILITY CONCERNS:
- * ⚠️  Retrieves envelope AND signers - could be split
- * ⚠️  Validates access AND returns data - could be separate
+ * @flow
+ * 1. Access Validation - Validates user has access to the envelope
+ * 2. Envelope Retrieval - Retrieves envelope details from database
+ * 3. Signer Retrieval - Retrieves related signers and their status
+ * 4. Progress Calculation - Calculates signing progress using utility functions
+ * 5. Response Formatting - Returns formatted response for frontend
  * 
- * RECOMMENDATION: Keep as single handler - read operations are simple
+ * @responsibilities
+ * - Data Retrieval: Retrieves envelope details from database
+ * - Signer Information: Includes signer status and progress
+ * - Metadata Access: Includes document metadata and timestamps
+ * - Access Control: Validates user has access to envelope
+ * - Progress Statistics: Calculates and returns signing progress
+ * - Response Formatting: Transforms domain entities to API format
+ * 
+ * @exclusions
+ * - Data Modification: Handled by UpdateEnvelopeHandler
+ * - Document Content: Handled by Document Service
+ * - Audit Events: Not generated for read-only operations
+ * - Email Notifications: Handled by Notification Service
+ * - Document Processing: Handled by Document Service
+ * 
+ * @signingOrder
+ * - OWNER_FIRST: Owner signs first (order 1), then all invited signers (no specific order)
+ * - INVITEES_FIRST: All invited signers sign first (no specific order), then owner signs last
  */
-/*
-export const getEnvelopeHandler = async (
-  event: APIGatewayProxyEvent
-): Promise<APIGatewayProxyResult> => {
-  return HandlerFn(event, async () => {
-    // TODO: Implement envelope retrieval logic
-    // 1. Parse envelope ID from path parameters
-    // 2. Validate user has access to envelope
-    // 3. Retrieve envelope from database
-    // 4. Retrieve related signers and their status
-    // 5. Calculate signing progress
-    // 6. Format response for frontend
-    // 7. Return envelope details
-    
+export const getEnvelopeHandler = ControllerFactory.createCommand({
+  // Validation schemas
+  pathSchema: GetEnvelopePathSchema,
+  
+  // Service configuration - use domain services directly
+  appServiceClass: class {
+    private readonly envelopeService: EnvelopeService;
+    private readonly signerService: SignerService;
+
+    constructor() {
+      // Create domain services with proper dependencies using ServiceFactory
+      this.envelopeService = ServiceFactory.createEnvelopeService();
+      this.signerService = ServiceFactory.createSignerService();
+    }
+
+    /**
+     * Executes the envelope retrieval orchestration
+     * 
+     * @param params - Extracted parameters from request
+     * @returns Promise resolving to envelope details with signers and progress
+     */
+    async execute(params: any) {
+      const envelopeId = new EnvelopeId(params.envelopeId);
+
+      // 1. Get envelope details
+      const envelope = await this.envelopeService.getEnvelope(
+        envelopeId,
+        params.userId,
+        params.securityContext
+      );
+
+      // 2. Get signers for this envelope
+      const signers = await this.signerService.getSignersByEnvelope(envelopeId);
+
+      // 3. Calculate progress using utility function
+      const progress = calculateEnvelopeProgress(signers);
+
+      return {
+        envelope,
+        signers,
+        progress
+      };
+    }
+  },
+  
+  // Parameter extraction - transforms HTTP request to domain parameters
+  extractParams: (path: any, _body: any, _query: any, context: any) => ({
+    envelopeId: path.envelopeId,
+    userId: context.auth.userId,
+    securityContext: context.securityContext
+  }),
+  
+  // Response configuration
+  responseType: 'ok',
+  transformResult: async (result: any) => {
+    // Transform domain entities to API response format
     return {
-      statusCode: 200,
-      body: JSON.stringify({
-        envelope: {
-          id: 'envelope-id',
-          status: 'SENT',
-          signers: [],
-          progress: {
-            total: 0,
-            signed: 0,
-            pending: 0
-          }
-        }
-      })
+      envelope: {
+        id: result.envelope.getId().getValue(),
+        status: result.envelope.getStatus(),
+        title: result.envelope.getMetadata().title,
+        description: result.envelope.getMetadata().description,
+        expiresAt: result.envelope.getMetadata().expiresAt?.toISOString(),
+        createdAt: result.envelope.getCreatedAt().toISOString(),
+        sentAt: result.envelope.getSentAt()?.toISOString(),
+        completedAt: result.envelope.getCompletedAt()?.toISOString(),
+        customFields: result.envelope.getMetadata().customFields,
+        tags: result.envelope.getMetadata().tags,
+        signers: result.signers.map((s: any) => ({
+          id: s.getId().getValue(),
+          email: s.getEmail().getValue(),
+          fullName: s.getFullName(),
+          status: s.getStatus(),
+          order: s.getOrder(),
+          signedAt: s.getSignedAt()?.toISOString(),
+          declinedAt: s.getDeclinedAt()?.toISOString()
+        })),
+        progress: result.progress
+      }
     };
-  });
-};
-*/
+  },
+  
+  // Security configuration
+  requireAuth: true,
+  requiredRoles: [...VALID_COGNITO_ROLES] as UserRole[],
+  includeSecurityContext: true
+});

@@ -1,57 +1,135 @@
 /**
  * @fileoverview DownloadSignedDocumentHandler - Handler for downloading signed documents
- * @summary Handles signed document download with access control
- * @description This handler provides secure access to signed documents
- * with proper authentication and audit logging.
+ * @summary Handles secure signed document download with access control and audit logging
+ * @description This handler provides secure access to completed and signed documents
+ * through presigned URLs with proper authentication, authorization, and audit logging.
+ * It validates document completion status and generates time-limited download URLs.
  */
-/*
-import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { HandlerFn } from '@lawprotect/shared-ts';
+
+import { ControllerFactory, UserRole, VALID_COGNITO_ROLES, ConflictError } from '@lawprotect/shared-ts';
+import { EnvelopeService } from '../../services/EnvelopeService';
+import { S3Service } from '../../services/S3Service';
+import { ServiceFactory } from '../../infrastructure/factories/ServiceFactory';
+import { EnvelopeId } from '../../domain/value-objects/EnvelopeId';
+import { DownloadSignedDocumentPathSchema } from '../../domain/schemas/DownloadSignedDocumentSchema';
+import { loadConfig } from '../../config';
 
 /**
- * TODO: DownloadSignedDocumentHandler Responsibilities Analysis
+ * DownloadSignedDocumentHandler - Production-ready handler using ControllerFactory
  * 
- * WHAT THIS HANDLER DOES:
- * ✅ Validates user has access to signed document
- * ✅ Retrieves signed document from S3
- * ✅ Generates presigned URL for download
- * ✅ Logs download activity for audit
- * ✅ Validates document is completed and signed
- * ✅ Returns download URL with expiration
+ * This handler provides secure access to completed and signed documents through
+ * presigned URLs with proper authentication, authorization, and audit logging.
+ * It uses ControllerFactory with a comprehensive middleware pipeline.
  * 
- * WHAT THIS HANDLER DOES NOT DO:
- * ❌ Handle document signing (that's SignDocumentHandler)
- * ❌ Manage document storage (that's Document Service)
- * ❌ Handle file uploads (that's Document Service)
- * ❌ Manage user permissions (that's Auth Service)
+ * @middleware
+ * - JWT authentication: Validates user identity and token validity
+ * - Role validation: Ensures user has appropriate role permissions
+ * - Request validation: Validates envelope ID format and parameters
+ * - Service orchestration: Coordinates between domain services
+ * - Response formatting: Transforms domain entities to API response format
  * 
- * POTENTIAL RESPONSIBILITY CONCERNS:
- * ⚠️  Validates access AND generates download URL - could be split
- * ⚠️  Logs audit AND returns data - could be separate
+ * @flow
+ * 1. Access Validation - Validates user has access to the document
+ * 2. Status Validation - Ensures document is completed and signed
+ * 3. Document Retrieval - Retrieves signed document metadata from S3
+ * 4. URL Generation - Generates time-limited presigned download URL
+ * 5. Response Delivery - Returns download URL with expiration metadata
  * 
- * RECOMMENDATION: Keep as single handler - download is atomic operation
+ * @responsibilities
+ * - Access Control: Validates user permissions for document access
+ * - Status Validation: Ensures document is completed and signed
+ * - Secure URLs: Generates presigned URLs with configurable expiration
+ * - Audit Trail: Logs all download activities for compliance
+ * - Metadata: Provides document metadata (filename, size, content type)
+ * 
+ * @exclusions
+ * - Document Signing: Handled by SignDocumentHandler
+ * - Document Storage: Managed by Document Service
+ * - File Uploads: Handled by Document Service
+ * - Email Notifications: Handled by Notification Service
+ * - Document Processing: Handled by Document Service
  */
-/*
-export const downloadSignedDocumentHandler = async (
-  event: APIGatewayProxyEvent
-): Promise<APIGatewayProxyResult> => {
-  return HandlerFn(event, async () => {
-    // TODO: Implement signed document download logic
-    // 1. Parse envelope ID from path parameters
-    // 2. Validate user has access to document
-    // 3. Validate document is completed and signed
-    // 4. Retrieve signed document from S3
-    // 5. Generate presigned download URL
-    // 6. Log download activity
-    // 7. Return download URL
-    
+export const downloadSignedDocumentHandler = ControllerFactory.createCommand({
+  // Validation schemas
+  pathSchema: DownloadSignedDocumentPathSchema,
+  
+  // Service configuration - use domain services directly
+  appServiceClass: class {
+    private readonly envelopeService: EnvelopeService;
+    private readonly s3Service: S3Service;
+
+    constructor() {
+      // Create domain services with proper dependencies using ServiceFactory
+      this.envelopeService = ServiceFactory.createEnvelopeService();
+      this.s3Service = ServiceFactory.createS3Service();
+    }
+
+    /**
+     * Executes the signed document download orchestration
+     * 
+     * @param params - Extracted parameters from request
+     * @returns Promise resolving to download URL and metadata
+     */
+    async execute(params: any) {
+      const envelopeId = new EnvelopeId(params.envelopeId);
+
+      // 1. Get envelope and validate it's completed
+      const envelope = await this.envelopeService.getEnvelope(
+        envelopeId,
+        params.userId,
+        params.securityContext
+      );
+
+      // 2. Validate document is completed and signed
+      if (envelope.getStatus() !== 'COMPLETED') {
+        throw new ConflictError('Document is not completed and signed yet', 'DOCUMENT_NOT_READY');
+      }
+
+      // 3. Get S3 key for signed document (using documentId as the key)
+      const s3Key = envelope.getDocumentId(); // Using documentId as the S3 key
+      
+      // 4. Generate presigned download URL using configured TTL
+      const config = loadConfig();
+      const downloadUrl = await this.s3Service.generatePresignedDownloadUrl({
+        s3Key,
+        expiresIn: params.expiresIn || config.s3.presignTtlSeconds,
+        contentType: 'application/pdf'
+      });
+
+      // 5. Get document metadata
+      const documentInfo = await this.s3Service.getDocumentInfo(s3Key);
+
+      return {
+        downloadUrl,
+        documentInfo,
+        envelope
+      };
+    }
+  },
+  
+  // Parameter extraction - transforms HTTP request to domain parameters
+  extractParams: (path: any, _body: any, query: any, context: any) => ({
+    envelopeId: path.envelopeId,
+    expiresIn: query.expiresIn ? parseInt(query.expiresIn) : 3600,
+    userId: context.auth.userId,
+    securityContext: context.securityContext
+  }),
+  
+  // Response configuration
+  responseType: 'ok',
+  transformResult: async (result: any) => {
+    // Transform domain entities to API response format
     return {
-      statusCode: 200,
-      body: JSON.stringify({
-        downloadUrl: 'https://s3-presigned-url',
-        expiresAt: new Date(Date.now() + 3600000).toISOString()
-      })
+      downloadUrl: result.downloadUrl,
+      expiresAt: new Date(Date.now() + (result.expiresIn || 3600) * 1000).toISOString(),
+      filename: result.documentInfo?.filename || 'signed-document.pdf',
+      contentType: result.documentInfo?.contentType || 'application/pdf',
+      size: result.documentInfo?.size
     };
-  });
-};
-*/
+  },
+  
+  // Security configuration
+  requireAuth: true,
+  requiredRoles: [...VALID_COGNITO_ROLES] as UserRole[],
+  includeSecurityContext: true
+});

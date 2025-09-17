@@ -74,16 +74,6 @@ export interface CreateSignatureRequest {
    */
   location?: string;
 
-  /**
-   * Certificate information (if available)
-   */
-  certificateInfo?: {
-    issuer: string;
-    subject: string;
-    validFrom: Date;
-    validTo: Date;
-    certificateHash: string;
-  };
 
   /**
    * IP address of the signer

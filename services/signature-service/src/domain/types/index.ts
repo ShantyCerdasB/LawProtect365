@@ -25,3 +25,6 @@ export * from './signature';
 
 // Signer types
 export * from './signer';
+
+// Invitation token types
+export * from './invitation-token';

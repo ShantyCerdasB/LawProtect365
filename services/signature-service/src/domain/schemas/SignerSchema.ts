@@ -5,17 +5,16 @@
  * operations including creation, updates, and status management.
  */
 
-import { z, UuidV4, EmailStringSchema, NonEmptyStringSchema } from '@lawprotect/shared-ts';
+import { z, UuidV4, NonEmptyStringSchema, EmailStringSchema } from '@lawprotect/shared-ts';
 import { SignerStatus, SignerSortBy, SortOrder } from '@/domain/enums';
+import { SignerDataSchema } from './CommonSchemas';
 
 /**
  * Schema for creating a new signer
  */
 export const CreateSignerSchema = z.object({
   envelopeId: UuidV4,
-  email: EmailStringSchema,
-  fullName: NonEmptyStringSchema.max(255, 'Full name must be less than 255 characters'),
-  order: z.number().min(1, 'Order must be at least 1'),
+  ...SignerDataSchema.shape,
   invitationToken: z.string().optional()
 });
 

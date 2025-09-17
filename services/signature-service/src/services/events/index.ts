@@ -1,26 +1,14 @@
 /**
  * @fileoverview Event services - Barrel exports for event services
- * @summary Centralized exports for event services
- * @description Provides centralized access to all event-related services
- * including base event service, event publisher, and specific event services.
+ * @summary Centralized exports for all event services
+ * @description Provides centralized access to all event service implementations
+ * for domain-specific event publishing.
  */
 
-// Base event service
-export type {
-  DomainEvent,
-  EventServiceConfig
-} from './EventService';
-
-export {
-  EventService
-} from './EventService';
-
-// Event publisher
-export type {
-  EventPublisherConfig,
-  EventPublisherStats
-} from './EventPublisher';
-
-export {
-  EventPublisher
-} from './EventPublisher';
+export { EventService } from './EventService';
+export { EventPublisher } from './EventPublisher';
+export { EnvelopeEventService } from './EnvelopeEventService';
+export { SignerEventService } from './SignerEventService';
+export { SignatureEventService } from './SignatureEventService';
+export { AuditEventService } from './AuditEventService';
+export { ConsentEventService } from './ConsentEventService';

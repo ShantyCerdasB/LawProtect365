@@ -5,7 +5,7 @@
  * including CRUD operations, queries, and data persistence.
  */
 
-import { DdbClientLike, mapAwsError, ConflictError, ErrorCodes, decodeCursor, encodeCursor, NotFoundError, requireUpdate } from '@lawprotect/shared-ts';
+import { DdbClientLike, mapAwsError, ConflictError, ErrorCodes, decodeCursor, encodeCursor, NotFoundError, requireUpdate, BadRequestError } from '@lawprotect/shared-ts';
 import { requireQuery } from '@lawprotect/shared-ts';
 
 import { Signature } from '../domain/entities/Signature';
@@ -73,7 +73,6 @@ export class SignatureRepository {
       status: request.status,
       reason: request.reason,
       location: request.location,
-      certificateInfo: request.certificateInfo,
       ipAddress: request.ipAddress,
       userAgent: request.userAgent
     });
@@ -117,7 +116,7 @@ export class SignatureRepository {
       }
 
       if (!isSignatureDdbItem(result.Item)) {
-        throw new Error('Invalid signature item structure');
+        throw new BadRequestError('Invalid signature item structure', 'INVALID_SIGNATURE_DATA');
       }
 
       return signatureDdbMapper.fromDTO(result.Item);
@@ -165,16 +164,6 @@ export class SignatureRepository {
         expressionAttributeValues[':location'] = request.metadata.location;
       }
 
-      if (request.metadata.certificateInfo !== undefined) {
-        updateExpressions.push('certificateInfo = :certificateInfo');
-        expressionAttributeValues[':certificateInfo'] = {
-          issuer: request.metadata.certificateInfo.issuer,
-          subject: request.metadata.certificateInfo.subject,
-          validFrom: request.metadata.certificateInfo.validFrom.toISOString(),
-          validTo: request.metadata.certificateInfo.validTo.toISOString(),
-          certificateHash: request.metadata.certificateInfo.certificateHash
-        };
-      }
 
       if (request.metadata.ipAddress !== undefined) {
         updateExpressions.push('ipAddress = :ipAddress');
@@ -203,7 +192,7 @@ export class SignatureRepository {
       });
 
       if (!result.Attributes || !isSignatureDdbItem(result.Attributes)) {
-        throw new Error('Invalid signature item structure');
+        throw new BadRequestError('Invalid signature item structure', 'INVALID_SIGNATURE_DATA');
       }
 
       return signatureDdbMapper.fromDTO(result.Attributes);
@@ -502,4 +491,5 @@ export class SignatureRepository {
       throw mapAwsError(err, 'SignatureRepository.countBySigner');
     }
   }
+
 }

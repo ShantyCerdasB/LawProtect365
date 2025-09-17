@@ -5,6 +5,8 @@
  * either with the owner signing first or invitees signing first.
  */
 
+import { BadRequestError } from '@lawprotect/shared-ts';
+
 /**
  * Signing order types
  */
@@ -21,7 +23,7 @@ export class SigningOrder {
 
   constructor(type: SigningOrderType) {
     if (!type || !['OWNER_FIRST', 'INVITEES_FIRST'].includes(type)) {
-      throw new Error('SigningOrder type must be OWNER_FIRST or INVITEES_FIRST');
+      throw new BadRequestError('SigningOrder type must be OWNER_FIRST or INVITEES_FIRST', 'INVALID_SIGNING_ORDER_TYPE');
     }
 
     this.type = type;

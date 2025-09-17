@@ -7,14 +7,14 @@
 
 import { Signer } from '@/domain/entities/Signer';
 import { Signature } from '@/domain/entities/Signature';
-import { SignerStatus } from '@/domain/enums/SignerStatus';
-import { isValidSigningAlgorithm } from '@/domain/enums/SigningAlgorithm';
+import { SignerStatus } from '@lawprotect/shared-ts';
 import { 
   complianceViolation,
   consentRequired,
   documentIntegrityViolation,
   signatureInvalid
 } from '@/signature-errors';
+import { SignatureValidator } from '@/domain/validators/SignatureValidator';
 
 /**
  * Validates ESIGN Act compliance for signer consent
@@ -87,8 +87,7 @@ export function validateUETAAttribution(signature: Signature): void {
  * This is critical for ESIGN Act and UETA compliance.
  * 
  * @param signer - The signer to validate consent documentation for
- * @throws {SignatureError} When consent timestamp is not documented
- * @throws {SignatureError} When consent IP address is not documented
+ * @throws {SignatureError} When consent documentation is incomplete
  * @returns void
  */
 export function validateConsentDocumentation(signer: Signer): void {
@@ -101,6 +100,16 @@ export function validateConsentDocumentation(signer: Signer): void {
   if (!metadata.ipAddress) {
     throw consentRequired('Consent IP address not documented');
   }
+
+  // Use entity's built-in validation for consent
+  try {
+    signer.validateForSigning();
+  } catch (error) {
+    if (error instanceof Error) {
+      throw consentRequired(`Consent validation failed: ${error.message}`);
+    }
+    throw error;
+  }
 }
 
 /**
@@ -110,18 +119,18 @@ export function validateConsentDocumentation(signer: Signer): void {
  * This is essential for legal validity of electronic signatures.
  * 
  * @param signature - The signature to validate document integrity for
- * @throws {SignatureError} When document hash format is invalid
- * @throws {SignatureError} When signature timestamp is in the future
+ * @throws {SignatureError} When document integrity validation fails
  * @returns void
  */
 export function validateDocumentIntegrity(signature: Signature): void {
-  if (!signature.getDocumentHash() || signature.getDocumentHash().length !== 64) {
-    throw documentIntegrityViolation('Invalid document hash format');
-  }
-  
-  // Verify timestamp is not in the future
-  if (signature.getTimestamp() > new Date()) {
-    throw documentIntegrityViolation('Signature timestamp cannot be in the future');
+  // Use centralized validator for signature validation
+  try {
+    SignatureValidator.validateHashIntegrity(signature);
+  } catch (error) {
+    if (error instanceof Error) {
+      throw documentIntegrityViolation(`Document integrity validation failed: ${error.message}`);
+    }
+    throw error;
   }
 }
 
@@ -132,17 +141,18 @@ export function validateDocumentIntegrity(signature: Signature): void {
  * This validation is critical for legal compliance.
  * 
  * @param signature - The signature to validate
- * @throws {SignatureError} When signature hash format is invalid
- * @throws {SignatureError} When signing algorithm is not supported
+ * @throws {SignatureError} When signature authenticity validation fails
+ * @returns void
  */
 export function validateSignatureAuthenticity(signature: Signature): void {
-  if (!signature.getSignatureHash() || signature.getSignatureHash().length !== 64) {
-    throw signatureInvalid('Invalid signature hash format');
-  }
-  
-  // Verify signing algorithm is valid using enum
-  if (!signature.getAlgorithm() || !isValidSigningAlgorithm(signature.getAlgorithm())) {
-    throw signatureInvalid('Invalid signing algorithm');
+  // Use centralized validator for signature validation
+  try {
+    SignatureValidator.validateHashIntegrity(signature);
+  } catch (error) {
+    if (error instanceof Error) {
+      throw signatureInvalid(`Signature authenticity validation failed: ${error.message}`);
+    }
+    throw error;
   }
 }
 
@@ -161,8 +171,6 @@ export function validateSignerComplianceIdentity(signer: Signer): void {
     throw complianceViolation('Signer identity must include email and full name');
   }
 
-  // Validate email format is already handled by Email value object
-  // Additional identity validation can be added here
 }
 
 /**
@@ -176,19 +184,21 @@ export function validateSignerComplianceIdentity(signer: Signer): void {
  * @throws {SignatureError} When consent is too old
  * @returns void
  */
-export function validateConsentTiming(signer: Signer, maxConsentAgeHours: number = 24): void {
+export function validateConsentTiming(signer: Signer, _maxConsentAgeHours: number = 24): void {
   const metadata = signer.getMetadata();
   
   if (!metadata.consentTimestamp) {
     throw consentRequired('Consent timestamp is required');
   }
 
-  const now = new Date();
-  const consentAge = now.getTime() - metadata.consentTimestamp.getTime();
-  const maxAgeMs = maxConsentAgeHours * 60 * 60 * 1000;
-
-  if (consentAge > maxAgeMs) {
-    throw complianceViolation(`Consent is too old. Maximum age: ${maxConsentAgeHours} hours`);
+  // Use entity's built-in validation for consent
+  try {
+    signer.validateForSigning();
+  } catch (error) {
+    if (error instanceof Error) {
+      throw complianceViolation(`Consent timing validation failed: ${error.message}`);
+    }
+    throw error;
   }
 }
 

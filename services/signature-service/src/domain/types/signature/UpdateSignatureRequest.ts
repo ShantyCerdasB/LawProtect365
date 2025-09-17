@@ -22,13 +22,6 @@ export interface UpdateSignatureRequest {
   metadata?: {
     reason?: string;
     location?: string;
-    certificateInfo?: {
-      issuer: string;
-      subject: string;
-      validFrom: Date;
-      validTo: Date;
-      certificateHash: string;
-    };
     ipAddress?: string;
     userAgent?: string;
   };

@@ -8,7 +8,7 @@
 import { EnvelopeOperation } from '@/domain/enums/EnvelopeOperation';
 import { Envelope } from '@/domain/entities/Envelope';
 import { WorkflowTimingConfig } from '@/domain/types/WorkflowTypes';
-import { diffHours } from '@lawprotect/shared-ts';
+import { diffHours, REMINDER_INTERVALS } from '@lawprotect/shared-ts';
 import { workflowViolation } from '@/signature-errors';
 
 /**
@@ -51,7 +51,7 @@ export function validateSendTiming(
   
   if (expiresAt) {
     const hoursUntilExpiration = diffHours(expiresAt, now);
-    const minHoursRequired = timingConfig.reminderIntervals[0] || 24;
+    const minHoursRequired = timingConfig.reminderIntervals[0] || REMINDER_INTERVALS.MIN_HOURS_BEFORE_EXPIRATION;
     
     if (hoursUntilExpiration < minHoursRequired) {
       throw workflowViolation(
@@ -146,7 +146,7 @@ export function validateReminderWorkflow(
   timingConfig: WorkflowTimingConfig, 
   lastReminderSent?: Date
 ): void {
-  const reminderIntervals = timingConfig.reminderIntervals || [24, 48, 72];
+  const reminderIntervals = timingConfig.reminderIntervals || REMINDER_INTERVALS.DEFAULT_INTERVALS_HOURS;
   
   if (!lastReminderSent) {
     // First reminder - always valid
@@ -155,7 +155,7 @@ export function validateReminderWorkflow(
   
   const now = new Date();
   const hoursSinceLastReminder = diffHours(now, lastReminderSent);
-  const nextReminderInterval = reminderIntervals[0] || 24;
+  const nextReminderInterval = reminderIntervals[0] || REMINDER_INTERVALS.FIRST_REMINDER_HOURS;
   
   if (hoursSinceLastReminder < nextReminderInterval) {
     throw workflowViolation(

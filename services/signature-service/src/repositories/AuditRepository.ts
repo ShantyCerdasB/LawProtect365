@@ -5,7 +5,7 @@
  * including CRUD operations, queries, and data persistence.
  */
 
-import { DdbClientLike, mapAwsError, ConflictError, ErrorCodes, decodeCursor, encodeCursor, NotFoundError } from '@lawprotect/shared-ts';
+import { DdbClientLike, mapAwsError, ConflictError, ErrorCodes, decodeCursor, encodeCursor, NotFoundError, BadRequestError } from '@lawprotect/shared-ts';
 import { requireQuery } from '@lawprotect/shared-ts';
 
 import { AuditEvent } from '../domain/types/audit/AuditEvent';
@@ -105,7 +105,7 @@ export class AuditRepository {
       }
 
       if (!isAuditDdbItem(res.Item)) {
-        throw new Error('Invalid audit event data structure');
+        throw new BadRequestError('Invalid audit event data structure', 'INVALID_AUDIT_EVENT_DATA');
       }
 
       return auditItemMapper.fromDTO(res.Item);

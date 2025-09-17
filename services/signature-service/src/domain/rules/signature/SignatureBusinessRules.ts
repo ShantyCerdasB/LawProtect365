@@ -16,17 +16,11 @@ import {
   signatureInvalid,
   rateLimitExceeded
 } from '@/signature-errors';
-
-/**
- * Signature operation types for business rule validation
- */
-export enum SignatureOperation {
-  CREATE = 'CREATE',
-  VALIDATE = 'VALIDATE',
-  UPDATE = 'UPDATE',
-  RETRIEVE = 'RETRIEVE',
-  VERIFY = 'VERIFY'
-}
+import { 
+  validateAlgorithmSecurityLevel,
+  SecurityLevel,
+  SignatureOperation
+} from '@lawprotect/shared-ts';
 
 /**
  * Validates signature creation requirements
@@ -102,23 +96,9 @@ export function validateSignatureIntegrity(signature: Signature): void {
     throw signatureNotFound('Signature is required for integrity validation');
   }
 
+  // Use entity's built-in validation which already includes hash and timestamp validation
   if (!signature.validateIntegrity()) {
     throw signatureInvalid('Signature integrity validation failed');
-  }
-
-  // Validate hash formats
-  const hashRegex = /^[a-f0-9]{64}$/i;
-  if (!hashRegex.test(signature.getDocumentHash())) {
-    throw signatureInvalid('Invalid document hash format');
-  }
-
-  if (!hashRegex.test(signature.getSignatureHash())) {
-    throw signatureInvalid('Invalid signature hash format');
-  }
-
-  // Validate timestamp is not in the future
-  if (signature.getTimestamp() > new Date()) {
-    throw signatureInvalid('Signature timestamp cannot be in the future');
   }
 }
 
@@ -148,12 +128,6 @@ export function validateSignatureMetadata(signature: Signature): void {
     throw signatureInvalid('User agent must be a string');
   }
 
-  if (metadata.certificateInfo) {
-    const cert = metadata.certificateInfo;
-    if (!cert.issuer || !cert.subject || !cert.validFrom || !cert.validTo || !cert.certificateHash) {
-      throw signatureInvalid('Certificate information is incomplete');
-    }
-  }
 }
 
 /**
@@ -183,7 +157,7 @@ export function validateSignatureTiming(
  */
 export function validateSignatureAlgorithm(
   algorithm: string,
-  config: { allowedAlgorithms: SigningAlgorithm[]; minSecurityLevel: 'LOW' | 'MEDIUM' | 'HIGH' }
+  config: { allowedAlgorithms: SigningAlgorithm[]; minSecurityLevel: SecurityLevel }
 ): void {
   if (!algorithm) {
     throw signatureInvalid('Signing algorithm is required');
@@ -195,11 +169,13 @@ export function validateSignatureAlgorithm(
 
   // Validate security level if required
   if (config.minSecurityLevel) {
-    const algorithmLevel = getSigningAlgorithmSecurityLevel(algorithm as SigningAlgorithm);
-    const levelOrder = { 'LOW': 1, 'MEDIUM': 2, 'HIGH': 3 };
-    
-    if (levelOrder[algorithmLevel] < levelOrder[config.minSecurityLevel]) {
-      throw signatureInvalid(`Algorithm ${algorithm} does not meet minimum security level ${config.minSecurityLevel}`);
+    try {
+      validateAlgorithmSecurityLevel(algorithm as SigningAlgorithm, config.minSecurityLevel);
+    } catch (error) {
+      if (error instanceof Error) {
+        throw signatureInvalid(error.message);
+      }
+      throw error;
     }
   }
 }
@@ -326,12 +302,9 @@ export function validateSignatureCanBeVerified(signature: Signature): void {
     throw signatureNotFound('Signature not found');
   }
 
-  if (signature.getStatus() !== SignatureStatus.SIGNED) {
-    throw signatureInvalid('Only signed signatures can be verified');
-  }
-
+  // Use entity's built-in validation
   if (!signature.isValid()) {
-    throw signatureInvalid('Signature is not valid');
+    throw signatureInvalid('Signature is not valid for verification');
   }
 }
 
@@ -347,7 +320,7 @@ export function validateSignatureBusinessRules(
     maxSignatureAge: number;
     minSignatureAge: number;
     allowedAlgorithms: SigningAlgorithm[];
-    minSecurityLevel: 'LOW' | 'MEDIUM' | 'HIGH';
+    minSecurityLevel: SecurityLevel;
     allowedKMSKeys: string[];
     kmsKeyFormat: RegExp;
     s3KeyFormat: RegExp;
@@ -390,20 +363,3 @@ export function validateSignatureBusinessRules(
   }
 }
 
-/**
- * Helper function to get signing algorithm security level
- */
-function getSigningAlgorithmSecurityLevel(algorithm: SigningAlgorithm): 'HIGH' | 'MEDIUM' | 'LOW' {
-  switch (algorithm) {
-    case SigningAlgorithm.SHA512_RSA:
-    case SigningAlgorithm.ECDSA_P384_SHA384:
-      return 'HIGH';
-    case SigningAlgorithm.SHA384_RSA:
-    case SigningAlgorithm.ECDSA_P256_SHA256:
-      return 'MEDIUM';
-    case SigningAlgorithm.SHA256_RSA:
-      return 'LOW';
-    default:
-      return 'LOW';
-  }
-}

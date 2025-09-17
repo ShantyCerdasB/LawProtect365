@@ -40,13 +40,6 @@ export interface SignatureDdbItem extends DdbItemWithAudit {
   // Optional metadata
   reason?: string;               // Signing reason
   location?: string;             // Signing location
-  certificateInfo?: {            // Certificate information
-    issuer: string;
-    subject: string;
-    validFrom: string;
-    validTo: string;
-    certificateHash: string;
-  };
   ipAddress?: string;            // IP address
   userAgent?: string;            // User agent
   

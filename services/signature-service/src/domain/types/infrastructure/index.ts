@@ -15,3 +15,4 @@ export * from './outbox';
 export * from './consent';
 export * from './signature';
 export * from './signer';
+export * from './invitation-token';

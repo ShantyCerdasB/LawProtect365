@@ -11,3 +11,6 @@ export { SignatureId } from './SignatureId';
 export { ConsentId } from './ConsentId';
 export { Email } from './Email';
 export { SigningOrder } from './SigningOrder';
+export { AuditEventId } from './AuditEventId';
+export { OutboxId } from './OutboxId';
+export { InvitationTokenId } from './InvitationTokenId';

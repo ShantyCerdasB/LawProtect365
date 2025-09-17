@@ -27,9 +27,7 @@ export interface CreateEnvelopeMetadataRequest {
   /**
    * Optional custom fields
    */
-  customFields?: {
-    [key: string]: string | number | boolean;
-  };
+  customFields?: Record<string, unknown>;
 
   /**
    * Optional tags
