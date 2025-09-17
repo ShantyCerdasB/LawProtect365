@@ -84,4 +84,11 @@ export interface CreateSignatureRequest {
    * User agent of the signer's browser
    */
   userAgent?: string;
+
+  /**
+   * Email of the actor performing the signature operation
+   * Used for consent authorization checks. When provided, it must match
+   * the signer's email. If omitted, downstream services may apply fallbacks.
+   */
+  userEmail?: string;
 }

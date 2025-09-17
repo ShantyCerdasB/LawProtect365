@@ -38,7 +38,9 @@ const tableDefinitions = [
       { AttributeName: "pk", AttributeType: "S" },
       { AttributeName: "sk", AttributeType: "S" },
       { AttributeName: "gsi1pk", AttributeType: "S" },
-      { AttributeName: "gsi1sk", AttributeType: "S" }
+      { AttributeName: "gsi1sk", AttributeType: "S" },
+      { AttributeName: "gsi2pk", AttributeType: "S" },
+      { AttributeName: "gsi2sk", AttributeType: "S" }
     ],
     GlobalSecondaryIndexes: [
       {
@@ -46,6 +48,102 @@ const tableDefinitions = [
         KeySchema: [
           { AttributeName: "gsi1pk", KeyType: "HASH" },
           { AttributeName: "gsi1sk", KeyType: "RANGE" }
+        ],
+        Projection: { ProjectionType: "ALL" }
+      },
+      {
+        IndexName: "gsi2",
+        KeySchema: [
+          { AttributeName: "gsi2pk", KeyType: "HASH" },
+          { AttributeName: "gsi2sk", KeyType: "RANGE" }
+        ],
+        Projection: { ProjectionType: "ALL" }
+      }
+    ],
+    BillingMode: "PAY_PER_REQUEST"
+  },
+  {
+    TableName: "test-signers",
+    KeySchema: [
+      { AttributeName: "pk", KeyType: "HASH" },
+      { AttributeName: "sk", KeyType: "RANGE" }
+    ],
+    AttributeDefinitions: [
+      { AttributeName: "pk", AttributeType: "S" },
+      { AttributeName: "sk", AttributeType: "S" },
+      { AttributeName: "gsi1pk", AttributeType: "S" },
+      { AttributeName: "gsi1sk", AttributeType: "S" },
+      { AttributeName: "gsi2pk", AttributeType: "S" },
+      { AttributeName: "gsi2sk", AttributeType: "S" },
+      { AttributeName: "gsi3pk", AttributeType: "S" },
+      { AttributeName: "gsi3sk", AttributeType: "S" }
+    ],
+    GlobalSecondaryIndexes: [
+      {
+        IndexName: "gsi1",
+        KeySchema: [
+          { AttributeName: "gsi1pk", KeyType: "HASH" },
+          { AttributeName: "gsi1sk", KeyType: "RANGE" }
+        ],
+        Projection: { ProjectionType: "ALL" }
+      },
+      {
+        IndexName: "gsi2",
+        KeySchema: [
+          { AttributeName: "gsi2pk", KeyType: "HASH" },
+          { AttributeName: "gsi2sk", KeyType: "RANGE" }
+        ],
+        Projection: { ProjectionType: "ALL" }
+      },
+      {
+        IndexName: "gsi3",
+        KeySchema: [
+          { AttributeName: "gsi3pk", KeyType: "HASH" },
+          { AttributeName: "gsi3sk", KeyType: "RANGE" }
+        ],
+        Projection: { ProjectionType: "ALL" }
+      }
+    ],
+    BillingMode: "PAY_PER_REQUEST"
+  },
+  {
+    TableName: "test-signatures",
+    KeySchema: [
+      { AttributeName: "pk", KeyType: "HASH" },
+      { AttributeName: "sk", KeyType: "RANGE" }
+    ],
+    AttributeDefinitions: [
+      { AttributeName: "pk", AttributeType: "S" },
+      { AttributeName: "sk", AttributeType: "S" },
+      { AttributeName: "gsi1pk", AttributeType: "S" },
+      { AttributeName: "gsi1sk", AttributeType: "S" },
+      { AttributeName: "gsi2pk", AttributeType: "S" },
+      { AttributeName: "gsi2sk", AttributeType: "S" },
+      { AttributeName: "gsi3pk", AttributeType: "S" },
+      { AttributeName: "gsi3sk", AttributeType: "S" }
+    ],
+    GlobalSecondaryIndexes: [
+      {
+        IndexName: "gsi1",
+        KeySchema: [
+          { AttributeName: "gsi1pk", KeyType: "HASH" },
+          { AttributeName: "gsi1sk", KeyType: "RANGE" }
+        ],
+        Projection: { ProjectionType: "ALL" }
+      },
+      {
+        IndexName: "gsi2",
+        KeySchema: [
+          { AttributeName: "gsi2pk", KeyType: "HASH" },
+          { AttributeName: "gsi2sk", KeyType: "RANGE" }
+        ],
+        Projection: { ProjectionType: "ALL" }
+      },
+      {
+        IndexName: "gsi3",
+        KeySchema: [
+          { AttributeName: "gsi3pk", KeyType: "HASH" },
+          { AttributeName: "gsi3sk", KeyType: "RANGE" }
         ],
         Projection: { ProjectionType: "ALL" }
       }
@@ -206,14 +304,24 @@ const tableDefinitions = [
       { AttributeName: "pk", AttributeType: "S" },
       { AttributeName: "sk", AttributeType: "S" },
       { AttributeName: "gsi1pk", AttributeType: "S" },
-      { AttributeName: "gsi1sk", AttributeType: "S" }
+      { AttributeName: "gsi1sk", AttributeType: "S" },
+      { AttributeName: "gsi2pk", AttributeType: "S" },
+      { AttributeName: "gsi2sk", AttributeType: "S" }
     ],
     GlobalSecondaryIndexes: [
       {
-        IndexName: "gsi1",
+        IndexName: "GSI1",
         KeySchema: [
           { AttributeName: "gsi1pk", KeyType: "HASH" },
           { AttributeName: "gsi1sk", KeyType: "RANGE" }
+        ],
+        Projection: { ProjectionType: "ALL" }
+      },
+      {
+        IndexName: "GSI2",
+        KeySchema: [
+          { AttributeName: "gsi2pk", KeyType: "HASH" },
+          { AttributeName: "gsi2sk", KeyType: "RANGE" }
         ],
         Projection: { ProjectionType: "ALL" }
       }
@@ -278,7 +386,9 @@ const tableDefinitions = [
       { AttributeName: "pk", AttributeType: "S" },
       { AttributeName: "sk", AttributeType: "S" },
       { AttributeName: "gsi1pk", AttributeType: "S" },
-      { AttributeName: "gsi1sk", AttributeType: "S" }
+      { AttributeName: "gsi1sk", AttributeType: "S" },
+      { AttributeName: "gsi2pk", AttributeType: "S" },
+      { AttributeName: "gsi2sk", AttributeType: "S" }
     ],
     GlobalSecondaryIndexes: [
       {
@@ -286,6 +396,14 @@ const tableDefinitions = [
         KeySchema: [
           { AttributeName: "gsi1pk", KeyType: "HASH" },
           { AttributeName: "gsi1sk", KeyType: "RANGE" }
+        ],
+        Projection: { ProjectionType: "ALL" }
+      },
+      {
+        IndexName: "gsi2",
+        KeySchema: [
+          { AttributeName: "gsi2pk", KeyType: "HASH" },
+          { AttributeName: "gsi2sk", KeyType: "RANGE" }
         ],
         Projection: { ProjectionType: "ALL" }
       }

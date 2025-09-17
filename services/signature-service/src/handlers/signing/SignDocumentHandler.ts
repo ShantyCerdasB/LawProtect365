@@ -63,7 +63,8 @@ export const signDocumentHandler = ControllerFactory.createCommand({
   // Parameter extraction
   extractParams: (_path: any, body: any, _query: any, context: any) => ({
     requestBody: body,
-    securityContext: context.securityContext
+    securityContext: context.securityContext,
+    actorEmail: context.auth?.email
   }),
   
   // Service configuration - use domain services directly
@@ -81,11 +82,12 @@ export const signDocumentHandler = ControllerFactory.createCommand({
     private envelopeService: EnvelopeService;
     private signerService: SignerService;
     
-    async execute(params: { requestBody: any; securityContext: any }) {
-      const { requestBody, securityContext } = params;
+    async execute(params: { requestBody: any; securityContext: any; actorEmail?: string }) {
+      const { requestBody, securityContext, actorEmail } = params;
       let envelopeId: string;
       let signerId: string;
       let invitationToken: InvitationToken | null = null;
+      let userEmail: string | undefined;
       
       // Determine authentication method and extract envelope/signer info
       if (requestBody.invitationToken) {
@@ -93,10 +95,12 @@ export const signDocumentHandler = ControllerFactory.createCommand({
         invitationToken = await this.invitationTokenService.validateInvitationToken(requestBody.invitationToken);
         envelopeId = invitationToken.getEnvelopeId().getValue();
         signerId = invitationToken.getSignerId().getValue();
+        userEmail = invitationToken.getMetadata()?.email
       } else {
         // Authenticated user with JWT token
         envelopeId = requestBody.envelopeId;
         signerId = requestBody.signerId;
+        userEmail = actorEmail
       }
       // Create signature using real SignatureService
       const signatureId = new SignatureId(crypto.randomUUID());
@@ -114,7 +118,8 @@ export const signDocumentHandler = ControllerFactory.createCommand({
         reason: requestBody.reason,
         location: requestBody.location,
         ipAddress: securityContext?.ipAddress,
-        userAgent: securityContext?.userAgent
+        userAgent: securityContext?.userAgent,
+        userEmail
       });
 
       // Get real envelope status and progress

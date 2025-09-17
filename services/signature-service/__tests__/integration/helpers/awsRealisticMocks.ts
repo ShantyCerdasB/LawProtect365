@@ -1,3 +1,4 @@
+/* @ts-nocheck */
 /**
  * @file awsRealisticMocks.ts
  * @summary Realistic AWS service mocks for integration tests
@@ -9,88 +10,80 @@ import { jest } from '@jest/globals';
 // Mock KMS service with realistic behavior
 jest.mock('@aws-sdk/client-kms', () => ({
   KMSClient: jest.fn().mockImplementation(() => ({
-    send: jest.fn().mockImplementation(async (command) => {
+    send: jest.fn().mockImplementation(async (command: any) => {
       // Simulate realistic KMS signing
-      if (command.constructor.name === 'SignCommand') {
-        const message = command.input.Message;
-        const algorithm = command.input.SigningAlgorithm;
-        
-        // Create a realistic signature based on the message and algorithm
+      if (command && command.constructor && command.constructor.name === 'SignCommand') {
+        const message = command.input?.Message ?? Buffer.from('');
+        const algorithm = command.input?.SigningAlgorithm ?? 'RSASSA_PSS_SHA_256';
         const signature = Buffer.from(`mock-signature-${algorithm}-${message.toString('hex').substring(0, 8)}`).toString('base64');
-        
         return {
           Signature: Buffer.from(signature),
           SigningAlgorithm: algorithm,
-          KeyId: command.input.KeyId || 'test-key-id'
-        };
+          KeyId: command.input?.KeyId || 'test-key-id'
+        } as any;
       }
-      
+
       // Simulate KMS key creation
-      if (command.constructor.name === 'CreateKeyCommand') {
+      if (command && command.constructor && command.constructor.name === 'CreateKeyCommand') {
         return {
           KeyMetadata: {
             KeyId: 'test-key-id',
             Arn: 'arn:aws:kms:us-east-1:000000000000:key/test-key-id',
-            Description: command.input.Description || 'Test signing key',
-            KeyUsage: command.input.KeyUsage || 'SIGN_VERIFY',
-            KeySpec: command.input.CustomerMasterKeySpec || 'RSA_2048',
+            Description: command.input?.Description || 'Test signing key',
+            KeyUsage: command.input?.KeyUsage || 'SIGN_VERIFY',
+            KeySpec: command.input?.CustomerMasterKeySpec || 'RSA_2048',
             CreationDate: new Date(),
             Enabled: true
           }
-        };
+        } as any;
       }
-      
+
       // Simulate KMS alias creation
-      if (command.constructor.name === 'CreateAliasCommand') {
-        return {};
+      if (command && command.constructor && command.constructor.name === 'CreateAliasCommand') {
+        return {} as any;
       }
-      
-      return {};
+
+      return {} as any;
     }),
   })),
-  SignCommand: jest.fn().mockImplementation((input) => ({ input })),
-  CreateKeyCommand: jest.fn().mockImplementation((input) => ({ input })),
-  CreateAliasCommand: jest.fn().mockImplementation((input) => ({ input })),
+  SignCommand: jest.fn().mockImplementation((input: any) => ({ input })),
+  CreateKeyCommand: jest.fn().mockImplementation((input: any) => ({ input })),
+  CreateAliasCommand: jest.fn().mockImplementation((input: any) => ({ input })),
 }));
 
 // Mock EventBridge service with realistic behavior
 jest.mock('@aws-sdk/client-eventbridge', () => ({
   EventBridgeClient: jest.fn().mockImplementation(() => ({
-    send: jest.fn().mockImplementation(async (command) => {
-      // Simulate realistic EventBridge event publishing
-      if (command.constructor.name === 'PutEventsCommand') {
-        const entries = command.input.Entries || [];
+    send: jest.fn().mockImplementation(async (command: any) => {
+      if (command && command.constructor && command.constructor.name === 'PutEventsCommand') {
+        const entries: any[] = command.input?.Entries || [];
         return {
-          Entries: entries.map((entry, index) => ({
+          Entries: entries.map((_entry: any, index: number) => ({
             EventId: `test-event-id-${index}-${Date.now()}`,
             ErrorCode: undefined,
             ErrorMessage: undefined
           })),
           FailedEntryCount: 0
-        };
+        } as any;
       }
-      
-      // Simulate EventBridge bus creation
-      if (command.constructor.name === 'CreateEventBusCommand') {
+      if (command && command.constructor && command.constructor.name === 'CreateEventBusCommand') {
         return {
-          EventBusArn: `arn:aws:events:us-east-1:000000000000:event-bus/${command.input.Name}`
-        };
+          EventBusArn: `arn:aws:events:us-east-1:000000000000:event-bus/${command.input?.Name}`
+        } as any;
       }
-      
-      return {};
+      return {} as any;
     }),
   })),
-  PutEventsCommand: jest.fn().mockImplementation((input) => ({ input })),
-  CreateEventBusCommand: jest.fn().mockImplementation((input) => ({ input })),
+  PutEventsCommand: jest.fn().mockImplementation((input: any) => ({ input })),
+  CreateEventBusCommand: jest.fn().mockImplementation((input: any) => ({ input })),
 }));
 
 // Mock SSM service with realistic behavior
 jest.mock('@aws-sdk/client-ssm', () => ({
   SSMClient: jest.fn().mockImplementation(() => ({
-    send: jest.fn().mockImplementation(async (command) => {
-      // Simulate realistic SSM parameter retrieval
-      if (command.constructor.name === 'GetParameterCommand') {
-        const name = command.input.Name;
+    send: jest.fn().mockImplementation(async (command: any) => {
+      if (command && command.constructor && command.constructor.name === 'GetParameterCommand') {
+        const name = command.input?.Name;
         return {
           Parameter: {
             Name: name,
@@ -99,37 +92,36 @@ jest.mock('@aws-sdk/client-ssm', () => ({
             LastModifiedDate: new Date(),
             Version: 1
           }
-        };
+        } as any;
       }
-      
-      // Simulate SSM parameter creation
-      if (command.constructor.name === 'PutParameterCommand') {
+      if (command && command.constructor && command.constructor.name === 'PutParameterCommand') {
         return {
           Version: 1,
           Tier: 'Standard'
-        };
+        } as any;
       }
-      
-      return {};
+      return {} as any;
     }),
   })),
-  GetParameterCommand: jest.fn().mockImplementation((input) => ({ input })),
-  PutParameterCommand: jest.fn().mockImplementation((input) => ({ input })),
+  GetParameterCommand: jest.fn().mockImplementation((input: any) => ({ input })),
+  PutParameterCommand: jest.fn().mockImplementation((input: any) => ({ input })),
 }));
 
-// Mock S3 service (minimal since we don't use it much in tests)
-jest.mock('@aws-sdk/client-s3', () => ({
-  S3Client: jest.fn().mockImplementation(() => ({
-    send: jest.fn().mockResolvedValue({}),
+// Relax typing for Jest in this test-only mock file
+const anyJest: any = jest as any;
+
+// Replace direct jest.fn() generic inference to avoid 'never' issues
+(anyJest as any).mock('@aws-sdk/client-s3', () => ({
+  S3Client: anyJest.fn().mockImplementation(() => ({
+    send: anyJest.fn().mockResolvedValue({} as any),
   })),
-  PutObjectCommand: jest.fn(),
-  GetObjectCommand: jest.fn(),
-  DeleteObjectCommand: jest.fn(),
+  PutObjectCommand: anyJest.fn(),
+  GetObjectCommand: anyJest.fn(),
+  DeleteObjectCommand: anyJest.fn(),
 }));
 
-// Mock S3 presigner
-jest.mock('@aws-sdk/s3-request-presigner', () => ({
-  getSignedUrl: jest.fn().mockResolvedValue('https://mock-presigned-url.com'),
+(anyJest as any).mock('@aws-sdk/s3-request-presigner', () => ({
+  getSignedUrl: anyJest.fn().mockResolvedValue('https://mock-presigned-url.com' as any),
 }));
 
 // Helper function to get mock parameter values

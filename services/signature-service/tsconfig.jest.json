@@ -16,7 +16,11 @@
     // Mapea el paquete compartido y sus aliases internos
     "paths": {
       "@/*": ["src/*"]
-    }
+    },
+
+    // Relax type checks for tests to avoid noisy warnings from shared packages
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
   },
 
   // Asegura que TS procese src y tests en este modo

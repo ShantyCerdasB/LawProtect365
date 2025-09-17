@@ -74,7 +74,7 @@ export class SignatureService {
       const consent = await this.consentService.getConsentBySignerAndEnvelope(
         request.signerId.getValue(),
         request.envelopeId.getValue(),
-        request.signerId.getValue()
+        request.userEmail ?? request.signerId.getValue()
       );
       
       if (!consent || !consent.getConsentGiven()) {

@@ -285,6 +285,9 @@ export class EnvelopeRepository implements Repository<Envelope, EnvelopeId, unde
 
       return { items, nextCursor };
     } catch (err) {
+      // Diagnostic logging (allowed): help surface DDB details in tests
+      // eslint-disable-next-line no-console
+      console.error('DDB listByOwner error', { ownerId, index: this.gsi2IndexName, error: (err as any)?.message });
       throw mapAwsError(err, "EnvelopeRepository.listByOwner");
     }
   }

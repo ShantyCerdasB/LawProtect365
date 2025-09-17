@@ -29,6 +29,7 @@ import { InvitationTokenRepository } from '../../repositories/InvitationTokenRep
 import { OutboxRepository } from '../../repositories/OutboxRepository';
 import { AuditRepository } from '../../repositories/AuditRepository';
 import { ConsentRepository } from '../../repositories/ConsentRepository';
+import { DocumentRepository } from '../../repositories/DocumentRepository';
 
 /**
  * ServiceFactory - Infrastructure factory for service instantiation
@@ -62,7 +63,14 @@ export class ServiceFactory {
    * @returns Configured EnvelopeService instance
    */
   static createEnvelopeService(): EnvelopeService {
-    const envelopeRepository = new EnvelopeRepository(this.config.ddb.envelopesTable, this.ddbClient);
+    const envelopeRepository = new EnvelopeRepository(
+      this.config.ddb.envelopesTable,
+      this.ddbClient,
+      {
+        indexName: this.config.ddb.envelopesGsi1Name,
+        gsi2IndexName: this.config.ddb.envelopesGsi2Name
+      }
+    );
     const signerRepository = new SignerRepository(this.config.ddb.signersTable, this.ddbClient);
     const signatureRepository = new SignatureRepository(this.config.ddb.signaturesTable, this.ddbClient);
     const auditRepository = new AuditRepository(this.config.ddb.auditTable, this.ddbClient);
@@ -74,13 +82,21 @@ export class ServiceFactory {
       defaultTraceId: undefined
     });
 
+    // Wire shared Documents table (read-only) for business rule validation
+    const documentRepository = new DocumentRepository(this.config.ddb.documentsTable, this.ddbClient);
+
     return new EnvelopeService(
       envelopeRepository,
       signerRepository,
       signatureRepository,
       auditService,
       envelopeEventService,
-      this.config
+      this.config,
+      {
+        getDocument: async (documentId: string) => {
+          return await documentRepository.getByDocumentId(documentId);
+        }
+      }
     );
   }
 

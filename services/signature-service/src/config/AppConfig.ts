@@ -126,6 +126,10 @@ export interface SignatureServiceConfig extends AppConfig {
   ddb: {
     /** Table holding Envelope aggregates */
     envelopesTable: string;
+    /** GSI1 name for envelope queries */
+    envelopesGsi1Name: string;
+    /** GSI2 name for owner/status queries */
+    envelopesGsi2Name: string;
     /** Table holding Signer aggregates */
     signersTable: string;
     /** Table holding Signature aggregates */
@@ -375,6 +379,8 @@ export const getTableNames = (environment: EnvironmentType) => {
   
   return {
     envelopesTable: getRequired("ENVELOPES_TABLE") || `${prefix}envelopes`,
+    envelopesGsi1Name: getEnv("ENVELOPES_GSI1_NAME") ?? "gsi1",
+    envelopesGsi2Name: getEnv("ENVELOPES_GSI2_NAME") ?? "gsi2",
     signersTable: getRequired("SIGNERS_TABLE") || `${prefix}signers`,
     signaturesTable: getRequired("SIGNATURES_TABLE") || `${prefix}signatures`,
     documentsTable: getRequired("DOCUMENTS_TABLE") || `${prefix}documents`,
@@ -425,6 +431,8 @@ export const loadConfig = (
 
     ddb: {
       envelopesTable: tableNames.envelopesTable,
+      envelopesGsi1Name: tableNames.envelopesGsi1Name,
+      envelopesGsi2Name: tableNames.envelopesGsi2Name,
       signersTable: tableNames.signersTable,
       signaturesTable: tableNames.signaturesTable,
       documentsTable: tableNames.documentsTable,
