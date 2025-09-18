@@ -31,19 +31,25 @@ export const SignDocumentRequestSchema = z.object({
   ipAddress: z.string().ip().optional(),
   userAgent: z.string().optional(),
   
-  // Consent data (required for invitation token users)
+  // Consent data (required for all cases)
   consent: z.object({
     given: z.boolean(),
     timestamp: z.string().datetime(),
     text: z.string(),
-    ipAddress: z.string(),
-    userAgent: z.string()
-  }).optional()
+    ipAddress: z.string().optional(),
+    userAgent: z.string().optional()
+  })
 }).refine(
   (data) => data.invitationToken || (data.envelopeId && data.signerId),
   {
     message: "Either invitationToken or (envelopeId and signerId) must be provided",
     path: ["invitationToken"]
+  }
+).refine(
+  (data) => data.consent?.given === true,
+  {
+    message: 'Consent must be given',
+    path: ['consent', 'given']
   }
 );
 

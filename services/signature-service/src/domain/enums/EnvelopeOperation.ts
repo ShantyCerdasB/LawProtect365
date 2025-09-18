@@ -71,28 +71,63 @@ export enum EnvelopeOperation {
    * - Can only be performed when envelope is in DRAFT status
    */
   REMOVE_SIGNER = 'REMOVE_SIGNER'
+  ,
+  /**
+   * Read envelope details (view-only)
+   * - Allowed in any status
+   */
+  READ = 'READ'
 }
 
 /**
  * Valid operations for each envelope status
  */
-export const ENVELOPE_OPERATION_PERMISSIONS: Record<string, EnvelopeOperation[]> = {
-  [EnvelopeOperation.CREATE]: [EnvelopeOperation.CREATE],
-  [EnvelopeOperation.UPDATE]: [EnvelopeOperation.UPDATE, EnvelopeOperation.ADD_SIGNER, EnvelopeOperation.REMOVE_SIGNER],
-  [EnvelopeOperation.SEND]: [EnvelopeOperation.SEND],
-  [EnvelopeOperation.SIGN]: [EnvelopeOperation.SIGN],
-  [EnvelopeOperation.COMPLETE]: [EnvelopeOperation.COMPLETE],
-  [EnvelopeOperation.EXPIRE]: [EnvelopeOperation.EXPIRE],
-  [EnvelopeOperation.DECLINE]: [EnvelopeOperation.DECLINE],
-  [EnvelopeOperation.CANCEL]: [EnvelopeOperation.CANCEL],
-  [EnvelopeOperation.ADD_SIGNER]: [EnvelopeOperation.ADD_SIGNER],
-  [EnvelopeOperation.REMOVE_SIGNER]: [EnvelopeOperation.REMOVE_SIGNER]
+import { EnvelopeStatus } from './EnvelopeStatus';
+
+export const ENVELOPE_OPERATION_PERMISSIONS: Record<EnvelopeStatus, EnvelopeOperation[]> = {
+  [EnvelopeStatus.DRAFT]: [
+    EnvelopeOperation.READ,
+    EnvelopeOperation.CREATE,
+    EnvelopeOperation.UPDATE,
+    EnvelopeOperation.SEND,
+    EnvelopeOperation.ADD_SIGNER,
+    EnvelopeOperation.REMOVE_SIGNER
+  ],
+  [EnvelopeStatus.SENT]: [
+    EnvelopeOperation.READ,
+    EnvelopeOperation.SIGN,
+    EnvelopeOperation.COMPLETE,
+    EnvelopeOperation.EXPIRE,
+    EnvelopeOperation.DECLINE,
+    EnvelopeOperation.CANCEL
+  ],
+  [EnvelopeStatus.IN_PROGRESS]: [
+    EnvelopeOperation.READ,
+    EnvelopeOperation.SIGN,
+    EnvelopeOperation.COMPLETE,
+    EnvelopeOperation.EXPIRE,
+    EnvelopeOperation.DECLINE,
+    EnvelopeOperation.CANCEL
+  ],
+  [EnvelopeStatus.READY_FOR_SIGNATURE]: [
+    EnvelopeOperation.READ,
+    EnvelopeOperation.COMPLETE,
+    EnvelopeOperation.EXPIRE,
+    EnvelopeOperation.CANCEL
+  ],
+  [EnvelopeStatus.COMPLETED]: [EnvelopeOperation.READ],
+  [EnvelopeStatus.EXPIRED]: [EnvelopeOperation.READ],
+  [EnvelopeStatus.DECLINED]: [
+    EnvelopeOperation.READ,
+    EnvelopeOperation.UPDATE
+  ],
+  [EnvelopeStatus.CANCELLED]: [EnvelopeOperation.READ]
 };
 
 /**
  * Checks if an operation is valid for a given envelope status
  */
-export function isValidEnvelopeOperation(status: string, operation: EnvelopeOperation): boolean {
+export function isValidEnvelopeOperation(status: EnvelopeStatus, operation: EnvelopeOperation): boolean {
   const validOperations = ENVELOPE_OPERATION_PERMISSIONS[status] || [];
   return validOperations.includes(operation);
 }
@@ -100,7 +135,7 @@ export function isValidEnvelopeOperation(status: string, operation: EnvelopeOper
 /**
  * Gets all valid operations for a given envelope status
  */
-export function getValidEnvelopeOperations(status: string): EnvelopeOperation[] {
+export function getValidEnvelopeOperations(status: EnvelopeStatus): EnvelopeOperation[] {
   return ENVELOPE_OPERATION_PERMISSIONS[status] || [];
 }
 

@@ -47,7 +47,11 @@ export class ServiceFactory {
   private static config = loadConfig();
   private static ddbClient = createDynamoDBClient(this.config.dynamodb);
   private static s3Client = new S3Client({
-    region: this.config.region
+    region: this.config.region,
+    ...(process.env.AWS_ENDPOINT_URL ? { endpoint: process.env.AWS_ENDPOINT_URL } : {}),
+    ...(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
+      ? { credentials: { accessKeyId: process.env.AWS_ACCESS_KEY_ID, secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY } }
+      : {})
   });
   private static kmsClient = new KMSClient({
     region: this.config.region
@@ -193,7 +197,6 @@ export class ServiceFactory {
       this.kmsSigner,
       signatureRepository,
       auditService,
-      signatureEventService,
       s3Service,
       this.config.kms.signerKeyId
     );
@@ -205,5 +208,18 @@ export class ServiceFactory {
       signatureEventService,
       auditService
     );
+  }
+
+  /**
+   * Creates a ConsentService instance with all required dependencies
+   */
+  static createConsentService(): ConsentService {
+    const consentRepository = new ConsentRepository(this.config.ddb.consentTable, this.ddbClient);
+    const signerRepository = new SignerRepository(this.config.ddb.signersTable, this.ddbClient);
+    const auditRepository = new AuditRepository(this.config.ddb.auditTable, this.ddbClient);
+    const auditService = new AuditService(auditRepository);
+    const outboxRepository = new OutboxRepository(this.config.ddb.outboxTable, this.ddbClient);
+    const consentEventService = new ConsentEventService({ outboxRepository, serviceName: 'ConsentService' });
+    return new ConsentService(consentRepository, signerRepository, auditService, consentEventService);
   }
 }

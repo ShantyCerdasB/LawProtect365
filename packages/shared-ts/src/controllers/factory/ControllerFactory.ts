@@ -118,7 +118,7 @@ export class ControllerFactory {
           const result = await appService[methodName](params);
           
           // Transform result if needed
-          const responseData = config.transformResult ? config.transformResult(result) : result;
+          const responseData = config.transformResult ? await config.transformResult(result) : result;
           
           // Return appropriate response
           switch (config.responseType) {
@@ -205,7 +205,7 @@ export class ControllerFactory {
           const result = await appService[methodName](params);
           
           // Transform result if needed
-          const responseData = config.transformResult ? config.transformResult(result) : result;
+          const responseData = config.transformResult ? await config.transformResult(result) : result;
           
           // Return appropriate response
           switch (config.responseType) {
@@ -289,7 +289,7 @@ export class ControllerFactory {
           const result = await appService[methodName](params);
           
           // Transform result if needed
-          const responseData = config.transformResult ? config.transformResult(result) : result;
+          const responseData = config.transformResult ? await config.transformResult(result) : result;
           
           // Return appropriate response
           switch (config.responseType) {

@@ -142,3 +142,27 @@ export function meetsMinimumSecurityLevel(
   const levelOrder = { 'LOW': 1, 'MEDIUM': 2, 'HIGH': 3 };
   return levelOrder[algorithmLevel] >= levelOrder[minimumLevel];
 }
+
+/**
+ * Maps AWS KMS SigningAlgorithmSpec strings to domain SigningAlgorithm
+ * Returns null if no mapping is known.
+ */
+export function mapKmsAlgorithmToDomain(spec: string): SigningAlgorithm | null {
+  switch (spec) {
+    case 'RSASSA_PSS_SHA_256':
+    case 'RSA_PKCS1_SHA_256':
+      return SigningAlgorithm.SHA256_RSA;
+    case 'RSASSA_PSS_SHA_384':
+    case 'RSA_PKCS1_SHA_384':
+      return SigningAlgorithm.SHA384_RSA;
+    case 'RSASSA_PSS_SHA_512':
+    case 'RSA_PKCS1_SHA_512':
+      return SigningAlgorithm.SHA512_RSA;
+    case 'ECDSA_SHA_256':
+      return SigningAlgorithm.ECDSA_P256_SHA256;
+    case 'ECDSA_SHA_384':
+      return SigningAlgorithm.ECDSA_P384_SHA384;
+    default:
+      return null;
+  }
+}

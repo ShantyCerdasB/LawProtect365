@@ -283,23 +283,27 @@ export class SignerRepository {
     requireQuery(this.ddb);
 
     try {
-      const result = await this.ddb.query({
+      const exprNames: Record<string, string> = { '#gsi1pk': 'gsi1pk' };
+      if (c) exprNames['#gsi1sk'] = 'gsi1sk';
+      const params = {
         TableName: this.tableName,
         IndexName: this.envelopeGsi1Name,
         KeyConditionExpression: '#gsi1pk = :envelope' + (c ? ' AND #gsi1sk > :after' : ''),
-        ExpressionAttributeNames: {
-          '#gsi1pk': 'gsi1pk',
-          '#gsi1sk': 'gsi1sk'
-        },
+        ExpressionAttributeNames: exprNames,
         ExpressionAttributeValues: {
           ':envelope': `ENVELOPE#${envelopeId}`,
           ...(c ? { ':after': `SIGNER#${c.signerId}` } : {})
         },
         Limit: take,
         ScanIndexForward: sortOrder === DdbSortOrder.ASC
-      });
+      } as const;
+      // eslint-disable-next-line no-console
+      console.log('DDB query SignersByEnvelope', { index: this.envelopeGsi1Name, hasCursor: Boolean(c), params: { ...params, ExpressionAttributeValues: Object.keys(params.ExpressionAttributeValues) } });
+      const result = await this.ddb.query(params as any);
 
       const items = (result.Items || []) as any[];
+      // eslint-disable-next-line no-console
+      console.log('DDB SignersByEnvelope items', { count: items.length, firstKeys: items[0] ? Object.keys(items[0]) : [] });
       const signers = items
         .filter(item => isSignerDdbItem(item))
         .map(item => signerDdbMapper.fromDTO(item));

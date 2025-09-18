@@ -358,6 +358,41 @@ export class S3Service {
   }
 
   /**
+   * Records a document download action in the audit trail
+   */
+  async recordDownloadAction(request: {
+    envelopeId: string;
+    userId?: string;
+    userEmail?: string;
+    s3Key: string;
+    ipAddress?: string;
+    userAgent?: string;
+    country?: string;
+  }): Promise<void> {
+    try {
+      const info = await this.getDocumentInfo(request.s3Key);
+      await this.auditService.createEvent({
+        envelopeId: request.envelopeId,
+        description: 'Signed document downloaded',
+        type: AuditEventType.DOCUMENT_DOWNLOADED,
+        userId: request.userId,
+        userEmail: request.userEmail,
+        ipAddress: request.ipAddress,
+        userAgent: request.userAgent,
+        country: request.country,
+        metadata: {
+          s3Key: request.s3Key,
+          filename: info.filename,
+          contentType: info.contentType,
+          size: info.size
+        }
+      });
+    } catch (error: unknown) {
+      throw mapAwsError(error, 'S3Service.recordDownloadAction');
+    }
+  }
+
+  /**
    * Generates a document key for S3 storage
    */
   private generateDocumentKey(envelopeId: EnvelopeId, signerId: SignerId): string {

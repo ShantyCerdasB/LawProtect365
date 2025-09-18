@@ -66,6 +66,8 @@ export class AuditRepository {
     const item = auditItemMapper.toDTO(auditEvent);
 
     try {
+      // eslint-disable-next-line no-console
+      console.log('DDB put Audit item', { keys: Object.keys(item), eventType: item.eventType, envelopeId: item.envelopeId });
       await this.ddb.put({
         TableName: this.tableName,
         Item: item as any,
@@ -221,13 +223,21 @@ export class AuditRepository {
     cursor?: string,
     sortOrder: DdbSortOrder = DdbSortOrder.DESC
   ): Promise<AuditListResult> {
-    return this.listByGsi(
+    // eslint-disable-next-line no-console
+    console.log('DDB query AuditByEnvelope', {
+      index: this.envelopeGsi1Name,
+      gsiPk: AuditKeyBuilders.buildEnvelopeGsi1Pk(envelopeId)
+    });
+    const res = await this.listByGsi(
       this.envelopeGsi1Name,
       AuditKeyBuilders.buildEnvelopeGsi1Pk(envelopeId),
       limit,
       cursor,
       sortOrder
     );
+    // eslint-disable-next-line no-console
+    console.log('DDB AuditByEnvelope result', { count: res.items.length, hasNext: res.hasNext });
+    return res;
   }
 
   /**
@@ -442,22 +452,35 @@ export class AuditRepository {
       const decodedCursor = cursor ? decodeCursor<AuditListCursorPayload>(cursor) : undefined;
       const afterTimestamp = decodedCursor?.timestamp;
 
+      const pkAttr = indexName === 'gsi1' ? 'gsi1pk' : indexName === 'gsi2' ? 'gsi2pk' : indexName === 'gsi3' ? 'gsi3pk' : 'gsi4pk';
+      const skAttr = indexName === 'gsi1' ? 'gsi1sk' : indexName === 'gsi2' ? 'gsi2sk' : indexName === 'gsi3' ? 'gsi3sk' : 'gsi4sk';
+
+      const exprNames: Record<string, string> = { '#gsiPk': pkAttr };
+      if (afterTimestamp) exprNames['#gsiSk'] = skAttr;
+
+      const exprVals: Record<string, any> = { ':gsiPk': gsiPk } as any;
+      if (afterTimestamp) exprVals[':afterTimestamp'] = afterTimestamp;
+
+      const keyExpr = '#gsiPk = :gsiPk' + (afterTimestamp ? ' AND #gsiSk > :afterTimestamp' : '');
+
+      // eslint-disable-next-line no-console
+      console.log('DDB Audit.listByGsi params', { indexName, keyExpr, names: exprNames, hasAfter: Boolean(afterTimestamp) });
+
       const res = await this.ddb.query({
         TableName: this.tableName,
         IndexName: indexName,
-        KeyConditionExpression: 
-          '#gsiPk = :gsiPk' + 
-          (afterTimestamp ? ' AND #gsiSk > :afterTimestamp' : ''),
-        ExpressionAttributeNames: {
-          '#gsiPk': 'gsi1pk',
-          '#gsiSk': 'gsi1sk'
-        },
-        ExpressionAttributeValues: {
-          ':gsiPk': gsiPk,
-          ...(afterTimestamp ? { ':afterTimestamp': afterTimestamp } : {})
-        },
+        KeyConditionExpression: keyExpr,
+        ExpressionAttributeNames: exprNames,
+        ExpressionAttributeValues: exprVals,
         Limit: limit + 1,
         ScanIndexForward: sortOrder === DdbSortOrder.ASC
+      });
+
+      // eslint-disable-next-line no-console
+      console.log('DDB Audit.listByGsi raw', {
+        indexName,
+        count: (res.Items || []).length,
+        firstItemKeys: res.Items?.[0] ? Object.keys(res.Items[0] as any) : []
       });
 
       const items = (res.Items || []).slice(0, limit);

@@ -16,7 +16,9 @@ module.exports = {
   /** Package root for glob resolution */
   roots: ["<rootDir>"],
 
-  /** Setup files to run before tests */
+  /** Setup mocks first (before env) */
+  setupFiles: ["<rootDir>/__tests__/integration/helpers/awsRealisticMocks.ts"],
+  /** Setup files to run after env is set */
   setupFilesAfterEnv: ["<rootDir>/__tests__/setup.ts"],
 
   /** Global setup and teardown for DynamoDB Local */

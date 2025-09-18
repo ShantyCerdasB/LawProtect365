@@ -30,8 +30,13 @@ export function createDynamoDBClient(config: DynamoDBConfig): DdbClientLike {
   // Create low-level client
   const client = new DynamoDBClient(clientConfig);
   
-  // Create document client (higher-level)
-  const docClient = DynamoDBDocumentClient.from(client);
+  // Create document client (higher-level) with safer marshalling to strip undefineds
+  const docClient = DynamoDBDocumentClient.from(client, {
+    marshallOptions: {
+      removeUndefinedValues: true,
+      convertClassInstanceToMap: true
+    }
+  });
 
   // Adapter that implements DdbClientLike API using DocumentClient commands
   const adapter: DdbClientLike = {

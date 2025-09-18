@@ -108,7 +108,7 @@ export class ConsentRepository {
    */
   async getBySignerAndEnvelope(signerId: SignerId, envelopeId: EnvelopeId): Promise<Consent | null> {
     try {
-      const result = await this.ddb.query!({
+      const params = {
         TableName: this.tableName,
         IndexName: 'GSI2',
         KeyConditionExpression: '#gsi2pk = :gsi2pk',
@@ -122,19 +122,39 @@ export class ConsentRepository {
           ':envelopeId': envelopeId.getValue()
         },
         Limit: 1
+      } as any;
+      // eslint-disable-next-line no-console
+      console.log('DDB query Consent.getBySignerAndEnvelope', {
+        table: this.tableName,
+        index: params.IndexName,
+        signerId: signerId.getValue(),
+        envelopeId: envelopeId.getValue(),
+        exprNames: Object.keys(params.ExpressionAttributeNames || {}),
+        exprVals: Object.keys(params.ExpressionAttributeValues || {})
       });
+      const result = await this.ddb.query!(params);
+      // eslint-disable-next-line no-console
+      console.log('DDB Consent.getBySignerAndEnvelope result', { count: (result as any)?.Count ?? (result.Items?.length || 0) });
 
       if (!result.Items || result.Items.length === 0) {
         return null;
       }
 
       const item = result.Items[0] as Record<string, unknown>;
+      // eslint-disable-next-line no-console
+      console.log('DDB Consent item keys', { keys: Object.keys(item || {}) });
       if (!isConsentDdbItem(item)) {
         throw new BadRequestError('Invalid consent item structure', 'INVALID_CONSENT_DATA');
       }
 
       return consentFromDdbItem(item as any);
     } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('DDB Consent.getBySignerAndEnvelope ERROR', {
+        name: (err as any)?.name,
+        code: (err as any)?.code,
+        message: (err as any)?.message
+      });
       throw mapAwsError(err, 'ConsentRepository.getBySignerAndEnvelope');
     }
   }

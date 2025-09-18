@@ -84,5 +84,10 @@ export interface KmsCreateSignatureRequest {
      * Geographic location of signing (for compliance)
      */
     readonly location?: string;
+
+    /**
+     * Email of the user performing the signing (for audit trail)
+     */
+    readonly userEmail?: string;
   };
 }

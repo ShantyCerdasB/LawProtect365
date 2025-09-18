@@ -71,7 +71,18 @@ export class EnvelopeRepository implements Repository<Envelope, EnvelopeId, unde
           sk: EnvelopeKeyBuilders.buildMetaSk() 
         }
       });
-      return res.Item ? envelopeDdbMapper.fromDTO(res.Item as any) : null;
+      // eslint-disable-next-line no-console
+      console.log('DDB get Envelope', { id: envelopeId.getValue(), found: Boolean(res.Item) });
+      if (!res.Item) return null;
+      // eslint-disable-next-line no-console
+      console.log('DDB get Envelope item keys', Object.keys(res.Item as any));
+      try {
+        return envelopeDdbMapper.fromDTO(res.Item as any);
+      } catch (mapErr: any) {
+        // eslint-disable-next-line no-console
+        console.error('DDB get Envelope mapping error', { name: mapErr?.name, message: mapErr?.message, item: res.Item });
+        throw mapErr;
+      }
     } catch (err) {
       throw mapAwsError(err, "EnvelopeRepository.getById");
     }
@@ -96,13 +107,19 @@ export class EnvelopeRepository implements Repository<Envelope, EnvelopeId, unde
    */
   async create(entity: Envelope): Promise<Envelope> {
     try {
+      // eslint-disable-next-line no-console
+      console.log('DDB put Envelope start', { table: this.tableName, id: entity.getId().getValue() });
       await this.ddb.put({
         TableName: this.tableName,
         Item: envelopeDdbMapper.toDTO(entity) as any,
         ConditionExpression: "attribute_not_exists(pk) AND attribute_not_exists(sk)"
       });
+      // eslint-disable-next-line no-console
+      console.log('DDB put Envelope success', { id: entity.getId().getValue() });
       return entity;
     } catch (err: any) {
+      // eslint-disable-next-line no-console
+      console.error('DDB put Envelope error', { name: err?.name, message: err?.message });
       if (String(err?.name) === "ConditionalCheckFailedException") {
         throw new ConflictError("Envelope already exists", ErrorCodes.COMMON_CONFLICT);
       }
@@ -129,17 +146,18 @@ export class EnvelopeRepository implements Repository<Envelope, EnvelopeId, unde
         );
       }
 
+      const plain = patch as any;
       const updated = new Envelope(
         current.getId(),
-        patch.getDocumentId?.() ?? current.getDocumentId(),
-        patch.getOwnerId?.() ?? current.getOwnerId(),
-        patch.getStatus?.() ?? current.getStatus(),
-        patch.getSigners?.() ?? current.getSigners(),
-        patch.getSigningOrder?.() ?? current.getSigningOrder(),
+        (plain?.documentId) ?? current.getDocumentId(),
+        (plain?.ownerId) ?? current.getOwnerId(),
+        (plain?.status) ?? current.getStatus(),
+        (plain?.signers) ?? current.getSigners(),
+        (plain?.signingOrder) ?? current.getSigningOrder(),
         current.getCreatedAt(),
         new Date(),
-        patch.getMetadata?.() ?? current.getMetadata(),
-        patch.getCompletedAt?.() ?? current.getCompletedAt()
+        (plain?.metadata) ?? current.getMetadata(),
+        (plain?.completedAt) ?? current.getCompletedAt()
       );
 
       await this.ddb.put({
@@ -204,14 +222,15 @@ export class EnvelopeRepository implements Repository<Envelope, EnvelopeId, unde
     const ddb = this.ddb as DdbClientWithQuery;
 
     try {
+      const exprNames: Record<string, string> = { "#gsi1pk": "gsi1pk" };
+      if (c) {
+        exprNames["#gsi1sk"] = "gsi1sk";
+      }
       const res = await ddb.query({
         TableName: this.tableName,
         IndexName: this.indexName,
         KeyConditionExpression: "#gsi1pk = :envelope" + (c ? " AND #gsi1sk > :after" : ""),
-        ExpressionAttributeNames: {
-          "#gsi1pk": "gsi1pk",
-          "#gsi1sk": "gsi1sk",
-        },
+        ExpressionAttributeNames: exprNames,
         ExpressionAttributeValues: {
           ":envelope": EnvelopeKeyBuilders.buildGsi1Pk(),
           ...(c ? { ":after": `${c.createdAt}#${c.envelopeId}` } : {}),
@@ -254,14 +273,15 @@ export class EnvelopeRepository implements Repository<Envelope, EnvelopeId, unde
     const ddb = this.ddb as DdbClientWithQuery;
 
     try {
+      const exprNames: Record<string, string> = { "#gsi2pk": "gsi2pk" };
+      if (c) {
+        exprNames["#gsi2sk"] = "gsi2sk";
+      }
       const res = await ddb.query({
         TableName: this.tableName,
         IndexName: this.gsi2IndexName,
         KeyConditionExpression: "#gsi2pk = :owner" + (c ? " AND #gsi2sk > :after" : ""),
-        ExpressionAttributeNames: {
-          "#gsi2pk": "gsi2pk",
-          "#gsi2sk": "gsi2sk",
-        },
+        ExpressionAttributeNames: exprNames,
         ExpressionAttributeValues: {
           ":owner": EnvelopeKeyBuilders.buildGsi2Pk(ownerId),
           ...(c ? { ":after": `${c.createdAt}#${c.envelopeId}` } : {}),
@@ -271,9 +291,45 @@ export class EnvelopeRepository implements Repository<Envelope, EnvelopeId, unde
       });
 
       const rows = (res.Items ?? []) as any[];
-      const mapped = rows
-        .filter((it) => it.sk === "META")
-        .map((it) => envelopeDdbMapper.fromDTO(it));
+
+      // Hydrate full items when GSI projection is not ALL_ATTRIBUTES
+      const hydrated: any[] = [];
+      for (const it of rows) {
+        let item: any | null = it;
+        const hasAll = item && item.type === 'ENVELOPE' && item.sk === 'META' && item.envelopeId && item.metadata;
+        if (!hasAll) {
+          let envelopeIdFromIdx: string | undefined;
+          if (item?.envelopeId) {
+            envelopeIdFromIdx = item.envelopeId;
+          } else if (item?.gsi2sk && typeof item.gsi2sk === 'string') {
+            const parts = String(item.gsi2sk).split('#');
+            envelopeIdFromIdx = parts[parts.length - 1];
+          }
+          if (envelopeIdFromIdx) {
+            const full = await this.ddb.get({
+              TableName: this.tableName,
+              Key: { pk: EnvelopeKeyBuilders.buildPk(envelopeIdFromIdx), sk: EnvelopeKeyBuilders.buildMetaSk() },
+              ConsistentRead: false
+            });
+            item = full.Item || null;
+          } else {
+            item = null;
+          }
+        }
+        if (item && item.sk === 'META' && item.type === 'ENVELOPE') {
+          hydrated.push(item);
+        }
+      }
+
+      const mapped: Envelope[] = [];
+      for (const it of hydrated) {
+        try {
+          mapped.push(envelopeDdbMapper.fromDTO(it));
+        } catch {
+          // Skip invalid/partial items
+          continue;
+        }
+      }
 
       const items = mapped.slice(0, take - 1);
       const hasMore = mapped.length === take;
@@ -307,14 +363,15 @@ export class EnvelopeRepository implements Repository<Envelope, EnvelopeId, unde
     const ddb = this.ddb as DdbClientWithQuery;
 
     try {
+      const exprNames: Record<string, string> = { "#gsi2pk": "gsi2pk" };
+      if (c) {
+        exprNames["#gsi2sk"] = "gsi2sk";
+      }
       const res = await ddb.query({
         TableName: this.tableName,
         IndexName: this.gsi2IndexName,
         KeyConditionExpression: "#gsi2pk = :status" + (c ? " AND #gsi2sk > :after" : ""),
-        ExpressionAttributeNames: {
-          "#gsi2pk": "gsi2pk",
-          "#gsi2sk": "gsi2sk",
-        },
+        ExpressionAttributeNames: exprNames,
         ExpressionAttributeValues: {
           ":status": EnvelopeKeyBuilders.buildStatusGsi2Pk(status),
           ...(c ? { ":after": `${c.createdAt}#${c.envelopeId}` } : {}),

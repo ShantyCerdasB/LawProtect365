@@ -45,12 +45,17 @@ export class InvitationTokenService {
       userId: string;
       ipAddress?: string;
       userAgent?: string;
-    }
+    },
+    actorEmail?: string
   ): Promise<InvitationToken[]> {
     try {
       const tokens: InvitationToken[] = [];
       
       for (const signer of signers) {
+        // Skip token generation for owner-only scenarios (actor signing themselves)
+        if (actorEmail && signer.getEmail().getValue().toLowerCase() === actorEmail.toLowerCase()) {
+          continue;
+        }
         // Generate secure token
         const token = this.generateSecureToken();
         const expiresAt = new Date();

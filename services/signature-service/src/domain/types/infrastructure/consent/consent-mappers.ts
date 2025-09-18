@@ -25,16 +25,23 @@ export function isConsentDdbItem(item: unknown): item is ConsentDdbItem {
     return false;
   }
 
-  const requiredFields = [
+  const stringFields: Array<keyof ConsentDdbItem> = [
     'pk', 'sk', 'type', 'consentId', 'envelopeId', 'signerId', 'signatureId',
-    'consentGiven', 'consentTimestamp', 'consentText', 'ipAddress', 'userAgent',
+    'consentTimestamp', 'consentText', 'ipAddress', 'userAgent',
     'gsi1pk', 'gsi1sk', 'gsi2pk', 'gsi2sk', 'createdAt', 'updatedAt'
   ];
 
-  return requiredFields.every(field => 
-    typeof obj[field as keyof ConsentDdbItem] === 'string'
-  ) && 
-  typeof obj.consentGiven === 'boolean';
+  for (const field of stringFields) {
+    if (typeof obj[field] !== 'string') {
+      return false;
+    }
+  }
+
+  if (typeof obj.consentGiven !== 'boolean') {
+    return false;
+  }
+
+  return true;
 }
 
 /**

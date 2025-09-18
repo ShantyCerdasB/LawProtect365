@@ -41,6 +41,7 @@ export const auditItemMapper = {
       timestamp,
       ipAddress: auditEvent.ipAddress,
       userAgent: auditEvent.userAgent,
+      country: (auditEvent as any).country,
       metadata: auditEvent.metadata,
       description: auditEvent.description,
       
@@ -82,6 +83,7 @@ export const auditItemMapper = {
       timestamp: new Date(item.timestamp),
       ipAddress: item.ipAddress,
       userAgent: item.userAgent,
+      country: (item as any).country,
       metadata: item.metadata,
       description: item.description
     };

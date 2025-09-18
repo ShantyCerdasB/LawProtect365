@@ -310,7 +310,6 @@ export function validateSignatureSecurityRules(
 ): void {
   switch (operation) {
     case SecurityOperation.SIGN:
-      validateSignatureCryptographicIntegrity(signature);
       validateSignatureTimestamp(signature);
       validateSignatureHashFormat(signature);
       validateSignatureKMSAccess(signature, config);

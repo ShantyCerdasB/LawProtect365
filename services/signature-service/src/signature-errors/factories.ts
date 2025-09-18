@@ -5,7 +5,7 @@
  * appropriate status codes, error codes, and messages for the signature service domain.
  */
 
-import {
+import { 
   BadRequestError,
   ConflictError,
   ForbiddenError,
@@ -441,7 +441,7 @@ export const documentIntegrityViolation = (details?: unknown) =>
  * Creates a ForbiddenError for when signature is invalid (403).
  */
 export const signatureInvalid = (details?: unknown) =>
-  new ForbiddenError("Signature is invalid or malformed", SignatureErrorCodes.SIGNATURE_INVALID, details);
+  new BadRequestError("Signature is invalid or malformed", SignatureErrorCodes.SIGNATURE_INVALID, details);
 
 // ============================================================================
 // Workflow Errors

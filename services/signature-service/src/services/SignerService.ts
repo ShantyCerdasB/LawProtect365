@@ -184,10 +184,19 @@ export class SignerService {
    */
   async getSignersByEnvelope(envelopeId: EnvelopeId): Promise<Signer[]> {
     try {
+      // eslint-disable-next-line no-console
+      console.log('[SignerService.getSignersByEnvelope] querying', { envelopeId: envelopeId.getValue() });
       const result = await this.signerRepository.getByEnvelope(envelopeId.getValue());
+      // eslint-disable-next-line no-console
+      console.log('[SignerService.getSignersByEnvelope] result', { count: result.items.length, firstKeys: result.items[0] ? Object.keys(result.items[0] as any) : [] });
       // Convert DTOs to domain entities using the mapper
-      return result.items.map(item => signerDdbMapper.fromDTO(item));
+      const mapped = result.items.map(item => signerDdbMapper.fromDTO(item as any));
+      // eslint-disable-next-line no-console
+      console.log('[SignerService.getSignersByEnvelope] mapped', { count: mapped.length });
+      return mapped;
     } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('[SignerService.getSignersByEnvelope] ERROR', { name: (error as any)?.name, code: (error as any)?.code, message: (error as any)?.message });
       throw mapAwsError(error, 'SignerService.getSignersByEnvelope');
     }
   }
@@ -211,7 +220,8 @@ export class SignerService {
       userId: string;
       ipAddress?: string;
       userAgent?: string;
-    }
+    },
+    actorEmail?: string
   ): Promise<Signer[]> {
     try {
       const signers: Signer[] = [];
@@ -236,8 +246,9 @@ export class SignerService {
           }
         });
 
-        // Create audit event
-        await this.auditService.createEvent({
+        // Create audit event only for non-owner external signers
+        if (!actorEmail || signerData.email.toLowerCase() !== actorEmail.toLowerCase()) {
+          await this.auditService.createEvent({
           type: AuditEventType.SIGNER_ADDED,
           envelopeId: envelopeId.getValue(),
           signerId: signerId.getValue(),
@@ -250,10 +261,13 @@ export class SignerService {
             ipAddress: securityContext.ipAddress,
             userAgent: securityContext.userAgent
           }
-        });
+          });
+        }
 
-        // Publish signer created event
-        await this.signerEventService.publishSignerCreated(signer, securityContext.userId);
+        // Publish signer created event only for external signers
+        if (!actorEmail || signerData.email.toLowerCase() !== actorEmail.toLowerCase()) {
+          await this.signerEventService.publishSignerCreated(signer, securityContext.userId);
+        }
         
         signers.push(signer);
       }

@@ -126,8 +126,14 @@ function determineAccessType(evt: any): AccessType {
     }
   } catch {}
   
+  // If authenticated user present, treat as DIRECT access
+  if ((evt as any)?.auth) {
+    return AccessType.DIRECT;
+  }
+  
   // Check for API access
-  if (evt.headers?.['x-api-key'] || evt.headers?.['authorization']?.startsWith('Bearer')) {
+  const authzHeader = evt.headers?.['authorization'] || evt.headers?.['Authorization'];
+  if (evt.headers?.['x-api-key'] || (typeof authzHeader === 'string' && authzHeader.startsWith('Bearer'))) {
     return AccessType.API;
   }
   
@@ -137,7 +143,7 @@ function determineAccessType(evt: any): AccessType {
   }
   
   // Check for public access
-  if (!evt.headers?.['authorization'] && !evt.headers?.['x-api-key']) {
+  if (!authzHeader && !evt.headers?.['x-api-key']) {
     return AccessType.PUBLIC;
   }
   

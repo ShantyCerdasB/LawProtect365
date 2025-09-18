@@ -19,6 +19,8 @@
 
 import { ControllerFactory, UserRole, VALID_COGNITO_ROLES } from '@lawprotect/shared-ts';
 import { EnvelopeService } from '../../services/EnvelopeService';
+// import { SignerService } from '../../services/SignerService';
+// import { AuditEventType } from '../../domain/enums/AuditEventType';
 import { AuditService } from '../../services/AuditService';
 import { ServiceFactory } from '../../infrastructure/factories/ServiceFactory';
 import { EnvelopeId } from '../../domain/value-objects/EnvelopeId';
@@ -74,10 +76,12 @@ export const getDocumentHistoryHandler = ControllerFactory.createCommand({
     constructor() {
       this.envelopeService = ServiceFactory.createEnvelopeService();
       this.auditService = ServiceFactory.createAuditService();
+      // this.signerService = ServiceFactory.createSignerService();
     }
     
     private envelopeService: EnvelopeService;
     private auditService: AuditService;
+    // private signerService: SignerService;
     
     async execute(params: { envelopeId: string; limit: number; cursor?: string; userId: string; securityContext: any }) {
       const { envelopeId, limit, cursor, userId, securityContext } = params;
@@ -89,15 +93,18 @@ export const getDocumentHistoryHandler = ControllerFactory.createCommand({
         securityContext
       );
 
-      // Get audit trail for the envelope
+      // Get audit trail for the envelope (no synthesis; reflect persisted state only)
       const auditTrail = await this.auditService.getAuditTrail(envelopeId, limit, cursor);
-
       // Format events for frontend display
-      const formattedEvents = auditTrail.items.map(event => ({
+      const formattedEvents = auditTrail.items.map((event: any) => ({
         id: event.id,
         type: event.type,
         timestamp: event.timestamp.toISOString(),
         userId: event.userId,
+        userEmail: event.userEmail,
+        ipAddress: event.ipAddress,
+        userAgent: event.userAgent,
+        country: event.country,
         description: event.description || 'No description available',
         metadata: event.metadata,
         entityId: event.envelopeId,
@@ -113,7 +120,7 @@ export const getDocumentHistoryHandler = ControllerFactory.createCommand({
           nextCursor: auditTrail.nextCursor,
           envelopeStatus: envelope.getStatus(),
           envelopeTitle: envelope.getMetadata().title || 'Document',
-          documentId: envelopeId,
+          documentId: (envelope as any).getDocumentId?.() || envelope.getDocumentId?.() || envelopeId,
           createdAt: envelope.getCreatedAt().toISOString(),
           updatedAt: envelope.getUpdatedAt().toISOString(),
           expiresAt: envelope.getMetadata().expiresAt?.toISOString()

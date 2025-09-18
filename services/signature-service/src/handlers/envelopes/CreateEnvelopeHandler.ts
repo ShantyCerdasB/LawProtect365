@@ -90,7 +90,8 @@ export const createEnvelopeHandler = ControllerFactory.createCommand({
       const signers = await this.signerService.createSignersForEnvelope(
         envelope.getId(),
         params.signersData,
-        params.securityContext
+        params.securityContext,
+        params.actorEmail
       );
 
       // 3. Generate invitation tokens (NO events published - will be published when envelope is sent)
@@ -98,7 +99,8 @@ export const createEnvelopeHandler = ControllerFactory.createCommand({
         .generateInvitationTokensForSigners(
           signers,
           envelope.getId(),
-          params.securityContext
+          params.securityContext,
+          params.actorEmail
         );
 
       return {
@@ -123,14 +125,21 @@ export const createEnvelopeHandler = ControllerFactory.createCommand({
     },
     signersData: body.signers || [], // Array of signers to be created
     userId: context.auth.userId, // Authenticated user ID
-    securityContext: context.securityContext // Security context from middleware
+    securityContext: context.securityContext, // Security context from middleware
+    actorEmail: context.auth?.email
   }),
   
   // Response configuration
   responseType: 'created',
   transformResult: async (result: any) => {
     // Transform domain entities to API response format
+    // eslint-disable-next-line no-console
+    console.log('[CreateEnvelopeHandler] Transforming result', {
+      envelopeId: result?.envelope?.getId?.().getValue?.(),
+      hasSigners: Array.isArray(result?.signers) ? result.signers.length : undefined
+    });
     return {
+      envelopeId: result.envelope.getId().getValue(),
       envelope: {
         id: result.envelope.getId().getValue(),
         status: result.envelope.getStatus(),

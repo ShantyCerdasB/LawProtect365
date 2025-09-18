@@ -6,9 +6,9 @@
  * both authenticated users (with JWT tokens) and external users (with invitation tokens).
  */
 
-import { ControllerFactory } from '@lawprotect/shared-ts';
+import { ControllerFactory, PermissionLevel, AccessType } from '@lawprotect/shared-ts';
 import { SignDocumentRequestSchema } from '../../domain/schemas/SigningHandlersSchema';
-import { ServiceFactory } from '../../infrastructure/factories/ServiceFactory';
+// ServiceFactory is already imported above
 import { SignatureService } from '../../services/SignatureService';
 import { InvitationTokenService } from '../../services/InvitationTokenService';
 import { EnvelopeService } from '../../services/EnvelopeService';
@@ -21,6 +21,11 @@ import { EnvelopeId } from '../../domain/value-objects/EnvelopeId';
 import { SignerId } from '../../domain/value-objects/SignerId';
 import { SignatureStatus } from '../../domain/enums/SignatureStatus';
 import { calculateEnvelopeProgress } from '../../utils/envelope-progress';
+import { SignerStatus } from '../../domain/enums/SignerStatus';
+import { SignerRepository } from '../../repositories/SignerRepository';
+import { ServiceFactory } from '../../infrastructure/factories/ServiceFactory';
+import { ConsentService } from '../../services/ConsentService';
+import { EnvelopeRepository } from '../../repositories/EnvelopeRepository';
 
 /**
  * SignDocumentHandler - Production-ready handler using ControllerFactory
@@ -75,15 +80,17 @@ export const signDocumentHandler = ControllerFactory.createCommand({
       this.invitationTokenService = ServiceFactory.createInvitationTokenService();
       this.envelopeService = ServiceFactory.createEnvelopeService();
       this.signerService = ServiceFactory.createSignerService();
+      this.consentService = ServiceFactory.createConsentService();
     }
     
     private signatureService: SignatureService;
     private invitationTokenService: InvitationTokenService;
     private envelopeService: EnvelopeService;
     private signerService: SignerService;
+    private consentService: ConsentService;
     
     async execute(params: { requestBody: any; securityContext: any; actorEmail?: string }) {
-      const { requestBody, securityContext, actorEmail } = params;
+      const { requestBody, securityContext } = params;
       let envelopeId: string;
       let signerId: string;
       let invitationToken: InvitationToken | null = null;
@@ -100,10 +107,39 @@ export const signDocumentHandler = ControllerFactory.createCommand({
         // Authenticated user with JWT token
         envelopeId = requestBody.envelopeId;
         signerId = requestBody.signerId;
-        userEmail = actorEmail
+        // Resolve signer email from repository to ensure consent auth matches signer identity
+        const signerEntity = await this.signerService.getSigner(new SignerId(signerId));
+        userEmail = signerEntity?.getEmail().getValue();
       }
-      // Create signature using real SignatureService
+      // Create or ensure consent exists (mandatory for all flows)
+      const consentPayload = requestBody.consent;
+      if (!consentPayload || consentPayload.given !== true) {
+        throw new Error('Consent is required and must be given');
+      }
+      const effectiveIp = consentPayload.ipAddress || securityContext?.ipAddress;
+      const effectiveUa = consentPayload.userAgent || securityContext?.userAgent;
+
       const signatureId = new SignatureId(crypto.randomUUID());
+
+      try {
+        await this.consentService.createConsent({
+          envelopeId: new EnvelopeId(envelopeId),
+          signerId: new SignerId(signerId),
+          signatureId,
+          consentGiven: true,
+          consentTimestamp: new Date(consentPayload.timestamp),
+          consentText: consentPayload.text,
+          ipAddress: effectiveIp,
+          userAgent: effectiveUa
+        }, userEmail || '');
+      } catch (e: any) {
+        // Ignore conflict if consent already exists
+        if (String(e?.code) !== 'COMMON_CONFLICT') {
+          throw e;
+        }
+      }
+
+      // Create signature using real SignatureService
       const signature: Signature = await this.signatureService.createSignature({
         id: signatureId,
         envelopeId: new EnvelopeId(envelopeId),
@@ -117,20 +153,74 @@ export const signDocumentHandler = ControllerFactory.createCommand({
         status: SignatureStatus.SIGNED,
         reason: requestBody.reason,
         location: requestBody.location,
-        ipAddress: securityContext?.ipAddress,
-        userAgent: securityContext?.userAgent,
-        userEmail
+        ipAddress: effectiveIp,
+        userAgent: effectiveUa,
+        userEmail,
+        ownerUserId: securityContext?.userId,
+        country: securityContext?.country
       });
 
-      // Get real envelope status and progress
-      const userId = invitationToken ? 'external-user' : 'authenticated-user';
-      const mergedSecurityContext = { ...securityContext, userId };
-      
-      const envelope: Envelope = await this.envelopeService.getEnvelope(
-        new EnvelopeId(envelopeId),
+      // Mark signer as SIGNED and auto-complete envelope if all signed
+      const userId = securityContext?.userId;
+      const mergedSecurityContext = {
+        ...(securityContext || {}),
         userId,
+        permission: securityContext?.permission ?? PermissionLevel.VIEWER,
+        accessType: securityContext?.accessType ?? AccessType.DIRECT
+      } as any;
+
+      const signerRepo = new SignerRepository((ServiceFactory as any).config.ddb.signersTable, (ServiceFactory as any).ddbClient);
+      await signerRepo.update(new SignerId(signerId), {
+        status: SignerStatus.SIGNED,
+        signedAt: new Date(),
+        metadata: {
+          ipAddress: securityContext?.ipAddress,
+          userAgent: securityContext?.userAgent
+        }
+      } as any);
+
+      const allSigners = await this.signerService.getSignersByEnvelope(new EnvelopeId(envelopeId));
+      const allSigned = allSigners.length > 0 && allSigners.every(s => s.getStatus() === SignerStatus.SIGNED);
+      if (allSigned) {
+        // Persist signed document key into envelope metadata for stable retrieval
+        try {
+          const envelopeRepo = new EnvelopeRepository((ServiceFactory as any).config.ddb.envelopesTable, (ServiceFactory as any).ddbClient, {
+            indexName: (ServiceFactory as any).config.ddb.envelopesGsi1Name,
+            gsi2IndexName: (ServiceFactory as any).config.ddb.envelopesGsi2Name
+          });
+          const currentEnv = await envelopeRepo.getById(new EnvelopeId(envelopeId));
+          const currentMeta = (currentEnv as any)?.getMetadata?.() || {};
+          await envelopeRepo.update(new EnvelopeId(envelopeId), {
+            metadata: {
+              ...currentMeta,
+              signedS3Key: requestBody.s3Key
+            }
+          } as any);
+        } catch (_e) {
+          // best-effort; do not block signing flow
+        }
+        const currentEnvelope = await this.envelopeService.getEnvelope(new EnvelopeId(envelopeId), userId, mergedSecurityContext);
+        const ownerId = (currentEnvelope as any)?.getOwnerId?.() || mergedSecurityContext.userId;
+        const ownerContext = {
+          ...mergedSecurityContext,
+          userId: ownerId,
+          permission: PermissionLevel.OWNER,
+          accessType: AccessType.DIRECT
+        } as any;
+        await this.envelopeService.completeIfAllSigned(new EnvelopeId(envelopeId), ownerId, ownerContext as any);
+      }
+
+      // Get real envelope status and progress (reload with OWNER if completed)
+      let envelope: Envelope = await this.envelopeService.getEnvelope(
+        new EnvelopeId(envelopeId),
+        mergedSecurityContext.userId,
         mergedSecurityContext
       );
+      if (envelope.getStatus() !== 'COMPLETED' && allSigned) {
+        const ownerId = (envelope as any)?.getOwnerId?.() || mergedSecurityContext.userId;
+        const ownerContext = { ...mergedSecurityContext, userId: ownerId, permission: PermissionLevel.OWNER } as any;
+        envelope = await this.envelopeService.getEnvelope(new EnvelopeId(envelopeId), ownerContext.userId, ownerContext);
+      }
       
       // Get signers to calculate real progress
       const signers = await this.signerService.getSignersByEnvelope(new EnvelopeId(envelopeId));

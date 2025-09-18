@@ -7,39 +7,46 @@
 
 import { jest } from '@jest/globals';
 
-// Mock KMS service with realistic behavior
+// Mock KMS service with realistic behavior unless explicitly using LocalStack KMS
+if (!process.env.USE_LOCALSTACK_KMS) {
 jest.mock('@aws-sdk/client-kms', () => ({
   KMSClient: jest.fn().mockImplementation(() => ({
     send: jest.fn().mockImplementation(async (command: any) => {
-      // Simulate realistic KMS signing
-      if (command && command.constructor && command.constructor.name === 'SignCommand') {
-        const message = command.input?.Message ?? Buffer.from('');
-        const algorithm = command.input?.SigningAlgorithm ?? 'RSASSA_PSS_SHA_256';
-        const signature = Buffer.from(`mock-signature-${algorithm}-${message.toString('hex').substring(0, 8)}`).toString('base64');
+      const input = command?.input ?? {};
+      // Detect Verify by presence of Signature + SigningAlgorithm
+      if (input && (input.Signature && input.SigningAlgorithm)) {
+        return { SignatureValid: true } as any;
+      }
+      // Detect Sign by presence of Message + SigningAlgorithm
+      if (input && (input.Message || input.SigningAlgorithm)) {
+        const message = input.Message ?? new Uint8Array();
+        const bytes = typeof message === 'string' ? Buffer.from(message) : Buffer.from(message);
+        const algorithm = input.SigningAlgorithm ?? 'RSASSA_PSS_SHA_256';
+        const signature = Buffer.from(`mock-signature-${algorithm}-${bytes.toString('hex').substring(0, 8)}`);
         return {
-          Signature: Buffer.from(signature),
+          Signature: signature,
           SigningAlgorithm: algorithm,
-          KeyId: command.input?.KeyId || 'test-key-id'
+          KeyId: input.KeyId || 'test-key-id'
         } as any;
       }
 
-      // Simulate KMS key creation
-      if (command && command.constructor && command.constructor.name === 'CreateKeyCommand') {
+      // Simulate KMS key creation by presence of KeyUsage/CustomerMasterKeySpec
+      if (input && (input.KeyUsage || input.CustomerMasterKeySpec)) {
         return {
           KeyMetadata: {
             KeyId: 'test-key-id',
             Arn: 'arn:aws:kms:us-east-1:000000000000:key/test-key-id',
-            Description: command.input?.Description || 'Test signing key',
-            KeyUsage: command.input?.KeyUsage || 'SIGN_VERIFY',
-            KeySpec: command.input?.CustomerMasterKeySpec || 'RSA_2048',
+            Description: input.Description || 'Test signing key',
+            KeyUsage: input.KeyUsage || 'SIGN_VERIFY',
+            KeySpec: input.CustomerMasterKeySpec || 'RSA_2048',
             CreationDate: new Date(),
             Enabled: true
           }
         } as any;
       }
 
-      // Simulate KMS alias creation
-      if (command && command.constructor && command.constructor.name === 'CreateAliasCommand') {
+      // Simulate KMS alias creation by presence of AliasName/TargetKeyId
+      if (input && (input.AliasName || input.TargetKeyId)) {
         return {} as any;
       }
 
@@ -50,6 +57,46 @@ jest.mock('@aws-sdk/client-kms', () => ({
   CreateKeyCommand: jest.fn().mockImplementation((input: any) => ({ input })),
   CreateAliasCommand: jest.fn().mockImplementation((input: any) => ({ input })),
 }));
+} else {
+  // Force KMSClient to point to LocalStack endpoint but intercept Sign to avoid unimplemented ops in LS free tier
+  const actual: any = (jest as any).requireActual('@aws-sdk/client-kms');
+  class KMSClientLS extends actual.KMSClient {
+    constructor(cfg: any = {}) {
+      super({
+        region: process.env.AWS_REGION || cfg.region || 'us-east-1',
+        endpoint: process.env.AWS_ENDPOINT_URL || cfg.endpoint,
+        credentials: {
+          accessKeyId: process.env.AWS_ACCESS_KEY_ID || 'test',
+          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || 'test'
+        }
+      });
+    }
+    async send(command: any): Promise<any> {
+      const input = command?.input ?? {};
+      // Intercept Verify first
+      if (input && (input.Signature && input.SigningAlgorithm)) {
+        return { SignatureValid: true } as any;
+      }
+      // Intercept Sign to return a deterministic mock signature
+      if (input && (input.Message || input.SigningAlgorithm)) {
+        const message = input.Message ?? new Uint8Array();
+        const bytes = typeof message === 'string' ? Buffer.from(message) : Buffer.from(message);
+        const algorithm = input.SigningAlgorithm ?? 'RSASSA_PSS_SHA_256';
+        const signature = Buffer.from(`mock-signature-${algorithm}-${bytes.toString('hex').substring(0, 8)}`);
+        return {
+          Signature: signature,
+          SigningAlgorithm: algorithm,
+          KeyId: input.KeyId || 'test-key-id'
+        } as any;
+      }
+      return super.send(command);
+    }
+  }
+  // @ts-ignore
+  jest.mock('@aws-sdk/client-kms', () => {
+    return Object.assign({}, actual, { KMSClient: KMSClientLS });
+  });
+}
 
 // Mock EventBridge service with realistic behavior
 jest.mock('@aws-sdk/client-eventbridge', () => ({
@@ -113,11 +160,14 @@ const anyJest: any = jest as any;
 // Replace direct jest.fn() generic inference to avoid 'never' issues
 (anyJest as any).mock('@aws-sdk/client-s3', () => ({
   S3Client: anyJest.fn().mockImplementation(() => ({
-    send: anyJest.fn().mockResolvedValue({} as any),
+    send: anyJest.fn().mockImplementation(async (_command: any) => {
+      return {} as any;
+    }),
   })),
-  PutObjectCommand: anyJest.fn(),
-  GetObjectCommand: anyJest.fn(),
-  DeleteObjectCommand: anyJest.fn(),
+  PutObjectCommand: anyJest.fn().mockImplementation((input: any) => ({ input })),
+  GetObjectCommand: anyJest.fn().mockImplementation((input: any) => ({ input })),
+  HeadObjectCommand: anyJest.fn().mockImplementation((input: any) => ({ input })),
+  DeleteObjectCommand: anyJest.fn().mockImplementation((input: any) => ({ input })),
 }));
 
 (anyJest as any).mock('@aws-sdk/s3-request-presigner', () => ({
@@ -143,3 +193,24 @@ console.log('   - EventBridge: Realistic event publishing with proper responses'
 console.log('   - SSM: Realistic parameter retrieval with test values');
 console.log('   - S3: Basic mock for storage operations');
 console.log('   - DynamoDB: Using real DynamoDB Local');
+
+// Targeted mock: override only KmsSigner from shared-ts, leave the rest intact
+jest.mock('@lawprotect/shared-ts', () => {
+  const actual = (jest as any).requireActual('@lawprotect/shared-ts');
+  class KmsSignerMock {
+    private readonly defaultAlgorithm: string;
+    constructor(_client?: any, opts: any = {}) {
+      this.defaultAlgorithm = opts?.defaultSigningAlgorithm || 'RSASSA_PSS_SHA_256';
+    }
+    async sign(input: any): Promise<{ signature: Uint8Array }> {
+      const msg = input?.message ?? new Uint8Array();
+      const bytes = Buffer.isBuffer(msg) ? msg : Buffer.from(msg);
+      const sig = Buffer.from(`mock-signature-${this.defaultAlgorithm}-${bytes.toString('hex').substring(0,8)}`);
+      return { signature: sig } as any;
+    }
+    async verify(_input: any): Promise<{ valid: boolean }> {
+      return { valid: true } as any;
+    }
+  }
+  return { ...actual, KmsSigner: KmsSignerMock };
+});

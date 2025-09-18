@@ -15,7 +15,7 @@ import { Signer } from '../../../entities/Signer';
 import { SignerId } from '../../../value-objects/SignerId';
 import { Email } from '../../../value-objects/Email';
 import { SignerStatus } from '../../../enums/SignerStatus';
-import { DynamoDbPrefixes } from '../../../enums/DynamoDbPrefixes';
+// import { DynamoDbPrefixes } from '../../../enums/DynamoDbPrefixes';
 
 /**
  * Type guard for envelope DynamoDB items
@@ -191,7 +191,7 @@ export function createEnvelopeCursorPayload(envelope: Envelope): EnvelopeListCur
  * Complete mapper for envelope DynamoDB operations with type guard.
  */
 export const envelopeDdbMapper = DdbMapperUtils.createMapper(
-  DynamoDbPrefixes.ENVELOPE,
+  'ENVELOPE',
   ['pk', 'sk', 'envelopeId', 'documentId', 'ownerId', 'status', 'signingOrder', 'createdAt', 'updatedAt', 'metadata', 'signers'],
   envelopeToDdbItem,
   envelopeFromDdbItem

@@ -30,6 +30,7 @@ export interface AuditDdbItem extends DdbItemWithAudit, DdbItemWithTTL {
   readonly timestamp: string; // ISO string
   readonly ipAddress?: string;
   readonly userAgent?: string;
+  readonly country?: string;
   readonly metadata?: Record<string, any>;
   readonly description: string;
 }

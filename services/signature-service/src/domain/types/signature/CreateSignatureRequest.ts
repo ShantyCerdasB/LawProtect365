@@ -91,4 +91,14 @@ export interface CreateSignatureRequest {
    * the signer's email. If omitted, downstream services may apply fallbacks.
    */
   userEmail?: string;
+
+  /**
+   * The owner userId of the envelope (actor for internal single-signer flows)
+   */
+  ownerUserId?: string;
+
+  /**
+   * Country (ISO code or name) of the actor at the time of signing
+   */
+  country?: string;
 }

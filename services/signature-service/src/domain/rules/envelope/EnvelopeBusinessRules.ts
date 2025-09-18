@@ -189,7 +189,12 @@ export async function validateDocumentExists(
   }
 
   try {
+    // Diagnostic logging to help integration tests
+    // eslint-disable-next-line no-console
+    console.log('[EnvelopeRules] validateDocumentExists: fetching document', { documentId });
     const document = await documentRepository.getDocument(documentId);
+    // eslint-disable-next-line no-console
+    console.log('[EnvelopeRules] validateDocumentExists: fetched document', document ? { status: document.status, ownerId: document.ownerId, s3Key: document.s3Key } : { notFound: true });
     
     if (!document) {
       throw envelopeDocumentNotFound(`Document with ID ${documentId} not found`);
@@ -439,23 +444,50 @@ export async function validateEnvelopeBusinessRules(
     } | null>;
   }
 ): Promise<void> {
+  // Diagnostics: start
+  // eslint-disable-next-line no-console
+  console.log('[EnvelopeRules] BR start', {
+    signerCount: envelopeData.signerCount,
+    ownerId: envelopeData.ownerId,
+    title: envelopeData.title,
+    expiresAt: envelopeData.expiresAt,
+    documentId: envelopeData.documentId,
+    currentStatus: envelopeData.currentStatus,
+    operation: envelopeData.operation
+  });
+
   // Validate limits
+  // eslint-disable-next-line no-console
+  console.log('[EnvelopeRules] validateMaxSignersPerEnvelope');
   validateMaxSignersPerEnvelope(envelopeData.signerCount, config);
   
   // Validate title uniqueness
+  // eslint-disable-next-line no-console
+  console.log('[EnvelopeRules] validateUniqueTitlePerOwner', { existingCount: envelopeData.existingTitles.length });
   validateUniqueTitlePerOwner(envelopeData.title, envelopeData.ownerId, envelopeData.existingTitles, config);
   
   // Validate expiration
+  // eslint-disable-next-line no-console
+  console.log('[EnvelopeRules] validateExpirationDate');
   validateExpirationDate(envelopeData.expiresAt, config);
   
   // Validate metadata integrity
+  // eslint-disable-next-line no-console
+  console.log('[EnvelopeRules] validateMetadataIntegrity');
   validateMetadataIntegrity(envelopeData.metadata, config);
   
   // Validate document exists
+  // eslint-disable-next-line no-console
+  console.log('[EnvelopeRules] validateDocumentExists');
   await validateDocumentExists(envelopeData.documentId, documentRepository);
   
   // Validate status for operation
+  // eslint-disable-next-line no-console
+  console.log('[EnvelopeRules] validateEnvelopeStatusForBusinessOperation');
   validateEnvelopeStatusForBusinessOperation(envelopeData.currentStatus, envelopeData.operation);
+
+  // eslint-disable-next-line no-console
+  console.log('[EnvelopeRules] BR end - OK');
 }
 
 /**

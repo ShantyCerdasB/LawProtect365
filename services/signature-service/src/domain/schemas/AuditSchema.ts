@@ -47,7 +47,7 @@ export const DocumentHistoryPathSchema = z.object({
  * Schema for document history query parameters
  */
 export const DocumentHistoryQuerySchema = z.object({
-  limit: z.number().min(1).max(100).default(25),
+  limit: z.coerce.number().min(1).max(100).default(25),
   cursor: z.string().optional()
 });
 

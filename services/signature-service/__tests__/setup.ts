@@ -22,6 +22,7 @@ process.env.DYNAMODB_SECRET_ACCESS_KEY = 'fake';
 process.env.AWS_ENDPOINT_URL = 'http://localhost:4566';
 process.env.AWS_ACCESS_KEY_ID = 'test';
 process.env.AWS_SECRET_ACCESS_KEY = 'test';
+process.env.USE_LOCALSTACK_KMS = 'true';
 
 // Set required shared-ts environment variables
 process.env.PROJECT_NAME = 'lawprotect365';
@@ -52,6 +53,19 @@ process.env.EVENTS_BUS_NAME = 'test-bus';
 process.env.EVENTS_SOURCE = 'lawprotect365.signature-service.test';
 process.env.KMS_SIGNING_ALGORITHM = 'RSASSA_PSS_SHA_256';
 
+// Disable security validations that can cause flakiness in integration tests
+process.env.SECURITY_ENABLE_RATE_LIMITING = 'false';
+process.env.SECURITY_ENABLE_IP_VALIDATION = 'false';
+process.env.SECURITY_ENABLE_USER_AGENT_VALIDATION = 'false';
+process.env.SECURITY_ENABLE_GEOLOCATION_VALIDATION = 'false';
+process.env.SECURITY_ENABLE_DEVICE_TRUST_VALIDATION = 'false';
+process.env.SECURITY_ENABLE_SUSPICIOUS_ACTIVITY_DETECTION = 'false';
+// Set generous business rate limits to avoid accidental 429s
+process.env.ENVELOPE_CREATION_RATE_LIMIT = '1000000';
+process.env.SIGNER_INVITATION_RATE_LIMIT = '1000000';
+process.env.SIGNATURE_ATTEMPT_RATE_LIMIT = '1000000';
+process.env.RATE_LIMIT_WINDOW_SECONDS = '60';
+
 // Configure JWT for tests - use improved mock JWKS server
 process.env.JWT_ISSUER = 'https://cognito-idp.us-east-1.amazonaws.com/us-east-1_test';
 process.env.JWT_AUDIENCE = 'test-client-id';
@@ -61,6 +75,27 @@ process.env.JWKS_URI = 'http://localhost:3000/.well-known/jwks.json';
 beforeAll(async () => {
   console.log('🔐 Starting improved mock JWKS server for tests...');
   await startMockJwksServer();
+  // Ensure KMS test key and alias exist in LocalStack
+  try {
+    const { KMSClient, CreateKeyCommand, CreateAliasCommand }: any = await import('@aws-sdk/client-kms');
+    const kmsClient = new KMSClient({ region: process.env.AWS_REGION, endpoint: process.env.AWS_ENDPOINT_URL });
+    const createRes = await kmsClient.send(new CreateKeyCommand({ KeyUsage: 'SIGN_VERIFY', CustomerMasterKeySpec: 'RSA_2048' }));
+    const keyId = createRes?.KeyMetadata?.KeyId;
+    if (keyId) {
+      try {
+        await kmsClient.send(new CreateAliasCommand({ AliasName: 'alias/test-key-id', TargetKeyId: keyId }));
+        console.log('✅ KMS alias ensured: alias/test-key-id');
+      } catch (e: any) {
+        if (e?.name === 'AlreadyExistsException') {
+          console.log('⚠️  KMS alias already exists: alias/test-key-id');
+        } else {
+          throw e;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('⚠️  Failed to ensure KMS test key/alias:', (err as any)?.message);
+  }
 }, 10000); // 10 second timeout for server startup
 
 // Stop mock JWKS server after all tests

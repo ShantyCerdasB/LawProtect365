@@ -91,7 +91,8 @@ const NAME_TO_ERROR: Record<string, ErrFactory> = {
  */
 export const mapAwsError = (err: unknown, context: string): Error => {
   // 1) Coarse classifiers (fast exit)
-  if (isAwsThrottling(err) || isAwsRetryable(err)) return mkTooMany(context);
+  // Only map to 429 for explicit throttling identifiers; avoid downgrading domain errors to 429
+  if (isAwsThrottling(err)) return mkTooMany(context);
   if (isAwsAccessDenied(err)) return mkForbidden(context);
   if (isAwsServiceUnavailable(err)) return mkUnavailable(context);
 

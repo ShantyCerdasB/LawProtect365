@@ -52,6 +52,11 @@ export interface CreateAuditEventRequest {
   userAgent?: string;
 
   /**
+   * Country (ISO code or name) of the user at the time of the event
+   */
+  country?: string;
+
+  /**
    * Additional event-specific data
    */
   metadata?: {

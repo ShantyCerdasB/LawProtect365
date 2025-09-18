@@ -13,6 +13,8 @@ import { ServiceFactory } from '../../infrastructure/factories/ServiceFactory';
 import { EnvelopeId } from '../../domain/value-objects/EnvelopeId';
 import { DownloadSignedDocumentPathSchema } from '../../domain/schemas/DownloadSignedDocumentSchema';
 import { loadConfig } from '../../config';
+import { getSignedDocumentS3Key } from '../../utils/signedDocumentKey';
+// Audit is handled by S3Service via recordDownloadAction
 
 /**
  * DownloadSignedDocumentHandler - Production-ready handler using ControllerFactory
@@ -85,8 +87,11 @@ export const downloadSignedDocumentHandler = ControllerFactory.createCommand({
         throw new ConflictError('Document is not completed and signed yet', 'DOCUMENT_NOT_READY');
       }
 
-      // 3. Get S3 key for signed document (using documentId as the key)
-      const s3Key = envelope.getDocumentId(); // Using documentId as the S3 key
+      // 3. Resolve signed S3 key: prefer envelope metadata, fallback to canonical key
+      const meta = (envelope as any)?.getMetadata?.() || {};
+      const s3Key = typeof meta.signedS3Key === 'string' && meta.signedS3Key.length > 0
+        ? meta.signedS3Key
+        : getSignedDocumentS3Key(envelopeId.getValue());
       
       // 4. Generate presigned download URL using configured TTL
       const config = loadConfig();
@@ -98,6 +103,17 @@ export const downloadSignedDocumentHandler = ControllerFactory.createCommand({
 
       // 5. Get document metadata
       const documentInfo = await this.s3Service.getDocumentInfo(s3Key);
+
+      // 6. Audit: document downloaded (delegated to S3Service)
+      await this.s3Service.recordDownloadAction({
+        envelopeId: envelopeId.getValue(),
+        userId: params.securityContext?.userId,
+        userEmail: params.authEmail || params.securityContext?.email,
+        s3Key,
+        ipAddress: params.securityContext?.ipAddress,
+        userAgent: params.securityContext?.userAgent,
+        country: params.securityContext?.country
+      });
 
       return {
         downloadUrl,
@@ -112,7 +128,8 @@ export const downloadSignedDocumentHandler = ControllerFactory.createCommand({
     envelopeId: path.envelopeId,
     expiresIn: query.expiresIn ? parseInt(query.expiresIn) : 3600,
     userId: context.auth.userId,
-    securityContext: context.securityContext
+    securityContext: context.securityContext,
+    authEmail: context.auth?.email
   }),
   
   // Response configuration
@@ -122,7 +139,7 @@ export const downloadSignedDocumentHandler = ControllerFactory.createCommand({
     return {
       downloadUrl: result.downloadUrl,
       expiresAt: new Date(Date.now() + (result.expiresIn || 3600) * 1000).toISOString(),
-      filename: result.documentInfo?.filename || 'signed-document.pdf',
+      filename: 'signed.pdf',
       contentType: result.documentInfo?.contentType || 'application/pdf',
       size: result.documentInfo?.size
     };

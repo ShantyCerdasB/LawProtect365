@@ -23,17 +23,17 @@ export function isSignerDdbItem(item: unknown): item is SignerDdbItem {
     return false;
   }
 
-  const requiredFields = [
+  const requiredStringFields: Array<keyof SignerDdbItem> = [
     'pk', 'sk', 'type', 'signerId', 'envelopeId', 'email', 'fullName',
-    'status', 'order', 'gsi1pk', 'gsi1sk', 'gsi2pk', 'gsi2sk',
+    'status', 'gsi1pk', 'gsi1sk', 'gsi2pk', 'gsi2sk',
     'gsi3pk', 'gsi3sk', 'createdAt', 'updatedAt'
   ];
 
-  return requiredFields.every(field => 
-    typeof obj[field as keyof SignerDdbItem] === 'string'
-  ) && 
-  typeof obj.order === 'number' &&
-  typeof obj.consentGiven === 'boolean';
+  const stringsOk = requiredStringFields.every((field) => typeof (obj as any)[field] === 'string');
+  const orderOk = typeof (obj as any).order === 'number';
+  const consentOk = typeof (obj as any).consentGiven === 'boolean';
+
+  return stringsOk && orderOk && consentOk;
 }
 
 /**

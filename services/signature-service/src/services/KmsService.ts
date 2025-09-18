@@ -15,7 +15,7 @@ import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
 import { SignatureStatus } from '../domain/enums/SignatureStatus';
 import { SignatureRepository } from '../repositories/SignatureRepository';
 import { AuditService } from './AuditService';
-import { SignatureEventService } from './events/SignatureEventService';
+// import { SignatureEventService } from './events/SignatureEventService';
 import { AuditEventType } from '../domain/enums/AuditEventType';
 import { CreateSignatureRequest as DomainCreateSignatureRequest } from '../domain/types/signature/CreateSignatureRequest';
 import { KmsCreateSignatureRequest } from '../domain/types/signature/KmsCreateSignatureRequest';
@@ -42,7 +42,7 @@ export class KmsService {
     private readonly kmsSigner: KmsSigner,
     private readonly signatureRepository: SignatureRepository,
     private readonly auditService: AuditService,
-    private readonly eventService: SignatureEventService,
+    // private readonly eventService: SignatureEventService,
     private readonly s3Service: S3Service,
     private readonly kmsKeyId: string
   ) {}
@@ -99,27 +99,9 @@ export class KmsService {
       // Store signature in repository
       const createdSignature = await this.signatureRepository.create(createRequest);
 
-      // Log audit event
-      await this.auditService.createEvent({
-        envelopeId: request.envelopeId.getValue(),
-        description: `Digital signature created for signer ${request.signerId.getValue()}`,
-        type: AuditEventType.SIGNATURE_CREATED,
-        userId: request.signerId.getValue(),
-        metadata: {
-          signatureId: request.signatureId.getValue(),
-          algorithm: request.algorithm,
-          kmsKeyId: request.kmsKeyId
-        }
-      });
+      // Audit handled at SignatureService level to avoid duplication
 
-      // Publish signature created event
-      await this.eventService.publishEvent('signature.created', {
-        signatureId: request.signatureId.getValue(),
-        signerId: request.signerId.getValue(),
-        envelopeId: request.envelopeId.getValue(),
-        algorithm: request.algorithm,
-        status: SignatureStatus.SIGNED
-      });
+      // Do not publish here; publication policy handled at higher-level service if needed
 
       return createdSignature;
     } catch (error) {

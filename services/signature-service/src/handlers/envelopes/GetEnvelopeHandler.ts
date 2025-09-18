@@ -77,6 +77,8 @@ export const getEnvelopeHandler = ControllerFactory.createCommand({
      */
     async execute(params: any) {
       const envelopeId = new EnvelopeId(params.envelopeId);
+      // eslint-disable-next-line no-console
+      console.log('[GetEnvelopeHandler] START', { envelopeId: envelopeId.getValue(), userId: params.userId });
 
       // 1. Get envelope details
       const envelope = await this.envelopeService.getEnvelope(
@@ -84,9 +86,15 @@ export const getEnvelopeHandler = ControllerFactory.createCommand({
         params.userId,
         params.securityContext
       );
+      // eslint-disable-next-line no-console
+      console.log('[GetEnvelopeHandler] envelope loaded', { id: envelope.getId().getValue(), status: envelope.getStatus() });
 
       // 2. Get signers for this envelope
       const signers = await this.signerService.getSignersByEnvelope(envelopeId);
+      // eslint-disable-next-line no-console
+      console.log('[GetEnvelopeHandler] signers raw loaded', { signersCount: signers.length, first: signers[0]?.getId?.().getValue?.() });
+      // eslint-disable-next-line no-console
+      console.log('[GetEnvelopeHandler] signers loaded', { count: signers.length });
 
       // 3. Calculate progress using utility function
       const progress = calculateEnvelopeProgress(signers);
@@ -109,31 +117,39 @@ export const getEnvelopeHandler = ControllerFactory.createCommand({
   // Response configuration
   responseType: 'ok',
   transformResult: async (result: any) => {
-    // Transform domain entities to API response format
-    return {
-      envelope: {
-        id: result.envelope.getId().getValue(),
-        status: result.envelope.getStatus(),
-        title: result.envelope.getMetadata().title,
-        description: result.envelope.getMetadata().description,
-        expiresAt: result.envelope.getMetadata().expiresAt?.toISOString(),
-        createdAt: result.envelope.getCreatedAt().toISOString(),
-        sentAt: result.envelope.getSentAt()?.toISOString(),
-        completedAt: result.envelope.getCompletedAt()?.toISOString(),
-        customFields: result.envelope.getMetadata().customFields,
-        tags: result.envelope.getMetadata().tags,
-        signers: result.signers.map((s: any) => ({
-          id: s.getId().getValue(),
-          email: s.getEmail().getValue(),
-          fullName: s.getFullName(),
-          status: s.getStatus(),
-          order: s.getOrder(),
-          signedAt: s.getSignedAt()?.toISOString(),
-          declinedAt: s.getDeclinedAt()?.toISOString()
-        })),
-        progress: result.progress
-      }
-    };
+    try {
+      // Transform domain entities to API response format
+      return {
+        envelope: {
+          id: result.envelope.getId().getValue(),
+          status: result.envelope.getStatus(),
+          title: result.envelope.getMetadata().title,
+          description: result.envelope.getMetadata().description,
+          expiresAt: result.envelope.getMetadata().expiresAt?.toISOString?.() ?? undefined,
+          createdAt: result.envelope.getCreatedAt?.().toISOString?.() ?? new Date(result.envelope.getCreatedAt()).toISOString?.(),
+          sentAt: result.envelope.getSentAt?.()?.toISOString?.(),
+          completedAt: result.envelope.getCompletedAt?.()?.toISOString?.(),
+          customFields: result.envelope.getMetadata().customFields,
+          tags: result.envelope.getMetadata().tags,
+          signers: Array.isArray(result.signers)
+            ? result.signers.map((s: any) => ({
+                id: s.getId().getValue(),
+                email: s.getEmail().getValue(),
+                fullName: s.getFullName(),
+                status: s.getStatus(),
+                order: s.getOrder(),
+                signedAt: s.getSignedAt()?.toISOString(),
+                declinedAt: s.getDeclinedAt()?.toISOString()
+              }))
+            : [],
+          progress: result.progress
+        }
+      };
+    } catch (e: any) {
+      // eslint-disable-next-line no-console
+      console.error('[GetEnvelopeHandler.transformResult] ERROR', { name: e?.name, message: e?.message, stack: e?.stack });
+      throw e;
+    }
   },
   
   // Security configuration

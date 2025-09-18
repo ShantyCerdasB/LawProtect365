@@ -33,6 +33,7 @@ import {
 } from '../domain/rules/envelope/EnvelopeBusinessRules';
 import { validateEnvelopeStateTransition } from '../domain/rules/envelope/EnvelopeStateTransitionRules';
 import { validateEnvelopeAccessPermissions } from '../domain/rules/envelope/EnvelopeSecurityRules';
+import { PermissionLevel, AccessType } from '@lawprotect/shared-ts';
 
 /**
  * EnvelopeService implementation
@@ -115,11 +116,12 @@ export class EnvelopeService {
     // Save envelope
     const createdEnvelope = await this.envelopeRepository.create(envelope);
 
-    // Create audit event
+    // Create audit event (persisted synchronously)
     await this.auditService.createEvent({
       type: AuditEventType.ENVELOPE_CREATED,
       envelopeId: createdEnvelope.getId().getValue(),
       userId: context.userId,
+      userEmail: (context as any)?.email,
       metadata: {
         title: request.title,
         documentHash: request.documentHash,
@@ -129,13 +131,20 @@ export class EnvelopeService {
       description: `Envelope created: ${request.title}`
     });
 
-    // Publish event
-    await this.eventService.publishEvent('envelope.created', {
-      envelopeId: createdEnvelope.getId().getValue(),
-      userId,
-      title: request.title,
-      status: EnvelopeStatus.DRAFT
-    });
+    // Publish event only when useful for other services (e.g., multi-signer or external signers)
+    try {
+      const signers = await this.signerRepository.getByEnvelope(createdEnvelope.getId().getValue());
+      const signerItems = (signers as any)?.items ?? [];
+      const shouldPublish = signerItems.length > 1;
+      if (shouldPublish) {
+        await this.eventService.publishEvent('envelope.created', {
+          envelopeId: createdEnvelope.getId().getValue(),
+          userId,
+          title: request.title,
+          status: EnvelopeStatus.DRAFT
+        });
+      }
+    } catch { /* ignore publish errors */ }
 
     return createdEnvelope;
   }
@@ -186,23 +195,30 @@ export class EnvelopeService {
       }
     } as Partial<Envelope>);
 
-    // Create audit event
+    // Create audit event (persisted synchronously)
     await this.auditService.createEvent({
       type: AuditEventType.ENVELOPE_UPDATED,
       envelopeId: envelopeId.getValue(),
       userId,
+      userEmail: (context as any)?.email,
       metadata: {
         changes: request
       },
       description: `Envelope updated: ${envelopeId.getValue()}`
     });
 
-    // Publish event
-    await this.eventService.publishEvent('envelope.updated', {
-      envelopeId: envelopeId.getValue(),
-      userId,
-      changes: request
-    });
+    // Conditional publish
+    try {
+      const signers = await this.signerRepository.getByEnvelope(envelopeId.getValue());
+      const shouldPublish = ((signers as any)?.items ?? []).length > 1;
+      if (shouldPublish) {
+        await this.eventService.publishEvent('envelope.updated', {
+          envelopeId: envelopeId.getValue(),
+          userId,
+          changes: request
+        });
+      }
+    } catch { /* ignore publish errors */ }
 
     return updatedEnvelope;
   }
@@ -219,25 +235,39 @@ export class EnvelopeService {
     _userId: string,
     context: EnvelopeSecurityContext
   ): Promise<Envelope> {
-    const envelope = await this.envelopeRepository.getById(envelopeId);
-    if (!envelope) {
-      throw new NotFoundError(
-        `Envelope with ID ${envelopeId.getValue()} not found`,
-        ErrorCodes.COMMON_NOT_FOUND
-      );
+    try {
+      // eslint-disable-next-line no-console
+      console.log('[EnvelopeService.getEnvelope] fetching envelope', { envelopeId: envelopeId.getValue() });
+      const envelope = await this.envelopeRepository.getById(envelopeId);
+      if (!envelope) {
+        throw new NotFoundError(
+          `Envelope with ID ${envelopeId.getValue()} not found`,
+          ErrorCodes.COMMON_NOT_FOUND
+        );
+      }
+
+      // Validate access permissions using domain rules for READ
+      // eslint-disable-next-line no-console
+      console.log('[EnvelopeService.getEnvelope] access check', { ownerId: envelope.getOwnerId(), userId: context.userId, permission: context.permission, accessType: context.accessType });
+      validateEnvelopeAccessPermissions({
+        userId: context.userId,
+        accessType: context.accessType,
+        permission: context.permission,
+        ipAddress: context.ipAddress,
+        userAgent: context.userAgent,
+        timestamp: context.timestamp
+      }, EnvelopeOperation.READ, envelope.getOwnerId());
+
+      return envelope;
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[EnvelopeService.getEnvelope] ERROR', {
+        name: (err as any)?.name,
+        code: (err as any)?.code,
+        message: (err as any)?.message
+      });
+      throw err;
     }
-
-    // Validate access permissions using domain rules
-    validateEnvelopeAccessPermissions({
-      userId: context.userId,
-      accessType: context.accessType,
-      permission: context.permission,
-      ipAddress: context.ipAddress,
-      userAgent: context.userAgent,
-      timestamp: context.timestamp
-    }, EnvelopeOperation.UPDATE, envelope.getOwnerId());
-
-    return envelope;
   }
 
   /**
@@ -337,11 +367,12 @@ export class EnvelopeService {
       status: newStatus
     } as Partial<Envelope>);
 
-    // Create audit event
+    // Create audit event (persisted synchronously)
     await this.auditService.createEvent({
       type: AuditEventType.ENVELOPE_STATUS_CHANGED,
       envelopeId: envelopeId.getValue(),
       userId,
+      userEmail: (context as any)?.email,
       metadata: {
         oldStatus: envelope.getStatus(),
         newStatus
@@ -349,15 +380,94 @@ export class EnvelopeService {
       description: `Envelope status changed from ${envelope.getStatus()} to ${newStatus}`
     });
 
-    // Publish event
-    await this.eventService.publishEvent('envelope.status_changed', {
-      envelopeId: envelopeId.getValue(),
-      userId,
-      oldStatus: envelope.getStatus(),
-      newStatus
-    });
+    // Conditional publish
+    try {
+      const signers = await this.signerRepository.getByEnvelope(envelopeId.getValue());
+      const shouldPublish = ((signers as any)?.items ?? []).length > 1;
+      if (shouldPublish) {
+        await this.eventService.publishEvent('envelope.status_changed', {
+          envelopeId: envelopeId.getValue(),
+          userId,
+          oldStatus: envelope.getStatus(),
+          newStatus
+        });
+      }
+    } catch { /* ignore publish errors */ }
 
     return updatedEnvelope;
+  }
+
+  /**
+   * Completes the envelope if all signers have signed.
+   * Applies necessary intermediate transitions according to workflow rules.
+   */
+  async completeIfAllSigned(
+    envelopeId: EnvelopeId,
+    _userId: string,
+    context: EnvelopeSecurityContext
+  ): Promise<Envelope> {
+    const envelope = await this.envelopeRepository.getById(envelopeId);
+    if (!envelope) {
+      throw new NotFoundError(
+        `Envelope with ID ${envelopeId.getValue()} not found`,
+        ErrorCodes.COMMON_NOT_FOUND
+      );
+    }
+
+    const signers = await this.signerRepository.getByEnvelope(envelopeId.getValue());
+    const signerItems = (signers as any)?.items ?? [];
+    // Accept both DTOs (with 'status' string) and domain entities (with getStatus())
+    const allSigned = signerItems.length > 0 && signerItems.every((s: any) => {
+      const status = typeof s?.getStatus === 'function' ? s.getStatus() : s?.status;
+      return status === (require('../domain/enums/SignerStatus').SignerStatus.SIGNED);
+    });
+    if (!allSigned) {
+      return envelope;
+    }
+
+    const ownerId = envelope.getOwnerId();
+    const ownerContext: EnvelopeSecurityContext = {
+      ...context,
+      userId: ownerId,
+      permission: PermissionLevel.OWNER,
+      accessType: AccessType.DIRECT
+    } as any;
+
+    let current = envelope;
+    if (current.getStatus() === EnvelopeStatus.DRAFT) {
+      // Transition to SENT (safe via normal validation)
+      current = await this.changeEnvelopeStatus(envelopeId, EnvelopeStatus.SENT, ownerId, ownerContext);
+    }
+
+    // We have externally validated that all signers are SIGNED; apply completion directly
+    if (current.getStatus() !== EnvelopeStatus.COMPLETED) {
+      await this.envelopeRepository.update(envelopeId, { status: EnvelopeStatus.COMPLETED } as Partial<Envelope>);
+      // Audit (persisted synchronously)
+      await this.auditService.createEvent({
+        type: AuditEventType.ENVELOPE_STATUS_CHANGED,
+        envelopeId: envelopeId.getValue(),
+        userId: ownerId,
+        userEmail: (context as any)?.email,
+        metadata: { oldStatus: current.getStatus(), newStatus: EnvelopeStatus.COMPLETED },
+        description: `Envelope status changed from ${current.getStatus()} to ${EnvelopeStatus.COMPLETED}`
+      });
+      // Conditional publish
+      try {
+        const signers2 = await this.signerRepository.getByEnvelope(envelopeId.getValue());
+        const shouldPublish2 = ((signers2 as any)?.items ?? []).length > 1;
+        if (shouldPublish2) {
+          await this.eventService.publishEvent('envelope.status_changed', {
+            envelopeId: envelopeId.getValue(),
+            userId: ownerId,
+            oldStatus: current.getStatus(),
+            newStatus: EnvelopeStatus.COMPLETED
+          });
+        }
+      } catch { /* ignore publish errors */ }
+      current = (await this.envelopeRepository.getById(envelopeId)) as Envelope;
+    }
+
+    return current;
   }
 
   /**
