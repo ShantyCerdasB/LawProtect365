@@ -8,6 +8,13 @@
 import {z,  UuidV4 } from '@lawprotect/shared-ts';
 
 /**
+ * Schema for envelope ID in path parameters
+ */
+export const SendNotificationPathSchema = z.object({
+  envelopeId: UuidV4
+});
+
+/**
  * Schema for sending notifications request body
  */
 export const SendNotificationRequestSchema = z.object({

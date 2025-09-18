@@ -136,6 +136,20 @@ export class ServiceFactory {
   }
 
   /**
+   * Creates a SignerEventService instance with all required dependencies
+   * 
+   * @returns Configured SignerEventService instance
+   */
+  static createSignerEventService(): SignerEventService {
+    const outboxRepository = new OutboxRepository(this.config.ddb.outboxTable, this.ddbClient);
+    return new SignerEventService({
+      outboxRepository,
+      serviceName: 'signature-service',
+      defaultTraceId: undefined
+    });
+  }
+
+  /**
    * Creates an InvitationTokenService instance with all required dependencies
    * 
    * @returns Configured InvitationTokenService instance

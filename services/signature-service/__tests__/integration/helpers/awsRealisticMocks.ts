@@ -98,32 +98,34 @@ jest.mock('@aws-sdk/client-kms', () => ({
   });
 }
 
-// Mock EventBridge service with realistic behavior
-jest.mock('@aws-sdk/client-eventbridge', () => ({
-  EventBridgeClient: jest.fn().mockImplementation(() => ({
-    send: jest.fn().mockImplementation(async (command: any) => {
-      if (command && command.constructor && command.constructor.name === 'PutEventsCommand') {
-        const entries: any[] = command.input?.Entries || [];
-        return {
-          Entries: entries.map((_entry: any, index: number) => ({
-            EventId: `test-event-id-${index}-${Date.now()}`,
-            ErrorCode: undefined,
-            ErrorMessage: undefined
-          })),
-          FailedEntryCount: 0
-        } as any;
-      }
-      if (command && command.constructor && command.constructor.name === 'CreateEventBusCommand') {
-        return {
-          EventBusArn: `arn:aws:events:us-east-1:000000000000:event-bus/${command.input?.Name}`
-        } as any;
-      }
-      return {} as any;
-    }),
-  })),
-  PutEventsCommand: jest.fn().mockImplementation((input: any) => ({ input })),
-  CreateEventBusCommand: jest.fn().mockImplementation((input: any) => ({ input })),
-}));
+// Mock EventBridge service with realistic behavior unless using LocalStack
+if (!process.env.USE_LOCALSTACK_EVENTBRIDGE) {
+  jest.mock('@aws-sdk/client-eventbridge', () => ({
+    EventBridgeClient: jest.fn().mockImplementation(() => ({
+      send: jest.fn().mockImplementation(async (command: any) => {
+        if (command && command.constructor && command.constructor.name === 'PutEventsCommand') {
+          const entries: any[] = command.input?.Entries || [];
+          return {
+            Entries: entries.map((_entry: any, index: number) => ({
+              EventId: `test-event-id-${index}-${Date.now()}`,
+              ErrorCode: undefined,
+              ErrorMessage: undefined
+            })),
+            FailedEntryCount: 0
+          } as any;
+        }
+        if (command && command.constructor && command.constructor.name === 'CreateEventBusCommand') {
+          return {
+            EventBusArn: `arn:aws:events:us-east-1:000000000000:event-bus/${command.input?.Name}`
+          } as any;
+        }
+        return {} as any;
+      }),
+    })),
+    PutEventsCommand: jest.fn().mockImplementation((input: any) => ({ input })),
+    CreateEventBusCommand: jest.fn().mockImplementation((input: any) => ({ input })),
+  }));
+}
 
 // Mock SSM service with realistic behavior
 jest.mock('@aws-sdk/client-ssm', () => ({

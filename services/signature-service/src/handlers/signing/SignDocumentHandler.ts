@@ -22,7 +22,6 @@ import { SignerId } from '../../domain/value-objects/SignerId';
 import { SignatureStatus } from '../../domain/enums/SignatureStatus';
 import { calculateEnvelopeProgress } from '../../utils/envelope-progress';
 import { SignerStatus } from '../../domain/enums/SignerStatus';
-import { SignerRepository } from '../../repositories/SignerRepository';
 import { ServiceFactory } from '../../infrastructure/factories/ServiceFactory';
 import { ConsentService } from '../../services/ConsentService';
 import { EnvelopeRepository } from '../../repositories/EnvelopeRepository';
@@ -169,15 +168,12 @@ export const signDocumentHandler = ControllerFactory.createCommand({
         accessType: securityContext?.accessType ?? AccessType.DIRECT
       } as any;
 
-      const signerRepo = new SignerRepository((ServiceFactory as any).config.ddb.signersTable, (ServiceFactory as any).ddbClient);
-      await signerRepo.update(new SignerId(signerId), {
-        status: SignerStatus.SIGNED,
-        signedAt: new Date(),
-        metadata: {
-          ipAddress: securityContext?.ipAddress,
-          userAgent: securityContext?.userAgent
-        }
-      } as any);
+      // Mark signer as signed using the service (handles event publishing logic)
+      await this.signerService.markSignerAsSigned(new SignerId(signerId), {
+        userId: mergedSecurityContext.userId,
+        ipAddress: securityContext?.ipAddress,
+        userAgent: securityContext?.userAgent
+      });
 
       const allSigners = await this.signerService.getSignersByEnvelope(new EnvelopeId(envelopeId));
       const allSigned = allSigners.length > 0 && allSigners.every(s => s.getStatus() === SignerStatus.SIGNED);

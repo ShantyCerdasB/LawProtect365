@@ -7,6 +7,8 @@
 
 import { Envelope } from '../domain/entities/Envelope';
 import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
+import { SignatureId } from '../domain/value-objects/SignatureId';
+import { SignerId } from '../domain/value-objects/SignerId';
 import { EnvelopeStatus } from '../domain/enums/EnvelopeStatus';
 import { EnvelopeOperation } from '../domain/enums/EnvelopeOperation';
 import { SigningOrder } from '../domain/value-objects/SigningOrder';
@@ -302,10 +304,24 @@ export class EnvelopeService {
     );
 
     // Delete related entities first
-    await this.deleteRelatedEntities(envelopeId);
+    // eslint-disable-next-line no-console
+    console.log('[EnvelopeService.deleteEnvelope] deleting related entities...', { envelopeId: envelopeId.getValue() });
+    try {
+      await this.deleteRelatedEntities(envelopeId);
+      // eslint-disable-next-line no-console
+      console.log('[EnvelopeService.deleteEnvelope] related entities deleted');
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.log('[EnvelopeService.deleteEnvelope] failed deleting related entities', { name: (err as any)?.name, code: (err as any)?.code, message: (err as any)?.message });
+      throw err;
+    }
 
     // Delete envelope
+    // eslint-disable-next-line no-console
+    console.log('[EnvelopeService.deleteEnvelope] deleting envelope row...');
     await this.envelopeRepository.delete(envelopeId);
+    // eslint-disable-next-line no-console
+    console.log('[EnvelopeService.deleteEnvelope] envelope deleted');
 
     // Create audit event
     await this.auditService.createEvent({
@@ -339,6 +355,14 @@ export class EnvelopeService {
     userId: string,
     context: EnvelopeSecurityContext
   ): Promise<Envelope> {
+    // eslint-disable-next-line no-console
+    console.log('[EnvelopeService.changeEnvelopeStatus] start', {
+      envelopeId: envelopeId.getValue(),
+      newStatus,
+      userId,
+      permission: (context as any)?.permission,
+      accessType: (context as any)?.accessType
+    });
     // Get existing envelope
     const envelope = await this.envelopeRepository.getById(envelopeId);
     if (!envelope) {
@@ -347,6 +371,12 @@ export class EnvelopeService {
         ErrorCodes.COMMON_NOT_FOUND
       );
     }
+    // eslint-disable-next-line no-console
+    console.log('[EnvelopeService.changeEnvelopeStatus] current', {
+      status: envelope.getStatus(),
+      documentId: (envelope as any)?.getDocumentId?.() || (envelope as any)?.documentId,
+      title: envelope.getMetadata().title
+    });
 
     // Use comprehensive validation
     await validateEnvelopeComprehensive(
@@ -358,6 +388,8 @@ export class EnvelopeService {
         documentRepository: this.documentRepository
       }
     );
+    // eslint-disable-next-line no-console
+    console.log('[EnvelopeService.changeEnvelopeStatus] validations OK');
 
     // Validate state transition using domain rules
     validateEnvelopeStateTransition(envelope, newStatus);
@@ -489,14 +521,14 @@ export class EnvelopeService {
   private async deleteRelatedEntities(envelopeId: EnvelopeId): Promise<void> {
     // Delete signatures
     const signatures = await this.signatureRepository.getByEnvelope(envelopeId.getValue());
-    for (const signature of signatures.items) {
-      await this.signatureRepository.delete(signature.id as any);
+    for (const signature of signatures.items as any[]) {
+      await this.signatureRepository.delete(new SignatureId(signature.signatureId));
     }
 
     // Delete signers
     const signers = await this.signerRepository.getByEnvelope(envelopeId.getValue());
-    for (const signer of signers.items) {
-      await this.signerRepository.delete(signer.id as any);
+    for (const signer of signers.items as any[]) {
+      await this.signerRepository.delete(new SignerId(signer.signerId));
     }
   }
 }

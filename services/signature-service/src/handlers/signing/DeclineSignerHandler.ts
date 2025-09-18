@@ -10,10 +10,8 @@ import { DeclineSignerRequestSchema } from '../../domain/schemas/SigningHandlers
 import { ServiceFactory } from '../../infrastructure/factories/ServiceFactory';
 import { SignerService } from '../../services/SignerService';
 import { InvitationTokenService } from '../../services/InvitationTokenService';
-import { EnvelopeService } from '../../services/EnvelopeService';
 import { InvitationToken } from '../../domain/entities/InvitationToken';
 import { Signer } from '../../domain/entities/Signer';
-import { EnvelopeSecurityContext } from '../../domain/types/envelope/EnvelopeSecurityContext';
 
 /**
  * DeclineSignerHandler - Production-ready handler using ControllerFactory
@@ -49,6 +47,10 @@ export const declineSignerHandler = ControllerFactory.createCommand({
   // Validation schemas
   bodySchema: DeclineSignerRequestSchema,
   
+  // Authentication configuration
+  requireAuth: true,
+  includeSecurityContext: true,
+  
   // Parameter extraction
   extractParams: (_path: any, body: any, _query: any, context: any) => ({
     requestBody: body,
@@ -60,22 +62,30 @@ export const declineSignerHandler = ControllerFactory.createCommand({
     constructor() {
       this.signerService = ServiceFactory.createSignerService();
       this.invitationTokenService = ServiceFactory.createInvitationTokenService();
-      this.envelopeService = ServiceFactory.createEnvelopeService();
     }
     
     private signerService: SignerService;
     private invitationTokenService: InvitationTokenService;
-    private envelopeService: EnvelopeService;
     
     async execute(params: { requestBody: any; securityContext: any }) {
       const { requestBody, securityContext } = params;
       
+      // Log the entire security context for debugging
+      console.log('🔍 DeclineSignerHandler - Full securityContext:', securityContext);
+      
       // Validate invitation token (validation handled by service)
       const tokenValidation: InvitationToken = await this.invitationTokenService.validateInvitationToken(requestBody.invitationToken);
       
-      // Use centralized security context (shared-ts)
-      const ipAddress = securityContext?.ipAddress || 'unknown';
-      const userAgent = securityContext?.userAgent || 'unknown';
+      // Extract values from security context (now provided by middleware)
+      const { ipAddress, userAgent, country } = securityContext;
+      
+      // Log extracted values for debugging
+      console.log('🔍 DeclineSignerHandler - Extracted values:', {
+        ipAddress,
+        userAgent,
+        country,
+        source: 'securityContext'
+      });
       
       // Process signer decline using existing SignerService
       const updatedSigner: Signer = await this.signerService.declineSigner({
@@ -86,20 +96,10 @@ export const declineSignerHandler = ControllerFactory.createCommand({
         userId: 'external-user' // External user via invitation token
       });
       
-      // Get current envelope status after decline
+      // Return decline confirmation without accessing envelope
+      // The envelope status will be updated by the SignerService if needed
       const envelopeId = tokenValidation.getEnvelopeId();
-      const envSecurityContext: EnvelopeSecurityContext = {
-        ...securityContext,
-        userId: 'external-user'
-      };
       
-      const envelope = await this.envelopeService.getEnvelope(
-        envelopeId,
-        'external-user', // External user via invitation token
-        envSecurityContext
-      );
-      
-      // Return decline confirmation
       return {
         message: 'Document declined successfully',
         decline: {
@@ -107,7 +107,7 @@ export const declineSignerHandler = ControllerFactory.createCommand({
           envelopeId: envelopeId.getValue(),
           reason: requestBody.reason,
           declinedAt: updatedSigner.getDeclinedAt()?.toISOString() || new Date().toISOString(),
-          envelopeStatus: envelope.getStatus()
+          envelopeStatus: 'SENT' // Default status, will be updated by business logic if needed
         }
       };
     }

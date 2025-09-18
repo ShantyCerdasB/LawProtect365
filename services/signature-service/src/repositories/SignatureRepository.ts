@@ -272,14 +272,13 @@ export class SignatureRepository {
     requireQuery(this.ddb);
 
     try {
+      const exprNames: Record<string, string> = { '#gsi1pk': 'gsi1pk' };
+      if (c) exprNames['#gsi1sk'] = 'gsi1sk';
       const result = await this.ddb.query({
         TableName: this.tableName,
         IndexName: this.envelopeGsi1Name,
         KeyConditionExpression: '#gsi1pk = :envelope' + (c ? ' AND #gsi1sk > :after' : ''),
-        ExpressionAttributeNames: {
-          '#gsi1pk': 'gsi1pk',
-          '#gsi1sk': 'gsi1sk'
-        },
+        ExpressionAttributeNames: exprNames,
         ExpressionAttributeValues: {
           ':envelope': `ENVELOPE#${envelopeId}`,
           ...(c ? { ':after': `SIGNATURE#${c.signatureId}` } : {})
@@ -334,14 +333,13 @@ export class SignatureRepository {
     requireQuery(this.ddb);
 
     try {
+      const exprNames: Record<string, string> = { '#gsi2pk': 'gsi2pk' };
+      if (c) exprNames['#gsi2sk'] = 'gsi2sk';
       const result = await this.ddb.query({
         TableName: this.tableName,
         IndexName: this.signerGsi2Name,
         KeyConditionExpression: '#gsi2pk = :signer' + (c ? ' AND #gsi2sk > :after' : ''),
-        ExpressionAttributeNames: {
-          '#gsi2pk': 'gsi2pk',
-          '#gsi2sk': 'gsi2sk'
-        },
+        ExpressionAttributeNames: exprNames,
         ExpressionAttributeValues: {
           ':signer': `SIGNER#${signerId}`,
           ...(c ? { ':after': `SIGNATURE#${c.signatureId}` } : {})
@@ -396,14 +394,13 @@ export class SignatureRepository {
     requireQuery(this.ddb);
 
     try {
+      const exprNames: Record<string, string> = { '#gsi3pk': 'gsi3pk' };
+      if (c) exprNames['#gsi3sk'] = 'gsi3sk';
       const result = await this.ddb.query({
         TableName: this.tableName,
         IndexName: this.statusGsi3Name,
         KeyConditionExpression: '#gsi3pk = :status' + (c ? ' AND #gsi3sk > :after' : ''),
-        ExpressionAttributeNames: {
-          '#gsi3pk': 'gsi3pk',
-          '#gsi3sk': 'gsi3sk'
-        },
+        ExpressionAttributeNames: exprNames,
         ExpressionAttributeValues: {
           ':status': `STATUS#${status}`,
           ...(c ? { ':after': `SIGNATURE#${c.signatureId}` } : {})

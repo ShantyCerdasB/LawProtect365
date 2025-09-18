@@ -50,6 +50,12 @@ export interface SecurityContext {
   roles: string[];
   scopes?: Scope[];
   permissions?: Permission[];
+  ipAddress?: string;
+  userAgent?: string;
+  country?: string;
+  accessType?: 'DIRECT' | 'INVITATION';
+  tokenType?: 'JWT' | 'INVITATION';
+  invitationToken?: string;
 }
 
 /**

@@ -74,8 +74,10 @@ export class EventPublisher {
     };
 
     try {
+      
       // Pull pending events from outbox
       const pendingEvents = await this.outbox.pullPending(batchSize);
+      
       
       if (pendingEvents.length === 0) {
         stats.endTime = new Date();
@@ -115,20 +117,28 @@ export class EventPublisher {
    * @param event - Outbox event to process
    */
   private async processEvent(event: OutboxRecord): Promise<void> {
-    // Convert OutboxRecord to DomainEvent format
-    const domainEvent = {
-      id: event.id,
-      type: event.type,
-      payload: event.payload,
-      occurredAt: event.occurredAt,
-      metadata: event.traceId ? { "x-trace-id": event.traceId } : undefined
-    };
+    try {
 
-    // Publish to EventBridge
-    await this.eventBridge.publish([domainEvent]);
+      // Convert OutboxRecord to DomainEvent format
+      const domainEvent = {
+        id: event.id,
+        type: event.type,
+        payload: event.payload,
+        occurredAt: event.occurredAt,
+        metadata: event.traceId ? { "x-trace-id": event.traceId } : undefined
+      };
 
-    // Mark as dispatched
-    await this.outbox.markDispatched(event.id);
+
+      // Publish to EventBridge
+      await this.eventBridge.publish([domainEvent]);
+
+
+      // Mark as dispatched
+      await this.outbox.markDispatched(event.id);
+
+    } catch (error) {
+      throw error;
+    }
   }
 
   /**

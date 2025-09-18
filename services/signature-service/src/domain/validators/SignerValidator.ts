@@ -164,26 +164,54 @@ export class SignerValidator {
   ): void {
     const { timestamp, ipAddress, userAgent } = declineData;
 
+    console.log('[SignerValidator.validateDeclineData] Starting validation', {
+      signerId: signer.getId().getValue(),
+      hasSigned: signer.hasSigned(),
+      hasDeclined: signer.hasDeclined(),
+      timestamp: timestamp?.toISOString(),
+      ipAddress,
+      userAgent
+    });
+
     if (signer.hasSigned()) {
+      console.log('[SignerValidator.validateDeclineData] Signer has already signed');
       throw signerAlreadySigned('Signer has already signed');
     }
 
     if (signer.hasDeclined()) {
+      console.log('[SignerValidator.validateDeclineData] Signer has already declined');
       throw signerAlreadyDeclined('Signer has already declined');
     }
 
     if (!timestamp || timestamp > new Date()) {
+      console.log('[SignerValidator.validateDeclineData] Invalid timestamp', {
+        timestamp: timestamp?.toISOString(),
+        now: new Date().toISOString()
+      });
       throw invalidSignerState('Invalid decline timestamp');
     }
 
     try {
+      console.log('[SignerValidator.validateDeclineData] Validating IP and UserAgent', {
+        ipAddress,
+        userAgent,
+        maxLength: 500
+      });
       validateIpAddressAndUserAgent(ipAddress, userAgent, 500);
+      console.log('[SignerValidator.validateDeclineData] IP and UserAgent validation passed');
     } catch (error) {
+      console.error('[SignerValidator.validateDeclineData] IP/UserAgent validation failed:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        ipAddress,
+        userAgent
+      });
       if (error instanceof Error) {
         throw invalidSignerState(`Invalid IP address or user agent: ${error.message}`);
       }
       throw error;
     }
+
+    console.log('[SignerValidator.validateDeclineData] All validations passed');
   }
 
   /**

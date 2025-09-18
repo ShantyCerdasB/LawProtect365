@@ -210,7 +210,7 @@ export class OutboxRepository {
     try {
       const result = await this.ddb.query!({
         TableName: this.tableName,
-        IndexName: 'GSI1',
+        IndexName: 'gsi1',
         KeyConditionExpression: '#gsi1pk = :gsi1pk',
         ExpressionAttributeNames: {
           '#gsi1pk': 'gsi1pk'
@@ -242,7 +242,7 @@ export class OutboxRepository {
     try {
       let queryParams: any = {
         TableName: this.tableName,
-        IndexName: 'GSI1',
+        IndexName: 'gsi1',
         Limit: Math.min(limit, 100),
         ScanIndexForward: scanIndexForward
       };
@@ -296,7 +296,7 @@ export class OutboxRepository {
     try {
       const result = await this.ddb.query!({
         TableName: this.tableName,
-        IndexName: 'GSI1',
+        IndexName: 'gsi1',
         KeyConditionExpression: '#gsi1pk = :gsi1pk',
         ExpressionAttributeNames: {
           '#gsi1pk': 'gsi1pk'

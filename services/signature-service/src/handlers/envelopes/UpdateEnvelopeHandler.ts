@@ -9,6 +9,7 @@ import { ControllerFactory, UserRole, VALID_COGNITO_ROLES } from '@lawprotect/sh
 import { EnvelopeService } from '../../services/EnvelopeService';
 import { SignerService } from '../../services/SignerService';
 import { ServiceFactory } from '../../infrastructure/factories/ServiceFactory';
+import { InvitationTokenService } from '../../services/InvitationTokenService';
 import { EnvelopeId } from '../../domain/value-objects/EnvelopeId';
 import { UpdateEnvelopePathSchema, UpdateEnvelopeBodySchema } from '../../domain/schemas/UpdateEnvelopeSchema';
 
@@ -73,11 +74,13 @@ export const updateEnvelopeHandler = ControllerFactory.createCommand({
   appServiceClass: class {
     private readonly envelopeService: EnvelopeService;
     private readonly signerService: SignerService;
+    private readonly invitationTokenService: InvitationTokenService;
 
     constructor() {
       // Create domain services with proper dependencies using ServiceFactory
       this.envelopeService = ServiceFactory.createEnvelopeService();
       this.signerService = ServiceFactory.createSignerService();
+      this.invitationTokenService = ServiceFactory.createInvitationTokenService();
     }
 
     /**
@@ -119,6 +122,12 @@ export const updateEnvelopeHandler = ControllerFactory.createCommand({
                   params.securityContext
                 );
                 updatedSigners.push(newSigner);
+                // Generate invitation token for the newly added external signer
+                await this.invitationTokenService.generateInvitationTokensForSigners(
+                  [newSigner as any],
+                  envelopeId,
+                  params.securityContext
+                );
               }
               break;
             case 'remove':

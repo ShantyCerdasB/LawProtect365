@@ -21,7 +21,7 @@ import { handleSignerDeclineWorkflow } from '../domain/rules/signer/SignerWorkfl
 import { createCancelledEnvelope } from '../domain/rules/envelope/EnvelopeBusinessRules';
 import { validateSignerAddition, validateSignerRemoval, validateSignerUpdate, getNextSignerOrder } from '../domain/rules/signer/SignerManagementRules';
 import { signerDdbMapper } from '../domain/types/infrastructure/signer/signer-mappers';
-import { mapAwsError, NotFoundError, ErrorCodes, uuid } from '@lawprotect/shared-ts';
+import { mapAwsError, NotFoundError, BadRequestError, ForbiddenError, ErrorCodes, uuid } from '@lawprotect/shared-ts';
 
 /**
  * Request interface for declining a signer
@@ -63,32 +63,59 @@ export class SignerService {
    */
   async declineSigner(request: DeclineSignerRequest): Promise<Signer> {
     try {
+      console.log('[SignerService.declineSigner] Starting decline process', {
+        signerId: request.signerId.getValue(),
+        userId: request.userId,
+        reason: request.reason
+      });
+
       // Get signer and envelope
+      console.log('[SignerService.declineSigner] Getting signer from repository');
       const signer = await this.signerRepository.getById(request.signerId);
       if (!signer) {
+        console.log('[SignerService.declineSigner] Signer not found');
         throw new NotFoundError(
           `Signer with ID ${request.signerId.getValue()} not found`,
           ErrorCodes.COMMON_NOT_FOUND
         );
       }
+      console.log('[SignerService.declineSigner] Signer found', {
+        signerId: signer.getId().getValue(),
+        envelopeId: signer.getEnvelopeId(),
+        status: signer.getStatus(),
+        email: signer.getEmail().getValue()
+      });
 
+      console.log('[SignerService.declineSigner] Getting envelope from repository');
       const envelope = await this.envelopeRepository.getById(new EnvelopeId(signer.getEnvelopeId()));
       if (!envelope) {
+        console.log('[SignerService.declineSigner] Envelope not found');
         throw new NotFoundError(
           `Envelope with ID ${signer.getEnvelopeId()} not found`,
           ErrorCodes.COMMON_NOT_FOUND
         );
       }
+      console.log('[SignerService.declineSigner] Envelope found', {
+        envelopeId: envelope.getId().getValue(),
+        status: envelope.getStatus(),
+        signerCount: envelope.getSigners().length
+      });
 
       // Handle complete decline workflow using domain rules
+      console.log('[SignerService.declineSigner] Validating decline workflow');
       const declineWorkflowResult = handleSignerDeclineWorkflow(signer, envelope, {
         reason: request.reason,
         timestamp: new Date(),
         ipAddress: request.ipAddress,
         userAgent: request.userAgent
       });
+      console.log('[SignerService.declineSigner] Workflow validation completed', {
+        shouldCancelEnvelope: declineWorkflowResult.shouldCancelEnvelope,
+        cancellationReason: declineWorkflowResult.cancellationReason
+      });
 
       // Update signer status to DECLINED
+      console.log('[SignerService.declineSigner] Updating signer status to DECLINED');
       const updatedSigner = await this.signerRepository.update(request.signerId, {
         status: SignerStatus.DECLINED,
         declinedAt: new Date(),
@@ -98,8 +125,10 @@ export class SignerService {
           userAgent: request.userAgent
         }
       });
+      console.log('[SignerService.declineSigner] Signer status updated successfully');
 
       // Log audit event for signer decline
+      console.log('[SignerService.declineSigner] Creating audit event for signer decline');
       await this.auditService.createEvent({
         envelopeId: signer.getEnvelopeId(),
         description: `Signer ${signer.getEmail().getValue()} declined to sign`,
@@ -112,23 +141,31 @@ export class SignerService {
           userAgent: request.userAgent
         }
       });
+      console.log('[SignerService.declineSigner] Audit event created successfully');
 
       // Publish signer declined event
+      console.log('[SignerService.declineSigner] Publishing signer declined event');
       await this.signerEventService.publishSignerDeclined(
         updatedSigner,
         new Date(),
         request.reason
       );
+      console.log('[SignerService.declineSigner] Signer declined event published successfully');
 
       // Handle envelope cancellation if recommended by domain rules
       if (declineWorkflowResult.shouldCancelEnvelope) {
+        console.log('[SignerService.declineSigner] Cancelling envelope due to signer decline');
+        
         // Create cancelled envelope using domain rules
+        console.log('[SignerService.declineSigner] Creating cancelled envelope');
         const cancelledEnvelope = createCancelledEnvelope(envelope);
 
         // Update the envelope in the repository
+        console.log('[SignerService.declineSigner] Updating envelope status to CANCELLED');
         await this.envelopeRepository.update(new EnvelopeId(signer.getEnvelopeId()), cancelledEnvelope);
 
         // Log audit event for envelope cancellation
+        console.log('[SignerService.declineSigner] Creating audit event for envelope cancellation');
         await this.auditService.createEvent({
           envelopeId: signer.getEnvelopeId(),
           description: `Envelope cancelled due to signer decline`,
@@ -142,12 +179,15 @@ export class SignerService {
         });
 
         // Publish envelope cancelled event
+        console.log('[SignerService.declineSigner] Publishing envelope cancelled event');
         await this.envelopeEventService.publishEnvelopeCancelled(
           cancelledEnvelope,
           new Date(),
           declineWorkflowResult.cancellationReason
         );
+        console.log('[SignerService.declineSigner] Envelope cancellation completed successfully');
       } else {
+        console.log('[SignerService.declineSigner] Envelope will not be cancelled');
         // Envelope should not be cancelled - log that envelope remains active
         await this.auditService.createEvent({
           envelopeId: signer.getEnvelopeId(),
@@ -160,10 +200,18 @@ export class SignerService {
             envelopeStatus: envelope.getStatus()
           }
         });
+        console.log('[SignerService.declineSigner] Additional audit event created');
       }
 
+      console.log('[SignerService.declineSigner] Decline process completed successfully');
       return updatedSigner;
     } catch (error) {
+      console.error('[SignerService.declineSigner] Error occurred:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        signerId: request.signerId.getValue(),
+        userId: request.userId
+      });
       throw mapAwsError(error, 'SignerService.declineSigner');
     }
   }
@@ -413,6 +461,10 @@ export class SignerService {
         securityContext.userId
       );
     } catch (error) {
+      // Only map AWS errors, let domain errors pass through
+      if (error instanceof BadRequestError || error instanceof ForbiddenError || error instanceof NotFoundError) {
+        throw error;
+      }
       throw mapAwsError(error, 'SignerService.removeSigner');
     }
   }
@@ -437,13 +489,18 @@ export class SignerService {
     }
   ): Promise<{ sent: number; recipients: Array<{ signerId: string; email: string }> }> {
     try {
+      // eslint-disable-next-line no-console
+      console.log('[SignerService.sendReminders] START', { envelopeId: envelopeId.getValue(), signerIdsCount: signerIds?.length || 0, userId: securityContext.userId });
       const envelope = await this.envelopeRepository.getById(envelopeId);
       if (!envelope) {
         throw new NotFoundError('Envelope not found', ErrorCodes.COMMON_NOT_FOUND);
       }
 
-      if (envelope.getStatus() !== 'SENT') {
-        throw new Error('Reminders can only be sent for envelopes that have been sent');
+      if (envelope.getStatus() !== 'SENT' && envelope.getStatus() !== 'IN_PROGRESS') {
+        throw new BadRequestError(
+          'Reminders can only be sent for envelopes that are SENT or IN_PROGRESS',
+          'ENVELOPE_NOT_READY_FOR_NOTIFICATIONS'
+        );
       }
 
       const allSigners = await this.getSignersByEnvelope(envelopeId);
@@ -453,6 +510,8 @@ export class SignerService {
         recipients = recipients.filter(s => idSet.has(s.getId().getValue()));
       }
 
+      // eslint-disable-next-line no-console
+      console.log('[SignerService.sendReminders] recipients', { count: recipients.length });
       for (const signer of recipients) {
         await this.signerEventService.publishSignerReminder(signer, securityContext.userId);
       }
@@ -470,12 +529,99 @@ export class SignerService {
         }
       });
 
+      // eslint-disable-next-line no-console
+      console.log('[SignerService.sendReminders] DONE', { sent: recipients.length });
       return {
         sent: recipients.length,
         recipients: recipients.map(r => ({ signerId: r.getId().getValue(), email: r.getEmail().getValue() }))
       };
     } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('[SignerService.sendReminders] ERROR', { name: (error as any)?.name, code: (error as any)?.code, message: (error as any)?.message });
+      // Let domain errors through so they map to 4xx, only map AWS errors
+      if (error instanceof BadRequestError || error instanceof ForbiddenError || error instanceof NotFoundError) {
+        throw error;
+      }
       throw mapAwsError(error, 'SignerService.sendReminders');
+    }
+  }
+
+  /**
+   * Marks a signer as signed and publishes signer.signed event if envelope has multiple signers
+   * 
+   * @param signerId - The signer ID to mark as signed
+   * @param securityContext - Security context for audit
+   * @returns Promise resolving to the updated signer
+   * 
+   * @throws NotFoundError if signer not found
+   */
+  async markSignerAsSigned(
+    signerId: SignerId,
+    securityContext: {
+      userId: string;
+      ipAddress?: string;
+      userAgent?: string;
+    }
+  ): Promise<Signer> {
+    try {
+      const signer = await this.getSigner(signerId);
+      if (!signer) {
+        throw new NotFoundError('Signer not found', 'SIGNER_NOT_FOUND');
+      }
+
+      // Enforce signing order: if OWNER_FIRST and owner hasn't signed yet, prevent invitees from signing
+      const envelope = await this.envelopeRepository.getById(new EnvelopeId(signer.getEnvelopeId()));
+      if (envelope) {
+        const signingOrder = envelope.getSigningOrder();
+        const isOwnerFirst = typeof (signingOrder as any)?.isOwnerFirst === 'function'
+          ? (signingOrder as any).isOwnerFirst()
+          : String(signingOrder).toUpperCase().includes('OWNER');
+
+        if (isOwnerFirst) {
+          const signers = await this.getSignersByEnvelope(new EnvelopeId(signer.getEnvelopeId()));
+          const ownerSigner = signers.find(s => s.getOrder() === 1);
+          const ownerHasSigned = ownerSigner ? ownerSigner.getStatus() === SignerStatus.SIGNED : false;
+          const isCurrentSignerOwner = signer.getOrder() === 1;
+
+          if (!ownerHasSigned && !isCurrentSignerOwner) {
+            const { BadRequestError } = await import('@lawprotect/shared-ts');
+            throw new BadRequestError('Owner must sign first before invitees can sign', 'OWNER_MUST_SIGN_FIRST');
+          }
+        }
+      }
+
+      // Record consent first (required for signing)
+      signer.recordConsent(securityContext.ipAddress, securityContext.userAgent);
+      
+      // Use the entity method (includes validations)
+      signer.markAsSigned();
+      
+      // Update additional metadata
+      const metadata = signer.getMetadata();
+      metadata.ipAddress = securityContext.ipAddress;
+      metadata.userAgent = securityContext.userAgent;
+
+      // Persist changes
+      const updatedSigner = await this.signerRepository.update(signerId, {
+        status: signer.getStatus(),
+        signedAt: signer.getSignedAt(),
+        metadata
+      });
+
+      // Publish event only if envelope has multiple signers (following EnvelopeService pattern)
+      const allSigners = await this.getSignersByEnvelope(new EnvelopeId(signer.getEnvelopeId()));
+      if (allSigners.length > 1) {
+        await this.signerEventService.publishSignerSigned(updatedSigner, new Date());
+      }
+
+      return updatedSigner;
+    } catch (error) {
+      console.error('SignerService.markSignerAsSigned error:', error);
+      // Allow domain errors to pass through with correct status
+      if (error instanceof BadRequestError || error instanceof ForbiddenError || error instanceof NotFoundError) {
+        throw error;
+      }
+      throw mapAwsError(error, 'SignerService.markSignerAsSigned');
     }
   }
 

@@ -4,17 +4,24 @@
  * @description Creates real JWT tokens using Cognito User Pool in LocalStack for testing
  */
 
-import AWS from 'aws-sdk';
+import {
+  CognitoIdentityProviderClient,
+  AdminInitiateAuthCommand,
+  AdminCreateUserCommand,
+  AdminSetUserPasswordCommand,
+  AdminAddUserToGroupCommand,
+  AdminGetUserCommand,
+  AdminDeleteUserCommand
+} from '@aws-sdk/client-cognito-identity-provider';
 
 // Configure AWS SDK for LocalStack
 const localstackEndpoint = 'http://localhost:4566';
 const region = 'us-east-1';
 
-const cognito = new AWS.CognitoIdentityServiceProvider({
+const cognito = new CognitoIdentityProviderClient({
   endpoint: localstackEndpoint,
   region: region,
-  accessKeyId: 'test',
-  secretAccessKey: 'test'
+  credentials: { accessKeyId: 'test', secretAccessKey: 'test' }
 });
 
 /**
@@ -33,7 +40,7 @@ export async function generateCognitoToken(
 ): Promise<string> {
   try {
     // Authenticate user with Cognito
-    const authResult = await cognito.adminInitiateAuth({
+    const authResult = await cognito.send(new AdminInitiateAuthCommand({
       UserPoolId: userPoolId,
       ClientId: clientId,
       AuthFlow: 'ADMIN_NO_SRP_AUTH',
@@ -41,7 +48,7 @@ export async function generateCognitoToken(
         USERNAME: email,
         PASSWORD: password
       }
-    }).promise();
+    }));
 
     const accessToken = authResult.AuthenticationResult?.AccessToken;
     if (!accessToken) {
@@ -110,7 +117,7 @@ export async function createTestUser(
 
   try {
     // Create user
-    const createResult = await cognito.adminCreateUser({
+    const createResult = await cognito.send(new AdminCreateUserCommand({
       UserPoolId: userPoolId,
       Username: email,
       UserAttributes: [
@@ -119,23 +126,23 @@ export async function createTestUser(
       ],
       TemporaryPassword: password,
       MessageAction: 'SUPPRESS'
-    }).promise();
+    }));
 
     // Set permanent password
-    await cognito.adminSetUserPassword({
+    await cognito.send(new AdminSetUserPasswordCommand({
       UserPoolId: userPoolId,
       Username: email,
       Password: password,
       Permanent: true
-    }).promise();
+    }));
 
     // Add to group if specified
     if (groupName) {
-      await cognito.adminAddUserToGroup({
+      await cognito.send(new AdminAddUserToGroupCommand({
         UserPoolId: userPoolId,
         Username: email,
         GroupName: groupName
-      }).promise();
+      }));
     }
 
     console.log(`✅ Test user created: ${email}`);
@@ -162,10 +169,10 @@ export async function getTestUser(email: string): Promise<any> {
   }
 
   try {
-    const result = await cognito.adminGetUser({
+    const result = await cognito.send(new AdminGetUserCommand({
       UserPoolId: userPoolId,
       Username: email
-    }).promise();
+    }));
 
     return result;
   } catch (error) {
@@ -188,10 +195,10 @@ export async function deleteTestUser(email: string): Promise<void> {
   }
 
   try {
-    await cognito.adminDeleteUser({
+    await cognito.send(new AdminDeleteUserCommand({
       UserPoolId: userPoolId,
       Username: email
-    }).promise();
+    }));
 
     console.log(`✅ Test user deleted: ${email}`);
   } catch (error) {

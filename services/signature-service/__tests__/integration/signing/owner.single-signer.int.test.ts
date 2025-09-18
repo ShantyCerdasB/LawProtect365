@@ -33,7 +33,7 @@ describe('Integration: Single-signer (owner) flow', () => {
   });
 
   const ownerUser = {
-    userId: 'test-owner-123',
+    userId: `test-owner-${randomUUID()}`,
     email: 'owner@example.com'
   };
 
@@ -47,7 +47,7 @@ describe('Integration: Single-signer (owner) flow', () => {
       email: ownerUser.email,
       ip: '127.0.0.1',
       userAgent: 'jest-test/1.0',
-      roles: ['customer'],
+      roles: ['admin'],
       scopes: []
     };
     const merged = { ...base, ...(overrides || {}) } as any;
@@ -89,7 +89,7 @@ describe('Integration: Single-signer (owner) flow', () => {
     });
 
     // 1) Create envelope with a single owner signer
-    const envelopeTitle = `Test Envelope ${Date.now()}`;
+    const envelopeTitle = `Test Envelope ${Date.now()}-${randomUUID()}`;
 
     const createBody = {
       metadata: {

@@ -5,13 +5,13 @@
  * or resends invitations to specific signers who may not have received them.
  */
 
-import { ControllerFactory, UserRole, VALID_COGNITO_ROLES } from '@lawprotect/shared-ts';
+import { ControllerFactory, UserRole, VALID_COGNITO_ROLES, BadRequestError } from '@lawprotect/shared-ts';
 import { EnvelopeService } from '../../services/EnvelopeService';
 import { SignerService } from '../../services/SignerService';
 import { InvitationTokenService } from '../../services/InvitationTokenService';
 import { ServiceFactory } from '../../infrastructure/factories/ServiceFactory';
+import { SendNotificationRequestSchema, SendNotificationPathSchema } from '../../domain/schemas/SendNotificationSchema';
 import { EnvelopeId } from '../../domain/value-objects/EnvelopeId';
-import { SendNotificationRequestSchema } from '../../domain/schemas/SendNotificationSchema';
 
 /**
  * SendNotificationHandler - Production-ready handler using ControllerFactory
@@ -51,6 +51,7 @@ import { SendNotificationRequestSchema } from '../../domain/schemas/SendNotifica
  */
 export const sendNotificationHandler = ControllerFactory.createCommand({
   // Validation schemas
+  pathSchema: SendNotificationPathSchema,
   bodySchema: SendNotificationRequestSchema,
   
   // Parameter extraction
@@ -74,45 +75,65 @@ export const sendNotificationHandler = ControllerFactory.createCommand({
     private invitationTokenService: InvitationTokenService;
     
     async execute(params: { requestBody: any; envelopeId: string; userId: string; securityContext: any }) {
-      const { requestBody, envelopeId, userId, securityContext } = params;
+      try {
+        const { requestBody, envelopeId, userId, securityContext } = params;
 
-      // Get envelope and validate access
-      const envelope = await this.envelopeService.getEnvelope(
-        new EnvelopeId(envelopeId),
-        userId,
-        securityContext
-      );
-
-      // Validate envelope is sent (notifications only for sent envelopes)
-      if (envelope.getStatus() !== 'SENT') {
-        throw new Error('Notifications can only be sent for envelopes that have been sent');
-      }
-
-      // Send notifications based on type using existing services
-      if (requestBody.type === 'resend') {
-        // Use existing InvitationTokenService to resend invitations
-        await this.invitationTokenService.publishSignerInvitedEvents(
+        // Get envelope and validate access
+        // eslint-disable-next-line no-console
+        console.log('[SendNotificationHandler] START', { envelopeId, userId, type: requestBody?.type });
+        const envelope = await this.envelopeService.getEnvelope(
           new EnvelopeId(envelopeId),
-          userId
-        );
-      } else if (requestBody.type === 'reminder') {
-        // Delegate to SignerService to send reminders and publish events
-        await this.signerService.sendReminders(
-          new EnvelopeId(envelopeId),
-          requestBody.signerIds,
+          userId,
           securityContext
         );
-      }
 
-      return {
-        message: 'Notifications sent successfully',
-        notifications: {
-          type: requestBody.type,
-          sent: requestBody.type === 'resend' ? 'all' : 'pending',
-          envelopeId: envelopeId,
-          timestamp: new Date().toISOString()
+        // Validate envelope status: allow reminders for SENT or IN_PROGRESS
+        const status = envelope.getStatus();
+        if (status !== 'SENT' && status !== 'IN_PROGRESS') {
+          throw new BadRequestError(
+            'Notifications can only be sent for envelopes that are in SENT or IN_PROGRESS status',
+            'ENVELOPE_NOT_READY_FOR_NOTIFICATIONS'
+          );
         }
-      };
+
+        // Send notifications based on type using existing services
+        if (requestBody.type === 'resend') {
+          // Use existing InvitationTokenService to resend invitations
+          await this.invitationTokenService.publishSignerInvitedEvents(
+            new EnvelopeId(envelopeId),
+            userId
+          );
+        } else if (requestBody.type === 'reminder') {
+          // Delegate to SignerService to send reminders and publish events
+          try {
+            const result = await this.signerService.sendReminders(
+              new EnvelopeId(envelopeId),
+              requestBody.signerIds,
+              securityContext
+            );
+            // eslint-disable-next-line no-console
+            console.log('[SendNotificationHandler] sendReminders OK', { sent: result.sent });
+          } catch (e: any) {
+            // eslint-disable-next-line no-console
+            console.error('[SendNotificationHandler] sendReminders ERROR', { name: e?.name, code: e?.code, message: e?.message });
+            throw e;
+          }
+        }
+
+        return {
+          message: 'Notifications sent successfully',
+          notifications: {
+            type: requestBody.type,
+            sent: requestBody.type === 'resend' ? 'all' : 'pending',
+            envelopeId: envelopeId,
+            timestamp: new Date().toISOString()
+          }
+        };
+      } catch (e: any) {
+        // eslint-disable-next-line no-console
+        console.error('[SendNotificationHandler] ERROR', { name: e?.name, code: e?.code, message: e?.message });
+        throw e;
+      }
     }
   },
   

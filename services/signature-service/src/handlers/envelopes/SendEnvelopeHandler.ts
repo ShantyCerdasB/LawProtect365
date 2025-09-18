@@ -80,18 +80,31 @@ export const sendEnvelopeHandler = ControllerFactory.createCommand({
       const envelopeId = new EnvelopeId(params.envelopeId);
 
       // 1. Send envelope (changes status DRAFT → SENT and publishes envelope.sent event)
-      const envelope = await this.envelopeService.changeEnvelopeStatus(
-        envelopeId,
-        EnvelopeStatus.SENT,
-        params.userId,
-        params.securityContext
-      );
+      let envelope;
+      try {
+        envelope = await this.envelopeService.changeEnvelopeStatus(
+          envelopeId,
+          EnvelopeStatus.SENT,
+          params.userId,
+          params.securityContext
+        );
+      } catch (e: any) {
+        // eslint-disable-next-line no-console
+        console.error('[SendEnvelopeHandler] changeEnvelopeStatus error', { name: e?.name, code: e?.code, message: e?.message });
+        throw e;
+      }
 
       // 2. Publish signer.invited events (triggers email notifications via NotificationService)
-      await this.invitationTokenService.publishSignerInvitedEvents(
-        envelopeId,
-        params.userId
-      );
+      try {
+        await this.invitationTokenService.publishSignerInvitedEvents(
+          envelopeId,
+          params.userId
+        );
+      } catch (e: any) {
+        // eslint-disable-next-line no-console
+        console.error('[SendEnvelopeHandler] publishSignerInvitedEvents error', { name: e?.name, code: e?.code, message: e?.message });
+        // Do not fail the primary flow if notifications fail; outbox/worker will retry
+      }
 
       return {
         envelope
@@ -115,7 +128,7 @@ export const sendEnvelopeHandler = ControllerFactory.createCommand({
       envelope: {
         id: result.envelope.getId().getValue(),
         status: result.envelope.getStatus(),
-        sentAt: result.envelope.getSentAt(),
+        sentAt: result.envelope.getStatus() === 'SENT' ? result.envelope.getUpdatedAt() : undefined,
         title: result.envelope.getMetadata().title
       }
     };

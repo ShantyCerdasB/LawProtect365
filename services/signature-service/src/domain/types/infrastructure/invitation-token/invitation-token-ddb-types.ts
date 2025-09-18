@@ -46,14 +46,14 @@ export class InvitationTokenKeyBuilders {
    * Builds primary key for invitation token
    */
   static buildPk(token: string): string {
-    return `${DynamoDbPrefixes.INVITATION_TOKEN}#${token}`;
+    return `${DynamoDbPrefixes.INVITATION_TOKEN}${token}`;
   }
 
   /**
    * Builds sort key for invitation token
    */
   static buildSk(token: string): string {
-    return `${DynamoDbPrefixes.INVITATION_TOKEN}#${token}`;
+    return `${DynamoDbPrefixes.INVITATION_TOKEN}${token}`;
   }
 
   /**
@@ -67,21 +67,21 @@ export class InvitationTokenKeyBuilders {
    * Builds GSI1 sort key for signer queries
    */
   static buildGsi1Sk(token: string): string {
-    return `${DynamoDbPrefixes.INVITATION_TOKEN}#${token}`;
+    return `${DynamoDbPrefixes.INVITATION_TOKEN}${token}`;
   }
 
   /**
    * Builds GSI2 primary key for envelope queries
    */
   static buildGsi2Pk(envelopeId: string): string {
-    return `${DynamoDbPrefixes.ENVELOPE}#${envelopeId}`;
+    return `${DynamoDbPrefixes.ENVELOPE}${envelopeId}`;
   }
 
   /**
    * Builds GSI2 sort key for envelope queries
    */
   static buildGsi2Sk(token: string): string {
-    return `${DynamoDbPrefixes.INVITATION_TOKEN}#${token}`;
+    return `${DynamoDbPrefixes.INVITATION_TOKEN}${token}`;
   }
 
   /**

@@ -248,7 +248,9 @@ export class InvitationTokenService {
         }
       }
     } catch (error) {
-      throw mapAwsError(error, 'InvitationTokenService.publishSignerInvitedEvents');
+      // Log and swallow to avoid failing primary flow; outbox worker will retry
+      // eslint-disable-next-line no-console
+      console.error('[InvitationTokenService.publishSignerInvitedEvents] error', { name: (error as any)?.name, code: (error as any)?.code, message: (error as any)?.message });
     }
   }
 

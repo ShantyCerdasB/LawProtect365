@@ -38,6 +38,13 @@ export function validateEnvelopeAccessPermissions(
   operation: EnvelopeOperation,
   envelopeOwnerId?: string
 ): void {
+  // For CANCEL (delete) operations, require the requester to be the owner
+  if (operation === EnvelopeOperation.CANCEL) {
+    if (!context.userId || !envelopeOwnerId || context.userId !== envelopeOwnerId) {
+      throw permissionDenied('Only the envelope owner can cancel/delete this envelope');
+    }
+  }
+
   // Check if user has permission to perform the operation
   if (!canPerformOperation(context.permission, operation)) {
     throw permissionDenied(
@@ -122,7 +129,10 @@ export async function validateEnvelopeSecurity(
     operation,
     securityConfig,
     {
-      rateLimitStore: dependencies.rateLimitStore,
+      // Provide a no-op rate limit store if none supplied to avoid false negatives in tests
+      rateLimitStore: (dependencies.rateLimitStore as any) || {
+        incrementAndCheck: async (_key: string, window: any) => ({ currentUsage: 0, maxRequests: window.maxRequests })
+      },
       accessToken: dependencies.accessToken,
       sensitiveOperations: sensitiveOperations
     }

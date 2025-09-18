@@ -4,47 +4,46 @@
  * @description Creates Cognito User Pool, S3 buckets, KMS keys, and other AWS resources for testing
  */
 
-import AWS from 'aws-sdk';
+import { CognitoIdentityProviderClient, CreateUserPoolCommand, CreateUserPoolClientCommand, CreateGroupCommand, AdminCreateUserCommand, AdminSetUserPasswordCommand } from '@aws-sdk/client-cognito-identity-provider';
+import { S3Client, CreateBucketCommand, PutBucketVersioningCommand, PutBucketEncryptionCommand, PutBucketLifecycleConfigurationCommand } from '@aws-sdk/client-s3';
+import { KMSClient, CreateKeyCommand, CreateAliasCommand } from '@aws-sdk/client-kms';
+import { EventBridgeClient, CreateEventBusCommand } from '@aws-sdk/client-eventbridge';
+import { SSMClient, PutParameterCommand } from '@aws-sdk/client-ssm';
 import { startLocalStack } from './startLocalStack';
 
 // Configure AWS SDK for LocalStack
 const localstackEndpoint = 'http://localhost:4566';
 const region = 'us-east-1';
 
-const cognito = new AWS.CognitoIdentityServiceProvider({
+const cognito = new CognitoIdentityProviderClient({
   endpoint: localstackEndpoint,
   region: region,
-  accessKeyId: 'test',
-  secretAccessKey: 'test'
+  credentials: { accessKeyId: 'test', secretAccessKey: 'test' }
 });
 
-const s3 = new AWS.S3({
+const s3 = new S3Client({
   endpoint: localstackEndpoint,
   region: region,
-  accessKeyId: 'test',
-  secretAccessKey: 'test',
-  s3ForcePathStyle: true
+  credentials: { accessKeyId: 'test', secretAccessKey: 'test' },
+  forcePathStyle: true as any
 });
 
-const kms = new AWS.KMS({
+const kms = new KMSClient({
   endpoint: localstackEndpoint,
   region: region,
-  accessKeyId: 'test',
-  secretAccessKey: 'test'
+  credentials: { accessKeyId: 'test', secretAccessKey: 'test' }
 });
 
-const eventbridge = new AWS.EventBridge({
+const eventbridge = new EventBridgeClient({
   endpoint: localstackEndpoint,
   region: region,
-  accessKeyId: 'test',
-  secretAccessKey: 'test'
+  credentials: { accessKeyId: 'test', secretAccessKey: 'test' }
 });
 
-const ssm = new AWS.SSM({
+const ssm = new SSMClient({
   endpoint: localstackEndpoint,
   region: region,
-  accessKeyId: 'test',
-  secretAccessKey: 'test'
+  credentials: { accessKeyId: 'test', secretAccessKey: 'test' }
 });
 
 async function setupLocalStack() {
@@ -109,7 +108,7 @@ async function setupCognitoUserPool() {
       }
     };
     
-    const userPoolResult = await cognito.createUserPool(userPoolParams).promise();
+    const userPoolResult = await cognito.send(new CreateUserPoolCommand(userPoolParams as any));
     const userPoolId = userPoolResult.UserPool?.Id;
     
     if (!userPoolId) {
@@ -140,7 +139,7 @@ async function setupCognitoUserPool() {
       AllowedOAuthFlowsUserPoolClient: true
     };
     
-    const clientResult = await cognito.createUserPoolClient(clientParams).promise();
+    const clientResult = await cognito.send(new CreateUserPoolClientCommand(clientParams as any));
     const clientId = clientResult.UserPoolClient?.ClientId;
     
     if (!clientId) {
@@ -195,11 +194,11 @@ async function createUserGroups(userPoolId: string) {
   
   for (const group of groups) {
     try {
-      await cognito.createGroup({
+      await cognito.send(new CreateGroupCommand({
         UserPoolId: userPoolId,
         GroupName: group.GroupName,
         Description: group.Description
-      }).promise();
+      }));
       
       console.log(`✅ User group created: ${group.GroupName}`);
     } catch (error) {
@@ -235,7 +234,7 @@ async function createTestUsers(userPoolId: string) {
   for (const user of testUsers) {
     try {
       // Create user
-      await cognito.adminCreateUser({
+      await cognito.send(new AdminCreateUserCommand({
         UserPoolId: userPoolId,
         Username: user.username,
         UserAttributes: [
@@ -244,15 +243,15 @@ async function createTestUsers(userPoolId: string) {
         ],
         TemporaryPassword: user.password,
         MessageAction: 'SUPPRESS'
-      }).promise();
+      }));
       
       // Set permanent password
-      await cognito.adminSetUserPassword({
+      await cognito.send(new AdminSetUserPasswordCommand({
         UserPoolId: userPoolId,
         Username: user.username,
         Password: user.password,
         Permanent: true
-      }).promise();
+      }));
       
       console.log(`✅ Test user created: ${user.email}`);
     } catch (error) {
@@ -297,50 +296,42 @@ async function setupS3Buckets() {
         };
       }
       
-      await s3.createBucket(createBucketParams).promise();
+      await s3.send(new CreateBucketCommand(createBucketParams as any));
       
       console.log(`✅ S3 bucket created: ${bucket.name}`);
       
       // Enable versioning (matching Terraform)
       if (bucket.enableVersioning) {
-        await s3.putBucketVersioning({
+        await s3.send(new PutBucketVersioningCommand({
           Bucket: bucket.name,
-          VersioningConfiguration: {
-            Status: 'Enabled'
-          }
-        }).promise();
+          VersioningConfiguration: { Status: 'Enabled' }
+        }));
         console.log(`✅ Versioning enabled for: ${bucket.name}`);
       }
       
       // Enable server-side encryption (matching Terraform)
       if (bucket.enableEncryption) {
-        await s3.putBucketEncryption({
+        await s3.send(new PutBucketEncryptionCommand({
           Bucket: bucket.name,
           ServerSideEncryptionConfiguration: {
-            Rules: [{
-              ApplyServerSideEncryptionByDefault: {
-                SSEAlgorithm: 'AES256'
-              }
-            }]
+            Rules: [{ ApplyServerSideEncryptionByDefault: { SSEAlgorithm: 'AES256' } }]
           }
-        }).promise();
+        }));
         console.log(`✅ Encryption enabled for: ${bucket.name}`);
       }
       
       // Set lifecycle configuration (matching Terraform)
-      await s3.putBucketLifecycleConfiguration({
+      await s3.send(new PutBucketLifecycleConfigurationCommand({
         Bucket: bucket.name,
         LifecycleConfiguration: {
           Rules: [{
             ID: 'expire-noncurrent-versions',
             Status: 'Enabled',
-            NoncurrentVersionExpiration: {
-              NoncurrentDays: 30
-            },
+            NoncurrentVersionExpiration: { NoncurrentDays: 30 },
             Filter: {}
           }]
         }
-      }).promise();
+      }));
       console.log(`✅ Lifecycle configuration set for: ${bucket.name}`);
       
     } catch (error) {
@@ -364,7 +355,7 @@ async function setupKMSKeys() {
       CustomerMasterKeySpec: 'RSA_2048'
     };
     
-    const signingKeyResult = await kms.createKey(signingKeyParams).promise();
+    const signingKeyResult = await kms.send(new CreateKeyCommand(signingKeyParams as any));
     const signingKeyId = signingKeyResult.KeyMetadata?.KeyId;
     
     if (!signingKeyId) {
@@ -375,13 +366,11 @@ async function setupKMSKeys() {
     
     // Create alias for signing key (matching Terraform) - idempotent
     try {
-      await kms.createAlias({
-        AliasName: 'alias/lawprotect365-sign-key-test',
-        TargetKeyId: signingKeyId
-      }).promise();
+      await kms.send(new CreateAliasCommand({ AliasName: 'alias/lawprotect365-sign-key-test', TargetKeyId: signingKeyId }));
       console.log(`✅ KMS alias created: alias/lawprotect365-sign-key-test`);
     } catch (error: any) {
-      if (error.code === 'AlreadyExistsException') {
+      const name = error?.name || error?.code || error?.__type;
+      if (name === 'AlreadyExistsException') {
         console.log('⚠️  KMS alias already exists: alias/lawprotect365-sign-key-test');
       } else {
         throw error;
@@ -390,13 +379,11 @@ async function setupKMSKeys() {
     
     // Create alias for test-key-id (for tests) - idempotent
     try {
-      await kms.createAlias({
-        AliasName: 'alias/test-key-id',
-        TargetKeyId: signingKeyId
-      }).promise();
+      await kms.send(new CreateAliasCommand({ AliasName: 'alias/test-key-id', TargetKeyId: signingKeyId }));
       console.log(`✅ KMS alias created: alias/test-key-id`);
     } catch (error: any) {
-      if (error.code === 'AlreadyExistsException') {
+      const name = error?.name || error?.code || error?.__type;
+      if (name === 'AlreadyExistsException') {
         console.log('⚠️  KMS alias already exists: alias/test-key-id');
       } else {
         throw error;
@@ -422,7 +409,7 @@ async function setupEventBridge() {
       Name: 'lawprotect365-event-bus-test'
     };
     
-    await eventbridge.createEventBus(eventBusParams).promise();
+    await eventbridge.send(new CreateEventBusCommand(eventBusParams));
     
     console.log('✅ EventBridge event bus created: lawprotect365-event-bus-test');
     
@@ -430,7 +417,8 @@ async function setupEventBridge() {
     process.env.EVENT_BUS_ARN = `arn:aws:events:${region}:000000000000:event-bus/lawprotect365-event-bus-test`;
     
   } catch (error) {
-    if (error.code === 'ResourceAlreadyExistsException') {
+    const name = (error as any)?.name || (error as any)?.code || (error as any)?.__type;
+    if (name === 'ResourceAlreadyExistsException') {
       console.log('⚠️  EventBridge event bus already exists: lawprotect365-event-bus-test');
     } else {
       console.error('❌ Failed to setup EventBridge:', error);
@@ -460,7 +448,7 @@ async function setupSSMParameters() {
   
   for (const param of parameters) {
     try {
-      await ssm.putParameter(param).promise();
+      await ssm.send(new PutParameterCommand(param as any));
       console.log(`✅ SSM parameter created: ${param.Name}`);
     } catch (error) {
       console.log(`⚠️  SSM parameter ${param.Name} might already exist:`, error.message);

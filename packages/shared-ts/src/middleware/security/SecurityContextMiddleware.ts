@@ -8,6 +8,7 @@
 
 import type { BeforeMiddleware } from "../../http/middleware.js";
 import { AccessType, PermissionLevel, RequestSecurityContext } from "../../security/index.js";
+import { SecurityContextBuilder } from "./SecurityContextBuilder.js";
 
 // RequestSecurityContext is imported from security/index.js
 
@@ -20,19 +21,19 @@ import { AccessType, PermissionLevel, RequestSecurityContext } from "../../secur
  * @returns BeforeMiddleware that creates security context
  */
 export const withSecurityContext = (): BeforeMiddleware => {
+  const contextBuilder = new SecurityContextBuilder();
+  
   return (evt) => {
     const auth = (evt as any).auth;
     
-    // Extract IP address from various sources
-    const ipAddress = extractIpAddress(evt);
+    const requestData = {
+      headers: evt.headers,
+      requestContext: evt.requestContext,
+      securityContext: auth,
+      requestBody: evt.body
+    };
     
-    // Extract user agent
-    const userAgent = evt.headers?.['user-agent'] || 
-                     evt.headers?.['User-Agent'] || 
-                     'Unknown';
-    
-    // Determine access type based on request characteristics
-  const accessType = determineAccessType(evt);
+    const baseContext = contextBuilder.build(requestData);
     
     // Determine permission level based on auth context
     const permission = determinePermissionLevel(auth, evt);
@@ -47,14 +48,14 @@ export const withSecurityContext = (): BeforeMiddleware => {
 
     // Create security context
     const securityContext: RequestSecurityContext = {
-      userId: auth?.userId,
-      ipAddress,
-      userAgent,
-      accessType,
+      userId: baseContext.userId,
+      ipAddress: baseContext.ipAddress || '127.0.0.1',
+      userAgent: baseContext.userAgent || 'Unknown',
+      accessType: baseContext.accessType || AccessType.DIRECT,
       permission,
       timestamp: new Date(),
       deviceFingerprint: generateDeviceFingerprint(evt),
-      country: extractCountry(evt)
+      country: baseContext.country
     };
 
     // Attach security context to event

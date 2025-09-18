@@ -11,6 +11,7 @@ import { InvitationTokenId } from '../../../value-objects/InvitationTokenId';
 import { SignerId } from '../../../value-objects/SignerId';
 import { EnvelopeId } from '../../../value-objects/EnvelopeId';
 import { InvitationTokenDdbItem } from './invitation-token-ddb-types';
+import { DynamoDbPrefixes } from '../../../enums/DynamoDbPrefixes';
 
 /**
  * Mapper utility for invitation token DDB items
@@ -19,14 +20,14 @@ export const invitationTokenDdbMapper = DdbMapperUtils.createMapper<InvitationTo
   'INVITATION_TOKEN',
   ['pk', 'sk', 'token', 'signerId', 'envelopeId', 'expiresAt', 'createdAt', 'entityType'],
   (entity: InvitationToken): InvitationTokenDdbItem => ({
-    pk: `INVITATION_TOKEN#${entity.getToken()}`,
-    sk: `INVITATION_TOKEN#${entity.getToken()}`,
+    pk: `${DynamoDbPrefixes.INVITATION_TOKEN}${entity.getToken()}`,
+    sk: `${DynamoDbPrefixes.INVITATION_TOKEN}${entity.getToken()}`,
     type: 'INVITATION_TOKEN',
-    gsi1pk: `SIGNER#${entity.getSignerId().getValue()}`,
-    gsi1sk: `INVITATION_TOKEN#${entity.getToken()}`,
-    gsi2pk: `ENVELOPE#${entity.getEnvelopeId().getValue()}`,
-    gsi2sk: `INVITATION_TOKEN#${entity.getToken()}`,
-    gsi3pk: 'INVITATION_TOKEN',
+    gsi1pk: `${DynamoDbPrefixes.SIGNER}${entity.getSignerId().getValue()}`,
+    gsi1sk: `${DynamoDbPrefixes.INVITATION_TOKEN}${entity.getToken()}`,
+    gsi2pk: `${DynamoDbPrefixes.ENVELOPE}${entity.getEnvelopeId().getValue()}`,
+    gsi2sk: `${DynamoDbPrefixes.INVITATION_TOKEN}${entity.getToken()}`,
+    gsi3pk: DynamoDbPrefixes.INVITATION_TOKEN,
     gsi3sk: `EXPIRES_AT#${entity.getExpiresAt().toISOString()}#${entity.getToken()}`,
     entityType: 'INVITATION_TOKEN',
     token: entity.getToken(),
