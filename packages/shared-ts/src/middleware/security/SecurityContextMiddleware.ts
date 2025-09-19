@@ -39,13 +39,13 @@ export const withSecurityContext = (): BeforeMiddleware => {
     // Determine permission level based on auth context
     const permission = determinePermissionLevel(auth, evt);
     
-    // Extract request and trace IDs
-    const requestId = evt.headers?.['x-request-id'] || 
-                     evt.headers?.['X-Request-Id'] ||
-                     evt.requestContext?.requestId;
+    // Extract request and trace IDs (for potential future use)
+    // const requestId = evt.headers?.['x-request-id'] || 
+    //                  evt.headers?.['X-Request-Id'] ||
+    //                  evt.requestContext?.requestId;
     
-    const traceId = evt.headers?.['x-trace-id'] || 
-                   evt.headers?.['X-Trace-Id'];
+    // const traceId = evt.headers?.['x-trace-id'] || 
+    //                evt.headers?.['X-Trace-Id'];
 
     // Create security context
     // Enforce required security telemetry (no defaults)
@@ -60,10 +60,10 @@ export const withSecurityContext = (): BeforeMiddleware => {
     }
 
     const securityContext: RequestSecurityContext = {
-      userId: baseContext.userId as any,
+      userId: baseContext.userId,
       ipAddress: baseContext.ipAddress!,
       userAgent: (baseContext.userAgent || evt.requestContext?.http?.userAgent)!,
-      accessType: (baseContext as any).accessType || AccessType.DIRECT,
+      accessType: baseContext.accessType || AccessType.DIRECT,
       permission,
       timestamp: new Date(),
       deviceFingerprint: generateDeviceFingerprint(evt),
@@ -118,50 +118,101 @@ function extractIpAddress(evt: any): string {
  */
 function determineAccessType(evt: any): AccessType {
   // Check for shared link access
-  if (evt.headers?.['x-shared-link'] || evt.queryStringParameters?.sharedLink) {
+  if (hasSharedLinkAccess(evt)) {
     return AccessType.SHARED_LINK;
   }
   
   // Check for invitation access
-  if (evt.headers?.['x-invitation-token'] || evt.queryStringParameters?.invitationToken) {
+  if (hasInvitationAccess(evt)) {
     return AccessType.INVITATION;
   }
-  // Also check path and body for invitation token shapes used by signing endpoints
-  try {
-    if (evt.pathParameters?.invitationToken) {
-      return AccessType.INVITATION;
-    }
-    if (evt.body) {
-      const parsed = typeof evt.body === 'string' ? JSON.parse(evt.body) : evt.body;
-      if (parsed && typeof parsed === 'object' && parsed.invitationToken) {
-        return AccessType.INVITATION;
-      }
-    }
-  } catch {}
   
   // If authenticated user present, treat as DIRECT access
-  if ((evt as any)?.auth) {
+  if (evt.auth) {
     return AccessType.DIRECT;
   }
   
   // Check for API access
-  const authzHeader = evt.headers?.['authorization'] || evt.headers?.['Authorization'];
-  if (evt.headers?.['x-api-key'] || (typeof authzHeader === 'string' && authzHeader.startsWith('Bearer'))) {
+  if (hasApiAccess(evt)) {
     return AccessType.API;
   }
   
   // Check for system access
-  if (evt.headers?.['x-system-token'] || evt.requestContext?.identity?.userAgent?.includes('system')) {
+  if (hasSystemAccess(evt)) {
     return AccessType.SYSTEM;
   }
   
   // Check for public access
-  if (!authzHeader && !evt.headers?.['x-api-key']) {
+  if (hasPublicAccess(evt)) {
     return AccessType.PUBLIC;
   }
   
   // Default to direct access
   return AccessType.DIRECT;
+}
+
+/**
+ * Checks if request has shared link access
+ */
+function hasSharedLinkAccess(evt: any): boolean {
+  return !!(evt.headers?.['x-shared-link'] || evt.queryStringParameters?.sharedLink);
+}
+
+/**
+ * Checks if request has invitation access
+ */
+function hasInvitationAccess(evt: any): boolean {
+  // Check headers and query parameters
+  if (evt.headers?.['x-invitation-token'] || evt.queryStringParameters?.invitationToken) {
+    return true;
+  }
+  
+  // Check path parameters
+  if (evt.pathParameters?.invitationToken) {
+    return true;
+  }
+  
+  // Check body for invitation token
+  return hasInvitationTokenInBody(evt);
+}
+
+/**
+ * Checks if invitation token exists in request body
+ */
+function hasInvitationTokenInBody(evt: any): boolean {
+  if (!evt.body) {
+    return false;
+  }
+  
+  try {
+    const parsed = typeof evt.body === 'string' ? JSON.parse(evt.body) : evt.body;
+    return !!(parsed && typeof parsed === 'object' && parsed.invitationToken);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Checks if request has API access
+ */
+function hasApiAccess(evt: any): boolean {
+  const authzHeader = evt.headers?.['authorization'] || evt.headers?.['Authorization'];
+  return !!(evt.headers?.['x-api-key'] || (typeof authzHeader === 'string' && authzHeader.startsWith('Bearer')));
+}
+
+/**
+ * Checks if request has system access
+ */
+function hasSystemAccess(evt: any): boolean {
+  return !!(evt.headers?.['x-system-token'] || evt.requestContext?.identity?.userAgent?.includes('system'));
+}
+
+/**
+ * Checks if request has public access
+ */
+function hasPublicAccess(evt: any): boolean {
+  const authzHeader = evt.headers?.['authorization'] || evt.headers?.['Authorization'];
+  return !authzHeader && !evt.headers?.['x-api-key'];
 }
 
 /**

@@ -77,62 +77,132 @@ export const downloadSignedDocumentHandler = ControllerFactory.createCommand({
      */
     async execute(params: any) {
       let envelopeId = new EnvelopeId(params.envelopeId);
-      const isInvitation = params.securityContext?.accessType === 'INVITATION' || !!params.requestBody?.invitationToken;
+      const isInvitation = this.isInvitationAccess(params);
 
-      // 1. Load envelope respecting access rules; for invitations, allow fallback access
-      let envelope: any;
+      // 1. Load envelope respecting access rules
+      const envelope = await this.loadEnvelope(envelopeId, params, isInvitation);
+
+      // 2. Resolve S3 key based on envelope status
+      const s3Key = this.resolveS3Key(envelope, envelopeId);
+
+      // 3. Generate presigned download URL
+      const downloadUrl = await this.generateDownloadUrl(s3Key, params);
+
+      // 4. Get document metadata
+      const documentInfo = await this.s3Service.getDocumentInfo(s3Key);
+
+      // 5. Audit: document downloaded
+      await this.recordDownloadAudit(envelopeId, s3Key, params, isInvitation);
+
+      return {
+        downloadUrl,
+        documentInfo,
+        envelope
+      };
+    }
+
+    /**
+     * Determines if this is an invitation access
+     */
+    private isInvitationAccess(params: any): boolean {
+      return params.securityContext?.accessType === 'INVITATION' || !!params.requestBody?.invitationToken;
+    }
+
+    /**
+     * Loads envelope with appropriate access rules
+     */
+    private async loadEnvelope(envelopeId: EnvelopeId, params: any, isInvitation: boolean): Promise<any> {
       if (isInvitation) {
-        try {
-          if (params.requestBody?.invitationToken) {
-            const token = await this.invitationTokenService.validateInvitationToken(params.requestBody.invitationToken);
-            envelopeId = token.getEnvelopeId();
-          }
-        } catch {}
-        try {
-          envelope = await this.envelopeService.getEnvelope(
-            envelopeId,
-            'external-user',
-            { ...params.securityContext, permission: 'PARTICIPANT', accessType: 'INVITATION' }
-          );
-        } catch (err) {
-          const repo = (this.envelopeService as any)?.envelopeRepository;
-          if (repo?.getById) {
-            envelope = await repo.getById(envelopeId);
-          } else {
-            throw err;
-          }
-        }
+        return await this.loadEnvelopeForInvitation(envelopeId, params);
       } else {
-        envelope = await this.envelopeService.getEnvelope(
+        return await this.envelopeService.getEnvelope(
           envelopeId,
           params.userId,
           params.securityContext
         );
       }
+    }
 
-      // 2. Resolve S3 key based on envelope status: if completed, use signed; otherwise flattened
+    /**
+     * Loads envelope for invitation access with fallback
+     */
+    private async loadEnvelopeForInvitation(envelopeId: EnvelopeId, params: any): Promise<any> {
+      // Try to validate invitation token first
+      if (params.requestBody?.invitationToken) {
+        try {
+          const token = await this.invitationTokenService.validateInvitationToken(params.requestBody.invitationToken);
+          envelopeId = token.getEnvelopeId();
+        } catch {
+          // Continue with original envelopeId if token validation fails
+        }
+      }
+
+      // Try to get envelope with invitation context
+      try {
+        return await this.envelopeService.getEnvelope(
+          envelopeId,
+          'external-user',
+          { ...params.securityContext, permission: 'PARTICIPANT', accessType: 'INVITATION' }
+        );
+      } catch (err) {
+        // Fallback to direct repository access
+        const repo = (this.envelopeService as any)?.envelopeRepository;
+        if (repo?.getById) {
+          return await repo.getById(envelopeId);
+        } else {
+          throw err;
+        }
+      }
+    }
+
+    /**
+     * Resolves the appropriate S3 key based on envelope status
+     */
+    private resolveS3Key(envelope: any, envelopeId: EnvelopeId): string {
       const meta = (envelope as any)?.getMetadata?.() || {};
       const isCompleted = envelope.getStatus && envelope.getStatus() === 'COMPLETED';
-      const signedKey = typeof meta.signedS3Key === 'string' && meta.signedS3Key.length > 0
+      
+      if (isCompleted) {
+        return this.getSignedS3Key(meta, envelopeId);
+      } else {
+        return this.getFlattenedS3Key(meta, envelope);
+      }
+    }
+
+    /**
+     * Gets the signed S3 key
+     */
+    private getSignedS3Key(meta: any, envelopeId: EnvelopeId): string {
+      return typeof meta.signedS3Key === 'string' && meta.signedS3Key.length > 0
         ? meta.signedS3Key
         : getSignedDocumentS3Key(envelopeId.getValue());
-      const flattenedKey = typeof meta.flattenedS3Key === 'string' && meta.flattenedS3Key.length > 0
+    }
+
+    /**
+     * Gets the flattened S3 key
+     */
+    private getFlattenedS3Key(meta: any, envelope: any): string {
+      return typeof meta.flattenedS3Key === 'string' && meta.flattenedS3Key.length > 0
         ? meta.flattenedS3Key
         : `envelopes/${(envelope as any)?.getDocumentId?.() || meta.documentId || ''}/flattened.pdf`;
-      const s3Key = isCompleted ? signedKey : flattenedKey;
-      
-      // 3. Generate presigned download URL using configured TTL
+    }
+
+    /**
+     * Generates presigned download URL
+     */
+    private async generateDownloadUrl(s3Key: string, params: any): Promise<string> {
       const config = loadConfig();
-      const downloadUrl = await this.s3Service.generatePresignedDownloadUrl({
+      return await this.s3Service.generatePresignedDownloadUrl({
         s3Key,
         expiresIn: params.expiresIn || config.s3.presignTtlSeconds,
         contentType: 'application/pdf'
       });
+    }
 
-      // 4. Get document metadata
-      const documentInfo = await this.s3Service.getDocumentInfo(s3Key);
-
-      // 5. Audit: document downloaded (delegated to S3Service)
+    /**
+     * Records download audit action
+     */
+    private async recordDownloadAudit(envelopeId: EnvelopeId, s3Key: string, params: any, isInvitation: boolean): Promise<void> {
       await this.s3Service.recordDownloadAction({
         envelopeId: envelopeId.getValue(),
         userId: params.securityContext?.userId || (isInvitation ? 'external-user' : undefined),
@@ -142,12 +212,6 @@ export const downloadSignedDocumentHandler = ControllerFactory.createCommand({
         userAgent: params.securityContext?.userAgent,
         country: params.securityContext?.country
       });
-
-      return {
-        downloadUrl,
-        documentInfo,
-        envelope
-      };
     }
   },
   

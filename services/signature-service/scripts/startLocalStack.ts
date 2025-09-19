@@ -61,7 +61,8 @@ function createSafePath(): string {
  * @returns The result of execSync
  * @description Uses a dynamically generated safe PATH environment variable that
  * includes necessary system directories while excluding user-writable locations.
- * This prevents security vulnerabilities from PATH injection attacks.
+ * Executes commands directly without shell interpreter for enhanced security.
+ * This prevents security vulnerabilities from PATH injection and shell injection attacks.
  */
 function safeExecSync(command: string, options: any = {}) {
   const safeEnv = {
@@ -69,8 +70,22 @@ function safeExecSync(command: string, options: any = {}) {
     PATH: createSafePath()
   };
   
-  return execSync(command, {
+  // For docker compose commands, we need to use shell: true since it's a subcommand
+  if (command.startsWith('docker compose')) {
+    return execSync(command, {
+      ...options,
+      shell: true, // Use shell for docker compose subcommands
+      env: safeEnv
+    });
+  }
+  
+  // Parse command and arguments to avoid shell interpreter for other commands
+  const [cmd, ...args] = command.split(' ');
+  
+  return execSync(cmd, {
     ...options,
+    args: args,
+    shell: false, // Disable shell interpreter for security
     env: safeEnv
   });
 }
@@ -121,7 +136,7 @@ async function startLocalStack(): Promise<void> {
     } catch {}
 
     console.log('🐳 Ensuring LocalStack container is running...');
-    safeExecSync(`docker-compose -f ${DOCKER_COMPOSE_FILE} up -d`, { stdio: 'inherit' });
+    safeExecSync(`docker compose -f ${DOCKER_COMPOSE_FILE} up -d`, { stdio: 'inherit' });
 
     console.log('⏳ Waiting for LocalStack to be ready...');
     await waitForLocalStack();
@@ -155,7 +170,12 @@ async function startLocalStack(): Promise<void> {
 async function waitForLocalStack(maxRetries = 20, delay = 3000): Promise<void> {
   for (let i = 0; i < maxRetries; i++) {
     try {
-      safeExecSync('curl -f http://localhost:4566/_localstack/health', { 
+      // Use platform-specific health check command
+      const healthCheckCmd = process.platform === 'win32' 
+        ? 'powershell -Command "Invoke-WebRequest -Uri http://localhost:4566/_localstack/health -UseBasicParsing | Out-Null"'
+        : 'curl -f http://localhost:4566/_localstack/health';
+        
+      safeExecSync(healthCheckCmd, { 
         stdio: 'ignore',
         timeout: 10000 
       });

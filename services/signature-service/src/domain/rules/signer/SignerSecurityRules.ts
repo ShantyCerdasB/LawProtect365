@@ -11,8 +11,12 @@ import {
   signerEmailRequired
 } from '@/signature-errors';
 import type { SignatureServiceConfig } from '@/config';
-import { SignerOperation, diffMs } from '@lawprotect/shared-ts';
-import { validateSignatureIpAddress, validateSignatureUserAgent } from '@lawprotect/shared-ts';
+import { 
+  SignerOperation, 
+  diffMs,
+  validateSignatureIpAddress, 
+  validateSignatureUserAgent 
+} from '@lawprotect/shared-ts';
 
 /**
  * Validates signer access to envelope

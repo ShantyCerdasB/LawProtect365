@@ -55,47 +55,88 @@ export function validateCustomFields(
     return; // Optional field
   }
 
+  validateCustomFieldsCount(customFields, config, fieldName);
+  validateCustomFieldsEntries(customFields, config, fieldName);
+}
+
+/**
+ * Validates the count of custom fields
+ */
+function validateCustomFieldsCount(
+  customFields: Record<string, any>,
+  config: CustomFieldsConfig,
+  fieldName: string
+): void {
   const fieldKeys = Object.keys(customFields);
   
-  // Validate maximum number of fields
   if (fieldKeys.length > config.maxFields) {
     throw new Error(
       `${fieldName} cannot have more than ${config.maxFields} field${config.maxFields !== 1 ? 's' : ''}`
     );
   }
+}
 
-  // Validate each field
+/**
+ * Validates each custom field entry
+ */
+function validateCustomFieldsEntries(
+  customFields: Record<string, any>,
+  config: CustomFieldsConfig,
+  fieldName: string
+): void {
   for (const [key, value] of Object.entries(customFields)) {
-    // Validate field key length
-    if (key.length > config.maxKeyLength) {
+    validateCustomFieldKey(key, config, fieldName);
+    validateCustomFieldValue(key, value, config, fieldName);
+  }
+}
+
+/**
+ * Validates a custom field key
+ */
+function validateCustomFieldKey(
+  key: string,
+  config: CustomFieldsConfig,
+  fieldName: string
+): void {
+  // Validate field key length
+  if (key.length > config.maxKeyLength) {
+    throw new Error(
+      `${fieldName} key "${key}" exceeds maximum length of ${config.maxKeyLength} characters`
+    );
+  }
+
+  // Validate field key pattern
+  if (config.allowedKeyPattern && !config.allowedKeyPattern.test(key)) {
+    throw new Error(
+      `${fieldName} key "${key}" does not match allowed pattern`
+    );
+  }
+}
+
+/**
+ * Validates a custom field value
+ */
+function validateCustomFieldValue(
+  key: string,
+  value: any,
+  config: CustomFieldsConfig,
+  fieldName: string
+): void {
+  // Validate field value type
+  if (config.allowedValueTypes) {
+    const valueType = typeof value;
+    if (!config.allowedValueTypes.includes(valueType as any)) {
       throw new Error(
-        `${fieldName} key "${key}" exceeds maximum length of ${config.maxKeyLength} characters`
+        `${fieldName} value for "${key}" must be one of: ${config.allowedValueTypes.join(', ')}`
       );
     }
+  }
 
-    // Validate field key pattern
-    if (config.allowedKeyPattern && !config.allowedKeyPattern.test(key)) {
-      throw new Error(
-        `${fieldName} key "${key}" does not match allowed pattern`
-      );
-    }
-
-    // Validate field value type
-    if (config.allowedValueTypes) {
-      const valueType = typeof value;
-      if (!config.allowedValueTypes.includes(valueType as any)) {
-        throw new Error(
-          `${fieldName} value for "${key}" must be one of: ${config.allowedValueTypes.join(', ')}`
-        );
-      }
-    }
-
-    // Validate field value length (for strings)
-    if (typeof value === 'string' && value.length > config.maxValueLength) {
-      throw new Error(
-        `${fieldName} value for "${key}" exceeds maximum length of ${config.maxValueLength} characters`
-      );
-    }
+  // Validate field value length (for strings)
+  if (typeof value === 'string' && value.length > config.maxValueLength) {
+    throw new Error(
+      `${fieldName} value for "${key}" exceeds maximum length of ${config.maxValueLength} characters`
+    );
   }
 }
 
@@ -116,41 +157,99 @@ export function validateTags(
     return; // Optional field
   }
 
-  // Validate maximum number of tags
+  validateTagsCount(tags, config, fieldName);
+  
+  const processedTags = processTags(tags, config);
+  validateTagsContent(processedTags, config, fieldName);
+  validateTagsDuplicates(processedTags, config, fieldName);
+}
+
+/**
+ * Validates the count of tags
+ */
+function validateTagsCount(
+  tags: string[],
+  config: TagsConfig,
+  fieldName: string
+): void {
   if (tags.length > config.maxTags) {
     throw new Error(
       `${fieldName} cannot have more than ${config.maxTags} tag${config.maxTags !== 1 ? 's' : ''}`
     );
   }
+}
 
-  // Process tags (trim if configured)
-  const processedTags = config.trimWhitespace 
+/**
+ * Processes tags (trim if configured)
+ */
+function processTags(tags: string[], config: TagsConfig): string[] {
+  return config.trimWhitespace 
     ? tags.map(tag => tag.trim())
     : tags;
+}
 
-  // Validate each tag
+/**
+ * Validates the content of each tag
+ */
+function validateTagsContent(
+  processedTags: string[],
+  config: TagsConfig,
+  fieldName: string
+): void {
   for (const tag of processedTags) {
-    // Validate tag length
-    if (tag.length > config.maxTagLength) {
-      throw new Error(
-        `${fieldName} tag "${tag}" exceeds maximum length of ${config.maxTagLength} characters`
-      );
-    }
-
-    // Validate tag is not empty
-    if (tag.length === 0) {
-      throw new Error(`${fieldName} cannot contain empty tags`);
-    }
-
-    // Validate tag pattern
-    if (config.allowedTagPattern && !config.allowedTagPattern.test(tag)) {
-      throw new Error(
-        `${fieldName} tag "${tag}" does not match allowed pattern`
-      );
-    }
+    validateTagLength(tag, config, fieldName);
+    validateTagNotEmpty(tag, fieldName);
+    validateTagPattern(tag, config, fieldName);
   }
+}
 
-  // Validate no duplicates (if configured)
+/**
+ * Validates tag length
+ */
+function validateTagLength(
+  tag: string,
+  config: TagsConfig,
+  fieldName: string
+): void {
+  if (tag.length > config.maxTagLength) {
+    throw new Error(
+      `${fieldName} tag "${tag}" exceeds maximum length of ${config.maxTagLength} characters`
+    );
+  }
+}
+
+/**
+ * Validates tag is not empty
+ */
+function validateTagNotEmpty(tag: string, fieldName: string): void {
+  if (tag.length === 0) {
+    throw new Error(`${fieldName} cannot contain empty tags`);
+  }
+}
+
+/**
+ * Validates tag pattern
+ */
+function validateTagPattern(
+  tag: string,
+  config: TagsConfig,
+  fieldName: string
+): void {
+  if (config.allowedTagPattern && !config.allowedTagPattern.test(tag)) {
+    throw new Error(
+      `${fieldName} tag "${tag}" does not match allowed pattern`
+    );
+  }
+}
+
+/**
+ * Validates no duplicates (if configured)
+ */
+function validateTagsDuplicates(
+  processedTags: string[],
+  config: TagsConfig,
+  fieldName: string
+): void {
   if (!config.allowDuplicates) {
     const normalizedTags = processedTags.map(tag => tag.toLowerCase());
     const uniqueTags = new Set(normalizedTags);

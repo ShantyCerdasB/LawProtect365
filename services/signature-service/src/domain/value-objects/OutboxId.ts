@@ -5,8 +5,7 @@
  * for outbox records, extending the base Identifier class for consistency.
  */
 
-import { Identifier, BadRequestError } from '@lawprotect/shared-ts';
-import { isUuidV4 } from '@lawprotect/shared-ts';
+import { Identifier, BadRequestError, isUuidV4 } from '@lawprotect/shared-ts';
 
 /**
  * OutboxId value object

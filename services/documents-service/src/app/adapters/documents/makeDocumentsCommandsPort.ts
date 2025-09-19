@@ -22,8 +22,7 @@ import type {
 } from "../../ports/documents/DocumentsCommandsPort";
 import type { DocumentLock } from "@lawprotect/shared-ts";
 import type { DocumentsRepository } from "@/domain/contracts/repositories/documents/DocumentsRepository";
-import { documentNotFound, envelopeNotFound, badRequest, ForbiddenError } from "@/shared/errors";
-import { ErrorCodes } from "@/shared/errors";
+import { documentNotFound, envelopeNotFound, badRequest, ForbiddenError, ErrorCodes } from "@/shared/errors";
 import { nowIso } from "@lawprotect/shared-ts";
 import { 
   assertDocumentMutable, 

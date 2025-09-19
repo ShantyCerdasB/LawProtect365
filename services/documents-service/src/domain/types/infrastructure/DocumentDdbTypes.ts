@@ -100,8 +100,8 @@ export const toDocumentItem = (src: Document): DdbDocumentItem => {
     sk: documentSk(src.documentId),
     type: DOCUMENT_ENTITY,
 
-    documentId: src.documentId as DocumentId,
-    envelopeId: src.envelopeId as EnvelopeId,
+    documentId: src.documentId,
+    envelopeId: src.envelopeId,
 
     name: src.name,
     status: src.status,

@@ -33,13 +33,70 @@ export class DocumentAccessService {
   }): Promise<{ document: any; signer: any; envelope: any }> {
     const { invitationToken, requestedTtlSeconds, securityContext } = params;
 
-    // 1) Validate token
-    const tokenValidation = await this.invitationTokenService.validateInvitationToken(invitationToken);
-    const envelopeId = tokenValidation.getEnvelopeId();
-    const signerId = tokenValidation.getSignerId();
+    // 1) Validate token and get IDs
+    const { envelopeId, signerId } = await this.validateInvitationToken(invitationToken);
 
-    // 2) Load envelope to infer correct S3 key and metadata
-    const safeContext = {
+    // 2) Load envelope with fallback
+    const envelope = await this.loadEnvelopeWithFallback(envelopeId, securityContext);
+
+    // 3) Resolve S3 key based on envelope status
+    const s3Key = this.resolveS3Key(envelope, envelopeId);
+
+    // 4) Compute TTL within bounds
+    const ttl = this.computeTtl(requestedTtlSeconds);
+
+    // 5) Generate presigned URL and fetch metadata
+    const { viewUrl, documentInfo } = await this.generateViewUrlAndMetadata(s3Key, ttl);
+
+    // 6) Mark token usage and load signer
+    const signer = await this.markTokenAndLoadSigner(invitationToken, signerId);
+
+    // 7) Record audit events
+    await this.recordAuditEvents(envelopeId, signerId, signer, s3Key, documentInfo, ttl, securityContext);
+
+    return {
+      document: { viewUrl, ...documentInfo },
+      signer,
+      envelope
+    };
+  }
+
+  /**
+   * Validates invitation token and extracts IDs
+   */
+  private async validateInvitationToken(invitationToken: string) {
+    const tokenValidation = await this.invitationTokenService.validateInvitationToken(invitationToken);
+    return {
+      envelopeId: tokenValidation.getEnvelopeId(),
+      signerId: tokenValidation.getSignerId(),
+      tokenValidation
+    };
+  }
+
+  /**
+   * Loads envelope with fallback for permission issues
+   */
+  private async loadEnvelopeWithFallback(envelopeId: any, securityContext: any) {
+    const safeContext = this.buildSafeContext(securityContext);
+    
+    try {
+      return await this.envelopeService.getEnvelope(envelopeId, 'external-user', safeContext);
+    } catch (err) {
+      // Fallback to direct repository access
+      const repo = (this.envelopeService as any)?.envelopeRepository;
+      if (repo?.getById) {
+        return await repo.getById(envelopeId);
+      } else {
+        throw err;
+      }
+    }
+  }
+
+  /**
+   * Builds safe context for external users
+   */
+  private buildSafeContext(securityContext: any) {
+    return {
       userId: (securityContext && securityContext.userId) ? securityContext.userId : 'external-user',
       accessType: 'INVITATION',
       permission: 'PARTICIPANT',
@@ -47,56 +104,109 @@ export class DocumentAccessService {
       userAgent: securityContext?.userAgent,
       timestamp: new Date()
     } as any;
-    // External users viewing via invitation should be allowed to READ; if strict READ denies, fall back to raw fetch
-    let envelope;
-    try {
-      envelope = await this.envelopeService.getEnvelope(envelopeId, 'external-user', safeContext);
-    } catch (err) {
-      // If permission denied during READ, still allow view link generation for invitation tokens
-      // by fetching directly from repository path exposed via service internals
-      const repo = (this.envelopeService as any)?.envelopeRepository;
-      if (repo?.getById) {
-        envelope = await repo.getById(envelopeId);
-      } else {
-        throw err;
-      }
-    }
-    const meta: any = (envelope as any)?.getMetadata?.() || {};
+  }
 
-    // Prefer explicit metadata keys; fallback to conventional keys used in tests
+  /**
+   * Resolves the appropriate S3 key based on envelope status
+   */
+  private resolveS3Key(envelope: any, envelopeId: any): string {
+    const meta: any = (envelope as any)?.getMetadata?.() || {};
     const isCompleted = envelope.getStatus && envelope.getStatus() === 'COMPLETED';
-    const signedKey = typeof meta.signedS3Key === 'string' && meta.signedS3Key.length > 0
+    
+    if (isCompleted) {
+      return this.getSignedS3Key(meta, envelopeId);
+    } else {
+      return this.getFlattenedS3Key(meta, envelope);
+    }
+  }
+
+  /**
+   * Gets signed S3 key
+   */
+  private getSignedS3Key(meta: any, envelopeId: any): string {
+    return typeof meta.signedS3Key === 'string' && meta.signedS3Key.length > 0
       ? meta.signedS3Key
       : `envelopes/${envelopeId.getValue()}/signed.pdf`;
-    const flattenedKey = typeof meta.flattenedS3Key === 'string' && meta.flattenedS3Key.length > 0
+  }
+
+  /**
+   * Gets flattened S3 key
+   */
+  private getFlattenedS3Key(meta: any, envelope: any): string {
+    return typeof meta.flattenedS3Key === 'string' && meta.flattenedS3Key.length > 0
       ? meta.flattenedS3Key
       : `envelopes/${(envelope as any)?.getDocumentId?.() || meta.documentId || ''}/flattened.pdf`;
+  }
 
-    const s3Key = isCompleted ? signedKey : flattenedKey;
-
-    // 3) Compute TTL within bounds
+  /**
+   * Computes TTL within bounds
+   */
+  private computeTtl(requestedTtlSeconds?: number): number {
     const defaultTtl = this.config.s3.documentViewTtlSeconds;
     const maxTtl = this.config.s3.maxPresignTtlSeconds || defaultTtl;
-    const ttl = typeof requestedTtlSeconds === 'number' && requestedTtlSeconds > 0
+    
+    return typeof requestedTtlSeconds === 'number' && requestedTtlSeconds > 0
       ? Math.min(requestedTtlSeconds, maxTtl)
       : defaultTtl;
+  }
 
-    // 4) Generate presigned URL and fetch basic metadata
-    const viewUrl = await this.s3Service.generatePresignedDownloadUrl({ s3Key, expiresIn: ttl, contentType: 'application/pdf' });
+  /**
+   * Generates view URL and fetches document metadata
+   */
+  private async generateViewUrlAndMetadata(s3Key: string, ttl: number) {
+    const viewUrl = await this.s3Service.generatePresignedDownloadUrl({ 
+      s3Key, 
+      expiresIn: ttl, 
+      contentType: 'application/pdf' 
+    });
     const documentInfo = await this.s3Service.getDocumentInfo(s3Key);
+    
+    return { viewUrl, documentInfo };
+  }
 
-    // 5) Mark token usage and load signer
+  /**
+   * Marks token as used and loads signer
+   */
+  private async markTokenAndLoadSigner(invitationToken: string, signerId: any) {
     await this.invitationTokenService.markTokenAsUsed(invitationToken, 'external-user');
-    const signer = await this.signerService.getSigner(new SignerId(signerId.getValue()));
+    return await this.signerService.getSigner(new SignerId(signerId.getValue()));
+  }
 
-    // 6) Audit document access via invitation (ensure ip, ua, country)
+  /**
+   * Records audit events for document access
+   */
+  private async recordAuditEvents(
+    envelopeId: any,
+    signerId: any,
+    signer: any,
+    s3Key: string,
+    documentInfo: any,
+    ttl: number,
+    securityContext: any
+  ) {
+    await this.recordDocumentAccessAudit(envelopeId, signerId, signer, s3Key, documentInfo, ttl, securityContext);
+    await this.recordLinkSharedAudit(envelopeId, signerId, securityContext);
+  }
+
+  /**
+   * Records document access audit event
+   */
+  private async recordDocumentAccessAudit(
+    envelopeId: any,
+    signerId: any,
+    signer: any,
+    s3Key: string,
+    documentInfo: any,
+    ttl: number,
+    securityContext: any
+  ) {
     try {
       await this.auditService.createEvent({
         type: AuditEventType.DOCUMENT_ACCESSED,
         envelopeId: envelopeId.getValue(),
         signerId: signerId.getValue(),
-        userId: safeContext.userId,
-        userEmail: signer?.getEmail().getValue?.() || tokenValidation.getMetadata()?.email || 'unknown',
+        userId: 'external-user',
+        userEmail: signer?.getEmail().getValue?.() || 'unknown',
         ipAddress: securityContext?.ipAddress,
         userAgent: securityContext?.userAgent,
         country: securityContext?.country,
@@ -106,14 +216,20 @@ export class DocumentAccessService {
           filename: documentInfo.filename,
           contentType: documentInfo.contentType,
           size: documentInfo.size,
-          accessType: safeContext.accessType,
+          accessType: 'INVITATION',
           expiresAt: new Date(Date.now() + ttl * 1000).toISOString(),
         }
       });
-    } catch {}
+    } catch {
+      // Ignore audit failures
+    }
+  }
 
-    // 7) Audit LINK_SHARED if the caller is authenticated (owner/admin) initiating share
-    if (securityContext?.userId && (securityContext?.accessType === 'DIRECT' || securityContext?.permission === 'OWNER' || securityContext?.permission === 'ADMIN')) {
+  /**
+   * Records link shared audit event if applicable
+   */
+  private async recordLinkSharedAudit(envelopeId: any, _signerId: any, securityContext: any) {
+    if (this.shouldRecordLinkSharedAudit(securityContext)) {
       try {
         await this.auditService.createEvent({
           type: AuditEventType.LINK_SHARED,
@@ -121,40 +237,24 @@ export class DocumentAccessService {
           userId: securityContext.userId,
           description: 'Share link generated for external viewing',
           metadata: {
-            ttlSeconds: ttl,
             ipAddress: securityContext?.ipAddress,
             userAgent: securityContext?.userAgent
           }
         });
       } catch {
-        // do not fail main flow if auditing link share fails
+        // Ignore audit failures
       }
     }
+  }
 
-    return {
-      document: {
-        id: envelopeId.getValue(),
-        envelopeId: envelopeId.getValue(),
-        signerId: signerId.getValue(),
-        viewUrl,
-        expiresAt: new Date(Date.now() + ttl * 1000).toISOString(),
-        filename: documentInfo.filename,
-        contentType: documentInfo.contentType,
-        size: documentInfo.size
-      },
-      signer: {
-        id: signerId.getValue(),
-        email: signer?.getEmail().getValue?.() || tokenValidation.getMetadata()?.email || 'unknown',
-        fullName: signer?.getFullName?.() || tokenValidation.getMetadata()?.fullName || 'unknown',
-        status: signer?.getStatus?.() || 'PENDING'
-      },
-      envelope: {
-        id: envelopeId.getValue(),
-        title: envelope.getMetadata().title || 'Document',
-        status: envelope.getStatus(),
-        signingOrder: envelope.getSigningOrder().getType()
-      }
-    };
+  /**
+   * Determines if link shared audit should be recorded
+   */
+  private shouldRecordLinkSharedAudit(securityContext: any): boolean {
+    return !!(securityContext?.userId && 
+      (securityContext?.accessType === 'DIRECT' || 
+       securityContext?.permission === 'OWNER' || 
+       securityContext?.permission === 'ADMIN'));
   }
 }
 

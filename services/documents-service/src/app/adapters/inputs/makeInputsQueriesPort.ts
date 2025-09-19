@@ -69,7 +69,7 @@ export const makeInputsQueriesPort = (
       position: {
         x: input.position.x,
         y: input.position.y},
-      assignedPartyId: input.partyId as PartyId | undefined,
+      assignedPartyId: input.partyId,
       required: input.required,
       value: input.value,
       createdAt: input.createdAt,
@@ -125,7 +125,7 @@ export const makeInputsQueriesPort = (
         position: {
           x: input.position.x,
           y: input.position.y},
-        assignedPartyId: input.partyId as PartyId | undefined,
+        assignedPartyId: input.partyId,
         required: input.required,
         value: input.value,
         createdAt: input.createdAt,

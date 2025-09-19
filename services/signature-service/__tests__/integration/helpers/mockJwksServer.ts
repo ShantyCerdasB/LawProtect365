@@ -5,7 +5,7 @@
  * This server provides realistic JWT tokens that match Cognito's format and behavior.
  */
 
-import { generateKeyPairSync } from 'crypto';
+import { generateKeyPairSync, randomBytes } from 'crypto';
 import { SignJWT, importPKCS8, exportJWK, importSPKI } from 'jose';
 import express from 'express';
 
@@ -233,7 +233,7 @@ export const generateRS256Token = async (
     'cognito:preferred_role': payload.roles?.[0] || 'customer',
     client_id: 'test-client-id',
     username: payload.sub,
-    jti: `test-jti-${now}-${Math.random().toString(36).substr(2, 9)}` // Unique JWT ID
+    jti: `test-jti-${now}-${randomBytes(6).toString('hex')}` // Unique JWT ID
   };
 
   console.log('🔍 [TOKEN DEBUG] Generating RS256 token with payload:', {

@@ -11,8 +11,10 @@ import {
   signerAlreadySigned,
   signerAlreadyDeclined
 } from '@/signature-errors';
-import { validateIpAddressAndUserAgent } from '@lawprotect/shared-ts';
-import { SignerOperation } from '@lawprotect/shared-ts';
+import { 
+  validateIpAddressAndUserAgent,
+  SignerOperation 
+} from '@lawprotect/shared-ts';
 
 /**
  * SignerValidator class provides centralized signer validation utilities

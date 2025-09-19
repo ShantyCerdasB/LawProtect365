@@ -136,7 +136,7 @@ export async function validateEnvelopeSecurity(
     securityConfig,
     {
       // Provide a no-op rate limit store if none supplied to avoid false negatives in tests
-      rateLimitStore: (dependencies.rateLimitStore as any) || {
+      rateLimitStore: dependencies.rateLimitStore || {
         incrementAndCheck: async (_key: string, window: any) => ({ currentUsage: 0, maxRequests: window.maxRequests })
       },
       accessToken: dependencies.accessToken,

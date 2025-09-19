@@ -6,7 +6,13 @@
  * These rules complement the entity validations and provide higher-level business constraints.
  */
 
-import { SignerStatus, isValidSignerStatusTransition, getValidNextSignerStatuses, SignerOperation } from '@lawprotect/shared-ts';
+import { 
+  SignerStatus, 
+  isValidSignerStatusTransition, 
+  getValidNextSignerStatuses, 
+  SignerOperation,
+  validateStringField
+} from '@lawprotect/shared-ts';
 import { Signer } from '@/domain/entities/Signer';
 import { Email } from '@/domain/value-objects/Email';
 import { 
@@ -17,9 +23,6 @@ import {
   signerAlreadyDeclined
 } from '@/signature-errors';
 import type { SignatureServiceConfig } from '@/config';
-import { 
-  validateStringField
-} from '@lawprotect/shared-ts';
 import { SignerValidator } from '@/domain/validators/SignerValidator';
 
 /**

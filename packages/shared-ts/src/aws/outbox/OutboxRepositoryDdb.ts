@@ -179,7 +179,7 @@ export class OutboxRepositoryDdb implements OutboxPort {
         ScanIndexForward: true, // oldest first
       });
 
-      const items = (out.Items ?? []) as Array<Record<string, unknown>>;
+      const items = out.Items ?? [];
       return items.map((raw) => mapDtoToRecord(raw as unknown as OutboxItemDTO));
     } catch (err) {
       throw mapAwsError(err, "OutboxRepositoryDdb.pullPending");

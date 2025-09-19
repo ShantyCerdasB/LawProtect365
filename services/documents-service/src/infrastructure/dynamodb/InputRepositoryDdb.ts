@@ -159,7 +159,7 @@ export class InputRepositoryDdb implements InputsRepository {
       const res = await this.ddb.query(queryParams);
 
       const items = (res.Items ?? []).map((item) => 
-        inputItemMapper.fromDTO(item as any)
+        inputItemMapper.fromDTO(item)
       );
 
       return {

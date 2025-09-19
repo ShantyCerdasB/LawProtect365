@@ -6,8 +6,29 @@
  * generation, authentication helpers, and request context creation.
  */
 
-import { createHash, randomUUID } from 'crypto';
+import { createHash, randomUUID, randomBytes } from 'crypto';
 import { generateRS256Token } from './mockJwksServer';
+
+/**
+ * Generate a cryptographically secure random string
+ * 
+ * @param length - Length of the random string to generate
+ * @returns Cryptographically secure random string
+ * @description Creates a random string using crypto.randomBytes for security.
+ * This is cryptographically secure unlike Math.random() which is not suitable
+ * for security-sensitive applications.
+ */
+export const secureRandomString = (length: number): string => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  const bytes = randomBytes(length);
+  
+  for (let i = 0; i < length; i++) {
+    result += chars[bytes[i] % chars.length];
+  }
+  
+  return result;
+};
 
 /**
  * Generate a simple test PDF buffer
@@ -102,7 +123,7 @@ export const calculatePdfDigest = (
  * @description Creates a unique tenant ID using timestamp and random string for test isolation.
  */
 export const generateTestTenantId = (): string => {
-  return `tenant-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  return `tenant-${Date.now()}-${secureRandomString(9)}`;
 };
 
 /**
@@ -144,8 +165,8 @@ export const generateTestDocumentId = (): string => {
  */
 export const generateTestIpAddress = (): string => {
   // Generate random IP in 192.168.x.x range (private network)
-  const thirdOctet = Math.floor(Math.random() * 256);
-  const fourthOctet = Math.floor(Math.random() * 256);
+  const thirdOctet = randomBytes(1)[0];
+  const fourthOctet = randomBytes(1)[0];
   return `192.168.${thirdOctet}.${fourthOctet}`;
 };
 
@@ -298,12 +319,7 @@ export const wait = (ms: number): Promise<void> => {
  * @description Creates a random string using alphanumeric characters for test data generation.
  */
 export const generateRandomString = (length: number): string => {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let result = '';
-  for (let i = 0; i < length; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
+  return secureRandomString(length);
 };
 
 /**
@@ -324,7 +340,10 @@ export const generateTestEmail = (): string => {
  * @description Generates a random 6-digit numeric OTP code for testing authentication flows.
  */
 export const generateTestOtpCode = (): string => {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  // Generate secure 6-digit OTP code
+  const randomValue = randomBytes(4).readUInt32BE(0);
+  const otp = 100000 + (randomValue % 900000);
+  return otp.toString();
 };
 
 /**

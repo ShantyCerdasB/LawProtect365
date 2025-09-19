@@ -449,65 +449,156 @@ export class AuditRepository {
     try {
       requireQuery(this.ddb);
       
-      const decodedCursor = cursor ? decodeCursor<AuditListCursorPayload>(cursor) : undefined;
-      const afterTimestamp = decodedCursor?.timestamp;
-
-      const pkAttr = indexName === 'gsi1' ? 'gsi1pk' : indexName === 'gsi2' ? 'gsi2pk' : indexName === 'gsi3' ? 'gsi3pk' : 'gsi4pk';
-      const skAttr = indexName === 'gsi1' ? 'gsi1sk' : indexName === 'gsi2' ? 'gsi2sk' : indexName === 'gsi3' ? 'gsi3sk' : 'gsi4sk';
-
-      const exprNames: Record<string, string> = { '#gsiPk': pkAttr };
-      if (afterTimestamp) exprNames['#gsiSk'] = skAttr;
-
-      const exprVals: Record<string, any> = { ':gsiPk': gsiPk } as any;
-      if (afterTimestamp) exprVals[':afterTimestamp'] = afterTimestamp;
-
-      const keyExpr = '#gsiPk = :gsiPk' + (afterTimestamp ? ' AND #gsiSk > :afterTimestamp' : '');
-
-      // eslint-disable-next-line no-console
-      console.log('DDB Audit.listByGsi params', { indexName, keyExpr, names: exprNames, hasAfter: Boolean(afterTimestamp) });
-
-      const res = await this.ddb.query({
-        TableName: this.tableName,
-        IndexName: indexName,
-        KeyConditionExpression: keyExpr,
-        ExpressionAttributeNames: exprNames,
-        ExpressionAttributeValues: exprVals,
-        Limit: limit + 1,
-        ScanIndexForward: sortOrder === DdbSortOrder.ASC
-      });
-
-      // eslint-disable-next-line no-console
-      console.log('DDB Audit.listByGsi raw', {
-        indexName,
-        count: (res.Items || []).length,
-        firstItemKeys: res.Items?.[0] ? Object.keys(res.Items[0] as any) : []
-      });
-
-      const items = (res.Items || []).slice(0, limit);
-      const hasMore = (res.Items || []).length > limit;
-
-      const auditEvents = items
-        .filter(isAuditDdbItem)
-        .map(item => auditItemMapper.fromDTO(item));
-
-      const lastItem = items[items.length - 1];
-      const nextCursor = hasMore && lastItem && isAuditDdbItem(lastItem)
-        ? encodeCursor({
-            auditEventId: lastItem.auditEventId,
-            timestamp: lastItem.timestamp,
-            createdAt: lastItem.createdAt,
-            id: lastItem.auditEventId
-          } as any)
-        : undefined;
-
-      return {
-        items: auditEvents,
-        nextCursor,
-        hasNext: !!nextCursor
-      };
+      const queryParams = this.buildQueryParams(indexName, gsiPk, cursor, limit, sortOrder);
+      const res = await this.executeQuery(queryParams);
+      return this.processQueryResults(res, limit);
     } catch (err: any) {
       throw mapAwsError(err, 'AuditRepository.listByGsi');
     }
+  }
+
+  /**
+   * Builds query parameters for DynamoDB query
+   */
+  private buildQueryParams(
+    indexName: string,
+    gsiPk: string,
+    cursor: string | undefined,
+    limit: number,
+    sortOrder: DdbSortOrder
+  ) {
+    const decodedCursor = cursor ? decodeCursor<AuditListCursorPayload>(cursor) : undefined;
+    const afterTimestamp = decodedCursor?.timestamp;
+
+    const { pkAttr, skAttr } = this.getGsiAttributes(indexName);
+    const { exprNames, exprVals, keyExpr } = this.buildExpressionAttributes(
+      pkAttr,
+      skAttr,
+      gsiPk,
+      afterTimestamp
+    );
+
+    this.logQueryParams(indexName, keyExpr, exprNames, afterTimestamp);
+
+    return {
+      TableName: this.tableName,
+      IndexName: indexName,
+      KeyConditionExpression: keyExpr,
+      ExpressionAttributeNames: exprNames,
+      ExpressionAttributeValues: exprVals,
+      Limit: limit + 1,
+      ScanIndexForward: sortOrder === DdbSortOrder.ASC
+    };
+  }
+
+  /**
+   * Gets GSI attribute names based on index name
+   */
+  private getGsiAttributes(indexName: string) {
+    const gsiMap = {
+      gsi1: { pkAttr: 'gsi1pk', skAttr: 'gsi1sk' },
+      gsi2: { pkAttr: 'gsi2pk', skAttr: 'gsi2sk' },
+      gsi3: { pkAttr: 'gsi3pk', skAttr: 'gsi3sk' },
+      gsi4: { pkAttr: 'gsi4pk', skAttr: 'gsi4sk' }
+    };
+
+    return gsiMap[indexName as keyof typeof gsiMap] || gsiMap.gsi1;
+  }
+
+  /**
+   * Builds expression attributes for DynamoDB query
+   */
+  private buildExpressionAttributes(
+    pkAttr: string,
+    skAttr: string,
+    gsiPk: string,
+    afterTimestamp?: string
+  ) {
+    const exprNames: Record<string, string> = { '#gsiPk': pkAttr };
+    const exprVals: Record<string, any> = { ':gsiPk': gsiPk };
+
+    let keyExpr = '#gsiPk = :gsiPk';
+
+    if (afterTimestamp) {
+      exprNames['#gsiSk'] = skAttr;
+      exprVals[':afterTimestamp'] = afterTimestamp;
+      keyExpr += ' AND #gsiSk > :afterTimestamp';
+    }
+
+    return { exprNames, exprVals, keyExpr };
+  }
+
+  /**
+   * Logs query parameters for debugging
+   */
+  private logQueryParams(
+    indexName: string,
+    keyExpr: string,
+    exprNames: Record<string, string>,
+    afterTimestamp?: string
+  ) {
+    // eslint-disable-next-line no-console
+    console.log('DDB Audit.listByGsi params', { 
+      indexName, 
+      keyExpr, 
+      names: exprNames, 
+      hasAfter: Boolean(afterTimestamp) 
+    });
+  }
+
+  /**
+   * Executes the DynamoDB query
+   */
+  private async executeQuery(queryParams: any) {
+    requireQuery(this.ddb);
+    const res = await this.ddb.query(queryParams);
+
+    // eslint-disable-next-line no-console
+    console.log('DDB Audit.listByGsi raw', {
+      indexName: queryParams.IndexName,
+      count: (res.Items || []).length,
+      firstItemKeys: res.Items?.[0] ? Object.keys(res.Items[0] as any) : []
+    });
+
+    return res;
+  }
+
+  /**
+   * Processes query results and builds response
+   */
+  private processQueryResults(res: any, limit: number): AuditListResult {
+    const items = (res.Items || []).slice(0, limit);
+    const hasMore = (res.Items || []).length > limit;
+
+    const auditEvents = items
+      .filter(isAuditDdbItem)
+      .map((item: any) => auditItemMapper.fromDTO(item));
+
+    const nextCursor = this.buildNextCursor(items, hasMore);
+
+    return {
+      items: auditEvents,
+      nextCursor,
+      hasNext: !!nextCursor
+    };
+  }
+
+  /**
+   * Builds next cursor for pagination
+   */
+  private buildNextCursor(items: any[], hasMore: boolean): string | undefined {
+    const lastItem = items[items.length - 1];
+    
+    if (!hasMore || !lastItem || !isAuditDdbItem(lastItem)) {
+      return undefined;
+    }
+
+    return encodeCursor({
+      auditEventId: lastItem.auditEventId,
+      timestamp: lastItem.timestamp,
+      createdAt: lastItem.createdAt,
+      id: lastItem.auditEventId
+    } as any);
   }
 
   /**

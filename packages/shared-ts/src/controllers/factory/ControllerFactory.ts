@@ -15,8 +15,7 @@ import { withSecurityContext } from "../../middleware/security/index.js";
 import { validateRequest } from "../../validation/requests.js";
 import { ok, created, noContent } from "../../http/responses.js";
 import { mapError } from "../../errors/mapError.js";
-import type { UserRole } from "../../types/auth.js";
-import type { JwtVerifyOptions } from "../../types/auth.js";
+import type { UserRole, JwtVerifyOptions } from "../../types/auth.js";
 import type { ObservabilityFactories } from "../../http/withObservability.js";
 
 /**

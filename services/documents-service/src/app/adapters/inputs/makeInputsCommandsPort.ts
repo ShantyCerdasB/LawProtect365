@@ -350,7 +350,7 @@ export const makeInputsCommandsPort = (
     async create(command: CreateInputsCommand): Promise<CreateInputsResult> {
       // 🔍 IDEMPOTENCY WRAPPER - PATRÓN REUTILIZABLE
       if (idempotencyRunner) {
-        const idempotencyKey = `create-inputs:${command}:${command.envelopeId}:command.documentId`;
+        const idempotencyKey = `create-inputs:${JSON.stringify(command)}:${command.envelopeId}:${command.documentId}`;
         return await idempotencyRunner.run(idempotencyKey, async () => {
           return await createInternal(command);
         });
@@ -363,7 +363,7 @@ export const makeInputsCommandsPort = (
     async update(command: UpdateInputCommand): Promise<UpdateInputResult> {
       // 🔍 IDEMPOTENCY WRAPPER - PATRÓN REUTILIZABLE
       if (idempotencyRunner) {
-        const idempotencyKey = `update-input:${command}:${command.envelopeId}:command.inputId`;
+        const idempotencyKey = `update-input:${JSON.stringify(command)}:${command.envelopeId}:${command.inputId}`;
         return await idempotencyRunner.run(idempotencyKey, async () => {
           return await updateInternal(command);
         });
@@ -376,7 +376,7 @@ export const makeInputsCommandsPort = (
     async updatePositions(command: UpdateInputPositionsCommand): Promise<UpdateInputPositionsResult> {
       // 🔍 IDEMPOTENCY WRAPPER - PATRÓN REUTILIZABLE
       if (idempotencyRunner) {
-        const idempotencyKey = `update-input-positions:${command}:command.envelopeId`;
+        const idempotencyKey = `update-input-positions:${JSON.stringify(command)}:${command.envelopeId}`;
         return await idempotencyRunner.run(idempotencyKey, async () => {
           return await updatePositionsInternal(command);
         });
@@ -389,7 +389,7 @@ export const makeInputsCommandsPort = (
     async delete(command: DeleteInputCommand): Promise<void> {
       // 🔍 IDEMPOTENCY WRAPPER - PATRÓN REUTILIZABLE
       if (idempotencyRunner) {
-        const idempotencyKey = `delete-input:${command}:${command.envelopeId}:command.inputId`;
+        const idempotencyKey = `delete-input:${JSON.stringify(command)}:${command.envelopeId}:${command.inputId}`;
         return await idempotencyRunner.run(idempotencyKey, async () => {
           return await deleteInternal(command);
         });

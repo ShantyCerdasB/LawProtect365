@@ -320,6 +320,29 @@ export async function validateSecurity(
   },
   options?: SecurityValidationOptions
 ): Promise<SecurityValidationResult> {
+  // Validate basic security checks
+  const basicValidationResult = await validateBasicSecurity(context, config, options);
+  if (!basicValidationResult.isValid) return basicValidationResult;
+  
+  // Validate rate limiting
+  const rateLimitResult = await validateRateLimit(context, operation, config, dependencies.rateLimitStore, options);
+  if (!rateLimitResult.isValid) return rateLimitResult;
+  
+  // Validate advanced security checks
+  const advancedValidationResult = await validateAdvancedSecurity(context, config, dependencies, options);
+  if (!advancedValidationResult.isValid) return advancedValidationResult;
+
+  return { isValid: true };
+}
+
+/**
+ * Validates basic security checks (IP, user agent, geolocation)
+ */
+async function validateBasicSecurity(
+  context: RequestSecurityContext,
+  config: SecurityConfig,
+  options?: SecurityValidationOptions
+): Promise<SecurityValidationResult> {
   // Validate IP address
   if (!options?.skipIPValidation) {
     const ipResult = validateIPAddress(context.ipAddress, config);
@@ -332,16 +355,27 @@ export async function validateSecurity(
     if (!userAgentResult.isValid) return userAgentResult;
   }
   
-  // Validate rate limiting
-  const rateLimitResult = await validateRateLimit(context, operation, config, dependencies.rateLimitStore, options);
-  if (!rateLimitResult.isValid) return rateLimitResult;
-  
   // Validate geolocation
   if (!options?.skipGeolocationValidation) {
     const geolocationResult = validateGeolocation(context, config);
     if (!geolocationResult.isValid) return geolocationResult;
   }
-  
+
+  return { isValid: true };
+}
+
+/**
+ * Validates advanced security checks (device trust, access token, suspicious activity)
+ */
+async function validateAdvancedSecurity(
+  context: RequestSecurityContext,
+  config: SecurityConfig,
+  dependencies: {
+    accessToken?: string;
+    sensitiveOperations?: string[];
+  },
+  options?: SecurityValidationOptions
+): Promise<SecurityValidationResult> {
   // Validate device trust
   if (!options?.skipDeviceTrustValidation) {
     const deviceResult = validateDeviceTrust(context, config, dependencies.sensitiveOperations);

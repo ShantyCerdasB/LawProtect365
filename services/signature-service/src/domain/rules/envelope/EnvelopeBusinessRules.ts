@@ -248,79 +248,123 @@ export function validateEnvelopeStatusForBusinessOperation(
   }
 
   // Additional business-specific validations
-  switch (operation) {
-    case EnvelopeOperation.CREATE:
-      // Can only create in DRAFT status
-      if (currentStatus !== EnvelopeStatus.DRAFT) {
-        throw invalidEnvelopeState('Can only create envelope in DRAFT status');
-      }
-      break;
+  validateOperationSpecificRules(currentStatus, operation);
+}
 
-    case EnvelopeOperation.UPDATE:
-      // Can only update in DRAFT or DECLINED status
-      if (currentStatus !== EnvelopeStatus.DRAFT && currentStatus !== EnvelopeStatus.DECLINED) {
-        throw invalidEnvelopeState('Can only update envelope in DRAFT or DECLINED status');
-      }
-      break;
+/**
+ * Validates operation-specific business rules
+ */
+function validateOperationSpecificRules(
+  currentStatus: EnvelopeStatus,
+  operation: EnvelopeOperation
+): void {
+  const validators = {
+    [EnvelopeOperation.CREATE]: validateCreateOperation,
+    [EnvelopeOperation.UPDATE]: validateUpdateOperation,
+    [EnvelopeOperation.SEND]: validateSendOperation,
+    [EnvelopeOperation.SIGN]: validateSignOperation,
+    [EnvelopeOperation.COMPLETE]: validateCompleteOperation,
+    [EnvelopeOperation.EXPIRE]: validateExpireOperation,
+    [EnvelopeOperation.DECLINE]: validateDeclineOperation,
+    [EnvelopeOperation.CANCEL]: validateCancelOperation,
+    [EnvelopeOperation.ADD_SIGNER]: validateAddSignerOperation,
+    [EnvelopeOperation.REMOVE_SIGNER]: validateRemoveSignerOperation
+  };
 
-    case EnvelopeOperation.SEND:
-      // Can only send from DRAFT status
-      if (currentStatus !== EnvelopeStatus.DRAFT) {
-        throw invalidEnvelopeState('Can only send envelope from DRAFT status');
-      }
-      break;
+  const validator = validators[operation as keyof typeof validators];
+  if (validator) {
+    validator(currentStatus);
+  }
+}
 
-    case EnvelopeOperation.SIGN:
-      // Can sign in SENT, IN_PROGRESS, or READY_FOR_SIGNATURE status
-      if (![EnvelopeStatus.SENT, EnvelopeStatus.IN_PROGRESS, EnvelopeStatus.READY_FOR_SIGNATURE].includes(currentStatus)) {
-        throw invalidEnvelopeState('Can only sign envelope in SENT, IN_PROGRESS, or READY_FOR_SIGNATURE status');
-      }
-      break;
+/**
+ * Validates CREATE operation
+ */
+function validateCreateOperation(currentStatus: EnvelopeStatus): void {
+  if (currentStatus !== EnvelopeStatus.DRAFT) {
+    throw invalidEnvelopeState('Can only create envelope in DRAFT status');
+  }
+}
 
-    case EnvelopeOperation.COMPLETE:
-      // Can only complete if all signers have signed
-      if (currentStatus !== EnvelopeStatus.READY_FOR_SIGNATURE) {
-        throw invalidEnvelopeState('Can only complete envelope when ready for signature');
-      }
-      break;
+/**
+ * Validates UPDATE operation
+ */
+function validateUpdateOperation(currentStatus: EnvelopeStatus): void {
+  if (currentStatus !== EnvelopeStatus.DRAFT && currentStatus !== EnvelopeStatus.DECLINED) {
+    throw invalidEnvelopeState('Can only update envelope in DRAFT or DECLINED status');
+  }
+}
 
-    case EnvelopeOperation.EXPIRE:
-      // Can expire from any status except COMPLETED
-      if (currentStatus === EnvelopeStatus.COMPLETED) {
-        throw invalidEnvelopeState('Cannot expire completed envelope');
-      }
-      break;
+/**
+ * Validates SEND operation
+ */
+function validateSendOperation(currentStatus: EnvelopeStatus): void {
+  if (currentStatus !== EnvelopeStatus.DRAFT) {
+    throw invalidEnvelopeState('Can only send envelope from DRAFT status');
+  }
+}
 
-    case EnvelopeOperation.DECLINE:
-      // Can decline from any status except COMPLETED
-      if (currentStatus === EnvelopeStatus.COMPLETED) {
-        throw invalidEnvelopeState('Cannot decline completed envelope');
-      }
-      break;
+/**
+ * Validates SIGN operation
+ */
+function validateSignOperation(currentStatus: EnvelopeStatus): void {
+  const validStatuses = [EnvelopeStatus.SENT, EnvelopeStatus.IN_PROGRESS, EnvelopeStatus.READY_FOR_SIGNATURE];
+  if (!validStatuses.includes(currentStatus)) {
+    throw invalidEnvelopeState('Can only sign envelope in SENT, IN_PROGRESS, or READY_FOR_SIGNATURE status');
+  }
+}
 
-    case EnvelopeOperation.CANCEL:
-      // Can cancel from any status except COMPLETED
-      if (currentStatus === EnvelopeStatus.COMPLETED) {
-        throw invalidEnvelopeState('Cannot cancel completed envelope');
-      }
-      break;
+/**
+ * Validates COMPLETE operation
+ */
+function validateCompleteOperation(currentStatus: EnvelopeStatus): void {
+  if (currentStatus !== EnvelopeStatus.READY_FOR_SIGNATURE) {
+    throw invalidEnvelopeState('Can only complete envelope when ready for signature');
+  }
+}
 
-    case EnvelopeOperation.ADD_SIGNER:
-      // Can only add signers in DRAFT status
-      if (currentStatus !== EnvelopeStatus.DRAFT) {
-        throw invalidEnvelopeState('Can only add signers to envelope in DRAFT status');
-      }
-      break;
+/**
+ * Validates EXPIRE operation
+ */
+function validateExpireOperation(currentStatus: EnvelopeStatus): void {
+  if (currentStatus === EnvelopeStatus.COMPLETED) {
+    throw invalidEnvelopeState('Cannot expire completed envelope');
+  }
+}
 
-    case EnvelopeOperation.REMOVE_SIGNER:
-      // Can only remove signers in DRAFT status
-      if (currentStatus !== EnvelopeStatus.DRAFT) {
-        throw invalidEnvelopeState('Can only remove signers from envelope in DRAFT status');
-      }
-      break;
+/**
+ * Validates DECLINE operation
+ */
+function validateDeclineOperation(currentStatus: EnvelopeStatus): void {
+  if (currentStatus === EnvelopeStatus.COMPLETED) {
+    throw invalidEnvelopeState('Cannot decline completed envelope');
+  }
+}
 
-    default:
-      throw invalidEnvelopeState(`Unknown operation: ${operation}`);
+/**
+ * Validates CANCEL operation
+ */
+function validateCancelOperation(currentStatus: EnvelopeStatus): void {
+  if (currentStatus === EnvelopeStatus.COMPLETED) {
+    throw invalidEnvelopeState('Cannot cancel completed envelope');
+  }
+}
+
+/**
+ * Validates ADD_SIGNER operation
+ */
+function validateAddSignerOperation(currentStatus: EnvelopeStatus): void {
+  if (currentStatus !== EnvelopeStatus.DRAFT) {
+    throw invalidEnvelopeState('Can only add signers to envelope in DRAFT status');
+  }
+}
+
+/**
+ * Validates REMOVE_SIGNER operation
+ */
+function validateRemoveSignerOperation(currentStatus: EnvelopeStatus): void {
+  if (currentStatus !== EnvelopeStatus.DRAFT) {
+    throw invalidEnvelopeState('Can only remove signers from envelope in DRAFT status');
   }
 }
 

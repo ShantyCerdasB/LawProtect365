@@ -6,17 +6,17 @@
  */
 
 import { Signature } from '@/domain/entities/Signature';
-import { SignatureStatus } from '@lawprotect/shared-ts';
+import { 
+  SignatureStatus,
+  validateSignatureHash,
+  validateSignatureTimestamp,
+  validateIpAddressAndUserAgent
+} from '@lawprotect/shared-ts';
 import { 
   signatureInvalid,
   signatureNotFound,
   signatureFailed
 } from '@/signature-errors';
-import {
-  validateSignatureHash,
-  validateSignatureTimestamp,
-  validateIpAddressAndUserAgent
-} from '@lawprotect/shared-ts';
 
 /**
  * SignatureValidator class provides centralized signature validation utilities

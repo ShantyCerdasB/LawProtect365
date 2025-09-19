@@ -93,6 +93,21 @@ export const updateEnvelopeHandler = ControllerFactory.createCommand({
       const envelopeId = new EnvelopeId(params.envelopeId);
 
       // 1. Update envelope metadata if provided
+      const envelope = await this.updateEnvelopeMetadata(envelopeId, params);
+
+      // 2. Handle signer updates if provided
+      const updatedSigners = await this.updateSigners(envelopeId, params);
+
+      return {
+        envelope,
+        signers: updatedSigners
+      };
+    }
+
+    /**
+     * Updates envelope metadata if provided
+     */
+    private async updateEnvelopeMetadata(envelopeId: EnvelopeId, params: any): Promise<any> {
       let envelope = await this.envelopeService.getEnvelope(
         envelopeId,
         params.userId,
@@ -108,60 +123,124 @@ export const updateEnvelopeHandler = ControllerFactory.createCommand({
         );
       }
 
-      // 2. Handle signer updates if provided
+      return envelope;
+    }
+
+    /**
+     * Updates signers based on provided signer updates
+     */
+    private async updateSigners(envelopeId: EnvelopeId, params: any): Promise<any[]> {
       let updatedSigners = await this.signerService.getSignersByEnvelope(envelopeId);
       
       if (params.signerUpdates && params.signerUpdates.length > 0) {
         for (const signerUpdate of params.signerUpdates) {
-          switch (signerUpdate.action) {
-            case 'add':
-              if (signerUpdate.signerData) {
-                const newSigner = await this.signerService.addSigner(
-                  envelopeId,
-                  signerUpdate.signerData,
-                  params.securityContext
-                );
-                updatedSigners.push(newSigner);
-                // Generate invitation token for the newly added external signer
-                await this.invitationTokenService.generateInvitationTokensForSigners(
-                  [newSigner as any],
-                  envelopeId,
-                  params.securityContext
-                );
-              }
-              break;
-            case 'remove':
-              if (signerUpdate.signerId) {
-                const { SignerId } = await import('../../domain/value-objects/SignerId');
-                await this.signerService.removeSigner(
-                  new SignerId(signerUpdate.signerId),
-                  params.securityContext
-                );
-                updatedSigners = updatedSigners.filter(s => s.getId().getValue() !== signerUpdate.signerId);
-              }
-              break;
-            case 'update':
-              if (signerUpdate.signerId && signerUpdate.signerData) {
-                const { SignerId } = await import('../../domain/value-objects/SignerId');
-                const updatedSigner = await this.signerService.updateSigner(
-                  new SignerId(signerUpdate.signerId),
-                  signerUpdate.signerData,
-                  params.securityContext
-                );
-                const index = updatedSigners.findIndex(s => s.getId().getValue() === signerUpdate.signerId);
-                if (index !== -1) {
-                  updatedSigners[index] = updatedSigner;
-                }
-              }
-              break;
-          }
+          updatedSigners = await this.processSignerUpdate(updatedSigners, signerUpdate, envelopeId, params);
         }
       }
 
-      return {
-        envelope,
-        signers: updatedSigners
+      return updatedSigners;
+    }
+
+    /**
+     * Processes a single signer update
+     */
+    private async processSignerUpdate(
+      updatedSigners: any[],
+      signerUpdate: any,
+      envelopeId: EnvelopeId,
+      params: any
+    ): Promise<any[]> {
+      const actionHandlers = {
+        add: () => this.handleAddSigner(updatedSigners, signerUpdate, envelopeId, params),
+        remove: () => this.handleRemoveSigner(updatedSigners, signerUpdate, params),
+        update: () => this.handleUpdateSigner(updatedSigners, signerUpdate, params)
       };
+
+      const handler = actionHandlers[signerUpdate.action as keyof typeof actionHandlers];
+      if (handler) {
+        return await handler();
+      }
+
+      return updatedSigners;
+    }
+
+    /**
+     * Handles adding a new signer
+     */
+    private async handleAddSigner(
+      updatedSigners: any[],
+      signerUpdate: any,
+      envelopeId: EnvelopeId,
+      params: any
+    ): Promise<any[]> {
+      if (!signerUpdate.signerData) {
+        return updatedSigners;
+      }
+
+      const newSigner = await this.signerService.addSigner(
+        envelopeId,
+        signerUpdate.signerData,
+        params.securityContext
+      );
+      
+      updatedSigners.push(newSigner);
+      
+      // Generate invitation token for the newly added external signer
+      await this.invitationTokenService.generateInvitationTokensForSigners(
+        [newSigner as any],
+        envelopeId,
+        params.securityContext
+      );
+
+      return updatedSigners;
+    }
+
+    /**
+     * Handles removing a signer
+     */
+    private async handleRemoveSigner(
+      updatedSigners: any[],
+      signerUpdate: any,
+      params: any
+    ): Promise<any[]> {
+      if (!signerUpdate.signerId) {
+        return updatedSigners;
+      }
+
+      const { SignerId } = await import('../../domain/value-objects/SignerId');
+      await this.signerService.removeSigner(
+        new SignerId(signerUpdate.signerId),
+        params.securityContext
+      );
+
+      return updatedSigners.filter(s => s.getId().getValue() !== signerUpdate.signerId);
+    }
+
+    /**
+     * Handles updating an existing signer
+     */
+    private async handleUpdateSigner(
+      updatedSigners: any[],
+      signerUpdate: any,
+      params: any
+    ): Promise<any[]> {
+      if (!signerUpdate.signerId || !signerUpdate.signerData) {
+        return updatedSigners;
+      }
+
+      const { SignerId } = await import('../../domain/value-objects/SignerId');
+      const updatedSigner = await this.signerService.updateSigner(
+        new SignerId(signerUpdate.signerId),
+        signerUpdate.signerData,
+        params.securityContext
+      );
+
+      const index = updatedSigners.findIndex(s => s.getId().getValue() === signerUpdate.signerId);
+      if (index !== -1) {
+        updatedSigners[index] = updatedSigner;
+      }
+
+      return updatedSigners;
     }
   },
   
