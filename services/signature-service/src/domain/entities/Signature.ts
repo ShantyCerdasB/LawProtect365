@@ -10,7 +10,8 @@ import {
   signatureFailed, 
   signatureAlreadyExists
 } from '../../signature-errors';
-import { validateSignatureHash, validateSignatureTimestamp, SignatureStatus } from '@lawprotect/shared-ts';
+import { SignatureStatus } from '@/domain/enums/SignatureStatus';
+import { validateSignatureHash, validateSignatureTimestamp } from '@lawprotect/shared-ts';
 
 /**
  * Signature entity representing a cryptographic signature on a document

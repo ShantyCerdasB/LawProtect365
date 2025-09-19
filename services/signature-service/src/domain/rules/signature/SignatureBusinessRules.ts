@@ -7,7 +7,7 @@
  */
 
 import { Signature } from '@/domain/entities/Signature';
-import { SignatureStatus } from '@lawprotect/shared-ts';
+import { SignatureStatus } from '@/domain/enums/SignatureStatus';
 import { SigningAlgorithm } from '@/domain/enums/SigningAlgorithm';
 import { 
   signatureFailed, 

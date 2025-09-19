@@ -5,7 +5,7 @@
  * updating existing signature records, primarily for status changes and metadata updates.
  */
 
-import type { SignatureStatus } from '@lawprotect/shared-ts';
+import type { SignatureStatus } from '@/domain/enums/SignatureStatus';
 
 /**
  * Request to update an existing signature record

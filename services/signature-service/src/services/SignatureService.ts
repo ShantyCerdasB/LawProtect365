@@ -31,7 +31,8 @@ import { mapKmsAlgorithmToDomain } from '../domain/enums/SigningAlgorithm';
 import { 
   validateSignatureSecurityRules
 } from '../domain/rules/signature/SignatureSecurityRules';
-import { mapAwsError, NotFoundError, ForbiddenError, ErrorCodes, SignatureStatus } from '@lawprotect/shared-ts';
+import { mapAwsError, NotFoundError, ForbiddenError, ErrorCodes } from '@lawprotect/shared-ts';
+import { SignatureStatus } from '@/domain/enums/SignatureStatus';
 
 /**
  * SignatureService implementation

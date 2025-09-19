@@ -6,7 +6,8 @@
  */
 
 
-import { KmsSigner, mapAwsError, BadRequestError, NotFoundError, ErrorCodes, SignatureStatus } from '@lawprotect/shared-ts';
+import { KmsSigner, mapAwsError, BadRequestError, NotFoundError, ErrorCodes } from '@lawprotect/shared-ts';
+import { SignatureStatus } from '@/domain/enums/SignatureStatus';
 import { Signature } from '../domain/entities/Signature';
 import { SignatureId } from '../domain/value-objects/SignatureId';
 import { SignerId } from '../domain/value-objects/SignerId';

@@ -5,7 +5,8 @@
  * operations including signing requests, responses, and validation.
  */
 
-import { z, UuidV4, NonEmptyStringSchema, SignatureStatus } from '@lawprotect/shared-ts';
+import { z, UuidV4, NonEmptyStringSchema } from '@lawprotect/shared-ts';
+import { SignatureStatus } from '@/domain/enums/SignatureStatus';
 import { SignatureSortBy, SortOrder } from '@/domain/enums';
 
 /**

@@ -6,7 +6,9 @@
  * both authenticated users (with JWT tokens) and external users (with invitation tokens).
  */
 
-import { ControllerFactory, PermissionLevel, AccessType, SignatureStatus, SignerStatus } from '@lawprotect/shared-ts';
+import { ControllerFactory, PermissionLevel, AccessType } from '@lawprotect/shared-ts';
+import { SignatureStatus } from '@/domain/enums/SignatureStatus';
+import { SignerStatus } from '@/domain/enums/SignerStatus';
 import { SignDocumentRequestSchema } from '../../domain/schemas/SigningHandlersSchema';
 // ServiceFactory is already imported above
 import { SignatureService } from '../../services/SignatureService';

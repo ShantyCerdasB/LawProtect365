@@ -1,5 +1,5 @@
 /**
- * @fileoverview SignerStatus enum - Defines all possible states for a signer
+ * @fileoverview SignerStatus.ts - Defines all possible states for a signer
  * @summary Enumerates the states of an individual signer in the signing process
  * @description The SignerStatus enum defines all possible states a signer can be in
  * during the signing process, from invitation to completion or decline.

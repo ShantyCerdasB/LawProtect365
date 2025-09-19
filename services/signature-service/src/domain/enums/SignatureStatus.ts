@@ -1,5 +1,5 @@
 /**
- * @fileoverview SignatureStatus enum - Defines all possible states for a signature
+ * @fileoverview SignatureStatus.ts - Defines all possible states for a signature
  * @summary Enumerates the states of a cryptographic signature process
  * @description The SignatureStatus enum defines all possible states a signature can be in
  * during the cryptographic signing process, from initiation to completion or failure.

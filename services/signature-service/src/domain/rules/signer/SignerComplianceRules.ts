@@ -7,7 +7,7 @@
 
 import { Signer } from '@/domain/entities/Signer';
 import { Signature } from '@/domain/entities/Signature';
-import { SignerStatus } from '@lawprotect/shared-ts';
+import { SignerStatus } from '@/domain/enums/SignerStatus';
 import { 
   complianceViolation,
   consentRequired,

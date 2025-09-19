@@ -16,7 +16,8 @@ import { validateEnvelopeWorkflow } from './EnvelopeEventRules';
 import type { AuditEvent } from '@/domain/types/audit/AuditEvent';
 import type { Signer } from '@/domain/entities/Signer';
 import type { Signature } from '@/domain/entities/Signature';
-import { AccessType, PermissionLevel, SignerStatus } from '@lawprotect/shared-ts';
+import { AccessType, PermissionLevel } from '@lawprotect/shared-ts';
+import { SignerStatus } from '@/domain/enums/SignerStatus';
 import { 
   invalidEnvelopeState, 
   envelopeLimitExceeded,

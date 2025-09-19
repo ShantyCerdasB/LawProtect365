@@ -7,12 +7,10 @@
  */
 
 import { 
-  SignerStatus, 
-  isValidSignerStatusTransition, 
-  getValidNextSignerStatuses, 
   SignerOperation,
   validateStringField
 } from '@lawprotect/shared-ts';
+import { SignerStatus, isValidSignerStatusTransition, getValidNextSignerStatuses } from '@/domain/enums/SignerStatus';
 import { Signer } from '@/domain/entities/Signer';
 import { Email } from '@/domain/value-objects/Email';
 import { 

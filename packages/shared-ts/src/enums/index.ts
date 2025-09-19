@@ -5,8 +5,6 @@
  * throughout the application and across microservices.
  */
 
-export * from './SignatureStatus.js';
-export * from './SignerStatus.js';
 export * from './SecurityLevel.js';
 export * from './ComplianceLevel.js';
 export * from './HashAlgorithm.js';

@@ -8,7 +8,7 @@
 import type { SignatureId } from '../../value-objects/SignatureId';
 import type { EnvelopeId } from '../../value-objects/EnvelopeId';
 import type { SignerId } from '../../value-objects/SignerId';
-import type { SignatureStatus } from '@lawprotect/shared-ts';
+import type { SignatureStatus } from '@/domain/enums/SignatureStatus';
 
 /**
  * Request to create a new signature record

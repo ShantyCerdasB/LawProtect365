@@ -13,7 +13,8 @@ import {
   invalidSignerState,
   eventGenerationFailed
 } from '@/signature-errors';
-import { diffMinutes, SignerStatus, isValidSignerStatusTransition, getValidNextSignerStatuses } from '@lawprotect/shared-ts';
+import { diffMinutes } from '@lawprotect/shared-ts';
+import { SignerStatus, isValidSignerStatusTransition, getValidNextSignerStatuses } from '@/domain/enums/SignerStatus';
 import { SignerValidator } from '@/domain/validators/SignerValidator';
 import { validateInvitationToken } from './SignerSecurityRules';
 import { shouldCancelEnvelopeOnDecline } from '../envelope/EnvelopeBusinessRules';

@@ -8,7 +8,7 @@
 
 import { EnvelopeId } from '../value-objects/EnvelopeId';
 import { EnvelopeStatus } from '../enums/EnvelopeStatus';
-import { SignerStatus } from '@lawprotect/shared-ts';
+import { SignerStatus } from '@/domain/enums/SignerStatus';
 import { Signer } from './Signer';
 import { SigningOrder } from '../value-objects/SigningOrder';
 import { 

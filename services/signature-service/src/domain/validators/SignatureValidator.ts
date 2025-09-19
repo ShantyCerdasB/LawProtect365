@@ -7,11 +7,11 @@
 
 import { Signature } from '@/domain/entities/Signature';
 import { 
-  SignatureStatus,
   validateSignatureHash,
   validateSignatureTimestamp,
   validateIpAddressAndUserAgent
 } from '@lawprotect/shared-ts';
+import { SignatureStatus } from '@/domain/enums/SignatureStatus';
 import { 
   signatureInvalid,
   signatureNotFound,
