@@ -45,6 +45,7 @@ import { updateEnvelopeHandler } from '../../../src/handlers/envelopes/UpdateEnv
 import { deleteEnvelopeHandler } from '../../../src/handlers/envelopes/DeleteEnvelopeHandler';
 import { sendNotificationHandler } from '../../../src/handlers/notifications/SendNotificationHandler';
 import { viewDocumentHandler } from '../../../src/handlers/signing/ViewDocumentHandler';
+import { downloadSignedDocumentHandler } from '../../../src/handlers/envelopes/DownloadSignedDocumentHandler';
 import { ServiceFactory } from '../../../src/infrastructure/factories/ServiceFactory';
 import { EnvelopeId } from '../../../src/domain/value-objects/EnvelopeId';
 import { EventBridgeAdapter } from '../../../src/infrastructure/eventbridge';
@@ -326,12 +327,30 @@ describe('Integration: Complete Multi-signer Flow with Business Rule Validations
     const sendObjOwnerFirst = typeof sendResOwnerFirst === 'string' ? JSON.parse(sendResOwnerFirst) : sendResOwnerFirst;
     expect(sendObjOwnerFirst.statusCode).toBe(200);
 
-    // 9. Signer tries to sign (MUST FAIL - owner must sign first)
+    // Compute token for a signer before using it
     const tokenA2 = createData2.invitationTokens?.find((t: any) => {
       const signer = createData2.signers?.find((s: any) => s.email === signerA.email);
       return signer && t.signerId === signer.id;
     })?.token;
     expect(tokenA2).toBeTruthy();
+
+    // External view-only access right after sending (envelope is live)
+    if (tokenA2) {
+      const viewEvtOwnerFirst = await createApiGatewayEvent({
+        includeAuth: false,
+        pathParameters: { invitationToken: tokenA2 },
+        headers: { 'user-agent': 'jest-test/1.0', 'x-country': 'CO' }
+      });
+      const viewResOwnerFirst = await viewDocumentHandler(viewEvtOwnerFirst);
+      const viewObjOwnerFirst = typeof viewResOwnerFirst === 'string' ? JSON.parse(viewResOwnerFirst) : viewResOwnerFirst;
+      expect(viewObjOwnerFirst.statusCode).toBe(200);
+      const viewDataOwnerFirst = JSON.parse(viewObjOwnerFirst.body).data || JSON.parse(viewObjOwnerFirst.body);
+      expect(viewDataOwnerFirst.document.viewUrl).toContain('http');
+      expect(viewDataOwnerFirst.envelope.id).toBe(envelopeId2);
+    }
+
+    // 9. Signer tries to sign (MUST FAIL - owner must sign first)
+    // tokenA2 computed above
 
     const signBodyA2 = {
       invitationToken: tokenA2,
@@ -485,6 +504,48 @@ describe('Integration: Complete Multi-signer Flow with Business Rule Validations
       expect(signDObj2.statusCode).toBe(200);
     }
 
+    // 16.b Signer C signs (to ensure all required signers are signed)
+    {
+      const tokensAfterResend2 = await invitationTokenService.getTokensByEnvelope(new EnvelopeId(envelopeId2));
+      const cId2: string | undefined = (getData4.envelope.signers || []).find((s: any) => s.email === signerC.email)?.id;
+      expect(cId2).toBeTruthy();
+      const tokenC2 = tokensAfterResend2.find(t => t.getSignerId().getValue() === cId2)?.getToken();
+      expect(tokenC2).toBeTruthy();
+
+      const signBodyC2 = {
+        invitationToken: tokenC2,
+        envelopeId: envelopeId2,
+        documentHash: sha256,
+        signatureHash,
+        s3Key: `envelopes/${envelopeId2}/signed.pdf`,
+        kmsKeyId: cfg.kms.signerKeyId,
+        algorithm: cfg.kms.signingAlgorithm,
+        reason: 'Approved',
+        location: 'Test Suite',
+        consent: { given: true, timestamp: new Date().toISOString(), text: 'I agree', ipAddress: '127.0.0.1', userAgent: 'jest-test/1.0' }
+      };
+
+      const signCEvt2 = await createApiGatewayEvent({
+        includeAuth: false,
+        body: JSON.stringify(signBodyC2),
+        headers: { 'user-agent': 'jest-test/1.0', 'x-country': 'CO' }
+      });
+
+      const signCRes2 = await signDocumentHandler(signCEvt2);
+      const signCObj2 = typeof signCRes2 === 'string' ? JSON.parse(signCRes2) : signCRes2;
+      expect(signCObj2.statusCode).toBe(200);
+    }
+
+    // 16.c Verify envelope is COMPLETED after all required signers have signed
+    {
+      const getEvtAfterAllSigned = await makeAuthEvent({ pathParameters: { envelopeId: envelopeId2 } });
+      const getResAfterAllSigned = await getEnvelopeHandler(getEvtAfterAllSigned);
+      const getObjAfterAllSigned = typeof getResAfterAllSigned === 'string' ? JSON.parse(getResAfterAllSigned) : getResAfterAllSigned;
+      expect(getObjAfterAllSigned.statusCode).toBe(200);
+      const envStatusAfterAll = JSON.parse(getObjAfterAllSigned.body).data.envelope.status;
+      expect(envStatusAfterAll).toBe('COMPLETED');
+    }
+
     // eslint-disable-next-line no-console
     console.log('✅ PART 2 COMPLETED: OWNER_FIRST flow validated');
 
@@ -497,17 +558,27 @@ describe('Integration: Complete Multi-signer Flow with Business Rule Validations
 
     // 17. Owner downloads document (SUCCESS - always allowed)
     const downloadEvt1 = await makeAuthEvent({ pathParameters: { envelopeId: envelopeId2 } });
-    const downloadRes1 = await getEnvelopeHandler(downloadEvt1);
+    const downloadRes1Raw = await downloadSignedDocumentHandler(downloadEvt1);
+    const downloadRes1 = typeof downloadRes1Raw === 'string' ? JSON.parse(downloadRes1Raw) : downloadRes1Raw;
     const downloadObj1 = typeof downloadRes1 === 'string' ? JSON.parse(downloadRes1) : downloadRes1;
     expect(downloadObj1.statusCode).toBe(200);
 
-    // 18. Signer downloads document (SUCCESS - always allowed)
-    const downloadEvt2 = await makeAuthEvent({ pathParameters: { envelopeId: envelopeId2 } });
-    const downloadRes2 = await getEnvelopeHandler(downloadEvt2);
-    const downloadObj2 = typeof downloadRes2 === 'string' ? JSON.parse(downloadRes2) : downloadRes2;
-    expect(downloadObj2.statusCode).toBe(200);
+    // 18. External signer downloads document via invitation (SUCCESS - always allowed)
+    if (tokenA2) {
+      const externalDownloadEvt = await createApiGatewayEvent({
+        includeAuth: false,
+        pathParameters: { envelopeId: envelopeId2 },
+        body: JSON.stringify({ invitationToken: tokenA2 }),
+        headers: { 'user-agent': 'jest-test/1.0', 'x-country': 'CO' }
+      });
+      const externalDownloadResRaw = await downloadSignedDocumentHandler(externalDownloadEvt);
+      const externalDownloadRes = typeof externalDownloadResRaw === 'string' ? JSON.parse(externalDownloadResRaw) : externalDownloadResRaw;
+      expect(externalDownloadRes.statusCode).toBe(200);
+    }
 
-    // 19-20. View-only access for external users is out of scope here; skipping explicit grant/access
+    // (view-only check done earlier right after send)
+
+    // (external download already performed above)
 
     // 21. Verify complete event history
     const historyEvt = await makeAuthEvent({ pathParameters: { envelopeId: envelopeId2 }, queryStringParameters: { limit: '100' } });
@@ -516,11 +587,14 @@ describe('Integration: Complete Multi-signer Flow with Business Rule Validations
     expect(historyObj.statusCode).toBe(200);
     const events = JSON.parse(historyObj.body).data.history.events as Array<any>;
     const types = events.map(e => e.type);
+    // eslint-disable-next-line no-console
+    console.log('History (multi-signer) 200 response body:', JSON.stringify(JSON.parse(historyObj.body), null, 2));
     
-    // Validate that key business events are present (as produced by services)
+    // Validate that key business events are present (as produced by services),
+    // without duplicated invitation audits on resend
     expect(types).toEqual(expect.arrayContaining([
-      'SIGNER_ADDED', 'SIGNER_INVITED', 'SIGNER_REMOVED', 'SIGNER_REMINDER_SENT',
-      'SIGNATURE_CREATED', 'CONSENT_GIVEN'
+      'SIGNER_ADDED', 'SIGNER_REMOVED', 'SIGNER_REMINDER_SENT',
+      'SIGNATURE_CREATED', 'CONSENT_GIVEN', 'DOCUMENT_ACCESSED', 'DOCUMENT_DOWNLOADED'
     ]));
 
     // eslint-disable-next-line no-console

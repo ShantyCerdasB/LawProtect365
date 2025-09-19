@@ -43,8 +43,9 @@ export class InvitationTokenService {
     envelopeId: EnvelopeId,
     securityContext: {
       userId: string;
-      ipAddress?: string;
-      userAgent?: string;
+      ipAddress: string;
+      userAgent: string;
+      country?: string;
     },
     actorEmail?: string
   ): Promise<InvitationToken[]> {
@@ -77,18 +78,21 @@ export class InvitationTokenService {
           }
         });
 
-        // Create audit event
+        // Record initial issuance once per signer (not on resend)
         await this.auditService.createEvent({
-          type: AuditEventType.SIGNER_INVITED,
+          type: AuditEventType.INVITATION_ISSUED,
           envelopeId: envelopeId.getValue(),
           signerId: signer.getId().getValue(),
           userId: securityContext.userId,
-          description: `Invitation token generated for signer ${signer.getEmail().getValue()}`,
+          userEmail: signer.getEmail().getValue(),
+          ipAddress: securityContext.ipAddress,
+          userAgent: securityContext.userAgent,
+          country: securityContext.country,
+          description: `Invitation issued to ${signer.getEmail().getValue()}`,
           metadata: {
-            token: token,
-            expiresAt: expiresAt.toISOString(),
             signerEmail: signer.getEmail().getValue(),
-            signerName: signer.getFullName()
+            signerName: signer.getFullName(),
+            expiresAt: expiresAt.toISOString()
           }
         });
 
@@ -148,7 +152,7 @@ export class InvitationTokenService {
    */
   async markTokenAsUsed(
     token: string, 
-    userId: string
+    _userId: string
   ): Promise<InvitationToken> {
     try {
       const invitationToken = await this.invitationTokenRepository.update(token, {
@@ -161,15 +165,18 @@ export class InvitationTokenService {
         }
       });
 
-      // Create audit event
+      // Audit token usage
       await this.auditService.createEvent({
-        type: AuditEventType.SIGNER_INVITED,
+        type: AuditEventType.INVITATION_TOKEN_USED,
         envelopeId: invitationToken.getEnvelopeId().getValue(),
         signerId: invitationToken.getSignerId().getValue(),
-        userId,
-        description: `Invitation token used by signer`,
+        userId: 'external-user',
+        userEmail: invitationToken.getMetadata()?.email,
+        description: 'Invitation token used by recipient',
+        ipAddress: invitationToken.getMetadata()?.ipAddress,
+        userAgent: invitationToken.getMetadata()?.userAgent,
+        country: invitationToken.getMetadata()?.country,
         metadata: {
-          token: token,
           usedAt: new Date().toISOString()
         }
       });

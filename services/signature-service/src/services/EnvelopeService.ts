@@ -126,7 +126,7 @@ export class EnvelopeService {
       userEmail: (context as any)?.email,
       metadata: {
         title: request.title,
-        documentHash: request.documentHash,
+        documentId: request.documentHash,
         ipAddress: context.ipAddress,
         userAgent: context.userAgent
       },

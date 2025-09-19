@@ -107,6 +107,7 @@ export function createAuditEventFromRequest(request: CreateAuditEventRequest): A
     timestamp: new Date(),
     ipAddress: request.ipAddress,
     userAgent: request.userAgent,
+    country: (request as any).country,
     metadata: request.metadata,
     description: request.description
   };

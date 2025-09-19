@@ -39,7 +39,8 @@ export class SecurityContextBuilder {
       headers?.['x-country'] ||
       headers?.['X-Country'] ||
       headers?.['cf-ipcountry'] ||
-      headers?.['CF-IPCountry'];
+      headers?.['CF-IPCountry'] ||
+      (requestBody?.metadata?.country as string | undefined);
 
     return {
       ipAddress,
@@ -100,6 +101,9 @@ export class SecurityContextBuilder {
     return {
       ...baseContext,
       userId: 'external-user' as UserId,
+      ipAddress: baseContext.ipAddress!,
+      userAgent: baseContext.userAgent!,
+      country: baseContext.country!,
       accessType: 'INVITATION' as const,
       tokenType: 'INVITATION' as const,
       invitationToken: token,
@@ -109,11 +113,22 @@ export class SecurityContextBuilder {
   }
 
   private buildAuthenticatedContext(baseContext: Partial<SecurityContext>, request: RequestData): SecurityContext {
-    return {
+    const merged = {
       ...baseContext,
       ...request.securityContext,
+    } as Partial<SecurityContext>;
+
+    return {
+      userId: (merged as any).userId,
+      roles: (merged as any).roles || [],
+      scopes: (merged as any).scopes,
+      permissions: (merged as any).permissions,
+      ipAddress: merged.ipAddress!,
+      userAgent: merged.userAgent!,
+      country: merged.country!,
       accessType: 'DIRECT' as const,
       tokenType: 'JWT' as const,
+      invitationToken: undefined
     } as SecurityContext;
   }
 }

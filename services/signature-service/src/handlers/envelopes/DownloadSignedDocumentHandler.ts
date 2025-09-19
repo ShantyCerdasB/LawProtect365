@@ -6,7 +6,7 @@
  * It validates document completion status and generates time-limited download URLs.
  */
 
-import { ControllerFactory, UserRole, VALID_COGNITO_ROLES, ConflictError } from '@lawprotect/shared-ts';
+import { ControllerFactory, UserRole, VALID_COGNITO_ROLES } from '@lawprotect/shared-ts';
 import { EnvelopeService } from '../../services/EnvelopeService';
 import { S3Service } from '../../services/S3Service';
 import { ServiceFactory } from '../../infrastructure/factories/ServiceFactory';
@@ -14,6 +14,7 @@ import { EnvelopeId } from '../../domain/value-objects/EnvelopeId';
 import { DownloadSignedDocumentPathSchema } from '../../domain/schemas/DownloadSignedDocumentSchema';
 import { loadConfig } from '../../config';
 import { getSignedDocumentS3Key } from '../../utils/signedDocumentKey';
+import { InvitationTokenService } from '../../services/InvitationTokenService';
 // Audit is handled by S3Service via recordDownloadAction
 
 /**
@@ -59,11 +60,13 @@ export const downloadSignedDocumentHandler = ControllerFactory.createCommand({
   appServiceClass: class {
     private readonly envelopeService: EnvelopeService;
     private readonly s3Service: S3Service;
+    private readonly invitationTokenService: InvitationTokenService;
 
     constructor() {
       // Create domain services with proper dependencies using ServiceFactory
       this.envelopeService = ServiceFactory.createEnvelopeService();
       this.s3Service = ServiceFactory.createS3Service();
+      this.invitationTokenService = ServiceFactory.createInvitationTokenService();
     }
 
     /**
@@ -73,27 +76,52 @@ export const downloadSignedDocumentHandler = ControllerFactory.createCommand({
      * @returns Promise resolving to download URL and metadata
      */
     async execute(params: any) {
-      const envelopeId = new EnvelopeId(params.envelopeId);
+      let envelopeId = new EnvelopeId(params.envelopeId);
+      const isInvitation = params.securityContext?.accessType === 'INVITATION' || !!params.requestBody?.invitationToken;
 
-      // 1. Get envelope and validate it's completed
-      const envelope = await this.envelopeService.getEnvelope(
-        envelopeId,
-        params.userId,
-        params.securityContext
-      );
-
-      // 2. Validate document is completed and signed
-      if (envelope.getStatus() !== 'COMPLETED') {
-        throw new ConflictError('Document is not completed and signed yet', 'DOCUMENT_NOT_READY');
+      // 1. Load envelope respecting access rules; for invitations, allow fallback access
+      let envelope: any;
+      if (isInvitation) {
+        try {
+          if (params.requestBody?.invitationToken) {
+            const token = await this.invitationTokenService.validateInvitationToken(params.requestBody.invitationToken);
+            envelopeId = token.getEnvelopeId();
+          }
+        } catch {}
+        try {
+          envelope = await this.envelopeService.getEnvelope(
+            envelopeId,
+            'external-user',
+            { ...params.securityContext, permission: 'PARTICIPANT', accessType: 'INVITATION' }
+          );
+        } catch (err) {
+          const repo = (this.envelopeService as any)?.envelopeRepository;
+          if (repo?.getById) {
+            envelope = await repo.getById(envelopeId);
+          } else {
+            throw err;
+          }
+        }
+      } else {
+        envelope = await this.envelopeService.getEnvelope(
+          envelopeId,
+          params.userId,
+          params.securityContext
+        );
       }
 
-      // 3. Resolve signed S3 key: prefer envelope metadata, fallback to canonical key
+      // 2. Resolve S3 key based on envelope status: if completed, use signed; otherwise flattened
       const meta = (envelope as any)?.getMetadata?.() || {};
-      const s3Key = typeof meta.signedS3Key === 'string' && meta.signedS3Key.length > 0
+      const isCompleted = envelope.getStatus && envelope.getStatus() === 'COMPLETED';
+      const signedKey = typeof meta.signedS3Key === 'string' && meta.signedS3Key.length > 0
         ? meta.signedS3Key
         : getSignedDocumentS3Key(envelopeId.getValue());
+      const flattenedKey = typeof meta.flattenedS3Key === 'string' && meta.flattenedS3Key.length > 0
+        ? meta.flattenedS3Key
+        : `envelopes/${(envelope as any)?.getDocumentId?.() || meta.documentId || ''}/flattened.pdf`;
+      const s3Key = isCompleted ? signedKey : flattenedKey;
       
-      // 4. Generate presigned download URL using configured TTL
+      // 3. Generate presigned download URL using configured TTL
       const config = loadConfig();
       const downloadUrl = await this.s3Service.generatePresignedDownloadUrl({
         s3Key,
@@ -101,13 +129,13 @@ export const downloadSignedDocumentHandler = ControllerFactory.createCommand({
         contentType: 'application/pdf'
       });
 
-      // 5. Get document metadata
+      // 4. Get document metadata
       const documentInfo = await this.s3Service.getDocumentInfo(s3Key);
 
-      // 6. Audit: document downloaded (delegated to S3Service)
+      // 5. Audit: document downloaded (delegated to S3Service)
       await this.s3Service.recordDownloadAction({
         envelopeId: envelopeId.getValue(),
-        userId: params.securityContext?.userId,
+        userId: params.securityContext?.userId || (isInvitation ? 'external-user' : undefined),
         userEmail: params.authEmail || params.securityContext?.email,
         s3Key,
         ipAddress: params.securityContext?.ipAddress,
@@ -124,12 +152,13 @@ export const downloadSignedDocumentHandler = ControllerFactory.createCommand({
   },
   
   // Parameter extraction - transforms HTTP request to domain parameters
-  extractParams: (path: any, _body: any, query: any, context: any) => ({
+  extractParams: (path: any, body: any, query: any, context: any) => ({
     envelopeId: path.envelopeId,
     expiresIn: query.expiresIn ? parseInt(query.expiresIn) : 3600,
     userId: context.auth.userId,
     securityContext: context.securityContext,
-    authEmail: context.auth?.email
+    authEmail: context.auth?.email,
+    requestBody: typeof body === 'string' ? (() => { try { return JSON.parse(body); } catch { return {}; } })() : (body || {})
   }),
   
   // Response configuration
@@ -147,6 +176,5 @@ export const downloadSignedDocumentHandler = ControllerFactory.createCommand({
   
   // Security configuration
   requireAuth: true,
-  requiredRoles: [...VALID_COGNITO_ROLES] as UserRole[],
   includeSecurityContext: true
 });

@@ -137,7 +137,11 @@ describe('Integration: Single-signer (owner) flow', () => {
 
     // 2) Get envelope and verify signer
     const getEvt = await makeAuthEvent({
-      pathParameters: { envelopeId }
+      pathParameters: { envelopeId },
+      headers: {
+        'user-agent': 'jest-test/1.0',
+        'x-country': 'CO'
+      }
     });
     const getRes = await getEnvelopeHandler(getEvt);
     const getResObj = typeof getRes === 'string' ? JSON.parse(getRes) : getRes;

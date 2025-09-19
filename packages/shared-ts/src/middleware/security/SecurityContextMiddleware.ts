@@ -8,6 +8,7 @@
 
 import type { BeforeMiddleware } from "../../http/middleware.js";
 import { AccessType, PermissionLevel, RequestSecurityContext } from "../../security/index.js";
+import { BadRequestError } from "../../errors/index.js";
 import { SecurityContextBuilder } from "./SecurityContextBuilder.js";
 
 // RequestSecurityContext is imported from security/index.js
@@ -47,15 +48,26 @@ export const withSecurityContext = (): BeforeMiddleware => {
                    evt.headers?.['X-Trace-Id'];
 
     // Create security context
+    // Enforce required security telemetry (no defaults)
+    if (!baseContext.ipAddress) {
+      throw new BadRequestError('Missing ipAddress in request (x-forwarded-for/x-real-ip or sourceIp required)', 'SECURITY_MISSING_IP');
+    }
+    if (!baseContext.userAgent && !evt.requestContext?.http?.userAgent) {
+      throw new BadRequestError('Missing userAgent in request (User-Agent header required)', 'SECURITY_MISSING_UA');
+    }
+    if (!baseContext.country) {
+      throw new BadRequestError('Missing country in request (x-country/CF-IPCountry header required)', 'SECURITY_MISSING_COUNTRY');
+    }
+
     const securityContext: RequestSecurityContext = {
-      userId: baseContext.userId,
-      ipAddress: baseContext.ipAddress || '127.0.0.1',
-      userAgent: baseContext.userAgent || 'Unknown',
-      accessType: baseContext.accessType || AccessType.DIRECT,
+      userId: baseContext.userId as any,
+      ipAddress: baseContext.ipAddress!,
+      userAgent: (baseContext.userAgent || evt.requestContext?.http?.userAgent)!,
+      accessType: (baseContext as any).accessType || AccessType.DIRECT,
       permission,
       timestamp: new Date(),
       deviceFingerprint: generateDeviceFingerprint(evt),
-      country: baseContext.country
+      country: baseContext.country!
     };
 
     // Attach security context to event

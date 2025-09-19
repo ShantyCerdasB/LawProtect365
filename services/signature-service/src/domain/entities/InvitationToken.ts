@@ -29,6 +29,7 @@ export class InvitationToken {
       userAgent?: string;
       email?: string;
       fullName?: string;
+      country?: string;
     } = {}
   ) {}
 
@@ -89,6 +90,7 @@ export class InvitationToken {
     userAgent?: string;
     email?: string;
     fullName?: string;
+    country?: string;
   } {
     return this.metadata;
   }

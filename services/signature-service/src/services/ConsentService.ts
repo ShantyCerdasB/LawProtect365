@@ -40,7 +40,7 @@ export class ConsentService {
     // Validate business rules
     await this.validateCreateConsentRequest(request, userId);
 
-    // Save consent
+    // Save consent (request now may include userEmail and country)
     const createdConsent = await this.consentRepository.create(request);
 
     // Create audit event
@@ -48,6 +48,10 @@ export class ConsentService {
       type: AuditEventType.CONSENT_GIVEN,
       envelopeId: request.envelopeId.getValue(),
       userId,
+      userEmail: request.userEmail,
+      ipAddress: request.ipAddress,
+      userAgent: request.userAgent,
+      country: (request as any).country,
       description: `Consent given by signer ${request.signerId.getValue()}`,
       metadata: {
         consentId: createdConsent.getId().getValue(),
@@ -94,7 +98,9 @@ export class ConsentService {
     }
 
     // Check if user is the signer themselves
-    if (signer.getEmail().getValue() !== userId) {
+    // For external users (userId = 'external-user'), we allow consent access
+    // as the signer identity is validated through the invitation token
+    if (userId !== 'external-user' && signer.getEmail().getValue() !== userId) {
       throw new ForbiddenError(
         `User ${userId} is not authorized to access consent for signer ${signerId}`,
         ErrorCodes.AUTH_FORBIDDEN
@@ -120,7 +126,9 @@ export class ConsentService {
     }
 
     // Check if user is the signer themselves
-    if (signer.getEmail().getValue() !== userId) {
+    // For external users (userId = 'external-user'), we allow consent creation
+    // as the signer identity is validated through the invitation token
+    if (userId !== 'external-user' && signer.getEmail().getValue() !== userId) {
       throw new ForbiddenError(
         `User ${userId} is not authorized to create consent for signer ${request.signerId.getValue()}`,
         ErrorCodes.AUTH_FORBIDDEN

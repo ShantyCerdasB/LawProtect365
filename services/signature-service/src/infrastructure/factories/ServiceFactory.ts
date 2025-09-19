@@ -15,6 +15,7 @@ import { SignerService } from '../../services/SignerService';
 import { InvitationTokenService } from '../../services/InvitationTokenService';
 import { AuditService } from '../../services/AuditService';
 import { S3Service } from '../../services/S3Service';
+import { DocumentAccessService } from '../../services/DocumentAccessService';
 import { SignatureService } from '../../services/SignatureService';
 import { ConsentService } from '../../services/ConsentService';
 import { KmsService } from '../../services/KmsService';
@@ -184,6 +185,22 @@ export class ServiceFactory {
     return new S3Service(
       this.s3Client,
       this.config.s3.signedBucket,
+      auditService,
+      this.config
+    );
+  }
+
+  static createDocumentAccessService(): DocumentAccessService {
+    const invitationTokenService = this.createInvitationTokenService();
+    const s3Service = this.createS3Service();
+    const signerService = this.createSignerService();
+    const envelopeService = this.createEnvelopeService();
+    const auditService = this.createAuditService();
+    return new DocumentAccessService(
+      invitationTokenService,
+      s3Service,
+      signerService,
+      envelopeService,
       auditService,
       this.config
     );

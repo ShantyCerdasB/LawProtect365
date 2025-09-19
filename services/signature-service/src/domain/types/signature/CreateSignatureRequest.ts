@@ -93,6 +93,16 @@ export interface CreateSignatureRequest {
   userEmail?: string;
 
   /**
+   * Email of the signer (redundant to userEmail for external flows, explicit for audit)
+   */
+  signerEmail?: string;
+
+  /**
+   * Full name of the signer (for audit readability)
+   */
+  signerFullName?: string;
+
+  /**
    * The owner userId of the envelope (actor for internal single-signer flows)
    */
   ownerUserId?: string;

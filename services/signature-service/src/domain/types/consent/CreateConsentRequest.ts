@@ -52,4 +52,14 @@ export interface CreateConsentRequest {
    * The user agent of the signer's browser
    */
   userAgent: string;
+
+  /**
+   * Email of the user giving consent (owner or external signer)
+   */
+  userEmail?: string;
+
+  /**
+   * Country derived from headers (ISO code)
+   */
+  country?: string;
 }

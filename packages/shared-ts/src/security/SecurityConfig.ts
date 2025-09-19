@@ -66,8 +66,8 @@ export interface RequestSecurityContext {
   permission: string;
   /** Device fingerprint (optional) */
   deviceFingerprint?: string;
-  /** Geographic location (optional) */
-  country?: string;
+  /** Geographic location (ISO country code) */
+  country: string;
   /** Timestamp of the request */
   timestamp: Date;
   /** Resource ID being accessed (optional) */

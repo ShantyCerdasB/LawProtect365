@@ -134,7 +134,7 @@ export function canPerformOperation(permission: PermissionLevel, operation: stri
     case PermissionLevel.VIEWER:
       return ['view', 'read', 'download'].includes(operationLower);
     case PermissionLevel.PARTICIPANT:
-      return ['view', 'participate', 'interact'].includes(operationLower);
+      return ['view', 'read', 'participate', 'interact', 'sign'].includes(operationLower);
     default:
       return false;
   }

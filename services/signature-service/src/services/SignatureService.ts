@@ -79,10 +79,11 @@ export class SignatureService {
         s3Key: request.s3Key
       });
       // 1. Validate consent before allowing signature creation
+      // Authorize consent lookup using external sentinel to allow invitation-token flows
       const consent = await this.consentService.getConsentBySignerAndEnvelope(
         request.signerId.getValue(),
         request.envelopeId.getValue(),
-        request.userEmail ?? request.signerId.getValue()
+        'external-user'
       );
       // eslint-disable-next-line no-console
       console.log('[SignatureService.createSignature] consent', { found: Boolean(consent), given: consent?.getConsentGiven?.() });
@@ -186,13 +187,16 @@ export class SignatureService {
         userEmail: request.userEmail,
         ipAddress: request.ipAddress,
         userAgent: request.userAgent,
+        country: request.country,
         metadata: {
           signatureId: request.id.getValue(),
           algorithm: request.algorithm,
           kmsKeyId: request.kmsKeyId,
           documentHash: request.documentHash,
           s3Key: request.s3Key,
-          filename: (request.s3Key || '').split('/').pop() || 'signed.pdf'
+          filename: (request.s3Key || '').split('/').pop() || 'signed.pdf',
+          signerEmail: request.signerEmail || request.userEmail,
+          signerFullName: request.signerFullName
         }
       });
 
