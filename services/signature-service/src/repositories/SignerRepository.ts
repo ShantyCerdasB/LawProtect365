@@ -20,7 +20,7 @@ import {
   type SignerListCursorPayload
 } from '../domain/types/infrastructure/signer';
 import { DdbSortOrder } from '../domain/types/infrastructure/common';
-import { BaseRepository, type CursorPayload } from './BaseRepository';
+import { BaseRepository, type CursorPayload, SingleItemQueryConfig } from './BaseRepository';
 
 /**
  * SignerRepository implementation for DynamoDB
@@ -376,11 +376,13 @@ export class SignerRepository extends BaseRepository {
    */
   async getByEmail(email: string): Promise<Signer | null> {
     return this.executeSingleItemQuery(
-      this.tableName,
-      this.emailGsi2Name,
-      'gsi2pk',
-      `EMAIL#${email}`,
-      this.ddb,
+      {
+        tableName: this.tableName,
+        indexName: this.emailGsi2Name,
+        gsiPkAttribute: 'gsi2pk',
+        pkValue: `EMAIL#${email}`,
+        ddb: this.ddb
+      },
       isSignerDdbItem,
       signerDdbMapper,
       'SignerRepository.getByEmail'
@@ -432,11 +434,13 @@ export class SignerRepository extends BaseRepository {
    */
   async getByInvitationToken(invitationToken: string): Promise<Signer | null> {
     return this.executeSingleItemQuery(
-      this.tableName,
-      this.tokenGsi4Name,
-      'gsi4pk',
-      `TOKEN#${invitationToken}`,
-      this.ddb,
+      {
+        tableName: this.tableName,
+        indexName: this.tokenGsi4Name,
+        gsiPkAttribute: 'gsi4pk',
+        pkValue: `TOKEN#${invitationToken}`,
+        ddb: this.ddb
+      },
       isSignerDdbItem,
       signerDdbMapper,
       'SignerRepository.getByInvitationToken'

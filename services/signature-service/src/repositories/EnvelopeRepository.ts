@@ -12,25 +12,32 @@ import {
   ErrorCodes, 
   decodeCursor, 
   encodeCursor,
-  NotFoundError 
+  NotFoundError,
+  requireQuery,
+  type DdbClientWithQuery
 } from '@lawprotect/shared-ts';
 
 import { Envelope } from '../domain/entities/Envelope';
 import type { EnvelopeId } from '../domain/value-objects/EnvelopeId';
 import type { EnvelopeStatus } from '../domain/enums/EnvelopeStatus';
 import { 
-  requireQuery,
-  type DdbClientWithQuery
-} from '../domain/types/infrastructure/common/dynamodb-base';
-import { 
   envelopeDdbMapper,
   createEnvelopeCursorPayload,
   type EnvelopeListResult,
   type EnvelopeCountResult,
   type EnvelopeListCursorPayload,
+  type EnvelopeDdbItem,
   EnvelopeKeyBuilders
 } from '../domain/types/infrastructure/envelope';
 import { BaseRepository } from './BaseRepository';
+import { DdbSortOrder } from '../domain/types/infrastructure/common';
+
+/**
+ * Type guard for envelope DDB items
+ */
+function isEnvelopeDdbItem(item: any): item is EnvelopeDdbItem {
+  return item && item.sk === "META" && item.type === "ENVELOPE";
+}
 
 /**
  * DynamoDB implementation of Repository<Envelope, EnvelopeId>.
@@ -217,47 +224,45 @@ export class EnvelopeRepository extends BaseRepository implements Repository<Env
    * @throws AppError when DynamoDB operation fails
    */
   async listAll(params: { limit: number; cursor?: string }): Promise<EnvelopeListResult> {
-    const take = Math.max(1, Math.min(params.limit ?? 25, 100)) + 1;
-    const c = decodeCursor<EnvelopeListCursorPayload>(params.cursor);
+    const cursor = params.cursor ? decodeCursor<EnvelopeListCursorPayload>(params.cursor) : undefined;
 
-    requireQuery(this.ddb);
-    const ddb = this.ddb as DdbClientWithQuery;
-
-    try {
-      const exprNames: Record<string, string> = { "#gsi1pk": "gsi1pk" };
-      if (c) {
-        exprNames["#gsi1sk"] = "gsi1sk";
-      }
-      const res = await ddb.query({
-        TableName: this.tableName,
-        IndexName: this.indexName,
-        KeyConditionExpression: "#gsi1pk = :envelope" + (c ? " AND #gsi1sk > :after" : ""),
-        ExpressionAttributeNames: exprNames,
-        ExpressionAttributeValues: {
-          ":envelope": EnvelopeKeyBuilders.buildGsi1Pk(),
-          ...(c ? { ":after": `${c.createdAt}#${c.envelopeId}` } : {}),
+    const result = await this.executeAdvancedPaginatedQuery(
+      {
+        tableName: this.tableName,
+        indexName: this.indexName,
+        keyConditionExpression: "#gsi1pk = :envelope" + (cursor ? " AND #gsi1sk > :after" : ""),
+        expressionAttributeNames: {
+          "#gsi1pk": "gsi1pk",
+          ...(cursor ? { "#gsi1sk": "gsi1sk" } : {})
         },
-        Limit: take,
-        ScanIndexForward: true,
-      });
+        expressionAttributeValues: {
+          ":envelope": EnvelopeKeyBuilders.buildGsi1Pk(),
+          ...(cursor ? { ":after": `${cursor.createdAt}#${cursor.envelopeId}` } : {})
+        },
+        cursor,
+        limit: params.limit ?? 25,
+        sortOrder: DdbSortOrder.ASC,
+        ddb: this.ddb,
+        exclusiveStartKeyBuilder: cursor ? (c) => ({
+          pk: EnvelopeKeyBuilders.buildPk(c.envelopeId),
+          sk: EnvelopeKeyBuilders.buildMetaSk(),
+          gsi1pk: EnvelopeKeyBuilders.buildGsi1Pk(),
+          gsi1sk: `${c.createdAt}#${c.envelopeId}`
+        }) : undefined
+      },
+      isEnvelopeDdbItem,
+      envelopeDdbMapper,
+      (envelope) => ({
+        createdAt: envelope.getCreatedAt().toISOString(),
+        envelopeId: envelope.getId().getValue()
+      }),
+      'EnvelopeRepository.listAll'
+    );
 
-      const rows = (res.Items ?? []) as any[];
-      const mapped = rows
-        .filter((it) => it.sk === "META")
-        .map((it) => envelopeDdbMapper.fromDTO(it));
-
-      const items = mapped.slice(0, take - 1);
-      const hasMore = mapped.length === take;
-
-      const last = items.at(-1);
-      const nextCursor = hasMore && last
-        ? encodeCursor(createEnvelopeCursorPayload(last) as any)
-        : undefined;
-
-      return { items, nextCursor };
-    } catch (err) {
-      throw mapAwsError(err, "EnvelopeRepository.listAll");
-    }
+    return {
+      items: result.items,
+      nextCursor: result.nextCursor
+    };
   }
 
   /**
@@ -413,47 +418,45 @@ export class EnvelopeRepository extends BaseRepository implements Repository<Env
    * @throws AppError when DynamoDB operation fails
    */
   async listByStatus(status: EnvelopeStatus, params: { limit: number; cursor?: string }): Promise<EnvelopeListResult> {
-    const take = Math.max(1, Math.min(params.limit ?? 25, 100)) + 1;
-    const c = decodeCursor<EnvelopeListCursorPayload>(params.cursor);
+    const cursor = params.cursor ? decodeCursor<EnvelopeListCursorPayload>(params.cursor) : undefined;
 
-    requireQuery(this.ddb);
-    const ddb = this.ddb as DdbClientWithQuery;
-
-    try {
-      const exprNames: Record<string, string> = { "#gsi2pk": "gsi2pk" };
-      if (c) {
-        exprNames["#gsi2sk"] = "gsi2sk";
-      }
-      const res = await ddb.query({
-        TableName: this.tableName,
-        IndexName: this.gsi2IndexName,
-        KeyConditionExpression: "#gsi2pk = :status" + (c ? " AND #gsi2sk > :after" : ""),
-        ExpressionAttributeNames: exprNames,
-        ExpressionAttributeValues: {
-          ":status": EnvelopeKeyBuilders.buildStatusGsi2Pk(status),
-          ...(c ? { ":after": `${c.createdAt}#${c.envelopeId}` } : {}),
+    const result = await this.executeAdvancedPaginatedQuery(
+      {
+        tableName: this.tableName,
+        indexName: this.gsi2IndexName,
+        keyConditionExpression: "#gsi2pk = :status" + (cursor ? " AND #gsi2sk > :after" : ""),
+        expressionAttributeNames: {
+          "#gsi2pk": "gsi2pk",
+          ...(cursor ? { "#gsi2sk": "gsi2sk" } : {})
         },
-        Limit: take,
-        ScanIndexForward: true,
-      });
+        expressionAttributeValues: {
+          ":status": EnvelopeKeyBuilders.buildStatusGsi2Pk(status),
+          ...(cursor ? { ":after": `${cursor.createdAt}#${cursor.envelopeId}` } : {})
+        },
+        cursor,
+        limit: params.limit ?? 25,
+        sortOrder: DdbSortOrder.ASC,
+        ddb: this.ddb,
+        exclusiveStartKeyBuilder: cursor ? (c) => ({
+          pk: EnvelopeKeyBuilders.buildPk(c.envelopeId),
+          sk: EnvelopeKeyBuilders.buildMetaSk(),
+          gsi2pk: EnvelopeKeyBuilders.buildStatusGsi2Pk(status),
+          gsi2sk: `${c.createdAt}#${c.envelopeId}`
+        }) : undefined
+      },
+      isEnvelopeDdbItem,
+      envelopeDdbMapper,
+      (envelope) => ({
+        createdAt: envelope.getCreatedAt().toISOString(),
+        envelopeId: envelope.getId().getValue()
+      }),
+      'EnvelopeRepository.listByStatus'
+    );
 
-      const rows = (res.Items ?? []) as any[];
-      const mapped = rows
-        .filter((it) => it.sk === "META")
-        .map((it) => envelopeDdbMapper.fromDTO(it));
-
-      const items = mapped.slice(0, take - 1);
-      const hasMore = mapped.length === take;
-
-      const last = items.at(-1);
-      const nextCursor = hasMore && last
-        ? encodeCursor(createEnvelopeCursorPayload(last) as any)
-        : undefined;
-
-      return { items, nextCursor };
-    } catch (err) {
-      throw mapAwsError(err, "EnvelopeRepository.listByStatus");
-    }
+    return {
+      items: result.items,
+      nextCursor: result.nextCursor
+    };
   }
 
   /**
@@ -469,46 +472,46 @@ export class EnvelopeRepository extends BaseRepository implements Repository<Env
     endDate: Date, 
     params: { limit: number; cursor?: string }
   ): Promise<EnvelopeListResult> {
-    const take = Math.max(1, Math.min(params.limit ?? 25, 100)) + 1;
+    const cursor = params.cursor ? decodeCursor<EnvelopeListCursorPayload>(params.cursor) : undefined;
 
-    requireQuery(this.ddb);
-    const ddb = this.ddb as DdbClientWithQuery;
-
-    try {
-      const res = await ddb.query({
-        TableName: this.tableName,
-        IndexName: this.indexName,
-        KeyConditionExpression: "#gsi1pk = :envelope AND #gsi1sk BETWEEN :start AND :end",
-        ExpressionAttributeNames: {
+    const result = await this.executeAdvancedPaginatedQuery(
+      {
+        tableName: this.tableName,
+        indexName: this.indexName,
+        keyConditionExpression: "#gsi1pk = :envelope AND #gsi1sk BETWEEN :start AND :end",
+        expressionAttributeNames: {
           "#gsi1pk": "gsi1pk",
-          "#gsi1sk": "gsi1sk",
+          "#gsi1sk": "gsi1sk"
         },
-        ExpressionAttributeValues: {
+        expressionAttributeValues: {
           ":envelope": EnvelopeKeyBuilders.buildGsi1Pk(),
           ":start": startDate.toISOString(),
-          ":end": endDate.toISOString(),
+          ":end": endDate.toISOString()
         },
-        Limit: take,
-        ScanIndexForward: true,
-      });
+        cursor,
+        limit: params.limit ?? 25,
+        sortOrder: DdbSortOrder.ASC,
+        ddb: this.ddb,
+        exclusiveStartKeyBuilder: cursor ? (c) => ({
+          pk: EnvelopeKeyBuilders.buildPk(c.envelopeId),
+          sk: EnvelopeKeyBuilders.buildMetaSk(),
+          gsi1pk: EnvelopeKeyBuilders.buildGsi1Pk(),
+          gsi1sk: `${c.createdAt}#${c.envelopeId}`
+        }) : undefined
+      },
+      isEnvelopeDdbItem,
+      envelopeDdbMapper,
+      (envelope) => ({
+        createdAt: envelope.getCreatedAt().toISOString(),
+        envelopeId: envelope.getId().getValue()
+      }),
+      'EnvelopeRepository.listByDateRange'
+    );
 
-      const rows = (res.Items ?? []) as any[];
-      const mapped = rows
-        .filter((it) => it.sk === "META")
-        .map((it) => envelopeDdbMapper.fromDTO(it));
-
-      const items = mapped.slice(0, take - 1);
-      const hasMore = mapped.length === take;
-
-      const last = items.at(-1);
-      const nextCursor = hasMore && last
-        ? encodeCursor(createEnvelopeCursorPayload(last) as any)
-        : undefined;
-
-      return { items, nextCursor };
-    } catch (err) {
-      throw mapAwsError(err, "EnvelopeRepository.listByDateRange");
-    }
+    return {
+      items: result.items,
+      nextCursor: result.nextCursor
+    };
   }
 
   /**

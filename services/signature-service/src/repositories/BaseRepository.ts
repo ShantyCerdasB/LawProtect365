@@ -56,6 +56,17 @@ export interface AdvancedQueryConfig {
 }
 
 /**
+ * Single item query configuration
+ */
+export interface SingleItemQueryConfig {
+  tableName: string;
+  indexName: string;
+  gsiPkAttribute: string;
+  pkValue: string;
+  ddb: DdbClientLike;
+}
+
+/**
  * Base repository class with shared functionality
  */
 export abstract class BaseRepository {
@@ -179,27 +190,23 @@ export abstract class BaseRepository {
    * Executes a single-item query
    */
   protected async executeSingleItemQuery<TEntity, TItem>(
-    tableName: string,
-    indexName: string,
-    gsiPkAttribute: string,
-    pkValue: string,
-    ddb: DdbClientLike,
+    config: SingleItemQueryConfig,
     itemValidator: (item: any) => item is TItem,
     mapper: { fromDTO: (item: TItem) => TEntity },
     errorContext: string
   ): Promise<TEntity | null> {
-    requireQuery(ddb);
+    requireQuery(config.ddb);
 
     try {
-      const result = await ddb.query({
-        TableName: tableName,
-        IndexName: indexName,
-        KeyConditionExpression: `#${gsiPkAttribute} = :pkValue`,
+      const result = await config.ddb.query({
+        TableName: config.tableName,
+        IndexName: config.indexName,
+        KeyConditionExpression: `#${config.gsiPkAttribute} = :pkValue`,
         ExpressionAttributeNames: {
-          [`#${gsiPkAttribute}`]: gsiPkAttribute
+          [`#${config.gsiPkAttribute}`]: config.gsiPkAttribute
         },
         ExpressionAttributeValues: {
-          ':pkValue': pkValue
+          ':pkValue': config.pkValue
         },
         Limit: 1
       });
