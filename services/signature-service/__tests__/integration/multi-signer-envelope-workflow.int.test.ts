@@ -64,24 +64,6 @@ describe('Multi-Signer Envelope Workflow Integration Tests', () => {
     return merged;
   };
 
-  // Helper function for user5 authentication events
-  const makeUser5AuthEvent = async (overrides?: any) => {
-    const token = await generateTestJwtToken({ sub: user5.userId, email: user5.email, roles: ['viewer'], scopes: [] });
-    const base = await createApiGatewayEvent({ includeAuth: false, authToken: token });
-    (base.requestContext as any).authorizer.userId = user5.userId;
-    (base.requestContext as any).authorizer.email = user5.email;
-    (base.requestContext as any).authorizer.actor = {
-      userId: user5.userId,
-      email: user5.email,
-      ip: '127.0.0.1',
-      userAgent: 'jest-test/1.0',
-      roles: ['viewer'],
-      scopes: []
-    };
-    const merged = { ...base, ...(overrides || {}) } as any;
-    merged.headers = { ...(base.headers || {}), 'user-agent': 'jest-test/1.0', 'x-country': 'CO', ...((overrides && overrides.headers) || {}) };
-    return merged;
-  };
 
   // Helper function to validate events in outbox
   const validateEvents = async (expectedEvents: string[], description: string) => {
@@ -90,12 +72,12 @@ describe('Multi-Signer Envelope Workflow Integration Tests', () => {
     return [];
   };
 
-  it('should handle complete multi-signer envelope workflow with business rule validations', async () => {
-    // Setup: Create test document
-    const documentId = randomUUID();
+  // Helper function to create test document
+  const createTestDocument = async (documentId: string, cfg: any, owner: any) => {
     const documentsTable = process.env.DOCUMENTS_TABLE || 'test-documents';
     const ddb = (ServiceFactory as any).ddbClient;
     const createdAt = new Date().toISOString();
+    
     await ddb.put({
       TableName: documentsTable,
       Item: {
@@ -122,14 +104,45 @@ describe('Multi-Signer Envelope Workflow Integration Tests', () => {
     const pdfBuffer = generateTestPdf();
     const sha256 = createHash('sha256').update(pdfBuffer).digest('hex');
     const signatureHash = createHash('sha256').update(`signature:${sha256}`).digest('hex');
-
-    // ========================================
-    // SECTION 1: INVITEES_FIRST SIGNING ORDER VALIDATION
-    // ========================================
-    // Tests business rules where signers must sign before the owner
-    // Validates proper enforcement of signing order constraints
     
+    return { pdfBuffer, sha256, signatureHash };
+  };
 
+  // Helper function to create envelope
+  const createEnvelope = async (createBody: any, makeAuthEvent: any, createEnvelopeHandler: any) => {
+    const createEvt = await makeAuthEvent({ body: JSON.stringify(createBody) });
+    const createRes = await createEnvelopeHandler(createEvt);
+    const createResObj = typeof createRes === 'string' ? JSON.parse(createRes) : createRes;
+    expect(createResObj.statusCode).toBe(201);
+    const createData = JSON.parse(createResObj.body).data;
+    const envelopeId: string = createData.envelope.id;
+    return { createData, envelopeId };
+  };
+
+  // Helper function to send envelope
+  const sendEnvelope = async (envelopeId: string, makeAuthEvent: any, sendEnvelopeHandler: any) => {
+    const sendEvt = await makeAuthEvent({ pathParameters: { envelopeId } });
+    const sendRes = await sendEnvelopeHandler(sendEvt);
+    const sendObj = typeof sendRes === 'string' ? JSON.parse(sendRes) : sendRes;
+    expect(sendObj.statusCode).toBe(200);
+    return sendObj;
+  };
+
+  // Helper function to sign document
+  const signDocument = async (signBody: any, createApiGatewayEvent: any, signDocumentHandler: any) => {
+    const signEvt = await createApiGatewayEvent({ 
+      includeAuth: false, 
+      body: JSON.stringify(signBody),
+      headers: { 'user-agent': 'jest-test/1.0', 'x-country': 'CO' }
+    });
+    
+    const signRes = await signDocumentHandler(signEvt);
+    const signObj = typeof signRes === 'string' ? JSON.parse(signRes) : signRes;
+    return signObj;
+  };
+
+  // Helper function to test INVITEES_FIRST workflow
+  const testInviteesFirstWorkflow = async (documentId: string, pdfBuffer: Buffer, sha256: string, signatureHash: string) => {
     // 1. Create envelope with 3 signers (INVITEES_FIRST)
     const createBody1 = {
       metadata: { title: `INVITEES_FIRST Test ${Date.now()}-${randomUUID()}`, description: 'Signers sign first' },
@@ -143,29 +156,16 @@ describe('Multi-Signer Envelope Workflow Integration Tests', () => {
         { email: signerC.email, fullName: signerC.fullName, order: 3 }
       ]
     };
-    const createEvt1 = await makeAuthEvent({ body: JSON.stringify(createBody1) });
-    const createRes1 = await createEnvelopeHandler(createEvt1);
-    const createResObj1 = typeof createRes1 === 'string' ? JSON.parse(createRes1) : createRes1;
-    expect(createResObj1.statusCode).toBe(201);
-    const createData1 = JSON.parse(createResObj1.body).data;
-    const envelopeId1: string = createData1.envelope.id;
+    const { createData: createData1, envelopeId: envelopeId1 } = await createEnvelope(createBody1, makeAuthEvent, createEnvelopeHandler);
 
     // Validate events: envelope.created, signer.created (x3)
     await validateEvents(['envelope.created', 'signer.created'], 'After creating INVITEES_FIRST envelope');
 
     // 2. Send envelope
-    const sendEvt1 = await makeAuthEvent({ pathParameters: { envelopeId: envelopeId1 } });
-    const sendRes1 = await sendEnvelopeHandler(sendEvt1);
-    const sendObj1 = typeof sendRes1 === 'string' ? JSON.parse(sendRes1) : sendRes1;
-    expect(sendObj1.statusCode).toBe(200);
+    await sendEnvelope(envelopeId1, makeAuthEvent, sendEnvelopeHandler);
 
     // Validate events: envelope.status_changed, signer.invited (x3)
     await validateEvents(['envelope.status_changed', 'signer.invited'], 'After sending INVITEES_FIRST envelope');
-
-    // 3. Owner tries to sign (MUST FAIL - signers must sign first)
-    // In INVITEES_FIRST, the owner is not automatically a signer, so we'll skip this test
-    // The business rule is that external signers must sign first, and the owner can only sign after all signers have signed
-
 
     // 4. Signer A signs (SUCCESS)
     const tokenA1 = createData1.invitationTokens?.find((t: any) => {
@@ -190,14 +190,7 @@ describe('Multi-Signer Envelope Workflow Integration Tests', () => {
       consent: { given: true, timestamp: new Date().toISOString(), text: 'I agree', ipAddress: '127.0.0.1', userAgent: 'jest-test/1.0' }
     };
     
-    const signAEvt1 = await createApiGatewayEvent({ 
-      includeAuth: false, 
-      body: JSON.stringify(signBodyA1),
-      headers: { 'user-agent': 'jest-test/1.0', 'x-country': 'CO' }
-    });
-    
-    const signARes1 = await signDocumentHandler(signAEvt1);
-    const signAObj1 = typeof signARes1 === 'string' ? JSON.parse(signARes1) : signARes1;
+    const signAObj1 = await signDocument(signBodyA1, createApiGatewayEvent, signDocumentHandler);
     expect(signAObj1.statusCode).toBe(200);
 
     // Validate events: signer.signed (only for multi-signer envelopes)
@@ -249,7 +242,6 @@ describe('Multi-Signer Envelope Workflow Integration Tests', () => {
     // This should fail because you cannot remove a signer who has already signed
     expect(updateObj1.statusCode).toBe(400); // Expected to fail
 
-
     // 7. Owner deletes entire envelope (SUCCESS)
     const deleteEvt1 = await makeAuthEvent({ pathParameters: { envelopeId: envelopeId1 } });
     const deleteRes1 = await deleteEnvelopeHandler(deleteEvt1);
@@ -258,15 +250,10 @@ describe('Multi-Signer Envelope Workflow Integration Tests', () => {
 
     // Validate events: envelope.deleted
     await validateEvents(['envelope.deleted'], 'After deleting INVITEES_FIRST envelope');
+  };
 
-
-    // ========================================
-    // SECTION 2: OWNER_FIRST SIGNING ORDER & NON-RESPONSIVE SIGNER MANAGEMENT
-    // ========================================
-    // Tests business rules where owner must sign first, then signers
-    // Validates non-responsive signer removal and replacement workflows
-    
-
+  // Helper function to test OWNER_FIRST workflow
+  const testOwnerFirstWorkflow = async (documentId: string, pdfBuffer: Buffer, sha256: string, signatureHash: string) => {
     // 8. Create new envelope with 3 signers (OWNER_FIRST)
     const createBody2 = {
       metadata: { title: `OWNER_FIRST Test ${Date.now()}-${randomUUID()}`, description: 'Owner signs first' },
@@ -281,18 +268,10 @@ describe('Multi-Signer Envelope Workflow Integration Tests', () => {
         { email: signerC.email, fullName: signerC.fullName, order: 4 }
       ]
     };
-    const createEvt2 = await makeAuthEvent({ body: JSON.stringify(createBody2) });
-    const createRes2 = await createEnvelopeHandler(createEvt2);
-    const createResObj2 = typeof createRes2 === 'string' ? JSON.parse(createRes2) : createRes2;
-    expect(createResObj2.statusCode).toBe(201);
-    const createData2 = JSON.parse(createResObj2.body).data;
-    const envelopeId2: string = createData2.envelope.id;
+    const { createData: createData2, envelopeId: envelopeId2 } = await createEnvelope(createBody2, makeAuthEvent, createEnvelopeHandler);
 
     // Send envelope so reminders are allowed (status must be SENT/IN_PROGRESS)
-    const sendEvtOwnerFirst = await makeAuthEvent({ pathParameters: { envelopeId: envelopeId2 } });
-    const sendResOwnerFirst = await sendEnvelopeHandler(sendEvtOwnerFirst);
-    const sendObjOwnerFirst = typeof sendResOwnerFirst === 'string' ? JSON.parse(sendResOwnerFirst) : sendResOwnerFirst;
-    expect(sendObjOwnerFirst.statusCode).toBe(200);
+    await sendEnvelope(envelopeId2, makeAuthEvent, sendEnvelopeHandler);
 
     // Compute token for a signer before using it
     const tokenA2 = createData2.invitationTokens?.find((t: any) => {
@@ -317,8 +296,6 @@ describe('Multi-Signer Envelope Workflow Integration Tests', () => {
     }
 
     // 9. Signer tries to sign (MUST FAIL - owner must sign first)
-    // tokenA2 computed above
-
     const signBodyA2 = {
       invitationToken: tokenA2,
       envelopeId: envelopeId2,
@@ -332,17 +309,9 @@ describe('Multi-Signer Envelope Workflow Integration Tests', () => {
       consent: { given: true, timestamp: new Date().toISOString(), text: 'I agree', ipAddress: '127.0.0.1', userAgent: 'jest-test/1.0' }
     };
     
-    const signAEvt2 = await createApiGatewayEvent({ 
-      includeAuth: false, 
-      body: JSON.stringify(signBodyA2),
-      headers: { 'user-agent': 'jest-test/1.0', 'x-country': 'CO' }
-    });
-    
-    const signARes2 = await signDocumentHandler(signAEvt2);
-    const signAObj2 = typeof signARes2 === 'string' ? JSON.parse(signARes2) : signARes2;
+    const signAObj2 = await signDocument(signBodyA2, createApiGatewayEvent, signDocumentHandler);
     // This should fail because owner must sign first in OWNER_FIRST
     expect(signAObj2.statusCode).toBe(400); // Expected to fail
-
 
     // 10. Owner signs (SUCCESS)
     // Get the owner's signer ID from the envelope
@@ -372,6 +341,11 @@ describe('Multi-Signer Envelope Workflow Integration Tests', () => {
     expect(ownerSignObj2.statusCode).toBe(200);
 
     // 11. Signer A signs (SUCCESS)
+    const signAEvt2 = await createApiGatewayEvent({ 
+      includeAuth: false, 
+      body: JSON.stringify(signBodyA2),
+      headers: { 'user-agent': 'jest-test/1.0', 'x-country': 'CO' }
+    });
     const signARes2After = await signDocumentHandler(signAEvt2);
     const signAObj2After = typeof signARes2After === 'string' ? JSON.parse(signARes2After) : signARes2After;
     expect(signAObj2After.statusCode).toBe(200);
@@ -458,14 +432,7 @@ describe('Multi-Signer Envelope Workflow Integration Tests', () => {
         consent: { given: true, timestamp: new Date().toISOString(), text: 'I agree', ipAddress: '127.0.0.1', userAgent: 'jest-test/1.0' }
       };
       
-      const signDEvt2 = await createApiGatewayEvent({ 
-        includeAuth: false, 
-        body: JSON.stringify(signBodyD2),
-        headers: { 'user-agent': 'jest-test/1.0', 'x-country': 'CO' }
-      });
-      
-      const signDRes2 = await signDocumentHandler(signDEvt2);
-      const signDObj2 = typeof signDRes2 === 'string' ? JSON.parse(signDRes2) : signDRes2;
+      const signDObj2 = await signDocument(signBodyD2, createApiGatewayEvent, signDocumentHandler);
       expect(signDObj2.statusCode).toBe(200);
     }
 
@@ -490,14 +457,7 @@ describe('Multi-Signer Envelope Workflow Integration Tests', () => {
         consent: { given: true, timestamp: new Date().toISOString(), text: 'I agree', ipAddress: '127.0.0.1', userAgent: 'jest-test/1.0' }
       };
 
-      const signCEvt2 = await createApiGatewayEvent({
-        includeAuth: false,
-        body: JSON.stringify(signBodyC2),
-        headers: { 'user-agent': 'jest-test/1.0', 'x-country': 'CO' }
-      });
-
-      const signCRes2 = await signDocumentHandler(signCEvt2);
-      const signCObj2 = typeof signCRes2 === 'string' ? JSON.parse(signCRes2) : signCRes2;
+      const signCObj2 = await signDocument(signBodyC2, createApiGatewayEvent, signDocumentHandler);
       expect(signCObj2.statusCode).toBe(200);
     }
 
@@ -511,14 +471,11 @@ describe('Multi-Signer Envelope Workflow Integration Tests', () => {
       expect(envStatusAfterAll).toBe('COMPLETED');
     }
 
+    return envelopeId2;
+  };
 
-    // ========================================
-    // SECTION 3: DOCUMENT ACCESS & AUDIT TRAIL VALIDATION
-    // ========================================
-    // Tests document download permissions and complete audit trail verification
-    // Validates access controls and event history completeness
-    
-
+  // Helper function to test document access and audit trail
+  const testDocumentAccessAndAuditTrail = async (envelopeId2: string, tokenA2: string) => {
     // 17. Owner downloads document (SUCCESS - always allowed)
     const downloadEvt1 = await makeAuthEvent({ pathParameters: { envelopeId: envelopeId2 } });
     const downloadRes1Raw = await downloadSignedDocumentHandler(downloadEvt1);
@@ -539,10 +496,6 @@ describe('Multi-Signer Envelope Workflow Integration Tests', () => {
       expect(externalDownloadRes.statusCode).toBe(200);
     }
 
-    // (view-only check done earlier right after send)
-
-    // (external download already performed above)
-
     // 21. Verify complete event history
     const historyEvt = await makeAuthEvent({ pathParameters: { envelopeId: envelopeId2 }, queryStringParameters: { limit: '100' } });
     const historyRes = await getDocumentHistoryHandler(historyEvt);
@@ -557,6 +510,39 @@ describe('Multi-Signer Envelope Workflow Integration Tests', () => {
       'SIGNER_ADDED', 'SIGNER_REMOVED', 'SIGNER_REMINDER_SENT',
       'SIGNATURE_CREATED', 'CONSENT_GIVEN', 'DOCUMENT_ACCESSED', 'DOCUMENT_DOWNLOADED'
     ]));
+  };
+
+  it('should handle complete multi-signer envelope workflow with business rule validations', async () => {
+    // Setup: Create test document
+    const documentId = randomUUID();
+    const { pdfBuffer, sha256, signatureHash } = await createTestDocument(documentId, cfg, owner);
+
+    // ========================================
+    // SECTION 1: INVITEES_FIRST SIGNING ORDER VALIDATION
+    // ========================================
+    await testInviteesFirstWorkflow(documentId, pdfBuffer, sha256, signatureHash);
+
+
+    // ========================================
+    // SECTION 2: OWNER_FIRST SIGNING ORDER & NON-RESPONSIVE SIGNER MANAGEMENT
+    // ========================================
+    const envelopeId2 = await testOwnerFirstWorkflow(documentId, pdfBuffer, sha256, signatureHash);
+
+
+    // ========================================
+    // SECTION 3: DOCUMENT ACCESS & AUDIT TRAIL VALIDATION
+    // ========================================
+    // Get tokenA2 from the OWNER_FIRST workflow for document access testing
+    const getEvtForToken = await makeAuthEvent({ pathParameters: { envelopeId: envelopeId2 } });
+    const getResForToken = await getEnvelopeHandler(getEvtForToken);
+    const getObjForToken = typeof getResForToken === 'string' ? JSON.parse(getResForToken) : getResForToken;
+    const getDataForToken = JSON.parse(getObjForToken.body).data;
+    const tokenA2 = getDataForToken.envelope.invitationTokens?.find((t: any) => {
+      const signer = getDataForToken.envelope.signers?.find((s: any) => s.email === signerA.email);
+      return signer && t.signerId === signer.id;
+    })?.token;
+
+    await testDocumentAccessAndAuditTrail(envelopeId2, tokenA2);
 
     // Final validation summary
     // All business rules validated successfully:

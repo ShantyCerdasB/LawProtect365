@@ -137,7 +137,8 @@ export class EventPublisher {
       await this.outbox.markDispatched(event.id);
 
     } catch (error) {
-      throw error;
+      // Re-throw with additional context
+      throw mapAwsError(error, 'EventPublisher.processEvent');
     }
   }
 

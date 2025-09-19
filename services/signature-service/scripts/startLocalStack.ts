@@ -78,7 +78,7 @@ function safeExecSync(command: string, options: any = {}) {
     'curl': ['-f']
   };
   
-  // Define safe argument patterns
+  // Define safe argument patterns (using atomic groups and avoiding backtracking)
   const SAFE_ARG_PATTERNS = [
     /^-[a-zA-Z]$/,                    // Single letter flags like -f, -d
     /^--[a-zA-Z-]+$/,                 // Long flags like --detach
@@ -86,8 +86,8 @@ function safeExecSync(command: string, options: any = {}) {
     /^[a-zA-Z0-9._-]+$/,              // Simple identifiers
     /^[a-zA-Z0-9._-]+:[a-zA-Z0-9._-]+$/, // Container names with colons
     /^https?:\/\/[a-zA-Z0-9._/-]+$/,  // HTTP/HTTPS URLs
-    /^Invoke-WebRequest.*$/,           // PowerShell commands
-    /^.*\|.*$/,                       // PowerShell pipe commands
+    /^Invoke-WebRequest [a-zA-Z0-9._/\\:-]+$/, // PowerShell commands with specific pattern
+    /^[a-zA-Z0-9._-]+ \| [a-zA-Z0-9._-]+$/, // PowerShell pipe commands with specific pattern
   ];
   
   function isSafeArgument(arg: string): boolean {

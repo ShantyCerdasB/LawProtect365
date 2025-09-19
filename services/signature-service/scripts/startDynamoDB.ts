@@ -95,7 +95,7 @@ export const stopDynamoDBLocal = async (): Promise<void> => {
     console.log('✅ DynamoDB Local stopped successfully!');
     
   } catch (error: any) {
-    console.log('⚠️  DynamoDB Local was not running or already stopped');
+    console.log(`⚠️  DynamoDB Local was not running or already stopped: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };
 
@@ -113,6 +113,8 @@ export const isDynamoDBLocalRunning = async (): Promise<boolean> => {
     await listTables(client);
     return true;
   } catch (error) {
+    // DynamoDB Local is not running or not accessible
+    console.debug(`DynamoDB Local check failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     return false;
   }
 };
@@ -143,7 +145,8 @@ export const waitForDynamoDBLocal = async (
         return;
       }
     } catch (error) {
-      // Ignore errors during startup
+      // Log errors during startup for debugging but continue retrying
+      console.debug(`DynamoDB Local startup check failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
     
     console.log(`⏳ Attempt ${i + 1}/${maxRetries} - waiting ${retryDelay}ms...`);

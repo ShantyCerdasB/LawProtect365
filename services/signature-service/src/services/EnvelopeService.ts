@@ -12,7 +12,7 @@ import { SignerId } from '../domain/value-objects/SignerId';
 import { EnvelopeStatus } from '../domain/enums/EnvelopeStatus';
 import { EnvelopeOperation } from '../domain/enums/EnvelopeOperation';
 import { SigningOrder } from '../domain/value-objects/SigningOrder';
-import { uuid } from '@lawprotect/shared-ts';
+import { uuid, NotFoundError, ErrorCodes, PermissionLevel, AccessType } from '@lawprotect/shared-ts';
 import { EnvelopeRepository } from '../repositories/EnvelopeRepository';
 import { SignerRepository } from '../repositories/SignerRepository';
 import { SignatureRepository } from '../repositories/SignatureRepository';
@@ -23,7 +23,6 @@ import {
   UpdateEnvelopeRequest,
   EnvelopeSecurityContext
 } from '../domain/types/envelope';
-import { NotFoundError, ErrorCodes } from '@lawprotect/shared-ts';
 import { AuditEventType } from '../domain/enums/AuditEventType';
 import type { SignatureServiceConfig } from '../config';
 
@@ -35,7 +34,6 @@ import {
 } from '../domain/rules/envelope/EnvelopeBusinessRules';
 import { validateEnvelopeStateTransition } from '../domain/rules/envelope/EnvelopeStateTransitionRules';
 import { validateEnvelopeAccessPermissions } from '../domain/rules/envelope/EnvelopeSecurityRules';
-import { PermissionLevel, AccessType } from '@lawprotect/shared-ts';
 
 /**
  * EnvelopeService implementation

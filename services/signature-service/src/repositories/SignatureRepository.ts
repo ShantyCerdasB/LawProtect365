@@ -5,8 +5,7 @@
  * including CRUD operations, queries, and data persistence.
  */
 
-import { DdbClientLike, mapAwsError, ConflictError, ErrorCodes, decodeCursor, encodeCursor, NotFoundError, requireUpdate, BadRequestError } from '@lawprotect/shared-ts';
-import { requireQuery } from '@lawprotect/shared-ts';
+import { DdbClientLike, mapAwsError, ConflictError, ErrorCodes, decodeCursor, encodeCursor, NotFoundError, requireUpdate, BadRequestError, requireQuery } from '@lawprotect/shared-ts';
 
 import { Signature } from '../domain/entities/Signature';
 import { SignatureId } from '../domain/value-objects/SignatureId';

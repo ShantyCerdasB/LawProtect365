@@ -320,7 +320,7 @@ export class EnvelopeRepository implements Repository<Envelope, EnvelopeId, unde
     const hydrated: any[] = [];
     
     for (const it of rows) {
-      let item: any | null = it;
+      let item: any = it;
       const hasAll = item && item.type === 'ENVELOPE' && item.sk === 'META' && item.envelopeId && item.metadata;
       
       if (!hasAll) {
@@ -338,7 +338,7 @@ export class EnvelopeRepository implements Repository<Envelope, EnvelopeId, unde
   /**
    * Hydrates a partial item by fetching full data
    */
-  private async hydratePartialItem(item: any): Promise<any | null> {
+  private async hydratePartialItem(item: any): Promise<any> {
     const envelopeIdFromIdx = this.extractEnvelopeId(item);
     
     if (!envelopeIdFromIdx) {

@@ -68,7 +68,8 @@ export class SecurityContextBuilder {
           return true;
         }
       } catch (e) {
-        // Ignore parsing errors
+        // Log parsing errors for debugging but continue with default behavior
+        console.warn('Failed to parse request body for invitation token check:', e instanceof Error ? e.message : 'Unknown error');
       }
     }
     
@@ -94,7 +95,8 @@ export class SecurityContextBuilder {
           token = body.invitationToken;
         }
       } catch (e) {
-        // Ignore parsing errors
+        // Log parsing errors for debugging but continue with default behavior
+        console.warn('Failed to parse request body for invitation token extraction:', e instanceof Error ? e.message : 'Unknown error');
       }
     }
 

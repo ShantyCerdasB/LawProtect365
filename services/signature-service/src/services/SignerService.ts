@@ -6,6 +6,7 @@
  */
 
 import { Signer } from '../domain/entities/Signer';
+import { Envelope } from '../domain/entities/Envelope';
 import { SignerId } from '../domain/value-objects/SignerId';
 import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
 import { Email } from '../domain/value-objects/Email';
@@ -70,139 +71,12 @@ export class SignerService {
         reason: request.reason
       });
 
-      // Get signer and envelope
-      console.log('[SignerService.declineSigner] Getting signer from repository');
-      const signer = await this.signerRepository.getById(request.signerId);
-      if (!signer) {
-        console.log('[SignerService.declineSigner] Signer not found');
-        throw new NotFoundError(
-          `Signer with ID ${request.signerId.getValue()} not found`,
-          ErrorCodes.COMMON_NOT_FOUND
-        );
-      }
-      console.log('[SignerService.declineSigner] Signer found', {
-        signerId: signer.getId().getValue(),
-        envelopeId: signer.getEnvelopeId(),
-        status: signer.getStatus(),
-        email: signer.getEmail().getValue()
-      });
-
-      console.log('[SignerService.declineSigner] Getting envelope from repository');
-      const envelope = await this.envelopeRepository.getById(new EnvelopeId(signer.getEnvelopeId()));
-      if (!envelope) {
-        console.log('[SignerService.declineSigner] Envelope not found');
-        throw new NotFoundError(
-          `Envelope with ID ${signer.getEnvelopeId()} not found`,
-          ErrorCodes.COMMON_NOT_FOUND
-        );
-      }
-      console.log('[SignerService.declineSigner] Envelope found', {
-        envelopeId: envelope.getId().getValue(),
-        status: envelope.getStatus(),
-        signerCount: envelope.getSigners().length
-      });
-
-      // Handle complete decline workflow using domain rules
-      console.log('[SignerService.declineSigner] Validating decline workflow');
-      const declineWorkflowResult = handleSignerDeclineWorkflow(signer, envelope, {
-        reason: request.reason,
-        timestamp: new Date(),
-        ipAddress: request.ipAddress,
-        userAgent: request.userAgent
-      });
-      console.log('[SignerService.declineSigner] Workflow validation completed', {
-        shouldCancelEnvelope: declineWorkflowResult.shouldCancelEnvelope,
-        cancellationReason: declineWorkflowResult.cancellationReason
-      });
-
-      // Update signer status to DECLINED
-      console.log('[SignerService.declineSigner] Updating signer status to DECLINED');
-      const updatedSigner = await this.signerRepository.update(request.signerId, {
-        status: SignerStatus.DECLINED,
-        declinedAt: new Date(),
-        metadata: {
-          declineReason: request.reason,
-          ipAddress: request.ipAddress,
-          userAgent: request.userAgent
-        }
-      });
-      console.log('[SignerService.declineSigner] Signer status updated successfully');
-
-      // Log audit event for signer decline
-      console.log('[SignerService.declineSigner] Creating audit event for signer decline');
-      await this.auditService.createEvent({
-        envelopeId: signer.getEnvelopeId(),
-        description: `Signer ${signer.getEmail().getValue()} declined to sign`,
-        type: AuditEventType.SIGNER_DECLINED,
-        userId: request.userId,
-        metadata: {
-          signerId: request.signerId.getValue(),
-          declineReason: request.reason,
-          ipAddress: request.ipAddress,
-          userAgent: request.userAgent
-        }
-      });
-      console.log('[SignerService.declineSigner] Audit event created successfully');
-
-      // Publish signer declined event
-      console.log('[SignerService.declineSigner] Publishing signer declined event');
-      await this.signerEventService.publishSignerDeclined(
-        updatedSigner,
-        new Date(),
-        request.reason
-      );
-      console.log('[SignerService.declineSigner] Signer declined event published successfully');
-
-      // Handle envelope cancellation if recommended by domain rules
-      if (declineWorkflowResult.shouldCancelEnvelope) {
-        console.log('[SignerService.declineSigner] Cancelling envelope due to signer decline');
-        
-        // Create cancelled envelope using domain rules
-        console.log('[SignerService.declineSigner] Creating cancelled envelope');
-        const cancelledEnvelope = createCancelledEnvelope(envelope);
-
-        // Update the envelope in the repository
-        console.log('[SignerService.declineSigner] Updating envelope status to CANCELLED');
-        await this.envelopeRepository.update(new EnvelopeId(signer.getEnvelopeId()), cancelledEnvelope);
-
-        // Log audit event for envelope cancellation
-        console.log('[SignerService.declineSigner] Creating audit event for envelope cancellation');
-        await this.auditService.createEvent({
-          envelopeId: signer.getEnvelopeId(),
-          description: `Envelope cancelled due to signer decline`,
-          type: AuditEventType.ENVELOPE_CANCELLED,
-          userId: request.userId,
-          metadata: {
-            signerId: request.signerId.getValue(),
-            declineReason: request.reason,
-            cancelledBy: 'signer_decline'
-          }
-        });
-
-        // Publish envelope cancelled event
-        console.log('[SignerService.declineSigner] Publishing envelope cancelled event');
-        await this.envelopeEventService.publishEnvelopeCancelled(
-          cancelledEnvelope,
-          new Date(),
-          declineWorkflowResult.cancellationReason
-        );
-        console.log('[SignerService.declineSigner] Envelope cancellation completed successfully');
-      } else {
-        console.log('[SignerService.declineSigner] Envelope will not be cancelled');
-        // Envelope should not be cancelled - log that envelope remains active
-        await this.auditService.createEvent({
-          envelopeId: signer.getEnvelopeId(),
-          description: `Signer declined but envelope remains active (cannot cancel)`,
-          type: AuditEventType.SIGNER_DECLINED,
-          userId: request.userId,
-          metadata: {
-            signerId: request.signerId.getValue(),
-            declineReason: request.reason,
-            envelopeStatus: envelope.getStatus()
-          }
-        });
-        console.log('[SignerService.declineSigner] Additional audit event created');
-      }
+      const { signer, envelope } = await this.loadSignerAndEnvelope(request);
+      const declineWorkflowResult = await this.validateDeclineWorkflow(signer, envelope, request);
+      const updatedSigner = await this.updateSignerToDeclined(request);
+      await this.createSignerDeclineAuditEvent(signer, request);
+      await this.publishSignerDeclinedEvent(updatedSigner, request);
+      await this.handleEnvelopeCancellationIfNeeded(signer, envelope, declineWorkflowResult, request);
 
       console.log('[SignerService.declineSigner] Decline process completed successfully');
       return updatedSigner;
@@ -215,6 +89,205 @@ export class SignerService {
       });
       throw mapAwsError(error, 'SignerService.declineSigner');
     }
+  }
+
+  /**
+   * Loads signer and envelope from repository
+   */
+  private async loadSignerAndEnvelope(request: DeclineSignerRequest): Promise<{ signer: Signer; envelope: Envelope }> {
+    console.log('[SignerService.declineSigner] Getting signer from repository');
+    const signer = await this.signerRepository.getById(request.signerId);
+    if (!signer) {
+      console.log('[SignerService.declineSigner] Signer not found');
+      throw new NotFoundError(
+        `Signer with ID ${request.signerId.getValue()} not found`,
+        ErrorCodes.COMMON_NOT_FOUND
+      );
+    }
+    console.log('[SignerService.declineSigner] Signer found', {
+      signerId: signer.getId().getValue(),
+      envelopeId: signer.getEnvelopeId(),
+      status: signer.getStatus(),
+      email: signer.getEmail().getValue()
+    });
+
+    console.log('[SignerService.declineSigner] Getting envelope from repository');
+    const envelope = await this.envelopeRepository.getById(new EnvelopeId(signer.getEnvelopeId()));
+    if (!envelope) {
+      console.log('[SignerService.declineSigner] Envelope not found');
+      throw new NotFoundError(
+        `Envelope with ID ${signer.getEnvelopeId()} not found`,
+        ErrorCodes.COMMON_NOT_FOUND
+      );
+    }
+    console.log('[SignerService.declineSigner] Envelope found', {
+      envelopeId: envelope.getId().getValue(),
+      status: envelope.getStatus(),
+      signerCount: envelope.getSigners().length
+    });
+
+    return { signer, envelope };
+  }
+
+  /**
+   * Validates decline workflow using domain rules
+   */
+  private async validateDeclineWorkflow(
+    signer: Signer,
+    envelope: Envelope,
+    request: DeclineSignerRequest
+  ): Promise<any> {
+    console.log('[SignerService.declineSigner] Validating decline workflow');
+    const declineWorkflowResult = handleSignerDeclineWorkflow(signer, envelope, {
+      reason: request.reason,
+      timestamp: new Date(),
+      ipAddress: request.ipAddress,
+      userAgent: request.userAgent
+    });
+    console.log('[SignerService.declineSigner] Workflow validation completed', {
+      shouldCancelEnvelope: declineWorkflowResult.shouldCancelEnvelope,
+      cancellationReason: declineWorkflowResult.cancellationReason
+    });
+    return declineWorkflowResult;
+  }
+
+  /**
+   * Updates signer status to DECLINED
+   */
+  private async updateSignerToDeclined(request: DeclineSignerRequest): Promise<Signer> {
+    console.log('[SignerService.declineSigner] Updating signer status to DECLINED');
+    const updatedSigner = await this.signerRepository.update(request.signerId, {
+      status: SignerStatus.DECLINED,
+      declinedAt: new Date(),
+      metadata: {
+        declineReason: request.reason,
+        ipAddress: request.ipAddress,
+        userAgent: request.userAgent
+      }
+    });
+    console.log('[SignerService.declineSigner] Signer status updated successfully');
+    return updatedSigner;
+  }
+
+  /**
+   * Creates audit event for signer decline
+   */
+  private async createSignerDeclineAuditEvent(signer: Signer, request: DeclineSignerRequest): Promise<void> {
+    console.log('[SignerService.declineSigner] Creating audit event for signer decline');
+    await this.auditService.createEvent({
+      envelopeId: signer.getEnvelopeId(),
+      description: `Signer ${signer.getEmail().getValue()} declined to sign`,
+      type: AuditEventType.SIGNER_DECLINED,
+      userId: request.userId,
+      metadata: {
+        signerId: request.signerId.getValue(),
+        declineReason: request.reason,
+        ipAddress: request.ipAddress,
+        userAgent: request.userAgent
+      }
+    });
+    console.log('[SignerService.declineSigner] Audit event created successfully');
+  }
+
+  /**
+   * Publishes signer declined event
+   */
+  private async publishSignerDeclinedEvent(updatedSigner: Signer, request: DeclineSignerRequest): Promise<void> {
+    console.log('[SignerService.declineSigner] Publishing signer declined event');
+    await this.signerEventService.publishSignerDeclined(
+      updatedSigner,
+      new Date(),
+      request.reason
+    );
+    console.log('[SignerService.declineSigner] Signer declined event published successfully');
+  }
+
+  /**
+   * Handles envelope cancellation if needed
+   */
+  private async handleEnvelopeCancellationIfNeeded(
+    signer: Signer,
+    envelope: Envelope,
+    declineWorkflowResult: any,
+    request: DeclineSignerRequest
+  ): Promise<void> {
+    if (declineWorkflowResult.shouldCancelEnvelope) {
+      await this.cancelEnvelopeDueToDecline(signer, envelope, declineWorkflowResult, request);
+    } else {
+      await this.logEnvelopeRemainsActive(signer, envelope, request);
+    }
+  }
+
+  /**
+   * Cancels envelope due to signer decline
+   */
+  private async cancelEnvelopeDueToDecline(
+    signer: Signer,
+    envelope: Envelope,
+    declineWorkflowResult: any,
+    request: DeclineSignerRequest
+  ): Promise<void> {
+    console.log('[SignerService.declineSigner] Cancelling envelope due to signer decline');
+    
+    console.log('[SignerService.declineSigner] Creating cancelled envelope');
+    const cancelledEnvelope = createCancelledEnvelope(envelope);
+
+    console.log('[SignerService.declineSigner] Updating envelope status to CANCELLED');
+    await this.envelopeRepository.update(new EnvelopeId(signer.getEnvelopeId()), cancelledEnvelope);
+
+    await this.createEnvelopeCancellationAuditEvent(signer, request);
+    await this.publishEnvelopeCancelledEvent(cancelledEnvelope, declineWorkflowResult);
+    
+    console.log('[SignerService.declineSigner] Envelope cancellation completed successfully');
+  }
+
+  /**
+   * Creates audit event for envelope cancellation
+   */
+  private async createEnvelopeCancellationAuditEvent(signer: Signer, request: DeclineSignerRequest): Promise<void> {
+    console.log('[SignerService.declineSigner] Creating audit event for envelope cancellation');
+    await this.auditService.createEvent({
+      envelopeId: signer.getEnvelopeId(),
+      description: `Envelope cancelled due to signer decline`,
+      type: AuditEventType.ENVELOPE_CANCELLED,
+      userId: request.userId,
+      metadata: {
+        signerId: request.signerId.getValue(),
+        declineReason: request.reason,
+        cancelledBy: 'signer_decline'
+      }
+    });
+  }
+
+  /**
+   * Publishes envelope cancelled event
+   */
+  private async publishEnvelopeCancelledEvent(cancelledEnvelope: Envelope, declineWorkflowResult: any): Promise<void> {
+    console.log('[SignerService.declineSigner] Publishing envelope cancelled event');
+    await this.envelopeEventService.publishEnvelopeCancelled(
+      cancelledEnvelope,
+      new Date(),
+      declineWorkflowResult.cancellationReason
+    );
+  }
+
+  /**
+   * Logs that envelope remains active
+   */
+  private async logEnvelopeRemainsActive(signer: Signer, envelope: Envelope, request: DeclineSignerRequest): Promise<void> {
+    console.log('[SignerService.declineSigner] Envelope will not be cancelled');
+    await this.auditService.createEvent({
+      envelopeId: signer.getEnvelopeId(),
+      description: `Signer declined but envelope remains active (cannot cancel)`,
+      type: AuditEventType.SIGNER_DECLINED,
+      userId: request.userId,
+      metadata: {
+        signerId: request.signerId.getValue(),
+        declineReason: request.reason,
+        envelopeStatus: envelope.getStatus()
+      }
+    });
+    console.log('[SignerService.declineSigner] Additional audit event created');
   }
 
   /**

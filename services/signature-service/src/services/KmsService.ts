@@ -6,7 +6,7 @@
  */
 
 
-import { KmsSigner } from '@lawprotect/shared-ts';
+import { KmsSigner, mapAwsError, BadRequestError, NotFoundError, ErrorCodes } from '@lawprotect/shared-ts';
 import { Signature } from '../domain/entities/Signature';
 import { SignatureId } from '../domain/value-objects/SignatureId';
 import { SignerId } from '../domain/value-objects/SignerId';
@@ -23,7 +23,6 @@ import { SignatureValidationResult } from '../domain/types/signature/SignatureVa
 import { signatureDdbMapper } from '../domain/types/infrastructure/signature/signature-mappers';
 import { S3Service } from './S3Service';
 import { validateKmsCreateSignatureRequest, validateSignatureValidationRequest } from '../domain/rules/signature/SignatureValidationRules';
-import { mapAwsError, BadRequestError, NotFoundError, ErrorCodes } from '@lawprotect/shared-ts';
 
 // Local interfaces moved to domain/types/signature/
 // - KmsCreateSignatureRequest

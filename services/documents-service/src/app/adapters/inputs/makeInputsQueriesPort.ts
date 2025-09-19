@@ -6,7 +6,7 @@
  */
 
 import type { Input } from "../../../domain/entities/Input";
-import type { InputId, PartyId } from "../../../domain/value-objects/ids";
+import type { InputId } from "../../../domain/value-objects/ids";
 import type { InputsQueriesPort } from "../../ports/inputs/InputsQueriesPort";
 import type { InputsRepository } from "../../../domain/contracts/repositories/inputs/InputsRepository";
 import type { InputsValidationService } from "../../services/Inputs/InputsValidationService";

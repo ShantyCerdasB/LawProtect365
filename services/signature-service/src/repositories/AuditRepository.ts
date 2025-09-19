@@ -5,8 +5,7 @@
  * including CRUD operations, queries, and data persistence.
  */
 
-import { DdbClientLike, mapAwsError, ConflictError, ErrorCodes, decodeCursor, encodeCursor, NotFoundError, BadRequestError } from '@lawprotect/shared-ts';
-import { requireQuery } from '@lawprotect/shared-ts';
+import { DdbClientLike, mapAwsError, ConflictError, ErrorCodes, decodeCursor, encodeCursor, NotFoundError, BadRequestError, requireQuery } from '@lawprotect/shared-ts';
 
 import { AuditEvent } from '../domain/types/audit/AuditEvent';
 import { CreateAuditEventRequest } from '../domain/types/audit/CreateAuditEventRequest';

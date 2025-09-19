@@ -80,7 +80,9 @@ export const downloadSignedDocumentHandler = ControllerFactory.createCommand({
       const isInvitation = this.isInvitationAccess(params);
 
       // 1. Load envelope respecting access rules
-      const envelope = await this.loadEnvelope(envelopeId, params, isInvitation);
+      const envelope = isInvitation 
+        ? await this.loadEnvelopeForInvitationAccess(envelopeId, params)
+        : await this.loadEnvelopeForDirectAccess(envelopeId, params);
 
       // 2. Resolve S3 key based on envelope status
       const s3Key = this.resolveS3Key(envelope, envelopeId);
@@ -109,18 +111,21 @@ export const downloadSignedDocumentHandler = ControllerFactory.createCommand({
     }
 
     /**
-     * Loads envelope with appropriate access rules
+     * Loads envelope for invitation access
      */
-    private async loadEnvelope(envelopeId: EnvelopeId, params: any, isInvitation: boolean): Promise<any> {
-      if (isInvitation) {
-        return await this.loadEnvelopeForInvitation(envelopeId, params);
-      } else {
-        return await this.envelopeService.getEnvelope(
-          envelopeId,
-          params.userId,
-          params.securityContext
-        );
-      }
+    private async loadEnvelopeForInvitationAccess(envelopeId: EnvelopeId, params: any): Promise<any> {
+      return await this.loadEnvelopeForInvitation(envelopeId, params);
+    }
+
+    /**
+     * Loads envelope for direct access
+     */
+    private async loadEnvelopeForDirectAccess(envelopeId: EnvelopeId, params: any): Promise<any> {
+      return await this.envelopeService.getEnvelope(
+        envelopeId,
+        params.userId,
+        params.securityContext
+      );
     }
 
     /**
