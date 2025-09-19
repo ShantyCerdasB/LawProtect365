@@ -237,11 +237,8 @@ export function getNextSignerOrder(
   
   const maxOrder = Math.max(...existingSigners.map(s => s.getOrder()));
   
-  if (signingOrderType === SigningOrderType.OWNER_FIRST) {
-    // Owner is 1, invitees continue from 2
-    return maxOrder + 1;
-  } else {
-    // INVITEES_FIRST: Invitees get sequential orders, owner gets highest + 1
-    return maxOrder + 1;
-  }
+  // Both signing order types use the same logic: next order is max + 1
+  // OWNER_FIRST: Owner is 1, invitees continue from 2
+  // INVITEES_FIRST: Invitees get sequential orders, owner gets highest + 1
+  return maxOrder + 1;
 }

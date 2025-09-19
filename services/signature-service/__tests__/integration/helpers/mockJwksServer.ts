@@ -41,7 +41,7 @@ const keyMetadata = {
  * Create JWKS (JSON Web Key Set) with the public key
  * @description Global variable to store the JWKS object after initialization
  */
-let jwks: any = null;
+const jwksState = { value: null as any };
 
 /**
  * Initialize JWKS with proper format (matching Cognito's JWKS structure)
@@ -54,7 +54,7 @@ const initializeJwks = async () => {
   const josePublicKey = await importSPKI(publicKey, 'RS256');
   const jwk = await exportJWK(josePublicKey);
   
-  jwks = {
+  jwksState.value = {
     keys: [{
       ...jwk,
       kid: keyMetadata.keyId,
@@ -91,7 +91,7 @@ const PORT = 3000;
  * @description Express route handler for serving the JSON Web Key Set at the standard JWKS endpoint
  */
 app.get('/.well-known/jwks.json', (_req, res) => {
-  if (!jwks) {
+  if (!jwksState.value) {
     console.error('❌ JWKS not initialized when requested');
     res.status(500).json({ error: 'JWKS not initialized' });
     return;
@@ -103,7 +103,7 @@ app.get('/.well-known/jwks.json', (_req, res) => {
   res.header('Access-Control-Allow-Headers', 'Content-Type');
   
   console.log('🔍 JWKS requested, serving key:', keyMetadata.keyId);
-  res.json(jwks);
+  res.json(jwksState.value);
 });
 
 /**
@@ -132,7 +132,7 @@ app.use((error: any, _req: any, res: any, _next: any) => {
  * Start server
  * @description Global variable to store the Express server instance
  */
-let server: any = null;
+const serverState = { value: null as any };
 
 /**
  * Start the mock JWKS server
@@ -147,7 +147,7 @@ export const startMockJwksServer = async (): Promise<void> => {
   
   return new Promise((resolve, reject) => {
     try {
-      server = app.listen(PORT, () => {
+      serverState.value = app.listen(PORT, () => {
         console.log(`🔐 Improved mock JWKS server running on http://localhost:${PORT}`);
         console.log(`📋 Available endpoints:`);
         console.log(`   - JWKS: http://localhost:${PORT}/.well-known/jwks.json`);
@@ -156,7 +156,7 @@ export const startMockJwksServer = async (): Promise<void> => {
         resolve();
       });
       
-      server.on('error', (error: any) => {
+      serverState.value.on('error', (error: any) => {
         console.error('❌ Failed to start mock JWKS server:', error);
         reject(error);
       });
@@ -175,8 +175,8 @@ export const startMockJwksServer = async (): Promise<void> => {
  */
 export const stopMockJwksServer = (): Promise<void> => {
   return new Promise((resolve) => {
-    if (server) {
-      server.close(() => {
+    if (serverState.value) {
+      serverState.value.close(() => {
         console.log('🔐 Improved mock JWKS server stopped');
         resolve();
       });
@@ -255,4 +255,4 @@ export const generateRS256Token = async (
  * @description Exports the generated key pair and JWKS for advanced testing scenarios
  * where direct access to keys or JWKS is required.
  */
-export { privateKey, publicKey, jwks };
+export { privateKey, publicKey, jwksState };

@@ -1,7 +1,16 @@
 /**
- * @file owner.single-signer.int.test.ts
- * @description End-to-end integration test for single-signer (owner) flow using JWT.
- * Flow: create envelope → get envelope → upload PDF to S3 → sign via JWT → complete → download → history.
+ * @file single-signer-envelope-workflow.int.test.ts
+ * @summary Single-signer envelope workflow integration tests
+ * @description End-to-end integration tests for single-signer envelope workflows where the owner
+ * is the only signer. Tests complete document lifecycle from creation to completion.
+ * 
+ * Test Coverage:
+ * - Envelope creation and configuration
+ * - Document upload and processing
+ * - Owner signing workflow
+ * - Document completion and status updates
+ * - Signed document download
+ * - Complete audit trail verification
  */
 
 import { randomUUID, createHash } from 'crypto';
@@ -24,7 +33,7 @@ import { SignerId } from '../../src/domain/value-objects/SignerId';
 import { EnvelopeId } from '../../src/domain/value-objects/EnvelopeId';
 import { EnvelopeStatus } from '../../src/domain/enums/EnvelopeStatus';
 
-describe('Integration: Single-signer (owner) flow', () => {
+describe('Single-Signer Envelope Workflow Integration Tests', () => {
   const cfg = loadConfig();
   const s3 = new S3Client({
     region: cfg.region,
@@ -55,7 +64,12 @@ describe('Integration: Single-signer (owner) flow', () => {
     return merged;
   };
 
-  it('should create, get, sign (JWT), complete, download, and show history', async () => {
+  it('should handle complete single-signer envelope workflow from creation to completion', async () => {
+    // ========================================
+    // SETUP: DOCUMENT SEEDING & ENVIRONMENT PREPARATION
+    // ========================================
+    // Prepare test environment with document data and validate service connectivity
+    
     // Pre-flight: ensure owner listing works (diagnostic)
     const preEnvService: EnvelopeService = ServiceFactory.createEnvelopeService();
     await preEnvService.getUserEnvelopes(ownerUser.userId, 1).catch(() => Promise.resolve());
@@ -88,6 +102,11 @@ describe('Integration: Single-signer (owner) flow', () => {
       } as any
     });
 
+    // ========================================
+    // SECTION 1: ENVELOPE CREATION & CONFIGURATION
+    // ========================================
+    // Create envelope with owner as the single signer and validate initial state
+    
     // 1) Create envelope with a single owner signer
     const envelopeTitle = `Test Envelope ${Date.now()}-${randomUUID()}`;
 
@@ -118,8 +137,6 @@ describe('Integration: Single-signer (owner) flow', () => {
     });
     const createRes = await createEnvelopeHandler(createEvt);
     const createResObj = typeof createRes === 'string' ? JSON.parse(createRes) : createRes;
-    // eslint-disable-next-line no-console
-    console.log('CreateEnvelope 201 response body:', createResObj.body);
     expect(createResObj.statusCode).toBe(201);
     const createParsed = JSON.parse(createResObj.body);
     const createData = (createParsed && (createParsed.data ?? createParsed)) as any;
@@ -135,6 +152,11 @@ describe('Integration: Single-signer (owner) flow', () => {
       throw new Error('Envelope ID not found after create; response missing envelope.id and fallback list returned none');
     }
 
+    // ========================================
+    // SECTION 2: ENVELOPE RETRIEVAL & SIGNER VALIDATION
+    // ========================================
+    // Retrieve created envelope and validate signer configuration
+    
     // 2) Get envelope and verify signer
     const getEvt = await makeAuthEvent({
       pathParameters: { envelopeId },
@@ -163,6 +185,11 @@ describe('Integration: Single-signer (owner) flow', () => {
       ContentType: 'application/pdf'
     }));
 
+    // ========================================
+    // SECTION 3: DOCUMENT SIGNING & COMPLETION
+    // ========================================
+    // Owner signs the document and envelope is automatically completed
+    
     // 4) Sign via JWT (owner path) - send consent from frontend payload
 
     const signBody = {
@@ -193,14 +220,17 @@ describe('Integration: Single-signer (owner) flow', () => {
     const signRes = await signDocumentHandler(signEvt);
     const signResObj = typeof signRes === 'string' ? JSON.parse(signRes) : signRes;
     if (signResObj.statusCode !== 200) {
-      // eslint-disable-next-line no-console
-      console.log('Sign response debug:', signResObj);
     }
     expect(signResObj.statusCode).toBe(200);
     const signData = JSON.parse(signResObj.body).data;
     expect(signData.signature.id).toBeTruthy();
     expect(signData.envelope.id).toBe(envelopeId);
 
+    // ========================================
+    // SECTION 4: DOCUMENT DOWNLOAD & AUDIT TRAIL
+    // ========================================
+    // Download signed document and verify complete audit trail
+    
     // 5) Download via handler (auto-completed for single signer)
     const downloadEvt = await makeAuthEvent({
       pathParameters: { envelopeId },
@@ -229,8 +259,6 @@ describe('Integration: Single-signer (owner) flow', () => {
     const historyRes = await getDocumentHistoryHandler(historyEvt);
     const historyResObj = typeof historyRes === 'string' ? JSON.parse(historyRes) : historyRes;
     expect(historyResObj.statusCode).toBe(200);
-    // eslint-disable-next-line no-console
-    console.log('History 200 response body:', JSON.stringify(JSON.parse(historyResObj.body), null, 2));
     const historyData = JSON.parse(historyResObj.body).data;
     expect(historyData.envelopeId).toBe(envelopeId);
     expect(Array.isArray(historyData.history.events)).toBe(true);
@@ -265,16 +293,16 @@ describe('Integration: Single-signer (owner) flow', () => {
       expect(new Date(ev.timestamp).toString()).not.toBe('Invalid Date');
       if (ev.userId !== undefined) expect(typeof ev.userId).toBe('string');
       if (ev.userEmail !== undefined) expect(typeof ev.userEmail).toBe('string');
-      // ip, ua, country deben estar presentes en eventos clave
+      // ip, ua, country should be present in key events
       if (['SIGNATURE_CREATED', 'DOCUMENT_DOWNLOADED', 'ENVELOPE_CREATED', 'ENVELOPE_STATUS_CHANGED'].includes(ev.type)) {
-        // ip/ua se registran en metadata superior; en nuestro modelo están como campos de evento
-        // La respuesta del handler no expone ip/ua/country directamente; validamos presence via metadata o por diseño actual omitimos.
-        // Aquí validamos que metadata exista; country puede venir null si no se resolvió geolocalización.
+        // ip/ua are recorded in superior metadata; in our model they are as event fields
+        // The handler response does not expose ip/ua/country directly; we validate presence via metadata or by current design we omit.
+        // Here we validate that metadata exists; country can come null if geolocation was not resolved.
         expect(typeof ev.metadata).toBe('object');
       }
     }
 
-    // Validaciones específicas por tipo
+    // Specific validations by type
     const sigCreated = events.find(e => e.type === 'SIGNATURE_CREATED');
     expect(sigCreated).toBeTruthy();
     expect(sigCreated.metadata.filename).toBe('signed.pdf');
@@ -284,7 +312,7 @@ describe('Integration: Single-signer (owner) flow', () => {
     expect(downloaded).toBeTruthy();
     expect(downloaded.metadata.filename).toBe('signed.pdf');
     expect(typeof downloaded.metadata.contentType).toBe('string');
-    // size depende del HeadObject en LocalStack/mocks; si está, debe ser número
+    // size depends on HeadObject in LocalStack/mocks; if present, must be number
     if (downloaded.metadata.size !== undefined) expect(typeof downloaded.metadata.size).toBe('number');
 
     // Validate envelope status summary matches completed

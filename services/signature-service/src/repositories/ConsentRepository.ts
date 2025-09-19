@@ -318,7 +318,7 @@ export class ConsentRepository {
         Limit: 1
       });
 
-      return (result as any).Count || result.Items?.length || 0 > 0;
+      return ((result as any).Count || result.Items?.length || 0) > 0;
     } catch (err) {
       throw mapAwsError(err, 'ConsentRepository.exists');
     }

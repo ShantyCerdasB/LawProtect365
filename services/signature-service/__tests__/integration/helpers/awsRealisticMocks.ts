@@ -30,7 +30,7 @@ jest.mock('@aws-sdk/client-kms', () => ({
       // Detect Sign by presence of Message + SigningAlgorithm
       if (input && (input.Message || input.SigningAlgorithm)) {
         const message = input.Message ?? new Uint8Array();
-        const bytes = typeof message === 'string' ? Buffer.from(message) : Buffer.from(message);
+        const bytes = typeof message === 'string' ? Buffer.from(message, 'utf8') : Buffer.from(message);
         const algorithm = input.SigningAlgorithm ?? 'RSASSA_PSS_SHA_256';
         const signature = Buffer.from(`mock-signature-${algorithm}-${bytes.toString('hex').substring(0, 8)}`);
         return {
@@ -97,7 +97,7 @@ jest.mock('@aws-sdk/client-kms', () => ({
       // Intercept Sign to return a deterministic mock signature
       if (input && (input.Message || input.SigningAlgorithm)) {
         const message = input.Message ?? new Uint8Array();
-        const bytes = typeof message === 'string' ? Buffer.from(message) : Buffer.from(message);
+        const bytes = typeof message === 'string' ? Buffer.from(message, 'utf8') : Buffer.from(message);
         const algorithm = input.SigningAlgorithm ?? 'RSASSA_PSS_SHA_256';
         const signature = Buffer.from(`mock-signature-${algorithm}-${bytes.toString('hex').substring(0, 8)}`);
         return {
