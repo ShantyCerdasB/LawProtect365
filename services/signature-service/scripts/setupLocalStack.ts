@@ -1,7 +1,10 @@
 /**
  * @file setupLocalStack.ts
- * @summary Setup AWS resources in LocalStack
- * @description Creates Cognito User Pool, S3 buckets, KMS keys, and other AWS resources for testing
+ * @summary Setup AWS resources in LocalStack for testing
+ * @description Creates and configures AWS resources in LocalStack including S3 buckets,
+ * KMS keys, EventBridge event buses, and SSM parameters. This script is designed to
+ * replicate the production AWS infrastructure locally for integration testing.
+ * Cognito setup is skipped as it's not available in the free LocalStack tier.
  */
 
 import { CognitoIdentityProviderClient, CreateUserPoolCommand, CreateUserPoolClientCommand, CreateGroupCommand, AdminCreateUserCommand, AdminSetUserPasswordCommand } from '@aws-sdk/client-cognito-identity-provider';
@@ -11,10 +14,15 @@ import { EventBridgeClient, CreateEventBusCommand } from '@aws-sdk/client-eventb
 import { SSMClient, PutParameterCommand } from '@aws-sdk/client-ssm';
 import { startLocalStack } from './startLocalStack';
 
-// Configure AWS SDK for LocalStack
+/**
+ * LocalStack endpoint configuration for AWS SDK clients
+ */
 const localstackEndpoint = 'http://localhost:4566';
 const region = 'us-east-1';
 
+/**
+ * AWS SDK clients configured for LocalStack with test credentials
+ */
 const cognito = new CognitoIdentityProviderClient({
   endpoint: localstackEndpoint,
   region: region,
@@ -46,29 +54,29 @@ const ssm = new SSMClient({
   credentials: { accessKeyId: 'test', secretAccessKey: 'test' }
 });
 
-async function setupLocalStack() {
+/**
+ * Main setup function that orchestrates the creation of all AWS resources in LocalStack
+ * 
+ * @description Starts LocalStack container, waits for services to be ready, then
+ * creates S3 buckets, KMS keys, EventBridge event buses, and SSM parameters.
+ * Cognito setup is skipped as it's not available in the free LocalStack tier.
+ * 
+ * @returns Promise<void> Resolves when all resources are created successfully
+ * @throws Exits process with code 1 if any setup step fails
+ */
+async function setupLocalStack(): Promise<void> {
   console.log('🔧 Setting up AWS resources in LocalStack...');
   
   try {
-    // Start LocalStack first
     await startLocalStack();
     
-    // Wait a bit for services to be fully ready
     await new Promise(resolve => setTimeout(resolve, 5000));
     
-    // Skip Cognito setup (not available in free LocalStack)
     console.log('⚠️  Skipping Cognito setup (not available in free LocalStack)');
     
-    // Setup S3 buckets
     await setupS3Buckets();
-    
-    // Setup KMS keys
     await setupKMSKeys();
-    
-    // Setup EventBridge
     await setupEventBridge();
-    
-    // Setup SSM parameters
     await setupSSMParameters();
     
     console.log('✅ LocalStack setup completed successfully!');
@@ -79,11 +87,20 @@ async function setupLocalStack() {
   }
 }
 
-async function setupCognitoUserPool() {
+/**
+ * Creates a Cognito User Pool with client and test users for authentication testing
+ * 
+ * @description Sets up a complete Cognito User Pool with OAuth configuration,
+ * user groups, and test users. This function is currently unused as Cognito
+ * is not available in the free LocalStack tier.
+ * 
+ * @returns Promise<void> Resolves when User Pool setup is complete
+ * @throws Error if User Pool or Client creation fails
+ */
+async function setupCognitoUserPool(): Promise<void> {
   console.log('🔐 Setting up Cognito User Pool...');
   
   try {
-    // Create User Pool (matching Terraform configuration)
     const userPoolParams = {
       PoolName: 'lawprotect365-test-user-pool',
       MfaConfiguration: 'OPTIONAL',
@@ -170,7 +187,17 @@ async function setupCognitoUserPool() {
   }
 }
 
-async function createUserGroups(userPoolId: string) {
+/**
+ * Creates user groups in the Cognito User Pool for role-based access control
+ * 
+ * @description Creates predefined user groups (SuperAdmin, Admin, Lawyer, Customer)
+ * that match the production Terraform configuration for consistent testing.
+ * 
+ * @param userPoolId - The Cognito User Pool ID where groups will be created
+ * @returns Promise<void> Resolves when all groups are created
+ * @throws Logs warnings for groups that already exist
+ */
+async function createUserGroups(userPoolId: string): Promise<void> {
   console.log('👥 Creating user groups...');
   
   const groups = [
@@ -207,7 +234,17 @@ async function createUserGroups(userPoolId: string) {
   }
 }
 
-async function createTestUsers(userPoolId: string) {
+/**
+ * Creates test users in the Cognito User Pool for integration testing
+ * 
+ * @description Creates predefined test users with verified email addresses
+ * and permanent passwords for automated testing scenarios.
+ * 
+ * @param userPoolId - The Cognito User Pool ID where users will be created
+ * @returns Promise<void> Resolves when all test users are created
+ * @throws Logs warnings for users that already exist
+ */
+async function createTestUsers(userPoolId: string): Promise<void> {
   console.log('👥 Creating test users...');
   
   const testUsers = [
@@ -260,10 +297,19 @@ async function createTestUsers(userPoolId: string) {
   }
 }
 
-async function setupS3Buckets() {
+/**
+ * Creates and configures S3 buckets for document storage and evidence
+ * 
+ * @description Creates S3 buckets with versioning, encryption, and lifecycle
+ * policies that match the production Terraform configuration. Handles
+ * region-specific bucket creation requirements.
+ * 
+ * @returns Promise<void> Resolves when all buckets are created and configured
+ * @throws Logs warnings for buckets that already exist
+ */
+async function setupS3Buckets(): Promise<void> {
   console.log('🪣 Setting up S3 buckets...');
   
-  // Buckets matching Terraform configuration
   const buckets = [
     {
       name: 'lawprotect365-sign-evidence-test',
@@ -344,11 +390,19 @@ async function setupS3Buckets() {
   }
 }
 
-async function setupKMSKeys() {
+/**
+ * Creates KMS keys and aliases for document signing operations
+ * 
+ * @description Creates RSA signing keys with aliases that match the production
+ * Terraform configuration. Sets up environment variables for test usage.
+ * 
+ * @returns Promise<void> Resolves when all keys and aliases are created
+ * @throws Error if key creation fails
+ */
+async function setupKMSKeys(): Promise<void> {
   console.log('🔑 Setting up KMS keys...');
   
   try {
-    // Create signing key (matching Terraform configuration)
     const signingKeyParams = {
       Description: 'Test signing key for LawProtect365',
       KeyUsage: 'SIGN_VERIFY',
@@ -400,11 +454,19 @@ async function setupKMSKeys() {
   }
 }
 
-async function setupEventBridge() {
+/**
+ * Creates EventBridge event bus for event-driven architecture testing
+ * 
+ * @description Creates an event bus that matches the production Terraform
+ * configuration and sets up environment variables for test usage.
+ * 
+ * @returns Promise<void> Resolves when event bus is created
+ * @throws Logs warnings if event bus already exists
+ */
+async function setupEventBridge(): Promise<void> {
   console.log('📡 Setting up EventBridge...');
   
   try {
-    // Create event bus (matching Terraform configuration)
     const eventBusParams = {
       Name: 'lawprotect365-event-bus-test'
     };
@@ -427,10 +489,18 @@ async function setupEventBridge() {
   }
 }
 
-async function setupSSMParameters() {
+/**
+ * Creates SSM parameters for storing configuration values
+ * 
+ * @description Creates SSM parameters that store KMS key ARNs and EventBridge
+ * ARNs for use in integration tests, matching the production configuration.
+ * 
+ * @returns Promise<void> Resolves when all parameters are created
+ * @throws Logs warnings for parameters that already exist
+ */
+async function setupSSMParameters(): Promise<void> {
   console.log('🔧 Setting up SSM parameters...');
   
-  // Parameters matching Terraform configuration
   const parameters = [
     {
       Name: '/lawprotect365/test/kms/signer-key-arn',
@@ -456,9 +526,14 @@ async function setupSSMParameters() {
   }
 }
 
-// Run if called directly
+/**
+ * Executes the setup function when this script is run directly from the command line
+ */
 if (require.main === module) {
   setupLocalStack();
 }
 
+/**
+ * Exports the main setup function for use by other modules
+ */
 export { setupLocalStack };

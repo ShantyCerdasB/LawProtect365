@@ -6,23 +6,23 @@
 
 import { randomUUID, createHash } from 'crypto';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { loadConfig } from '../../../src/config';
-import { createApiGatewayEvent, createTestRequestContext, generateTestPdf } from '../helpers/testHelpers';
-import { createEnvelopeHandler } from '../../../src/handlers/envelopes/CreateEnvelopeHandler';
-import { getEnvelopeHandler } from '../../../src/handlers/envelopes/GetEnvelopeHandler';
-import { signDocumentHandler } from '../../../src/handlers/signing/SignDocumentHandler';
-import { downloadSignedDocumentHandler } from '../../../src/handlers/envelopes/DownloadSignedDocumentHandler';
-import { getDocumentHistoryHandler } from '../../../src/handlers/audit/GetDocumentHistoryHandler';
-import { ServiceFactory } from '../../../src/infrastructure/factories/ServiceFactory';
-import { EnvelopeService } from '../../../src/services/EnvelopeService';
-import { ConsentService } from '../../../src/services/ConsentService';
-import { ConsentRepository } from '../../../src/repositories/ConsentRepository';
-import { AuditService } from '../../../src/services/AuditService';
-import { AuditRepository } from '../../../src/repositories/AuditRepository';
-import { SignerRepository } from '../../../src/repositories/SignerRepository';
-import { SignerId } from '../../../src/domain/value-objects/SignerId';
-import { EnvelopeId } from '../../../src/domain/value-objects/EnvelopeId';
-import { EnvelopeStatus } from '../../../src/domain/enums/EnvelopeStatus';
+import { loadConfig } from '../../src/config';
+import { createApiGatewayEvent, createTestRequestContext, generateTestPdf } from './helpers/testHelpers';
+import { createEnvelopeHandler } from '../../src/handlers/envelopes/CreateEnvelopeHandler';
+import { getEnvelopeHandler } from '../../src/handlers/envelopes/GetEnvelopeHandler';
+import { signDocumentHandler } from '../../src/handlers/signing/SignDocumentHandler';
+import { downloadSignedDocumentHandler } from '../../src/handlers/envelopes/DownloadSignedDocumentHandler';
+import { getDocumentHistoryHandler } from '../../src/handlers/audit/GetDocumentHistoryHandler';
+import { ServiceFactory } from '../../src/infrastructure/factories/ServiceFactory';
+import { EnvelopeService } from '../../src/services/EnvelopeService';
+import { ConsentService } from '../../src/services/ConsentService';
+import { ConsentRepository } from '../../src/repositories/ConsentRepository';
+import { AuditService } from '../../src/services/AuditService';
+import { AuditRepository } from '../../src/repositories/AuditRepository';
+import { SignerRepository } from '../../src/repositories/SignerRepository';
+import { SignerId } from '../../src/domain/value-objects/SignerId';
+import { EnvelopeId } from '../../src/domain/value-objects/EnvelopeId';
+import { EnvelopeStatus } from '../../src/domain/enums/EnvelopeStatus';
 
 describe('Integration: Single-signer (owner) flow', () => {
   const cfg = loadConfig();

@@ -33,25 +33,25 @@
 
 import { randomUUID, createHash } from 'crypto';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { loadConfig } from '../../../src/config';
-import { createApiGatewayEvent, generateTestPdf, generateTestJwtToken } from '../helpers/testHelpers';
-import { createEnvelopeHandler } from '../../../src/handlers/envelopes/CreateEnvelopeHandler';
-import { sendEnvelopeHandler } from '../../../src/handlers/envelopes/SendEnvelopeHandler';
-import { getEnvelopeHandler } from '../../../src/handlers/envelopes/GetEnvelopeHandler';
-import { signDocumentHandler } from '../../../src/handlers/signing/SignDocumentHandler';
-import { declineSignerHandler } from '../../../src/handlers/signing/DeclineSignerHandler';
-import { getDocumentHistoryHandler } from '../../../src/handlers/audit/GetDocumentHistoryHandler';
-import { updateEnvelopeHandler } from '../../../src/handlers/envelopes/UpdateEnvelopeHandler';
-import { deleteEnvelopeHandler } from '../../../src/handlers/envelopes/DeleteEnvelopeHandler';
-import { sendNotificationHandler } from '../../../src/handlers/notifications/SendNotificationHandler';
-import { viewDocumentHandler } from '../../../src/handlers/signing/ViewDocumentHandler';
-import { downloadSignedDocumentHandler } from '../../../src/handlers/envelopes/DownloadSignedDocumentHandler';
-import { ServiceFactory } from '../../../src/infrastructure/factories/ServiceFactory';
-import { EnvelopeId } from '../../../src/domain/value-objects/EnvelopeId';
-import { EventBridgeAdapter } from '../../../src/infrastructure/eventbridge';
-import { EventPublisher } from '../../../src/services/events/EventPublisher';
-import { OutboxRepository } from '../../../src/repositories/OutboxRepository';
-import { createDynamoDBClient } from '../../../src/utils/dynamodb-client';
+import { loadConfig } from '../../src/config';
+import { createApiGatewayEvent, generateTestPdf, generateTestJwtToken } from './helpers/testHelpers';
+import { createEnvelopeHandler } from '../../src/handlers/envelopes/CreateEnvelopeHandler';
+import { sendEnvelopeHandler } from '../../src/handlers/envelopes/SendEnvelopeHandler';
+import { getEnvelopeHandler } from '../../src/handlers/envelopes/GetEnvelopeHandler';
+import { signDocumentHandler } from '../../src/handlers/signing/SignDocumentHandler';
+import { declineSignerHandler } from '../../src/handlers/signing/DeclineSignerHandler';
+import { getDocumentHistoryHandler } from '../../src/handlers/audit/GetDocumentHistoryHandler';
+import { updateEnvelopeHandler } from '../../src/handlers/envelopes/UpdateEnvelopeHandler';
+import { deleteEnvelopeHandler } from '../../src/handlers/envelopes/DeleteEnvelopeHandler';
+import { sendNotificationHandler } from '../../src/handlers/notifications/SendNotificationHandler';
+import { viewDocumentHandler } from '../../src/handlers/signing/ViewDocumentHandler';
+import { downloadSignedDocumentHandler } from '../../src/handlers/envelopes/DownloadSignedDocumentHandler';
+import { ServiceFactory } from '../../src/infrastructure/factories/ServiceFactory';
+import { EnvelopeId } from '../../src/domain/value-objects/EnvelopeId';
+import { EventBridgeAdapter } from '../../src/infrastructure/eventbridge';
+import { EventPublisher } from '../../src/services/events/EventPublisher';
+import { OutboxRepository } from '../../src/repositories/OutboxRepository';
+import { createDynamoDBClient } from '../../src/utils/dynamodb-client';
 import { EventBridgeClient, CreateEventBusCommand, PutEventsCommand } from '@aws-sdk/client-eventbridge';
 
 describe('Integration: Complete Multi-signer Flow with Business Rule Validations', () => {

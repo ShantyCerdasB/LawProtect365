@@ -1,7 +1,9 @@
 /**
  * @file testHelpers.ts
  * @summary Test helper functions for integration tests
- * @description Utility functions for generating test data and PDFs
+ * @description Utility functions for generating test data, PDFs, JWT tokens, and API Gateway events.
+ * This module provides comprehensive test utilities for integration testing including mock data
+ * generation, authentication helpers, and request context creation.
  */
 
 import { createHash } from 'crypto';
@@ -10,7 +12,10 @@ import { generateRS256Token } from './mockJwksServer';
 
 /**
  * Generate a simple test PDF buffer
- * This creates a minimal PDF structure for testing purposes
+ * 
+ * @returns Buffer containing a minimal PDF structure for testing purposes
+ * @description Creates a basic PDF document with a single page containing "Test Document" text.
+ * This PDF is suitable for testing document processing, signing, and storage operations.
  */
 export const generateTestPdf = (): Buffer => {
   // Minimal PDF content - this is a very basic PDF structure
@@ -93,6 +98,9 @@ export const calculatePdfDigest = (
 
 /**
  * Generate test tenant ID
+ * 
+ * @returns Unique tenant identifier for testing
+ * @description Creates a unique tenant ID using timestamp and random string for test isolation.
  */
 export const generateTestTenantId = (): string => {
   return `tenant-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -100,6 +108,9 @@ export const generateTestTenantId = (): string => {
 
 /**
  * Generate test envelope ID
+ * 
+ * @returns Unique envelope identifier for testing
+ * @description Creates a UUID-based envelope ID for testing envelope operations.
  */
 export const generateTestEnvelopeId = (): string => {
   return randomUUID();
@@ -107,6 +118,9 @@ export const generateTestEnvelopeId = (): string => {
 
 /**
  * Generate test party ID
+ * 
+ * @returns Unique party identifier for testing
+ * @description Creates a UUID-based party ID for testing signer and party operations.
  */
 export const generateTestPartyId = (): string => {
   return randomUUID();
@@ -114,6 +128,9 @@ export const generateTestPartyId = (): string => {
 
 /**
  * Generate test document ID
+ * 
+ * @returns Unique document identifier for testing
+ * @description Creates a UUID-based document ID for testing document operations.
  */
 export const generateTestDocumentId = (): string => {
   return randomUUID();
@@ -121,6 +138,11 @@ export const generateTestDocumentId = (): string => {
 
 /**
  * Create test request context with actor information
+ * 
+ * @param overrides - Optional overrides for default test values
+ * @returns Test request context object with identity and authorizer information
+ * @description Creates a complete request context object suitable for testing API Gateway
+ * handlers with realistic user identity and authorization data.
  */
 export const createTestRequestContext = (overrides: {
   userId?: string;
@@ -157,6 +179,11 @@ export const createTestRequestContext = (overrides: {
 
 /**
  * Create test path parameters
+ * 
+ * @param params - Optional path parameters to include
+ * @returns Object containing path parameters for API Gateway events
+ * @description Creates path parameters object for testing API Gateway events with
+ * optional envelope and document IDs.
  */
 export const createTestPathParams = (params: {
   envelopeId?: string;
@@ -170,6 +197,11 @@ export const createTestPathParams = (params: {
 
 /**
  * Creates a complete API Gateway event for testing
+ * 
+ * @param overrides - Optional overrides for default event properties
+ * @returns Complete API Gateway v2 event object for testing
+ * @description Creates a realistic API Gateway event with optional authentication,
+ * path parameters, query parameters, and request body for comprehensive testing.
  */
 export const createApiGatewayEvent = async (overrides: {
   pathParameters?: Record<string, string>;
@@ -236,7 +268,10 @@ export const createApiGatewayEvent = async (overrides: {
 
 /**
  * Wait for a specified amount of time
- * Useful for testing async operations
+ * 
+ * @param ms - Number of milliseconds to wait
+ * @returns Promise that resolves after the specified delay
+ * @description Useful for testing async operations and introducing delays in test scenarios.
  */
 export const wait = (ms: number): Promise<void> => {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -244,6 +279,10 @@ export const wait = (ms: number): Promise<void> => {
 
 /**
  * Generate a random string of specified length
+ * 
+ * @param length - Length of the random string to generate
+ * @returns Random alphanumeric string of specified length
+ * @description Creates a random string using alphanumeric characters for test data generation.
  */
 export const generateRandomString = (length: number): string => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -256,6 +295,9 @@ export const generateRandomString = (length: number): string => {
 
 /**
  * Generate a random email address
+ * 
+ * @returns Random test email address
+ * @description Creates a unique test email address using random string generation.
  */
 export const generateTestEmail = (): string => {
   const randomString = generateRandomString(8);
@@ -264,6 +306,9 @@ export const generateTestEmail = (): string => {
 
 /**
  * Generate test OTP code
+ * 
+ * @returns 6-digit OTP code as string
+ * @description Generates a random 6-digit numeric OTP code for testing authentication flows.
  */
 export const generateTestOtpCode = (): string => {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -271,8 +316,11 @@ export const generateTestOtpCode = (): string => {
 
 /**
  * Generate a test JWT token for authentication using RS256
+ * 
  * @param payload - JWT payload with user information
  * @param expiresIn - Token expiration time (default: '1h')
+ * @returns Promise resolving to RS256 JWT token string
+ * @description Creates a test JWT token using the mock JWKS server for authentication testing.
  */
 export const generateTestJwtToken = async (
   payload: {
@@ -289,8 +337,12 @@ export const generateTestJwtToken = async (
 
 /**
  * Generate a mock Cognito JWT token for testing
+ * 
  * @param payload - JWT payload with user information
  * @param expiresIn - Token expiration time (default: '1h')
+ * @returns Mock JWT token string (unsigned, for testing purposes)
+ * @description Creates a mock JWT token that mimics Cognito's token structure without
+ * actual cryptographic signing. Used for testing scenarios where token verification is mocked.
  */
 export const generateMockCognitoToken = (
   payload: {
@@ -332,6 +384,11 @@ export const generateMockCognitoToken = (
 
 /**
  * Create test request context with JWT token
+ * 
+ * @param overrides - Optional overrides for default test values
+ * @returns Test request context object with authentication information
+ * @description Creates a request context object with user authentication data for testing
+ * authenticated API endpoints and authorization flows.
  */
 export const createTestRequestContextWithAuth = (overrides: {
   userId?: string;
@@ -347,13 +404,6 @@ export const createTestRequestContextWithAuth = (overrides: {
   const roles = overrides.roles || ['user'];
   const scopes = overrides.scopes || [];
   
-  // Generate JWT token (not used in this function, but available for future use)
-  // const token = generateTestJwtToken({
-  //   sub: userId,
-  //   email: email,
-  //   roles: roles,
-  //   scopes: scopes
-  // }, overrides.tokenSecret);
 
   return {
     identity: {

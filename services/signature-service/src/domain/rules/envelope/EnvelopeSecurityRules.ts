@@ -124,8 +124,14 @@ export async function validateEnvelopeSecurity(
     : [EnvelopeOperation.SEND, EnvelopeOperation.SIGN, EnvelopeOperation.COMPLETE, EnvelopeOperation.CANCEL];
 
   // Use shared security validation
+  // Patch: Ensure 'country' is always a string for shared validation compatibility
+  const patchedContext = {
+    ...context,
+    country: context.country ?? ''
+  };
+
   const result = await validateSecurity(
-    context,
+    patchedContext,
     operation,
     securityConfig,
     {

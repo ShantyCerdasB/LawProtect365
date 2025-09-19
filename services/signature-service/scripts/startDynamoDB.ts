@@ -1,15 +1,16 @@
 /**
  * @file startDynamoDB.ts
- * @summary Script to start DynamoDB Local server
- * @description This script starts DynamoDB Local server with proper configuration
- * for development and testing. It includes health checks and table initialization.
+ * @summary Script to start DynamoDB Local server for testing
+ * @description This script provides utilities to start, stop, and manage DynamoDB Local
+ * server with proper configuration for development and testing. It includes health checks,
+ * connection validation, and graceful startup/shutdown procedures.
  */
 
 import { createDynamoDBClient, listTables } from './createLocalTables';
 import * as DynamoDBLocal from 'dynamodb-local';
 
 /**
- * @description Configuration for DynamoDB Local server
+ * Configuration interface for DynamoDB Local server parameters
  */
 interface DynamoDBLocalConfig {
   port: number;
@@ -21,7 +22,7 @@ interface DynamoDBLocalConfig {
 }
 
 /**
- * @description Default configuration for DynamoDB Local
+ * Default configuration optimized for testing and development
  */
 const defaultConfig: DynamoDBLocalConfig = {
   port: 8000,
@@ -33,14 +34,20 @@ const defaultConfig: DynamoDBLocalConfig = {
 };
 
 /**
- * @description DynamoDB Local port
+ * Tracks the current DynamoDB Local port for shutdown operations
  */
 let dynamoDBPort: number = 8000;
 
 /**
- * @description Starts DynamoDB Local server using the programmatic API
- * @param config - Configuration for DynamoDB Local
- * @returns Promise that resolves when server is ready
+ * Starts DynamoDB Local server using the programmatic API
+ * 
+ * @description Launches DynamoDB Local with the specified configuration,
+ * merging provided options with defaults. Waits for the server to be
+ * fully initialized before resolving.
+ * 
+ * @param config - Partial configuration object to override defaults
+ * @returns Promise<void> Resolves when server is ready and accessible
+ * @throws Error if server startup fails
  */
 export const startDynamoDBLocal = async (config: Partial<DynamoDBLocalConfig> = {}): Promise<void> => {
   const finalConfig = { ...defaultConfig, ...config };
@@ -70,8 +77,13 @@ export const startDynamoDBLocal = async (config: Partial<DynamoDBLocalConfig> = 
 };
 
 /**
- * @description Stops DynamoDB Local server
- * @returns Promise that resolves when server is stopped
+ * Stops the running DynamoDB Local server
+ * 
+ * @description Gracefully shuts down DynamoDB Local using the tracked port.
+ * Handles cases where the server may not be running.
+ * 
+ * @returns Promise<void> Resolves when server is stopped
+ * @throws Logs warnings if server was not running
  */
 export const stopDynamoDBLocal = async (): Promise<void> => {
   try {
@@ -88,8 +100,12 @@ export const stopDynamoDBLocal = async (): Promise<void> => {
 };
 
 /**
- * @description Checks if DynamoDB Local is running and accessible
- * @returns Promise that resolves to true if accessible, false otherwise
+ * Checks if DynamoDB Local is running and accessible
+ * 
+ * @description Attempts to connect to DynamoDB Local and list tables
+ * to verify the server is responsive and ready for operations.
+ * 
+ * @returns Promise<boolean> True if server is accessible, false otherwise
  */
 export const isDynamoDBLocalRunning = async (): Promise<boolean> => {
   try {
@@ -102,10 +118,16 @@ export const isDynamoDBLocalRunning = async (): Promise<boolean> => {
 };
 
 /**
- * @description Waits for DynamoDB Local to be ready
- * @param maxRetries - Maximum number of retry attempts
- * @param retryDelay - Delay between retries in milliseconds
- * @returns Promise that resolves when ready
+ * Waits for DynamoDB Local to be ready with retry logic
+ * 
+ * @description Polls DynamoDB Local connection status with configurable
+ * retry attempts and delays. Useful for ensuring server is fully ready
+ * before proceeding with operations.
+ * 
+ * @param maxRetries - Maximum number of connection attempts (default: 30)
+ * @param retryDelay - Milliseconds to wait between attempts (default: 1000)
+ * @returns Promise<void> Resolves when server is ready
+ * @throws Error if server fails to become ready within timeout
  */
 export const waitForDynamoDBLocal = async (
   maxRetries: number = 30,
@@ -132,9 +154,14 @@ export const waitForDynamoDBLocal = async (
 };
 
 /**
- * @description Main function to start DynamoDB Local with table creation
+ * Main execution function for starting DynamoDB Local
+ * 
+ * @description Orchestrates the complete startup process: checks if already
+ * running, starts the server, waits for readiness, and exits gracefully.
+ * 
+ * @returns Promise<void> Exits process with code 0 on success, 1 on failure
  */
-const main = async () => {
+const main = async (): Promise<void> => {
   try {
     // Check if already running
     const isRunning = await isDynamoDBLocalRunning();
@@ -158,9 +185,14 @@ const main = async () => {
   }
 };
 
-// Run the script
+/**
+ * Executes the main function when this script is run directly from the command line
+ */
 if (require.main === module) {
   main().catch(console.error);
 }
 
+/**
+ * Exports configuration types and defaults for use by other modules
+ */
 export { DynamoDBLocalConfig, defaultConfig };

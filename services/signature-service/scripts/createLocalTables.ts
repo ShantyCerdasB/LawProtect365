@@ -10,9 +10,14 @@ import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { CreateTableCommand, ListTablesCommand } from "@aws-sdk/client-dynamodb";
 
 /**
- * @description Configuration for DynamoDB Local client
+ * Creates a DynamoDB client configured for local development and testing
+ * 
+ * @description Configures a DynamoDB client with local endpoint and test credentials.
+ * Uses environment variables for endpoint and region configuration with sensible defaults.
+ * 
+ * @returns DynamoDBClient instance configured for local testing
  */
-const createDynamoDBClient = () => {
+const createDynamoDBClient = (): DynamoDBClient => {
   return new DynamoDBClient({
     endpoint: process.env.AWS_ENDPOINT_URL || "http://localhost:8000",
     region: process.env.AWS_REGION || "us-east-1",
@@ -24,8 +29,14 @@ const createDynamoDBClient = () => {
 };
 
 /**
- * @description Table definitions for the signature service
- * All tables use single-table design with pk/sk pattern
+ * DynamoDB table definitions used for local development and integration tests
+ * of the signature service. The design follows a single-table pattern where
+ * each logical entity shares the same table using partition (pk) and sort (sk)
+ * keys, plus multiple GSIs for access patterns required by the tests.
+ * 
+ * @description Contains 12 table definitions covering all entities in the signature
+ * service: envelopes, signers, signatures, documents, parties, inputs, idempotency,
+ * outbox, audit, consent, delegation, global parties, and invitation tokens.
  */
 const tableDefinitions = [
   {
@@ -413,11 +424,18 @@ const tableDefinitions = [
 ];
 
 /**
- * @description Creates a single DynamoDB table
- * @param client - DynamoDB client instance
- * @param tableDefinition - Table definition object
+ * Creates a single DynamoDB table with the provided definition
+ * 
+ * @description Attempts to create a DynamoDB table using the provided client and
+ * table definition. Handles the case where the table already exists gracefully
+ * by logging a warning instead of throwing an error.
+ * 
+ * @param client - DynamoDB client instance for table operations
+ * @param tableDefinition - Complete table definition including schema, indexes, and billing
+ * @returns Promise<void> Resolves when table creation is attempted
+ * @throws Error if table creation fails for reasons other than already existing
  */
-const createTable = async (client: DynamoDBClient, tableDefinition: any) => {
+const createTable = async (client: DynamoDBClient, tableDefinition: any): Promise<void> => {
   try {
     await client.send(new CreateTableCommand(tableDefinition));
     console.log(`✅ Table '${tableDefinition.TableName}' created successfully`);
@@ -432,10 +450,17 @@ const createTable = async (client: DynamoDBClient, tableDefinition: any) => {
 };
 
 /**
- * @description Lists all existing tables in DynamoDB Local
- * @param client - DynamoDB client instance
+ * Lists all existing tables in the DynamoDB instance
+ * 
+ * @description Retrieves a list of all table names from the DynamoDB instance
+ * using the provided client. Returns an empty array if no tables exist or if
+ * the operation fails.
+ * 
+ * @param client - DynamoDB client instance for table operations
+ * @returns Promise<string[]> Array of table names
+ * @throws Error if the list tables operation fails
  */
-const listTables = async (client: DynamoDBClient) => {
+const listTables = async (client: DynamoDBClient): Promise<string[]> => {
   try {
     const result = await client.send(new ListTablesCommand({}));
     return result.TableNames || [];
@@ -446,9 +471,16 @@ const listTables = async (client: DynamoDBClient) => {
 };
 
 /**
- * @description Main function to create all tables
+ * Main execution function that orchestrates the table creation process
+ * 
+ * @description Bootstraps DynamoDB Local by creating the tables declared in
+ * `tableDefinitions`. The function is idempotent: if a table already exists,
+ * creation is skipped and the script proceeds with the remaining tables.
+ * 
+ * @returns Promise<void> Resolves when all tables are created successfully
+ * @throws Exits process with code 1 if any table creation fails
  */
-const main = async () => {
+const main = async (): Promise<void> => {
   console.log('🚀 Starting DynamoDB Local table creation...');
   
   const client = createDynamoDBClient();
@@ -476,9 +508,18 @@ const main = async () => {
   }
 };
 
-// Run the script
+/**
+ * Executes the main function when this script is run directly from the command line
+ */
 if (require.main === module) {
   main().catch(console.error);
 }
 
+/**
+ * Exports the shared utilities and table definitions for potential reuse
+ * by other modules in the signature service.
+ * 
+ * @description Re-exports DynamoDB utilities and the local table definitions
+ * for use in other parts of the application.
+ */
 export { createDynamoDBClient, tableDefinitions, createTable, listTables };

@@ -1,29 +1,40 @@
 {
-  // Hereda de tu tsconfig de la app
+  "_comment": "TypeScript configuration for Jest testing environment in signature-service",
+  "_description": "Extends the main tsconfig.json with Jest-specific settings for test compilation and module resolution",
+  
+  // Inherits from the main application TypeScript configuration
   "extends": "./tsconfig.json",
+  
   "compilerOptions": {
-    // Para que TS resuelva los aliases abajo
+    // Base URL for resolving non-relative module names
     "baseUrl": ".",
 
-    // Con Bundler, TS entiende imports TS con sufijo ".js" (Node/ESM friendly)
-    // y juega mejor con path aliases apuntando a .ts
+    // Module system configuration for Jest compatibility
+    // Uses ESNext with Bundler resolution for optimal Jest integration
     "module": "ESNext",
     "moduleResolution": "Bundler",
 
-    // Asegura tipos de Jest y Node en tests
+    // Type definitions for Jest and Node.js testing environment
     "types": ["jest", "node"],
 
-    // Mapea el paquete compartido y sus aliases internos
+    // Path mapping for service-specific aliases
+    // Maps @/* imports to src/* directory for clean import paths
     "paths": {
       "@/*": ["src/*"]
     },
 
-    // Relax type checks for tests to avoid noisy warnings from shared packages
+    // Relaxed type checking for test files to avoid noisy warnings
+    // from shared packages and test-specific code patterns
     "noUnusedLocals": false,
     "noUnusedParameters": false
   },
 
-  // Asegura que TS procese src y tests en este modo
+  // Include source code and test files for TypeScript compilation
   "include": ["src", "__tests__"],
-  "exclude": ["__tests__/integration/disabled", "__tests__/integration/helpers/cognitoTokenHelper.ts"]
+  
+  // Exclude disabled tests and specific helper files that don't need compilation
+  "exclude": [
+    "__tests__/integration/disabled", 
+    "__tests__/integration/helpers/cognitoTokenHelper.ts"
+  ]
 }

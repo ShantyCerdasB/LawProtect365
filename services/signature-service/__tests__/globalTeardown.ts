@@ -8,10 +8,16 @@
 import { stopDynamoDBLocal } from '../scripts/startDynamoDB';
 
 /**
- * @description Global teardown function for Jest
- * This function runs once after all tests complete
+ * Global teardown function for Jest test environment
+ * 
+ * @description Executes once after all tests complete to clean up the test environment.
+ * Stops DynamoDB Local server and performs any necessary resource cleanup.
+ * Errors in teardown are logged but not thrown to avoid masking test failures.
+ * 
+ * @returns Promise<void> Resolves when cleanup is complete
+ * @throws Never throws errors to avoid masking test failures
  */
-export default async function globalTeardown() {
+export default async function globalTeardown(): Promise<void> {
   console.log('🛑 Starting global test teardown...');
   
   try {

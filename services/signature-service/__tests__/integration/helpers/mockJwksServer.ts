@@ -9,17 +9,26 @@ import { generateKeyPairSync } from 'crypto';
 import { SignJWT, importPKCS8, exportJWK, importSPKI } from 'jose';
 import express from 'express';
 
-// Generate RSA key pair for testing (matching Cognito's key specifications)
+/**
+ * Generate RSA key pair for testing (matching Cognito's key specifications)
+ * @description Creates a 2048-bit RSA key pair with proper encoding for JWT signing and verification
+ */
 const { publicKey, privateKey } = generateKeyPairSync('rsa', { 
   modulusLength: 2048,
   publicKeyEncoding: { type: 'spki', format: 'pem' },
   privateKeyEncoding: { type: 'pkcs8', format: 'pem' }
 });
 
-// Convert private key to jose format for signing
+/**
+ * Convert private key to jose format for signing
+ * @description Imports the private key in PKCS8 format for use with the jose library
+ */
 const josePrivateKey = importPKCS8(privateKey, 'RS256');
 
-// Store key metadata for better debugging
+/**
+ * Store key metadata for better debugging
+ * @description Contains metadata about the generated key pair for logging and debugging purposes
+ */
 const keyMetadata = {
   keyId: 'test-key-id',
   algorithm: 'RS256',
@@ -28,10 +37,19 @@ const keyMetadata = {
   createdAt: new Date().toISOString()
 };
 
-// Create JWKS (JSON Web Key Set) with the public key
+/**
+ * Create JWKS (JSON Web Key Set) with the public key
+ * @description Global variable to store the JWKS object after initialization
+ */
 let jwks: any = null;
 
-// Initialize JWKS with proper format (matching Cognito's JWKS structure)
+/**
+ * Initialize JWKS with proper format (matching Cognito's JWKS structure)
+ * 
+ * @returns Promise that resolves when JWKS is initialized
+ * @description Creates the JSON Web Key Set object with the public key in the format
+ * expected by JWT verification libraries, matching Cognito's JWKS structure.
+ */
 const initializeJwks = async () => {
   const josePublicKey = await importSPKI(publicKey, 'RS256');
   const jwk = await exportJWK(josePublicKey);
@@ -56,11 +74,22 @@ const initializeJwks = async () => {
   });
 };
 
-// Create Express server
+/**
+ * Create Express server
+ * @description Express application instance for serving JWKS endpoints
+ */
 const app = express();
+
+/**
+ * Server port configuration
+ * @description Port number for the mock JWKS server
+ */
 const PORT = 3000;
 
-// Serve JWKS endpoint (matching Cognito's endpoint structure)
+/**
+ * Serve JWKS endpoint (matching Cognito's endpoint structure)
+ * @description Express route handler for serving the JSON Web Key Set at the standard JWKS endpoint
+ */
 app.get('/.well-known/jwks.json', (_req, res) => {
   if (!jwks) {
     console.error('❌ JWKS not initialized when requested');
@@ -77,7 +106,10 @@ app.get('/.well-known/jwks.json', (_req, res) => {
   res.json(jwks);
 });
 
-// Health check endpoint
+/**
+ * Health check endpoint
+ * @description Express route handler for server health status and key metadata information
+ */
 app.get('/health', (_req, res) => {
   res.json({ 
     status: 'ok', 
@@ -87,15 +119,28 @@ app.get('/health', (_req, res) => {
   });
 });
 
-// Add error handling middleware
+/**
+ * Add error handling middleware
+ * @description Express error handling middleware for catching and logging server errors
+ */
 app.use((error: any, _req: any, res: any, _next: any) => {
   console.error('❌ Mock JWKS server error:', error);
   res.status(500).json({ error: 'Internal server error' });
 });
 
-// Start server
+/**
+ * Start server
+ * @description Global variable to store the Express server instance
+ */
 let server: any = null;
 
+/**
+ * Start the mock JWKS server
+ * 
+ * @returns Promise that resolves when the server is successfully started
+ * @description Initializes the JWKS and starts the Express server on the configured port.
+ * The server provides JWKS endpoint and health check endpoint for JWT verification testing.
+ */
 export const startMockJwksServer = async (): Promise<void> => {
   // Initialize JWKS first
   await initializeJwks();
@@ -121,6 +166,13 @@ export const startMockJwksServer = async (): Promise<void> => {
   });
 };
 
+/**
+ * Stop the mock JWKS server
+ * 
+ * @returns Promise that resolves when the server is successfully stopped
+ * @description Gracefully shuts down the Express server and cleans up resources.
+ * Safe to call even if the server is not running.
+ */
 export const stopMockJwksServer = (): Promise<void> => {
   return new Promise((resolve) => {
     if (server) {
@@ -137,9 +189,12 @@ export const stopMockJwksServer = (): Promise<void> => {
 
 /**
  * Generate RS256 JWT token for testing (matching Cognito's token format)
- * @param payload - JWT payload
+ * 
+ * @param payload - JWT payload with user information
  * @param expiresIn - Token expiration time (default: '1h')
- * @returns RS256 JWT token
+ * @returns Promise resolving to RS256 JWT token string
+ * @description Creates a cryptographically signed JWT token using the mock server's private key.
+ * The token payload matches Cognito's format exactly for realistic testing scenarios.
  */
 export const generateRS256Token = async (
   payload: {
@@ -195,5 +250,9 @@ export const generateRS256Token = async (
   return token;
 };
 
-// Export the private key for advanced testing scenarios
+/**
+ * Export the private key for advanced testing scenarios
+ * @description Exports the generated key pair and JWKS for advanced testing scenarios
+ * where direct access to keys or JWKS is required.
+ */
 export { privateKey, publicKey, jwks };

@@ -11,10 +11,16 @@ import { createTable, tableDefinitions } from '../scripts/createLocalTables';
 import { DynamoDBClient, DeleteTableCommand, ListTablesCommand } from '@aws-sdk/client-dynamodb';
 
 /**
- * @description Global setup function for Jest
- * This function runs once before all tests
+ * Global setup function for Jest test environment
+ * 
+ * @description Executes once before all tests to prepare the complete test environment.
+ * Sets up environment variables, starts DynamoDB Local, cleans existing test tables,
+ * and creates fresh test tables with the latest schema definitions.
+ * 
+ * @returns Promise<void> Resolves when the test environment is fully prepared
+ * @throws Error if any setup step fails, causing all tests to be skipped
  */
-export default async function globalSetup() {
+export default async function globalSetup(): Promise<void> {
   console.log('🚀 Starting global test setup...');
   
   try {

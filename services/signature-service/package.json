@@ -18,14 +18,9 @@
     "dynamodb:start": "tsx scripts/startDynamoDB.ts",
     "dynamodb:stop": "taskkill /F /IM java.exe /FI \"WINDOWTITLE eq DynamoDB Local*\" 2>nul || pkill -f dynamodb-local || true",
     "dynamodb:create-tables": "tsx scripts/createLocalTables.ts",
-    "dynamodb:delete-tables": "tsx scripts/deleteLocalTables.ts",
-    "dynamodb:setup": "tsx scripts/setupDynamoDB.ts",
-    "dynamodb:reset": "npm run dynamodb:stop && npm run dynamodb:setup",
     "localstack:start": "tsx scripts/startLocalStack.ts",
-    "localstack:stop": "tsx scripts/stopLocalStack.ts",
     "localstack:setup": "tsx scripts/setupLocalStack.ts",
-    "localstack:reset": "npm run localstack:stop && npm run localstack:setup",
-    "test:cleanup": "tsx scripts/cleanupTestEnvironment.ts"
+    "localstack:reset": "docker rm -f lawprotect365-localstack 2>nul || true && npm run localstack:start && npm run localstack:setup"
   },
   "dependencies": {
     "@aws-sdk/client-cognito-identity-provider": "^3.883.0",

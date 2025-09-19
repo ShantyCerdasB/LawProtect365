@@ -3,6 +3,7 @@
  * @summary Jest setup for integration tests with DynamoDB Local and LocalStack
  * @description Global setup for integration tests using real DynamoDB Local and LocalStack AWS services.
  * This provides more realistic testing by using actual AWS services instead of mocks.
+ * Configures environment variables, starts mock JWKS server, and sets up AWS service endpoints.
  */
 
 import { startMockJwksServer, stopMockJwksServer } from './integration/helpers/mockJwksServer';
@@ -72,10 +73,18 @@ process.env.JWT_ISSUER = 'https://cognito-idp.us-east-1.amazonaws.com/us-east-1_
 process.env.JWT_AUDIENCE = 'test-client-id';
 process.env.JWKS_URI = 'http://localhost:3000/.well-known/jwks.json';
 
-// Start improved mock JWKS server before all tests
+/**
+ * Jest beforeAll hook to start mock JWKS server and ensure KMS test resources
+ * 
+ * @description Starts the mock JWKS server for JWT token validation during tests
+ * and ensures KMS test key and alias exist in LocalStack for signing operations.
+ * 
+ * @param timeout - 10 second timeout for server startup and KMS setup
+ */
 beforeAll(async () => {
   console.log('🔐 Starting improved mock JWKS server for tests...');
   await startMockJwksServer();
+  
   // Ensure KMS test key and alias exist in LocalStack
   try {
     const { KMSClient, CreateKeyCommand, CreateAliasCommand }: any = await import('@aws-sdk/client-kms');
@@ -97,13 +106,24 @@ beforeAll(async () => {
   } catch (err) {
     console.warn('⚠️  Failed to ensure KMS test key/alias:', (err as any)?.message);
   }
-}, 10000); // 10 second timeout for server startup
+}, 10000);
 
-// Stop mock JWKS server after all tests
+/**
+ * Jest afterAll hook to stop mock JWKS server
+ * 
+ * @description Stops the mock JWKS server after all tests complete to clean up resources.
+ * 
+ * @param timeout - 5 second timeout for server shutdown
+ */
 afterAll(async () => {
   console.log('🔐 Stopping mock JWKS server...');
   await stopMockJwksServer();
-}, 5000); // 5 second timeout for server shutdown
+}, 5000);
 
-// Increase timeout for integration tests with DynamoDB Local
-jest.setTimeout(60000); // 60 seconds for DynamoDB operations
+/**
+ * Jest timeout configuration for integration tests
+ * 
+ * @description Sets a 60-second timeout for all tests to accommodate DynamoDB operations,
+ * AWS service interactions, and other integration test activities.
+ */
+jest.setTimeout(60000);

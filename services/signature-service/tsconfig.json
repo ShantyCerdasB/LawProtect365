@@ -1,29 +1,41 @@
 ﻿{
+  "_comment": "TypeScript configuration for signature-service production build",
+  "_description": "Main TypeScript configuration for building the signature service with ESM support and strict type checking",
+  
   "compilerOptions": {
+    // Target ECMAScript version for compilation output
     "target": "ES2022",
-    // Para la build de la app: Node ESM
+    
+    // Module system configuration for Node.js ESM compatibility
+    // Uses ESNext with bundler resolution for optimal build performance
     "module": "ESNext",
     "moduleResolution": "bundler",
 
+    // Output and source directory configuration
     "outDir": "dist",
     "rootDir": ".",
 
-    // Aliases locales mínimos para dev (los extensos van en tsconfig.jest.json)
+    // Path mapping configuration for clean imports
+    // Minimal local aliases for development (extensive mappings in tsconfig.jest.json)
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]
     },
 
+    // Strict type checking configuration for production code quality
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
 
-    // Integración ESM/CJS
+    // ESM/CommonJS interoperability settings
     "esModuleInterop": true,
     "skipLibCheck": true,
 
-    // Tipos base de la app; Jest se añade en tsconfig.jest.json
+    // Type definitions for the application
+    // Base Node.js types; Jest types are added in tsconfig.jest.json
     "types": ["node"]
   },
+  
+  // Source files to include in TypeScript compilation
   "include": ["src", "serverless.local.ts"]
 }

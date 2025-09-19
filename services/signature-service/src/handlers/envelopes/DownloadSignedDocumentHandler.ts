@@ -6,7 +6,7 @@
  * It validates document completion status and generates time-limited download URLs.
  */
 
-import { ControllerFactory, UserRole, VALID_COGNITO_ROLES } from '@lawprotect/shared-ts';
+import { ControllerFactory, } from '@lawprotect/shared-ts';
 import { EnvelopeService } from '../../services/EnvelopeService';
 import { S3Service } from '../../services/S3Service';
 import { ServiceFactory } from '../../infrastructure/factories/ServiceFactory';
