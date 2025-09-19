@@ -38,46 +38,104 @@ export function validateEnvelopeAccessPermissions(
   operation: EnvelopeOperation,
   envelopeOwnerId?: string
 ): void {
-  // For CANCEL (delete) operations, require the requester to be the owner
+  validateCancelOperationPermission(context, operation, envelopeOwnerId);
+  validateOperationPermission(context, operation);
+  validateAccessTypePermission(context);
+  validatePermissionSpecificRules(context, envelopeOwnerId);
+}
+
+/**
+ * Validates CANCEL operation permission
+ */
+function validateCancelOperationPermission(
+  context: EnvelopeSecurityContext,
+  operation: EnvelopeOperation,
+  envelopeOwnerId?: string
+): void {
   if (operation === EnvelopeOperation.CANCEL) {
     if (!context.userId || !envelopeOwnerId || context.userId !== envelopeOwnerId) {
       throw permissionDenied('Only the envelope owner can cancel/delete this envelope');
     }
   }
+}
 
-  // Check if user has permission to perform the operation
+/**
+ * Validates operation permission
+ */
+function validateOperationPermission(
+  context: EnvelopeSecurityContext,
+  operation: EnvelopeOperation
+): void {
   if (!canPerformOperation(context.permission, operation)) {
     throw permissionDenied(
       `User with permission ${context.permission} cannot perform operation ${operation}`
     );
   }
+}
 
-  // Check if access type is valid for the permission
+/**
+ * Validates access type permission
+ */
+function validateAccessTypePermission(context: EnvelopeSecurityContext): void {
   if (!isValidAccessTypeForPermission(context.accessType, context.permission)) {
     throw accessDenied(
       `Access type ${context.accessType} is not valid for permission ${context.permission}`
     );
   }
+}
 
-  // Owner-specific validations
-  if (context.permission === PermissionLevel.OWNER) {
-    if (context.userId && envelopeOwnerId && context.userId !== envelopeOwnerId) {
-      throw permissionDenied('User is not the owner of this envelope');
-    }
+/**
+ * Validates permission-specific rules
+ */
+function validatePermissionSpecificRules(
+  context: EnvelopeSecurityContext,
+  envelopeOwnerId?: string
+): void {
+  const validators = {
+    [PermissionLevel.OWNER]: validateOwnerPermission,
+    [PermissionLevel.PARTICIPANT]: validateParticipantPermission,
+    [PermissionLevel.VIEWER]: validateViewerPermission
+  };
+
+  const validator = validators[context.permission as keyof typeof validators];
+  if (validator) {
+    validator(context, envelopeOwnerId);
   }
+}
 
-  // Signer-specific validations (using PARTICIPANT level)
-  if (context.permission === PermissionLevel.PARTICIPANT) {
-    if (context.accessType !== AccessType.INVITATION && context.accessType !== AccessType.DIRECT) {
-      throw accessDenied('Signers can only access via invitation or direct permission');
-    }
+/**
+ * Validates owner permission
+ */
+function validateOwnerPermission(
+  context: EnvelopeSecurityContext,
+  envelopeOwnerId?: string
+): void {
+  if (context.userId && envelopeOwnerId && context.userId !== envelopeOwnerId) {
+    throw permissionDenied('User is not the owner of this envelope');
   }
+}
 
-  // Viewer-specific validations
-  if (context.permission === PermissionLevel.VIEWER) {
-    if (context.accessType !== AccessType.SHARED_LINK && context.accessType !== AccessType.DIRECT) {
-      throw accessDenied('Viewers can only access via shared link or direct permission');
-    }
+/**
+ * Validates participant permission
+ */
+function validateParticipantPermission(
+  context: EnvelopeSecurityContext,
+  _envelopeOwnerId?: string
+): void {
+  if (context.accessType !== AccessType.INVITATION && context.accessType !== AccessType.DIRECT) {
+    throw accessDenied('Signers can only access via invitation or direct permission');
+  }
+}
+
+/**
+ * Validates viewer permission
+ */
+function validateViewerPermission(
+  context: EnvelopeSecurityContext,
+  _envelopeOwnerId?: string
+): void {
+  if (context.accessType !== AccessType.SHARED_LINK && context.accessType !== AccessType.DIRECT) {
+    throw accessDenied('Viewers can only access via shared link or direct permission');
   }
 }
 

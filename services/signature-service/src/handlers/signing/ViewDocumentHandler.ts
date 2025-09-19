@@ -50,7 +50,7 @@ export const viewDocumentHandler = ControllerFactory.createCommand({
   extractParams: (path: any, _body: any, query: any, context: any) => ({
     invitationToken: path.invitationToken,
     // Allow caller to override TTL for share links (falls back to config)
-    expiresIn: query && query.expiresIn ? Number(query.expiresIn) : undefined,
+    expiresIn: query?.expiresIn ? Number(query.expiresIn) : undefined,
     securityContext: context.securityContext
   }),
   
@@ -60,7 +60,7 @@ export const viewDocumentHandler = ControllerFactory.createCommand({
       this.documentAccessService = ServiceFactory.createDocumentAccessService();
     }
     
-    private documentAccessService: DocumentAccessService;
+    private readonly documentAccessService: DocumentAccessService;
     
     async execute(params: { invitationToken: string; expiresIn?: number; securityContext: any }) {
       const { invitationToken, expiresIn, securityContext } = params;

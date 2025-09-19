@@ -15,7 +15,6 @@ import { Signer } from '../../../entities/Signer';
 import { SignerId } from '../../../value-objects/SignerId';
 import { Email } from '../../../value-objects/Email';
 import { SignerStatus } from '../../../enums/SignerStatus';
-// import { DynamoDbPrefixes } from '../../../enums/DynamoDbPrefixes';
 
 /**
  * Type guard for envelope DynamoDB items

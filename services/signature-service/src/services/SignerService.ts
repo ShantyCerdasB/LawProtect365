@@ -577,50 +577,10 @@ export class SignerService {
         throw new NotFoundError('Signer not found', 'SIGNER_NOT_FOUND');
       }
 
-      // Enforce signing order: if OWNER_FIRST and owner hasn't signed yet, prevent invitees from signing
-      const envelope = await this.envelopeRepository.getById(new EnvelopeId(signer.getEnvelopeId()));
-      if (envelope) {
-        const signingOrder = envelope.getSigningOrder();
-        const isOwnerFirst = typeof (signingOrder as any)?.isOwnerFirst === 'function'
-          ? (signingOrder as any).isOwnerFirst()
-          : String(signingOrder).toUpperCase().includes('OWNER');
-
-        if (isOwnerFirst) {
-          const signers = await this.getSignersByEnvelope(new EnvelopeId(signer.getEnvelopeId()));
-          const ownerSigner = signers.find(s => s.getOrder() === 1);
-          const ownerHasSigned = ownerSigner ? ownerSigner.getStatus() === SignerStatus.SIGNED : false;
-          const isCurrentSignerOwner = signer.getOrder() === 1;
-
-          if (!ownerHasSigned && !isCurrentSignerOwner) {
-            const { BadRequestError } = await import('@lawprotect/shared-ts');
-            throw new BadRequestError('Owner must sign first before invitees can sign', 'OWNER_MUST_SIGN_FIRST');
-          }
-        }
-      }
-
-      // Record consent first (required for signing)
-      signer.recordConsent(securityContext.ipAddress, securityContext.userAgent);
-      
-      // Use the entity method (includes validations)
-      signer.markAsSigned();
-      
-      // Update additional metadata
-      const metadata = signer.getMetadata();
-      metadata.ipAddress = securityContext.ipAddress;
-      metadata.userAgent = securityContext.userAgent;
-
-      // Persist changes
-      const updatedSigner = await this.signerRepository.update(signerId, {
-        status: signer.getStatus(),
-        signedAt: signer.getSignedAt(),
-        metadata
-      });
-
-      // Publish event only if envelope has multiple signers (following EnvelopeService pattern)
-      const allSigners = await this.getSignersByEnvelope(new EnvelopeId(signer.getEnvelopeId()));
-      if (allSigners.length > 1) {
-        await this.signerEventService.publishSignerSigned(updatedSigner, new Date());
-      }
+      await this.validateSigningOrderConstraints(signer);
+      this.updateSignerForSigning(signer, securityContext);
+      const updatedSigner = await this.persistSignerUpdate(signerId, signer);
+      await this.publishSignerSignedEvent(signer, updatedSigner);
 
       return updatedSigner;
     } catch (error) {
@@ -630,6 +590,79 @@ export class SignerService {
         throw error;
       }
       throw mapAwsError(error, 'SignerService.markSignerAsSigned');
+    }
+  }
+
+  /**
+   * Validates signing order constraints
+   */
+  private async validateSigningOrderConstraints(signer: Signer): Promise<void> {
+    const envelope = await this.envelopeRepository.getById(new EnvelopeId(signer.getEnvelopeId()));
+    if (!envelope) return;
+
+    const signingOrder = envelope.getSigningOrder();
+    const isOwnerFirst = this.isOwnerFirstSigningOrder(signingOrder);
+
+    if (!isOwnerFirst) return;
+
+    const signers = await this.getSignersByEnvelope(new EnvelopeId(signer.getEnvelopeId()));
+    const ownerSigner = signers.find(s => s.getOrder() === 1);
+    const ownerHasSigned = ownerSigner ? ownerSigner.getStatus() === SignerStatus.SIGNED : false;
+    const isCurrentSignerOwner = signer.getOrder() === 1;
+
+    if (!ownerHasSigned && !isCurrentSignerOwner) {
+      const { BadRequestError } = await import('@lawprotect/shared-ts');
+      throw new BadRequestError('Owner must sign first before invitees can sign', 'OWNER_MUST_SIGN_FIRST');
+    }
+  }
+
+  /**
+   * Checks if signing order is owner first
+   */
+  private isOwnerFirstSigningOrder(signingOrder: any): boolean {
+    return typeof (signingOrder as any)?.isOwnerFirst === 'function'
+      ? (signingOrder as any).isOwnerFirst()
+      : String(signingOrder).toUpperCase().includes('OWNER');
+  }
+
+  /**
+   * Updates signer for signing
+   */
+  private updateSignerForSigning(
+    signer: Signer,
+    securityContext: { ipAddress?: string; userAgent?: string }
+  ): void {
+    // Record consent first (required for signing)
+    signer.recordConsent(securityContext.ipAddress, securityContext.userAgent);
+    
+    // Use the entity method (includes validations)
+    signer.markAsSigned();
+    
+    // Update additional metadata
+    const metadata = signer.getMetadata();
+    metadata.ipAddress = securityContext.ipAddress;
+    metadata.userAgent = securityContext.userAgent;
+  }
+
+  /**
+   * Persists signer update to repository
+   */
+  private async persistSignerUpdate(signerId: SignerId, signer: Signer): Promise<Signer> {
+    return await this.signerRepository.update(signerId, {
+      status: signer.getStatus(),
+      signedAt: signer.getSignedAt(),
+      metadata: signer.getMetadata()
+    });
+  }
+
+  /**
+   * Publishes signer signed event if applicable
+   */
+  private async publishSignerSignedEvent(signer: Signer, updatedSigner: Signer): Promise<void> {
+    // Publish event only if envelope has multiple signers (following EnvelopeService pattern)
+    const allSigners = await this.getSignersByEnvelope(new EnvelopeId(signer.getEnvelopeId()));
+    if (allSigners.length > 1) {
+      await this.signerEventService.publishSignerSigned(updatedSigner, new Date());
     }
   }
 

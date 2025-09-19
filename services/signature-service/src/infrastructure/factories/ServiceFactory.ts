@@ -45,19 +45,19 @@ import { DocumentRepository } from '../../repositories/DocumentRepository';
  * - Provide consistent service creation across handlers
  */
 export class ServiceFactory {
-  private static config = loadConfig();
-  private static ddbClient = createDynamoDBClient(this.config.dynamodb);
-  private static s3Client = new S3Client({
+  private static readonly config = loadConfig();
+  private static readonly ddbClient = createDynamoDBClient(this.config.dynamodb);
+  private static readonly s3Client = new S3Client({
     region: this.config.region,
     ...(process.env.AWS_ENDPOINT_URL ? { endpoint: process.env.AWS_ENDPOINT_URL } : {}),
     ...(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
       ? { credentials: { accessKeyId: process.env.AWS_ACCESS_KEY_ID, secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY } }
       : {})
   });
-  private static kmsClient = new KMSClient({
+  private static readonly kmsClient = new KMSClient({
     region: this.config.region
   });
-  private static kmsSigner = new KmsSigner(this.kmsClient, {
+  private static readonly kmsSigner = new KmsSigner(this.kmsClient, {
     defaultKeyId: this.config.kms.signerKeyId,
     defaultSigningAlgorithm: this.config.kms.signingAlgorithm
   });

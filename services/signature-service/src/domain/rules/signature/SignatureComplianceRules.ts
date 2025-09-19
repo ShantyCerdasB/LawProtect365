@@ -152,47 +152,67 @@ export function validateSignatureAccessLogging(signature: Signature): void {
     throw signatureNotFound('Signature is required for access logging validation');
   }
 
+  validateRequiredAccessLoggingFields(signature);
+  validateAccessLoggingMetadata(signature);
+}
+
+/**
+ * Validates required access logging fields
+ */
+function validateRequiredAccessLoggingFields(signature: Signature): void {
+  const requiredFields = [
+    { value: signature.getTimestamp(), name: 'timestamp' },
+    { value: signature.getId(), name: 'ID' },
+    { value: signature.getEnvelopeId(), name: 'envelope ID' },
+    { value: signature.getSignerId(), name: 'signer ID' }
+  ];
+
+  for (const field of requiredFields) {
+    if (!field.value) {
+      throw complianceViolation(`Signature ${field.name} is required for access logging`);
+    }
+  }
+}
+
+/**
+ * Validates access logging metadata
+ */
+function validateAccessLoggingMetadata(signature: Signature): void {
   const metadata = signature.getMetadata();
 
-  // Validate required access logging fields
-  if (!signature.getTimestamp()) {
-    throw complianceViolation('Signature timestamp is required for access logging');
-  }
+  validateIpAddressIfPresent(metadata.ipAddress);
+  validateUserAgentIfPresent(metadata.userAgent);
+}
 
-  if (!signature.getId()) {
-    throw complianceViolation('Signature ID is required for access logging');
-  }
+/**
+ * Validates IP address if present
+ */
+function validateIpAddressIfPresent(ipAddress: string | undefined): void {
+  if (!ipAddress) return;
 
-  if (!signature.getEnvelopeId()) {
-    throw complianceViolation('Envelope ID is required for access logging');
-  }
-
-  if (!signature.getSignerId()) {
-    throw complianceViolation('Signer ID is required for access logging');
-  }
-
-  // Validate IP address is logged if present using shared utilities
-  if (metadata.ipAddress) {
-    try {
-      validateSignatureIpAddress(metadata.ipAddress);
-    } catch (error) {
-      if (error instanceof Error) {
-        throw complianceViolation(`Invalid IP address format in access log: ${error.message}`);
-      }
-      throw error;
+  try {
+    validateSignatureIpAddress(ipAddress);
+  } catch (error) {
+    if (error instanceof Error) {
+      throw complianceViolation(`Invalid IP address format in access log: ${error.message}`);
     }
+    throw error;
   }
+}
 
-  // Validate user agent is logged if present using shared utilities
-  if (metadata.userAgent) {
-    try {
-      validateSignatureUserAgent(metadata.userAgent, 500);
-    } catch (error) {
-      if (error instanceof Error) {
-        throw complianceViolation(`Invalid user agent format in access log: ${error.message}`);
-      }
-      throw error;
+/**
+ * Validates user agent if present
+ */
+function validateUserAgentIfPresent(userAgent: string | undefined): void {
+  if (!userAgent) return;
+
+  try {
+    validateSignatureUserAgent(userAgent, 500);
+  } catch (error) {
+    if (error instanceof Error) {
+      throw complianceViolation(`Invalid user agent format in access log: ${error.message}`);
     }
+    throw error;
   }
 }
 

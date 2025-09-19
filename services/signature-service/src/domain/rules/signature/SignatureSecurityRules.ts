@@ -174,47 +174,67 @@ export function validateSignatureAuditTrail(signature: Signature): void {
     throw signatureNotFound('Signature is required for audit trail validation');
   }
 
+  validateRequiredAuditFields(signature);
+  validateAuditMetadata(signature);
+}
+
+/**
+ * Validates required audit fields
+ */
+function validateRequiredAuditFields(signature: Signature): void {
+  const requiredFields = [
+    { value: signature.getTimestamp(), name: 'timestamp' },
+    { value: signature.getId(), name: 'ID' },
+    { value: signature.getEnvelopeId(), name: 'envelope ID' },
+    { value: signature.getSignerId(), name: 'signer ID' }
+  ];
+
+  for (const field of requiredFields) {
+    if (!field.value) {
+      throw signatureInvalid(`Signature ${field.name} is required for audit trail`);
+    }
+  }
+}
+
+/**
+ * Validates audit metadata
+ */
+function validateAuditMetadata(signature: Signature): void {
   const metadata = signature.getMetadata();
 
-  // Validate required audit fields
-  if (!signature.getTimestamp()) {
-    throw signatureInvalid('Signature timestamp is required for audit trail');
-  }
+  validateAuditIpAddressIfPresent(metadata.ipAddress);
+  validateAuditUserAgentIfPresent(metadata.userAgent);
+}
 
-  if (!signature.getId()) {
-    throw signatureInvalid('Signature ID is required for audit trail');
-  }
+/**
+ * Validates IP address if present in audit trail
+ */
+function validateAuditIpAddressIfPresent(ipAddress: string | undefined): void {
+  if (!ipAddress) return;
 
-  if (!signature.getEnvelopeId()) {
-    throw signatureInvalid('Envelope ID is required for audit trail');
-  }
-
-  if (!signature.getSignerId()) {
-    throw signatureInvalid('Signer ID is required for audit trail');
-  }
-
-  // Validate IP address if present using shared utilities
-  if (metadata.ipAddress) {
-    try {
-      validateSignatureIpAddress(metadata.ipAddress);
-    } catch (error) {
-      if (error instanceof Error) {
-        throw signatureInvalid(`Invalid IP address format in audit trail: ${error.message}`);
-      }
-      throw error;
+  try {
+    validateSignatureIpAddress(ipAddress);
+  } catch (error) {
+    if (error instanceof Error) {
+      throw signatureInvalid(`Invalid IP address format in audit trail: ${error.message}`);
     }
+    throw error;
   }
+}
 
-  // Validate user agent if present using shared utilities
-  if (metadata.userAgent) {
-    try {
-      validateSignatureUserAgent(metadata.userAgent, 500);
-    } catch (error) {
-      if (error instanceof Error) {
-        throw signatureInvalid(`Invalid user agent format in audit trail: ${error.message}`);
-      }
-      throw error;
+/**
+ * Validates user agent if present in audit trail
+ */
+function validateAuditUserAgentIfPresent(userAgent: string | undefined): void {
+  if (!userAgent) return;
+
+  try {
+    validateSignatureUserAgent(userAgent, 500);
+  } catch (error) {
+    if (error instanceof Error) {
+      throw signatureInvalid(`Invalid user agent format in audit trail: ${error.message}`);
     }
+    throw error;
   }
 }
 

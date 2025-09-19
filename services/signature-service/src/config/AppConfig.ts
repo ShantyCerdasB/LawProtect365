@@ -374,8 +374,12 @@ export const createDynamoDBConfig = (environment: EnvironmentType): DynamoDBConf
  * @returns Object with table names
  */
 export const getTableNames = (environment: EnvironmentType) => {
-  const prefix = environment === 'test' ? 'test-' : 
-                 environment === 'local' ? 'local-' : '';
+  let prefix = '';
+  if (environment === 'test') {
+    prefix = 'test-';
+  } else if (environment === 'local') {
+    prefix = 'local-';
+  }
   
   return {
     envelopesTable: getRequired("ENVELOPES_TABLE") || `${prefix}envelopes`,

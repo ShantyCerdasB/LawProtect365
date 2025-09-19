@@ -19,8 +19,6 @@
 
 import { ControllerFactory, UserRole, VALID_COGNITO_ROLES } from '@lawprotect/shared-ts';
 import { EnvelopeService } from '../../services/EnvelopeService';
-// import { SignerService } from '../../services/SignerService';
-// import { AuditEventType } from '../../domain/enums/AuditEventType';
 import { AuditService } from '../../services/AuditService';
 import { ServiceFactory } from '../../infrastructure/factories/ServiceFactory';
 import { EnvelopeId } from '../../domain/value-objects/EnvelopeId';
@@ -76,12 +74,10 @@ export const getDocumentHistoryHandler = ControllerFactory.createCommand({
     constructor() {
       this.envelopeService = ServiceFactory.createEnvelopeService();
       this.auditService = ServiceFactory.createAuditService();
-      // this.signerService = ServiceFactory.createSignerService();
     }
     
-    private envelopeService: EnvelopeService;
-    private auditService: AuditService;
-    // private signerService: SignerService;
+    private readonly envelopeService: EnvelopeService;
+    private readonly auditService: AuditService;
     
     async execute(params: { envelopeId: string; limit: number; cursor?: string; userId: string; securityContext: any }) {
       const { envelopeId, limit, cursor, userId, securityContext } = params;

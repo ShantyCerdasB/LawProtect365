@@ -15,7 +15,6 @@ import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
 import { SignatureStatus } from '../domain/enums/SignatureStatus';
 import { SignatureRepository } from '../repositories/SignatureRepository';
 import { AuditService } from './AuditService';
-// import { SignatureEventService } from './events/SignatureEventService';
 import { AuditEventType } from '../domain/enums/AuditEventType';
 import { CreateSignatureRequest as DomainCreateSignatureRequest } from '../domain/types/signature/CreateSignatureRequest';
 import { KmsCreateSignatureRequest } from '../domain/types/signature/KmsCreateSignatureRequest';

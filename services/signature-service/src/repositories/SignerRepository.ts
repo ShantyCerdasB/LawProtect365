@@ -134,73 +134,12 @@ export class SignerRepository {
   async update(id: SignerId, request: UpdateSignerDomainRequest): Promise<Signer> {
     const { pk, sk } = SignerKeyBuilders.buildPrimaryKey(id.getValue());
 
-    const updateExpressions: string[] = [];
-    const expressionAttributeNames: Record<string, string> = {};
-    const expressionAttributeValues: Record<string, any> = {};
-
-    if (request.status !== undefined) {
-      updateExpressions.push('#status = :status');
-      expressionAttributeNames['#status'] = 'status';
-      expressionAttributeValues[':status'] = request.status;
-
-      // Update GSI3 key if status changed
-      updateExpressions.push('gsi3pk = :gsi3pk, gsi3sk = :gsi3sk');
-      const gsi3Key = SignerKeyBuilders.buildGsi3Key(request.status, id.getValue());
-      expressionAttributeValues[':gsi3pk'] = gsi3Key.gsi3pk;
-      expressionAttributeValues[':gsi3sk'] = gsi3Key.gsi3sk;
-    }
-
-    if (request.signedAt !== undefined) {
-      updateExpressions.push('signedAt = :signedAt');
-      expressionAttributeValues[':signedAt'] = request.signedAt.toISOString();
-    }
-
-    if (request.declinedAt !== undefined) {
-      updateExpressions.push('declinedAt = :declinedAt');
-      expressionAttributeValues[':declinedAt'] = request.declinedAt.toISOString();
-    }
-
-    if (request.metadata) {
-      if (request.metadata.ipAddress !== undefined) {
-        updateExpressions.push('ipAddress = :ipAddress');
-        expressionAttributeValues[':ipAddress'] = request.metadata.ipAddress;
-      }
-
-      if (request.metadata.userAgent !== undefined) {
-        updateExpressions.push('userAgent = :userAgent');
-        expressionAttributeValues[':userAgent'] = request.metadata.userAgent;
-      }
-
-      if (request.metadata.consentGiven !== undefined) {
-        updateExpressions.push('consentGiven = :consentGiven');
-        expressionAttributeValues[':consentGiven'] = request.metadata.consentGiven;
-      }
-
-      if (request.metadata.consentTimestamp !== undefined) {
-        updateExpressions.push('consentTimestamp = :consentTimestamp');
-        expressionAttributeValues[':consentTimestamp'] = request.metadata.consentTimestamp.toISOString();
-      }
-
-      if (request.metadata.declineReason !== undefined) {
-        updateExpressions.push('declineReason = :declineReason');
-        expressionAttributeValues[':declineReason'] = request.metadata.declineReason;
-      }
-    }
-
-    updateExpressions.push('updatedAt = :updatedAt');
-    expressionAttributeValues[':updatedAt'] = new Date().toISOString();
+    const updateData = this.buildUpdateData(id, request);
+    const updateParams = this.buildUpdateParams(pk, sk, updateData);
 
     try {
       requireUpdate(this.ddb);
-      const result = await this.ddb.update({
-        TableName: this.tableName,
-        Key: { pk, sk },
-        UpdateExpression: `SET ${updateExpressions.join(', ')}`,
-        ...(Object.keys(expressionAttributeNames).length > 0 ? { ExpressionAttributeNames: expressionAttributeNames } : {}),
-        ExpressionAttributeValues: expressionAttributeValues,
-        ConditionExpression: 'attribute_exists(pk)',
-        ReturnValues: 'ALL_NEW'
-      });
+      const result = await this.ddb.update(updateParams);
 
       if (!result.Attributes || !isSignerDdbItem(result.Attributes)) {
         throw new BadRequestError('Invalid signer item structure', 'INVALID_SIGNER_DATA');
@@ -216,6 +155,124 @@ export class SignerRepository {
       }
       throw mapAwsError(err, 'SignerRepository.update');
     }
+  }
+
+  /**
+   * Builds update data from request
+   */
+  private buildUpdateData(id: SignerId, request: UpdateSignerDomainRequest) {
+    const updateExpressions: string[] = [];
+    const expressionAttributeNames: Record<string, string> = {};
+    const expressionAttributeValues: Record<string, any> = {};
+
+    this.addStatusUpdate(id, request, updateExpressions, expressionAttributeNames, expressionAttributeValues);
+    this.addTimestampUpdates(request, updateExpressions, expressionAttributeValues);
+    this.addMetadataUpdates(request, updateExpressions, expressionAttributeValues);
+    this.addUpdatedAt(updateExpressions, expressionAttributeValues);
+
+    return {
+      updateExpressions,
+      expressionAttributeNames,
+      expressionAttributeValues
+    };
+  }
+
+  /**
+   * Adds status update if present
+   */
+  private addStatusUpdate(
+    id: SignerId,
+    request: UpdateSignerDomainRequest,
+    updateExpressions: string[],
+    expressionAttributeNames: Record<string, string>,
+    expressionAttributeValues: Record<string, any>
+  ): void {
+    if (request.status === undefined) return;
+
+    updateExpressions.push('#status = :status');
+    expressionAttributeNames['#status'] = 'status';
+    expressionAttributeValues[':status'] = request.status;
+
+    // Update GSI3 key if status changed
+    updateExpressions.push('gsi3pk = :gsi3pk, gsi3sk = :gsi3sk');
+    const gsi3Key = SignerKeyBuilders.buildGsi3Key(request.status, id.getValue());
+    expressionAttributeValues[':gsi3pk'] = gsi3Key.gsi3pk;
+    expressionAttributeValues[':gsi3sk'] = gsi3Key.gsi3sk;
+  }
+
+  /**
+   * Adds timestamp updates if present
+   */
+  private addTimestampUpdates(
+    request: UpdateSignerDomainRequest,
+    updateExpressions: string[],
+    expressionAttributeValues: Record<string, any>
+  ): void {
+    if (request.signedAt !== undefined) {
+      updateExpressions.push('signedAt = :signedAt');
+      expressionAttributeValues[':signedAt'] = request.signedAt.toISOString();
+    }
+
+    if (request.declinedAt !== undefined) {
+      updateExpressions.push('declinedAt = :declinedAt');
+      expressionAttributeValues[':declinedAt'] = request.declinedAt.toISOString();
+    }
+  }
+
+  /**
+   * Adds metadata updates if present
+   */
+  private addMetadataUpdates(
+    request: UpdateSignerDomainRequest,
+    updateExpressions: string[],
+    expressionAttributeValues: Record<string, any>
+  ): void {
+    if (!request.metadata) return;
+
+    const metadataFields = [
+      { field: 'ipAddress', value: request.metadata.ipAddress },
+      { field: 'userAgent', value: request.metadata.userAgent },
+      { field: 'consentGiven', value: request.metadata.consentGiven },
+      { field: 'declineReason', value: request.metadata.declineReason }
+    ];
+
+    for (const { field, value } of metadataFields) {
+      if (value !== undefined) {
+        updateExpressions.push(`${field} = :${field}`);
+        expressionAttributeValues[`:${field}`] = value;
+      }
+    }
+
+    if (request.metadata.consentTimestamp !== undefined) {
+      updateExpressions.push('consentTimestamp = :consentTimestamp');
+      expressionAttributeValues[':consentTimestamp'] = request.metadata.consentTimestamp.toISOString();
+    }
+  }
+
+  /**
+   * Adds updatedAt timestamp
+   */
+  private addUpdatedAt(
+    updateExpressions: string[],
+    expressionAttributeValues: Record<string, any>
+  ): void {
+    updateExpressions.push('updatedAt = :updatedAt');
+    expressionAttributeValues[':updatedAt'] = new Date().toISOString();
+  }
+
+  /**
+   * Builds DynamoDB update parameters
+   */
+  private buildUpdateParams(pk: string, sk: string, updateData: any) {
+    return {
+      TableName: this.tableName,
+      Key: { pk, sk },
+      UpdateExpression: `SET ${updateData.updateExpressions.join(', ')}`,
+      ...(Object.keys(updateData.expressionAttributeNames).length > 0 ? { ExpressionAttributeNames: updateData.expressionAttributeNames } : {}),
+      ExpressionAttributeValues: updateData.expressionAttributeValues,
+      ConditionExpression: 'attribute_exists(pk)',
+      ReturnValues: 'ALL_NEW' as const
+    };
   }
 
   /**

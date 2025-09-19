@@ -82,11 +82,11 @@ export const signDocumentHandler = ControllerFactory.createCommand({
       this.consentService = ServiceFactory.createConsentService();
     }
     
-    private signatureService: SignatureService;
-    private invitationTokenService: InvitationTokenService;
-    private envelopeService: EnvelopeService;
-    private signerService: SignerService;
-    private consentService: ConsentService;
+    private readonly signatureService: SignatureService;
+    private readonly invitationTokenService: InvitationTokenService;
+    private readonly envelopeService: EnvelopeService;
+    private readonly signerService: SignerService;
+    private readonly consentService: ConsentService;
     
     async execute(params: { requestBody: any; securityContext: any; actorEmail?: string }) {
       const { requestBody, securityContext } = params;

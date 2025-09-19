@@ -43,9 +43,30 @@ export function validateContentType(contentType: string): boolean {
   }
 
   // Basic content type format validation (type/subtype)
-  const contentTypeRegex = /^[a-zA-Z0-9][a-zA-Z0-9!#$&\-_]*\/[a-zA-Z0-9][a-zA-Z0-9!#$&\-_]*(\s*;\s*[a-zA-Z0-9][a-zA-Z0-9!#$&\-_]*\s*=\s*[a-zA-Z0-9][a-zA-Z0-9!#$&\-_]*)*$/;
+  const parts = contentType.split('/');
+  if (parts.length !== 2) {
+    return false;
+  }
   
-  return contentTypeRegex.test(contentType);
+  const [type, subtype] = parts;
+  const validChars = /^[a-zA-Z0-9][a-zA-Z0-9!#$&\-_]*$/;
+  
+  if (!validChars.test(type) || !validChars.test(subtype.split(';')[0])) {
+    return false;
+  }
+  
+  // Check for parameters if present
+  if (subtype.includes(';')) {
+    const params = subtype.split(';').slice(1);
+    for (const param of params) {
+      const trimmed = param.trim();
+      if (!/^[a-zA-Z0-9][a-zA-Z0-9!#$&\-_]*\s*=\s*[a-zA-Z0-9][a-zA-Z0-9!#$&\-_]*$/.test(trimmed)) {
+        return false;
+      }
+    }
+  }
+  
+  return true;
 }
 
 /**

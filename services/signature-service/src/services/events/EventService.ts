@@ -6,6 +6,7 @@
  * SignerEventService, etc.). Uses the outbox pattern for reliable event delivery.
  */
 
+import { randomBytes } from 'crypto';
 import type { ActorContext } from '@lawprotect/shared-ts';
 import { makeEvent } from '@lawprotect/shared-ts';
 import { OutboxRepository } from '../../repositories/OutboxRepository';
@@ -146,7 +147,7 @@ export abstract class EventService {
    */
   async publishEvent(eventType: string, payload: Record<string, unknown>, traceId?: string): Promise<void> {
     const domainEvent: DomainEvent = {
-      id: `${eventType}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `${eventType}-${Date.now()}-${randomBytes(6).toString('hex')}`,
       type: eventType,
       payload,
       occurredAt: new Date().toISOString()

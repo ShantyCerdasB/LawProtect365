@@ -39,13 +39,6 @@ export const withSecurityContext = (): BeforeMiddleware => {
     // Determine permission level based on auth context
     const permission = determinePermissionLevel(auth, evt);
     
-    // Extract request and trace IDs (for potential future use)
-    // const requestId = evt.headers?.['x-request-id'] || 
-    //                  evt.headers?.['X-Request-Id'] ||
-    //                  evt.requestContext?.requestId;
-    
-    // const traceId = evt.headers?.['x-trace-id'] || 
-    //                evt.headers?.['X-Trace-Id'];
 
     // Create security context
     // Enforce required security telemetry (no defaults)

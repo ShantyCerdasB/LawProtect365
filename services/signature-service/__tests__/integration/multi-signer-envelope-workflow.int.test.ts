@@ -64,6 +64,7 @@ describe('Multi-Signer Envelope Workflow Integration Tests', () => {
     return merged;
   };
 
+  // Helper function for user5 authentication events
   const makeUser5AuthEvent = async (overrides?: any) => {
     const token = await generateTestJwtToken({ sub: user5.userId, email: user5.email, roles: ['viewer'], scopes: [] });
     const base = await createApiGatewayEvent({ includeAuth: false, authToken: token });

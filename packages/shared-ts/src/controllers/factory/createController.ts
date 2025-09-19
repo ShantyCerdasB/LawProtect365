@@ -35,7 +35,7 @@ export const createController = <TInput, TOutput>(
       } catch (error) {
         // If actor extraction fails, check if we have auth context from middleware
         const auth = (evt as any).auth;
-        if (!auth || !auth.email) {
+        if (!auth?.email) {
           throw new Error("Missing authentication context");
         }
         actor = {

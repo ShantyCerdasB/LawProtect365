@@ -64,8 +64,8 @@ export const declineSignerHandler = ControllerFactory.createCommand({
       this.invitationTokenService = ServiceFactory.createInvitationTokenService();
     }
     
-    private signerService: SignerService;
-    private invitationTokenService: InvitationTokenService;
+    private readonly signerService: SignerService;
+    private readonly invitationTokenService: InvitationTokenService;
     
     async execute(params: { requestBody: any; securityContext: any }) {
       const { requestBody, securityContext } = params;

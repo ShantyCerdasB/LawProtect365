@@ -70,17 +70,74 @@ function safeExecSync(command: string, options: any = {}) {
     PATH: createSafePath()
   };
   
-  // For docker compose commands, we need to use shell: true since it's a subcommand
-  if (command.startsWith('docker compose')) {
-    return execSync(command, {
-      ...options,
-      shell: true, // Use shell for docker compose subcommands
-      env: safeEnv
-    });
+  // Define allowed commands and their arguments for security
+  const ALLOWED_COMMANDS = {
+    'docker': ['compose', 'ps', 'rm', 'logs'],
+    'docker-compose': ['up', 'down', 'ps', 'logs'],
+    'powershell': ['-Command'],
+    'curl': ['-f']
+  };
+  
+  // Define safe argument patterns
+  const SAFE_ARG_PATTERNS = [
+    /^-[a-zA-Z]$/,                    // Single letter flags like -f, -d
+    /^--[a-zA-Z-]+$/,                 // Long flags like --detach
+    /^[a-zA-Z0-9._/\\:-]+$/,          // File paths and names (including Windows paths with backslashes)
+    /^[a-zA-Z0-9._-]+$/,              // Simple identifiers
+    /^[a-zA-Z0-9._-]+:[a-zA-Z0-9._-]+$/, // Container names with colons
+    /^https?:\/\/[a-zA-Z0-9._/-]+$/,  // HTTP/HTTPS URLs
+    /^Invoke-WebRequest.*$/,           // PowerShell commands
+    /^.*\|.*$/,                       // PowerShell pipe commands
+  ];
+  
+  function isSafeArgument(arg: string): boolean {
+    return SAFE_ARG_PATTERNS.some(pattern => pattern.test(arg));
   }
   
-  // Parse command and arguments to avoid shell interpreter for other commands
-  const [cmd, ...args] = command.split(' ');
+  // For docker compose commands, use predefined safe arguments
+  if (command.startsWith('docker compose')) {
+    const args = command.split(' ').slice(2); // Remove 'docker compose'
+    const allowedArgs = ALLOWED_COMMANDS['docker'];
+    
+    // Validate that all arguments are allowed
+    if (args.every(arg => allowedArgs.includes(arg) || isSafeArgument(arg))) {
+      return execSync(command, {
+        ...options,
+        shell: true, // Use shell for docker compose subcommands
+        env: safeEnv
+      });
+    } else {
+      throw new Error(`Unsafe command arguments detected: ${args.join(' ')}`);
+    }
+  }
+  
+  // For other commands, use predefined safe command arrays
+  if (command.startsWith('docker-compose')) {
+    const args = command.split(' ').slice(1); // Remove 'docker-compose'
+    const allowedArgs = ALLOWED_COMMANDS['docker-compose'];
+    
+    // Validate that all arguments are allowed
+    if (args.every(arg => allowedArgs.includes(arg) || isSafeArgument(arg))) {
+      return execSync('docker-compose', {
+        ...options,
+        args: args,
+        shell: false, // Disable shell interpreter for security
+        env: safeEnv
+      });
+    } else {
+      throw new Error(`Unsafe command arguments detected: ${args.join(' ')}`);
+    }
+  }
+  
+  // For other commands, use safe parsing with validation
+  const parts = command.split(' ');
+  const cmd = parts[0];
+  const args = parts.slice(1);
+  
+  // Only allow specific commands
+  if (!ALLOWED_COMMANDS[cmd as keyof typeof ALLOWED_COMMANDS]) {
+    throw new Error(`Command not allowed: ${cmd}`);
+  }
   
   return execSync(cmd, {
     ...options,

@@ -88,7 +88,7 @@ export function validateParallelSigning(envelope: Envelope, signers: Signer[]): 
  * @returns void
  */
 export function validateSignerOrder(signers: Signer[]): void {
-  const sortedSigners = signers.sort((a, b) => a.getOrder() - b.getOrder());
+  const sortedSigners = [...signers].sort((a, b) => a.getOrder() - b.getOrder());
   
   for (let i = 0; i < sortedSigners.length - 1; i++) {
     const current = sortedSigners[i];

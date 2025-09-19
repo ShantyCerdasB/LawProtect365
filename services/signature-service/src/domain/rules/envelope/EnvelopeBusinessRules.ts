@@ -118,54 +118,76 @@ export function validateMetadataIntegrity(
   },
   config: SignatureServiceConfig
 ): void {
-  // Validate custom fields using shared utility
-  if (metadata.customFields) {
-    const customFieldsConfig: CustomFieldsConfig = {
-      maxFields: config.envelopeRules.maxCustomFields,
-      maxKeyLength: config.envelopeRules.maxCustomFieldKeyLength,
-      maxValueLength: config.envelopeRules.maxCustomFieldValueLength,
-      allowedValueTypes: ['string', 'number', 'boolean']
-    };
+  validateCustomFieldsIfPresent(metadata.customFields, config);
+  validateTagsIfPresent(metadata.tags, config);
+  validateDescriptionIfPresent(metadata.description);
+}
 
-    try {
-      validateCustomFields(metadata.customFields, customFieldsConfig, "Envelope custom fields");
-    } catch (error) {
-      if (error instanceof Error) {
-        throw invalidEnvelopeState(error.message);
-      }
-      throw error;
+/**
+ * Validates custom fields if present
+ */
+function validateCustomFieldsIfPresent(
+  customFields: Record<string, any> | undefined,
+  config: SignatureServiceConfig
+): void {
+  if (!customFields) return;
+
+  const customFieldsConfig: CustomFieldsConfig = {
+    maxFields: config.envelopeRules.maxCustomFields,
+    maxKeyLength: config.envelopeRules.maxCustomFieldKeyLength,
+    maxValueLength: config.envelopeRules.maxCustomFieldValueLength,
+    allowedValueTypes: ['string', 'number', 'boolean']
+  };
+
+  try {
+    validateCustomFields(customFields, customFieldsConfig, "Envelope custom fields");
+  } catch (error) {
+    if (error instanceof Error) {
+      throw invalidEnvelopeState(error.message);
     }
+    throw error;
   }
+}
 
-  // Validate tags using shared utility
-  if (metadata.tags) {
-    const tagsConfig: TagsConfig = {
-      maxTags: config.envelopeRules.maxTags,
-      maxTagLength: config.envelopeRules.maxTagLength,
-      allowDuplicates: false,
-      trimWhitespace: true
-    };
+/**
+ * Validates tags if present
+ */
+function validateTagsIfPresent(
+  tags: string[] | undefined,
+  config: SignatureServiceConfig
+): void {
+  if (!tags) return;
 
-    try {
-      validateTags(metadata.tags, tagsConfig, "Envelope tags");
-    } catch (error) {
-      if (error instanceof Error) {
-        throw invalidEnvelopeState(error.message);
-      }
-      throw error;
+  const tagsConfig: TagsConfig = {
+    maxTags: config.envelopeRules.maxTags,
+    maxTagLength: config.envelopeRules.maxTagLength,
+    allowDuplicates: false,
+    trimWhitespace: true
+  };
+
+  try {
+    validateTags(tags, tagsConfig, "Envelope tags");
+  } catch (error) {
+    if (error instanceof Error) {
+      throw invalidEnvelopeState(error.message);
     }
+    throw error;
   }
+}
 
-  // Validate description using shared utility
-  if (metadata.description) {
-    try {
-      validateStringField(metadata.description, 1000, "Envelope description", true);
-    } catch (error) {
-      if (error instanceof Error) {
-        throw invalidEnvelopeState(error.message);
-      }
-      throw error;
+/**
+ * Validates description if present
+ */
+function validateDescriptionIfPresent(description: string | undefined): void {
+  if (!description) return;
+
+  try {
+    validateStringField(description, 1000, "Envelope description", true);
+  } catch (error) {
+    if (error instanceof Error) {
+      throw invalidEnvelopeState(error.message);
     }
+    throw error;
   }
 }
 

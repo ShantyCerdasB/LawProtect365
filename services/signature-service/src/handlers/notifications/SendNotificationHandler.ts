@@ -70,9 +70,9 @@ export const sendNotificationHandler = ControllerFactory.createCommand({
       this.invitationTokenService = ServiceFactory.createInvitationTokenService();
     }
     
-    private envelopeService: EnvelopeService;
-    private signerService: SignerService;
-    private invitationTokenService: InvitationTokenService;
+    private readonly envelopeService: EnvelopeService;
+    private readonly signerService: SignerService;
+    private readonly invitationTokenService: InvitationTokenService;
     
     async execute(params: { requestBody: any; envelopeId: string; userId: string; securityContext: any }) {
       try {

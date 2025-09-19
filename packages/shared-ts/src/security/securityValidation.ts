@@ -262,9 +262,6 @@ export function validateSuspiciousActivity(
   }
 
   // Check for rapid successive operations (potential bot activity)
-  const rapidOperationThreshold = config.rapidOperationThreshold || 10;
-  const rapidOperationWindow = config.rapidOperationWindowSeconds || 60;
-
   // This would typically check against a store of recent operations
   // For now, we'll implement basic validation
   

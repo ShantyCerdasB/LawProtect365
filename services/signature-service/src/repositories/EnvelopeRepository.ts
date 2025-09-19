@@ -273,79 +273,134 @@ export class EnvelopeRepository implements Repository<Envelope, EnvelopeId, unde
     const ddb = this.ddb as DdbClientWithQuery;
 
     try {
-      const exprNames: Record<string, string> = { "#gsi2pk": "gsi2pk" };
-      if (c) {
-        exprNames["#gsi2sk"] = "gsi2sk";
-      }
-      const res = await ddb.query({
-        TableName: this.tableName,
-        IndexName: this.gsi2IndexName,
-        KeyConditionExpression: "#gsi2pk = :owner" + (c ? " AND #gsi2sk > :after" : ""),
-        ExpressionAttributeNames: exprNames,
-        ExpressionAttributeValues: {
-          ":owner": EnvelopeKeyBuilders.buildGsi2Pk(ownerId),
-          ...(c ? { ":after": `${c.createdAt}#${c.envelopeId}` } : {}),
-        },
-        Limit: take,
-        ScanIndexForward: true,
-      });
-
+      const queryParams = this.buildQueryParams(ownerId, c || null, take);
+      const res = await ddb.query(queryParams);
       const rows = (res.Items ?? []) as any[];
 
-      // Hydrate full items when GSI projection is not ALL_ATTRIBUTES
-      const hydrated: any[] = [];
-      for (const it of rows) {
-        let item: any | null = it;
-        const hasAll = item && item.type === 'ENVELOPE' && item.sk === 'META' && item.envelopeId && item.metadata;
-        if (!hasAll) {
-          let envelopeIdFromIdx: string | undefined;
-          if (item?.envelopeId) {
-            envelopeIdFromIdx = item.envelopeId;
-          } else if (item?.gsi2sk && typeof item.gsi2sk === 'string') {
-            const parts = String(item.gsi2sk).split('#');
-            envelopeIdFromIdx = parts[parts.length - 1];
-          }
-          if (envelopeIdFromIdx) {
-            const full = await this.ddb.get({
-              TableName: this.tableName,
-              Key: { pk: EnvelopeKeyBuilders.buildPk(envelopeIdFromIdx), sk: EnvelopeKeyBuilders.buildMetaSk() },
-              ConsistentRead: false
-            });
-            item = full.Item || null;
-          } else {
-            item = null;
-          }
-        }
-        if (item && item.sk === 'META' && item.type === 'ENVELOPE') {
-          hydrated.push(item);
-        }
-      }
+      const hydrated = await this.hydrateItems(rows);
+      const mapped = this.mapToEnvelopes(hydrated);
+      const result = this.buildPaginationResult(mapped, take);
 
-      const mapped: Envelope[] = [];
-      for (const it of hydrated) {
-        try {
-          mapped.push(envelopeDdbMapper.fromDTO(it));
-        } catch {
-          // Skip invalid/partial items
-          continue;
-        }
-      }
-
-      const items = mapped.slice(0, take - 1);
-      const hasMore = mapped.length === take;
-
-      const last = items.at(-1);
-      const nextCursor = hasMore && last
-        ? encodeCursor(createEnvelopeCursorPayload(last) as any)
-        : undefined;
-
-      return { items, nextCursor };
+      return result;
     } catch (err) {
       // Diagnostic logging (allowed): help surface DDB details in tests
       // eslint-disable-next-line no-console
       console.error('DDB listByOwner error', { ownerId, index: this.gsi2IndexName, error: (err as any)?.message });
       throw mapAwsError(err, "EnvelopeRepository.listByOwner");
     }
+  }
+
+  /**
+   * Builds query parameters for DynamoDB query
+   */
+  private buildQueryParams(ownerId: string, cursor: EnvelopeListCursorPayload | null, take: number) {
+    const exprNames: Record<string, string> = { "#gsi2pk": "gsi2pk" };
+    if (cursor) {
+      exprNames["#gsi2sk"] = "gsi2sk";
+    }
+
+    return {
+      TableName: this.tableName,
+      IndexName: this.gsi2IndexName,
+      KeyConditionExpression: "#gsi2pk = :owner" + (cursor ? " AND #gsi2sk > :after" : ""),
+      ExpressionAttributeNames: exprNames,
+      ExpressionAttributeValues: {
+        ":owner": EnvelopeKeyBuilders.buildGsi2Pk(ownerId),
+        ...(cursor ? { ":after": `${cursor.createdAt}#${cursor.envelopeId}` } : {}),
+      },
+      Limit: take,
+      ScanIndexForward: true,
+    };
+  }
+
+  /**
+   * Hydrates items when GSI projection is not ALL_ATTRIBUTES
+   */
+  private async hydrateItems(rows: any[]): Promise<any[]> {
+    const hydrated: any[] = [];
+    
+    for (const it of rows) {
+      let item: any | null = it;
+      const hasAll = item && item.type === 'ENVELOPE' && item.sk === 'META' && item.envelopeId && item.metadata;
+      
+      if (!hasAll) {
+        item = await this.hydratePartialItem(item);
+      }
+      
+      if (item && item.sk === 'META' && item.type === 'ENVELOPE') {
+        hydrated.push(item);
+      }
+    }
+    
+    return hydrated;
+  }
+
+  /**
+   * Hydrates a partial item by fetching full data
+   */
+  private async hydratePartialItem(item: any): Promise<any | null> {
+    const envelopeIdFromIdx = this.extractEnvelopeId(item);
+    
+    if (!envelopeIdFromIdx) {
+      return null;
+    }
+
+    const full = await this.ddb.get({
+      TableName: this.tableName,
+      Key: { pk: EnvelopeKeyBuilders.buildPk(envelopeIdFromIdx), sk: EnvelopeKeyBuilders.buildMetaSk() },
+      ConsistentRead: false
+    });
+    
+    return full.Item || null;
+  }
+
+  /**
+   * Extracts envelope ID from item
+   */
+  private extractEnvelopeId(item: any): string | undefined {
+    if (item?.envelopeId) {
+      return item.envelopeId;
+    }
+    
+    if (item?.gsi2sk && typeof item.gsi2sk === 'string') {
+      const parts = String(item.gsi2sk).split('#');
+      return parts[parts.length - 1];
+    }
+    
+    return undefined;
+  }
+
+  /**
+   * Maps hydrated items to Envelope entities
+   */
+  private mapToEnvelopes(hydrated: any[]): Envelope[] {
+    const mapped: Envelope[] = [];
+    
+    for (const it of hydrated) {
+      try {
+        mapped.push(envelopeDdbMapper.fromDTO(it));
+      } catch {
+        // Skip invalid/partial items
+        continue;
+      }
+    }
+    
+    return mapped;
+  }
+
+  /**
+   * Builds pagination result
+   */
+  private buildPaginationResult(mapped: Envelope[], take: number): EnvelopeListResult {
+    const items = mapped.slice(0, take - 1);
+    const hasMore = mapped.length === take;
+
+    const last = items.at(-1);
+    const nextCursor = hasMore && last
+      ? encodeCursor(createEnvelopeCursorPayload(last) as any)
+      : undefined;
+
+    return { items, nextCursor };
   }
 
   /**

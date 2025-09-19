@@ -97,7 +97,7 @@ export class DocumentAccessService {
    */
   private buildSafeContext(securityContext: any) {
     return {
-      userId: (securityContext && securityContext.userId) ? securityContext.userId : 'external-user',
+      userId: securityContext?.userId || 'external-user',
       accessType: 'INVITATION',
       permission: 'PARTICIPANT',
       ipAddress: securityContext?.ipAddress,

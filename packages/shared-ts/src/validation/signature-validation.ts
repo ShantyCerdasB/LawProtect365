@@ -10,6 +10,27 @@ import { diffMs } from '../utils/date.js';
 import { HashAlgorithm, getHashLength } from '../enums/HashAlgorithm.js';
 
 /**
+ * Validates IPv4 address format
+ * @param ipAddress - The IP address to validate
+ * @returns true if valid IPv4 address
+ */
+function isValidIpAddress(ipAddress: string): boolean {
+  const parts = ipAddress.split('.');
+  if (parts.length !== 4) {
+    return false;
+  }
+  
+  for (const part of parts) {
+    const num = parseInt(part, 10);
+    if (isNaN(num) || num < 0 || num > 255) {
+      return false;
+    }
+  }
+  
+  return true;
+}
+
+/**
  * Validates signature hash format based on algorithm
  * @param hash - The hash to validate
  * @param algorithm - The signing algorithm used
@@ -101,8 +122,7 @@ export function validateSignatureIpAddress(ipAddress: string): void {
     );
   }
 
-  const ipRegex = /^(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)$/;
-  if (!ipRegex.test(ipAddress)) {
+  if (!isValidIpAddress(ipAddress)) {
     throw new AppError(
       ErrorCodes.COMMON_BAD_REQUEST,
       400,
