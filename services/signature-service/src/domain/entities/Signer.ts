@@ -7,7 +7,7 @@
 
 import { SignerId } from '../value-objects/SignerId';
 import { Email } from '../value-objects/Email';
-import { SignerStatus } from '../enums/SignerStatus';
+import { SignerStatus } from '@lawprotect/shared-ts';
 import { 
   invalidSignerState, 
   consentRequired,

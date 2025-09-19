@@ -9,7 +9,6 @@
 import { EnvelopeStatus, isValidEnvelopeStatusTransition, getValidNextStatuses } from '@/domain/enums/EnvelopeStatus';
 import { EnvelopeOperation, isValidEnvelopeOperation, getValidEnvelopeOperations } from '@/domain/enums/EnvelopeOperation';
 import { Envelope } from '@/domain/entities/Envelope';
-import { SignerStatus } from '@/domain/enums/SignerStatus';
 import type { WorkflowTimingConfig } from '@/domain/types/WorkflowTypes';
 import { SigningOrder } from '@/domain/value-objects/SigningOrder';
 import { validateEnvelopeSecurity } from './EnvelopeSecurityRules';
@@ -17,7 +16,7 @@ import { validateEnvelopeWorkflow } from './EnvelopeEventRules';
 import type { AuditEvent } from '@/domain/types/audit/AuditEvent';
 import type { Signer } from '@/domain/entities/Signer';
 import type { Signature } from '@/domain/entities/Signature';
-import { AccessType, PermissionLevel } from '@lawprotect/shared-ts';
+import { AccessType, PermissionLevel, SignerStatus } from '@lawprotect/shared-ts';
 import { 
   invalidEnvelopeState, 
   envelopeLimitExceeded,

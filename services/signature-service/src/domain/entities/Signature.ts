@@ -6,12 +6,11 @@
  */
 
 import { SignatureId } from '../value-objects/SignatureId';
-import { SignatureStatus } from '../enums/SignatureStatus';
 import { 
   signatureFailed, 
   signatureAlreadyExists
 } from '../../signature-errors';
-import { validateSignatureHash, validateSignatureTimestamp } from '@lawprotect/shared-ts';
+import { validateSignatureHash, validateSignatureTimestamp, SignatureStatus } from '@lawprotect/shared-ts';
 
 /**
  * Signature entity representing a cryptographic signature on a document

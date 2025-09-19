@@ -7,8 +7,8 @@
 
 import { Signer } from '../../entities';
 import { EnvelopeId } from '../../value-objects';
-import { SignerStatus, SigningOrderType } from '../../enums';
-import { BadRequestError, ForbiddenError, isEmail } from '@lawprotect/shared-ts';
+import { SigningOrderType } from '../../enums';
+import { BadRequestError, ForbiddenError, isEmail, SignerStatus } from '@lawprotect/shared-ts';
 
 /**
  * Validates that a signer can be removed from an envelope

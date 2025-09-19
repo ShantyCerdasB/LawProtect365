@@ -9,8 +9,7 @@ import { Signature } from '../../entities/Signature';
 import { Signer } from '../../entities/Signer';
 import { Envelope } from '../../entities/Envelope';
 import { SignerWorkflowOperation } from '../../enums/SignerOperation';
-import { SignatureStatus } from '../../enums/SignatureStatus';
-import { SignerStatus } from '../../enums/SignerStatus';
+import { SignatureStatus, SignerStatus } from '@lawprotect/shared-ts';
 import { EnvelopeStatus } from '../../enums/EnvelopeStatus';
 import { 
   workflowViolation, 
