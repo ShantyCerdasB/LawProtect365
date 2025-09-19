@@ -6,7 +6,7 @@
  * both authenticated users (with JWT tokens) and external users (with invitation tokens).
  */
 
-import { ControllerFactory, PermissionLevel, AccessType } from '@lawprotect/shared-ts';
+import { ControllerFactory, PermissionLevel, AccessType, SignatureStatus, SignerStatus } from '@lawprotect/shared-ts';
 import { SignDocumentRequestSchema } from '../../domain/schemas/SigningHandlersSchema';
 // ServiceFactory is already imported above
 import { SignatureService } from '../../services/SignatureService';
@@ -19,9 +19,7 @@ import { Envelope } from '../../domain/entities/Envelope';
 import { SignatureId } from '../../domain/value-objects/SignatureId';
 import { EnvelopeId } from '../../domain/value-objects/EnvelopeId';
 import { SignerId } from '../../domain/value-objects/SignerId';
-import { SignatureStatus } from '../../domain/enums/SignatureStatus';
 import { calculateEnvelopeProgress } from '../../utils/envelope-progress';
-import { SignerStatus } from '../../domain/enums/SignerStatus';
 import { ServiceFactory } from '../../infrastructure/factories/ServiceFactory';
 import { ConsentService } from '../../services/ConsentService';
 import { EnvelopeRepository } from '../../repositories/EnvelopeRepository';
@@ -221,8 +219,9 @@ export const signDocumentHandler = ControllerFactory.createCommand({
               signedS3Key: requestBody.s3Key
             }
           } as any);
-        } catch (_e) {
-          // best-effort; do not block signing flow
+        } catch (error) {
+          // Log the error for debugging but don't block signing flow
+          console.warn('[SignDocumentHandler] Failed to update envelope metadata:', error);
         }
         const ownerId = (allSigners.find(s => s.getOrder() === 1) as any)?.getOwnerId?.() || mergedSecurityContext.userId;
         const ownerContext = {
@@ -238,8 +237,9 @@ export const signDocumentHandler = ControllerFactory.createCommand({
       let envelope: Envelope;
       try {
         envelope = await this.envelopeService.getEnvelope(new EnvelopeId(envelopeId), userId, mergedSecurityContext);
-      } catch (_e) {
-        // If we can't get envelope, create a minimal response
+      } catch (error) {
+        // Log the error for debugging and create a minimal response
+        console.warn('[SignDocumentHandler] Failed to get envelope details:', error);
         envelope = {
           getStatus: () => 'SENT',
           getSigningOrder: () => ({ getType: () => 'OWNER_FIRST' })

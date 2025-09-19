@@ -10,7 +10,6 @@ import { Envelope } from '../domain/entities/Envelope';
 import { SignerId } from '../domain/value-objects/SignerId';
 import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
 import { Email } from '../domain/value-objects/Email';
-import { SignerStatus } from '../domain/enums/SignerStatus';
 import { AuditEventType } from '../domain/enums/AuditEventType';
 import { SigningOrderType } from '../domain/enums/SigningOrder';
 import { SignerRepository } from '../repositories/SignerRepository';
@@ -23,7 +22,7 @@ import { handleSignerDeclineWorkflow } from '../domain/rules/signer/SignerWorkfl
 import { createCancelledEnvelope } from '../domain/rules/envelope/EnvelopeBusinessRules';
 import { validateSignerAddition, validateSignerRemoval, validateSignerUpdate, getNextSignerOrder } from '../domain/rules/signer/SignerManagementRules';
 import { signerDdbMapper } from '../domain/types/infrastructure/signer/signer-mappers';
-import { mapAwsError, NotFoundError, BadRequestError, ForbiddenError, ErrorCodes, uuid } from '@lawprotect/shared-ts';
+import { mapAwsError, NotFoundError, BadRequestError, ForbiddenError, ErrorCodes, uuid, SignerStatus } from '@lawprotect/shared-ts';
 
 /**
  * Request interface for declining a signer

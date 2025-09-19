@@ -5,7 +5,7 @@
  * updating existing signer records, primarily for status changes and metadata updates.
  */
 
-import type { SignerStatus } from '../../enums/SignerStatus';
+import type { SignerStatus } from '@lawprotect/shared-ts';
 import type { Email } from '../../value-objects/Email';
 
 /**

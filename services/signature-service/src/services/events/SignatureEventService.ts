@@ -7,7 +7,7 @@
 
 import { EventService, DomainEvent } from './EventService';
 import { Signature } from '../../domain/entities/Signature';
-import { SignatureStatus } from '../../domain/enums/SignatureStatus';
+import { SignatureStatus } from '@lawprotect/shared-ts';
 
 /**
  * SignatureEventService implementation

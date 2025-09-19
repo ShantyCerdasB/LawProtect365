@@ -14,7 +14,7 @@ import { SigningOrder } from '../../../value-objects/SigningOrder';
 import { Signer } from '../../../entities/Signer';
 import { SignerId } from '../../../value-objects/SignerId';
 import { Email } from '../../../value-objects/Email';
-import { SignerStatus } from '../../../enums/SignerStatus';
+import { SignerStatus } from '@lawprotect/shared-ts';
 
 /**
  * Type guard for envelope DynamoDB items

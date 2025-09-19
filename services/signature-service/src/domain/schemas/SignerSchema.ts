@@ -5,8 +5,8 @@
  * operations including creation, updates, and status management.
  */
 
-import { z, UuidV4, NonEmptyStringSchema, EmailStringSchema } from '@lawprotect/shared-ts';
-import { SignerStatus, SignerSortBy, SortOrder } from '@/domain/enums';
+import { z, UuidV4, NonEmptyStringSchema, EmailStringSchema, SignerStatus } from '@lawprotect/shared-ts';
+import { SignerSortBy, SortOrder } from '@/domain/enums';
 import { SignerDataSchema } from './CommonSchemas';
 
 /**

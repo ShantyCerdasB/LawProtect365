@@ -9,7 +9,6 @@ import { Signature } from '../domain/entities/Signature';
 import { SignatureId } from '../domain/value-objects/SignatureId';
 import { SignerId } from '../domain/value-objects/SignerId';
 import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
-import { SignatureStatus } from '../domain/enums/SignatureStatus';
 import { SignatureRepository } from '../repositories/SignatureRepository';
 import { ConsentService } from './ConsentService';
 import { KmsService } from './KmsService';
@@ -32,7 +31,7 @@ import { mapKmsAlgorithmToDomain } from '../domain/enums/SigningAlgorithm';
 import { 
   validateSignatureSecurityRules
 } from '../domain/rules/signature/SignatureSecurityRules';
-import { mapAwsError, NotFoundError, ForbiddenError, ErrorCodes } from '@lawprotect/shared-ts';
+import { mapAwsError, NotFoundError, ForbiddenError, ErrorCodes, SignatureStatus } from '@lawprotect/shared-ts';
 
 /**
  * SignatureService implementation

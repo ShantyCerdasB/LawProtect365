@@ -6,13 +6,12 @@
  */
 
 
-import { KmsSigner, mapAwsError, BadRequestError, NotFoundError, ErrorCodes } from '@lawprotect/shared-ts';
+import { KmsSigner, mapAwsError, BadRequestError, NotFoundError, ErrorCodes, SignatureStatus } from '@lawprotect/shared-ts';
 import { Signature } from '../domain/entities/Signature';
 import { SignatureId } from '../domain/value-objects/SignatureId';
 import { SignerId } from '../domain/value-objects/SignerId';
 import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
 // SigningAlgorithm is now imported via the type files
-import { SignatureStatus } from '../domain/enums/SignatureStatus';
 import { SignatureRepository } from '../repositories/SignatureRepository';
 import { AuditService } from './AuditService';
 import { AuditEventType } from '../domain/enums/AuditEventType';

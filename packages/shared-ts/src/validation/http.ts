@@ -110,6 +110,7 @@ export const validateJsonBody = <S extends z.ZodTypeAny>(
       json = JSON.parse(json);
     }
   } catch (error) {
+    console.warn('JSON parsing failed:', error);
     throw new AppError(ErrorCodes.COMMON_BAD_REQUEST, 400, "Invalid JSON");
   }
 

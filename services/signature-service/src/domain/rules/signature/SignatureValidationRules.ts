@@ -30,8 +30,10 @@ export function validateKmsCreateSignatureRequest(request: KmsCreateSignatureReq
     validateSignatureHash(request.documentHash, request.algorithm);
   } catch (error) {
     if (error instanceof Error) {
+      console.warn('Document hash validation failed:', error);
       throw new BadRequestError(`Invalid document hash: ${error.message}`, ErrorCodes.COMMON_BAD_REQUEST);
     }
+    console.warn('Document hash validation failed with unknown error:', error);
     throw error;
   }
 
@@ -39,6 +41,7 @@ export function validateKmsCreateSignatureRequest(request: KmsCreateSignatureReq
   try {
     NonEmptyStringSchema.parse(request.algorithm);
   } catch (error) {
+    console.warn('Algorithm validation failed:', error);
     throw new BadRequestError('Signing algorithm is required', ErrorCodes.COMMON_BAD_REQUEST);
   }
 
@@ -46,6 +49,7 @@ export function validateKmsCreateSignatureRequest(request: KmsCreateSignatureReq
   try {
     NonEmptyStringSchema.parse(request.kmsKeyId);
   } catch (error) {
+    console.warn('KMS key ID validation failed:', error);
     throw new BadRequestError('KMS key ID is required', ErrorCodes.COMMON_BAD_REQUEST);
   }
 
@@ -55,8 +59,10 @@ export function validateKmsCreateSignatureRequest(request: KmsCreateSignatureReq
     validateS3Key(request.outputKey);
   } catch (error) {
     if (error instanceof Error) {
+      console.warn('S3 key validation failed:', error);
       throw new BadRequestError(`Invalid S3 key: ${error.message}`, ErrorCodes.COMMON_BAD_REQUEST);
     }
+    console.warn('S3 key validation failed with unknown error:', error);
     throw error;
   }
 
@@ -87,8 +93,10 @@ export function validateSignatureValidationRequest(request: ValidateSignatureReq
     validateSignatureHash(request.documentHash, request.algorithm);
   } catch (error) {
     if (error instanceof Error) {
+      console.warn('Document hash validation failed:', error);
       throw new BadRequestError(`Invalid document hash: ${error.message}`, ErrorCodes.COMMON_BAD_REQUEST);
     }
+    console.warn('Document hash validation failed with unknown error:', error);
     throw error;
   }
 
@@ -96,6 +104,7 @@ export function validateSignatureValidationRequest(request: ValidateSignatureReq
   try {
     NonEmptyStringSchema.parse(request.signature);
   } catch (error) {
+    console.warn('Signature validation failed:', error);
     throw new BadRequestError('Signature is required', ErrorCodes.COMMON_BAD_REQUEST);
   }
 
@@ -103,6 +112,7 @@ export function validateSignatureValidationRequest(request: ValidateSignatureReq
   try {
     NonEmptyStringSchema.parse(request.algorithm);
   } catch (error) {
+    console.warn('Algorithm validation failed:', error);
     throw new BadRequestError('Signing algorithm is required', ErrorCodes.COMMON_BAD_REQUEST);
   }
 }
@@ -132,8 +142,10 @@ export function validateSignatureTimestampRule(timestamp: Date, maxAgeHours: num
     validateSignatureTimestamp(timestamp, maxAgeHours);
   } catch (error) {
     if (error instanceof Error) {
+      console.warn('Signature timestamp validation failed:', error);
       throw new BadRequestError(`Invalid signature timestamp: ${error.message}`, ErrorCodes.COMMON_BAD_REQUEST);
     }
+    console.warn('Signature timestamp validation failed with unknown error:', error);
     throw error;
   }
 }

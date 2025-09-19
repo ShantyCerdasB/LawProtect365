@@ -7,14 +7,13 @@
 
 import { Signer } from '@/domain/entities/Signer';
 import { Envelope } from '@/domain/entities/Envelope';
-import { SignerStatus, isValidSignerStatusTransition, getValidNextSignerStatuses } from '@/domain/enums/SignerStatus';
 import { SignerWorkflowOperation } from '@/domain/enums/SignerOperation';
 import { AuditEventType } from '@/domain/enums/AuditEventType';
 import { 
   invalidSignerState,
   eventGenerationFailed
 } from '@/signature-errors';
-import { diffMinutes } from '@lawprotect/shared-ts';
+import { diffMinutes, SignerStatus, isValidSignerStatusTransition, getValidNextSignerStatuses } from '@lawprotect/shared-ts';
 import { SignerValidator } from '@/domain/validators/SignerValidator';
 import { validateInvitationToken } from './SignerSecurityRules';
 import { shouldCancelEnvelopeOnDecline } from '../envelope/EnvelopeBusinessRules';

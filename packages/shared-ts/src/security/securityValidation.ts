@@ -88,8 +88,8 @@ export function validateUserAgent(
         };
       }
     } catch (error) {
-      // Invalid regex pattern, skip it
-      console.warn(`Invalid regex pattern in blocked user agents: ${pattern}`);
+      // Invalid regex pattern, skip it and log the specific error
+      console.warn(`Invalid regex pattern in blocked user agents: ${pattern}`, error);
     }
   }
 
@@ -230,7 +230,8 @@ export async function validateRateLimit(
       };
     }
   } catch (error) {
-    // Rate limit exceeded
+    // Log the specific error and return rate limit exceeded
+    console.warn(`Rate limit validation failed for operation ${operation}:`, error);
     return {
       isValid: false,
       errorMessage: `Rate limit exceeded for operation ${operation}`,
@@ -408,7 +409,7 @@ function isIPInRange(ip: string, cidr: string): boolean {
     // This is a simplified check - proper implementation would handle all CIDR cases
     return ip.startsWith(rangeIP.split('.').slice(0, Math.floor(prefixLength / 8)).join('.'));
   } catch (error) {
-    console.warn(`Invalid CIDR range: ${cidr}`);
+    console.warn(`Invalid CIDR range: ${cidr}`, error);
     return false;
   }
 }
