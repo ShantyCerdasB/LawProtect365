@@ -74,9 +74,6 @@ export abstract class ValueObject<T> {
  * @typeParam T The underlying identifier type (usually string)
  */
 export abstract class Identifier<T> extends ValueObject<T> {
-  constructor(value: T) {
-    super(value);
-  }
 
   /**
    * Creates an identifier from a string value
@@ -123,9 +120,6 @@ export abstract class Identifier<T> extends ValueObject<T> {
  * ```
  */
 export abstract class StringValueObject extends ValueObject<string> {
-  constructor(value: string) {
-    super(value);
-  }
 
   /**
    * Creates a string value object from a string value

@@ -7,7 +7,7 @@
 
 import { AppError, ErrorCodes } from '../errors/index.js';
 import { SecurityLevel, meetsSecurityLevel } from '../enums/SecurityLevel.js';
-import { ComplianceLevel, meetsComplianceLevel } from '../enums/ComplianceLevel.js';
+import { ComplianceLevel } from '../enums/ComplianceLevel.js';
 
 /**
  * Signing algorithm types

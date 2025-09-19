@@ -30,11 +30,6 @@ import { viewDocumentHandler } from '../../src/handlers/signing/ViewDocumentHand
 import { downloadSignedDocumentHandler } from '../../src/handlers/envelopes/DownloadSignedDocumentHandler';
 import { ServiceFactory } from '../../src/infrastructure/factories/ServiceFactory';
 import { EnvelopeId } from '../../src/domain/value-objects/EnvelopeId';
-import { EventBridgeAdapter } from '../../src/infrastructure/eventbridge';
-import { EventPublisher } from '../../src/services/events/EventPublisher';
-import { OutboxRepository } from '../../src/repositories/OutboxRepository';
-import { createDynamoDBClient } from '../../src/utils/dynamodb-client';
-import { EventBridgeClient, CreateEventBusCommand, PutEventsCommand } from '@aws-sdk/client-eventbridge';
 
 describe('Multi-Signer Envelope Workflow Integration Tests', () => {
   const cfg = loadConfig();

@@ -4,7 +4,7 @@
  */
 
 import { formatActor, type AuditActor, type AuditContext } from '../../src/utils/audit.js';
-import type { TenantId, UserId } from '../../src/types/brand.js';
+import type { UserId } from '../../src/types/brand.js';
 
 describe('audit utilities', () => {
   describe('formatActor', () => {

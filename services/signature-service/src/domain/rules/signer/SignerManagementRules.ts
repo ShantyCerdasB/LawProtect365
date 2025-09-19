@@ -229,7 +229,7 @@ export function validateSignerOrder(
  */
 export function getNextSignerOrder(
   existingSigners: Signer[],
-  signingOrderType: SigningOrderType
+  _signingOrderType: SigningOrderType
 ): number {
   if (existingSigners.length === 0) {
     return 1; // First signer is always order 1 (owner)

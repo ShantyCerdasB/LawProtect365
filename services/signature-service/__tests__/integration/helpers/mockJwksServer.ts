@@ -80,6 +80,14 @@ const initializeJwks = async () => {
  */
 const app = express();
 
+// Security: Disable headers that reveal framework version information
+app.disable('x-powered-by');
+app.use((req, res, next) => {
+  // Remove server identification headers to prevent version disclosure
+  res.removeHeader('Server');
+  next();
+});
+
 /**
  * Server port configuration
  * @description Port number for the mock JWKS server

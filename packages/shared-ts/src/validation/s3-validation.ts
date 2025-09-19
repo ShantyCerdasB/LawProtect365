@@ -43,7 +43,7 @@ export function validateContentType(contentType: string): boolean {
   }
 
   // Basic content type format validation (type/subtype)
-  const contentTypeRegex = /^[a-zA-Z0-9][a-zA-Z0-9!#$&\-\^_]*\/[a-zA-Z0-9][a-zA-Z0-9!#$&\-\^_]*(\s*;\s*[a-zA-Z0-9][a-zA-Z0-9!#$&\-\^_]*\s*=\s*[a-zA-Z0-9][a-zA-Z0-9!#$&\-\^_]*)*$/;
+  const contentTypeRegex = /^[a-zA-Z0-9][a-zA-Z0-9!#$&\-_]*\/[a-zA-Z0-9][a-zA-Z0-9!#$&\-_]*(\s*;\s*[a-zA-Z0-9][a-zA-Z0-9!#$&\-_]*\s*=\s*[a-zA-Z0-9][a-zA-Z0-9!#$&\-_]*)*$/;
   
   return contentTypeRegex.test(contentType);
 }

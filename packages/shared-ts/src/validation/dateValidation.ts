@@ -5,8 +5,7 @@
  * for validating expiration dates, date ranges, and temporal business rules.
  */
 
-import { addDays, diffMs } from '../utils/date.js';
-import { assert } from '../utils/validation.js';
+import { addDays } from '../utils/date.js';
 
 /**
  * Configuration for date range validation

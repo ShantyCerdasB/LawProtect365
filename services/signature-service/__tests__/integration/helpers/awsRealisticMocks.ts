@@ -111,7 +111,7 @@ jest.mock('@aws-sdk/client-kms', () => ({
   }
   // @ts-ignore
   jest.mock('@aws-sdk/client-kms', () => {
-    return Object.assign({}, actual, { KMSClient: KMSClientLS });
+    return { ...actual, KMSClient: KMSClientLS };
   });
 }
 

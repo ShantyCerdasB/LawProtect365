@@ -6,8 +6,7 @@
  * generation, authentication helpers, and request context creation.
  */
 
-import { createHash } from 'crypto';
-import { randomUUID } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 import { generateRS256Token } from './mockJwksServer';
 
 /**
@@ -137,6 +136,20 @@ export const generateTestDocumentId = (): string => {
 };
 
 /**
+ * Generate a random test IP address
+ * 
+ * @returns Random IP address in the 192.168.x.x range for testing
+ * @description Creates a random IP address in the private network range to avoid
+ * conflicts with real IP addresses and ensure test isolation.
+ */
+export const generateTestIpAddress = (): string => {
+  // Generate random IP in 192.168.x.x range (private network)
+  const thirdOctet = Math.floor(Math.random() * 256);
+  const fourthOctet = Math.floor(Math.random() * 256);
+  return `192.168.${thirdOctet}.${fourthOctet}`;
+};
+
+/**
  * Create test request context with actor information
  * 
  * @param overrides - Optional overrides for default test values
@@ -153,7 +166,7 @@ export const createTestRequestContext = (overrides: {
   role?: string;
 } = {}) => {
   const userAgent = overrides.userAgent || 'test-agent/1.0';
-  const sourceIp = overrides.sourceIp || '192.168.1.100';
+  const sourceIp = overrides.sourceIp || generateTestIpAddress();
   const role = overrides.role || 'customer'; // Default role for tests
   
   return {
@@ -250,7 +263,7 @@ export const createApiGatewayEvent = async (overrides: {
         method: 'POST',
         path: '/test',
         protocol: 'HTTP/1.1',
-        sourceIp: '192.168.1.100',
+        sourceIp: generateTestIpAddress(),
         userAgent: 'test-agent/1.0'
       },
       requestId: 'test-request-id',
@@ -407,7 +420,7 @@ export const createTestRequestContextWithAuth = (overrides: {
 
   return {
     identity: {
-      sourceIp: overrides.sourceIp || '192.168.1.100',
+      sourceIp: overrides.sourceIp || generateTestIpAddress(),
       userAgent: overrides.userAgent || 'test-agent/1.0'
     },
     authorizer: {
@@ -416,7 +429,7 @@ export const createTestRequestContextWithAuth = (overrides: {
       actor: {
         userId: userId,
         email: email,
-        ip: overrides.sourceIp || '192.168.1.100',
+        ip: overrides.sourceIp || generateTestIpAddress(),
         roles: roles,
         scopes: scopes
       }

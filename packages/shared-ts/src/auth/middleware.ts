@@ -8,11 +8,10 @@ import type { HandlerFn, ApiEvent } from "../http/httpTypes.js";
 import { mapError } from "../errors/mapError.js";
 import { ErrorCodes } from "../errors/codes.js";
 import { UnauthorizedError, ForbiddenError } from "../errors/errors.js";
-import type { JwtVerifyOptions } from "../types/auth.js";
+import type { JwtVerifyOptions, UserRole } from "../types/auth.js";
 import { bearerFromAuthHeader, verifyJwt } from "./jwtVerifier.js";
 import { normalizeRoles, hasRole } from "./roles.js";
 import { VALID_COGNITO_ROLES } from "./validRoles.js";
-import type { UserRole } from "../types/auth.js";
 
 /**
  * Unified authentication and authorization middleware

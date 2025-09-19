@@ -101,7 +101,7 @@ export function validateSignatureIpAddress(ipAddress: string): void {
     );
   }
 
-  const ipRegex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+  const ipRegex = /^(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)$/;
   if (!ipRegex.test(ipAddress)) {
     throw new AppError(
       ErrorCodes.COMMON_BAD_REQUEST,

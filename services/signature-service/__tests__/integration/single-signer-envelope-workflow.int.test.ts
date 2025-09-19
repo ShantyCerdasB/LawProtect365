@@ -24,14 +24,6 @@ import { downloadSignedDocumentHandler } from '../../src/handlers/envelopes/Down
 import { getDocumentHistoryHandler } from '../../src/handlers/audit/GetDocumentHistoryHandler';
 import { ServiceFactory } from '../../src/infrastructure/factories/ServiceFactory';
 import { EnvelopeService } from '../../src/services/EnvelopeService';
-import { ConsentService } from '../../src/services/ConsentService';
-import { ConsentRepository } from '../../src/repositories/ConsentRepository';
-import { AuditService } from '../../src/services/AuditService';
-import { AuditRepository } from '../../src/repositories/AuditRepository';
-import { SignerRepository } from '../../src/repositories/SignerRepository';
-import { SignerId } from '../../src/domain/value-objects/SignerId';
-import { EnvelopeId } from '../../src/domain/value-objects/EnvelopeId';
-import { EnvelopeStatus } from '../../src/domain/enums/EnvelopeStatus';
 
 describe('Single-Signer Envelope Workflow Integration Tests', () => {
   const cfg = loadConfig();

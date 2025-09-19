@@ -10,7 +10,6 @@ import { ErrorCodes } from "./codes.js";
 import {
   extractAwsError,
   isAwsAccessDenied,
-  isAwsRetryable,
   isAwsServiceUnavailable,
   isAwsThrottling} from "../aws/errors.js";
 

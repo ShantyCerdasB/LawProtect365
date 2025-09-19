@@ -5,7 +5,6 @@
  * for validating custom fields, tags, and other metadata structures.
  */
 
-import { assert } from '../utils/validation.js';
 
 /**
  * Configuration for custom fields validation

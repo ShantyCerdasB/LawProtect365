@@ -6,8 +6,7 @@
  * primary keys, global secondary indexes, and billing configuration.
  */
 
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { CreateTableCommand, ListTablesCommand } from "@aws-sdk/client-dynamodb";
+import { DynamoDBClient, CreateTableCommand, ListTablesCommand } from "@aws-sdk/client-dynamodb";
 
 /**
  * Creates a DynamoDB client configured for local development and testing

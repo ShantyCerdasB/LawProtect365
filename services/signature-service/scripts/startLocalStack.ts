@@ -8,7 +8,72 @@
 
 import { execSync } from 'child_process';
 import { existsSync } from 'fs';
-import { join, resolve } from 'path';
+import { resolve } from 'path';
+
+/**
+ * Creates a safe PATH environment variable for command execution
+ * 
+ * @returns Safe PATH string containing only system directories
+ * @description Generates a PATH that includes system directories and common tool locations
+ * while excluding user-writable directories to prevent PATH injection attacks.
+ * Works across different operating systems and CI/CD environments.
+ */
+function createSafePath(): string {
+  const platform = process.platform;
+  const currentPath = process.env.PATH || '';
+  
+  // Extract system directories from current PATH
+  const systemDirs = currentPath
+    .split(platform === 'win32' ? ';' : ':')
+    .filter(dir => {
+      if (!dir.trim()) return false;
+      
+      // Include system directories
+      if (platform === 'win32') {
+        return dir.includes('Windows') || 
+               dir.includes('Program Files') || 
+               dir.includes('Docker') ||
+               dir.includes('Git') ||
+               dir.includes('Node');
+      } else {
+        return dir.startsWith('/usr') || 
+               dir.startsWith('/bin') || 
+               dir.startsWith('/sbin') ||
+               dir.startsWith('/opt');
+      }
+    });
+  
+  // Fallback to minimal safe paths if no system dirs found
+  if (systemDirs.length === 0) {
+    return platform === 'win32' 
+      ? 'C:\\Windows\\System32;C:\\Windows'
+      : '/usr/local/bin:/usr/bin:/bin';
+  }
+  
+  return systemDirs.join(platform === 'win32' ? ';' : ':');
+}
+
+/**
+ * Executes a command with a sanitized environment to prevent PATH injection
+ * 
+ * @param command - The command to execute
+ * @param options - Execution options (stdio, timeout, etc.)
+ * @returns The result of execSync
+ * @description Uses a dynamically generated safe PATH environment variable that
+ * includes necessary system directories while excluding user-writable locations.
+ * This prevents security vulnerabilities from PATH injection attacks.
+ */
+function safeExecSync(command: string, options: any = {}) {
+  const safeEnv = {
+    ...process.env,
+    PATH: createSafePath()
+  };
+  
+  return execSync(command, {
+    ...options,
+    env: safeEnv
+  });
+}
 
 /**
  * Path to the Docker Compose file for LocalStack configuration
@@ -35,7 +100,7 @@ async function startLocalStack(): Promise<void> {
   
   try {
     try {
-      execSync('docker --version', { stdio: 'ignore' });
+      safeExecSync('docker --version', { stdio: 'ignore' });
     } catch (error) {
       throw new Error('Docker is not installed or not running. Please install Docker and try again.');
     }
@@ -52,11 +117,11 @@ async function startLocalStack(): Promise<void> {
 
     try {
       console.log('🧹 Ensuring no existing LocalStack container...');
-      execSync('docker rm -f lawprotect365-localstack', { stdio: 'ignore' });
+      safeExecSync('docker rm -f lawprotect365-localstack', { stdio: 'ignore' });
     } catch {}
 
     console.log('🐳 Ensuring LocalStack container is running...');
-    execSync(`docker-compose -f ${DOCKER_COMPOSE_FILE} up -d`, { stdio: 'inherit' });
+    safeExecSync(`docker-compose -f ${DOCKER_COMPOSE_FILE} up -d`, { stdio: 'inherit' });
 
     console.log('⏳ Waiting for LocalStack to be ready...');
     await waitForLocalStack();
@@ -88,11 +153,9 @@ async function startLocalStack(): Promise<void> {
  * @throws Error if LocalStack fails to become healthy within timeout
  */
 async function waitForLocalStack(maxRetries = 20, delay = 3000): Promise<void> {
-  const { execSync } = require('child_process');
-  
   for (let i = 0; i < maxRetries; i++) {
     try {
-      execSync('curl -f http://localhost:4566/_localstack/health', { 
+      safeExecSync('curl -f http://localhost:4566/_localstack/health', { 
         stdio: 'ignore',
         timeout: 10000 
       });
