@@ -174,6 +174,7 @@ async function startLocalStack(): Promise<void> {
     try {
       safeExecSync('docker --version', { stdio: 'ignore' });
     } catch (error) {
+      console.error('Docker version check failed:', error);
       throw new Error('Docker is not installed or not running. Please install Docker and try again.');
     }
 
@@ -240,6 +241,7 @@ async function waitForLocalStack(maxRetries = 20, delay = 3000): Promise<void> {
       return;
     } catch (error) {
       if (i === maxRetries - 1) {
+        console.error('LocalStack health check failed after maximum retries:', error);
         throw new Error('LocalStack failed to start within the expected time');
       }
       console.log(`⏳ Waiting for LocalStack... (${i + 1}/${maxRetries})`);
