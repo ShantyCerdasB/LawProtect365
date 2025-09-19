@@ -88,7 +88,7 @@ export class SignatureService {
       // eslint-disable-next-line no-console
       console.log('[SignatureService.createSignature] consent', { found: Boolean(consent), given: consent?.getConsentGiven?.() });
       
-      if (!consent || !consent.getConsentGiven()) {
+      if (!consent?.getConsentGiven()) {
         throw new ForbiddenError(
           'Consent is required before creating a signature',
           ErrorCodes.AUTH_FORBIDDEN

@@ -5,7 +5,7 @@
  * including CRUD operations, queries, and data persistence.
  */
 
-import { DdbClientLike, mapAwsError, ConflictError, ErrorCodes, decodeCursor, encodeCursor, NotFoundError, requireUpdate, BadRequestError, requireQuery } from '@lawprotect/shared-ts';
+import { DdbClientLike, mapAwsError, ConflictError, ErrorCodes, decodeCursor, NotFoundError, requireUpdate, BadRequestError } from '@lawprotect/shared-ts';
 
 import { Signature } from '../domain/entities/Signature';
 import { SignatureId } from '../domain/value-objects/SignatureId';
@@ -20,6 +20,7 @@ import {
   type SignatureListCursorPayload
 } from '../domain/types/infrastructure/signature';
 import { DdbSortOrder } from '../domain/types/infrastructure/common';
+import { BaseRepository, type CursorPayload } from './BaseRepository';
 
 /**
  * SignatureRepository implementation for DynamoDB
@@ -27,7 +28,7 @@ import { DdbSortOrder } from '../domain/types/infrastructure/common';
  * Provides CRUD operations and querying capabilities for signatures
  * using single-table pattern with multiple GSI for efficient querying.
  */
-export class SignatureRepository {
+export class SignatureRepository extends BaseRepository {
   private readonly envelopeGsi1Name: string;
   private readonly signerGsi2Name: string;
   private readonly statusGsi3Name: string;
@@ -39,17 +40,28 @@ export class SignatureRepository {
    * @param options - Optional configuration for GSI names
    */
   constructor(
-    private readonly tableName: string,
-    private readonly ddb: DdbClientLike,
+    tableName: string,
+    ddb: DdbClientLike,
     options?: {
       readonly envelopeGsi1Name?: string;
       readonly signerGsi2Name?: string;
       readonly statusGsi3Name?: string;
     }
   ) {
+    super(tableName, ddb);
     this.envelopeGsi1Name = options?.envelopeGsi1Name || 'gsi1';
     this.signerGsi2Name = options?.signerGsi2Name || 'gsi2';
     this.statusGsi3Name = options?.statusGsi3Name || 'gsi3';
+  }
+
+  /**
+   * Builds the "after" value for cursor-based pagination
+   */
+  protected buildAfterValue(cursor: CursorPayload, gsiSkAttribute: string): string {
+    if (gsiSkAttribute === 'gsi1sk' || gsiSkAttribute === 'gsi2sk' || gsiSkAttribute === 'gsi3sk') {
+      return `SIGNATURE#${cursor.signatureId}`;
+    }
+    throw new Error(`Unsupported GSI sort key attribute: ${gsiSkAttribute}`);
   }
 
   /**
@@ -265,51 +277,28 @@ export class SignatureRepository {
     cursor?: string,
     sortOrder: DdbSortOrder = DdbSortOrder.DESC
   ): Promise<SignatureListResult> {
-    const take = Math.max(1, Math.min(limit, 100)) + 1;
     const c = decodeCursor<SignatureListCursorPayload>(cursor);
-
-    requireQuery(this.ddb);
-
-    try {
-      const exprNames: Record<string, string> = { '#gsi1pk': 'gsi1pk' };
-      if (c) exprNames['#gsi1sk'] = 'gsi1sk';
-      const result = await this.ddb.query({
-        TableName: this.tableName,
-        IndexName: this.envelopeGsi1Name,
-        KeyConditionExpression: '#gsi1pk = :envelope' + (c ? ' AND #gsi1sk > :after' : ''),
-        ExpressionAttributeNames: exprNames,
-        ExpressionAttributeValues: {
-          ':envelope': `ENVELOPE#${envelopeId}`,
-          ...(c ? { ':after': `SIGNATURE#${c.signatureId}` } : {})
-        },
-        Limit: take,
-        ScanIndexForward: sortOrder === DdbSortOrder.ASC
-      });
-
-      const items = (result.Items || []) as any[];
-      const signatures = items
-        .filter(item => isSignatureDdbItem(item))
-        .map(item => signatureDdbMapper.fromDTO(item));
-
-      const hasMore = signatures.length === take;
-      const resultItems = signatures.slice(0, take - 1);
-
-      const last = resultItems.at(-1);
-      const nextCursor = hasMore && last
-        ? encodeCursor({
-            signatureId: last.getId().getValue(),
-            timestamp: last.getTimestamp().toISOString()
-          })
-        : undefined;
-
-      return {
-        items: resultItems.map(s => signatureDdbMapper.toDTO(s)),
-        nextCursor,
-        hasMore
-      };
-    } catch (err: any) {
-      throw mapAwsError(err, 'SignatureRepository.getByEnvelope');
-    }
+    
+    return this.executePaginatedQuery(
+      {
+        tableName: this.tableName,
+        indexName: this.envelopeGsi1Name,
+        gsiPkAttribute: 'gsi1pk',
+        gsiSkAttribute: 'gsi1sk',
+        pkValue: `ENVELOPE#${envelopeId}`,
+        cursor: c,
+        limit,
+        sortOrder,
+        ddb: this.ddb
+      },
+      isSignatureDdbItem,
+      signatureDdbMapper,
+      (signature) => ({
+        signatureId: signature.getId().getValue(),
+        timestamp: signature.getTimestamp().toISOString()
+      }),
+      'SignatureRepository.getByEnvelope'
+    );
   }
 
   /**
@@ -326,51 +315,28 @@ export class SignatureRepository {
     cursor?: string,
     sortOrder: DdbSortOrder = DdbSortOrder.DESC
   ): Promise<SignatureListResult> {
-    const take = Math.max(1, Math.min(limit, 100)) + 1;
     const c = decodeCursor<SignatureListCursorPayload>(cursor);
-
-    requireQuery(this.ddb);
-
-    try {
-      const exprNames: Record<string, string> = { '#gsi2pk': 'gsi2pk' };
-      if (c) exprNames['#gsi2sk'] = 'gsi2sk';
-      const result = await this.ddb.query({
-        TableName: this.tableName,
-        IndexName: this.signerGsi2Name,
-        KeyConditionExpression: '#gsi2pk = :signer' + (c ? ' AND #gsi2sk > :after' : ''),
-        ExpressionAttributeNames: exprNames,
-        ExpressionAttributeValues: {
-          ':signer': `SIGNER#${signerId}`,
-          ...(c ? { ':after': `SIGNATURE#${c.signatureId}` } : {})
-        },
-        Limit: take,
-        ScanIndexForward: sortOrder === DdbSortOrder.ASC
-      });
-
-      const items = (result.Items || []) as any[];
-      const signatures = items
-        .filter(item => isSignatureDdbItem(item))
-        .map(item => signatureDdbMapper.fromDTO(item));
-
-      const hasMore = signatures.length === take;
-      const resultItems = signatures.slice(0, take - 1);
-
-      const last = resultItems.at(-1);
-      const nextCursor = hasMore && last
-        ? encodeCursor({
-            signatureId: last.getId().getValue(),
-            timestamp: last.getTimestamp().toISOString()
-          })
-        : undefined;
-
-      return {
-        items: resultItems.map(s => signatureDdbMapper.toDTO(s)),
-        nextCursor,
-        hasMore
-      };
-    } catch (err: any) {
-      throw mapAwsError(err, 'SignatureRepository.getBySigner');
-    }
+    
+    return this.executePaginatedQuery(
+      {
+        tableName: this.tableName,
+        indexName: this.signerGsi2Name,
+        gsiPkAttribute: 'gsi2pk',
+        gsiSkAttribute: 'gsi2sk',
+        pkValue: `SIGNER#${signerId}`,
+        cursor: c,
+        limit,
+        sortOrder,
+        ddb: this.ddb
+      },
+      isSignatureDdbItem,
+      signatureDdbMapper,
+      (signature) => ({
+        signatureId: signature.getId().getValue(),
+        timestamp: signature.getTimestamp().toISOString()
+      }),
+      'SignatureRepository.getBySigner'
+    );
   }
 
   /**
@@ -387,51 +353,28 @@ export class SignatureRepository {
     cursor?: string,
     sortOrder: DdbSortOrder = DdbSortOrder.DESC
   ): Promise<SignatureListResult> {
-    const take = Math.max(1, Math.min(limit, 100)) + 1;
     const c = decodeCursor<SignatureListCursorPayload>(cursor);
-
-    requireQuery(this.ddb);
-
-    try {
-      const exprNames: Record<string, string> = { '#gsi3pk': 'gsi3pk' };
-      if (c) exprNames['#gsi3sk'] = 'gsi3sk';
-      const result = await this.ddb.query({
-        TableName: this.tableName,
-        IndexName: this.statusGsi3Name,
-        KeyConditionExpression: '#gsi3pk = :status' + (c ? ' AND #gsi3sk > :after' : ''),
-        ExpressionAttributeNames: exprNames,
-        ExpressionAttributeValues: {
-          ':status': `STATUS#${status}`,
-          ...(c ? { ':after': `SIGNATURE#${c.signatureId}` } : {})
-        },
-        Limit: take,
-        ScanIndexForward: sortOrder === DdbSortOrder.ASC
-      });
-
-      const items = (result.Items || []) as any[];
-      const signatures = items
-        .filter(item => isSignatureDdbItem(item))
-        .map(item => signatureDdbMapper.fromDTO(item));
-
-      const hasMore = signatures.length === take;
-      const resultItems = signatures.slice(0, take - 1);
-
-      const last = resultItems.at(-1);
-      const nextCursor = hasMore && last
-        ? encodeCursor({
-            signatureId: last.getId().getValue(),
-            timestamp: last.getTimestamp().toISOString()
-          })
-        : undefined;
-
-      return {
-        items: resultItems.map(s => signatureDdbMapper.toDTO(s)),
-        nextCursor,
-        hasMore
-      };
-    } catch (err: any) {
-      throw mapAwsError(err, 'SignatureRepository.getByStatus');
-    }
+    
+    return this.executePaginatedQuery(
+      {
+        tableName: this.tableName,
+        indexName: this.statusGsi3Name,
+        gsiPkAttribute: 'gsi3pk',
+        gsiSkAttribute: 'gsi3sk',
+        pkValue: `STATUS#${status}`,
+        cursor: c,
+        limit,
+        sortOrder,
+        ddb: this.ddb
+      },
+      isSignatureDdbItem,
+      signatureDdbMapper,
+      (signature) => ({
+        signatureId: signature.getId().getValue(),
+        timestamp: signature.getTimestamp().toISOString()
+      }),
+      'SignatureRepository.getByStatus'
+    );
   }
 
   /**
@@ -440,25 +383,14 @@ export class SignatureRepository {
    * @returns Number of signatures for the envelope
    */
   async countByEnvelope(envelopeId: string): Promise<number> {
-    requireQuery(this.ddb);
-
-    try {
-      const result = await this.ddb.query({
-        TableName: this.tableName,
-        IndexName: this.envelopeGsi1Name,
-        KeyConditionExpression: '#gsi1pk = :envelope',
-        ExpressionAttributeNames: {
-          '#gsi1pk': 'gsi1pk'
-        },
-        ExpressionAttributeValues: {
-          ':envelope': `ENVELOPE#${envelopeId}`
-        }
-      });
-
-      return (result as any).Count || result.Items?.length || 0;
-    } catch (err: any) {
-      throw mapAwsError(err, 'SignatureRepository.countByEnvelope');
-    }
+    return this.executeCountQuery(
+      this.tableName,
+      this.envelopeGsi1Name,
+      'gsi1pk',
+      `ENVELOPE#${envelopeId}`,
+      this.ddb,
+      'SignatureRepository.countByEnvelope'
+    );
   }
 
   /**
@@ -467,25 +399,14 @@ export class SignatureRepository {
    * @returns Number of signatures for the signer
    */
   async countBySigner(signerId: string): Promise<number> {
-    requireQuery(this.ddb);
-
-    try {
-      const result = await this.ddb.query({
-        TableName: this.tableName,
-        IndexName: this.signerGsi2Name,
-        KeyConditionExpression: '#gsi2pk = :signer',
-        ExpressionAttributeNames: {
-          '#gsi2pk': 'gsi2pk'
-        },
-        ExpressionAttributeValues: {
-          ':signer': `SIGNER#${signerId}`
-        }
-      });
-
-      return (result as any).Count || result.Items?.length || 0;
-    } catch (err: any) {
-      throw mapAwsError(err, 'SignatureRepository.countBySigner');
-    }
+    return this.executeCountQuery(
+      this.tableName,
+      this.signerGsi2Name,
+      'gsi2pk',
+      `SIGNER#${signerId}`,
+      this.ddb,
+      'SignatureRepository.countBySigner'
+    );
   }
 
 }

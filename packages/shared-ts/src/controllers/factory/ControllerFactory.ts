@@ -78,85 +78,7 @@ export class ControllerFactory {
   static createCommand<TInput, TOutput>(
     config: ControllerConfig<TInput, TOutput>
   ): HandlerFn {
-    return compose(
-      async (evt) => {
-        try {
-          // Validate request
-          const validationSchemas: any = {};
-          if (config.pathSchema) validationSchemas.path = config.pathSchema;
-          if (config.bodySchema) validationSchemas.body = config.bodySchema;
-          
-          const validated = validateRequest(evt, validationSchemas);
-          
-          // Get authentication and security context
-          const auth = (evt as any).auth;
-          const securityContext = (evt as any).securityContext;
-          
-          // Create service instance
-          let appService;
-          if (config.getContainer && config.createDependencies) {
-            // Use container-based dependency injection
-            const container = config.getContainer();
-            const dependencies = config.createDependencies(container);
-            appService = new config.appServiceClass(dependencies);
-          } else {
-            // Use direct instantiation (no container)
-            appService = new config.appServiceClass();
-          }
-          
-          // Extract parameters
-          const params = config.extractParams(
-            validated.path, 
-            validated.body, 
-            validated.query,
-            { auth, securityContext, requestContext: evt.requestContext }
-          );
-          
-          // Execute service method
-          const methodName = config.methodName || 'execute';
-          const result = await appService[methodName](params);
-          
-          // Transform result if needed
-          const responseData = config.transformResult ? await config.transformResult(result) : result;
-          
-          // Return appropriate response
-          switch (config.responseType) {
-            case 'created':
-              return created({ data: responseData });
-            case 'noContent':
-              return noContent();
-            default: // 'ok'
-              return ok({ data: responseData });
-          }
-        } catch (error) {
-          return mapError(error);
-        }
-      },
-      {
-        before: [
-          // Request context and observability
-          withRequestContext(),
-          ...(config.observability ? [withObservability(config.observability)] : []),
-          
-          // Authentication (if required)
-          ...(config.requireAuth ? [withJwtAuth(config.authOptions)] : []),
-          
-          // Authorization (if roles specified)
-          ...(config.requiredRoles ? [withRoleValidation(config.requiredRoles)] : []),
-          
-          // Security context (if enabled)
-          ...(config.includeSecurityContext ? [withSecurityContext()] : [])
-        ],
-        after: [
-          // Controller logging
-          withControllerLogging().after
-        ],
-        onError: [
-          // Error handling
-          async (evt, error) => mapError(error)
-        ]
-      }
-    );
+    return this.createController(config, { includeBody: true });
   }
 
   /**
@@ -165,85 +87,145 @@ export class ControllerFactory {
   static createQuery<TInput, TOutput>(
     config: ControllerConfig<TInput, TOutput>
   ): HandlerFn {
+    return this.createController(config, { includeBody: false });
+  }
+
+  /**
+   * Creates a controller with the specified configuration
+   */
+  private static createController<TInput, TOutput>(
+    config: ControllerConfig<TInput, TOutput>,
+    options: { includeBody: boolean }
+  ): HandlerFn {
     return compose(
       async (evt) => {
         try {
-          // Validate request
-          const validationSchemas: any = {};
-          if (config.pathSchema) validationSchemas.path = config.pathSchema;
-          if (config.querySchema) validationSchemas.query = config.querySchema;
-          
-          const validated = validateRequest(evt, validationSchemas);
-          
-          // Get authentication and security context
-          const auth = (evt as any).auth;
-          const securityContext = (evt as any).securityContext;
-          
-          // Create service instance
-          let appService;
-          if (config.getContainer && config.createDependencies) {
-            // Use container-based dependency injection
-            const container = config.getContainer();
-            const dependencies = config.createDependencies(container);
-            appService = new config.appServiceClass(dependencies);
-          } else {
-            // Use direct instantiation (no container)
-            appService = new config.appServiceClass();
-          }
-          
-          // Extract parameters
-          const params = config.extractParams(
-            validated.path, 
-            undefined, // No body for GET requests
-            validated.query,
-            { auth, securityContext, requestContext: evt.requestContext }
-          );
-          
-          // Execute service method
-          const methodName = config.methodName || 'execute';
-          const result = await appService[methodName](params);
-          
-          // Transform result if needed
-          const responseData = config.transformResult ? await config.transformResult(result) : result;
-          
-          // Return appropriate response
-          switch (config.responseType) {
-            case 'created':
-              return created({ data: responseData });
-            case 'noContent':
-              return noContent();
-            default: // 'ok'
-              return ok({ data: responseData });
-          }
+          const validated = this.validateRequest(evt, config, options);
+          const { auth, securityContext } = this.extractContext(evt);
+          const appService = this.createServiceInstance(config);
+          const params = this.extractParameters(config, validated, auth, securityContext, evt, options);
+          const result = await this.executeServiceMethod(appService, config, params);
+          const responseData = await this.transformResult(config, result);
+          return this.createResponse(config, responseData);
         } catch (error) {
           return mapError(error);
         }
       },
-      {
-        before: [
-          // Request context and observability
-          withRequestContext(),
-          ...(config.observability ? [withObservability(config.observability)] : []),
-          
-          // Authentication (if required)
-          ...(config.requireAuth ? [withJwtAuth(config.authOptions)] : []),
-          
-          // Authorization (if roles specified)
-          ...(config.requiredRoles ? [withRoleValidation(config.requiredRoles)] : []),
-          
-          // Security context (if enabled)
-          ...(config.includeSecurityContext ? [withSecurityContext()] : [])
-        ],
-        after: [
-          // Controller logging
-          withControllerLogging().after
-        ],
+      this.createMiddlewareConfig(config)
+    );
+  }
+
+  /**
+   * Validates the request based on configuration
+   */
+  private static validateRequest(evt: any, config: ControllerConfig, options: { includeBody: boolean }) {
+    const validationSchemas: any = {};
+    if (config.pathSchema) validationSchemas.path = config.pathSchema;
+    if (options.includeBody && config.bodySchema) validationSchemas.body = config.bodySchema;
+    if (!options.includeBody && config.querySchema) validationSchemas.query = config.querySchema;
+    
+    return validateRequest(evt, validationSchemas);
+  }
+
+  /**
+   * Extracts authentication and security context from event
+   */
+  private static extractContext(evt: any) {
+    return {
+      auth: (evt as any).auth,
+      securityContext: (evt as any).securityContext
+    };
+  }
+
+  /**
+   * Creates service instance with dependency injection
+   */
+  private static createServiceInstance(config: ControllerConfig) {
+    if (config.getContainer && config.createDependencies) {
+      const container = config.getContainer();
+      const dependencies = config.createDependencies(container);
+      return new config.appServiceClass(dependencies);
+    } else {
+      return new config.appServiceClass();
+    }
+  }
+
+  /**
+   * Extracts parameters for service method
+   */
+  private static extractParameters(
+    config: ControllerConfig,
+    validated: any,
+    auth: any,
+    securityContext: any,
+    evt: any,
+    options: { includeBody: boolean }
+  ) {
+    return config.extractParams(
+      validated.path,
+      options.includeBody ? validated.body : undefined,
+      validated.query,
+      { auth, securityContext, requestContext: evt.requestContext }
+    );
+  }
+
+  /**
+   * Executes the service method
+   */
+  private static async executeServiceMethod(appService: any, config: ControllerConfig, params: any) {
+    const methodName = config.methodName || 'execute';
+    return await appService[methodName](params);
+  }
+
+  /**
+   * Transforms the result if needed
+   */
+  private static async transformResult(config: ControllerConfig, result: any) {
+    return config.transformResult ? await config.transformResult(result) : result;
+  }
+
+  /**
+   * Creates the appropriate HTTP response
+   */
+  private static createResponse(config: ControllerConfig, responseData: any) {
+    switch (config.responseType) {
+      case 'created':
+        return created({ data: responseData });
+      case 'noContent':
+        return noContent();
+      default: // 'ok'
+        return ok({ data: responseData });
+    }
+  }
+
+  /**
+   * Creates middleware configuration
+   */
+  private static createMiddlewareConfig(config: ControllerConfig) {
+    return {
+      before: [
+        // Request context and observability
+        withRequestContext(),
+        ...(config.observability ? [withObservability(config.observability)] : []),
+        
+        // Authentication (if required)
+        ...(config.requireAuth ? [withJwtAuth(config.authOptions)] : []),
+        
+        // Authorization (if roles specified)
+        ...(config.requiredRoles ? [withRoleValidation(config.requiredRoles)] : []),
+        
+        // Security context (if enabled)
+        ...(config.includeSecurityContext ? [withSecurityContext()] : [])
+      ],
+      after: [
+        // Controller logging
+        withControllerLogging().after
+      ],
         onError: [
           // Error handling
-          async (evt, error) => mapError(error)
+          async (evt: any, error: any) => mapError(error)
         ]
-      }
-    );
+    };
   }
 
   /**

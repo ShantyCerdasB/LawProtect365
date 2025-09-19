@@ -30,12 +30,13 @@ import {
   type EnvelopeListCursorPayload,
   EnvelopeKeyBuilders
 } from '../domain/types/infrastructure/envelope';
+import { BaseRepository } from './BaseRepository';
 
 /**
  * DynamoDB implementation of Repository<Envelope, EnvelopeId>.
  * Provides CRUD operations for envelope entities using DynamoDB single-table pattern.
  */
-export class EnvelopeRepository implements Repository<Envelope, EnvelopeId, undefined> {
+export class EnvelopeRepository extends BaseRepository implements Repository<Envelope, EnvelopeId, undefined> {
   private readonly indexName: string;
   private readonly gsi2IndexName: string;
 
@@ -48,10 +49,11 @@ export class EnvelopeRepository implements Repository<Envelope, EnvelopeId, unde
    * @param opts.gsi2IndexName - GSI2 name for owner queries (default: from env or "gsi2")
    */
   constructor(
-    private readonly tableName: string,
-    private readonly ddb: DdbClientLike,
+    tableName: string,
+    ddb: DdbClientLike,
     opts?: { indexName?: string; gsi2IndexName?: string }
   ) {
+    super(tableName, ddb);
     this.indexName = opts?.indexName || process.env.ENVELOPES_GSI1_NAME || "gsi1";
     this.gsi2IndexName = opts?.gsi2IndexName || process.env.ENVELOPES_GSI2_NAME || "gsi2";
   }
@@ -516,29 +518,19 @@ export class EnvelopeRepository implements Repository<Envelope, EnvelopeId, unde
    * @throws AppError when DynamoDB operation fails
    */
   async countByStatus(status: EnvelopeStatus): Promise<EnvelopeCountResult> {
-    requireQuery(this.ddb);
-    const ddb = this.ddb as DdbClientWithQuery;
+    const count = await this.executeCountQuery(
+      this.tableName,
+      this.gsi2IndexName,
+      'gsi2pk',
+      EnvelopeKeyBuilders.buildStatusGsi2Pk(status),
+      this.ddb,
+      'EnvelopeRepository.countByStatus'
+    );
 
-    try {
-      const res = await ddb.query({
-        TableName: this.tableName,
-        IndexName: this.gsi2IndexName,
-        KeyConditionExpression: "#gsi2pk = :status",
-        ExpressionAttributeNames: {
-          "#gsi2pk": "gsi2pk",
-        },
-        ExpressionAttributeValues: {
-          ":status": EnvelopeKeyBuilders.buildStatusGsi2Pk(status),
-        },
-      });
-
-      return {
-        count: (res as any).Count ?? 0,
-        status
-      };
-    } catch (err) {
-      throw mapAwsError(err, "EnvelopeRepository.countByStatus");
-    }
+    return {
+      count,
+      status
+    };
   }
 
   /**
@@ -548,28 +540,18 @@ export class EnvelopeRepository implements Repository<Envelope, EnvelopeId, unde
    * @throws AppError when DynamoDB operation fails
    */
   async countByOwner(ownerId: string): Promise<EnvelopeCountResult> {
-    requireQuery(this.ddb);
-    const ddb = this.ddb as DdbClientWithQuery;
+    const count = await this.executeCountQuery(
+      this.tableName,
+      this.gsi2IndexName,
+      'gsi2pk',
+      EnvelopeKeyBuilders.buildGsi2Pk(ownerId),
+      this.ddb,
+      'EnvelopeRepository.countByOwner'
+    );
 
-    try {
-      const res = await ddb.query({
-        TableName: this.tableName,
-        IndexName: this.gsi2IndexName,
-        KeyConditionExpression: "#gsi2pk = :owner",
-        ExpressionAttributeNames: {
-          "#gsi2pk": "gsi2pk",
-        },
-        ExpressionAttributeValues: {
-          ":owner": EnvelopeKeyBuilders.buildGsi2Pk(ownerId),
-        },
-      });
-
-      return {
-        count: (res as any).Count ?? 0,
-        ownerId
-      };
-    } catch (err) {
-      throw mapAwsError(err, "EnvelopeRepository.countByOwner");
-    }
+    return {
+      count,
+      ownerId
+    };
   }
 }

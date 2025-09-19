@@ -5,12 +5,14 @@
  * including CRUD operations, queries, and data persistence.
  */
 
-import { DdbClientLike, mapAwsError, ConflictError, NotFoundError, ErrorCodes, encodeCursor, decodeCursor, requireQuery, requireUpdate, BadRequestError } from '@lawprotect/shared-ts';
+import { DdbClientLike, mapAwsError, ConflictError, NotFoundError, ErrorCodes, decodeCursor, requireUpdate, BadRequestError } from '@lawprotect/shared-ts';
 import { InvitationToken } from '../domain/entities/InvitationToken';
 import { InvitationTokenId } from '../domain/value-objects/InvitationTokenId';
 import { CreateInvitationTokenDomainRequest, UpdateInvitationTokenDomainRequest } from '../domain/types/invitation-token';
 import { InvitationTokenKeyBuilders, InvitationTokenListCursorPayload, InvitationTokenQueryParams } from '../domain/types/infrastructure/invitation-token/invitation-token-ddb-types';
 import { invitationTokenDdbMapper, isInvitationTokenDdbItem } from '../domain/types/infrastructure/invitation-token/invitation-token-mappers';
+import { BaseRepository } from './BaseRepository';
+import { DdbSortOrder } from '../domain/types/infrastructure/common';
 
 /**
  * InvitationTokenRepository
@@ -18,20 +20,21 @@ import { invitationTokenDdbMapper, isInvitationTokenDdbItem } from '../domain/ty
  * Repository for managing invitation token data access operations.
  * Handles CRUD operations, queries, and data persistence for invitation tokens.
  */
-export class InvitationTokenRepository {
+export class InvitationTokenRepository extends BaseRepository {
   private readonly signerGsi1Name: string;
   private readonly envelopeGsi2Name: string;
   private readonly expirationGsi3Name: string;
 
   constructor(
-    private readonly tableName: string,
-    private readonly ddb: DdbClientLike,
+    tableName: string,
+    ddb: DdbClientLike,
     options?: {
       readonly signerGsi1Name?: string;
       readonly envelopeGsi2Name?: string;
       readonly expirationGsi3Name?: string;
     }
   ) {
+    super(tableName, ddb);
     this.signerGsi1Name = options?.signerGsi1Name || 'gsi1';
     this.envelopeGsi2Name = options?.envelopeGsi2Name || 'gsi2';
     this.expirationGsi3Name = options?.expirationGsi3Name || 'gsi3';
@@ -202,52 +205,36 @@ export class InvitationTokenRepository {
     const gsi1pk = InvitationTokenKeyBuilders.buildGsi1Pk(signerId);
     const limit = params.limit || 20;
     const sortOrder = params.sortOrder || 'desc';
+    const cursor = params.cursor ? decodeCursor<InvitationTokenListCursorPayload>(params.cursor) : undefined;
 
-    const queryParams: any = {
-      TableName: this.tableName,
-      IndexName: this.signerGsi1Name,
-      KeyConditionExpression: 'gsi1pk = :gsi1pk',
-      ExpressionAttributeValues: {
-        ':gsi1pk': gsi1pk
-      },
-      Limit: limit + 1,
-      ScanIndexForward: sortOrder === 'asc'
-    };
-
-    if (params.cursor) {
-      const cursor = decodeCursor<InvitationTokenListCursorPayload>(params.cursor);
-      if (cursor) {
-        queryParams.ExclusiveStartKey = {
+    return this.executeAdvancedPaginatedQuery(
+      {
+        tableName: this.tableName,
+        indexName: this.signerGsi1Name,
+        keyConditionExpression: '#gsi1pk = :gsi1pk',
+        expressionAttributeNames: { '#gsi1pk': 'gsi1pk' },
+        expressionAttributeValues: {
+          ':gsi1pk': gsi1pk
+        },
+        cursor,
+        limit,
+        sortOrder: sortOrder === 'asc' ? DdbSortOrder.ASC : DdbSortOrder.DESC,
+        ddb: this.ddb,
+        exclusiveStartKeyBuilder: (cursor) => ({
           pk: InvitationTokenKeyBuilders.buildPk(cursor.token),
           sk: InvitationTokenKeyBuilders.buildSk(cursor.token),
           gsi1pk,
           gsi1sk: InvitationTokenKeyBuilders.buildGsi1Sk(cursor.token)
-        };
-      }
-    }
-
-    requireQuery(this.ddb);
-    try {
-      const result = await this.ddb.query!(queryParams);
-
-      const items = (result.Items || [])
-        .filter(isInvitationTokenDdbItem)
-        .slice(0, limit)
-        .map(item => invitationTokenDdbMapper.fromDTO(item as any));
-
-      const hasMore = (result.Items || []).length > limit;
-      const last = items[items.length - 1];
-      const nextCursor = hasMore && last
-        ? encodeCursor({
-            token: last.getToken(),
-            expiresAt: last.getExpiresAt().toISOString()
-          })
-        : undefined;
-
-      return { items, nextCursor };
-    } catch (error) {
-      throw mapAwsError(error, 'InvitationTokenRepository.getBySigner');
-    }
+        })
+      },
+      isInvitationTokenDdbItem,
+      invitationTokenDdbMapper,
+      (token) => ({
+        token: token.getToken(),
+        expiresAt: token.getExpiresAt().toISOString()
+      }),
+      'InvitationTokenRepository.getBySigner'
+    );
   }
 
   /**
@@ -260,52 +247,44 @@ export class InvitationTokenRepository {
     const gsi2pk = InvitationTokenKeyBuilders.buildGsi2Pk(envelopeId);
     const limit = params.limit || 20;
     const sortOrder = params.sortOrder || 'desc';
+    const cursor = params.cursor ? decodeCursor<InvitationTokenListCursorPayload>(params.cursor) : undefined;
 
-    const queryParams: any = {
-      TableName: this.tableName,
-      IndexName: this.envelopeGsi2Name,
-      KeyConditionExpression: 'gsi2pk = :gsi2pk',
-      ExpressionAttributeValues: {
-        ':gsi2pk': gsi2pk
-      },
-      Limit: limit + 1,
-      ScanIndexForward: sortOrder === 'asc'
-    };
-
-    if (params.cursor) {
-      const cursor = decodeCursor<InvitationTokenListCursorPayload>(params.cursor);
-      if (cursor) {
-        queryParams.ExclusiveStartKey = {
+    const result = await this.executeAdvancedPaginatedQuery(
+      {
+        tableName: this.tableName,
+        indexName: this.envelopeGsi2Name,
+        keyConditionExpression: '#gsi2pk = :gsi2pk',
+        expressionAttributeNames: { '#gsi2pk': 'gsi2pk' },
+        expressionAttributeValues: {
+          ':gsi2pk': gsi2pk
+        },
+        cursor,
+        limit,
+        sortOrder: sortOrder === 'asc' ? DdbSortOrder.ASC : DdbSortOrder.DESC,
+        ddb: this.ddb,
+        exclusiveStartKeyBuilder: (cursor) => ({
           pk: InvitationTokenKeyBuilders.buildPk(cursor.token),
           sk: InvitationTokenKeyBuilders.buildSk(cursor.token),
           gsi2pk,
           gsi2sk: InvitationTokenKeyBuilders.buildGsi2Sk(cursor.token)
-        };
-      }
-    }
+        })
+      },
+      isInvitationTokenDdbItem,
+      invitationTokenDdbMapper,
+      (token) => ({
+        token: token.getToken(),
+        expiresAt: token.getExpiresAt().toISOString()
+      }),
+      'InvitationTokenRepository.getByEnvelope'
+    );
 
-    try {
-      requireQuery(this.ddb);
-      const result = await this.ddb.query!(queryParams);
-
-      const items = (result.Items || [])
-        .filter(isInvitationTokenDdbItem)
-        .slice(0, limit)
-        .map(item => invitationTokenDdbMapper.fromDTO(item as any));
-
-      const hasMore = (result.Items || []).length > limit;
-      const last = items[items.length - 1];
-      const nextCursor = hasMore && last
-        ? encodeCursor({
-            token: last.getToken(),
-            expiresAt: last.getExpiresAt().toISOString()
-          })
-        : undefined;
-
-      return { items, nextCursor };
-    } catch (error) {
-      throw mapAwsError(error, 'InvitationTokenRepository.getByEnvelope');
-    }
+    // Convert DTOs back to domain entities for the service layer
+    const entities = result.items.map(dto => invitationTokenDdbMapper.fromDTO(dto as any));
+    
+    return {
+      items: entities,
+      nextCursor: result.nextCursor
+    };
   }
 
   /**
@@ -317,53 +296,37 @@ export class InvitationTokenRepository {
   }> {
     const gsi3pk = InvitationTokenKeyBuilders.buildGsi3Pk();
     const limit = params.limit || 20;
+    const cursor = params.cursor ? decodeCursor<InvitationTokenListCursorPayload>(params.cursor) : undefined;
 
-    const queryParams: any = {
-      TableName: this.tableName,
-      IndexName: this.expirationGsi3Name,
-      KeyConditionExpression: 'gsi3pk = :gsi3pk AND gsi3sk < :expiresAt',
-      ExpressionAttributeValues: {
-        ':gsi3pk': gsi3pk,
-        ':expiresAt': `EXPIRES_AT#${beforeDate.toISOString()}`
-      },
-      Limit: limit + 1,
-      ScanIndexForward: false
-    };
-
-    if (params.cursor) {
-      const cursor = decodeCursor<InvitationTokenListCursorPayload>(params.cursor);
-      if (cursor) {
-        queryParams.ExclusiveStartKey = {
+    return this.executeAdvancedPaginatedQuery(
+      {
+        tableName: this.tableName,
+        indexName: this.expirationGsi3Name,
+        keyConditionExpression: '#gsi3pk = :gsi3pk AND #gsi3sk < :expiresAt',
+        expressionAttributeNames: { '#gsi3pk': 'gsi3pk', '#gsi3sk': 'gsi3sk' },
+        expressionAttributeValues: {
+          ':gsi3pk': gsi3pk,
+          ':expiresAt': `EXPIRES_AT#${beforeDate.toISOString()}`
+        },
+        cursor,
+        limit,
+        sortOrder: DdbSortOrder.DESC,
+        ddb: this.ddb,
+        exclusiveStartKeyBuilder: (cursor) => ({
           pk: InvitationTokenKeyBuilders.buildPk(cursor.token),
           sk: InvitationTokenKeyBuilders.buildSk(cursor.token),
           gsi3pk,
           gsi3sk: InvitationTokenKeyBuilders.buildGsi3Sk(cursor.expiresAt, cursor.token)
-        };
-      }
-    }
-
-    try {
-      requireQuery(this.ddb);
-      const result = await this.ddb.query!(queryParams);
-
-      const items = (result.Items || [])
-        .filter(isInvitationTokenDdbItem)
-        .slice(0, limit)
-        .map(item => invitationTokenDdbMapper.fromDTO(item as any));
-
-      const hasMore = (result.Items || []).length > limit;
-      const last = items[items.length - 1];
-      const nextCursor = hasMore && last
-        ? encodeCursor({
-            token: last.getToken(),
-            expiresAt: last.getExpiresAt().toISOString()
-          })
-        : undefined;
-
-      return { items, nextCursor };
-    } catch (error) {
-      throw mapAwsError(error, 'InvitationTokenRepository.getExpired');
-    }
+        })
+      },
+      isInvitationTokenDdbItem,
+      invitationTokenDdbMapper,
+      (token) => ({
+        token: token.getToken(),
+        expiresAt: token.getExpiresAt().toISOString()
+      }),
+      'InvitationTokenRepository.getExpired'
+    );
   }
 
   /**
@@ -371,22 +334,14 @@ export class InvitationTokenRepository {
    */
   async countBySigner(signerId: string): Promise<number> {
     const gsi1pk = InvitationTokenKeyBuilders.buildGsi1Pk(signerId);
-
-    try {
-      requireQuery(this.ddb);
-      const result = await this.ddb.query!({
-        TableName: this.tableName,
-        IndexName: this.signerGsi1Name,
-        KeyConditionExpression: 'gsi1pk = :gsi1pk',
-        ExpressionAttributeValues: {
-          ':gsi1pk': gsi1pk
-        }
-      });
-
-      return result.Items?.length || 0;
-    } catch (error) {
-      throw mapAwsError(error, 'InvitationTokenRepository.countBySigner');
-    }
+    return this.executeCountQuery(
+      this.tableName,
+      this.signerGsi1Name,
+      'gsi1pk',
+      gsi1pk,
+      this.ddb,
+      'InvitationTokenRepository.countBySigner'
+    );
   }
 
   /**
@@ -394,21 +349,13 @@ export class InvitationTokenRepository {
    */
   async countByEnvelope(envelopeId: string): Promise<number> {
     const gsi2pk = InvitationTokenKeyBuilders.buildGsi2Pk(envelopeId);
-
-    try {
-      requireQuery(this.ddb);
-      const result = await this.ddb.query!({
-        TableName: this.tableName,
-        IndexName: this.envelopeGsi2Name,
-        KeyConditionExpression: 'gsi2pk = :gsi2pk',
-        ExpressionAttributeValues: {
-          ':gsi2pk': gsi2pk
-        }
-      });
-
-      return result.Items?.length || 0;
-    } catch (error) {
-      throw mapAwsError(error, 'InvitationTokenRepository.countByEnvelope');
-    }
+    return this.executeCountQuery(
+      this.tableName,
+      this.envelopeGsi2Name,
+      'gsi2pk',
+      gsi2pk,
+      this.ddb,
+      'InvitationTokenRepository.countByEnvelope'
+    );
   }
 }

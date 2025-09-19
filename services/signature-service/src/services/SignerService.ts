@@ -823,82 +823,110 @@ export class SignerService {
     securityContext: any
   ): Promise<void> {
     try {
-      // Get all signers for the envelope
       const allSigners = await this.getSignersByEnvelope(envelopeId);
+      const currentSigner = await this.validateCurrentSigner(allSigners, signerId, envelopeId);
+      const signingOrderType = await this.getSigningOrderType(envelopeService, envelopeId, userId, securityContext);
       
-      // Get the current signer
-      const currentSigner = allSigners.find(s => s.getId().getValue() === signerId.getValue());
-      if (!currentSigner) {
-        throw new BadRequestError(
-          `Signer ${signerId.getValue()} not found in envelope ${envelopeId.getValue()}`,
-          'SIGNER_NOT_FOUND'
-        );
+      if (signingOrderType) {
+        await this.validateSigningOrderByType(signingOrderType, currentSigner, allSigners);
       }
-
-      // Check if signer is already signed
-      if (currentSigner.getStatus() === SignerStatus.SIGNED) {
-        throw new BadRequestError(
-          `Signer ${signerId.getValue()} has already signed`,
-          'SIGNER_ALREADY_SIGNED'
-        );
-      }
-
-      // Check if signer is declined
-      if (currentSigner.getStatus() === SignerStatus.DECLINED) {
-        throw new BadRequestError(
-          `Signer ${signerId.getValue()} has declined to sign`,
-          'SIGNER_DECLINED'
-        );
-      }
-
-      // Try to get envelope to check signing order type, but don't fail if we can't access it
-      let signingOrderType: SigningOrderType | null = null;
-      try {
-        const envelope = await envelopeService.getEnvelope(envelopeId, userId, securityContext);
-        signingOrderType = envelope.getSigningOrder().getType() as SigningOrderType;
-      } catch (envelopeError) {
-        // If we can't access the envelope, we'll skip signing order validation
-        // This allows external signers to proceed when they have valid invitation tokens
-        console.log('[SignerService] Cannot access envelope for signing order validation, skipping:', envelopeError);
-        return; // Allow signing to proceed
-      }
-
-      // Validate signing order based on type (only if we could determine the type)
-      if (signingOrderType === SigningOrderType.OWNER_FIRST) {
-        // In OWNER_FIRST, owner (order 1) must sign before any other signer
-        if (currentSigner.getOrder() > 1) {
-          // Check if owner has already signed
-          const owner = allSigners.find(s => s.getOrder() === 1);
-          if (owner && owner.getStatus() !== SignerStatus.SIGNED) {
-            throw new BadRequestError(
-              'Owner must sign first in OWNER_FIRST flow',
-              'OWNER_MUST_SIGN_FIRST'
-            );
-          }
-        }
-      } else if (signingOrderType === SigningOrderType.INVITEES_FIRST) {
-        // In INVITEES_FIRST, all invitees must sign before owner
-        if (currentSigner.getOrder() === 1) {
-          // Check if any invitee is still pending
-          const pendingInvitees = allSigners.filter(s => s.getOrder() > 1 && s.getStatus() === SignerStatus.PENDING);
-          if (pendingInvitees.length > 0) {
-            throw new BadRequestError(
-              'All invitees must sign before owner in INVITEES_FIRST flow',
-              'INVITEES_MUST_SIGN_FIRST'
-            );
-          }
-        }
-      }
-
     } catch (error) {
-      // If it's a BadRequestError, re-throw it
       if (error instanceof BadRequestError) {
         throw error;
       }
-      
-      // For other errors, we'll allow the signing to proceed
-      // This is a fallback to prevent blocking legitimate signers due to access issues
       console.log('[SignerService] Signing order validation failed, allowing signing to proceed:', error);
+    }
+  }
+
+  /**
+   * Validates the current signer and returns it if valid
+   */
+  private async validateCurrentSigner(allSigners: Signer[], signerId: SignerId, envelopeId: EnvelopeId): Promise<Signer> {
+    const currentSigner = allSigners.find(s => s.getId().getValue() === signerId.getValue());
+    if (!currentSigner) {
+      throw new BadRequestError(
+        `Signer ${signerId.getValue()} not found in envelope ${envelopeId.getValue()}`,
+        'SIGNER_NOT_FOUND'
+      );
+    }
+
+    if (currentSigner.getStatus() === SignerStatus.SIGNED) {
+      throw new BadRequestError(
+        `Signer ${signerId.getValue()} has already signed`,
+        'SIGNER_ALREADY_SIGNED'
+      );
+    }
+
+    if (currentSigner.getStatus() === SignerStatus.DECLINED) {
+      throw new BadRequestError(
+        `Signer ${signerId.getValue()} has declined to sign`,
+        'SIGNER_DECLINED'
+      );
+    }
+
+    return currentSigner;
+  }
+
+  /**
+   * Gets the signing order type from envelope service, returns null if not accessible
+   */
+  private async getSigningOrderType(
+    envelopeService: EnvelopeService,
+    envelopeId: EnvelopeId,
+    userId: string,
+    securityContext: any
+  ): Promise<SigningOrderType | null> {
+    try {
+      const envelope = await envelopeService.getEnvelope(envelopeId, userId, securityContext);
+      return envelope.getSigningOrder().getType() as SigningOrderType;
+    } catch (envelopeError) {
+      console.log('[SignerService] Cannot access envelope for signing order validation, skipping:', envelopeError);
+      return null;
+    }
+  }
+
+  /**
+   * Validates signing order based on the order type
+   */
+  private async validateSigningOrderByType(
+    signingOrderType: SigningOrderType,
+    currentSigner: Signer,
+    allSigners: Signer[]
+  ): Promise<void> {
+    if (signingOrderType === SigningOrderType.OWNER_FIRST) {
+      await this.validateOwnerFirstOrder(currentSigner, allSigners);
+    } else if (signingOrderType === SigningOrderType.INVITEES_FIRST) {
+      await this.validateInviteesFirstOrder(currentSigner, allSigners);
+    }
+  }
+
+  /**
+   * Validates OWNER_FIRST signing order
+   */
+  private async validateOwnerFirstOrder(currentSigner: Signer, allSigners: Signer[]): Promise<void> {
+    if (currentSigner.getOrder() > 1) {
+      const owner = allSigners.find(s => s.getOrder() === 1);
+      if (owner && owner.getStatus() !== SignerStatus.SIGNED) {
+        throw new BadRequestError(
+          'Owner must sign first in OWNER_FIRST flow',
+          'OWNER_MUST_SIGN_FIRST'
+        );
+      }
+    }
+  }
+
+  /**
+   * Validates INVITEES_FIRST signing order
+   */
+  private async validateInviteesFirstOrder(currentSigner: Signer, allSigners: Signer[]): Promise<void> {
+    if (currentSigner.getOrder() === 1) {
+      const pendingInvitees = allSigners.filter(s => s.getOrder() > 1 && s.getStatus() === SignerStatus.PENDING);
+      if (pendingInvitees.length > 0) {
+        throw new BadRequestError(
+          'All invitees must sign before owner in INVITEES_FIRST flow',
+          'INVITEES_MUST_SIGN_FIRST'
+        );
+      }
     }
   }
 }

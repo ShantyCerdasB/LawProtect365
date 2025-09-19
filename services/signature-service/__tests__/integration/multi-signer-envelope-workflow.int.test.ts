@@ -44,7 +44,6 @@ describe('Multi-Signer Envelope Workflow Integration Tests', () => {
   const signerB = { email: 'b.signer@example.com', fullName: 'Signer B' };
   const signerC = { email: 'c.signer@example.com', fullName: 'Signer C' };
   const signerD = { email: 'd.signer@example.com', fullName: 'Signer D' };
-  const user5 = { userId: 'user-5-123', email: 'user5@example.com' };
 
   const makeAuthEvent = async (overrides?: any) => {
     const token = await generateTestJwtToken({ sub: owner.userId, email: owner.email, roles: ['admin'], scopes: [] });

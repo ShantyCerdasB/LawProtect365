@@ -56,11 +56,16 @@ const GSI_PROJECTION = { ProjectionType: "ALL" };
 const BILLING_MODE = "PAY_PER_REQUEST";
 
 /**
+ * Type alias for GSI names
+ */
+type GSIName = 'gsi1' | 'gsi2' | 'gsi3';
+
+/**
  * Interface for table configuration
  */
 interface TableConfig {
   tableName: string;
-  gsis?: ('gsi1' | 'gsi2' | 'gsi3')[];
+  gsis?: GSIName[];
   ttl?: {
     attributeName: string;
     enabled: boolean;
@@ -119,7 +124,7 @@ function createBaseTableDefinition(tableName: string): TableDefinition {
  * @param gsis - Array of GSI names to create
  * @returns Object containing attribute definitions and GSI definitions
  */
-function createGSIDefinitions(gsis: ('gsi1' | 'gsi2' | 'gsi3')[]): {
+function createGSIDefinitions(gsis: GSIName[]): {
   attributeDefinitions: Array<{ AttributeName: string; AttributeType: string }>;
   globalSecondaryIndexes: Array<{
     IndexName: string;
@@ -253,23 +258,23 @@ export function createCustomTableDefinition(
  * Predefined table configurations for the signature service
  */
 export const TABLE_CONFIGS = {
-  ENVELOPES: { tableName: "test-envelopes", gsis: ['gsi1', 'gsi2'] as ('gsi1' | 'gsi2' | 'gsi3')[] },
-  SIGNERS: { tableName: "test-signers", gsis: ['gsi1', 'gsi2', 'gsi3'] as ('gsi1' | 'gsi2' | 'gsi3')[] },
-  SIGNATURES: { tableName: "test-signatures", gsis: ['gsi1', 'gsi2', 'gsi3'] as ('gsi1' | 'gsi2' | 'gsi3')[] },
-  DOCUMENTS: { tableName: "test-documents", gsis: ['gsi1'] as ('gsi1' | 'gsi2' | 'gsi3')[] },
-  PARTIES: { tableName: "test-parties", gsis: ['gsi1'] as ('gsi1' | 'gsi2' | 'gsi3')[] },
-  INPUTS: { tableName: "test-inputs", gsis: ['gsi1'] as ('gsi1' | 'gsi2' | 'gsi3')[] },
+  ENVELOPES: { tableName: "test-envelopes", gsis: ['gsi1', 'gsi2'] as GSIName[] },
+  SIGNERS: { tableName: "test-signers", gsis: ['gsi1', 'gsi2', 'gsi3'] as GSIName[] },
+  SIGNATURES: { tableName: "test-signatures", gsis: ['gsi1', 'gsi2', 'gsi3'] as GSIName[] },
+  DOCUMENTS: { tableName: "test-documents", gsis: ['gsi1'] as GSIName[] },
+  PARTIES: { tableName: "test-parties", gsis: ['gsi1'] as GSIName[] },
+  INPUTS: { tableName: "test-inputs", gsis: ['gsi1'] as GSIName[] },
   IDEMPOTENCY: { 
     tableName: "test-idempotency", 
-    gsis: [] as ('gsi1' | 'gsi2' | 'gsi3')[],
+    gsis: [] as GSIName[],
     ttl: { attributeName: "ttl", enabled: true }
   },
-  OUTBOX: { tableName: "test-outbox", gsis: ['gsi1'] as ('gsi1' | 'gsi2' | 'gsi3')[] },
-  AUDIT: { tableName: "test-audit", gsis: ['gsi1'] as ('gsi1' | 'gsi2' | 'gsi3')[] },
-  CONSENT: { tableName: "test-consent", gsis: ['gsi1', 'gsi2'] as ('gsi1' | 'gsi2' | 'gsi3')[] },
-  DELEGATION: { tableName: "test-delegation", gsis: ['gsi1'] as ('gsi1' | 'gsi2' | 'gsi3')[] },
-  GLOBAL_PARTIES: { tableName: "test-global-parties", gsis: ['gsi1'] as ('gsi1' | 'gsi2' | 'gsi3')[] },
-  INVITATION_TOKENS: { tableName: "test-invitation-tokens", gsis: ['gsi1', 'gsi2'] as ('gsi1' | 'gsi2' | 'gsi3')[] }
+  OUTBOX: { tableName: "test-outbox", gsis: ['gsi1'] as GSIName[] },
+  AUDIT: { tableName: "test-audit", gsis: ['gsi1'] as GSIName[] },
+  CONSENT: { tableName: "test-consent", gsis: ['gsi1', 'gsi2'] as GSIName[] },
+  DELEGATION: { tableName: "test-delegation", gsis: ['gsi1'] as GSIName[] },
+  GLOBAL_PARTIES: { tableName: "test-global-parties", gsis: ['gsi1'] as GSIName[] },
+  INVITATION_TOKENS: { tableName: "test-invitation-tokens", gsis: ['gsi1', 'gsi2'] as GSIName[] }
 };
 
 /**
