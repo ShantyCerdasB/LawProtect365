@@ -20,7 +20,7 @@ import {
   type SignerListCursorPayload
 } from '../domain/types/infrastructure/signer';
 import { DdbSortOrder } from '../domain/types/infrastructure/common';
-import { BaseRepository, type CursorPayload, SingleItemQueryConfig } from './BaseRepository';
+import { BaseRepository, type CursorPayload } from './BaseRepository';
 
 /**
  * SignerRepository implementation for DynamoDB

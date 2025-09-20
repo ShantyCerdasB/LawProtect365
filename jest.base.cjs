@@ -26,8 +26,12 @@ module.exports = {
 
   transformIgnorePatterns: ["node_modules/(?!@lawprotect/shared-ts)"],
 
-  /** Coverage for all src files (excluding .d.ts) */
-  collectCoverageFrom: ["<rootDir>/src/**/*.ts", "!<rootDir>/src/**/*.d.ts"],
+  /** Coverage for all src files (excluding .d.ts and index files) */
+  collectCoverageFrom: [
+    "<rootDir>/src/**/*.ts", 
+    "!<rootDir>/src/**/*.d.ts",
+    "!<rootDir>/src/**/index.ts"
+  ],
   coverageDirectory: "<rootDir>/coverage",
   coverageReporters: ["text", "lcov", "html"],
   coveragePathIgnorePatterns: ["/node_modules/", "/dist/", "/__tests__/"],
@@ -40,11 +44,13 @@ module.exports = {
   moduleNameMapper: {
     "^(\\.{1,2}/.*)\\.js$": "$1",
 
+    // Service-specific aliases (for @/ imports within the service) - MUST come first
+    "^@/(.*)\\.js$": "<rootDir>/src/$1.ts",
+    "^@/(.*)$": "<rootDir>/src/$1",
+
     // Shared-ts internal aliases (for @/ imports within shared-ts package) - MUST come first
     "^@/index\\.js$": "<rootDir>/../../packages/shared-ts/src/index.ts",
     "^@/validation/z\\.js$": "<rootDir>/../../packages/shared-ts/src/validation/z.ts",
-    "^@/(.*)\\.js$": "<rootDir>/../../packages/shared-ts/src/$1.ts",
-    "^@/(.*)$": "<rootDir>/../../packages/shared-ts/src/$1",
     
     // Shared-ts package aliases
     "^@lawprotect/shared-ts$": "<rootDir>/../../packages/shared-ts/src/index.ts",

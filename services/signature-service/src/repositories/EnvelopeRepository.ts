@@ -5,7 +5,7 @@
  * including CRUD operations, queries, and data persistence using DynamoDB.
  */
 
-import type { Repository, DdbClientLike } from '@lawprotect/shared-ts';
+import type { Repository, DdbClientLike, DdbClientWithQuery } from '@lawprotect/shared-ts';
 import { 
   mapAwsError, 
   ConflictError, 
@@ -13,8 +13,7 @@ import {
   decodeCursor, 
   encodeCursor,
   NotFoundError,
-  requireQuery,
-  type DdbClientWithQuery
+  requireQuery
 } from '@lawprotect/shared-ts';
 
 import { Envelope } from '../domain/entities/Envelope';

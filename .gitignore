@@ -146,3 +146,6 @@ dist
 .pnp.*
 infra/.terraform.lock.hcl
 infra/backend/.terraform.lock.hcl
+
+# Cursor AI rules (personal configuration)
+.cursorrules
