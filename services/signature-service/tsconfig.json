@@ -32,10 +32,10 @@
     "skipLibCheck": true,
 
     // Type definitions for the application
-    // Base Node.js types; Jest types are added in tsconfig.jest.json
-    "types": ["node"]
+    // Base Node.js types; Jest types included for test files
+    "types": ["node", "jest"]
   },
   
   // Source files to include in TypeScript compilation
-  "include": ["src", "serverless.local.ts"]
+  "include": ["src", "serverless.local.ts", "__tests__/**/*"]
 }

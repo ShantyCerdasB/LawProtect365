@@ -29,6 +29,9 @@ module.exports = {
    * and resolve module paths relative to the signature service.
    */
   roots: ["<rootDir>"],
+  
+  /** Only run integration tests in the integration folder */
+  testMatch: ["<rootDir>/__tests__/integration/**/*.test.ts"],
 
   /**
    * Setup files to run before the test environment is established

@@ -718,22 +718,22 @@ describe('Signature Error Factories', () => {
     });
 
     it('should use correct HTTP status codes for each error type', () => {
-      const statusCodeTests = [
-        { factory: envelopeNotFound, expected: 404, args: [testDetails] },
-        { factory: envelopeAlreadySent, expected: 409, args: [testDetails] },
-        { factory: envelopeExpirationInvalid, expected: 400, args: [testDetails] },
-        { factory: signerEmailRequired, expected: 400, args: [testDetails] },
-        { factory: signatureFailed, expected: 500, args: [testDetails] },
-        { factory: signatureHashMismatch, expected: 422, args: [testDetails] },
-        { factory: kmsPermissionDenied, expected: 403, args: [testDetails] },
-        { factory: consentRequired, expected: 403, args: [testDetails] },
-        { factory: invitationTokenInvalid, expected: 401, args: [testDetails] },
-        { factory: rateLimitEnvelopeSend, expected: 429, args: [60, testDetails] }
+      const results = [
+        envelopeNotFound(testDetails),
+        envelopeAlreadySent(testDetails),
+        envelopeExpirationInvalid(testDetails),
+        signerEmailRequired(testDetails),
+        signatureFailed(testDetails),
+        signatureHashMismatch(testDetails),
+        kmsPermissionDenied(testDetails),
+        consentRequired(testDetails),
+        invitationTokenInvalid(testDetails),
+        rateLimitEnvelopeSend(60, testDetails),
       ];
 
-      statusCodeTests.forEach(({ factory, expected, args }) => {
-        const error = factory(...args);
-        expect(error.statusCode).toBe(expected);
+      const expected = [404, 409, 400, 400, 500, 422, 403, 403, 401, 429];
+      results.forEach((error, idx) => {
+        expect(error.statusCode).toBe(expected[idx]);
       });
     });
   });
