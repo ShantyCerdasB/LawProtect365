@@ -5,7 +5,7 @@
  * including type guards and validation functions.
  */
 
-import { Envelope } from '../../../entities/Envelope';
+import { SignatureEnvelope } from '../../../entities/SignatureEnvelope';
 import type { EnvelopeDdbItem, EnvelopeListCursorPayload } from './envelope-ddb-types';
 import { EnvelopeKeyBuilders } from './envelope-ddb-types';
 import { DdbMapperUtils } from '../common/dynamodb-mappers';

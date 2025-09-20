@@ -7,10 +7,13 @@
 
 export { EnvelopeId } from './EnvelopeId';
 export { SignerId } from './SignerId';
-export { SignatureId } from './SignatureId';
 export { ConsentId } from './ConsentId';
 export { Email } from './Email';
 export { SigningOrder } from './SigningOrder';
-export { AuditEventId } from './AuditEventId';
-export { OutboxId } from './OutboxId';
 export { InvitationTokenId } from './InvitationTokenId';
+export { SignatureMetadata } from './SignatureMetadata';
+export { DocumentOrigin } from './DocumentOrigin';
+export { EnvelopeStatus } from './EnvelopeStatus';
+export { S3Key } from './S3Key';
+export { DocumentHash } from './DocumentHash';
+export { Signature } from './Signature';

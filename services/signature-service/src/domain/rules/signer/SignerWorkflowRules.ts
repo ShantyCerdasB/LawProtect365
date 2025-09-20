@@ -6,7 +6,7 @@
  */
 
 import { Signer } from '@/domain/entities/Signer';
-import { Envelope } from '@/domain/entities/Envelope';
+import { SignatureEnvelope } from '@/domain/entities/SignatureEnvelope';
 import { SignerWorkflowOperation } from '@/domain/enums/SignerOperation';
 import { AuditEventType } from '@/domain/enums/AuditEventType';
 import { 

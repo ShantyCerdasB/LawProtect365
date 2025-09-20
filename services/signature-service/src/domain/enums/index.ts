@@ -5,19 +5,6 @@
  * throughout the application.
  */
 
-export * from './EnvelopeStatus';
-export * from './EnvelopeOperation';
-export * from './SignerOperation';
-export * from './SigningAlgorithm';
-export * from './SignerStatus';
-export * from './SignatureStatus';
-export * from './SigningOrder';
-export * from './AuditEventType';
-export * from './DynamoDbPrefixes';
-export * from './SortOrder';
-export * from './SortBy';
-export * from './OutboxStatuses';
-export * from './SignaturePermission';
-export * from './EnvelopeEventTypes';
-export * from './ConsentEventTypes';
-export * from './AuditEventTypes';
+// All local enums have been migrated to Prisma enums
+// Use @prisma/client for: EnvelopeStatus, SignerStatus, SigningOrderType, 
+// UserRole, InvitationTokenStatus, DocumentOriginType, OAuthProvider

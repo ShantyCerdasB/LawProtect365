@@ -6,7 +6,6 @@
  */
 
 import { Identifier, uuid, isUuidV4 } from '@lawprotect/shared-ts';
-import { signerNotFound } from '../../signature-errors';
 
 /**
  * SignerId value object
@@ -17,11 +16,11 @@ import { signerNotFound } from '../../signature-errors';
 export class SignerId extends Identifier<string> {
   constructor(value: string) {
     if (!value || typeof value !== 'string') {
-      throw signerNotFound('SignerId must be a non-empty string');
+      throw new Error('SignerId must be a non-empty string');
     }
 
     if (!isUuidV4(value)) {
-      throw signerNotFound('SignerId must be a valid UUID');
+      throw new Error('SignerId must be a valid UUID');
     }
 
     super(value);

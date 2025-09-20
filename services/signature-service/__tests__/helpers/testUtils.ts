@@ -5,10 +5,9 @@
  * generating valid UUIDs, and other common test utilities.
  */
 
-import { uuid } from '@lawprotect/shared-ts';
+import { uuid, sha256Hex } from '@lawprotect/shared-ts';
 import { SignerId } from '@/domain/value-objects/SignerId';
 import { EnvelopeId } from '@/domain/value-objects/EnvelopeId';
-import { SignatureId } from '@/domain/value-objects/SignatureId';
 import { ConsentId } from '@/domain/value-objects/ConsentId';
 
 /**
@@ -39,13 +38,6 @@ export class TestUtils {
     return EnvelopeId.generate();
   }
 
-  /**
-   * Generates a SignatureId for testing
-   * @returns A valid SignatureId instance
-   */
-  static generateSignatureId(): SignatureId {
-    return SignatureId.generate();
-  }
 
   /**
    * Generates a ConsentId for testing
@@ -107,6 +99,25 @@ export class TestUtils {
    */
   static createTestUserAgent(): string {
     return 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36';
+  }
+
+  /**
+   * Generates a valid SHA-256 hash for testing
+   * @param data - The data to hash (default: random string)
+   * @returns A valid SHA-256 hash (64 hex characters)
+   */
+  static generateSha256Hash(data?: string): string {
+    const input = data || this.generateUuid();
+    return sha256Hex(input);
+  }
+
+  /**
+   * Generates multiple SHA-256 hashes for testing
+   * @param count - Number of hashes to generate
+   * @returns Array of SHA-256 hash strings
+   */
+  static generateSha256Hashes(count: number): string[] {
+    return Array.from({ length: count }, () => this.generateSha256Hash());
   }
 }
 

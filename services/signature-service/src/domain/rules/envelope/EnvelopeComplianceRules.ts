@@ -5,7 +5,7 @@
  * to ensure legal compliance with ESIGN Act, UETA, and other US regulations for electronic signatures.
  */
 
-import { Envelope } from '@/domain/entities/Envelope';
+import { SignatureEnvelope } from '@/domain/entities/SignatureEnvelope';
 import { Signer } from '@/domain/entities/Signer';
 import { Signature } from '@/domain/entities/Signature';
 import { AuditEventType } from '@/domain/enums/AuditEventType';

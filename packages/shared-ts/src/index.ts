@@ -21,5 +21,16 @@ export * from "./controllers/index.js";
 export * from "./middleware/index.js";
 export * from "./rules/index.js";
 
+// Prisma enums
+export { 
+  EnvelopeStatus, 
+  SignerStatus, 
+  SigningOrderType, 
+  DocumentOriginType,
+  InvitationTokenStatus,
+  UserRole,
+  OAuthProvider
+} from '@prisma/client';
+
 // AWS implementations last to avoid conflicts
 export * from "./aws/index.js";

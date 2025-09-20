@@ -8,7 +8,7 @@
 import { EnvelopeStatus, isValidEnvelopeStatusTransition, getValidNextStatuses } from '@/domain/enums/EnvelopeStatus';
 import { SignerStatus, isValidSignerStatusTransition, getValidNextSignerStatuses } from '@/domain/enums/SignerStatus';
 import { SignatureStatus, isValidSignatureStatusTransition, getValidNextSignatureStatuses } from '@/domain/enums/SignatureStatus';
-import { Envelope } from '@/domain/entities/Envelope';
+import { SignatureEnvelope } from '@/domain/entities/SignatureEnvelope';
 import { Signer } from '@/domain/entities/Signer';
 import { Signature } from '@/domain/entities/Signature';
 import { workflowViolation, invalidStateTransition } from '@/signature-errors';

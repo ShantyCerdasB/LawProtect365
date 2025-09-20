@@ -9,7 +9,7 @@ import { EnvelopeStatus } from '@/domain/enums/EnvelopeStatus';
 import { EnvelopeOperation } from '@/domain/enums/EnvelopeOperation';
 import { AuditEventType } from '@/domain/enums/AuditEventType';
 import { SigningOrder } from '@/domain/value-objects/SigningOrder';
-import { Envelope } from '@/domain/entities/Envelope';
+import { SignatureEnvelope } from '@/domain/entities/SignatureEnvelope';
 import { WorkflowTimingConfig, WorkflowEventData } from '@/domain/types/WorkflowTypes';
 import { diffMinutes, EVENT_TIMING } from '@lawprotect/shared-ts';
 import { eventGenerationFailed } from '@/signature-errors';

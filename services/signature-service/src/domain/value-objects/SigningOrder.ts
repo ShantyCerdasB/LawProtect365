@@ -5,12 +5,8 @@
  * either with the owner signing first or invitees signing first.
  */
 
+import { SigningOrderType } from '@prisma/client';
 import { BadRequestError } from '@lawprotect/shared-ts';
-
-/**
- * Signing order types
- */
-export type SigningOrderType = 'OWNER_FIRST' | 'INVITEES_FIRST';
 
 /**
  * SigningOrder value object
@@ -22,8 +18,8 @@ export class SigningOrder {
   private readonly type: SigningOrderType;
 
   constructor(type: SigningOrderType) {
-    if (!type || !['OWNER_FIRST', 'INVITEES_FIRST'].includes(type)) {
-      throw new BadRequestError('SigningOrder type must be OWNER_FIRST or INVITEES_FIRST', 'INVALID_SIGNING_ORDER_TYPE');
+    if (!type || !Object.values(SigningOrderType).includes(type)) {
+      throw new BadRequestError('SigningOrder type must be a valid SigningOrderType', 'INVALID_SIGNING_ORDER_TYPE');
     }
 
     this.type = type;
@@ -33,20 +29,23 @@ export class SigningOrder {
    * Creates a SigningOrder with owner first configuration
    */
   static ownerFirst(): SigningOrder {
-    return new SigningOrder('OWNER_FIRST');
+    return new SigningOrder(SigningOrderType.OWNER_FIRST);
   }
 
   /**
    * Creates a SigningOrder with invitees first configuration
    */
   static inviteesFirst(): SigningOrder {
-    return new SigningOrder('INVITEES_FIRST');
+    return new SigningOrder(SigningOrderType.INVITEES_FIRST);
   }
 
   /**
    * Creates a SigningOrder from a string value
    */
   static fromString(type: string): SigningOrder {
+    if (!Object.values(SigningOrderType).includes(type as SigningOrderType)) {
+      throw new BadRequestError('Invalid SigningOrderType string', 'INVALID_SIGNING_ORDER_TYPE');
+    }
     return new SigningOrder(type as SigningOrderType);
   }
 
@@ -61,14 +60,14 @@ export class SigningOrder {
    * Checks if owner should sign first
    */
   isOwnerFirst(): boolean {
-    return this.type === 'OWNER_FIRST';
+    return this.type === SigningOrderType.OWNER_FIRST;
   }
 
   /**
    * Checks if invitees should sign first
    */
   isInviteesFirst(): boolean {
-    return this.type === 'INVITEES_FIRST';
+    return this.type === SigningOrderType.INVITEES_FIRST;
   }
 
   /**

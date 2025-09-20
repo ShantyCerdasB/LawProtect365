@@ -16,9 +16,9 @@ import {
   requireQuery
 } from '@lawprotect/shared-ts';
 
-import { Envelope } from '../domain/entities/Envelope';
+import { SignatureEnvelope } from '../domain/entities/SignatureEnvelope';
 import type { EnvelopeId } from '../domain/value-objects/EnvelopeId';
-import type { EnvelopeStatus } from '../domain/enums/EnvelopeStatus';
+import type { EnvelopeStatus } from '@prisma/client';
 import { 
   envelopeDdbMapper,
   createEnvelopeCursorPayload,

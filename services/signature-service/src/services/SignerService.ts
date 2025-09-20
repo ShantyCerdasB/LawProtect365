@@ -6,7 +6,7 @@
  */
 
 import { Signer } from '../domain/entities/Signer';
-import { Envelope } from '../domain/entities/Envelope';
+import { SignatureEnvelope } from '../domain/entities/SignatureEnvelope';
 import { SignerId } from '../domain/value-objects/SignerId';
 import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
 import { Email } from '../domain/value-objects/Email';

@@ -5,11 +5,11 @@
  * including creation, updates, status management, and business rule validation.
  */
 
-import { Envelope } from '../domain/entities/Envelope';
+import { SignatureEnvelope } from '../domain/entities/SignatureEnvelope';
 import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
 import { SignatureId } from '../domain/value-objects/SignatureId';
 import { SignerId } from '../domain/value-objects/SignerId';
-import { EnvelopeStatus } from '../domain/enums/EnvelopeStatus';
+import { EnvelopeStatus } from '@prisma/client';
 import { EnvelopeOperation } from '../domain/enums/EnvelopeOperation';
 import { SigningOrder } from '../domain/value-objects/SigningOrder';
 import { uuid, NotFoundError, ErrorCodes, PermissionLevel, AccessType } from '@lawprotect/shared-ts';

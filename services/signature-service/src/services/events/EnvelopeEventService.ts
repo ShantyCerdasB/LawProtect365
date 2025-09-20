@@ -6,7 +6,7 @@
  */
 
 import { BaseEventService, DomainEvent } from '@lawprotect/shared-ts';
-import { Envelope } from '../../domain/entities/Envelope';
+import { SignatureEnvelope } from '../../domain/entities/SignatureEnvelope';
 import { EnvelopeStatus } from '../../domain/enums/EnvelopeStatus';
 import { EnvelopeEventTypes } from '../../domain/enums/EnvelopeEventTypes';
 

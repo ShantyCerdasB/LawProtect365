@@ -5,10 +5,8 @@
  * throughout the application.
  */
 
-export { Envelope } from './Envelope';
-export { Signer } from './Signer';
-export { Signature } from './Signature';
+export { SignatureEnvelope } from './SignatureEnvelope';
+export { EnvelopeSigner } from './EnvelopeSigner';
 export { Consent } from './Consent';
-export { AuditEvent } from './AuditEvent';
-export { OutboxRecord } from './OutboxRecord';
+export { SignatureAuditEvent } from './SignatureAuditEvent';
 export { InvitationToken } from './InvitationToken';

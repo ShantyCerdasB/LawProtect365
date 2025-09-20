@@ -6,7 +6,7 @@
  */
 
 import { EnvelopeOperation } from '@/domain/enums/EnvelopeOperation';
-import { Envelope } from '@/domain/entities/Envelope';
+import { SignatureEnvelope } from '@/domain/entities/SignatureEnvelope';
 import { WorkflowTimingConfig } from '@/domain/types/WorkflowTypes';
 import { diffHours, REMINDER_INTERVALS } from '@lawprotect/shared-ts';
 import { workflowViolation } from '@/signature-errors';

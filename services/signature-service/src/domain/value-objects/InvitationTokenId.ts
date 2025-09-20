@@ -1,21 +1,44 @@
 /**
- * @fileoverview InvitationTokenId value object - Unique identifier for invitation tokens
- * @summary Value object for invitation token identification
- * @description The InvitationTokenId value object represents a unique identifier
- * for invitation tokens, extending the base Identifier class.
+ * @fileoverview InvitationTokenId value object - Represents a unique invitation token identifier
+ * @summary Encapsulates invitation token ID validation and equality logic
+ * @description The InvitationTokenId value object ensures invitation token identifiers are valid UUIDs
+ * and provides type safety for invitation token identification throughout the system.
  */
 
-import { Identifier } from '@lawprotect/shared-ts';
+import { Identifier, uuid, isUuidV4 } from '@lawprotect/shared-ts';
+import { envelopeNotFound } from '../../signature-errors';
 
 /**
  * InvitationTokenId value object
  * 
- * Represents a unique identifier for invitation tokens,
- * extending the base Identifier class for type safety.
+ * Represents a unique identifier for an invitation token. Ensures the ID is a valid UUID
+ * and provides type safety for invitation token identification.
  */
 export class InvitationTokenId extends Identifier<string> {
   constructor(value: string) {
+    if (!value || typeof value !== 'string') {
+      throw envelopeNotFound('InvitationTokenId must be a non-empty string');
+    }
+
+    if (!isUuidV4(value)) {
+      throw envelopeNotFound('InvitationTokenId must be a valid UUID');
+    }
+
     super(value);
+  }
+
+  /**
+   * Creates a new InvitationTokenId with a random UUID
+   */
+  static generate(): InvitationTokenId {
+    return new InvitationTokenId(uuid());
+  }
+
+  /**
+   * Creates an InvitationTokenId from a string value
+   */
+  static fromString(value: string): InvitationTokenId {
+    return new InvitationTokenId(value);
   }
 
   /**

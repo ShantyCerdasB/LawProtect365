@@ -16,7 +16,7 @@ import { EnvelopeService } from '../../services/EnvelopeService';
 import { SignerService } from '../../services/SignerService';
 import { InvitationToken } from '../../domain/entities/InvitationToken';
 import { Signature } from '../../domain/entities/Signature';
-import { Envelope } from '../../domain/entities/Envelope';
+import { SignatureEnvelope } from '../../domain/entities/SignatureEnvelope';
 import { SignatureId } from '../../domain/value-objects/SignatureId';
 import { EnvelopeId } from '../../domain/value-objects/EnvelopeId';
 import { SignerId } from '../../domain/value-objects/SignerId';

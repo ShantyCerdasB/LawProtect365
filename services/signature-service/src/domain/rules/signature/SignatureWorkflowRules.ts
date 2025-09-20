@@ -7,7 +7,7 @@
 
 import { Signature } from '../../entities/Signature';
 import { Signer } from '../../entities/Signer';
-import { Envelope } from '../../entities/Envelope';
+import { SignatureEnvelope } from '../../entities/SignatureEnvelope';
 import { SignerWorkflowOperation } from '../../enums/SignerOperation';
 import { SignatureStatus } from '@/domain/enums/SignatureStatus';
 import { SignerStatus } from '@/domain/enums/SignerStatus';

@@ -8,7 +8,6 @@
 import { ConsentId } from '../value-objects/ConsentId';
 import { EnvelopeId } from '../value-objects/EnvelopeId';
 import { SignerId } from '../value-objects/SignerId';
-import { SignatureId } from '../value-objects/SignatureId';
 import { 
   consentNotGiven, 
   consentTimestampRequired, 
@@ -28,7 +27,7 @@ export class Consent {
     private readonly id: ConsentId,
     private readonly envelopeId: EnvelopeId,
     private readonly signerId: SignerId,
-    private readonly signatureId: SignatureId,
+    private readonly signatureId: SignerId | undefined,
     private readonly consentGiven: boolean,
     private readonly consentTimestamp: Date,
     private readonly consentText: string,
@@ -62,7 +61,7 @@ export class Consent {
   /**
    * Gets the signature ID linked to this consent
    */
-  getSignatureId(): SignatureId {
+  getSignatureId(): SignerId | undefined {
     return this.signatureId;
   }
 
@@ -124,7 +123,7 @@ export class Consent {
     id: ConsentId;
     envelopeId: EnvelopeId;
     signerId: SignerId;
-    signatureId: SignatureId;
+    signatureId: SignerId | undefined;
     consentGiven: boolean;
     consentTimestamp: Date;
     consentText: string;
@@ -152,7 +151,7 @@ export class Consent {
    * @param signatureId - New signature ID to link
    * @returns New consent instance with updated signature ID
    */
-  linkWithSignature(signatureId: SignatureId): Consent {
+  linkWithSignature(signatureId: SignerId): Consent {
     return new Consent(
       this.id,
       this.envelopeId,
@@ -201,7 +200,7 @@ export class Consent {
       id: this.id.getValue(),
       envelopeId: this.envelopeId.getValue(),
       signerId: this.signerId.getValue(),
-      signatureId: this.signatureId.getValue(),
+      signatureId: this.signatureId?.getValue(),
       consentGiven: this.consentGiven,
       consentTimestamp: this.consentTimestamp.toISOString(),
       consentText: this.consentText,
