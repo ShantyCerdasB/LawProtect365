@@ -277,8 +277,15 @@ export class InvitationToken {
 
   /**
    * Checks if the token has expired
+   * Returns true if either the status is EXPIRED or the expiration date has passed
    */
   isExpired(): boolean {
+    // Check if status is explicitly EXPIRED
+    if (this.status === InvitationTokenStatus.EXPIRED) {
+      return true;
+    }
+    
+    // Check if expiration date has passed
     if (!this.expiresAt) {
       return false;
     }
