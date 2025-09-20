@@ -6,10 +6,10 @@
  */
 
 /**
- * EventBridge configuration interface
- * Configuration options for EventBridge integration
+ * EventBridge adapter configuration interface
+ * Configuration options for EventBridge adapter integration
  */
-export interface EventBridgeConfig {
+export interface EventBridgeAdapterConfig {
   /** EventBridge bus name */
   busName: string;
   /** Event source identifier */
@@ -23,10 +23,10 @@ export interface EventBridgeConfig {
 }
 
 /**
- * EventBridge event entry interface
- * Represents a single event entry for EventBridge
+ * EventBridge adapter event entry interface
+ * Represents a single event entry for EventBridge adapter
  */
-export interface EventBridgeEntry {
+export interface EventBridgeAdapterEntry {
   /** Event source */
   Source: string;
   /** Event detail type */
@@ -44,10 +44,10 @@ export interface EventBridgeEntry {
 }
 
 /**
- * EventBridge put events response interface
- * Response from EventBridge putEvents operation
+ * EventBridge adapter put events response interface
+ * Response from EventBridge adapter putEvents operation
  */
-export interface EventBridgePutEventsResponse {
+export interface EventBridgeAdapterPutEventsResponse {
   /** Number of failed entries */
   FailedEntryCount?: number;
   /** Array of failed entries */
@@ -58,29 +58,29 @@ export interface EventBridgePutEventsResponse {
 }
 
 /**
- * EventBridge client interface
- * Minimal interface for EventBridge client operations
+ * EventBridge adapter client interface
+ * Minimal interface for EventBridge adapter client operations
  */
-export interface EventBridgeClient {
+export interface EventBridgeAdapterClient {
   putEvents(params: {
-    Entries: EventBridgeEntry[];
-  }): Promise<EventBridgePutEventsResponse>;
+    Entries: EventBridgeAdapterEntry[];
+  }): Promise<EventBridgeAdapterPutEventsResponse>;
 }
 
 /**
- * Default EventBridge configuration
- * Default values for EventBridge configuration
+ * Default EventBridge adapter configuration
+ * Default values for EventBridge adapter configuration
  */
-export const DEFAULT_EVENTBRIDGE_CONFIG: Partial<EventBridgeConfig> = {
+export const DEFAULT_EVENTBRIDGE_ADAPTER_CONFIG: Partial<EventBridgeAdapterConfig> = {
   maxEntriesPerBatch: 10,
   region: 'us-east-1'
 };
 
 /**
- * EventBridge constants
- * Constants for EventBridge integration
+ * EventBridge adapter constants
+ * Constants for EventBridge adapter integration
  */
-export const EVENTBRIDGE_CONSTANTS = {
+export const EVENTBRIDGE_ADAPTER_CONSTANTS = {
   /** Maximum entries per batch (EventBridge limit) */
   MAX_ENTRIES_PER_BATCH: 10,
   /** Maximum detail size in bytes */

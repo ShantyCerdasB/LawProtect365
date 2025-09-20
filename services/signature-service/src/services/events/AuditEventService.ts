@@ -7,6 +7,7 @@
 
 import { BaseEventService, DomainEvent } from '@lawprotect/shared-ts';
 import { AuditEvent } from '../../domain/entities/AuditEvent';
+import { AuditEventTypes } from '../../domain/enums/AuditEventTypes';
 
 /**
  * AuditEventService implementation
@@ -28,7 +29,7 @@ export class AuditEventService extends BaseEventService {
    * @param auditEvent - The created audit event
    */
   async publishAuditEventCreated(auditEvent: AuditEvent): Promise<void> {
-    await this.publishEvent('audit.event_created', {
+    await this.publishEvent(AuditEventTypes.EVENT_CREATED, {
       auditEventId: auditEvent.getId().getValue(),
       type: auditEvent.getType(),
       entityId: auditEvent.getEntityId(),
@@ -52,7 +53,7 @@ export class AuditEventService extends BaseEventService {
     userId: string,
     accessedAt: Date
   ): Promise<void> {
-    await this.publishEvent('audit.trail_accessed', {
+    await this.publishEvent(AuditEventTypes.TRAIL_ACCESSED, {
       entityId,
       entityType,
       userId,
@@ -77,7 +78,7 @@ export class AuditEventService extends BaseEventService {
     exportFormat: string,
     eventCount: number
   ): Promise<void> {
-    await this.publishEvent('audit.events_exported', {
+    await this.publishEvent(AuditEventTypes.EVENTS_EXPORTED, {
       entityId,
       entityType,
       userId,
@@ -102,7 +103,7 @@ export class AuditEventService extends BaseEventService {
     userId: string,
     deletedAt: Date
   ): Promise<void> {
-    await this.publishEvent('audit.event_deleted', {
+    await this.publishEvent(AuditEventTypes.EVENT_DELETED, {
       auditEventId,
       entityId,
       entityType,
@@ -122,7 +123,7 @@ export class AuditEventService extends BaseEventService {
     olderThanDate: Date,
     cleanedUpAt: Date
   ): Promise<void> {
-    await this.publishEvent('audit.events_cleaned_up', {
+    await this.publishEvent(AuditEventTypes.EVENTS_CLEANED_UP, {
       cleanedUpCount,
       olderThanDate: olderThanDate.toISOString(),
       cleanedUpAt: cleanedUpAt.toISOString()

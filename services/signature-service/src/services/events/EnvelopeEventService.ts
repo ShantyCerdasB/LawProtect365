@@ -8,6 +8,7 @@
 import { BaseEventService, DomainEvent } from '@lawprotect/shared-ts';
 import { Envelope } from '../../domain/entities/Envelope';
 import { EnvelopeStatus } from '../../domain/enums/EnvelopeStatus';
+import { EnvelopeEventTypes } from '../../domain/enums/EnvelopeEventTypes';
 
 /**
  * EnvelopeEventService implementation
@@ -31,7 +32,7 @@ export class EnvelopeEventService extends BaseEventService {
    */
   async publishEnvelopeCreated(envelope: Envelope, userId: string): Promise<void> {
     const metadata = envelope.getMetadata();
-    await this.publishEvent('envelope.created', {
+    await this.publishEvent(EnvelopeEventTypes.CREATED, {
       envelopeId: envelope.getId().getValue(),
       title: metadata.title,
       description: metadata.description,
@@ -52,7 +53,7 @@ export class EnvelopeEventService extends BaseEventService {
    */
   async publishEnvelopeUpdated(envelope: Envelope, userId: string, changes: Record<string, unknown>): Promise<void> {
     const metadata = envelope.getMetadata();
-    await this.publishEvent('envelope.updated', {
+    await this.publishEvent(EnvelopeEventTypes.UPDATED, {
       envelopeId: envelope.getId().getValue(),
       title: metadata.title,
       description: metadata.description,
@@ -78,7 +79,7 @@ export class EnvelopeEventService extends BaseEventService {
     userId: string
   ): Promise<void> {
     const metadata = envelope.getMetadata();
-    await this.publishEvent('envelope.status_changed', {
+    await this.publishEvent(EnvelopeEventTypes.STATUS_CHANGED, {
       envelopeId: envelope.getId().getValue(),
       title: metadata.title,
       ownerId: envelope.getOwnerId(),
@@ -102,7 +103,7 @@ export class EnvelopeEventService extends BaseEventService {
     ownerId: string,
     userId: string
   ): Promise<void> {
-    await this.publishEvent('envelope.deleted', {
+    await this.publishEvent(EnvelopeEventTypes.DELETED, {
       envelopeId,
       title,
       ownerId,
@@ -117,7 +118,7 @@ export class EnvelopeEventService extends BaseEventService {
    */
   async publishEnvelopeExpired(envelope: Envelope): Promise<void> {
     const metadata = envelope.getMetadata();
-    await this.publishEvent('envelope.expired', {
+    await this.publishEvent(EnvelopeEventTypes.EXPIRED, {
       envelopeId: envelope.getId().getValue(),
       title: metadata.title,
       ownerId: envelope.getOwnerId(),
@@ -133,7 +134,7 @@ export class EnvelopeEventService extends BaseEventService {
    */
   async publishEnvelopeCompleted(envelope: Envelope, completedAt: Date): Promise<void> {
     const metadata = envelope.getMetadata();
-    await this.publishEvent('envelope.completed', {
+    await this.publishEvent(EnvelopeEventTypes.COMPLETED, {
       envelopeId: envelope.getId().getValue(),
       title: metadata.title,
       ownerId: envelope.getOwnerId(),
@@ -149,7 +150,7 @@ export class EnvelopeEventService extends BaseEventService {
    */
   async publishEnvelopeCancelled(envelope: Envelope, cancelledAt: Date, reason?: string): Promise<void> {
     const metadata = envelope.getMetadata();
-    await this.publishEvent('envelope.cancelled', {
+    await this.publishEvent(EnvelopeEventTypes.CANCELLED, {
       envelopeId: envelope.getId().getValue(),
       title: metadata.title,
       ownerId: envelope.getOwnerId(),

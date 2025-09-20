@@ -18,3 +18,6 @@ export * from './SortOrder';
 export * from './SortBy';
 export * from './OutboxStatuses';
 export * from './SignaturePermission';
+export * from './EnvelopeEventTypes';
+export * from './ConsentEventTypes';
+export * from './AuditEventTypes';

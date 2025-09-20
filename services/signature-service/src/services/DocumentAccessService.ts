@@ -10,6 +10,7 @@ import { SignerService } from './SignerService';
 import { EnvelopeService } from './EnvelopeService';
 import { AuditService } from './AuditService';
 import { AuditEventType } from '../domain/enums/AuditEventType';
+import { EnvelopeStatus } from '../domain/enums/EnvelopeStatus';
 import { SignerId } from '../domain/value-objects/SignerId';
 
 export class DocumentAccessService {
@@ -111,7 +112,7 @@ export class DocumentAccessService {
    */
   private resolveS3Key(envelope: any, envelopeId: any): string {
     const meta: any = (envelope as any)?.getMetadata?.() || {};
-    const isCompleted = envelope.getStatus && envelope.getStatus() === 'COMPLETED';
+    const isCompleted = envelope.getStatus && envelope.getStatus() === EnvelopeStatus.COMPLETED;
     
     if (isCompleted) {
       return this.getSignedS3Key(meta, envelopeId);
@@ -206,7 +207,7 @@ export class DocumentAccessService {
         envelopeId: envelopeId.getValue(),
         signerId: signerId.getValue(),
         userId: 'external-user',
-        userEmail: signer?.getEmail().getValue?.() || 'unknown',
+        userEmail: signer?.getEmail()?.getValue() || 'unknown',
         ipAddress: securityContext?.ipAddress,
         userAgent: securityContext?.userAgent,
         country: securityContext?.country,

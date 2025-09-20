@@ -5,15 +5,13 @@
  * to EventBridge with proper error handling, retry logic, and observability.
  */
 
-import { mapAwsError } from '@lawprotect/shared-ts';
-import { OutboxRepository, type OutboxRecord } from '@lawprotect/shared-ts';
-import type { EventBridgeAdapter } from '../../infrastructure/eventbridge/EventBridgeAdapter';
+import { mapAwsError, OutboxRepository, type OutboxRecord, type EventBridgeAdapter } from '../index.js';
 
 /**
- * Event publisher configuration
- * Configuration options for the event publisher
+ * Event publisher service configuration
+ * Configuration options for the event publisher service
  */
-export interface EventPublisherConfig {
+export interface EventPublisherServiceConfig {
   outboxRepository: OutboxRepository;
   eventBridgeAdapter: EventBridgeAdapter;
   maxBatchSize?: number;
@@ -22,10 +20,10 @@ export interface EventPublisherConfig {
 }
 
 /**
- * Event publisher statistics
+ * Event publisher service statistics
  * Statistics about event processing
  */
-export interface EventPublisherStats {
+export interface EventPublisherServiceStats {
   processed: number;
   failed: number;
   retried: number;
@@ -35,7 +33,7 @@ export interface EventPublisherStats {
 }
 
 /**
- * EventPublisher - Processes pending outbox events and publishes them to EventBridge
+ * EventPublisherService - Processes pending outbox events and publishes them to EventBridge
  * 
  * Implements the outbox pattern by:
  * 1. Pulling pending events from the outbox
@@ -43,14 +41,14 @@ export interface EventPublisherStats {
  * 3. Marking them as dispatched or failed
  * 4. Handling retries and error recovery
  */
-export class EventPublisher {
+export class EventPublisherService {
   private readonly outbox: OutboxRepository;
   private readonly eventBridge: EventBridgeAdapter;
   private readonly maxBatchSize: number;
   private readonly maxRetries: number;
   private readonly retryDelayMs: number;
 
-  constructor(config: EventPublisherConfig) {
+  constructor(config: EventPublisherServiceConfig) {
     this.outbox = config.outboxRepository;
     this.eventBridge = config.eventBridgeAdapter;
     this.maxBatchSize = config.maxBatchSize ?? 10;
@@ -63,9 +61,9 @@ export class EventPublisher {
    * @param maxBatch - Maximum number of events to process in this batch
    * @returns Statistics about the processing run
    */
-  async processPendingEvents(maxBatch?: number): Promise<EventPublisherStats> {
+  async processPendingEvents(maxBatch?: number): Promise<EventPublisherServiceStats> {
     const batchSize = Math.min(maxBatch ?? this.maxBatchSize, 100);
-    const stats: EventPublisherStats = {
+    const stats: EventPublisherServiceStats = {
       processed: 0,
       failed: 0,
       retried: 0,
@@ -192,8 +190,8 @@ export class EventPublisher {
    * @param maxIterations - Maximum number of iterations to prevent infinite loops
    * @returns Total statistics across all iterations
    */
-  async processAllPendingEvents(maxIterations: number = 10): Promise<EventPublisherStats> {
-    const totalStats: EventPublisherStats = {
+  async processAllPendingEvents(maxIterations: number = 10): Promise<EventPublisherServiceStats> {
+    const totalStats: EventPublisherServiceStats = {
       processed: 0,
       failed: 0,
       retried: 0,

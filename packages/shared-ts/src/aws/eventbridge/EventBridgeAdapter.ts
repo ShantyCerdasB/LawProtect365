@@ -5,32 +5,20 @@
  * for publishing domain events. Provides batching, error handling, and proper serialization.
  */
 
-import { mapAwsError, InternalError, ErrorCodes } from '@lawprotect/shared-ts';
+import { mapAwsError, InternalError, ErrorCodes, type DomainEvent } from '../../index.js';
 import type { 
-  EventBridgeConfig, 
-  EventBridgeEntry, 
-  EventBridgeClient,
-  EventBridgePutEventsResponse 
-} from './EventBridgeConfig';
-import { EVENTBRIDGE_CONSTANTS } from './EventBridgeConfig';
+  EventBridgeAdapterConfig, 
+  EventBridgeAdapterEntry, 
+  EventBridgeAdapterClient,
+  EventBridgeAdapterPutEventsResponse 
+} from './EventBridgeConfig.js';
+import { EVENTBRIDGE_ADAPTER_CONSTANTS } from './EventBridgeConfig.js';
 
 /**
- * Domain event interface for EventBridge
- * Represents a domain event in EventBridge format
+ * EventBridge adapter port interface
+ * Interface for EventBridge adapter operations
  */
-export interface DomainEvent {
-  id: string;
-  type: string;
-  payload?: Record<string, unknown>;
-  occurredAt: string;
-  metadata?: Record<string, string>;
-}
-
-/**
- * EventBusPort interface implementation
- * Interface for event bus operations
- */
-export interface EventBusPort {
+export interface EventBridgeAdapterPort {
   publish(events: readonly DomainEvent[]): Promise<void>;
 }
 
@@ -43,21 +31,21 @@ export interface EventBusPort {
  * - Proper serialization
  * - Observability and tracing
  */
-export class EventBridgeAdapter implements EventBusPort {
+export class EventBridgeAdapter implements EventBridgeAdapterPort {
   private readonly busName: string;
   private readonly source: string;
-  private readonly client: EventBridgeClient;
+  private readonly client: EventBridgeAdapterClient;
   private readonly resources?: string[];
   private readonly batchSize: number;
 
-  constructor(config: EventBridgeConfig, client: EventBridgeClient) {
+  constructor(config: EventBridgeAdapterConfig, client: EventBridgeAdapterClient) {
     this.busName = config.busName;
     this.source = config.source;
     this.client = client;
     this.resources = config.resources;
     
-    const requested = Math.floor(config.maxEntriesPerBatch ?? EVENTBRIDGE_CONSTANTS.MAX_ENTRIES_PER_BATCH);
-    this.batchSize = Math.min(EVENTBRIDGE_CONSTANTS.MAX_ENTRIES_PER_BATCH, Math.max(1, requested));
+    const requested = Math.floor(config.maxEntriesPerBatch ?? EVENTBRIDGE_ADAPTER_CONSTANTS.MAX_ENTRIES_PER_BATCH);
+    this.batchSize = Math.min(EVENTBRIDGE_ADAPTER_CONSTANTS.MAX_ENTRIES_PER_BATCH, Math.max(1, requested));
   }
 
   /**
@@ -89,13 +77,13 @@ export class EventBridgeAdapter implements EventBusPort {
    * @param event - Domain event to convert
    * @returns EventBridge entry
    */
-  private toEventBridgeEntry(event: DomainEvent): EventBridgeEntry {
-    const detail = this.serializePayload(event.payload);
+  private toEventBridgeEntry(event: DomainEvent): EventBridgeAdapterEntry {
+    const detail = this.serializePayload(event.payload as Record<string, unknown>);
     
     // Validate detail size
-    if (detail.length > EVENTBRIDGE_CONSTANTS.MAX_DETAIL_SIZE) {
+    if (detail.length > EVENTBRIDGE_ADAPTER_CONSTANTS.MAX_DETAIL_SIZE) {
       throw new InternalError(
-        `Event detail size exceeds maximum allowed size of ${EVENTBRIDGE_CONSTANTS.MAX_DETAIL_SIZE} bytes`,
+        `Event detail size exceeds maximum allowed size of ${EVENTBRIDGE_ADAPTER_CONSTANTS.MAX_DETAIL_SIZE} bytes`,
         ErrorCodes.COMMON_INTERNAL_ERROR
       );
     }
@@ -136,8 +124,8 @@ export class EventBridgeAdapter implements EventBusPort {
    * @param entries - Original entries that were sent
    */
   private async handleResponse(
-    response: EventBridgePutEventsResponse, 
-    entries: EventBridgeEntry[]
+    response: EventBridgeAdapterPutEventsResponse, 
+    entries: EventBridgeAdapterEntry[]
   ): Promise<void> {
     const failedCount = response.FailedEntryCount ?? 0;
     
@@ -182,7 +170,7 @@ export class EventBridgeAdapter implements EventBusPort {
    * Gets the EventBridge configuration
    * @returns Configuration object
    */
-  getConfig(): EventBridgeConfig {
+  getConfig(): EventBridgeAdapterConfig {
     return {
       busName: this.busName,
       source: this.source,

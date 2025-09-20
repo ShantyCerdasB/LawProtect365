@@ -14,6 +14,7 @@ import { AuditService } from './AuditService';
 import { ConsentEventService } from './events/ConsentEventService';
 import { CreateConsentRequest } from '../domain/types/consent/CreateConsentRequest';
 import { AuditEventType } from '../domain/enums/AuditEventType';
+import { ConsentEventTypes } from '../domain/enums/ConsentEventTypes';
 import { NotFoundError, BadRequestError, ForbiddenError, ConflictError, ErrorCodes } from '@lawprotect/shared-ts';
 
 /**
@@ -62,7 +63,7 @@ export class ConsentService {
     });
 
     // Publish event
-    await this.eventService.publishEvent('consent.created', {
+    await this.eventService.publishEvent(ConsentEventTypes.GIVEN, {
       consentId: createdConsent.getId().getValue(),
       signerId: request.signerId.getValue(),
       envelopeId: request.envelopeId.getValue(),

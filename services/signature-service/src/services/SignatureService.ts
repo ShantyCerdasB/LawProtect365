@@ -71,13 +71,6 @@ export class SignatureService {
    */
   async createSignature(request: CreateSignatureRequest): Promise<Signature> {
     try {
-      // eslint-disable-next-line no-console
-      console.log('[SignatureService.createSignature] START', {
-        signerId: request.signerId.getValue(),
-        envelopeId: request.envelopeId.getValue(),
-        kmsKeyId: request.kmsKeyId,
-        s3Key: request.s3Key
-      });
       // 1. Validate consent before allowing signature creation
       // Authorize consent lookup using external sentinel to allow invitation-token flows
       const consent = await this.consentService.getConsentBySignerAndEnvelope(
@@ -85,8 +78,6 @@ export class SignatureService {
         request.envelopeId.getValue(),
         'external-user'
       );
-      // eslint-disable-next-line no-console
-      console.log('[SignatureService.createSignature] consent', { found: Boolean(consent), given: consent?.getConsentGiven?.() });
       
       if (!consent?.getConsentGiven()) {
         throw new ForbiddenError(
@@ -117,16 +108,12 @@ export class SignatureService {
       );
 
       // 3. Validate business rules
-      // eslint-disable-next-line no-console
-      console.log('[SignatureService.createSignature] validate business rules');
       validateSignatureCreation(signature, {
         maxSignaturesPerEnvelope: 10,
         maxSignaturesPerSigner: 5
       });
 
       // 4. Validate compliance requirements
-      // eslint-disable-next-line no-console
-      console.log('[SignatureService.createSignature] validate compliance');
       validateSignatureComplianceRules(signature, 'VALIDATE' as any, {
         allowedAlgorithms: [domainAlg as any],
         minSecurityLevel: 'LOW' as any,
@@ -138,8 +125,6 @@ export class SignatureService {
       });
 
       // 5. Validate security requirements
-      // eslint-disable-next-line no-console
-      console.log('[SignatureService.createSignature] validate security');
       validateSignatureSecurityRules(signature, 'SIGN' as any, {
         allowedKMSKeys: [],
         kmsKeyFormat: /.+/,
@@ -172,11 +157,7 @@ export class SignatureService {
         }
       };
 
-      // eslint-disable-next-line no-console
-      console.log('[SignatureService.createSignature] calling kmsService.createSignature');
       const createdSignature = await this.kmsService.createSignature(kmsRequest);
-      // eslint-disable-next-line no-console
-      console.log('[SignatureService.createSignature] KMS created signature', { id: createdSignature.getId().getValue() });
 
       // 7. Log audit event (persisted synchronously)
       await this.auditService.createEvent({

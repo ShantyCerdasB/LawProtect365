@@ -6,6 +6,7 @@
  */
 
 import { BaseEventService, DomainEvent } from '@lawprotect/shared-ts';
+import { ConsentEventTypes } from '../../domain/enums/ConsentEventTypes';
 
 /**
  * ConsentEventService implementation
@@ -35,20 +36,13 @@ export class ConsentEventService extends BaseEventService {
     envelopeId: string,
     userId: string
   ): Promise<void> {
-    const event: DomainEvent = {
-      id: consentId,
-      type: 'consent.given',
-      payload: {
-        consentId,
-        signerId,
-        envelopeId,
-        userId,
-        timestamp: new Date().toISOString()
-      },
-      occurredAt: new Date().toISOString()
-    };
-
-    await this.publishModuleEvent(event);
+    await this.publishEvent(ConsentEventTypes.GIVEN, {
+      consentId,
+      signerId,
+      envelopeId,
+      userId,
+      timestamp: new Date().toISOString()
+    });
   }
 
   /**
@@ -64,20 +58,13 @@ export class ConsentEventService extends BaseEventService {
     envelopeId: string,
     userId: string
   ): Promise<void> {
-    const event: DomainEvent = {
-      id: consentId,
-      type: 'consent.revoked',
-      payload: {
-        consentId,
-        signerId,
-        envelopeId,
-        userId,
-        timestamp: new Date().toISOString()
-      },
-      occurredAt: new Date().toISOString()
-    };
-
-    await this.publishModuleEvent(event);
+    await this.publishEvent(ConsentEventTypes.REVOKED, {
+      consentId,
+      signerId,
+      envelopeId,
+      userId,
+      timestamp: new Date().toISOString()
+    });
   }
 
 }
