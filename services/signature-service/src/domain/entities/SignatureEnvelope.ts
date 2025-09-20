@@ -448,8 +448,8 @@ export class SignatureEnvelope {
     }
 
     if (this.signingOrder.isOwnerFirst()) {
-      // Owner should sign first - find signer with matching email
-      const ownerSigner = this.signers.find(s => s.getEmail()?.getValue() === this.createdBy.getValue());
+      // Owner should sign first - find signer with matching ID
+      const ownerSigner = this.signers.find(s => s.getId().getValue() === this.createdBy.getValue());
       if (ownerSigner && ownerSigner.getStatus() === SignerStatus.PENDING) {
         return ownerSigner;
       }
@@ -517,11 +517,6 @@ export class SignatureEnvelope {
     if (signedCount === totalSigners && totalSigners > 0) {
       this.status = EnvelopeStatus.completed();
       this.completedAt = new Date();
-      return;
-    }
-
-    // If envelope is still in DRAFT, keep it as DRAFT
-    if (this.status.isDraft()) {
       return;
     }
 

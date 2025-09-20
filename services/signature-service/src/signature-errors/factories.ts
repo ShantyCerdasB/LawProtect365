@@ -248,6 +248,18 @@ export const invitationTokenInvalid = (details?: unknown) =>
 export const invitationTokenExpired = (details?: unknown) =>
   new UnauthorizedError("Invitation token expired", SignatureErrorCodes.INVITATION_TOKEN_EXPIRED, details);
 
+/**
+ * Creates a ConflictError for when invitation token has already been used (409).
+ */
+export const invitationTokenAlreadyUsed = (details?: unknown) =>
+  new ConflictError("Invitation token has already been used", SignatureErrorCodes.INVITATION_TOKEN_ALREADY_USED, details);
+
+/**
+ * Creates a ForbiddenError for when invitation token has been revoked (403).
+ */
+export const invitationTokenRevoked = (details?: unknown) =>
+  new ForbiddenError("Invitation token has been revoked", SignatureErrorCodes.INVITATION_TOKEN_REVOKED, details);
+
 // ============================================================================
 // DOCUMENT SERVICE INTEGRATION ERRORS
 // ============================================================================

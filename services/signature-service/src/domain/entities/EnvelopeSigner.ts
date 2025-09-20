@@ -15,7 +15,8 @@ import { SignerStatus } from '@prisma/client';
 import { 
   invalidSignerState, 
   signerAlreadySigned,
-  signerAlreadyDeclined
+  signerAlreadyDeclined,
+  consentTextRequired
 } from '../../signature-errors';
 
 /**
@@ -257,6 +258,20 @@ export class EnvelopeSigner {
   }
 
   /**
+   * Validates that the signer can perform signing or declining actions
+   * @throws signerAlreadySigned when signer has already signed
+   * @throws signerAlreadyDeclined when signer has already declined
+   */
+  private validateCanPerformAction(): void {
+    if (this.status === SignerStatus.SIGNED) {
+      throw signerAlreadySigned('Signer has already signed');
+    }
+    if (this.status === SignerStatus.DECLINED) {
+      throw signerAlreadyDeclined('Signer has already declined');
+    }
+  }
+
+  /**
    * Marks the signer as signed with cryptographic evidence
    * @param documentHash - Hash of the document before signing
    * @param signatureHash - Hash of the signature
@@ -275,12 +290,7 @@ export class EnvelopeSigner {
     algorithm: string,
     metadata: SignatureMetadata
   ): void {
-    if (this.status === SignerStatus.SIGNED) {
-      throw signerAlreadySigned('Signer has already signed');
-    }
-    if (this.status === SignerStatus.DECLINED) {
-      throw signerAlreadyDeclined('Signer has already declined');
-    }
+    this.validateCanPerformAction();
 
     this.status = SignerStatus.SIGNED;
     this.signedAt = new Date();
@@ -303,12 +313,7 @@ export class EnvelopeSigner {
    * @throws signerAlreadyDeclined when signer has already declined
    */
   decline(reason: string): void {
-    if (this.status === SignerStatus.SIGNED) {
-      throw signerAlreadySigned('Signer has already signed');
-    }
-    if (this.status === SignerStatus.DECLINED) {
-      throw signerAlreadyDeclined('Signer has already declined');
-    }
+    this.validateCanPerformAction();
 
     this.status = SignerStatus.DECLINED;
     this.declinedAt = new Date();
@@ -321,12 +326,13 @@ export class EnvelopeSigner {
    * @param consentText - The consent text that was shown
    * @param ipAddress - IP address of the signer
    * @param userAgent - User agent of the signer
+   * @throws consentTextRequired when consent text is empty
    */
   recordConsent(consentText: string, ipAddress: string, userAgent: string): void {
     // Note: consentText is stored in the Consent entity, not here
     // We validate that consentText is not empty for audit purposes
     if (!consentText || consentText.trim().length === 0) {
-      throw new Error('Consent text cannot be empty');
+      throw consentTextRequired('Consent text cannot be empty');
     }
     
     this.consentGiven = true;

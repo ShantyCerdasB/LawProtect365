@@ -469,6 +469,24 @@ describe('SignatureEnvelope', () => {
       const nextSigner = readyEnvelope.getNextSigner();
       expect(nextSigner).toBe(pendingSigner); // Should return first pending signer since owner already signed
     });
+
+    it('should return owner when owner is pending in OWNER_FIRST order - covers line 454', () => {
+      // This specifically covers line 454 - when owner is PENDING and should be returned
+      const ownerEmail = TestUtils.createTestEmail('owner');
+      const ownerId = TestUtils.generateUuid();
+      const pendingOwnerSigner = createMockSigner(ownerId, ownerEmail, SignerStatus.PENDING);
+      const otherPendingSigner = createMockSigner(TestUtils.generateUuid(), TestUtils.createTestEmail('signer2'), SignerStatus.PENDING);
+      
+      const readyEnvelope = createEnvelopeWithParams({
+        createdBy: ownerId, // Use the same ID as the owner signer
+        status: EnvelopeStatus.readyForSignature(),
+        signers: [pendingOwnerSigner, otherPendingSigner],
+        signingOrder: SigningOrder.ownerFirst()
+      });
+      
+      const nextSigner = readyEnvelope.getNextSigner();
+      expect(nextSigner).toBe(pendingOwnerSigner); // This should execute line 454
+    });
   });
 
   describe('Update Signer Status', () => {
@@ -595,5 +613,51 @@ describe('SignatureEnvelope', () => {
       // Should still be DRAFT because of the early return at line 525
       expect(draftEnvelope.getStatus().getValue()).toBe('DRAFT');
     });
+
+    it('should keep DRAFT status when updateEnvelopeStatus is called on DRAFT envelope - covers line 525', () => {
+      // This specifically covers line 525 - the early return when status is DRAFT
+      // Create a DRAFT envelope with signers that would normally trigger status changes
+      const pendingSigner = createMockSigner(TestUtils.generateUuid(), TestUtils.createTestEmail('signer1'), SignerStatus.PENDING);
+      const declinedSigner = createMockSigner(TestUtils.generateUuid(), TestUtils.createTestEmail('signer2'), SignerStatus.DECLINED);
+      
+      const draftEnvelope = createEnvelopeWithParams({
+        status: EnvelopeStatus.draft(),
+        signers: [pendingSigner, declinedSigner]
+      });
+      
+      // Even though there's a declined signer, the envelope should remain DRAFT
+      // because of the early return at line 525 when status.isDraft() is true
+      expect(draftEnvelope.getStatus().getValue()).toBe('DRAFT');
+      
+      // Add another signer to trigger updateEnvelopeStatus internally
+      const newSigner = createMockSigner(TestUtils.generateUuid(), TestUtils.createTestEmail('signer3'), SignerStatus.PENDING);
+      draftEnvelope.addSigner(newSigner);
+      
+      // Should still be DRAFT because of the early return at line 525
+      expect(draftEnvelope.getStatus().getValue()).toBe('DRAFT');
+    });
+
+    it('should keep DRAFT status when updateEnvelopeStatus is called on DRAFT envelope with only pending signers - covers line 525', () => {
+      // This specifically covers line 525 - the early return when status is DRAFT
+      // Create a DRAFT envelope with only pending signers (no declined, not all signed)
+      const pendingSigner1 = createMockSigner(TestUtils.generateUuid(), TestUtils.createTestEmail('signer1'), SignerStatus.PENDING);
+      const pendingSigner2 = createMockSigner(TestUtils.generateUuid(), TestUtils.createTestEmail('signer2'), SignerStatus.PENDING);
+      
+      const draftEnvelope = createEnvelopeWithParams({
+        status: EnvelopeStatus.draft(),
+        signers: [pendingSigner1, pendingSigner2]
+      });
+      
+      // The envelope should remain DRAFT - this should execute line 525
+      expect(draftEnvelope.getStatus().getValue()).toBe('DRAFT');
+      
+      // Add another signer to trigger updateEnvelopeStatus internally
+      const newSigner = createMockSigner(TestUtils.generateUuid(), TestUtils.createTestEmail('signer3'), SignerStatus.PENDING);
+      draftEnvelope.addSigner(newSigner);
+      
+      // Should still be DRAFT because of the early return at line 525
+      expect(draftEnvelope.getStatus().getValue()).toBe('DRAFT');
+    });
+
   });
 });

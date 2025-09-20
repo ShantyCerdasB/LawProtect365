@@ -73,6 +73,13 @@ export class InvitationToken {
   }
 
   /**
+   * Gets the token (same as hash for this implementation)
+   */
+  getToken(): string {
+    return this.tokenHash;
+  }
+
+  /**
    * Gets the current token status
    */
   getStatus(): InvitationTokenStatus {
@@ -164,6 +171,21 @@ export class InvitationToken {
   }
 
   /**
+   * Gets metadata object with all relevant fields
+   */
+  getMetadata(): {
+    ipAddress?: string;
+    userAgent?: string;
+    country?: string;
+  } {
+    return {
+      ipAddress: this.ipAddress,
+      userAgent: this.userAgent,
+      country: this.country
+    };
+  }
+
+  /**
    * Gets the creation timestamp
    */
   getCreatedAt(): Date {
@@ -226,6 +248,9 @@ export class InvitationToken {
     this.status = InvitationTokenStatus.REVOKED;
     this.revokedAt = new Date();
     this.revokedReason = reason;
+    // Note: revokedBy is tracked for audit purposes but not stored in this entity
+    // It should be recorded in the audit trail
+    void revokedBy; // Suppress unused parameter warning
     this.updatedAt = new Date();
   }
 
