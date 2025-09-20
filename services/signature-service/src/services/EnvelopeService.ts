@@ -32,7 +32,10 @@ import {
   validateEnvelopeBusinessRules,
   validateEnvelopeComprehensive
 } from '../domain/rules/envelope/EnvelopeBusinessRules';
-import { validateEnvelopeStateTransition } from '../domain/rules/envelope/EnvelopeStateTransitionRules';
+import { 
+  validateEnvelopeStateTransition,
+  validateCompletionRequirements
+} from '../domain/rules/envelope/EnvelopeStateTransitionRules';
 import { validateEnvelopeAccessPermissions } from '../domain/rules/envelope/EnvelopeSecurityRules';
 
 /**
@@ -144,7 +147,9 @@ export class EnvelopeService {
           status: EnvelopeStatus.DRAFT
         });
       }
-    } catch { /* ignore publish errors */ }
+    } catch (error) {
+      // Ignore publish errors to prevent envelope creation from failing
+    }
 
     return createdEnvelope;
   }
@@ -218,7 +223,9 @@ export class EnvelopeService {
           changes: request
         });
       }
-    } catch { /* ignore publish errors */ }
+    } catch (error) {
+      // Ignore publish errors to prevent envelope update from failing
+    }
 
     return updatedEnvelope;
   }
@@ -235,39 +242,25 @@ export class EnvelopeService {
     _userId: string,
     context: EnvelopeSecurityContext
   ): Promise<Envelope> {
-    try {
-      // eslint-disable-next-line no-console
-      console.log('[EnvelopeService.getEnvelope] fetching envelope', { envelopeId: envelopeId.getValue() });
-      const envelope = await this.envelopeRepository.getById(envelopeId);
-      if (!envelope) {
-        throw new NotFoundError(
-          `Envelope with ID ${envelopeId.getValue()} not found`,
-          ErrorCodes.COMMON_NOT_FOUND
-        );
-      }
-
-      // Validate access permissions using domain rules for READ
-      // eslint-disable-next-line no-console
-      console.log('[EnvelopeService.getEnvelope] access check', { ownerId: envelope.getOwnerId(), userId: context.userId, permission: context.permission, accessType: context.accessType });
-      validateEnvelopeAccessPermissions({
-        userId: context.userId,
-        accessType: context.accessType,
-        permission: context.permission,
-        ipAddress: context.ipAddress,
-        userAgent: context.userAgent,
-        timestamp: context.timestamp
-      }, EnvelopeOperation.READ, envelope.getOwnerId());
-
-      return envelope;
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('[EnvelopeService.getEnvelope] ERROR', {
-        name: (err as any)?.name,
-        code: (err as any)?.code,
-        message: (err as any)?.message
-      });
-      throw err;
+    const envelope = await this.envelopeRepository.getById(envelopeId);
+    if (!envelope) {
+      throw new NotFoundError(
+        `Envelope with ID ${envelopeId.getValue()} not found`,
+        ErrorCodes.COMMON_NOT_FOUND
+      );
     }
+
+    // Validate access permissions using domain rules for READ
+    validateEnvelopeAccessPermissions({
+      userId: context.userId,
+      accessType: context.accessType,
+      permission: context.permission,
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+      timestamp: context.timestamp
+    }, EnvelopeOperation.READ, envelope.getOwnerId());
+
+    return envelope;
   }
 
   /**
@@ -302,24 +295,10 @@ export class EnvelopeService {
     );
 
     // Delete related entities first
-    // eslint-disable-next-line no-console
-    console.log('[EnvelopeService.deleteEnvelope] deleting related entities...', { envelopeId: envelopeId.getValue() });
-    try {
-      await this.deleteRelatedEntities(envelopeId);
-      // eslint-disable-next-line no-console
-      console.log('[EnvelopeService.deleteEnvelope] related entities deleted');
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.log('[EnvelopeService.deleteEnvelope] failed deleting related entities', { name: (err as any)?.name, code: (err as any)?.code, message: (err as any)?.message });
-      throw err;
-    }
+    await this.deleteRelatedEntities(envelopeId);
 
     // Delete envelope
-    // eslint-disable-next-line no-console
-    console.log('[EnvelopeService.deleteEnvelope] deleting envelope row...');
     await this.envelopeRepository.delete(envelopeId);
-    // eslint-disable-next-line no-console
-    console.log('[EnvelopeService.deleteEnvelope] envelope deleted');
 
     // Create audit event
     await this.auditService.createEvent({
@@ -353,14 +332,6 @@ export class EnvelopeService {
     userId: string,
     context: EnvelopeSecurityContext
   ): Promise<Envelope> {
-    // eslint-disable-next-line no-console
-    console.log('[EnvelopeService.changeEnvelopeStatus] start', {
-      envelopeId: envelopeId.getValue(),
-      newStatus,
-      userId,
-      permission: (context as any)?.permission,
-      accessType: (context as any)?.accessType
-    });
     // Get existing envelope
     const envelope = await this.envelopeRepository.getById(envelopeId);
     if (!envelope) {
@@ -369,12 +340,6 @@ export class EnvelopeService {
         ErrorCodes.COMMON_NOT_FOUND
       );
     }
-    // eslint-disable-next-line no-console
-    console.log('[EnvelopeService.changeEnvelopeStatus] current', {
-      status: envelope.getStatus(),
-      documentId: (envelope as any)?.getDocumentId?.() || (envelope as any)?.documentId,
-      title: envelope.getMetadata().title
-    });
 
     // Use comprehensive validation
     await validateEnvelopeComprehensive(
@@ -386,8 +351,6 @@ export class EnvelopeService {
         documentRepository: this.documentRepository
       }
     );
-    // eslint-disable-next-line no-console
-    console.log('[EnvelopeService.changeEnvelopeStatus] validations OK');
 
     // Validate state transition using domain rules
     validateEnvelopeStateTransition(envelope, newStatus);
@@ -422,18 +385,22 @@ export class EnvelopeService {
           newStatus
         });
       }
-    } catch { /* ignore publish errors */ }
+    } catch (error) {
+      // Ignore publish errors to prevent envelope status change from failing
+    }
 
     return updatedEnvelope;
   }
 
   /**
-   * Completes the envelope if all signers have signed.
-   * Applies necessary intermediate transitions according to workflow rules.
+   * Attempts to complete the envelope if all signers and signatures are completed
+   * @param envelopeId - The envelope ID to complete
+   * @param context - Security context for authorization
+   * @returns The envelope (completed if requirements met, unchanged otherwise)
+   * @throws NotFoundError when envelope is not found
    */
   async completeIfAllSigned(
     envelopeId: EnvelopeId,
-    _userId: string,
     context: EnvelopeSecurityContext
   ): Promise<Envelope> {
     const envelope = await this.envelopeRepository.getById(envelopeId);
@@ -444,60 +411,81 @@ export class EnvelopeService {
       );
     }
 
-    const signers = await this.signerRepository.getByEnvelope(envelopeId.getValue());
-    const signerItems = (signers as any)?.items ?? [];
-    // Accept both DTOs (with 'status' string) and domain entities (with getStatus())
-    const allSigned = signerItems.length > 0 && signerItems.every((s: any) => {
-      const status = typeof s?.getStatus === 'function' ? s.getStatus() : s?.status;
-      return status === (require('../domain/enums/SignerStatus').SignerStatus.SIGNED);
-    });
-    if (!allSigned) {
+    try {
+      const signatures = await this.signatureRepository.getByEnvelope(envelopeId.getValue());
+      const signatureItems = signatures.items;
+
+      // Load signers from repository to ensure we have the most up-to-date data
+      const signers = await this.signerRepository.getByEnvelope(envelopeId.getValue());
+      const signerItems = signers.items;
+
+      // Debug: Log signature and signer counts
+      console.log(`[DEBUG] Envelope ${envelopeId.getValue()}:`, {
+        signerCount: signerItems.length,
+        signatureCount: signatureItems.length,
+        signerStatuses: signerItems.map(s => (s as any).getStatus?.() || (s as any).status),
+        signatureStatuses: signatureItems.map(s => (s as any).getStatus?.() || (s as any).status)
+      });
+
+      validateCompletionRequirements(envelope, signatureItems);
+
+      const ownerId = envelope.getOwnerId();
+      const ownerContext: EnvelopeSecurityContext = {
+        ...context,
+        userId: ownerId,
+        permission: PermissionLevel.OWNER,
+        accessType: AccessType.DIRECT
+      };
+
+      let current = envelope;
+      
+      if (current.getStatus() === EnvelopeStatus.DRAFT) {
+        current = await this.changeEnvelopeStatus(envelopeId, EnvelopeStatus.SENT, ownerId, ownerContext);
+      }
+
+      if (current.getStatus() !== EnvelopeStatus.COMPLETED) {
+        validateEnvelopeStateTransition(current, EnvelopeStatus.COMPLETED);
+        
+        const completedAt = new Date();
+        await this.envelopeRepository.update(envelopeId, { 
+          status: EnvelopeStatus.COMPLETED,
+          completedAt
+        } as Partial<Envelope>);
+
+        await this.auditService.createEvent({
+          type: AuditEventType.ENVELOPE_COMPLETED,
+          envelopeId: envelopeId.getValue(),
+          userId: ownerId,
+          userEmail: (context as any)?.email,
+          metadata: { 
+            oldStatus: current.getStatus(), 
+            newStatus: EnvelopeStatus.COMPLETED,
+            completedAt: completedAt.toISOString()
+          },
+          description: `Envelope completed: ${envelope.getMetadata().title}`
+        });
+
+        try {
+          const signersForEvent = await this.signerRepository.getByEnvelope(envelopeId.getValue());
+          const shouldPublish = signersForEvent.items.length > 1;
+          if (shouldPublish) {
+            const completedEnvelope = await this.envelopeRepository.getById(envelopeId);
+            if (completedEnvelope) {
+              await this.eventService.publishEnvelopeCompleted(completedEnvelope, completedAt);
+            }
+          }
+        } catch (error) {
+          // Ignore publish errors to prevent envelope completion from failing
+        }
+        
+        current = await this.envelopeRepository.getById(envelopeId) as Envelope;
+      }
+
+      return current;
+    } catch (error) {
+      // If completion requirements are not met, return the envelope unchanged
       return envelope;
     }
-
-    const ownerId = envelope.getOwnerId();
-    const ownerContext: EnvelopeSecurityContext = {
-      ...context,
-      userId: ownerId,
-      permission: PermissionLevel.OWNER,
-      accessType: AccessType.DIRECT
-    } as any;
-
-    let current = envelope;
-    if (current.getStatus() === EnvelopeStatus.DRAFT) {
-      // Transition to SENT (safe via normal validation)
-      current = await this.changeEnvelopeStatus(envelopeId, EnvelopeStatus.SENT, ownerId, ownerContext);
-    }
-
-    // We have externally validated that all signers are SIGNED; apply completion directly
-    if (current.getStatus() !== EnvelopeStatus.COMPLETED) {
-      await this.envelopeRepository.update(envelopeId, { status: EnvelopeStatus.COMPLETED } as Partial<Envelope>);
-      // Audit (persisted synchronously)
-      await this.auditService.createEvent({
-        type: AuditEventType.ENVELOPE_STATUS_CHANGED,
-        envelopeId: envelopeId.getValue(),
-        userId: ownerId,
-        userEmail: (context as any)?.email,
-        metadata: { oldStatus: current.getStatus(), newStatus: EnvelopeStatus.COMPLETED },
-        description: `Envelope status changed from ${current.getStatus()} to ${EnvelopeStatus.COMPLETED}`
-      });
-      // Conditional publish
-      try {
-        const signers2 = await this.signerRepository.getByEnvelope(envelopeId.getValue());
-        const shouldPublish2 = ((signers2 as any)?.items ?? []).length > 1;
-        if (shouldPublish2) {
-          await this.eventService.publishEvent('envelope.status_changed', {
-            envelopeId: envelopeId.getValue(),
-            userId: ownerId,
-            oldStatus: current.getStatus(),
-            newStatus: EnvelopeStatus.COMPLETED
-          });
-        }
-      } catch { /* ignore publish errors */ }
-      current = (await this.envelopeRepository.getById(envelopeId)) as Envelope;
-    }
-
-    return current;
   }
 
   /**

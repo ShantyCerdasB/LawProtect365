@@ -60,7 +60,6 @@ export const putMetrics = (
     emf[m.name] = m.value;
   }
 
-  console.log(JSON.stringify(emf));
 };
 
 /**

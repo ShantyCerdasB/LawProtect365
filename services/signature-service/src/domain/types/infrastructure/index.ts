@@ -11,8 +11,9 @@ export * from './common';
 // Entity-specific infrastructure types
 export * from './envelope';
 export * from './audit';
-export * from './outbox';
 export * from './consent';
 export * from './signature';
 export * from './signer';
 export * from './invitation-token';
+export * from '../document-access';
+export * from '../envelope-service';

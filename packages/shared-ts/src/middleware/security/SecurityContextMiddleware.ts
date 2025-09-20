@@ -66,12 +66,6 @@ export const withSecurityContext = (): BeforeMiddleware => {
     // Attach security context to event
     (evt as any).securityContext = securityContext;
     
-    console.log('✅ [SECURITY DEBUG] Security context created:', {
-      userId: securityContext.userId,
-      ipAddress: securityContext.ipAddress,
-      accessType: securityContext.accessType,
-      permission: securityContext.permission
-    });
   };
 };
 

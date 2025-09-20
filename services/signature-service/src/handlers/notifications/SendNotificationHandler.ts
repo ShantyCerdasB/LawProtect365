@@ -79,8 +79,6 @@ export const sendNotificationHandler = ControllerFactory.createCommand({
         const { requestBody, envelopeId, userId, securityContext } = params;
 
         // Get envelope and validate access
-        // eslint-disable-next-line no-console
-        console.log('[SendNotificationHandler] START', { envelopeId, userId, type: requestBody?.type });
         const envelope = await this.envelopeService.getEnvelope(
           new EnvelopeId(envelopeId),
           userId,
@@ -106,14 +104,12 @@ export const sendNotificationHandler = ControllerFactory.createCommand({
         } else if (requestBody.type === 'reminder') {
           // Delegate to SignerService to send reminders and publish events
           try {
-            const result = await this.signerService.sendReminders(
+            await this.signerService.sendReminders(
               new EnvelopeId(envelopeId),
               requestBody.signerIds,
               securityContext
             );
-            // eslint-disable-next-line no-console
-            console.log('[SendNotificationHandler] sendReminders OK', { sent: result.sent });
-          } catch (e: any) {
+            } catch (e: any) {
             // eslint-disable-next-line no-console
             console.error('[SendNotificationHandler] sendReminders ERROR', { name: e?.name, code: e?.code, message: e?.message });
             throw e;

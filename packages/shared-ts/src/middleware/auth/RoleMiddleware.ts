@@ -54,7 +54,6 @@ export const withRoleValidation = (requiredRoles: UserRole[]): BeforeMiddleware 
       );
     }
 
-    console.log(`✅ [ROLE DEBUG] Role validation successful. User has roles: ${normalizedRoles.join(", ")}`);
   };
 };
 
@@ -100,7 +99,6 @@ export const withMinimumRole = (minimumRole: UserRole): BeforeMiddleware => {
       );
     }
 
-    console.log(`✅ [ROLE DEBUG] Minimum role validation successful. User has roles: ${normalizedRoles.join(", ")}`);
   };
 };
 
@@ -140,6 +138,5 @@ export const withExactRole = (exactRole: UserRole): BeforeMiddleware => {
       );
     }
 
-    console.log(`✅ [ROLE DEBUG] Exact role validation successful. User has role: ${exactRole}`);
   };
 };

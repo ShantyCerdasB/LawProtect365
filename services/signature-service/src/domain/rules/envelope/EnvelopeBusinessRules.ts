@@ -548,12 +548,8 @@ export async function validateEnvelopeBusinessRules(
   await validateDocumentExists(envelopeData.documentId, documentRepository);
   
   // Validate status for operation
-  // eslint-disable-next-line no-console
-  console.log('[EnvelopeRules] validateEnvelopeStatusForBusinessOperation');
   validateEnvelopeStatusForBusinessOperation(envelopeData.currentStatus, envelopeData.operation);
 
-  // eslint-disable-next-line no-console
-  console.log('[EnvelopeRules] BR end - OK');
 }
 
 /**

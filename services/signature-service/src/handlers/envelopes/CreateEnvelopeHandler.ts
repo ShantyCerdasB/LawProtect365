@@ -133,11 +133,6 @@ export const createEnvelopeHandler = ControllerFactory.createCommand({
   responseType: 'created',
   transformResult: async (result: any) => {
     // Transform domain entities to API response format
-    // eslint-disable-next-line no-console
-    console.log('[CreateEnvelopeHandler] Transforming result', {
-      envelopeId: result?.envelope?.getId?.().getValue?.(),
-      hasSigners: Array.isArray(result?.signers) ? result.signers.length : undefined
-    });
     return {
       envelopeId: result.envelope.getId().getValue(),
       envelope: {

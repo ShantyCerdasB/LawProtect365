@@ -79,11 +79,7 @@ export class EnvelopeRepository extends BaseRepository implements Repository<Env
           sk: EnvelopeKeyBuilders.buildMetaSk() 
         }
       });
-      // eslint-disable-next-line no-console
-      console.log('DDB get Envelope', { id: envelopeId.getValue(), found: Boolean(res.Item) });
       if (!res.Item) return null;
-      // eslint-disable-next-line no-console
-      console.log('DDB get Envelope item keys', Object.keys(res.Item as any));
       try {
         return envelopeDdbMapper.fromDTO(res.Item as any);
       } catch (mapErr: any) {
@@ -115,15 +111,11 @@ export class EnvelopeRepository extends BaseRepository implements Repository<Env
    */
   async create(entity: Envelope): Promise<Envelope> {
     try {
-      // eslint-disable-next-line no-console
-      console.log('DDB put Envelope start', { table: this.tableName, id: entity.getId().getValue() });
       await this.ddb.put({
         TableName: this.tableName,
         Item: envelopeDdbMapper.toDTO(entity) as any,
         ConditionExpression: "attribute_not_exists(pk) AND attribute_not_exists(sk)"
       });
-      // eslint-disable-next-line no-console
-      console.log('DDB put Envelope success', { id: entity.getId().getValue() });
       return entity;
     } catch (err: any) {
       // eslint-disable-next-line no-console

@@ -82,7 +82,6 @@ process.env.JWKS_URI = 'http://localhost:3000/.well-known/jwks.json';
  * @param timeout - 10 second timeout for server startup and KMS setup
  */
 beforeAll(async () => {
-  console.log('🔐 Starting improved mock JWKS server for tests...');
   await startMockJwksServer();
   
   // Ensure KMS test key and alias exist in LocalStack
@@ -116,7 +115,6 @@ beforeAll(async () => {
  * @param timeout - 5 second timeout for server shutdown
  */
 afterAll(async () => {
-  console.log('🔐 Stopping mock JWKS server...');
   await stopMockJwksServer();
 }, 5000);
 

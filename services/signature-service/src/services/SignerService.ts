@@ -64,22 +64,12 @@ export class SignerService {
    * @returns The updated signer
    */
   async declineSigner(request: DeclineSignerRequest): Promise<Signer> {
-    try {
-      console.log('[SignerService.declineSigner] Starting decline process', {
-        signerId: request.signerId.getValue(),
-        userId: request.userId,
-        reason: request.reason
-      });
-
-      const { signer, envelope } = await this.loadSignerAndEnvelope(request);
+    try {const { signer, envelope } = await this.loadSignerAndEnvelope(request);
       const declineWorkflowResult = await this.validateDeclineWorkflow(signer, envelope, request);
       const updatedSigner = await this.updateSignerToDeclined(request);
       await this.createSignerDeclineAuditEvent(signer, request);
       await this.publishSignerDeclinedEvent(updatedSigner, request);
-      await this.handleEnvelopeCancellationIfNeeded(signer, envelope, declineWorkflowResult, request);
-
-      console.log('[SignerService.declineSigner] Decline process completed successfully');
-      return updatedSigner;
+      await this.handleEnvelopeCancellationIfNeeded(signer, envelope, declineWorkflowResult, request);return updatedSigner;
     } catch (error) {
       console.error('[SignerService.declineSigner] Error occurred:', {
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -94,39 +84,17 @@ export class SignerService {
   /**
    * Loads signer and envelope from repository
    */
-  private async loadSignerAndEnvelope(request: DeclineSignerRequest): Promise<{ signer: Signer; envelope: Envelope }> {
-    console.log('[SignerService.declineSigner] Getting signer from repository');
-    const signer = await this.signerRepository.getById(request.signerId);
-    if (!signer) {
-      console.log('[SignerService.declineSigner] Signer not found');
-      throw new NotFoundError(
+  private async loadSignerAndEnvelope(request: DeclineSignerRequest): Promise<{ signer: Signer; envelope: Envelope }> {const signer = await this.signerRepository.getById(request.signerId);
+    if (!signer) {throw new NotFoundError(
         `Signer with ID ${request.signerId.getValue()} not found`,
         ErrorCodes.COMMON_NOT_FOUND
       );
-    }
-    console.log('[SignerService.declineSigner] Signer found', {
-      signerId: signer.getId().getValue(),
-      envelopeId: signer.getEnvelopeId(),
-      status: signer.getStatus(),
-      email: signer.getEmail().getValue()
-    });
-
-    console.log('[SignerService.declineSigner] Getting envelope from repository');
-    const envelope = await this.envelopeRepository.getById(new EnvelopeId(signer.getEnvelopeId()));
-    if (!envelope) {
-      console.log('[SignerService.declineSigner] Envelope not found');
-      throw new NotFoundError(
+    }const envelope = await this.envelopeRepository.getById(new EnvelopeId(signer.getEnvelopeId()));
+    if (!envelope) {throw new NotFoundError(
         `Envelope with ID ${signer.getEnvelopeId()} not found`,
         ErrorCodes.COMMON_NOT_FOUND
       );
-    }
-    console.log('[SignerService.declineSigner] Envelope found', {
-      envelopeId: envelope.getId().getValue(),
-      status: envelope.getStatus(),
-      signerCount: envelope.getSigners().length
-    });
-
-    return { signer, envelope };
+    }return { signer, envelope };
   }
 
   /**
@@ -136,27 +104,18 @@ export class SignerService {
     signer: Signer,
     envelope: Envelope,
     request: DeclineSignerRequest
-  ): Promise<any> {
-    console.log('[SignerService.declineSigner] Validating decline workflow');
-    const declineWorkflowResult = handleSignerDeclineWorkflow(signer, envelope, {
+  ): Promise<any> {const declineWorkflowResult = handleSignerDeclineWorkflow(signer, envelope, {
       reason: request.reason,
       timestamp: new Date(),
       ipAddress: request.ipAddress,
       userAgent: request.userAgent
-    });
-    console.log('[SignerService.declineSigner] Workflow validation completed', {
-      shouldCancelEnvelope: declineWorkflowResult.shouldCancelEnvelope,
-      cancellationReason: declineWorkflowResult.cancellationReason
-    });
-    return declineWorkflowResult;
+    });return declineWorkflowResult;
   }
 
   /**
    * Updates signer status to DECLINED
    */
-  private async updateSignerToDeclined(request: DeclineSignerRequest): Promise<Signer> {
-    console.log('[SignerService.declineSigner] Updating signer status to DECLINED');
-    const updatedSigner = await this.signerRepository.update(request.signerId, {
+  private async updateSignerToDeclined(request: DeclineSignerRequest): Promise<Signer> {const updatedSigner = await this.signerRepository.update(request.signerId, {
       status: SignerStatus.DECLINED,
       declinedAt: new Date(),
       metadata: {
@@ -164,17 +123,13 @@ export class SignerService {
         ipAddress: request.ipAddress,
         userAgent: request.userAgent
       }
-    });
-    console.log('[SignerService.declineSigner] Signer status updated successfully');
-    return updatedSigner;
+    });return updatedSigner;
   }
 
   /**
    * Creates audit event for signer decline
    */
-  private async createSignerDeclineAuditEvent(signer: Signer, request: DeclineSignerRequest): Promise<void> {
-    console.log('[SignerService.declineSigner] Creating audit event for signer decline');
-    await this.auditService.createEvent({
+  private async createSignerDeclineAuditEvent(signer: Signer, request: DeclineSignerRequest): Promise<void> {await this.auditService.createEvent({
       envelopeId: signer.getEnvelopeId(),
       description: `Signer ${signer.getEmail().getValue()} declined to sign`,
       type: AuditEventType.SIGNER_DECLINED,
@@ -185,22 +140,16 @@ export class SignerService {
         ipAddress: request.ipAddress,
         userAgent: request.userAgent
       }
-    });
-    console.log('[SignerService.declineSigner] Audit event created successfully');
-  }
+    });}
 
   /**
    * Publishes signer declined event
    */
-  private async publishSignerDeclinedEvent(updatedSigner: Signer, request: DeclineSignerRequest): Promise<void> {
-    console.log('[SignerService.declineSigner] Publishing signer declined event');
-    await this.signerEventService.publishSignerDeclined(
+  private async publishSignerDeclinedEvent(updatedSigner: Signer, request: DeclineSignerRequest): Promise<void> {await this.signerEventService.publishSignerDeclined(
       updatedSigner,
       new Date(),
       request.reason
-    );
-    console.log('[SignerService.declineSigner] Signer declined event published successfully');
-  }
+    );}
 
   /**
    * Handles envelope cancellation if needed
@@ -226,27 +175,15 @@ export class SignerService {
     envelope: Envelope,
     declineWorkflowResult: any,
     request: DeclineSignerRequest
-  ): Promise<void> {
-    console.log('[SignerService.declineSigner] Cancelling envelope due to signer decline');
-    
-    console.log('[SignerService.declineSigner] Creating cancelled envelope');
-    const cancelledEnvelope = createCancelledEnvelope(envelope);
-
-    console.log('[SignerService.declineSigner] Updating envelope status to CANCELLED');
-    await this.envelopeRepository.update(new EnvelopeId(signer.getEnvelopeId()), cancelledEnvelope);
+  ): Promise<void> {const cancelledEnvelope = createCancelledEnvelope(envelope);await this.envelopeRepository.update(new EnvelopeId(signer.getEnvelopeId()), cancelledEnvelope);
 
     await this.createEnvelopeCancellationAuditEvent(signer, request);
-    await this.publishEnvelopeCancelledEvent(cancelledEnvelope, declineWorkflowResult);
-    
-    console.log('[SignerService.declineSigner] Envelope cancellation completed successfully');
-  }
+    await this.publishEnvelopeCancelledEvent(cancelledEnvelope, declineWorkflowResult);}
 
   /**
    * Creates audit event for envelope cancellation
    */
-  private async createEnvelopeCancellationAuditEvent(signer: Signer, request: DeclineSignerRequest): Promise<void> {
-    console.log('[SignerService.declineSigner] Creating audit event for envelope cancellation');
-    await this.auditService.createEvent({
+  private async createEnvelopeCancellationAuditEvent(signer: Signer, request: DeclineSignerRequest): Promise<void> {await this.auditService.createEvent({
       envelopeId: signer.getEnvelopeId(),
       description: `Envelope cancelled due to signer decline`,
       type: AuditEventType.ENVELOPE_CANCELLED,
@@ -262,9 +199,7 @@ export class SignerService {
   /**
    * Publishes envelope cancelled event
    */
-  private async publishEnvelopeCancelledEvent(cancelledEnvelope: Envelope, declineWorkflowResult: any): Promise<void> {
-    console.log('[SignerService.declineSigner] Publishing envelope cancelled event');
-    await this.envelopeEventService.publishEnvelopeCancelled(
+  private async publishEnvelopeCancelledEvent(cancelledEnvelope: Envelope, declineWorkflowResult: any): Promise<void> {await this.envelopeEventService.publishEnvelopeCancelled(
       cancelledEnvelope,
       new Date(),
       declineWorkflowResult.cancellationReason
@@ -274,9 +209,7 @@ export class SignerService {
   /**
    * Logs that envelope remains active
    */
-  private async logEnvelopeRemainsActive(signer: Signer, envelope: Envelope, request: DeclineSignerRequest): Promise<void> {
-    console.log('[SignerService.declineSigner] Envelope will not be cancelled');
-    await this.auditService.createEvent({
+  private async logEnvelopeRemainsActive(signer: Signer, envelope: Envelope, request: DeclineSignerRequest): Promise<void> {await this.auditService.createEvent({
       envelopeId: signer.getEnvelopeId(),
       description: `Signer declined but envelope remains active (cannot cancel)`,
       type: AuditEventType.SIGNER_DECLINED,
@@ -286,9 +219,7 @@ export class SignerService {
         declineReason: request.reason,
         envelopeStatus: envelope.getStatus()
       }
-    });
-    console.log('[SignerService.declineSigner] Additional audit event created');
-  }
+    });}
 
   /**
    * Gets a signer by ID
@@ -306,15 +237,9 @@ export class SignerService {
    */
   async getSignersByEnvelope(envelopeId: EnvelopeId): Promise<Signer[]> {
     try {
-      // eslint-disable-next-line no-console
-      console.log('[SignerService.getSignersByEnvelope] querying', { envelopeId: envelopeId.getValue() });
       const result = await this.signerRepository.getByEnvelope(envelopeId.getValue());
-      // eslint-disable-next-line no-console
-      console.log('[SignerService.getSignersByEnvelope] result', { count: result.items.length, firstKeys: result.items[0] ? Object.keys(result.items[0] as any) : [] });
       // Convert DTOs to domain entities using the mapper
       const mapped = result.items.map(item => signerDdbMapper.fromDTO(item as any));
-      // eslint-disable-next-line no-console
-      console.log('[SignerService.getSignersByEnvelope] mapped', { count: mapped.length });
       return mapped;
     } catch (error) {
       // eslint-disable-next-line no-console
@@ -570,8 +495,6 @@ export class SignerService {
     }
   ): Promise<{ sent: number; recipients: Array<{ signerId: string; email: string }> }> {
     try {
-      // eslint-disable-next-line no-console
-      console.log('[SignerService.sendReminders] START', { envelopeId: envelopeId.getValue(), signerIdsCount: signerIds?.length || 0, userId: securityContext.userId });
       const envelope = await this.envelopeRepository.getById(envelopeId);
       if (!envelope) {
         throw new NotFoundError('Envelope not found', ErrorCodes.COMMON_NOT_FOUND);
@@ -591,8 +514,6 @@ export class SignerService {
         recipients = recipients.filter(s => idSet.has(s.getId().getValue()));
       }
 
-      // eslint-disable-next-line no-console
-      console.log('[SignerService.sendReminders] recipients', { count: recipients.length });
       for (const signer of recipients) {
         await this.signerEventService.publishSignerReminder(signer, securityContext.userId);
       }
@@ -610,8 +531,6 @@ export class SignerService {
         }
       });
 
-      // eslint-disable-next-line no-console
-      console.log('[SignerService.sendReminders] DONE', { sent: recipients.length });
       return {
         sent: recipients.length,
         recipients: recipients.map(r => ({ signerId: r.getId().getValue(), email: r.getEmail().getValue() }))
@@ -833,9 +752,7 @@ export class SignerService {
     } catch (error) {
       if (error instanceof BadRequestError) {
         throw error;
-      }
-      console.log('[SignerService] Signing order validation failed, allowing signing to proceed:', error);
-    }
+      }}
   }
 
   /**
@@ -879,9 +796,7 @@ export class SignerService {
     try {
       const envelope = await envelopeService.getEnvelope(envelopeId, userId, securityContext);
       return envelope.getSigningOrder().getType() as SigningOrderType;
-    } catch (envelopeError) {
-      console.log('[SignerService] Cannot access envelope for signing order validation, skipping:', envelopeError);
-      return null;
+    } catch (envelopeError) {return null;
     }
   }
 

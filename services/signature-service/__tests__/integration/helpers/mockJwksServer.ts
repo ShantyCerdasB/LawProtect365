@@ -110,7 +110,6 @@ app.get('/.well-known/jwks.json', (_req, res) => {
   res.header('Access-Control-Allow-Methods', 'GET');
   res.header('Access-Control-Allow-Headers', 'Content-Type');
   
-  console.log('🔍 JWKS requested, serving key:', keyMetadata.keyId);
   res.json(jwksState.value);
 });
 
@@ -156,8 +155,6 @@ export const startMockJwksServer = async (): Promise<void> => {
   return new Promise((resolve, reject) => {
     try {
       serverState.value = app.listen(PORT, () => {
-        console.log(`🔐 Improved mock JWKS server running on http://localhost:${PORT}`);
-        console.log(`📋 Available endpoints:`);
         console.log(`   - JWKS: http://localhost:${PORT}/.well-known/jwks.json`);
         console.log(`   - Health: http://localhost:${PORT}/health`);
         console.log(`🔑 Key metadata:`, keyMetadata);
@@ -185,11 +182,9 @@ export const stopMockJwksServer = (): Promise<void> => {
   return new Promise((resolve) => {
     if (serverState.value) {
       serverState.value.close(() => {
-        console.log('🔐 Improved mock JWKS server stopped');
         resolve();
       });
     } else {
-      console.log('🔐 Mock JWKS server was not running');
       resolve();
     }
   });
@@ -236,13 +231,6 @@ export const generateRS256Token = async (
     jti: `test-jti-${now}-${randomBytes(6).toString('hex')}` // Unique JWT ID
   };
 
-  console.log('🔍 [TOKEN DEBUG] Generating RS256 token with payload:', {
-    sub: tokenPayload.sub,
-    email: tokenPayload.email,
-    roles: tokenPayload['cognito:groups'],
-    exp: new Date(exp * 1000).toISOString(),
-    jti: tokenPayload.jti
-  });
 
   const token = await new SignJWT(tokenPayload)
     .setProtectedHeader({ alg: 'RS256', kid: keyMetadata.keyId })
@@ -252,8 +240,6 @@ export const generateRS256Token = async (
     .setJti(tokenPayload.jti)
     .sign(await josePrivateKey);
 
-  console.log('🔍 [TOKEN DEBUG] Generated token (first 50 chars):', token.substring(0, 50) + '...');
-  console.log('🔍 [TOKEN DEBUG] Token length:', token.length);
 
   return token;
 };

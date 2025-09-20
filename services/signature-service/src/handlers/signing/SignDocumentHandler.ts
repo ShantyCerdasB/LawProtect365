@@ -8,7 +8,6 @@
 
 import { ControllerFactory, PermissionLevel, AccessType } from '@lawprotect/shared-ts';
 import { SignatureStatus } from '@/domain/enums/SignatureStatus';
-import { SignerStatus } from '@/domain/enums/SignerStatus';
 import { SignDocumentRequestSchema } from '../../domain/schemas/SigningHandlersSchema';
 // ServiceFactory is already imported above
 import { SignatureService } from '../../services/SignatureService';
@@ -128,7 +127,6 @@ export const signDocumentHandler = ControllerFactory.createCommand({
       } as any;
 
       // Validate signing order without requiring envelope access
-      console.log('[SignDocumentHandler] About to validate signing order:', { envelopeId, signerId, userId });
       await this.signerService.validateSigningOrder(
         new EnvelopeId(envelopeId),
         new SignerId(signerId),
@@ -136,7 +134,6 @@ export const signDocumentHandler = ControllerFactory.createCommand({
         userId,
         mergedSecurityContext
       );
-      console.log('[SignDocumentHandler] Signing order validation passed');
 
       // Create or ensure consent exists (mandatory for all flows)
       const consentPayload = requestBody.consent;
@@ -146,10 +143,7 @@ export const signDocumentHandler = ControllerFactory.createCommand({
       const effectiveIp = consentPayload.ipAddress || securityContext?.ipAddress;
       const effectiveUa = consentPayload.userAgent || securityContext?.userAgent;
 
-      const signatureId = new SignatureId(crypto.randomUUID());
-
-      console.log('[SignDocumentHandler] About to create consent:', { envelopeId, signerId, userEmail, consentUserId });
-      try {
+      const signatureId = new SignatureId(crypto.randomUUID());try {
         await this.consentService.createConsent({
           envelopeId: new EnvelopeId(envelopeId),
           signerId: new SignerId(signerId),
@@ -161,16 +155,10 @@ export const signDocumentHandler = ControllerFactory.createCommand({
           userAgent: effectiveUa,
           userEmail,
           country: securityContext?.country
-        }, consentUserId || '');
-        console.log('[SignDocumentHandler] Consent created successfully');
-      } catch (e: any) {
+        }, consentUserId || '');} catch (e: any) {
         // Ignore conflict if consent already exists
-        if (String(e?.code) !== 'COMMON_CONFLICT') {
-          console.log('[SignDocumentHandler] Consent creation failed:', e);
-          throw e;
-        }
-        console.log('[SignDocumentHandler] Consent already exists, continuing');
-      }
+        if (String(e?.code) !== 'COMMON_CONFLICT') {throw e;
+        }}
 
       // Create signature using real SignatureService
       const signature: Signature = await this.signatureService.createSignature({
@@ -196,44 +184,34 @@ export const signDocumentHandler = ControllerFactory.createCommand({
       });
 
       // Mark signer as signed using the service (handles event publishing logic)
-      console.log('[SignDocumentHandler] About to mark signer as signed:', { signerId, userId: mergedSecurityContext.userId });
       await this.signerService.markSignerAsSigned(new SignerId(signerId), {
         userId: mergedSecurityContext.userId,
         ipAddress: securityContext?.ipAddress,
         userAgent: securityContext?.userAgent
       });
-      console.log('[SignDocumentHandler] Signer marked as signed successfully');
 
-      const allSigners = await this.signerService.getSignersByEnvelope(new EnvelopeId(envelopeId));
-      const allSigned = allSigners.length > 0 && allSigners.every(s => s.getStatus() === SignerStatus.SIGNED);
-      if (allSigned) {
-        // Persist signed document key into envelope metadata for stable retrieval
-        try {
-          const envelopeRepo = new EnvelopeRepository((ServiceFactory as any).config.ddb.envelopesTable, (ServiceFactory as any).ddbClient, {
-            indexName: (ServiceFactory as any).config.ddb.envelopesGsi1Name,
-            gsi2IndexName: (ServiceFactory as any).config.ddb.envelopesGsi2Name
-          });
-          const currentEnv = await envelopeRepo.getById(new EnvelopeId(envelopeId));
-          const currentMeta = (currentEnv as any)?.getMetadata?.() || {};
-          await envelopeRepo.update(new EnvelopeId(envelopeId), {
-            metadata: {
-              ...currentMeta,
-              signedS3Key: requestBody.s3Key
-            }
-          } as any);
-        } catch (error) {
-          // Log the error for debugging but don't block signing flow
-          console.warn('[SignDocumentHandler] Failed to update envelope metadata:', error);
-        }
-        const ownerId = (allSigners.find(s => s.getOrder() === 1) as any)?.getOwnerId?.() || mergedSecurityContext.userId;
-        const ownerContext = {
-          ...mergedSecurityContext,
-          userId: ownerId,
-          permission: PermissionLevel.OWNER,
-          accessType: AccessType.DIRECT
-        } as any;
-        await this.envelopeService.completeIfAllSigned(new EnvelopeId(envelopeId), ownerId, ownerContext as any);
+      // Persist signed document key into envelope metadata for stable retrieval
+      try {
+        const envelopeRepo = new EnvelopeRepository((ServiceFactory as any).config.ddb.envelopesTable, (ServiceFactory as any).ddbClient, {
+          indexName: (ServiceFactory as any).config.ddb.envelopesGsi1Name,
+          gsi2IndexName: (ServiceFactory as any).config.ddb.envelopesGsi2Name
+        });
+        const currentEnv = await envelopeRepo.getById(new EnvelopeId(envelopeId));
+        const currentMeta = (currentEnv as any)?.getMetadata?.() || {};
+        await envelopeRepo.update(new EnvelopeId(envelopeId), {
+          metadata: {
+            ...currentMeta,
+            signedS3Key: requestBody.s3Key
+          }
+        } as any);
+      } catch (error) {
+        // Log the error for debugging but don't block signing flow
+        console.warn('[SignDocumentHandler] Failed to update envelope metadata:', error);
       }
+
+      // Attempt to complete envelope if all signers and signatures are ready
+      // The completeIfAllSigned method will validate completion requirements internally
+      await this.envelopeService.completeIfAllSigned(new EnvelopeId(envelopeId), mergedSecurityContext);
 
       // Get envelope status and progress
       let envelope: Envelope;
@@ -241,7 +219,7 @@ export const signDocumentHandler = ControllerFactory.createCommand({
         envelope = await this.envelopeService.getEnvelope(new EnvelopeId(envelopeId), userId, mergedSecurityContext);
       } catch (error) {
         // Log the error for debugging and create a minimal response
-        console.warn('[SignDocumentHandler] Failed to get envelope details:', error);
+
         envelope = {
           getStatus: () => 'SENT',
           getSigningOrder: () => ({ getType: () => 'OWNER_FIRST' })
@@ -253,7 +231,7 @@ export const signDocumentHandler = ControllerFactory.createCommand({
       const progress = calculateEnvelopeProgress(signers);
       
       // Return signing confirmation with real data
-    return {
+      return {
         message: 'Document signed successfully',
         signature: {
           id: signature.getId().getValue(),

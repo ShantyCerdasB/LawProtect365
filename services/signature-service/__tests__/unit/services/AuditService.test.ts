@@ -180,7 +180,7 @@ describe('AuditService', () => {
   describe('getAuditTrail', () => {
     it('should return audit trail with default limit', async () => {
       const envelopeId = 'envelope-123';
-      const mockResult = { items: [mockAuditEvent], hasMore: false };
+      const mockResult = { items: [mockAuditEvent], hasNext: false };
       mockAuditRepository.listByEnvelope.mockResolvedValue(mockResult);
 
       const result = await auditService.getAuditTrail(envelopeId);
@@ -193,7 +193,7 @@ describe('AuditService', () => {
       const envelopeId = 'envelope-123';
       const limit = 50;
       const cursor = 'cursor-123';
-      const mockResult = { items: [mockAuditEvent], hasMore: true, cursor: 'next-cursor' };
+      const mockResult = { items: [mockAuditEvent], hasNext: true, nextCursor: 'next-cursor' };
       mockAuditRepository.listByEnvelope.mockResolvedValue(mockResult);
 
       const result = await auditService.getAuditTrail(envelopeId, limit, cursor);
@@ -214,7 +214,7 @@ describe('AuditService', () => {
   describe('getUserAuditTrail', () => {
     it('should return user audit trail with default limit', async () => {
       const userId = 'user-123';
-      const mockResult = { items: [mockAuditEvent], hasMore: false };
+      const mockResult = { items: [mockAuditEvent], hasNext: false };
       mockAuditRepository.listByUser.mockResolvedValue(mockResult);
 
       const result = await auditService.getUserAuditTrail(userId);
@@ -227,7 +227,7 @@ describe('AuditService', () => {
       const userId = 'user-123';
       const limit = 100;
       const cursor = 'cursor-456';
-      const mockResult = { items: [mockAuditEvent], hasMore: true, cursor: 'next-cursor' };
+      const mockResult = { items: [mockAuditEvent], hasNext: true, nextCursor: 'next-cursor' };
       mockAuditRepository.listByUser.mockResolvedValue(mockResult);
 
       const result = await auditService.getUserAuditTrail(userId, limit, cursor);
@@ -248,7 +248,7 @@ describe('AuditService', () => {
   describe('getAuditEventsByType', () => {
     it('should return audit events by type with default limit', async () => {
       const eventType = AuditEventType.ENVELOPE_CREATED;
-      const mockResult = { items: [mockAuditEvent], hasMore: false };
+      const mockResult = { items: [mockAuditEvent], hasNext: false };
       mockAuditRepository.listByEventType.mockResolvedValue(mockResult);
 
       const result = await auditService.getAuditEventsByType(eventType);
@@ -261,7 +261,7 @@ describe('AuditService', () => {
       const eventType = AuditEventType.SIGNER_ADDED;
       const limit = 75;
       const cursor = 'cursor-789';
-      const mockResult = { items: [mockAuditEvent], hasMore: true, cursor: 'next-cursor' };
+      const mockResult = { items: [mockAuditEvent], hasNext: true, nextCursor: 'next-cursor' };
       mockAuditRepository.listByEventType.mockResolvedValue(mockResult);
 
       const result = await auditService.getAuditEventsByType(eventType, limit, cursor);
@@ -278,7 +278,7 @@ describe('AuditService', () => {
         AuditEventType.CONSENT_GIVEN,
         AuditEventType.DOCUMENT_ACCESSED
       ];
-      const mockResult = { items: [mockAuditEvent], hasMore: false };
+      const mockResult = { items: [mockAuditEvent], hasNext: false };
       mockAuditRepository.listByEventType.mockResolvedValue(mockResult);
 
       for (const eventType of eventTypes) {
@@ -348,7 +348,7 @@ describe('AuditService', () => {
     it('should handle pagination with different limit values', async () => {
       const envelopeId = 'envelope-123';
       const limits = [1, 10, 25, 50, 100];
-      const mockResult = { items: [mockAuditEvent], hasMore: false };
+      const mockResult = { items: [mockAuditEvent], hasNext: false };
       mockAuditRepository.listByEnvelope.mockResolvedValue(mockResult);
 
       for (const limit of limits) {
@@ -360,7 +360,7 @@ describe('AuditService', () => {
     it('should handle pagination with cursor values', async () => {
       const envelopeId = 'envelope-123';
       const cursors = [undefined, 'cursor-1', 'cursor-2', 'cursor-3'];
-      const mockResult = { items: [mockAuditEvent], hasMore: false };
+      const mockResult = { items: [mockAuditEvent], hasNext: false };
       mockAuditRepository.listByEnvelope.mockResolvedValue(mockResult);
 
       for (const cursor of cursors) {

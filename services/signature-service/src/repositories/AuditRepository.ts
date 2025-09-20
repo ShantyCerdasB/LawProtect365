@@ -65,8 +65,6 @@ export class AuditRepository {
     const item = auditItemMapper.toDTO(auditEvent);
 
     try {
-      // eslint-disable-next-line no-console
-      console.log('DDB put Audit item', { keys: Object.keys(item), eventType: item.eventType, envelopeId: item.envelopeId });
       await this.ddb.put({
         TableName: this.tableName,
         Item: item as any,
@@ -222,11 +220,6 @@ export class AuditRepository {
     cursor?: string,
     sortOrder: DdbSortOrder = DdbSortOrder.DESC
   ): Promise<AuditListResult> {
-    // eslint-disable-next-line no-console
-    console.log('DDB query AuditByEnvelope', {
-      index: this.envelopeGsi1Name,
-      gsiPk: AuditKeyBuilders.buildEnvelopeGsi1Pk(envelopeId)
-    });
     const res = await this.listByGsi(
       this.envelopeGsi1Name,
       AuditKeyBuilders.buildEnvelopeGsi1Pk(envelopeId),
@@ -234,8 +227,6 @@ export class AuditRepository {
       cursor,
       sortOrder
     );
-    // eslint-disable-next-line no-console
-    console.log('DDB AuditByEnvelope result', { count: res.items.length, hasNext: res.hasNext });
     return res;
   }
 
@@ -477,7 +468,6 @@ export class AuditRepository {
       afterTimestamp
     );
 
-    this.logQueryParams(indexName, keyExpr, exprNames, afterTimestamp);
 
     return {
       TableName: this.tableName,
@@ -528,37 +518,13 @@ export class AuditRepository {
   }
 
   /**
-   * Logs query parameters for debugging
-   */
-  private logQueryParams(
-    indexName: string,
-    keyExpr: string,
-    exprNames: Record<string, string>,
-    afterTimestamp?: string
-  ) {
-    // eslint-disable-next-line no-console
-    console.log('DDB Audit.listByGsi params', { 
-      indexName, 
-      keyExpr, 
-      names: exprNames, 
-      hasAfter: Boolean(afterTimestamp) 
-    });
-  }
-
-  /**
    * Executes the DynamoDB query
    */
   private async executeQuery(queryParams: any) {
     requireQuery(this.ddb);
     const res = await this.ddb.query(queryParams);
 
-    // eslint-disable-next-line no-console
-    console.log('DDB Audit.listByGsi raw', {
-      indexName: queryParams.IndexName,
-      count: (res.Items || []).length,
-      firstItemKeys: res.Items?.[0] ? Object.keys(res.Items[0] as any) : []
-    });
-
+ 
     return res;
   }
 

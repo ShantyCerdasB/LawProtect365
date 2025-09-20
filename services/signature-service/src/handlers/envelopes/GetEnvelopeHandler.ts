@@ -77,8 +77,6 @@ export const getEnvelopeHandler = ControllerFactory.createCommand({
      */
     async execute(params: any) {
       const envelopeId = new EnvelopeId(params.envelopeId);
-      // eslint-disable-next-line no-console
-      console.log('[GetEnvelopeHandler] START', { envelopeId: envelopeId.getValue(), userId: params.userId });
 
       // 1. Get envelope details
       const envelope = await this.envelopeService.getEnvelope(
@@ -86,15 +84,9 @@ export const getEnvelopeHandler = ControllerFactory.createCommand({
         params.userId,
         params.securityContext
       );
-      // eslint-disable-next-line no-console
-      console.log('[GetEnvelopeHandler] envelope loaded', { id: envelope.getId().getValue(), status: envelope.getStatus() });
 
       // 2. Get signers for this envelope
       const signers = await this.signerService.getSignersByEnvelope(envelopeId);
-      // eslint-disable-next-line no-console
-      console.log('[GetEnvelopeHandler] signers raw loaded', { signersCount: signers.length, first: signers[0]?.getId?.().getValue?.() });
-      // eslint-disable-next-line no-console
-      console.log('[GetEnvelopeHandler] signers loaded', { count: signers.length });
 
       // 3. Calculate progress using utility function
       const progress = calculateEnvelopeProgress(signers);
