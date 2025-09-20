@@ -6,8 +6,7 @@
  */
 
 import { mapAwsError } from '@lawprotect/shared-ts';
-import { OutboxRepository } from '../../repositories/OutboxRepository';
-import type { OutboxRecord } from '../../domain/types/infrastructure/outbox';
+import { OutboxRepository, type OutboxRecord } from '@lawprotect/shared-ts';
 import type { EventBridgeAdapter } from '../../infrastructure/eventbridge/EventBridgeAdapter';
 
 /**

@@ -27,7 +27,7 @@ import { EnvelopeRepository } from '../../repositories/EnvelopeRepository';
 import { SignerRepository } from '../../repositories/SignerRepository';
 import { SignatureRepository } from '../../repositories/SignatureRepository';
 import { InvitationTokenRepository } from '../../repositories/InvitationTokenRepository';
-import { OutboxRepository } from '../../repositories/OutboxRepository';
+import { OutboxRepository } from '@lawprotect/shared-ts';
 import { AuditRepository } from '../../repositories/AuditRepository';
 import { ConsentRepository } from '../../repositories/ConsentRepository';
 import { DocumentRepository } from '../../repositories/DocumentRepository';

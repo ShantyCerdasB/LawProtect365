@@ -5,7 +5,7 @@
  * provides event publishing functionality for audit operations.
  */
 
-import { EventService, DomainEvent } from './EventService';
+import { BaseEventService, DomainEvent } from '@lawprotect/shared-ts';
 import { AuditEvent } from '../../domain/entities/AuditEvent';
 
 /**
@@ -14,7 +14,7 @@ import { AuditEvent } from '../../domain/entities/AuditEvent';
  * Handles audit-specific domain events and provides event publishing
  * functionality for audit operations.
  */
-export class AuditEventService extends EventService {
+export class AuditEventService extends BaseEventService {
   /**
    * Publishes a module-specific event
    * @param event - Domain event to publish

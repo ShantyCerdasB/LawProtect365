@@ -1,5 +1,5 @@
 /**
- * @fileoverview EventService - Base abstract class for domain event publishing services
+ * @fileoverview BaseEventService - Base abstract class for domain event publishing services
  * @summary Provides common event publishing functionality for all domain services
  * @description Base abstract class that provides common event publishing functionality
  * that can be extended by module-specific event services (EnvelopeEventService, 
@@ -7,22 +7,9 @@
  */
 
 import { randomBytes } from 'crypto';
-import type { ActorContext } from '@lawprotect/shared-ts';
-import { makeEvent } from '@lawprotect/shared-ts';
-import { OutboxRepository } from '../../repositories/OutboxRepository';
-
-
-/**
- * Domain event interface
- * Represents a domain event in the system
- */
-export interface DomainEvent {
-  id: string;
-  type: string;
-  payload?: Record<string, unknown>;
-  occurredAt: string;
-  metadata?: Record<string, string>;
-}
+import type { ActorContext, DomainEvent } from '../index.js';
+import { makeEvent } from '../index.js';
+import { OutboxRepository } from '../aws/outbox/OutboxRepository.js';
 
 /**
  * Event service configuration
@@ -41,7 +28,7 @@ export interface EventServiceConfig {
  * by module-specific event services. Uses the outbox pattern for reliable
  * event delivery with proper error handling and observability.
  */
-export abstract class EventService {
+export abstract class BaseEventService {
   protected readonly outbox: OutboxRepository;
   protected readonly serviceName: string;
   protected readonly defaultTraceId?: string;
@@ -66,7 +53,7 @@ export abstract class EventService {
     await this.outbox.save({
       id: event.id,
       type: event.type,
-      payload: event.payload,
+      payload: event.payload as Record<string, unknown>,
       occurredAt: event.occurredAt
     }, finalTraceId);
   }
@@ -149,7 +136,7 @@ export abstract class EventService {
     const domainEvent: DomainEvent = {
       id: `${eventType}-${Date.now()}-${randomBytes(6).toString('hex')}`,
       type: eventType,
-      payload,
+      payload: payload as unknown,
       occurredAt: new Date().toISOString()
     };
 

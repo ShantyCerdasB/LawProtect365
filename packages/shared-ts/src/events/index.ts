@@ -3,4 +3,4 @@ export * from "./EventBusPort.js";
 export * from "./Envelope.js";
 export * from "./EventFactory.js";
 export * from "./EventsPublisher.js";
-export * from "./Outbox.js";
+// export * from "./Outbox.js"; // Conflicting with aws/outbox OutboxRecord

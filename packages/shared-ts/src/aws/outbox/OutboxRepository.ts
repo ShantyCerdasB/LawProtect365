@@ -5,22 +5,26 @@
  * including CRUD operations, queries, and data persistence for reliable messaging.
  */
 
-import type { DdbClientLike } from '@lawprotect/shared-ts';
-import { mapAwsError, ConflictError, NotFoundError, ErrorCodes, BadRequestError } from '@lawprotect/shared-ts';
+import type { DdbClientLike } from '../../index.js';
+import { mapAwsError, ConflictError, NotFoundError, ErrorCodes, BadRequestError } from '../../index.js';
 import type { 
-  OutboxRecord, 
+  OutboxRecord
+} from './outbox-mappers.js';
+import type {
   OutboxListResult, 
   OutboxCountResult,
   OutboxQueryOptions
-} from '../domain/types/infrastructure/outbox';
+} from './outbox-ddb-types.js';
 import { 
   outboxToDdbItem, 
   outboxFromDdbItem, 
   isOutboxDdbItem,
-  createOutboxRecordFromEvent,
+  createOutboxRecordFromEvent
+} from './outbox-mappers.js';
+import {
   OutboxKeyBuilders,
   OUTBOX_STATUSES
-} from '../domain/types/infrastructure/outbox';
+} from './outbox-ddb-types.js';
 
 /**
  * OutboxRepository - Repository for outbox event data access

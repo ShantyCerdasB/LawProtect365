@@ -5,7 +5,7 @@
  * provides event publishing functionality for envelope operations.
  */
 
-import { EventService, DomainEvent } from './EventService';
+import { BaseEventService, DomainEvent } from '@lawprotect/shared-ts';
 import { Envelope } from '../../domain/entities/Envelope';
 import { EnvelopeStatus } from '../../domain/enums/EnvelopeStatus';
 
@@ -15,7 +15,7 @@ import { EnvelopeStatus } from '../../domain/enums/EnvelopeStatus';
  * Handles envelope-specific domain events and provides event publishing
  * functionality for envelope operations.
  */
-export class EnvelopeEventService extends EventService {
+export class EnvelopeEventService extends BaseEventService {
   /**
    * Publishes a module-specific event
    * @param event - Domain event to publish

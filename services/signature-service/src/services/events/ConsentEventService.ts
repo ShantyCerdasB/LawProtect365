@@ -5,7 +5,7 @@
  * provides event publishing functionality for consent operations.
  */
 
-import { EventService, DomainEvent } from './EventService';
+import { BaseEventService, DomainEvent } from '@lawprotect/shared-ts';
 
 /**
  * ConsentEventService implementation
@@ -13,7 +13,7 @@ import { EventService, DomainEvent } from './EventService';
  * Handles consent-specific domain events and provides event publishing
  * functionality for consent operations.
  */
-export class ConsentEventService extends EventService {
+export class ConsentEventService extends BaseEventService {
   /**
    * Publishes a module-specific event
    * @param event - Domain event to publish

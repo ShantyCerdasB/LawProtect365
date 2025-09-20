@@ -5,7 +5,6 @@
  * for domain-specific event publishing.
  */
 
-export { EventService } from './EventService';
 export { EventPublisher } from './EventPublisher';
 export { EnvelopeEventService } from './EnvelopeEventService';
 export { SignerEventService } from './SignerEventService';

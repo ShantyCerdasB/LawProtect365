@@ -5,7 +5,7 @@
  * provides event publishing functionality for signer operations.
  */
 
-import { EventService, DomainEvent } from './EventService';
+import { BaseEventService, DomainEvent } from '@lawprotect/shared-ts';
 import { Signer } from '../../domain/entities/Signer';
 import { SignerStatus } from '@/domain/enums/SignerStatus';
 
@@ -15,7 +15,7 @@ import { SignerStatus } from '@/domain/enums/SignerStatus';
  * Handles signer-specific domain events and provides event publishing
  * functionality for signer operations.
  */
-export class SignerEventService extends EventService {
+export class SignerEventService extends BaseEventService {
   /**
    * Publishes a module-specific event
    * @param event - Domain event to publish
