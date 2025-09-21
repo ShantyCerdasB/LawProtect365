@@ -15,14 +15,16 @@ import { S3Key } from '../value-objects/S3Key';
 import { DocumentHash } from '../value-objects/DocumentHash';
 import { SignerStatus } from '@prisma/client';
 import { EnvelopeSigner } from './EnvelopeSigner';
+import { CreateSignerData } from '../types/signer/CreateSignerData';
+import { SigningOrderValidationRule } from '../rules/SigningOrderValidationRule';
 
 import { 
   invalidEnvelopeState, 
   envelopeCompleted,
   signerEmailDuplicate,
+  signerNotFound,
   signerCannotBeRemoved,
-  invalidSignerState,
-  signerNotFound
+  invalidSignerState
 } from '../../signature-errors';
 
 /**
@@ -618,6 +620,34 @@ export class SignatureEnvelope {
     (this as any).signedKey = signedKey;
     (this as any).signedSha256 = signedSha256;
     this.updatedAt = new Date();
+  }
+
+  /**
+   * Validates signing order for a signer
+   * @param signerId - The signer attempting to sign
+   * @param userId - The user ID
+   * @param allSigners - All signers in the envelope
+   * @throws signerSigningOrderViolation when signing order is violated
+   */
+  validateSigningOrder(signerId: SignerId, userId: string, allSigners: EnvelopeSigner[]): void {
+    SigningOrderValidationRule.validateSigningOrder(this, signerId, userId, allSigners);
+  }
+
+
+  /**
+   * Validates that there are no duplicate emails in signer data
+   * @param signersData - Array of signer data to validate
+   * @throws signerEmailDuplicate when duplicate emails are found
+   */
+  validateNoDuplicateEmails(signersData: CreateSignerData[]): void {
+    const emails = signersData
+      .filter(signer => signer.email)
+      .map(signer => signer.email!.toLowerCase());
+
+    const uniqueEmails = new Set(emails);
+    if (emails.length !== uniqueEmails.size) {
+      throw signerEmailDuplicate('Duplicate email addresses found in signer data');
+    }
   }
 
 }

@@ -81,6 +81,30 @@ export const envelopeExpirationInvalid = (details?: unknown) =>
 export const envelopeDocumentNotFound = (details?: unknown) =>
   new NotFoundError("Envelope document not found", SignatureErrorCodes.ENVELOPE_DOCUMENT_NOT_FOUND, details);
 
+/**
+ * Creates an InternalError for when envelope creation fails (500).
+ */
+export const envelopeCreationFailed = (details?: unknown) =>
+  new InternalError("Envelope creation failed", SignatureErrorCodes.ENVELOPE_CREATION_FAILED, details);
+
+/**
+ * Creates an InternalError for when envelope update fails (500).
+ */
+export const envelopeUpdateFailed = (details?: unknown) =>
+  new InternalError("Envelope update failed", SignatureErrorCodes.ENVELOPE_UPDATE_FAILED, details);
+
+/**
+ * Creates an InternalError for when envelope deletion fails (500).
+ */
+export const envelopeDeleteFailed = (details?: unknown) =>
+  new InternalError("Envelope deletion failed", SignatureErrorCodes.ENVELOPE_DELETE_FAILED, details);
+
+/**
+ * Creates a ForbiddenError for when user doesn't have access to envelope (403).
+ */
+export const envelopeAccessDenied = (details?: unknown) =>
+  new ForbiddenError("Access denied to envelope", SignatureErrorCodes.ENVELOPE_ACCESS_DENIED, details);
+
 // ============================================================================
 // SIGNER ERRORS
 // ============================================================================

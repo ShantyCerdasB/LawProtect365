@@ -11,15 +11,13 @@ import { SignerId } from '../domain/value-objects/SignerId';
 import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
 import { Email } from '../domain/value-objects/Email';
 import { SignatureMetadata } from '../domain/value-objects/SignatureMetadata';
-import { SignerStatus, SigningOrderType } from '@prisma/client';
+import { SignerStatus } from '@prisma/client';
 import { EnvelopeSignerRepository } from '../repositories/EnvelopeSignerRepository';
 import { SignatureEnvelopeRepository } from '../repositories/SignatureEnvelopeRepository';
 import { SignatureAuditEventService } from './SignatureAuditEventService';
-import { InvitationTokenService } from './InvitationTokenService';
 import { 
   CreateSignerData, 
   DeclineSignerData, 
-  ConsentData, 
   SignatureData 
 } from '../domain/types/signer';
 import { AuditEventType } from '../domain/enums/AuditEventType';
@@ -28,10 +26,8 @@ import {
   signerCreationFailed,
   signerUpdateFailed,
   signerDeleteFailed,
-  signerAccessDenied,
   signerSigningOrderViolation,
   signerAlreadySigned,
-  signerAlreadyDeclined,
   signerEmailDuplicate,
   envelopeNotFound
 } from '../signature-errors';
@@ -47,9 +43,44 @@ export class EnvelopeSignerService {
   constructor(
     private readonly envelopeSignerRepository: EnvelopeSignerRepository,
     private readonly signatureEnvelopeRepository: SignatureEnvelopeRepository,
-    private readonly signatureAuditEventService: SignatureAuditEventService,
-    private readonly invitationTokenService: InvitationTokenService
+    private readonly signatureAuditEventService: SignatureAuditEventService
   ) {}
+
+  /**
+   * Creates audit event with common fields for signer operations
+   * @param envelopeId - The envelope ID
+   * @param signerId - The signer ID
+   * @param eventType - The audit event type
+   * @param description - The event description
+   * @param userId - The user ID
+   * @param userEmail - The user email
+   * @param ipAddress - Optional IP address
+   * @param userAgent - Optional user agent
+   * @param metadata - Optional metadata
+   */
+  private async createSignerAuditEvent(
+    envelopeId: string,
+    signerId: string,
+    eventType: AuditEventType,
+    description: string,
+    userId: string,
+    userEmail?: string,
+    ipAddress?: string,
+    userAgent?: string,
+    metadata?: Record<string, unknown>
+  ): Promise<void> {
+    await this.signatureAuditEventService.createSignerAuditEvent(
+      envelopeId,
+      signerId,
+      eventType,
+      description,
+      userId,
+      userEmail,
+      ipAddress,
+      userAgent,
+      metadata
+    );
+  }
 
   /**
    * Creates signers for an envelope
@@ -77,23 +108,22 @@ export class EnvelopeSignerService {
 
       // Create audit events for all signers
       for (const signer of createdSigners) {
-        await this.signatureAuditEventService.createEvent({
-          envelopeId: envelopeId.getValue(),
-          signerId: signer.getId().getValue(),
-          eventType: AuditEventType.SIGNER_ADDED,
-          description: `Signer ${signer.getFullName() || signer.getEmail()?.getValue() || 'Unknown'} added to envelope`,
-          userId: envelope.getCreatedBy().getValue(),
-          userEmail: signer.getEmail()?.getValue(),
-          ipAddress: undefined,
-          userAgent: undefined,
-          country: undefined,
-          metadata: {
+        await this.createSignerAuditEvent(
+          envelopeId.getValue(),
+          signer.getId().getValue(),
+          AuditEventType.SIGNER_ADDED,
+          `Signer ${signer.getFullName() || signer.getEmail()?.getValue() || 'Unknown'} added to envelope`,
+          envelope.getCreatedBy().getValue(),
+          signer.getEmail()?.getValue(),
+          undefined,
+          undefined,
+          {
             signerId: signer.getId().getValue(),
             isExternal: signer.getIsExternal(),
             order: signer.getOrder(),
             participantRole: signer.getParticipantRole()
           }
-        });
+        );
       }
 
       return createdSigners;
@@ -276,26 +306,11 @@ export class EnvelopeSignerService {
         throw envelopeNotFound(`Envelope with ID ${envelopeId.getValue()} not found`);
       }
 
-      // Get current signer
-      const currentSigner = await this.envelopeSignerRepository.findById(signerId);
-      if (!currentSigner) {
-        throw signerNotFound(`Signer with ID ${signerId.getValue()} not found`);
-      }
-
       // Get all signers for this envelope
       const allSigners = await this.envelopeSignerRepository.findByEnvelopeId(envelopeId);
       
-      // Sort signers by order
-      const sortedSigners = allSigners.sort((a, b) => a.getOrder() - b.getOrder());
-
-      // Validate signing order based on envelope's signing order type
-      const signingOrderType = envelope.getSigningOrder().getType();
-      
-      if (signingOrderType === SigningOrderType.OWNER_FIRST) {
-        await this.validateOwnerFirstOrder(sortedSigners, currentSigner, userId);
-      } else if (signingOrderType === SigningOrderType.INVITEES_FIRST) {
-        await this.validateInviteesFirstOrder(sortedSigners, currentSigner, userId);
-      }
+      // Use entity method to validate signing order
+      envelope.validateSigningOrder(signerId, userId, allSigners);
     } catch (error) {
       throw signerSigningOrderViolation(
         `Signing order validation failed: ${error instanceof Error ? error.message : error}`
@@ -303,64 +318,6 @@ export class EnvelopeSignerService {
     }
   }
 
-  /**
-   * Validates owner-first signing order
-   * @param sortedSigners - Signers sorted by order
-   * @param currentSigner - The signer attempting to sign
-   * @param userId - The user ID
-   */
-  private async validateOwnerFirstOrder(
-    sortedSigners: EnvelopeSigner[], 
-    currentSigner: EnvelopeSigner, 
-    userId: string
-  ): Promise<void> {
-    // Find owner (signer with userId matching envelope creator)
-    const owner = sortedSigners.find(signer => signer.getUserId() === userId);
-    
-    if (owner && owner.getId().equals(currentSigner.getId())) {
-      // Owner can sign first
-      return;
-    }
-
-    // Check if owner has signed
-    if (owner && !owner.hasSigned()) {
-      throw signerSigningOrderViolation('Owner must sign first');
-    }
-
-    // For non-owner signers, they can sign after owner
-    if (!owner || owner.hasSigned()) {
-      return;
-    }
-  }
-
-  /**
-   * Validates invitees-first signing order
-   * @param sortedSigners - Signers sorted by order
-   * @param currentSigner - The signer attempting to sign
-   * @param userId - The user ID
-   */
-  private async validateInviteesFirstOrder(
-    sortedSigners: EnvelopeSigner[], 
-    currentSigner: EnvelopeSigner, 
-    userId: string
-  ): Promise<void> {
-    // Find owner (signer with userId matching envelope creator)
-    const owner = sortedSigners.find(signer => signer.getUserId() === userId);
-    
-    if (owner && owner.getId().equals(currentSigner.getId())) {
-      // Owner can only sign after all invitees have signed
-      const invitees = sortedSigners.filter(signer => signer.getIsExternal());
-      const allInviteesSigned = invitees.every(signer => signer.hasSigned());
-      
-      if (!allInviteesSigned) {
-        throw signerSigningOrderViolation('All invitees must sign before owner');
-      }
-      return;
-    }
-
-    // For invitees, they can sign in any order
-    return;
-  }
 
 
 
@@ -399,17 +356,16 @@ export class EnvelopeSignerService {
       const updatedSigner = await this.envelopeSignerRepository.update(signerId, signer);
 
       // Create audit event
-      await this.signatureAuditEventService.createEvent({
-        envelopeId: signer.getEnvelopeId().getValue(),
-        signerId: signerId.getValue(),
-        eventType: AuditEventType.SIGNER_SIGNED,
-        description: `Signer ${signer.getFullName() || signer.getEmail()?.getValue() || 'Unknown'} signed the document`,
-        userId: signer.getUserId() || 'external-user',
-        userEmail: signer.getEmail()?.getValue(),
-        ipAddress: signatureData.ipAddress,
-        userAgent: signatureData.userAgent,
-        country: undefined,
-        metadata: {
+      await this.createSignerAuditEvent(
+        signer.getEnvelopeId().getValue(),
+        signerId.getValue(),
+        AuditEventType.SIGNER_SIGNED,
+        `Signer ${signer.getFullName() || signer.getEmail()?.getValue() || 'Unknown'} signed the document`,
+        signer.getUserId() || 'external-user',
+        signer.getEmail()?.getValue(),
+        signatureData.ipAddress,
+        signatureData.userAgent,
+        {
           signatureHash: signatureData.signatureHash,
           documentHash: signatureData.documentHash,
           signedS3Key: signatureData.signedS3Key,
@@ -418,7 +374,7 @@ export class EnvelopeSignerService {
           reason: signatureData.reason,
           location: signatureData.location
         }
-      });
+      );
 
       return updatedSigner;
     } catch (error) {
@@ -447,21 +403,20 @@ export class EnvelopeSignerService {
       const updatedSigner = await this.envelopeSignerRepository.update(declineData.signerId, signer);
 
       // Create audit event
-      await this.signatureAuditEventService.createEvent({
-        envelopeId: signer.getEnvelopeId().getValue(),
-        signerId: declineData.signerId.getValue(),
-        eventType: AuditEventType.SIGNER_DECLINED,
-        description: `Signer ${signer.getFullName() || signer.getEmail()?.getValue() || 'Unknown'} declined to sign`,
-        userId: declineData.userId,
-        userEmail: signer.getEmail()?.getValue(),
-        ipAddress: undefined,
-        userAgent: undefined,
-        country: undefined,
-        metadata: {
+      await this.createSignerAuditEvent(
+        signer.getEnvelopeId().getValue(),
+        declineData.signerId.getValue(),
+        AuditEventType.SIGNER_DECLINED,
+        `Signer ${signer.getFullName() || signer.getEmail()?.getValue() || 'Unknown'} declined to sign`,
+        declineData.userId,
+        signer.getEmail()?.getValue(),
+        undefined,
+        undefined,
+        {
           declineReason: declineData.reason,
           declinedAt: updatedSigner.getDeclinedAt()?.toISOString()
         }
-      });
+      );
 
       return updatedSigner;
     } catch (error) {
@@ -471,30 +426,6 @@ export class EnvelopeSignerService {
     }
   }
 
-  /**
-   * Records signer consent
-   * @param signerId - The signer ID
-   * @param consentData - The consent data
-   * @returns Updated signer
-   */
-  async recordSignerConsent(signerId: SignerId, consentData: ConsentData): Promise<EnvelopeSigner> {
-    try {
-      const signer = await this.envelopeSignerRepository.findById(signerId);
-      if (!signer) {
-        throw signerNotFound(`Signer with ID ${signerId.getValue()} not found`);
-      }
-
-      // Use entity method to record consent
-      signer.recordConsent(consentData.consentText, consentData.ipAddress, consentData.userAgent);
-
-      // Update in repository
-      return await this.envelopeSignerRepository.update(signerId, signer);
-    } catch (error) {
-      throw signerUpdateFailed(
-        `Failed to record signer consent: ${error instanceof Error ? error.message : error}`
-      );
-    }
-  }
 
   /**
    * Sends reminders to pending signers
@@ -511,21 +442,20 @@ export class EnvelopeSignerService {
 
       for (const signer of signersToRemind) {
         // Create audit event for reminder
-        await this.signatureAuditEventService.createEvent({
-          envelopeId: envelopeId.getValue(),
-          signerId: signer.getId().getValue(),
-          eventType: AuditEventType.SIGNER_REMINDER_SENT,
-          description: `Reminder sent to signer ${signer.getFullName() || signer.getEmail()?.getValue() || 'Unknown'}`,
-          userId: 'system',
-          userEmail: signer.getEmail()?.getValue(),
-          ipAddress: undefined,
-          userAgent: undefined,
-          country: undefined,
-          metadata: {
+        await this.createSignerAuditEvent(
+          envelopeId.getValue(),
+          signer.getId().getValue(),
+          AuditEventType.SIGNER_REMINDER_SENT,
+          `Reminder sent to signer ${signer.getFullName() || signer.getEmail()?.getValue() || 'Unknown'}`,
+          'system',
+          signer.getEmail()?.getValue(),
+          undefined,
+          undefined,
+          {
             signerEmail: signer.getEmail()?.getValue(),
             signerFullName: signer.getFullName()
           }
-        });
+        );
       }
     } catch (error) {
       throw signerUpdateFailed(
@@ -555,14 +485,14 @@ export class EnvelopeSignerService {
    * @param signersData - Array of signer data
    */
   private async validateNoDuplicateEmails(envelopeId: EnvelopeId, signersData: CreateSignerData[]): Promise<void> {
-    const emails = signersData
-      .filter(signer => signer.email)
-      .map(signer => signer.email!.toLowerCase());
-
-    const uniqueEmails = new Set(emails);
-    if (emails.length !== uniqueEmails.size) {
-      throw signerEmailDuplicate('Duplicate email addresses found in signer data');
+    // Get envelope to use entity validation
+    const envelope = await this.signatureEnvelopeRepository.findById(envelopeId);
+    if (!envelope) {
+      throw envelopeNotFound(`Envelope with ID ${envelopeId.getValue()} not found`);
     }
+
+    // Use entity method to validate duplicate emails in new data
+    envelope.validateNoDuplicateEmails(signersData);
 
     // Check against existing signers
     for (const signerData of signersData) {
@@ -574,4 +504,5 @@ export class EnvelopeSignerService {
       }
     }
   }
+
 }

@@ -34,6 +34,43 @@ export class SignatureAuditEventService {
   ) {}
 
   /**
+   * Creates audit event with common fields for signer operations
+   * @param envelopeId - The envelope ID
+   * @param signerId - The signer ID
+   * @param eventType - The audit event type
+   * @param description - The event description
+   * @param userId - The user ID
+   * @param userEmail - The user email
+   * @param ipAddress - Optional IP address
+   * @param userAgent - Optional user agent
+   * @param metadata - Optional metadata
+   */
+  async createSignerAuditEvent(
+    envelopeId: string,
+    signerId: string,
+    eventType: AuditEventType,
+    description: string,
+    userId: string,
+    userEmail?: string,
+    ipAddress?: string,
+    userAgent?: string,
+    metadata?: Record<string, unknown>
+  ): Promise<SignatureAuditEvent> {
+    return this.createEvent({
+      envelopeId,
+      signerId,
+      eventType,
+      description,
+      userId,
+      userEmail,
+      ipAddress,
+      userAgent,
+      country: undefined,
+      metadata: metadata || {}
+    });
+  }
+
+  /**
    * Creates a new signature audit event
    * @param request - The create audit event request
    * @returns The created signature audit event

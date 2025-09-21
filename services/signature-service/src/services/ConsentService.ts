@@ -11,17 +11,14 @@ import { ConsentId } from '../domain/value-objects/ConsentId';
 import { SignerId } from '../domain/value-objects/SignerId';
 import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
 import { ConsentRepository } from '../repositories/ConsentRepository';
-import { EnvelopeSignerRepository } from '../repositories/EnvelopeSignerRepository';
-import { InvitationTokenRepository } from '../repositories/InvitationTokenRepository';
 import { SignatureAuditEventService } from './SignatureAuditEventService';
+import { InvitationTokenService } from './InvitationTokenService';
 import { CreateConsentRequest } from '../domain/types/consent/CreateConsentRequest';
 import { AuditEventType } from '../domain/enums/AuditEventType';
 import { 
   consentNotFound,
   consentAlreadyExists,
-  consentCreationFailed,
-  signerNotFound,
-  envelopeNotFound
+  consentCreationFailed
 } from '../signature-errors';
 
 /**
@@ -34,10 +31,22 @@ import {
 export class ConsentService {
   constructor(
     private readonly consentRepository: ConsentRepository,
-    private readonly envelopeSignerRepository: EnvelopeSignerRepository,
-    private readonly invitationTokenRepository: InvitationTokenRepository,
-    private readonly signatureAuditEventService: SignatureAuditEventService
+    private readonly signatureAuditEventService: SignatureAuditEventService,
+    private readonly invitationTokenService: InvitationTokenService
   ) {}
+
+  /**
+   * Validates signer access using invitation token
+   * @param signerId - The signer ID
+   * @param invitationToken - The invitation token
+   */
+  private async validateSignerAccessWithToken(
+    signerId: SignerId, 
+    invitationToken: string
+  ): Promise<void> {
+    const token = await this.invitationTokenService.validateInvitationToken(invitationToken);
+    await this.invitationTokenService.validateSignerAccess(signerId, token);
+  }
 
   /**
    * Creates a new consent
@@ -48,7 +57,7 @@ export class ConsentService {
   async createConsent(request: CreateConsentRequest, userId: string): Promise<Consent> {
     try {
       // Validate business rules
-      await this.validateConsentCreation(request, userId);
+      await this.validateConsentCreation(request);
 
       // Create consent entity
       const consent = Consent.create({
@@ -69,26 +78,22 @@ export class ConsentService {
       // Save to repository
       const createdConsent = await this.consentRepository.create(consent);
 
-      // Update signer consent status
-      await this.updateSignerConsentStatus(request.signerId, request.consentText, request.ipAddress, request.userAgent);
-
       // Create audit event
-      await this.signatureAuditEventService.createEvent({
-        envelopeId: request.envelopeId.getValue(),
-        signerId: request.signerId.getValue(),
-        eventType: AuditEventType.CONSENT_GIVEN,
-        description: `Consent given by signer ${request.signerId.getValue()}`,
-        userId: userId,
-        userEmail: request.userEmail,
-        ipAddress: request.ipAddress,
-        userAgent: request.userAgent,
-        country: request.country,
-        metadata: {
+      await this.signatureAuditEventService.createSignerAuditEvent(
+        request.envelopeId.getValue(),
+        request.signerId.getValue(),
+        AuditEventType.CONSENT_GIVEN,
+        `Consent given by signer ${request.signerId.getValue()}`,
+        userId,
+        request.userEmail,
+        request.ipAddress,
+        request.userAgent,
+        {
           consentId: createdConsent.getId().getValue(),
           consentGiven: request.consentGiven,
           consentText: request.consentText
         }
-      });
+      );
 
       return createdConsent;
     } catch (error) {
@@ -102,14 +107,15 @@ export class ConsentService {
    * Gets consent by signer and envelope
    * @param signerId - The signer ID
    * @param envelopeId - The envelope ID
-   * @param userId - The user requesting the consent
    * @param invitationToken - Optional invitation token for external users
    * @returns The consent or null if not found
    */
-  async getConsentBySignerAndEnvelope(signerId: SignerId, envelopeId: EnvelopeId, userId: string, invitationToken?: string): Promise<Consent | null> {
+  async getConsentBySignerAndEnvelope(signerId: SignerId, envelopeId: EnvelopeId, invitationToken?: string): Promise<Consent | null> {
     try {
-      // Validate user has access to signer
-      await this.validateUserAccessToSigner(signerId, userId, invitationToken);
+      // Validate user has access to signer using InvitationTokenService
+      if (invitationToken) {
+        await this.validateSignerAccessWithToken(signerId, invitationToken);
+      }
 
       // Get consent from repository
       return await this.consentRepository.findBySignerAndEnvelope(signerId, envelopeId);
@@ -207,16 +213,11 @@ export class ConsentService {
   /**
    * Validates consent creation request
    * @param request - The create request
-   * @param userId - The user creating the consent
    */
-  private async validateConsentCreation(request: CreateConsentRequest, userId: string): Promise<void> {
-    // Validate signer exists and user has access
-    await this.validateUserAccessToSigner(request.signerId, userId, request.invitationToken);
-
-    // Validate envelope exists
-    const envelope = await this.envelopeSignerRepository.findByEnvelopeId(request.envelopeId);
-    if (!envelope || envelope.length === 0) {
-      throw envelopeNotFound(`Envelope with ID ${request.envelopeId.getValue()} not found`);
+  private async validateConsentCreation(request: CreateConsentRequest): Promise<void> {
+    // Validate signer exists and user has access using InvitationTokenService
+    if (request.invitationToken) {
+      await this.validateSignerAccessWithToken(request.signerId, request.invitationToken);
     }
 
     // Check if consent already exists
@@ -231,84 +232,4 @@ export class ConsentService {
     }
   }
 
-  /**
-   * Validates user access to signer
-   * @param signerId - The signer ID
-   * @param userId - The user ID
-   * @param invitationToken - Optional invitation token for external users
-   */
-  private async validateUserAccessToSigner(signerId: SignerId, userId: string, invitationToken?: string): Promise<void> {
-    const signer = await this.envelopeSignerRepository.findById(signerId);
-    if (!signer) {
-      throw signerNotFound(`Signer with ID ${signerId.getValue()} not found`);
-    }
-
-    // For external users, validate through invitation token
-    if (userId === 'external-user') {
-      if (!invitationToken) {
-        throw signerNotFound('Invitation token is required for external users');
-      }
-
-      // Validate invitation token
-      const token = await this.invitationTokenRepository.getByToken(invitationToken);
-      if (!token) {
-        throw signerNotFound('Invalid invitation token');
-      }
-
-      // Validate that the token belongs to this signer
-      if (!token.getSignerId().equals(signerId)) {
-        throw signerNotFound('Invitation token does not belong to this signer');
-      }
-
-      // Validate that the signer was invited by the owner who created the token
-      if (signer.getInvitedByUserId() !== token.getCreatedBy()) {
-        throw signerNotFound('Signer was not invited by the token creator');
-      }
-
-      // Validate that the signer is external
-      if (!signer.getIsExternal()) {
-        throw signerNotFound('Signer is not external');
-      }
-    } else {
-      // For authenticated users, validate ownership
-      if (signer.getUserId() !== userId) {
-        throw signerNotFound(`User ${userId} is not authorized to access signer ${signerId.getValue()}`);
-      }
-    }
-  }
-
-  /**
-   * Updates signer consent status
-   * @param signerId - The signer ID
-   * @param consentText - The consent text
-   * @param ipAddress - The IP address
-   * @param userAgent - The user agent
-   */
-  private async updateSignerConsentStatus(
-    signerId: SignerId, 
-    consentText: string, 
-    ipAddress: string, 
-    userAgent: string
-  ): Promise<void> {
-    try {
-      // Get current signer
-      const currentSigner = await this.envelopeSignerRepository.findById(signerId);
-      if (!currentSigner) {
-        console.error('Signer not found for consent status update', { signerId: signerId.getValue() });
-        return;
-      }
-
-      // Record consent using entity method
-      currentSigner.recordConsent(consentText, ipAddress, userAgent);
-
-      // Update signer with new consent status
-      await this.envelopeSignerRepository.update(signerId, currentSigner);
-    } catch (error) {
-      // Log error but don't fail the consent creation
-      console.error('Failed to update signer consent status', {
-        signerId: signerId.getValue(),
-        error: error instanceof Error ? error.message : error
-      });
-    }
-  }
 }

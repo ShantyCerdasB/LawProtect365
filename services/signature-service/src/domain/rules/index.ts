@@ -8,3 +8,4 @@
 export * from './s3/S3StorageRules';
 export * from './AuditEventValidationRule';
 export * from './InvitationTokenValidationRule';
+export * from './SigningOrderValidationRule';

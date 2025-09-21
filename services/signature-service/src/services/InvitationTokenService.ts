@@ -95,23 +95,22 @@ export class InvitationTokenService {
         const createdToken = await this.invitationTokenRepository.create(invitationToken);
 
         // Create audit event
-        await this.signatureAuditEventService.createEvent({
-          envelopeId: envelopeId.getValue(),
-          signerId: signer.getId().getValue(),
-          eventType: AuditEventType.INVITATION_ISSUED,
-          description: `Invitation issued to ${signer.getEmail()?.getValue() || 'external signer'}`,
-          userId: securityContext.userId,
-          userEmail: signer.getEmail()?.getValue(),
-          ipAddress: securityContext.ipAddress,
-          userAgent: securityContext.userAgent,
-          country: securityContext.country,
-          metadata: {
+        await this.signatureAuditEventService.createSignerAuditEvent(
+          envelopeId.getValue(),
+          signer.getId().getValue(),
+          AuditEventType.INVITATION_ISSUED,
+          `Invitation issued to ${signer.getEmail()?.getValue() || 'external signer'}`,
+          securityContext.userId,
+          signer.getEmail()?.getValue(),
+          securityContext.ipAddress,
+          securityContext.userAgent,
+          {
             tokenId: createdToken.getId().getValue(),
             signerEmail: signer.getEmail()?.getValue(),
             signerName: signer.getFullName(),
             expiresAt: expiresAt.toISOString()
           }
-        });
+        );
 
         tokens.push(createdToken);
       }
@@ -201,16 +200,18 @@ export class InvitationTokenService {
       );
 
       // Create audit event
-      await this.signatureAuditEventService.createEvent(
-        this.createAuditEventFields(
-          invitationToken,
-          userId,
-          `Invitation token used by user ${userId}`,
-          AuditEventType.INVITATION_TOKEN_USED,
-          {
-            usedAt: invitationToken.getUsedAt()?.toISOString()
-          }
-        )
+      await this.signatureAuditEventService.createSignerAuditEvent(
+        invitationToken.getEnvelopeId().getValue(),
+        invitationToken.getSignerId().getValue(),
+        AuditEventType.INVITATION_TOKEN_USED,
+        `Invitation token used by user ${userId}`,
+        userId,
+        undefined,
+        invitationToken.getIpAddress(),
+        invitationToken.getUserAgent(),
+        {
+          usedAt: invitationToken.getUsedAt()?.toISOString()
+        }
       );
 
       return updatedToken;
@@ -242,17 +243,19 @@ export class InvitationTokenService {
       const updatedToken = await this.invitationTokenRepository.update(tokenId, invitationToken);
 
       // Create audit event
-      await this.signatureAuditEventService.createEvent(
-        this.createAuditEventFields(
-          invitationToken,
-          userId,
-          `Invitation token revoked: ${reason}`,
-          AuditEventType.INVITATION_TOKEN_USED,
-          {
-            revokedAt: invitationToken.getRevokedAt()?.toISOString(),
-            revokedReason: reason
-          }
-        )
+      await this.signatureAuditEventService.createSignerAuditEvent(
+        invitationToken.getEnvelopeId().getValue(),
+        invitationToken.getSignerId().getValue(),
+        AuditEventType.INVITATION_TOKEN_USED,
+        `Invitation token revoked: ${reason}`,
+        userId,
+        undefined,
+        invitationToken.getIpAddress(),
+        invitationToken.getUserAgent(),
+        {
+          revokedAt: invitationToken.getRevokedAt()?.toISOString(),
+          revokedReason: reason
+        }
       );
 
       return updatedToken;
@@ -300,37 +303,6 @@ export class InvitationTokenService {
     return this.invitationTokenRepository.countByEnvelopeId(envelopeId);
   }
 
-  /**
-   * Creates common audit event fields for invitation token operations
-   * @param invitationToken - The invitation token
-   * @param userId - The user performing the action
-   * @param description - Event description
-   * @param eventType - Type of audit event
-   * @param additionalMetadata - Additional metadata to include
-   * @returns Common audit event fields
-   */
-  private createAuditEventFields(
-    invitationToken: InvitationToken,
-    userId: string,
-    description: string,
-    eventType: AuditEventType,
-    additionalMetadata: Record<string, any> = {}
-  ) {
-    return {
-      envelopeId: invitationToken.getEnvelopeId().getValue(),
-      signerId: invitationToken.getSignerId().getValue(),
-      eventType,
-      description,
-      userId,
-      ipAddress: invitationToken.getIpAddress(),
-      userAgent: invitationToken.getUserAgent(),
-      country: invitationToken.getCountry(),
-      metadata: {
-        tokenId: invitationToken.getId().getValue(),
-        ...additionalMetadata
-      }
-    };
-  }
 
   /**
    * Generates a secure random token
