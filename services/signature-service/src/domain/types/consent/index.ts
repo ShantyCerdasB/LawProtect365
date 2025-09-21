@@ -1,15 +1,10 @@
 /**
- * @fileoverview Consent types - Barrel exports for consent types
- * @summary Centralized exports for consent-related types
- * @description Provides centralized access to all consent-related type definitions
- * including request types and domain interfaces.
+ * @fileoverview Consent Types - Barrel file for consent type exports
+ * @summary Exports all consent related types and interfaces
+ * @description This barrel file provides a single import point for all consent
+ * related types, interfaces, and specifications used throughout the application.
  */
 
-// Request types
-export type {
-  CreateConsentRequest
-} from './CreateConsentRequest';
-
-export type {
-  UpdateConsentRequest
-} from './UpdateConsentRequest';
+export * from './ConsentSpec';
+export * from './ConsentUpdateData';
+export * from './CreateConsentRequest';

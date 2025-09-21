@@ -1,249 +1,190 @@
 /**
- * @fileoverview KmsService - Service for cryptographic operations
- * @summary Manages KMS operations for digital signature creation and validation
- * @description This service handles all cryptographic operations including
- * signature creation, validation, and key management using AWS KMS.
+ * @fileoverview KmsService - Service for cryptographic operations only
+ * @summary Handles only KMS cryptographic operations for digital signatures
+ * @description This service is responsible ONLY for cryptographic operations using AWS KMS.
+ * It does not handle persistence, validation, or business logic - those are handled by other services.
+ * This service focuses solely on the cryptographic aspects of digital signature creation and verification.
  */
 
-
-import { KmsSigner, mapAwsError, BadRequestError, NotFoundError, ErrorCodes } from '@lawprotect/shared-ts';
-import { SignatureStatus } from '@/domain/enums/SignatureStatus';
-import { Signature } from '../domain/entities/Signature';
-import { SignatureId } from '../domain/value-objects/SignatureId';
-import { SignerId } from '../domain/value-objects/SignerId';
-import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
-// SigningAlgorithm is now imported via the type files
-import { SignatureRepository } from '../repositories/SignatureRepository';
-import { AuditService } from './AuditService';
-import { AuditEventType } from '../domain/enums/AuditEventType';
-import { CreateSignatureRequest as DomainCreateSignatureRequest } from '../domain/types/signature/CreateSignatureRequest';
-import { KmsCreateSignatureRequest } from '../domain/types/signature/KmsCreateSignatureRequest';
-import { ValidateSignatureRequest } from '../domain/types/signature/ValidateSignatureRequest';
-import { SignatureValidationResult } from '../domain/types/signature/SignatureValidationResult';
-import { signatureDdbMapper } from '../domain/types/infrastructure/signature/signature-mappers';
-import { S3Service } from './S3Service';
-import { validateKmsCreateSignatureRequest, validateSignatureValidationRequest } from '../domain/rules/signature/SignatureValidationRules';
-
-// Local interfaces moved to domain/types/signature/
-// - KmsCreateSignatureRequest
-// - ValidateSignatureRequest  
-// - SignatureValidationResult
+import { mapAwsError, BadRequestError, KmsSigner, hexToUint8Array, uint8ArrayToHex, pickMessageType } from '@lawprotect/shared-ts';
+import { KMSClient, SignCommand, VerifyCommand, type SigningAlgorithmSpec } from '@aws-sdk/client-kms';
+import { KMSKeyId } from '../domain/value-objects/KMSKeyId';
+import { SigningAlgorithm } from '../domain/value-objects/SigningAlgorithm';
+import { DocumentHash } from '../domain/value-objects/DocumentHash';
+import { KmsKeyValidationRule } from '../domain/rules/KmsKeyValidationRule';
+import { 
+  KmsSignRequest, 
+  KmsSignResult, 
+  KmsVerifyRequest, 
+  KmsVerifyResult 
+} from '../domain/types/kms';
+import { 
+  kmsKeyNotFound,
+  kmsPermissionDenied,
+  kmsSigningFailed,
+  kmsValidationFailed
+} from '../signature-errors';
 
 /**
- * KmsService
+ * KmsService - Service for cryptographic operations only
  * 
- * Service for managing cryptographic operations using AWS KMS.
- * Handles digital signature creation, validation, and key management.
+ * This service handles ONLY cryptographic operations using AWS KMS.
+ * It does not handle:
+ * - Persistence (handled by repositories)
+ * - Business logic validation (handled by entities and other services)
+ * - Audit logging (handled by audit services)
+ * - S3 operations (handled by S3Service)
+ * 
+ * Responsibilities:
+ * - Sign document hashes using KMS
+ * - Verify signatures using KMS
+ * - Validate KMS key availability
+ * - Handle KMS-specific errors
  */
 export class KmsService {
+  private readonly kmsSigner: KmsSigner;
+  private readonly keyValidationRule: KmsKeyValidationRule;
+
   constructor(
-    private readonly kmsSigner: KmsSigner,
-    private readonly signatureRepository: SignatureRepository,
-    private readonly auditService: AuditService,
-    // private readonly eventService: SignatureEventService,
-    private readonly s3Service: S3Service,
-    private readonly kmsKeyId: string
-  ) {}
-
-  /**
-   * Creates a digital signature for a document
-   */
-  async createSignature(request: KmsCreateSignatureRequest): Promise<Signature> {
-    try {
-      // Validate input
-      this.validateCreateSignatureRequest(request);
-
-      // Validate that the input PDF exists in S3
-      const inputExists = await this.s3Service.documentExists(request.inputKey);
-      if (!inputExists) {
-        throw new BadRequestError(
-          `Input PDF not found in S3: ${request.inputKey}`,
-          ErrorCodes.COMMON_NOT_FOUND
-        );
-      }
-
-      // Validate that outputKey equals inputKey (for overwrite strategy)
-      if (request.inputKey !== request.outputKey) {
-        throw new BadRequestError(
-          'Output key must equal input key for PDF overwrite strategy',
-          ErrorCodes.COMMON_BAD_REQUEST
-        );
-      }
-
-      // Create signature using KMS
-      const signatureResult = await this.kmsSigner.sign({
-        keyId: request.kmsKeyId,
-        message: new TextEncoder().encode(request.documentHash)
-      });
-
-      // Create signature request for repository
-      const createRequest: DomainCreateSignatureRequest = {
-        id: request.signatureId,
-        envelopeId: request.envelopeId,
-        signerId: request.signerId,
-        documentHash: request.documentHash,
-        signatureHash: new TextDecoder().decode(signatureResult.signature),
-        s3Key: request.outputKey, // Use the outputKey from Document Service
-        kmsKeyId: request.kmsKeyId,
-        algorithm: request.algorithm,
-        timestamp: new Date(),
-        status: SignatureStatus.SIGNED,
-        ipAddress: request.metadata?.ipAddress,
-        userAgent: request.metadata?.userAgent,
-        reason: request.metadata?.reason,
-        location: request.metadata?.location
-      };
-
-      // Store signature in repository
-      const createdSignature = await this.signatureRepository.create(createRequest);
-
-      // Audit handled at SignatureService level to avoid duplication
-
-      // Do not publish here; publication policy handled at higher-level service if needed
-
-      return createdSignature;
-    } catch (error) {
-      throw mapAwsError(error, 'KmsService.createSignature');
-    }
+    private readonly kmsClient: KMSClient
+  ) {
+    this.kmsSigner = new KmsSigner(kmsClient);
+    this.keyValidationRule = new KmsKeyValidationRule(this.kmsSigner);
   }
 
   /**
-   * Validates a digital signature
+   * Signs a document hash using KMS
+   * @param request - The signing request containing document hash, key ID, and algorithm
+   * @returns Promise with signature bytes, hash, and metadata
+   * @throws BadRequestError when request validation fails
+   * @throws kmsKeyNotFound when KMS key is not found
+   * @throws kmsPermissionDenied when KMS permissions are insufficient
+   * @throws kmsSigningFailed when signing operation fails
    */
-  async validateSignature(request: ValidateSignatureRequest): Promise<SignatureValidationResult> {
+  async sign(request: KmsSignRequest): Promise<KmsSignResult> {
     try {
-      // Validate input
-      this.validateValidateSignatureRequest(request);
+      // Validate input parameters using value objects
+      const kmsKeyId = KMSKeyId.fromString(request.kmsKeyId);
+      const signingAlgorithm = SigningAlgorithm.fromString(request.algorithm);
+      const documentHash = DocumentHash.fromString(request.documentHash);
 
-      // Get signature from repository
-      const signature = await this.signatureRepository.getById(request.signatureId);
-      if (!signature) {
-        return {
-          isValid: false,
-          error: 'Signature not found'
-        };
+      // Convert hex hash to Uint8Array for KMS
+      const hashBytes = hexToUint8Array(documentHash.getValue());
+
+      // Perform KMS signing operation directly
+      const signCommand = new SignCommand({
+        KeyId: kmsKeyId.getValue(),
+        Message: hashBytes,
+        MessageType: pickMessageType(hashBytes, signingAlgorithm.getValue()),
+        SigningAlgorithm: signingAlgorithm.getValue() as unknown as SigningAlgorithmSpec
+      });
+
+      const result = await this.kmsClient.send(signCommand);
+
+      if (!result.Signature) {
+        throw kmsSigningFailed('KMS signing operation returned an empty signature');
       }
 
-      // Validate signature using KMS
-      const validationResult = await this.kmsSigner.verify({
-        keyId: this.kmsKeyId,
-        message: new TextEncoder().encode(request.documentHash),
-        signature: new TextEncoder().encode(request.signature)
-      });
-
-      // Log audit event
-      await this.auditService.createEvent({
-        envelopeId: signature.getEnvelopeId(),
-        description: `Signature validation ${validationResult.valid ? 'succeeded' : 'failed'} for signature ${request.signatureId.getValue()}`,
-        type: AuditEventType.SIGNATURE_VALIDATED,
-        userId: signature.getSignerId(),
-        metadata: {
-          signatureId: request.signatureId.getValue(),
-          algorithm: request.algorithm,
-          isValid: validationResult.valid
-        }
-      });
+      // Convert signature bytes to hex string for storage
+      const signatureHash = uint8ArrayToHex(result.Signature);
 
       return {
-        isValid: validationResult.valid,
-        signedAt: signature.getTimestamp(),
-        error: validationResult.valid ? undefined : 'Signature validation failed'
+        signatureBytes: result.Signature,
+        signatureHash,
+        algorithm: signingAlgorithm.getValue(),
+        kmsKeyId: kmsKeyId.getValue(),
+        signedAt: new Date()
       };
+
     } catch (error) {
-      throw mapAwsError(error, 'KmsService.validateSignature');
+      this.handleKmsError(error, 'sign', request.kmsKeyId);
     }
   }
 
   /**
-   * Gets signature details by ID
+   * Verifies a signature using KMS
+   * @param request - The verification request containing document hash, signature, and key ID
+   * @returns Promise with verification result
+   * @throws BadRequestError when request validation fails
+   * @throws kmsKeyNotFound when KMS key is not found
+   * @throws kmsPermissionDenied when KMS permissions are insufficient
+   * @throws kmsValidationFailed when verification operation fails
    */
-  async getSignature(signatureId: SignatureId): Promise<Signature | null> {
+  async verify(request: KmsVerifyRequest): Promise<KmsVerifyResult> {
     try {
-      return await this.signatureRepository.getById(signatureId);
-    } catch (error) {
-      throw mapAwsError(error, 'KmsService.getSignature');
-    }
-  }
+      // Validate input parameters using value objects
+      const kmsKeyId = KMSKeyId.fromString(request.kmsKeyId);
+      const documentHash = DocumentHash.fromString(request.documentHash);
+      const signingAlgorithm = SigningAlgorithm.fromString(request.algorithm || 'RSASSA_PSS_SHA_256');
 
-  /**
-   * Gets signatures by signer
-   */
-  async getSignaturesBySigner(signerId: SignerId, limit: number = 20, cursor?: string): Promise<{
-    items: Signature[];
-    nextCursor?: string;
-  }> {
-    try {
-      const result = await this.signatureRepository.getBySigner(signerId.getValue(), limit, cursor);
-      return {
-        items: result.items.map(item => signatureDdbMapper.fromDTO(item)),
-        nextCursor: result.nextCursor
-      };
-    } catch (error) {
-      throw mapAwsError(error, 'KmsService.getSignaturesBySigner');
-    }
-  }
+      // Convert hex strings to Uint8Array for KMS
+      const hashBytes = hexToUint8Array(documentHash.getValue());
+      const signatureBytes = hexToUint8Array(request.signature);
 
-  /**
-   * Gets signatures by envelope
-   */
-  async getSignaturesByEnvelope(envelopeId: EnvelopeId, limit: number = 20, cursor?: string): Promise<{
-    items: Signature[];
-    nextCursor?: string;
-  }> {
-    try {
-      const result = await this.signatureRepository.getByEnvelope(envelopeId.getValue(), limit, cursor);
-      return {
-        items: result.items.map(item => signatureDdbMapper.fromDTO(item)),
-        nextCursor: result.nextCursor
-      };
-    } catch (error) {
-      throw mapAwsError(error, 'KmsService.getSignaturesByEnvelope');
-    }
-  }
-
-  /**
-   * Updates signature status
-   */
-  async updateSignatureStatus(signatureId: SignatureId, status: SignatureStatus): Promise<Signature> {
-    try {
-      const signature = await this.signatureRepository.getById(signatureId);
-      if (!signature) {
-        throw new NotFoundError('Signature not found', ErrorCodes.COMMON_NOT_FOUND);
-      }
-
-      const updatedSignature = await this.signatureRepository.update(signatureId, { status });
-
-      // Log audit event
-      await this.auditService.createEvent({
-        envelopeId: signature.getEnvelopeId(),
-        description: `Signature status updated to ${status} for signature ${signatureId.getValue()}`,
-        type: AuditEventType.SIGNATURE_STATUS_UPDATED,
-        userId: signature.getSignerId(),
-        metadata: {
-          signatureId: signatureId.getValue(),
-          oldStatus: signature.getStatus(),
-          newStatus: status
-        }
+      // Perform KMS verification operation directly
+      const verifyCommand = new VerifyCommand({
+        KeyId: kmsKeyId.getValue(),
+        Message: hashBytes,
+        MessageType: pickMessageType(hashBytes, signingAlgorithm.getValue()),
+        Signature: signatureBytes,
+        SigningAlgorithm: signingAlgorithm.getValue() as unknown as SigningAlgorithmSpec
       });
 
-      return updatedSignature;
+      const result = await this.kmsClient.send(verifyCommand);
+
+      return {
+        isValid: Boolean(result.SignatureValid),
+        error: result.SignatureValid ? undefined : 'Signature verification failed'
+      };
+
     } catch (error) {
-      throw mapAwsError(error, 'KmsService.updateSignatureStatus');
+      this.handleKmsError(error, 'verify', request.kmsKeyId);
     }
   }
 
-
   /**
-   * Validates create signature request using domain rules
+   * Validates KMS key format, availability, and configuration
+   * @param kmsKeyId - KMS key ID to validate
+   * @returns Promise with validation result
+   * @throws BadRequestError when key format is invalid
+   * @throws kmsKeyNotFound when KMS key is not found
+   * @throws kmsPermissionDenied when KMS permissions are insufficient
+   * @throws kmsValidationFailed when key is not configured for signing
    */
-  private validateCreateSignatureRequest(request: KmsCreateSignatureRequest): void {
-    validateKmsCreateSignatureRequest(request);
+  async validateKmsKey(kmsKeyId: string): Promise<boolean> {
+    await this.keyValidationRule.validateKeyForSigning(kmsKeyId);
+    return true;
   }
 
   /**
-   * Validates validate signature request using domain rules
+   * Handles KMS-specific errors and maps them to domain errors
+   * @param error - The error to handle
+   * @param operation - The operation that failed (for context)
+   * @param kmsKeyId - The KMS key ID involved in the operation
    */
-  private validateValidateSignatureRequest(request: ValidateSignatureRequest): void {
-    validateSignatureValidationRequest(request);
+  private handleKmsError(error: unknown, operation: string, kmsKeyId: string): never {
+    // Map domain-specific errors
+    if (error instanceof BadRequestError) {
+      throw error; // Re-throw validation errors
+    }
+
+    // Handle KMS-specific errors
+    if (error instanceof Error) {
+      if (error.message.includes('NotFoundException') || error.message.includes('not found')) {
+        throw kmsKeyNotFound(`KMS key not found: ${kmsKeyId}`);
+      }
+      if (error.message.includes('AccessDenied') || error.message.includes('permission')) {
+        throw kmsPermissionDenied(`KMS permission denied for key: ${kmsKeyId}`);
+      }
+      if (error.message.includes('signing') || error.message.includes('cryptographic')) {
+        throw kmsSigningFailed(`KMS signing failed: ${error.message}`);
+      }
+      if (error.message.includes('verification') || error.message.includes('invalid')) {
+        throw kmsValidationFailed(`KMS verification failed: ${error.message}`);
+      }
+    }
+
+    // Fallback to generic AWS error mapping
+    throw mapAwsError(error, `KmsService.${operation}`);
   }
 }

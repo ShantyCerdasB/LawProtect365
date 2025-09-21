@@ -1,15 +1,13 @@
 /**
- * @fileoverview Signer types - Barrel exports for signer types
- * @summary Centralized exports for signer-related types
- * @description Provides centralized access to all signer-related type definitions
- * including request types and domain interfaces.
+ * @fileoverview Signer Types - Barrel file for signer-related types
+ * @summary Exports all signer-related type definitions
+ * @description This barrel file exports all interfaces and types related to signers,
+ * including query specifications, update data, and signature information.
  */
 
-// Request types
-export type {
-  CreateSignerDomainRequest
-} from './CreateSignerRequest';
-
-export type {
-  UpdateSignerDomainRequest
-} from './UpdateSignerRequest';
+export * from './SignerSpec';
+export * from './SignerUpdateData';
+export * from './SignatureData';
+export * from './CreateSignerData';
+export * from './DeclineSignerData';
+export * from './ConsentData';

@@ -8,6 +8,7 @@
 export { EnvelopeId } from './EnvelopeId';
 export { SignerId } from './SignerId';
 export { ConsentId } from './ConsentId';
+export { SignatureAuditEventId } from './SignatureAuditEventId';
 export { Email } from './Email';
 export { SigningOrder } from './SigningOrder';
 export { InvitationTokenId } from './InvitationTokenId';

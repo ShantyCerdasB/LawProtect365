@@ -41,6 +41,15 @@ export class Email extends StringValueObject {
   }
 
   /**
+   * Creates an Email from a string value or returns undefined if null/undefined
+   * @param value - The email string or null/undefined
+   * @returns Email instance or undefined
+   */
+  static fromStringOrUndefined(value: string | null | undefined): Email | undefined {
+    return value ? new Email(value) : undefined;
+  }
+
+  /**
    * Gets the domain part of the email
    */
   getDomain(): string {

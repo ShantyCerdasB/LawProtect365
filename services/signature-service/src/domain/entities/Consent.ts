@@ -210,4 +210,25 @@ export class Consent {
       updatedAt: this.updatedAt.toISOString()
     };
   }
+
+  /**
+   * Creates a Consent from persistence data
+   * @param data - Prisma Consent data
+   * @returns Consent instance
+   */
+  static fromPersistence(data: any): Consent {
+    return new Consent(
+      ConsentId.fromString(data.id),
+      EnvelopeId.fromString(data.envelopeId),
+      SignerId.fromString(data.signerId),
+      data.signatureId ? SignerId.fromString(data.signatureId) : undefined,
+      data.consentGiven,
+      data.consentTimestamp,
+      data.consentText,
+      data.ipAddress,
+      data.userAgent,
+      data.createdAt,
+      data.updatedAt
+    );
+  }
 }

@@ -5,9 +5,6 @@
  * throughout the application.
  */
 
-export * from './EnvelopeMetadata';
-export * from './CreateEnvelopeMetadataRequest';
-export * from './UpdateEnvelopeMetadataRequest';
-export * from './CreateEnvelopeRequest';
-export * from './UpdateEnvelopeRequest';
-export * from './EnvelopeSecurityContext';
+export * from './EnvelopeSpec';
+export * from './S3Keys';
+export * from './Hashes';

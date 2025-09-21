@@ -1,45 +1,54 @@
 /**
- * @fileoverview InvitationTokenService - Service for invitation token business logic
- * @summary Manages invitation token operations and coordinates with other services
- * @description This service handles all invitation token-related business logic, including
- * generation, validation, expiration management, and coordination with signers and events.
+ * @fileoverview InvitationTokenService - Business logic service for invitation token operations
+ * @summary Provides business logic for invitation token management using new architecture
+ * @description This service handles all business logic for invitation token operations
+ * including generation, validation, expiration management, and coordination with other services
+ * using the new Prisma-based architecture with proper separation of concerns.
  */
 
 import { InvitationToken } from '../domain/entities/InvitationToken';
 import { InvitationTokenId } from '../domain/value-objects/InvitationTokenId';
 import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
-import { Signer } from '../domain/entities/Signer';
+import { SignerId } from '../domain/value-objects/SignerId';
+import { EnvelopeSigner } from '../domain/entities/EnvelopeSigner';
 import { InvitationTokenRepository } from '../repositories/InvitationTokenRepository';
-import { SignerEventService } from './events/SignerEventService';
-import { AuditService } from './AuditService';
+import { EnvelopeSignerRepository } from '../repositories/EnvelopeSignerRepository';
+import { SignatureAuditEventService } from './SignatureAuditEventService';
+import { InvitationTokenValidationRule } from '../domain/rules/InvitationTokenValidationRule';
 import { AuditEventType } from '../domain/enums/AuditEventType';
-import { mapAwsError, randomToken } from '@lawprotect/shared-ts';
-import { invitationTokenInvalid, invitationTokenExpired } from '../signature-errors';
+import { InvitationTokenStatus } from '@prisma/client';
+import { 
+  invitationTokenInvalid,
+  signerNotFound
+} from '../signature-errors';
+import { randomToken, sha256Hex } from '@lawprotect/shared-ts';
 
 /**
- * InvitationTokenService
+ * InvitationTokenService implementation
  * 
- * Service for managing invitation token operations and coordinating with other services.
- * Handles token generation, validation, expiration, and event publishing.
+ * Provides business logic for invitation token operations including generation, validation,
+ * expiration management, and coordination with other services. Uses the new Prisma-based
+ * architecture with proper separation of concerns between entities, repositories, and services.
  */
 export class InvitationTokenService {
+  private static readonly DEFAULT_EXPIRATION_DAYS = 7;
+
   constructor(
     private readonly invitationTokenRepository: InvitationTokenRepository,
-    private readonly signerEventService: SignerEventService,
-    private readonly auditService: AuditService
+    private readonly envelopeSignerRepository: EnvelopeSignerRepository,
+    private readonly signatureAuditEventService: SignatureAuditEventService
   ) {}
 
   /**
-   * Generates invitation tokens for multiple signers WITHOUT publishing events
-   * Used during envelope creation - events will be published later when envelope is sent
-   * 
-   * @param signers - Array of signers to generate tokens for
+   * Generates invitation tokens for multiple signers
+   * @param signers - Array of envelope signers to generate tokens for
    * @param envelopeId - The envelope ID
    * @param securityContext - Security context from middleware
+   * @param actorEmail - Email of the actor (optional, for owner-only scenarios)
    * @returns Array of created invitation tokens
    */
   async generateInvitationTokensForSigners(
-    signers: Signer[],
+    signers: EnvelopeSigner[],
     envelopeId: EnvelopeId,
     securityContext: {
       userId: string;
@@ -54,245 +63,289 @@ export class InvitationTokenService {
       
       for (const signer of signers) {
         // Skip token generation for owner-only scenarios (actor signing themselves)
-        if (actorEmail && signer.getEmail().getValue().toLowerCase() === actorEmail.toLowerCase()) {
+        if (actorEmail && signer.getEmail()?.getValue().toLowerCase() === actorEmail.toLowerCase()) {
           continue;
         }
+
+        // Validate that user can create tokens for this signer
+        InvitationTokenValidationRule.validateTokenCreation(signer, securityContext.userId);
+
         // Generate secure token
         const token = this.generateSecureToken();
+        const tokenHash = this.hashToken(token);
         const expiresAt = new Date();
-        expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiration
+        expiresAt.setDate(expiresAt.getDate() + InvitationTokenService.DEFAULT_EXPIRATION_DAYS);
+
+        // Validate expiration
+        InvitationTokenValidationRule.validateExpiration(expiresAt);
 
         // Create invitation token entity
-        const invitationToken = await this.invitationTokenRepository.create({
-          id: new InvitationTokenId(token),
-          token,
-          signerId: signer.getId(),
+        const invitationToken = InvitationToken.create({
           envelopeId,
+          signerId: signer.getId(),
+          tokenHash,
           expiresAt,
-          createdAt: new Date(),
-          metadata: {
-            ipAddress: securityContext.ipAddress,
-            userAgent: securityContext.userAgent,
-            email: signer.getEmail().getValue(),
-            fullName: signer.getFullName()
-          }
+          createdBy: securityContext.userId,
+          ipAddress: securityContext.ipAddress,
+          userAgent: securityContext.userAgent,
+          country: securityContext.country
         });
 
-        // Record initial issuance once per signer (not on resend)
-        await this.auditService.createEvent({
-          type: AuditEventType.INVITATION_ISSUED,
+        // Save to repository
+        const createdToken = await this.invitationTokenRepository.create(invitationToken);
+
+        // Create audit event
+        await this.signatureAuditEventService.createEvent({
           envelopeId: envelopeId.getValue(),
           signerId: signer.getId().getValue(),
+          eventType: AuditEventType.INVITATION_ISSUED,
+          description: `Invitation issued to ${signer.getEmail()?.getValue() || 'external signer'}`,
           userId: securityContext.userId,
-          userEmail: signer.getEmail().getValue(),
+          userEmail: signer.getEmail()?.getValue(),
           ipAddress: securityContext.ipAddress,
           userAgent: securityContext.userAgent,
           country: securityContext.country,
-          description: `Invitation issued to ${signer.getEmail().getValue()}`,
           metadata: {
-            signerEmail: signer.getEmail().getValue(),
+            tokenId: createdToken.getId().getValue(),
+            signerEmail: signer.getEmail()?.getValue(),
             signerName: signer.getFullName(),
             expiresAt: expiresAt.toISOString()
           }
         });
 
-      // NOTE: Do NOT publish signer.invited event here
-      // Events will be published by SendEnvelopeHandler when envelope is sent
-
-        tokens.push(invitationToken);
+        tokens.push(createdToken);
       }
 
       return tokens;
     } catch (error) {
-      throw mapAwsError(error, 'InvitationTokenService.generateInvitationTokensForSigners');
+      throw invitationTokenInvalid(
+        `Failed to generate invitation tokens: ${error instanceof Error ? error.message : error}`
+      );
     }
   }
 
   /**
    * Validates an invitation token
-   * 
    * @param token - The token to validate
    * @returns The invitation token if valid
-   * @throws UnauthorizedError if token is invalid or expired
+   * @throws invitationTokenInvalid if token is invalid or expired
    */
   async validateInvitationToken(token: string): Promise<InvitationToken> {
     try {
       const invitationToken = await this.invitationTokenRepository.getByToken(token);
       
       if (!invitationToken) {
-        throw invitationTokenInvalid({ token });
+        throw invitationTokenInvalid('Token not found');
       }
 
-      // Check if token is expired
-      if (invitationToken.getExpiresAt() < new Date()) {
-        throw invitationTokenExpired({ 
-          token, 
-          expiresAt: invitationToken.getExpiresAt().toISOString() 
-        });
-      }
+      // Validate token using domain rule
+      InvitationTokenValidationRule.validateToken(invitationToken);
 
       return invitationToken;
     } catch (error) {
       if (error && typeof error === 'object' && 'code' in error) {
         const errorCode = (error as any).code;
-        if (errorCode === 'INVITATION_TOKEN_INVALID' || errorCode === 'INVITATION_TOKEN_EXPIRED') {
+        if (errorCode === 'INVITATION_TOKEN_INVALID' || 
+            errorCode === 'INVITATION_TOKEN_EXPIRED' ||
+            errorCode === 'INVITATION_TOKEN_ALREADY_USED' ||
+            errorCode === 'INVITATION_TOKEN_REVOKED') {
           throw error;
         }
       }
-      throw mapAwsError(error, 'InvitationTokenService.validateInvitationToken');
+      throw invitationTokenInvalid(
+        `Token validation failed: ${error instanceof Error ? error.message : error}`
+      );
+    }
+  }
+
+  /**
+   * Validates that a signer has access to use an invitation token
+   * @param signerId - The signer ID
+   * @param invitationToken - The invitation token
+   * @returns void if valid, throws error if invalid
+   */
+  async validateSignerAccess(signerId: SignerId, invitationToken: InvitationToken): Promise<void> {
+    try {
+      // Get signer from repository
+      const signer = await this.envelopeSignerRepository.findById(signerId);
+      if (!signer) {
+        throw signerNotFound(`Signer with ID ${signerId.getValue()} not found`);
+      }
+
+      // Validate signer access using domain rule
+      InvitationTokenValidationRule.validateSignerAccess(invitationToken, signer);
+    } catch (error) {
+      throw signerNotFound(
+        `Signer access validation failed: ${error instanceof Error ? error.message : error}`
+      );
     }
   }
 
   /**
    * Marks an invitation token as used
-   * 
    * @param token - The token to mark as used
    * @param userId - The user who used the token
    * @returns The updated invitation token
    */
-  async markTokenAsUsed(
-    token: string, 
-    _userId: string
-  ): Promise<InvitationToken> {
+  async markTokenAsUsed(token: string, userId: string): Promise<InvitationToken> {
     try {
-      const invitationToken = await this.invitationTokenRepository.update(token, {
-        usedAt: new Date(),
-        metadata: {
-          ipAddress: undefined,
-          userAgent: undefined,
-          email: undefined,
-          fullName: undefined
-        }
-      });
-
-      // Audit token usage
-      await this.auditService.createEvent({
-        type: AuditEventType.INVITATION_TOKEN_USED,
-        envelopeId: invitationToken.getEnvelopeId().getValue(),
-        signerId: invitationToken.getSignerId().getValue(),
-        userId: 'external-user',
-        userEmail: invitationToken.getMetadata()?.email,
-        description: 'Invitation token used by recipient',
-        ipAddress: invitationToken.getMetadata()?.ipAddress,
-        userAgent: invitationToken.getMetadata()?.userAgent,
-        country: invitationToken.getMetadata()?.country,
-        metadata: {
-          usedAt: new Date().toISOString()
-        }
-      });
-
-      return invitationToken;
-    } catch (error) {
-      throw mapAwsError(error, 'InvitationTokenService.markTokenAsUsed');
-    }
-  }
-
-  /**
-   * Gets invitation tokens by envelope ID
-   * 
-   * @param envelopeId - The envelope ID
-   * @returns Array of invitation tokens for the envelope
-   */
-  async getTokensByEnvelope(envelopeId: EnvelopeId): Promise<InvitationToken[]> {
-    try {
-      const result = await this.invitationTokenRepository.getByEnvelope(envelopeId.getValue());
-      return result.items;
-    } catch (error) {
-      throw mapAwsError(error, 'InvitationTokenService.getTokensByEnvelope');
-    }
-  }
-
-  /**
-   * Gets invitation tokens by signer ID
-   * 
-   * @param signerId - The signer ID
-   * @returns Array of invitation tokens for the signer
-   */
-  async getTokensBySigner(signerId: string): Promise<InvitationToken[]> {
-    try {
-      const result = await this.invitationTokenRepository.getBySigner(signerId);
-      return result.items;
-    } catch (error) {
-      throw mapAwsError(error, 'InvitationTokenService.getTokensBySigner');
-    }
-  }
-
-  /**
-   * Publishes signer.invited events for all signers of an envelope
-   * Used by SendEnvelopeHandler to trigger email notifications
-   * 
-   * @param envelopeId - The envelope ID
-   * @param userId - The user who sent the envelope
-   */
-  async publishSignerInvitedEvents(
-    envelopeId: EnvelopeId,
-    userId: string
-  ): Promise<void> {
-    try {
-      // Get all invitation tokens for this envelope
-      const result = await this.invitationTokenRepository.getByEnvelope(envelopeId.getValue());
+      const invitationToken = await this.validateInvitationToken(token);
       
-      for (const token of result.items) {
-        // Get signer information from token metadata
-        const signerEmail = token.getMetadata().email;
-        const signerName = token.getMetadata().fullName;
-        
-        if (signerEmail && signerName) {
-          // Create a temporary signer object for event publishing
-          const tempSigner = {
-            getId: () => ({ getValue: () => token.getSignerId().getValue() }),
-            getEnvelopeId: () => envelopeId.getValue(),
-            getEmail: () => ({ getValue: () => signerEmail }),
-            getFullName: () => signerName
-          } as any;
-          
-          // Publish signer invited event
-          await this.signerEventService.publishSignerInvited(
-            tempSigner,
-            token.getToken(),
-            userId
-          );
-        }
-      }
-    } catch (error) {
-      // Log and swallow to avoid failing primary flow; outbox worker will retry
-      // eslint-disable-next-line no-console
-      console.error('[InvitationTokenService.publishSignerInvitedEvents] error', { name: (error as any)?.name, code: (error as any)?.code, message: (error as any)?.message });
-    }
-  }
+      // Mark token as used using entity method
+      invitationToken.markAsUsed(userId);
 
-  /**
-   * Deletes an invitation token
-   * 
-   * @param token - The token to delete
-   */
-  async deleteToken(token: string): Promise<void> {
-    try {
-      await this.invitationTokenRepository.delete(token);
+      // Update in repository
+      const updatedToken = await this.invitationTokenRepository.update(
+        invitationToken.getId(),
+        invitationToken
+      );
 
       // Create audit event
-      await this.auditService.createEvent({
-        type: AuditEventType.SIGNER_REMOVED,
-        envelopeId: 'unknown',
-        signerId: 'unknown',
-        userId: 'system',
-        description: `Invitation token deleted`,
-        metadata: {
-          token: token,
-          deletedAt: new Date().toISOString()
-        }
-      });
+      await this.signatureAuditEventService.createEvent(
+        this.createAuditEventFields(
+          invitationToken,
+          userId,
+          `Invitation token used by user ${userId}`,
+          AuditEventType.INVITATION_TOKEN_USED,
+          {
+            usedAt: invitationToken.getUsedAt()?.toISOString()
+          }
+        )
+      );
+
+      return updatedToken;
     } catch (error) {
-      throw mapAwsError(error, 'InvitationTokenService.deleteToken');
+      throw invitationTokenInvalid(
+        `Failed to mark token as used: ${error instanceof Error ? error.message : error}`
+      );
     }
   }
 
   /**
-   * Generates a secure random token using cryptographically secure random generation
-   * 
-   * @returns A secure random token string (base64url encoded)
+   * Revokes an invitation token
+   * @param tokenId - The token ID to revoke
+   * @param reason - Reason for revocation
+   * @param userId - The user revoking the token
+   * @returns The updated invitation token
+   */
+  async revokeToken(tokenId: InvitationTokenId, reason: string, userId: string): Promise<InvitationToken> {
+    try {
+      const invitationToken = await this.invitationTokenRepository.findById(tokenId);
+      if (!invitationToken) {
+        throw invitationTokenInvalid(`Token with ID ${tokenId.getValue()} not found`);
+      }
+
+      // Revoke token using entity method
+      invitationToken.revoke(reason, userId);
+
+      // Update in repository
+      const updatedToken = await this.invitationTokenRepository.update(tokenId, invitationToken);
+
+      // Create audit event
+      await this.signatureAuditEventService.createEvent(
+        this.createAuditEventFields(
+          invitationToken,
+          userId,
+          `Invitation token revoked: ${reason}`,
+          AuditEventType.INVITATION_TOKEN_USED,
+          {
+            revokedAt: invitationToken.getRevokedAt()?.toISOString(),
+            revokedReason: reason
+          }
+        )
+      );
+
+      return updatedToken;
+    } catch (error) {
+      throw invitationTokenInvalid(
+        `Failed to revoke token: ${error instanceof Error ? error.message : error}`
+      );
+    }
+  }
+
+  /**
+   * Gets invitation tokens by envelope
+   * @param envelopeId - The envelope ID
+   * @returns Array of invitation tokens
+   */
+  async getTokensByEnvelope(envelopeId: EnvelopeId): Promise<InvitationToken[]> {
+    return this.invitationTokenRepository.findByEnvelopeId(envelopeId);
+  }
+
+  /**
+   * Gets invitation tokens by signer
+   * @param signerId - The signer ID
+   * @returns Array of invitation tokens
+   */
+  async getTokensBySigner(signerId: SignerId): Promise<InvitationToken[]> {
+    return this.invitationTokenRepository.findBySignerId(signerId);
+  }
+
+  /**
+   * Gets active invitation tokens by envelope
+   * @param envelopeId - The envelope ID
+   * @returns Array of active invitation tokens
+   */
+  async getActiveTokensByEnvelope(envelopeId: EnvelopeId): Promise<InvitationToken[]> {
+    const allTokens = await this.invitationTokenRepository.findByEnvelopeId(envelopeId);
+    return allTokens.filter(token => token.getStatus() === InvitationTokenStatus.ACTIVE);
+  }
+
+  /**
+   * Counts invitation tokens by envelope
+   * @param envelopeId - The envelope ID
+   * @returns Number of invitation tokens
+   */
+  async countTokensByEnvelope(envelopeId: EnvelopeId): Promise<number> {
+    return this.invitationTokenRepository.countByEnvelopeId(envelopeId);
+  }
+
+  /**
+   * Creates common audit event fields for invitation token operations
+   * @param invitationToken - The invitation token
+   * @param userId - The user performing the action
+   * @param description - Event description
+   * @param eventType - Type of audit event
+   * @param additionalMetadata - Additional metadata to include
+   * @returns Common audit event fields
+   */
+  private createAuditEventFields(
+    invitationToken: InvitationToken,
+    userId: string,
+    description: string,
+    eventType: AuditEventType,
+    additionalMetadata: Record<string, any> = {}
+  ) {
+    return {
+      envelopeId: invitationToken.getEnvelopeId().getValue(),
+      signerId: invitationToken.getSignerId().getValue(),
+      eventType,
+      description,
+      userId,
+      ipAddress: invitationToken.getIpAddress(),
+      userAgent: invitationToken.getUserAgent(),
+      country: invitationToken.getCountry(),
+      metadata: {
+        tokenId: invitationToken.getId().getValue(),
+        ...additionalMetadata
+      }
+    };
+  }
+
+  /**
+   * Generates a secure random token
+   * @returns Secure random token string
    */
   private generateSecureToken(): string {
-    return randomToken(32);
+    return randomToken(32); // 32 bytes = 64 hex characters
+  }
+
+  /**
+   * Hashes a token for secure storage using shared-ts crypto utility
+   * @param token - Plain token string
+   * @returns Hashed token string
+   */
+  private hashToken(token: string): string {
+    return sha256Hex(token);
   }
 }

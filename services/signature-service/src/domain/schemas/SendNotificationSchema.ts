@@ -5,7 +5,7 @@
  * reminders and invitation resends with proper type safety and validation.
  */
 
-import {z,  UuidV4 } from '@lawprotect/shared-ts';
+import {z, UuidV4, NotificationType} from '@lawprotect/shared-ts';
 
 /**
  * Schema for envelope ID in path parameters
@@ -18,7 +18,7 @@ export const SendNotificationPathSchema = z.object({
  * Schema for sending notifications request body
  */
 export const SendNotificationRequestSchema = z.object({
-  type: z.enum(['reminder', 'resend'], {
+  type: z.nativeEnum(NotificationType, {
     errorMap: () => ({ message: 'Notification type must be either "reminder" or "resend"' })
   }),
   signerIds: z.array(UuidV4).optional().describe('Optional: specific signer IDs to notify'),

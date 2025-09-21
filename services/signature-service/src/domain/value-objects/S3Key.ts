@@ -46,6 +46,15 @@ export class S3Key {
   }
 
   /**
+   * Creates an S3Key from a string value or returns undefined if null/undefined
+   * @param key - The S3 key string or null/undefined
+   * @returns S3Key instance or undefined
+   */
+  static fromStringOrUndefined(key: string | null | undefined): S3Key | undefined {
+    return key ? new S3Key(key) : undefined;
+  }
+
+  /**
    * Gets the S3 key value
    */
   getValue(): string {

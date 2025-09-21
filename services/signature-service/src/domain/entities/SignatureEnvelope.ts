@@ -64,6 +64,40 @@ export class SignatureEnvelope {
   ) {}
 
   /**
+   * Creates a SignatureEnvelope from persistence data
+   * @param data - Prisma SignatureEnvelope data
+   * @returns SignatureEnvelope instance
+   */
+  static fromPersistence(data: any): SignatureEnvelope {
+    return new SignatureEnvelope(
+      EnvelopeId.fromString(data.id),
+      SignerId.fromString(data.createdBy),
+      data.title,
+      data.description,
+      EnvelopeStatus.fromString(data.status),
+      data.signers?.map((signer: any) => EnvelopeSigner.fromPersistence(signer)) || [],
+      SigningOrder.fromString(data.signingOrderType),
+      DocumentOrigin.fromString(data.originType, data.templateId, data.templateVersion),
+      S3Key.fromStringOrUndefined(data.sourceKey),
+      S3Key.fromStringOrUndefined(data.metaKey),
+      S3Key.fromStringOrUndefined(data.flattenedKey),
+      S3Key.fromStringOrUndefined(data.signedKey),
+      DocumentHash.fromStringOrUndefined(data.sourceSha256),
+      DocumentHash.fromStringOrUndefined(data.flattenedSha256),
+      DocumentHash.fromStringOrUndefined(data.signedSha256),
+      data.sentAt,
+      data.completedAt,
+      data.cancelledAt,
+      data.declinedAt,
+      data.declinedBySignerId ? SignerId.fromString(data.declinedBySignerId) : undefined,
+      data.declinedReason,
+      data.expiresAt,
+      data.createdAt,
+      data.updatedAt
+    );
+  }
+
+  /**
    * Gets the envelope unique identifier
    * @returns The envelope ID value object
    */
@@ -523,4 +557,67 @@ export class SignatureEnvelope {
     // If envelope was sent and has pending signers, keep as READY_FOR_SIGNATURE
     this.status = EnvelopeStatus.readyForSignature();
   }
+
+  /**
+   * Updates S3 keys for the envelope
+   * @param sourceKey - Source document S3 key
+   * @param metaKey - Metadata S3 key
+   * @param flattenedKey - Flattened document S3 key
+   * @param signedKey - Signed document S3 key
+   */
+  updateS3Keys(
+    sourceKey?: S3Key,
+    metaKey?: S3Key,
+    flattenedKey?: S3Key,
+    signedKey?: S3Key
+  ): void {
+    if (sourceKey !== undefined) {
+      (this as any).sourceKey = sourceKey;
+    }
+    if (metaKey !== undefined) {
+      (this as any).metaKey = metaKey;
+    }
+    if (flattenedKey !== undefined) {
+      (this as any).flattenedKey = flattenedKey;
+    }
+    if (signedKey !== undefined) {
+      (this as any).signedKey = signedKey;
+    }
+    this.updatedAt = new Date();
+  }
+
+  /**
+   * Updates document hashes for the envelope
+   * @param sourceSha256 - Source document hash
+   * @param flattenedSha256 - Flattened document hash
+   * @param signedSha256 - Signed document hash
+   */
+  updateHashes(
+    sourceSha256?: DocumentHash,
+    flattenedSha256?: DocumentHash,
+    signedSha256?: DocumentHash
+  ): void {
+    if (sourceSha256 !== undefined) {
+      (this as any).sourceSha256 = sourceSha256;
+    }
+    if (flattenedSha256 !== undefined) {
+      (this as any).flattenedSha256 = flattenedSha256;
+    }
+    if (signedSha256 !== undefined) {
+      (this as any).signedSha256 = signedSha256;
+    }
+    this.updatedAt = new Date();
+  }
+
+  /**
+   * Updates signed document information
+   * @param signedKey - S3 key for signed document
+   * @param signedSha256 - SHA-256 hash of signed document
+   */
+  updateSignedDocument(signedKey: S3Key, signedSha256: DocumentHash): void {
+    (this as any).signedKey = signedKey;
+    (this as any).signedSha256 = signedSha256;
+    this.updatedAt = new Date();
+  }
+
 }

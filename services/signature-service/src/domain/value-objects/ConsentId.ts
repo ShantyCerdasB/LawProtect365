@@ -42,6 +42,18 @@ export class ConsentId extends Identifier<string> {
   }
 
   /**
+   * Creates a ConsentId from a string value or returns undefined if null/undefined
+   * @param value - String value or null/undefined
+   * @returns ConsentId instance or undefined
+   */
+  static fromStringOrUndefined(value: string | null | undefined): ConsentId | undefined {
+    if (value === null || value === undefined) {
+      return undefined;
+    }
+    return new ConsentId(value);
+  }
+
+  /**
    * Checks if this ConsentId equals another ConsentId
    */
   equals(other: ConsentId): boolean {

@@ -323,4 +323,72 @@ export class InvitationToken {
   equals(other: InvitationToken): boolean {
     return this.id.equals(other.id);
   }
+
+  /**
+   * Creates a new InvitationToken for external signer access
+   * @param params - Parameters for creating the invitation token
+   * @returns InvitationToken instance
+   */
+  static create(params: {
+    envelopeId: EnvelopeId;
+    signerId: SignerId;
+    tokenHash: string;
+    expiresAt: Date;
+    createdBy: string;
+    ipAddress?: string;
+    userAgent?: string;
+    country?: string;
+  }): InvitationToken {
+    const now = new Date();
+    return new InvitationToken(
+      InvitationTokenId.generate(),
+      params.envelopeId,
+      params.signerId,
+      params.tokenHash,
+      InvitationTokenStatus.ACTIVE,
+      params.expiresAt,
+      undefined, // sentAt
+      undefined, // lastSentAt
+      0, // resendCount
+      undefined, // usedAt
+      undefined, // usedBy
+      undefined, // revokedAt
+      undefined, // revokedReason
+      params.createdBy,
+      params.ipAddress,
+      params.userAgent,
+      params.country,
+      now, // createdAt
+      now  // updatedAt
+    );
+  }
+
+  /**
+   * Creates an InvitationToken from persistence data
+   * @param data - Prisma InvitationToken data
+   * @returns InvitationToken instance
+   */
+  static fromPersistence(data: any): InvitationToken {
+    return new InvitationToken(
+      InvitationTokenId.fromString(data.id),
+      EnvelopeId.fromString(data.envelopeId),
+      SignerId.fromString(data.signerId),
+      data.tokenHash,
+      data.status,
+      data.expiresAt,
+      data.sentAt,
+      data.lastSentAt,
+      data.resendCount,
+      data.usedAt,
+      data.usedBy,
+      data.revokedAt,
+      data.revokedReason,
+      data.createdBy,
+      data.ipAddress,
+      data.userAgent,
+      data.country,
+      data.createdAt,
+      data.updatedAt
+    );
+  }
 }

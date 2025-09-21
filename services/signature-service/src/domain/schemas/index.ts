@@ -34,17 +34,21 @@ export {
 } from './SignerSchema';
 
 export {
-  SigningRequestSchema,
-  DeclineRequestSchema,
-  SignatureIdSchema,
-  SignatureStatusSchema,
-  SignatureValidationSchema,
-  SignatureQuerySchema,
-  SigningResponseSchema,
-  type SignatureIdParams,
-  type SignatureValidationRequest,
-  type SignatureQuery
-} from './SigningSchema';
+  SignDocumentRequestSchema,
+  ViewDocumentRequestSchema,
+  DeclineSignerRequestSchema,
+  InvitationTokenPathSchema,
+  SignDocumentResponseSchema,
+  ViewDocumentResponseSchema,
+  DeclineSignerResponseSchema,
+  type SignDocumentRequest,
+  type ViewDocumentRequest,
+  type DeclineSignerRequest,
+  type InvitationTokenPath,
+  type SignDocumentResponse,
+  type ViewDocumentResponse,
+  type DeclineSignerResponse
+} from './SigningHandlersSchema';
 
 export {
   AuditEventTypeSchema,

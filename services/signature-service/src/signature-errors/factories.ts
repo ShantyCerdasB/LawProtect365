@@ -127,6 +127,36 @@ export const signerEmailDuplicate = (details?: unknown) =>
 export const signerCannotBeRemoved = (details?: unknown) =>
   new ConflictError("Signer cannot be removed", SignatureErrorCodes.SIGNER_CANNOT_BE_REMOVED, details);
 
+/**
+ * Creates an InternalError for when signer creation fails (500).
+ */
+export const signerCreationFailed = (details?: unknown) =>
+  new InternalError("Failed to create signer", SignatureErrorCodes.SIGNER_CREATION_FAILED, details);
+
+/**
+ * Creates an InternalError for when signer update fails (500).
+ */
+export const signerUpdateFailed = (details?: unknown) =>
+  new InternalError("Failed to update signer", SignatureErrorCodes.SIGNER_UPDATE_FAILED, details);
+
+/**
+ * Creates an InternalError for when signer deletion fails (500).
+ */
+export const signerDeleteFailed = (details?: unknown) =>
+  new InternalError("Failed to delete signer", SignatureErrorCodes.SIGNER_DELETE_FAILED, details);
+
+/**
+ * Creates a ForbiddenError for when signer access is denied (403).
+ */
+export const signerAccessDenied = (details?: unknown) =>
+  new ForbiddenError("Access denied to signer", SignatureErrorCodes.SIGNER_ACCESS_DENIED, details);
+
+/**
+ * Creates a ConflictError for when signing order is violated (409).
+ */
+export const signerSigningOrderViolation = (details?: unknown) =>
+  new ConflictError("Signing order violation", SignatureErrorCodes.SIGNER_SIGNING_ORDER_VIOLATION, details);
+
 // ============================================================================
 // SIGNATURE ERRORS
 // ============================================================================
@@ -213,6 +243,18 @@ export const consentInvalid = (details?: unknown) =>
   new BadRequestError("Invalid consent", SignatureErrorCodes.CONSENT_INVALID, details);
 
 /**
+ * Creates a ConflictError for consent already exists (409).
+ */
+export const consentAlreadyExists = (details?: unknown) =>
+  new ConflictError("Consent already exists", SignatureErrorCodes.CONSENT_ALREADY_EXISTS, details);
+
+/**
+ * Creates an InternalError for consent creation failure (500).
+ */
+export const consentCreationFailed = (details?: unknown) =>
+  new InternalError("Consent creation failed", SignatureErrorCodes.CONSENT_CREATION_FAILED, details);
+
+/**
  * Creates a BadRequestError for missing consent timestamp (400).
  */
 export const consentTimestampRequired = (details?: unknown) =>
@@ -288,6 +330,12 @@ export const documentInvalidHash = (details?: unknown) =>
 export const documentS3Error = (details?: unknown) =>
   new InternalError("Document S3 error", SignatureErrorCodes.DOCUMENT_S3_ERROR, details);
 
+/**
+ * Creates a BadRequestError for when an entity is invalid (400).
+ */
+export const invalidEntity = (details?: unknown) =>
+  new BadRequestError("Invalid entity", SignatureErrorCodes.INVALID_ENTITY, details);
+
 // ============================================================================
 // AUDIT & COMPLIANCE ERRORS
 // ============================================================================
@@ -297,6 +345,18 @@ export const documentS3Error = (details?: unknown) =>
  */
 export const auditEventFailed = (details?: unknown) =>
   new InternalError("Audit event failed", SignatureErrorCodes.AUDIT_EVENT_FAILED, details);
+
+/**
+ * Creates a NotFoundError for audit event not found (404).
+ */
+export const auditEventNotFound = (details?: unknown) =>
+  new NotFoundError("Audit event not found", SignatureErrorCodes.AUDIT_EVENT_NOT_FOUND, details);
+
+/**
+ * Creates an InternalError for audit event creation failure (500).
+ */
+export const auditEventCreationFailed = (details?: unknown) =>
+  new InternalError("Audit event creation failed", SignatureErrorCodes.AUDIT_EVENT_CREATION_FAILED, details);
 
 /**
  * Creates a NotFoundError for when audit trail was not found (404).

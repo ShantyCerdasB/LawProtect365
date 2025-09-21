@@ -172,3 +172,42 @@ export function pickMessageType(
 
   return "RAW";
 }
+
+/**
+ * Converts a hex string to Uint8Array
+ * @param hex - Hex string to convert (e.g., "48656c6c6f")
+ * @returns Uint8Array representation of the hex string
+ * @throws Error if hex string is invalid or has odd length
+ * @example
+ * const bytes = hexToUint8Array("48656c6c6f"); // "Hello" in hex
+ * console.log(bytes); // Uint8Array(5) [72, 101, 108, 108, 111]
+ */
+export function hexToUint8Array(hex: string): Uint8Array {
+  if (hex.length % 2 !== 0) {
+    throw new Error(`Invalid hex string: length must be even, got ${hex.length}`);
+  }
+
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < hex.length; i += 2) {
+    const byte = parseInt(hex.substr(i, 2), 16);
+    if (isNaN(byte)) {
+      throw new Error(`Invalid hex character at position ${i}: ${hex.substr(i, 2)}`);
+    }
+    bytes[i / 2] = byte;
+  }
+  return bytes;
+}
+
+/**
+ * Converts a Uint8Array to hex string
+ * @param bytes - Uint8Array to convert
+ * @returns Hex string representation (lowercase)
+ * @example
+ * const hex = uint8ArrayToHex(new Uint8Array([72, 101, 108, 108, 111]));
+ * console.log(hex); // "48656c6c6f"
+ */
+export function uint8ArrayToHex(bytes: Uint8Array): string {
+  return Array.from(bytes)
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}

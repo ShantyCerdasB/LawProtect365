@@ -10,10 +10,11 @@ import { createDynamoDBClient } from '../../utils/dynamodb-client';
 import { S3Client } from '@aws-sdk/client-s3';
 import { KMSClient } from '@aws-sdk/client-kms';
 import { KmsSigner } from '@lawprotect/shared-ts';
+import { PrismaClient } from '@prisma/client';
 import { EnvelopeService } from '../../services/EnvelopeService';
 import { SignerService } from '../../services/SignerService';
 import { InvitationTokenService } from '../../services/InvitationTokenService';
-import { AuditService } from '../../services/AuditService';
+import { SignatureAuditEventService } from '../../services/SignatureAuditEventService';
 import { S3Service } from '../../services/S3Service';
 import { DocumentAccessService } from '../../services/DocumentAccessService';
 import { SignatureService } from '../../services/SignatureService';
@@ -28,7 +29,7 @@ import { SignerRepository } from '../../repositories/SignerRepository';
 import { SignatureRepository } from '../../repositories/SignatureRepository';
 import { InvitationTokenRepository } from '../../repositories/InvitationTokenRepository';
 import { OutboxRepository } from '@lawprotect/shared-ts';
-import { AuditRepository } from '../../repositories/AuditRepository';
+import { SignatureAuditEventRepository } from '../../repositories/SignatureAuditEventRepository';
 import { ConsentRepository } from '../../repositories/ConsentRepository';
 import { DocumentRepository } from '../../repositories/DocumentRepository';
 
@@ -47,6 +48,7 @@ import { DocumentRepository } from '../../repositories/DocumentRepository';
 export class ServiceFactory {
   private static readonly config = loadConfig();
   private static readonly ddbClient = createDynamoDBClient(this.config.dynamodb);
+  private static readonly prismaClient = new PrismaClient();
   private static readonly s3Client = new S3Client({
     region: this.config.region,
     ...(process.env.AWS_ENDPOINT_URL ? { endpoint: process.env.AWS_ENDPOINT_URL } : {}),
@@ -78,8 +80,7 @@ export class ServiceFactory {
     );
     const signerRepository = new SignerRepository(this.config.ddb.signersTable, this.ddbClient);
     const signatureRepository = new SignatureRepository(this.config.ddb.signaturesTable, this.ddbClient);
-    const auditRepository = new AuditRepository(this.config.ddb.auditTable, this.ddbClient);
-    const auditService = new AuditService(auditRepository);
+    const auditService = this.createAuditService();
     const outboxRepository = new OutboxRepository(this.config.ddb.outboxTable, this.ddbClient);
     const envelopeEventService = new EnvelopeEventService({
       outboxRepository,
@@ -113,8 +114,7 @@ export class ServiceFactory {
   static createSignerService(): SignerService {
     const signerRepository = new SignerRepository(this.config.ddb.signersTable, this.ddbClient);
     const envelopeRepository = new EnvelopeRepository(this.config.ddb.envelopesTable, this.ddbClient);
-    const auditRepository = new AuditRepository(this.config.ddb.auditTable, this.ddbClient);
-    const auditService = new AuditService(auditRepository);
+    const auditService = this.createAuditService();
     const outboxRepository = new OutboxRepository(this.config.ddb.outboxTable, this.ddbClient);
     const signerEventService = new SignerEventService({
       outboxRepository,
@@ -157,8 +157,7 @@ export class ServiceFactory {
    */
   static createInvitationTokenService(): InvitationTokenService {
     const invitationTokenRepository = new InvitationTokenRepository(this.config.ddb.invitationTokensTable, this.ddbClient);
-    const auditRepository = new AuditRepository(this.config.ddb.auditTable, this.ddbClient);
-    const auditService = new AuditService(auditRepository);
+    const auditService = this.createAuditService();
     const outboxRepository = new OutboxRepository(this.config.ddb.outboxTable, this.ddbClient);
     const signerEventService = new SignerEventService({
       outboxRepository,
@@ -173,14 +172,35 @@ export class ServiceFactory {
     );
   }
 
-  static createAuditService(): AuditService {
-    const auditRepository = new AuditRepository(this.config.ddb.auditTable, this.ddbClient);
-    return new AuditService(auditRepository);
+  static createSignatureAuditEventService(): SignatureAuditEventService {
+    const signatureAuditEventRepository = new SignatureAuditEventRepository(this.prismaClient);
+    return new SignatureAuditEventService(signatureAuditEventRepository);
+  }
+
+  /**
+   * Creates an AuditService instance for backward compatibility
+   * @deprecated Use createSignatureAuditEventService() instead
+   * @returns Configured AuditService instance
+   */
+  static createAuditService(): any {
+    // For now, return the new service wrapped in a compatibility layer
+    // This allows gradual migration without breaking existing code
+    const signatureAuditEventService = this.createSignatureAuditEventService();
+    
+    return {
+      createEvent: (request: any) => signatureAuditEventService.createEvent(request),
+      getAuditEvent: (id: string) => signatureAuditEventService.getAuditEvent({ getValue: () => id } as any),
+      getAuditTrail: (envelopeId: string, limit?: number, cursor?: string) => 
+        signatureAuditEventService.getAuditTrail({ getValue: () => envelopeId } as any),
+      getUserAuditTrail: (userId: string, limit?: number, cursor?: string) => 
+        signatureAuditEventService.getAuditEventsByType({} as any), // Temporary fallback
+      getAuditEventsByType: (eventType: any, limit?: number, cursor?: string) => 
+        signatureAuditEventService.getAuditEventsByType(eventType)
+    };
   }
 
   static createS3Service(): S3Service {
-    const auditRepository = new AuditRepository(this.config.ddb.auditTable, this.ddbClient);
-    const auditService = new AuditService(auditRepository);
+    const auditService = this.createAuditService();
     
     return new S3Service(
       this.s3Client,
@@ -247,8 +267,7 @@ export class ServiceFactory {
   static createConsentService(): ConsentService {
     const consentRepository = new ConsentRepository(this.config.ddb.consentTable, this.ddbClient);
     const signerRepository = new SignerRepository(this.config.ddb.signersTable, this.ddbClient);
-    const auditRepository = new AuditRepository(this.config.ddb.auditTable, this.ddbClient);
-    const auditService = new AuditService(auditRepository);
+    const auditService = this.createAuditService();
     const outboxRepository = new OutboxRepository(this.config.ddb.outboxTable, this.ddbClient);
     const consentEventService = new ConsentEventService({ outboxRepository, serviceName: 'ConsentService' });
     return new ConsentService(consentRepository, signerRepository, auditService, consentEventService);

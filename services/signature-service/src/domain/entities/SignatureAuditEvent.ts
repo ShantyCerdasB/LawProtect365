@@ -7,6 +7,8 @@
 
 import { EnvelopeId } from '../value-objects/EnvelopeId';
 import { SignerId } from '../value-objects/SignerId';
+import { SignatureAuditEventId } from '../value-objects/SignatureAuditEventId';
+import { AuditEventType } from '../enums/AuditEventType';
 
 /**
  * SignatureAuditEvent entity representing an audit event for signature operations
@@ -16,10 +18,10 @@ import { SignerId } from '../value-objects/SignerId';
  */
 export class SignatureAuditEvent {
   constructor(
-    private readonly id: string,
+    private readonly id: SignatureAuditEventId,
     private readonly envelopeId: EnvelopeId,
     private readonly signerId: SignerId | undefined,
-    private readonly eventType: string,
+    private readonly eventType: AuditEventType,
     private readonly description: string,
     private readonly userId: string | undefined,
     private readonly userEmail: string | undefined,
@@ -33,7 +35,7 @@ export class SignatureAuditEvent {
   /**
    * Gets the audit event unique identifier
    */
-  getId(): string {
+  getId(): SignatureAuditEventId {
     return this.id;
   }
 
@@ -54,7 +56,7 @@ export class SignatureAuditEvent {
   /**
    * Gets the event type
    */
-  getEventType(): string {
+  getEventType(): AuditEventType {
     return this.eventType;
   }
 
@@ -147,7 +149,7 @@ export class SignatureAuditEvent {
    */
   getSummary() {
     return {
-      id: this.id,
+      id: this.id.getValue(),
       envelopeId: this.envelopeId.getValue(),
       signerId: this.signerId?.getValue(),
       eventType: this.eventType,
@@ -168,6 +170,62 @@ export class SignatureAuditEvent {
    * @returns true if audit events are equal
    */
   equals(other: SignatureAuditEvent): boolean {
-    return this.id === other.id;
+    return this.id.equals(other.id);
+  }
+
+  /**
+   * Creates a new signature audit event instance
+   * @param params - Audit event creation parameters
+   * @returns New signature audit event instance
+   */
+  static create(params: {
+    envelopeId: EnvelopeId;
+    signerId?: SignerId;
+    eventType: AuditEventType;
+    description: string;
+    userId?: string;
+    userEmail?: string;
+    ipAddress?: string;
+    userAgent?: string;
+    country?: string;
+    metadata?: Record<string, any>;
+  }): SignatureAuditEvent {
+    const now = new Date();
+    return new SignatureAuditEvent(
+      SignatureAuditEventId.generate(),
+      params.envelopeId,
+      params.signerId,
+      params.eventType,
+      params.description,
+      params.userId,
+      params.userEmail,
+      params.ipAddress,
+      params.userAgent,
+      params.country,
+      params.metadata,
+      now
+    );
+  }
+
+  /**
+   * Creates a SignatureAuditEvent from persistence data
+   * @param data - Prisma SignatureAuditEvent data
+   * @returns SignatureAuditEvent instance
+   */
+  static fromPersistence(data: any): SignatureAuditEvent {
+    return new SignatureAuditEvent(
+      SignatureAuditEventId.fromString(data.id),
+      EnvelopeId.fromString(data.envelopeId),
+      data.signerId ? SignerId.fromString(data.signerId) : undefined,
+      data.eventType as AuditEventType,
+      data.description,
+      data.userId,
+      data.userEmail,
+      data.ipAddress,
+      data.userAgent,
+      data.country,
+      data.metadata,
+      data.createdAt
+    );
   }
 }

@@ -5,7 +5,7 @@
  * including path parameters and response formatting.
  */
 
-import { z, UuidV4 } from '@lawprotect/shared-ts';
+import { z, UuidV4, DocumentDownloadFormat } from '@lawprotect/shared-ts';
 
 /**
  * Schema for envelope ID in path parameters
@@ -19,7 +19,7 @@ export const DownloadSignedDocumentPathSchema = z.object({
  */
 export const DownloadSignedDocumentQuerySchema = z.object({
   expiresIn: z.number().min(300).max(3600).optional().default(3600), // 5 minutes to 1 hour
-  format: z.enum(['pdf', 'original']).optional().default('pdf')
+  format: z.nativeEnum(DocumentDownloadFormat).optional().default(DocumentDownloadFormat.PDF)
 });
 
 /**

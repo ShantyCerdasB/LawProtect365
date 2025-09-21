@@ -42,6 +42,18 @@ export class InvitationTokenId extends Identifier<string> {
   }
 
   /**
+   * Creates an InvitationTokenId from a string value or returns undefined if null/undefined
+   * @param value - String value to convert
+   * @returns InvitationTokenId instance or undefined
+   */
+  static fromStringOrUndefined(value: string | undefined): InvitationTokenId | undefined {
+    if (!value) {
+      return undefined;
+    }
+    return new InvitationTokenId(value);
+  }
+
+  /**
    * Checks if this InvitationTokenId equals another InvitationTokenId
    */
   equals(other: InvitationTokenId): boolean {

@@ -1,141 +1,165 @@
 /**
  * @fileoverview S3ValidationRules - Validation rules for S3 operations
- * @summary Contains validation logic for S3 document operations
- * @description This file contains validation rules specific to S3 operations,
- * including document storage, retrieval, and presigned URL generation.
+ * @summary Provides validation functions for S3 document operations
+ * @description This module contains validation rules for S3 operations including
+ * document storage, retrieval, and presigned URL generation using domain rules.
  */
 
+import { BadRequestError, ErrorCodes } from '@lawprotect/shared-ts';
 import { StoreDocumentRequest } from '../../types/s3/StoreDocumentRequest';
 import { RetrieveDocumentRequest } from '../../types/s3/RetrieveDocumentRequest';
 import { GeneratePresignedUrlRequest } from '../../types/s3/GeneratePresignedUrlRequest';
-import { BadRequestError, ErrorCodes, validateS3Key, validateContentType } from '@lawprotect/shared-ts';
-import type { SignatureServiceConfig } from '../../../config/AppConfig';
+import { validateS3StorageForDocument, validateS3StorageGeneral } from './S3StorageRules';
+import { S3Key } from '../../value-objects/S3Key';
+import { ContentType } from '../../value-objects/ContentType';
+import { S3Operation } from '../../value-objects/S3Operation';
 
 /**
- * Validates store document request
- * 
- * This function validates all required fields for storing a document in S3.
- * 
+ * Validates a store document request
  * @param request - The store document request to validate
- * @throws {BadRequestError} When validation fails
+ * @throws BadRequestError when validation fails
  */
 export function validateStoreDocumentRequest(request: StoreDocumentRequest): void {
-  // Validate required IDs
-  validateRequiredId('Envelope ID', request.envelopeId);
-  validateRequiredId('Signer ID', request.signerId);
+  if (!request) {
+    throw new BadRequestError('Store document request is required', ErrorCodes.COMMON_BAD_REQUEST);
+  }
 
-  // Validate document content
-  if (!request.documentContent) {
+  if (!request.envelopeId) {
+    throw new BadRequestError('Envelope ID is required', ErrorCodes.COMMON_BAD_REQUEST);
+  }
+
+  if (!request.signerId) {
+    throw new BadRequestError('Signer ID is required', ErrorCodes.COMMON_BAD_REQUEST);
+  }
+
+  if (!request.documentContent || request.documentContent.length === 0) {
     throw new BadRequestError('Document content is required', ErrorCodes.COMMON_BAD_REQUEST);
   }
 
-  // Validate content type
-  if (!request.contentType || request.contentType.trim().length === 0) {
+  if (!request.contentType) {
     throw new BadRequestError('Content type is required', ErrorCodes.COMMON_BAD_REQUEST);
   }
 
-  // Validate content type format using shared utilities
+  // Validate content type
   try {
-    validateContentType(request.contentType);
+    ContentType.fromString(request.contentType.getValue());
   } catch (error) {
-    if (error instanceof Error) {
-      throw new BadRequestError(`Invalid content type: ${error.message}`, ErrorCodes.COMMON_BAD_REQUEST);
+    throw new BadRequestError('Invalid content type', ErrorCodes.COMMON_BAD_REQUEST);
+  }
+
+  // Validate file size limits
+  const maxFileSize = 50 * 1024 * 1024; // 50MB
+  if (request.documentContent.length > maxFileSize) {
+    throw new BadRequestError('Document size exceeds maximum allowed size of 50MB', ErrorCodes.COMMON_BAD_REQUEST);
+  }
+
+  // Validate metadata if provided
+  if (request.metadata) {
+    if (request.metadata.fileSize && request.metadata.fileSize !== request.documentContent.length) {
+      throw new BadRequestError('File size in metadata does not match actual content size', ErrorCodes.COMMON_BAD_REQUEST);
     }
-    throw error;
   }
 }
 
 /**
- * Validates retrieve document request
- * 
- * This function validates all required fields for retrieving a document from S3.
- * 
+ * Validates a retrieve document request
  * @param request - The retrieve document request to validate
- * @throws {BadRequestError} When validation fails
+ * @throws BadRequestError when validation fails
  */
 export function validateRetrieveDocumentRequest(request: RetrieveDocumentRequest): void {
-  // Validate required IDs
-  validateRequiredId('Envelope ID', request.envelopeId);
-  validateRequiredId('Signer ID', request.signerId);
+  if (!request) {
+    throw new BadRequestError('Retrieve document request is required', ErrorCodes.COMMON_BAD_REQUEST);
+  }
 
-  // Validate document key
-  if (!request.documentKey || request.documentKey.trim().length === 0) {
+  if (!request.documentKey) {
     throw new BadRequestError('Document key is required', ErrorCodes.COMMON_BAD_REQUEST);
   }
 
-  // Validate document key format using shared utilities
-  try {
-    validateS3Key(request.documentKey);
-  } catch (error) {
-    if (error instanceof Error) {
-      throw new BadRequestError(`Invalid document key: ${error.message}`, ErrorCodes.COMMON_BAD_REQUEST);
-    }
-    throw error;
+  if (!request.envelopeId) {
+    throw new BadRequestError('Envelope ID is required', ErrorCodes.COMMON_BAD_REQUEST);
   }
+
+  if (!request.signerId) {
+    throw new BadRequestError('Signer ID is required', ErrorCodes.COMMON_BAD_REQUEST);
+  }
+
+  // Validate S3 key format
+  try {
+    S3Key.fromString(request.documentKey.getValue());
+  } catch (error) {
+    throw new BadRequestError('Invalid document key format', ErrorCodes.COMMON_BAD_REQUEST);
+  }
+
+  // Validate S3 key using storage rules
+  validateS3StorageForDocument(request.documentKey, {
+    allowedS3Buckets: [], // Will be validated by service configuration
+    documentKeyPrefix: 'envelopes/',
+    allowedExtensions: ['pdf']
+  });
 }
 
 /**
- * Validates generate presigned URL request
- * 
- * This function validates all required fields for generating a presigned URL.
- * 
+ * Validates a generate presigned URL request
  * @param request - The generate presigned URL request to validate
- * @param config - The service configuration containing S3 limits
- * @throws {BadRequestError} When validation fails
+ * @param config - Service configuration for validation
+ * @throws BadRequestError when validation fails
  */
 export function validateGeneratePresignedUrlRequest(
   request: GeneratePresignedUrlRequest, 
-  config: SignatureServiceConfig
+  config: { maxExpirationTime?: number; minExpirationTime?: number }
 ): void {
-  // Validate required IDs
-  validateRequiredId('Envelope ID', request.envelopeId);
-  validateRequiredId('Signer ID', request.signerId);
+  if (!request) {
+    throw new BadRequestError('Generate presigned URL request is required', ErrorCodes.COMMON_BAD_REQUEST);
+  }
 
-  // Validate document key
-  if (!request.documentKey || request.documentKey.trim().length === 0) {
+  if (!request.documentKey) {
     throw new BadRequestError('Document key is required', ErrorCodes.COMMON_BAD_REQUEST);
   }
 
-  // Validate document key format using shared utilities
+  if (!request.operation) {
+    throw new BadRequestError('S3 operation is required', ErrorCodes.COMMON_BAD_REQUEST);
+  }
+
+  if (!request.envelopeId) {
+    throw new BadRequestError('Envelope ID is required', ErrorCodes.COMMON_BAD_REQUEST);
+  }
+
+  if (!request.signerId) {
+    throw new BadRequestError('Signer ID is required', ErrorCodes.COMMON_BAD_REQUEST);
+  }
+
+  // Validate S3 key format
   try {
-    validateS3Key(request.documentKey);
+    S3Key.fromString(request.documentKey.getValue());
   } catch (error) {
-    if (error instanceof Error) {
-      throw new BadRequestError(`Invalid document key: ${error.message}`, ErrorCodes.COMMON_BAD_REQUEST);
-    }
-    throw error;
+    throw new BadRequestError('Invalid document key format', ErrorCodes.COMMON_BAD_REQUEST);
   }
 
-  // Validate operation type
-  if (!request.operation || !['get', 'put'].includes(request.operation)) {
-    throw new BadRequestError(
-      'Operation must be either "get" or "put"',
-      ErrorCodes.COMMON_BAD_REQUEST
-    );
+  // Validate S3 operation
+  try {
+    S3Operation.fromString(request.operation.getValue());
+  } catch (error) {
+    throw new BadRequestError('Invalid S3 operation', ErrorCodes.COMMON_BAD_REQUEST);
   }
 
-  // Validate expiration time using configuration
+  // Validate expiration time
   if (request.expiresIn !== undefined) {
-    const { minPresignTtlSeconds, maxPresignTtlSeconds } = config.s3;
-    if (request.expiresIn < minPresignTtlSeconds || request.expiresIn > maxPresignTtlSeconds) {
-      throw new BadRequestError(
-        `Expires in must be between ${minPresignTtlSeconds} and ${maxPresignTtlSeconds} seconds`,
-        ErrorCodes.COMMON_BAD_REQUEST
-      );
+    const minExpiration = config.minExpirationTime || 300; // 5 minutes
+    const maxExpiration = config.maxExpirationTime || 3600; // 1 hour
+
+    if (request.expiresIn < minExpiration) {
+      throw new BadRequestError(`Expiration time must be at least ${minExpiration} seconds`, ErrorCodes.COMMON_BAD_REQUEST);
+    }
+
+    if (request.expiresIn > maxExpiration) {
+      throw new BadRequestError(`Expiration time cannot exceed ${maxExpiration} seconds`, ErrorCodes.COMMON_BAD_REQUEST);
     }
   }
-}
 
-/**
- * Validates required ID field
- * 
- * @param fieldName - Name of the field for error messages
- * @param value - Value to validate
- * @throws {BadRequestError} When value is invalid
- */
-function validateRequiredId(fieldName: string, value: any): void {
-  if (!value) {
-    throw new BadRequestError(`${fieldName} is required`, ErrorCodes.COMMON_BAD_REQUEST);
-  }
+  // Validate S3 key using storage rules
+  validateS3StorageGeneral(request.documentKey, {
+    allowedS3Buckets: [], // Will be validated by service configuration
+    maxKeyLength: 1024,
+    minKeyLength: 1
+  });
 }
-

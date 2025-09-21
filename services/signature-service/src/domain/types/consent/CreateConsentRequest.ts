@@ -1,65 +1,25 @@
 /**
- * @fileoverview CreateConsentRequest type - Defines the structure for creating consent records
- * @summary Type definition for consent creation requests
- * @description The CreateConsentRequest interface defines the data structure required for
- * creating a new consent record, including all necessary metadata for legal compliance.
+ * @fileoverview CreateConsentRequest - Interface for consent creation
+ * @summary Defines data structure for creating new consents
+ * @description This interface provides type-safe creation specifications for consents,
+ * including all required fields for legal compliance and audit trail.
  */
 
-import type { EnvelopeId } from '../../value-objects/EnvelopeId';
-import type { SignerId } from '../../value-objects/SignerId';
-import type { SignatureId } from '../../value-objects/SignatureId';
+import { ConsentId } from '../../value-objects/ConsentId';
+import { EnvelopeId } from '../../value-objects/EnvelopeId';
+import { SignerId } from '../../value-objects/SignerId';
 
-/**
- * Request to create a new consent record
- */
 export interface CreateConsentRequest {
-  /**
-   * The envelope ID this consent belongs to
-   */
+  id: ConsentId;
   envelopeId: EnvelopeId;
-
-  /**
-   * The signer ID who is giving consent
-   */
   signerId: SignerId;
-
-  /**
-   * The signature ID that will be linked to this consent
-   */
-  signatureId: SignatureId;
-
-  /**
-   * Whether consent was given (should always be true if this request is made)
-   */
+  signatureId?: SignerId;
   consentGiven: boolean;
-
-  /**
-   * The timestamp when consent was given
-   */
   consentTimestamp: Date;
-
-  /**
-   * The consent text that was shown to the signer
-   */
   consentText: string;
-
-  /**
-   * The IP address of the signer when consent was given
-   */
   ipAddress: string;
-
-  /**
-   * The user agent of the signer's browser
-   */
   userAgent: string;
-
-  /**
-   * Email of the user giving consent (owner or external signer)
-   */
   userEmail?: string;
-
-  /**
-   * Country derived from headers (ISO code)
-   */
   country?: string;
+  invitationToken?: string; // For external users
 }

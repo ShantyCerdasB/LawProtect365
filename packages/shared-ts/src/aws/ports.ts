@@ -53,8 +53,12 @@ export interface KmsVerifyInput {
 export interface KmsPort {
   encrypt(input: KmsEncryptInput): Promise<{ ciphertext: Uint8Array }>;
   decrypt(input: KmsDecryptInput): Promise<{ plaintext: Uint8Array }>;
-  sign(input: KmsSignInput): Promise<{ signature: Uint8Array }>;
-  verify(input: KmsVerifyInput): Promise<{ valid: boolean }>;
+  describeKey(keyId: string): Promise<{
+    keyId: string;
+    keyState: string;
+    keyUsage: string;
+    enabled: boolean;
+  }>;
 }
 
 export interface SecretsPort {

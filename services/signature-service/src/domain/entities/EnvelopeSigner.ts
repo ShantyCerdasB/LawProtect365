@@ -58,6 +58,42 @@ export class EnvelopeSigner {
   ) {}
 
   /**
+   * Creates an EnvelopeSigner from persistence data
+   * @param data - Prisma EnvelopeSigner data
+   * @returns EnvelopeSigner instance
+   */
+  static fromPersistence(data: any): EnvelopeSigner {
+    return new EnvelopeSigner(
+      SignerId.fromString(data.id),
+      EnvelopeId.fromString(data.envelopeId),
+      data.userId,
+      data.isExternal,
+      Email.fromStringOrUndefined(data.email),
+      data.fullName,
+      data.invitedByUserId,
+      data.participantRole,
+      data.order,
+      data.status,
+      data.signedAt,
+      data.declinedAt,
+      data.declineReason,
+      data.consentGiven,
+      data.consentTimestamp,
+      data.documentHash,
+      data.signatureHash,
+      data.signedS3Key,
+      data.kmsKeyId,
+      data.algorithm,
+      data.ipAddress,
+      data.userAgent,
+      data.reason,
+      data.location,
+      data.createdAt,
+      data.updatedAt
+    );
+  }
+
+  /**
    * Gets the signer unique identifier
    */
   getId(): SignerId {

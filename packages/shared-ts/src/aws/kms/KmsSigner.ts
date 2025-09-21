@@ -20,16 +20,12 @@ import {
   KMSClient,
   EncryptCommand,
   DecryptCommand,
-  SignCommand,
-  VerifyCommand,
-  type SigningAlgorithmSpec} from "@aws-sdk/client-kms";
+  DescribeKeyCommand} from "@aws-sdk/client-kms";
 
 import type {
   KmsPort,
   KmsEncryptInput,
-  KmsDecryptInput,
-  KmsSignInput,
-  KmsVerifyInput} from "../ports.js";
+  KmsDecryptInput} from "../ports.js";
 
 import {
   BadRequestError,
@@ -38,7 +34,6 @@ import {
   mapAwsError,
   shouldRetry,
   isAwsRetryable,
-  pickMessageType,
   sleep
 } from "../../index.js";
 
@@ -46,20 +41,20 @@ import type { KmsSignerOptions } from "./types.js";
 
 /**
  * AWS KMS adapter that fulfills the shared `KmsPort`.
+ * Handles encryption, decryption, and key management operations.
  *
  * @example
  * ```ts
- * const signer = new KmsSigner(kmsClient, {
- *   defaultKeyId: process.env.KMS_SIGNER_KEY_ID!,
- *   defaultSigningAlgorithm: "RSASSA_PSS_SHA_256",
+ * const kmsClient = new KmsSigner(kmsClient, {
+ *   defaultKeyId: process.env.KMS_KEY_ID!,
  *   maxAttempts: 3,
  * });
  *
- * // Uses defaults:
- * await signer.sign({ message: new Uint8Array([1,2,3]) });
+ * // Encrypt data:
+ * await kmsClient.encrypt({ keyId: "key-123", plaintext: new Uint8Array([1,2,3]) });
  *
- * // Per-call override:
- * await signer.sign({ keyId: otherKey, signingAlgorithm: "ECDSA_SHA_256", message });
+ * // Decrypt data:
+ * await kmsClient.decrypt({ ciphertext: encryptedData });
  * ```
  */
 export class KmsSigner implements KmsPort {
@@ -69,19 +64,12 @@ export class KmsSigner implements KmsPort {
   /** Default KeyId used when a call omits `input.keyId`. */
   private readonly defaultKeyId?: string;
 
-  /** Default algorithm used when a call omits `input.signingAlgorithm`. */
-  private readonly defaultAlgorithm: SigningAlgorithmSpec;
-
   constructor(client: KMSClient, opts: KmsSignerOptions = {}) {
     this.client = client;
     this.maxAttempts = Math.max(1, opts.maxAttempts ?? 3);
 
     // Back-compat + preferred names
     this.defaultKeyId = opts.defaultKeyId ?? opts.signerKeyId;
-    this.defaultAlgorithm =
-      (opts.defaultSigningAlgorithm ??
-        opts.signingAlgorithm ??
-        "RSASSA_PSS_SHA_256") as SigningAlgorithmSpec;
   }
 
   /**
@@ -129,65 +117,6 @@ export class KmsSigner implements KmsPort {
     });
   }
 
-  /**
-   * Signs a message (RAW or DIGEST) with the specified (or default) key and algorithm.
-   *
-   * - If the message length matches the digest size for SHA-256/384/512, `MessageType` is set to `DIGEST`;
-   *   otherwise `RAW` is used.
-   */
-  async sign(input: KmsSignInput): Promise<{ signature: Uint8Array }> {
-    const ctx = "KmsSigner.sign";
-    const keyId = (input as any).keyId ?? this.defaultKeyId;
-    if (!keyId) {
-      throw new BadRequestError("Missing KeyId", ErrorCodes.COMMON_BAD_REQUEST);
-    }
-
-    const algo = (input as any).signingAlgorithm ?? this.defaultAlgorithm;
-    const messageType = pickMessageType(input.message, algo);
-
-    return this.withRetry(ctx, async () => {
-      const res = await this.client.send(
-        new SignCommand({
-          KeyId: keyId,
-          Message: input.message,
-          MessageType: messageType,
-          SigningAlgorithm: algo as SigningAlgorithmSpec})
-      );
-      if (!res.Signature) {
-        throw new InternalError("KMS returned empty Signature", ErrorCodes.COMMON_INTERNAL_ERROR, {
-          op: ctx});
-      }
-      return { signature: res.Signature };
-    });
-  }
-
-  /**
-   * Verifies a signature for a message using the specified (or default) key and algorithm.
-   *
-   * - Automatically selects `MessageType` (RAW/DIGEST) using the same heuristic as {@link sign}.
-   */
-  async verify(input: KmsVerifyInput): Promise<{ valid: boolean }> {
-    const ctx = "KmsSigner.verify";
-    const keyId = (input as any).keyId ?? this.defaultKeyId;
-    if (!keyId) {
-      throw new BadRequestError("Missing KeyId", ErrorCodes.COMMON_BAD_REQUEST);
-    }
-
-    const algo = (input as any).signingAlgorithm ?? this.defaultAlgorithm;
-    const messageType = pickMessageType(input.message, algo);
-
-    return this.withRetry(ctx, async () => {
-      const res = await this.client.send(
-        new VerifyCommand({
-          KeyId: keyId,
-          Message: input.message,
-          MessageType: messageType,
-          Signature: input.signature,
-          SigningAlgorithm: algo as SigningAlgorithmSpec})
-      );
-      return { valid: Boolean(res.SignatureValid) };
-    });
-  }
 
   /**
    * Shared retry wrapper:
@@ -213,6 +142,41 @@ export class KmsSigner implements KmsPort {
       }
     }
     throw mapAwsError(lastErr, op);
+  }
+
+  /**
+   * Describes a KMS key to check its availability and configuration
+   * @param keyId - The KMS key ID to describe
+   * @returns Promise with key metadata
+   */
+  async describeKey(keyId: string): Promise<{
+    keyId: string;
+    keyState: string;
+    keyUsage: string;
+    enabled: boolean;
+  }> {
+    const ctx = "KmsSigner.describeKey";
+
+    if (!keyId) {
+      throw new BadRequestError("Missing KeyId", ErrorCodes.COMMON_BAD_REQUEST);
+    }
+
+    return this.withRetry(ctx, async () => {
+      const res = await this.client.send(
+        new DescribeKeyCommand({ KeyId: keyId })
+      );
+
+      if (!res.KeyMetadata) {
+        throw new InternalError("No key metadata returned", ErrorCodes.COMMON_INTERNAL_ERROR);
+      }
+
+      return {
+        keyId: res.KeyMetadata.KeyId || keyId,
+        keyState: res.KeyMetadata.KeyState || 'Unknown',
+        keyUsage: res.KeyMetadata.KeyUsage || 'Unknown',
+        enabled: res.KeyMetadata.KeyState === 'Enabled'
+      };
+    });
   }
 }
 

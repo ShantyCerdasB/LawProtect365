@@ -5,6 +5,8 @@
  * throughout the application.
  */
 
-// All local enums have been migrated to Prisma enums
-// Use @prisma/client for: EnvelopeStatus, SignerStatus, SigningOrderType, 
+// Local enums
+export { AuditEventType } from './AuditEventType';
+
+// Prisma enums - Use @prisma/client for: EnvelopeStatus, SignerStatus, SigningOrderType, 
 // UserRole, InvitationTokenStatus, DocumentOriginType, OAuthProvider

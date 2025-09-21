@@ -42,6 +42,15 @@ export class DocumentHash {
   }
 
   /**
+   * Creates a DocumentHash from a string value or returns undefined if null/undefined
+   * @param hash - The hash string or null/undefined
+   * @returns DocumentHash instance or undefined
+   */
+  static fromStringOrUndefined(hash: string | null | undefined): DocumentHash | undefined {
+    return hash ? new DocumentHash(hash) : undefined;
+  }
+
+  /**
    * Gets the hash value
    */
   getValue(): string {
