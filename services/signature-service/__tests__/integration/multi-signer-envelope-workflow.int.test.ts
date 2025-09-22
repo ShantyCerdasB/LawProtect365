@@ -16,7 +16,7 @@
  * Currently only tests CreateEnvelope functionality with seeded test user.
  */
 
-import { randomUUID, createHash } from 'crypto';
+import { randomUUID } from 'crypto';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { loadConfig } from '../../src/config';
 import { createApiGatewayEvent, generateTestPdf, generateTestJwtToken } from './helpers/testHelpers';
@@ -25,8 +25,9 @@ import { createEnvelopeHandler } from '../../src/handlers/envelopes/CreateEnvelo
 describe('Multi-Signer Envelope Workflow Integration Tests', () => {
   const cfg = loadConfig();
   const s3 = new S3Client({
-    region: cfg.region,
+    region: cfg.s3.region,
     endpoint: process.env.AWS_ENDPOINT_URL,
+    forcePathStyle: true,
     credentials: { accessKeyId: process.env.AWS_ACCESS_KEY_ID || 'test', secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || 'test' }
   });
 

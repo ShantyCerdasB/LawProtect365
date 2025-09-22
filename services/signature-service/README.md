@@ -26,9 +26,8 @@ services/signature-service/
 │           └── mockJwksServer.ts # Mock JWKS server for JWT testing
 ├── scripts/                     # Utility scripts for development
 │   ├── createLocalTables.ts     # DynamoDB table creation script
-│   ├── setupLocalStack.ts       # LocalStack AWS services setup
 │   ├── startDynamoDB.ts         # DynamoDB Local management
-│   └── startLocalStack.ts       # LocalStack container management
+│   └── setupLocalDatabase.ts    # PostgreSQL database setup
 ├── src/                         # Source code
 ├── jest.config.cjs              # Jest configuration
 ├── jest.base.cjs                # Base Jest configuration
@@ -51,9 +50,10 @@ services/signature-service/
    npm install
    ```
 
-2. **Start LocalStack (AWS services emulation):**
+2. **AWS services are now mocked (no LocalStack needed):**
    ```bash
-   npm run localstack:start
+   # AWS services (KMS, S3, EventBridge, SSM) use realistic mocks
+   # No additional setup required
    ```
 
 3. **Start DynamoDB Local:**
@@ -82,8 +82,7 @@ services/signature-service/
 | `npm run build` | Build the TypeScript project |
 | `npm test` | Run all tests with full setup |
 | `npm run test:ci` | Run tests without pretest hooks (for CI) |
-| `npm run localstack:start` | Start LocalStack container |
-| `npm run localstack:reset` | Reset LocalStack container |
+| `npm run dev:local` | Start DynamoDB Local and development server |
 | `npm run dynamodb:start` | Start DynamoDB Local |
 | `npm run dynamodb:create-tables` | Create DynamoDB tables |
 | `npm run dynamodb:stop` | Stop DynamoDB Local |
@@ -169,14 +168,19 @@ services/signature-service/
 ### Test Structure
 
 - **Unit Tests**: Test individual functions and components
-- **Integration Tests**: Test API endpoints with real AWS services (LocalStack)
+- **Integration Tests**: Test API endpoints with mocked AWS services
 - **Global Setup/Teardown**: Manages test environment lifecycle
 
 ### Test Environment
 
 The test environment uses:
-- **DynamoDB Local**: For database operations
-- **LocalStack**: For AWS services emulation (S3, KMS, EventBridge, SSM)
+- **PostgreSQL**: For main database operations (with Prisma)
+- **DynamoDB Local**: For outbox events
+- **AWS Service Mocks**: For KMS, S3, EventBridge, SSM operations
+  - **KMS Mock**: Realistic signing and verification with algorithm-aware signatures
+  - **S3 Mock**: Realistic object storage with temporary file system persistence
+  - **EventBridge Mock**: Realistic event publishing with proper response structure
+  - **SSM Mock**: Realistic parameter retrieval with test values
 - **Mock JWKS Server**: For JWT token validation during tests
 - **Runtime Certificate Generation**: JWKS certificates are generated at runtime
 

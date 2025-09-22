@@ -1,15 +1,14 @@
 /**
- * @file setup.ts
- * @summary Jest setup for integration tests with hybrid database architecture
- * @description Global setup for integration tests using PostgreSQL with Prisma
- * for main data, DynamoDB Local for outbox events, and LocalStack for AWS services.
- * This provides realistic testing by using actual database services instead of mocks.
+ * @fileoverview Setup - Jest per-test-file setup for integration tests
+ * @summary Configures Jest hooks and mock services for integration tests
+ * @description Sets up Jest hooks for mock JWKS server management and configures
+ * AWS service mocks for integration tests using PostgreSQL and DynamoDB Local.
  */
 
 import { config } from 'dotenv';
-import { startMockJwksServer, stopMockJwksServer } from './integration/helpers/mockJwksServer';
-import './integration/helpers/awsLocalStackConfig';
-import './integration/helpers/awsRealisticMocks';
+import { startMockJwksServer, stopMockJwksServer } from './integration/mocks/cognito/jwksMock';
+// Load all mocks from centralized location
+import './integration/mocks';
 
 // Load environment variables from .env file
 config();
@@ -23,43 +22,25 @@ if (!process.env.DATABASE_URL) {
 }
 
 /**
- * Jest beforeAll hook to start mock JWKS server and ensure KMS test resources
+ * Starts mock JWKS server for JWT token validation during tests
  * 
- * @description Starts the mock JWKS server for JWT token validation during tests
- * and ensures KMS test key and alias exist in LocalStack for signing operations.
+ * @description Jest beforeAll hook that starts the mock JWKS server for JWT token
+ * validation. KMS operations are handled by mocks configured in awsRealisticMocks.
  * 
- * @param timeout - 10 second timeout for server startup and KMS setup
+ * @param timeout - 10 second timeout for server startup
  */
 beforeAll(async () => {
   await startMockJwksServer();
   
-  // Ensure KMS test key and alias exist in LocalStack
-  try {
-    const { KMSClient, CreateKeyCommand, CreateAliasCommand }: any = await import('@aws-sdk/client-kms');
-    const kmsClient = new KMSClient({ region: process.env.AWS_REGION, endpoint: process.env.AWS_ENDPOINT_URL });
-    const createRes = await kmsClient.send(new CreateKeyCommand({ KeyUsage: 'SIGN_VERIFY', CustomerMasterKeySpec: 'RSA_2048' }));
-    const keyId = createRes?.KeyMetadata?.KeyId;
-    if (keyId) {
-      try {
-        await kmsClient.send(new CreateAliasCommand({ AliasName: 'alias/test-key-id', TargetKeyId: keyId }));
-        console.log('✅ KMS alias ensured: alias/test-key-id');
-      } catch (e: any) {
-        if (e?.name === 'AlreadyExistsException') {
-          console.log('⚠️  KMS alias already exists: alias/test-key-id');
-        } else {
-          throw e;
-        }
-      }
-    }
-  } catch (err) {
-    console.warn('⚠️  Failed to ensure KMS test key/alias:', (err as any)?.message);
-  }
+  // KMS operations are now handled by mocks - no LocalStack setup needed
+  console.log('✅ Mock JWKS server started - KMS operations use mocks');
 }, 10000);
 
 /**
- * Jest afterAll hook to stop mock JWKS server
+ * Stops mock JWKS server after all tests complete
  * 
- * @description Stops the mock JWKS server after all tests complete to clean up resources.
+ * @description Jest afterAll hook that stops the mock JWKS server to clean up resources
+ * after all tests in the current test file complete.
  * 
  * @param timeout - 5 second timeout for server shutdown
  */
@@ -68,7 +49,7 @@ afterAll(async () => {
 }, 5000);
 
 /**
- * Jest timeout configuration for integration tests
+ * Configures Jest timeout for integration tests
  * 
  * @description Sets a 60-second timeout for all tests to accommodate database operations,
  * AWS service interactions, and other integration test activities.

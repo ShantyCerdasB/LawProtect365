@@ -1,18 +1,19 @@
 /**
- * @file globalTeardown.ts
- * @summary Global teardown for Jest tests with hybrid database architecture
- * @description This file cleans up the test environment after all Jest tests complete.
- * It stops DynamoDB Local server and performs any necessary resource cleanup.
+ * @fileoverview GlobalTeardown - Jest global teardown for test environment cleanup
+ * @summary Cleans up test environment after all Jest tests complete
+ * @description Performs cleanup operations after all Jest tests complete.
+ * Stops DynamoDB Local server and performs necessary resource cleanup.
  */
 
 import { stopDynamoDBLocal } from '../scripts/startDynamoDB';
+import { cleanupS3MockStorage } from './integration/mocks/aws/s3Mock';
 
 /**
- * Global teardown function for Jest test environment
+ * Cleans up the test environment after all Jest tests complete
  * 
- * @description Executes once after all tests complete to clean up the test environment.
- * Stops DynamoDB Local server and performs any necessary resource cleanup.
- * Errors in teardown are logged but not thrown to avoid masking test failures.
+ * @description Executes once after all tests complete to perform cleanup operations.
+ * Stops DynamoDB Local server and performs necessary resource cleanup.
+ * Errors are logged but not thrown to avoid masking test failures.
  * 
  * @returns Promise<void> Resolves when cleanup is complete
  * @throws Never throws errors to avoid masking test failures
@@ -24,6 +25,10 @@ export default async function globalTeardown(): Promise<void> {
     // Stop DynamoDB Local
     console.log('🛑 Stopping DynamoDB Local...');
     await stopDynamoDBLocal();
+    
+    // Clean up S3 mock storage
+    console.log('🧹 Cleaning up S3 mock storage...');
+    await cleanupS3MockStorage();
     
     console.log('✅ Global test teardown completed successfully!');
     

@@ -49,7 +49,10 @@ import {
   type GetObjectCommandOutput} from "@aws-sdk/client-s3";
 
 import type { S3Port, S3PutObjectInput, S3GetObjectOutput } from "../ports.js";
-import { shouldRetry, isAwsRetryable, mapAwsError, sleep } from "../../index.js";
+import { shouldRetry } from "../retry.js";
+import { isAwsRetryable } from "../errors.js";
+import { mapAwsError } from "../../errors/awsErrorsMap.js";
+import { sleep } from "../../utils/promise.js";
 import type { S3EvidenceStorageOptions, HeadResult } from "./types.js";
 
 /**

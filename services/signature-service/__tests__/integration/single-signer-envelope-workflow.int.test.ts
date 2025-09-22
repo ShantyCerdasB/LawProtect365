@@ -21,12 +21,14 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { loadConfig } from '../../src/config';
 import { createApiGatewayEvent, createTestRequestContext, generateTestPdf } from './helpers/testHelpers';
 import { createEnvelopeHandler } from '../../src/handlers/envelopes/CreateEnvelopeHandler';
+import { updateEnvelopeHandler } from '../../src/handlers/envelopes/UpdateEnvelopeHandler';
 
 describe('Single-Signer Envelope Workflow Integration Tests', () => {
   const cfg = loadConfig();
   const s3 = new S3Client({
-    region: cfg.region,
+    region: cfg.s3.region,
     endpoint: process.env.AWS_ENDPOINT_URL,
+    forcePathStyle: true,
     credentials: { accessKeyId: process.env.AWS_ACCESS_KEY_ID || 'test', secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || 'test' }
   });
 
@@ -65,7 +67,7 @@ describe('Single-Signer Envelope Workflow Integration Tests', () => {
       Body: testPdf,
       ContentType: 'application/pdf'
     }));
-
+    
     // Store source key for tests
     (global as any).testSourceKey = sourceKey;
   });
@@ -76,7 +78,7 @@ describe('Single-Signer Envelope Workflow Integration Tests', () => {
       requestContext: createTestRequestContext({ 
         userId: testUser.userId, 
         email: testUser.email, 
-        userAgent: 'jest-test/1.0' 
+        userAgent: 'jest-test/1.0'
       }),
       headers: {
         'x-country': 'US',
@@ -96,6 +98,22 @@ describe('Single-Signer Envelope Workflow Integration Tests', () => {
     };
     
     return { ...base, ...overrides };
+  };
+
+  // Helper function for updating envelopes
+  const updateEnvelope = async (envelopeId: string, updateData: any) => {
+    const event = await makeAuthEvent({
+      pathParameters: { id: envelopeId },
+      body: JSON.stringify(updateData)
+    });
+    
+    const result = await updateEnvelopeHandler(event) as any;
+    const response = JSON.parse(result.body);
+    
+    return { 
+      statusCode: result.statusCode, 
+      data: response // The handler returns the data directly, not wrapped in { data: ... }
+    };
   };
 
 
@@ -184,6 +202,194 @@ describe('Single-Signer Envelope Workflow Integration Tests', () => {
       
       const response = JSON.parse(result.body);
       expect(response.message).toBe('templateId and templateVersion are required when originType is TEMPLATE');
+    });
+  });
+
+  describe('UpdateEnvelope - Single Signer Workflow', () => {
+    it('should update envelope title and description', async () => {
+      // 1. Create envelope first
+      const createEvent = await makeAuthEvent({
+        body: JSON.stringify({
+          title: 'Original Title',
+          description: 'Original Description',
+          originType: 'USER_UPLOAD',
+          sourceKey: (global as any).testSourceKey,
+          metaKey: `test-meta/${randomUUID()}.json`
+        })
+      });
+
+      const createResult = await createEnvelopeHandler(createEvent) as any;
+      const createResponse = JSON.parse(createResult.body);
+      const envelopeId = createResponse.data.id;
+
+      // 2. Update envelope metadata
+      const updateResponse = await updateEnvelope(envelopeId, {
+        title: 'Updated Title',
+        description: 'Updated Description'
+      });
+
+      // 3. Verify response
+      expect(updateResponse.statusCode).toBe(200);
+      expect(updateResponse.data.title).toBe('Updated Title');
+      expect(updateResponse.data.description).toBe('Updated Description');
+      expect(updateResponse.data.id).toBe(envelopeId);
+
+      // 4. Verify changes in database
+      const { PrismaClient } = await import('@prisma/client');
+      const prisma = new PrismaClient();
+      
+      const envelope = await prisma.signatureEnvelope.findUnique({
+        where: { id: envelopeId }
+      });
+      
+      expect(envelope?.title).toBe('Updated Title');
+      expect(envelope?.description).toBe('Updated Description');
+      
+      await prisma.$disconnect();
+    });
+
+    it('should update envelope S3 keys', async () => {
+      // 1. Create envelope first
+      const createEvent = await makeAuthEvent({
+        body: JSON.stringify({
+          title: 'Test Document',
+          description: 'Test Description',
+          originType: 'USER_UPLOAD',
+          sourceKey: (global as any).testSourceKey,
+          metaKey: `test-meta/${randomUUID()}.json`
+        })
+      });
+
+      const createResult = await createEnvelopeHandler(createEvent) as any;
+      const createResponse = JSON.parse(createResult.body);
+      const envelopeId = createResponse.data.id;
+
+      // 2. Upload new test document to S3
+      const newTestPdf = generateTestPdf();
+      const newSourceKey = `test-documents/${randomUUID()}.pdf`;
+      const newMetaKey = `test-meta/${randomUUID()}.json`;
+      
+      await s3.send(new PutObjectCommand({
+        Bucket: cfg.s3.bucketName,
+        Key: newSourceKey,
+        Body: newTestPdf,
+        ContentType: 'application/pdf'
+      }));
+
+      // 3. Update envelope S3 keys
+      const updateResponse = await updateEnvelope(envelopeId, {
+        sourceKey: newSourceKey,
+        metaKey: newMetaKey
+      });
+
+      // 4. Verify response
+      expect(updateResponse.statusCode).toBe(200);
+      expect(updateResponse.data.sourceKey).toBe(newSourceKey);
+      expect(updateResponse.data.metaKey).toBe(newMetaKey);
+
+      // 5. Verify changes in database
+      const { PrismaClient } = await import('@prisma/client');
+      const prisma = new PrismaClient();
+      
+      const envelope = await prisma.signatureEnvelope.findUnique({
+        where: { id: envelopeId }
+      });
+      
+      expect(envelope?.sourceKey).toBe(newSourceKey);
+      expect(envelope?.metaKey).toBe(newMetaKey);
+      
+      await prisma.$disconnect();
+    });
+
+    it('should fail when updating immutable fields', async () => {
+      // 1. Create envelope first
+      const createEvent = await makeAuthEvent({
+        body: JSON.stringify({
+          title: 'Test Document',
+          description: 'Test Description',
+          originType: 'USER_UPLOAD',
+          sourceKey: (global as any).testSourceKey,
+          metaKey: `test-meta/${randomUUID()}.json`
+        })
+      });
+
+      const createResult = await createEnvelopeHandler(createEvent) as any;
+      const createResponse = JSON.parse(createResult.body);
+      const envelopeId = createResponse.data.id;
+
+      // 2. Try to update immutable field - this should fail at schema level
+      const updateResponse = await updateEnvelope(envelopeId, {
+        createdBy: 'other-user-id'
+      });
+
+      // 3. Verify error response - should be 422 (schema validation error)
+      expect(updateResponse.statusCode).toBe(422);
+      expect(updateResponse.data.message).toContain("Unrecognized key(s) in object");
+    });
+
+    it('should fail when S3 keys do not exist', async () => {
+      // 1. Create envelope first
+      const createEvent = await makeAuthEvent({
+        body: JSON.stringify({
+          title: 'Test Document',
+          description: 'Test Description',
+          originType: 'USER_UPLOAD',
+          sourceKey: (global as any).testSourceKey,
+          metaKey: `test-meta/${randomUUID()}.json`
+        })
+      });
+
+      const createResult = await createEnvelopeHandler(createEvent) as any;
+      const createResponse = JSON.parse(createResult.body);
+      const envelopeId = createResponse.data.id;
+
+      // 2. Try to update with non-existent S3 key
+      const updateResponse = await updateEnvelope(envelopeId, {
+        sourceKey: 'non-existent-document.pdf'
+      });
+
+      // 3. Verify error response
+      expect(updateResponse.statusCode).toBe(400);
+      expect(updateResponse.data.message).toContain("Source document with key 'non-existent-document.pdf' does not exist in S3");
+    });
+
+    it('should update envelope expiration date', async () => {
+      // 1. Create envelope first
+      const createEvent = await makeAuthEvent({
+        body: JSON.stringify({
+          title: 'Test Document',
+          description: 'Test Description',
+          originType: 'USER_UPLOAD',
+          sourceKey: (global as any).testSourceKey,
+          metaKey: `test-meta/${randomUUID()}.json`
+        })
+      });
+
+      const createResult = await createEnvelopeHandler(createEvent) as any;
+      const createResponse = JSON.parse(createResult.body);
+      const envelopeId = createResponse.data.id;
+
+      // 2. Update expiration date
+      const newExpirationDate = new Date('2024-12-31T23:59:59Z');
+      const updateResponse = await updateEnvelope(envelopeId, {
+        expiresAt: newExpirationDate.toISOString()
+      });
+
+      // 3. Verify response
+      expect(updateResponse.statusCode).toBe(200);
+      expect(new Date(updateResponse.data.expiresAt)).toEqual(newExpirationDate);
+
+      // 4. Verify changes in database
+      const { PrismaClient } = await import('@prisma/client');
+      const prisma = new PrismaClient();
+      
+      const envelope = await prisma.signatureEnvelope.findUnique({
+        where: { id: envelopeId }
+      });
+      
+      expect(envelope?.expiresAt).toEqual(newExpirationDate);
+      
+      await prisma.$disconnect();
     });
   });
 

@@ -44,9 +44,8 @@ module.exports = {
   /**
    * Setup files to run after the test environment is established
    * 
-   * @description Configures the test environment with LocalStack endpoints,
-   * DynamoDB Local settings, and mock JWKS server after Jest environment
-   * initialization is complete.
+   * @description Configures the test environment with DynamoDB Local settings
+   * and mock JWKS server after Jest environment initialization is complete.
    */
   setupFilesAfterEnv: ["<rootDir>/__tests__/setup.ts"],
 
@@ -80,7 +79,7 @@ module.exports = {
    * Process management for external service dependencies
    * 
    * @description Ensures Jest exits cleanly even when external services
-   * (DynamoDB Local, LocalStack) are running and detects open handles
+   * (DynamoDB Local) are running and detects open handles
    * for better debugging of resource leaks.
    */
   forceExit: true,

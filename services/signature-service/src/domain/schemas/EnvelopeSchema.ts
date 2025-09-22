@@ -78,7 +78,7 @@ export const UpdateEnvelopeSchema = z.object({
     firstReminderDays: z.number().min(1).max(30).optional(),
     secondReminderDays: z.number().min(1).max(30).optional()
   }).optional()
-});
+}).strict(); // Reject unrecognized fields (immutable fields)
 
 /**
  * Schema for envelope ID parameter

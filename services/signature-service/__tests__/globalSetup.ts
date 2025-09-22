@@ -1,10 +1,9 @@
 /**
- * @file globalSetup.ts
- * @summary Global setup for Jest tests with hybrid database architecture
- * @description This file sets up the complete test environment for Jest tests
- * using a hybrid architecture: PostgreSQL with Prisma for main data and
- * DynamoDB Local for outbox events. It starts services, creates databases,
- * and ensures the environment is ready for testing.
+ * @fileoverview GlobalSetup - Jest global setup for integration test environment
+ * @summary Initializes complete test environment with PostgreSQL and DynamoDB Local
+ * @description Configures and starts the complete test environment for Jest integration tests.
+ * Sets up PostgreSQL database with Prisma migrations, starts DynamoDB Local for outbox events,
+ * and configures all necessary environment variables for testing.
  */
 
 import { config } from 'dotenv';
@@ -17,15 +16,14 @@ import { DynamoDBClient, DeleteTableCommand, ListTablesCommand } from '@aws-sdk/
 config();
 
 /**
- * Global setup function for Jest test environment
+ * Initializes the complete test environment for Jest integration tests
  * 
- * @description Executes once before all tests to prepare the complete test environment
- * using a hybrid architecture. Sets up environment variables, starts DynamoDB Local
- * for outbox events, sets up PostgreSQL with Prisma for main data, and ensures
- * all services are ready for testing.
+ * @description Executes once before all tests to prepare the test environment.
+ * Configures environment variables, runs database migrations, starts DynamoDB Local
+ * for outbox events, and creates necessary database tables.
  * 
- * @returns Promise<void> Resolves when the test environment is fully prepared
- * @throws Error if any setup step fails, causing all tests to be skipped
+ * @returns Promise<void> Resolves when test environment is fully prepared
+ * @throws Error when setup fails, causing all tests to be skipped
  */
 export default async function globalSetup(): Promise<void> {
   console.log('🚀 Starting global test setup...');
@@ -78,10 +76,10 @@ export default async function globalSetup(): Promise<void> {
     process.env.ENV = 'dev';
     process.env.LOG_LEVEL = 'info';
     
-    // Set LocalStack configuration
-    process.env.AWS_ENDPOINT_URL = 'http://localhost:4566';
-    process.env.USE_LOCALSTACK_KMS = 'true';
-    process.env.USE_LOCALSTACK_EVENTBRIDGE = 'true';
+    // AWS services now use mocks (no LocalStack needed)
+    // process.env.AWS_ENDPOINT_URL = 'http://localhost:4566'; // Removed - using mocks
+    // process.env.USE_LOCALSTACK_KMS = 'true'; // Removed - using mocks
+    // process.env.USE_LOCALSTACK_EVENTBRIDGE = 'true'; // Removed - using mocks
     
     // Set DynamoDB Local configuration (for outbox only)
     process.env.DYNAMODB_ENDPOINT = 'http://localhost:8000';
