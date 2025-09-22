@@ -116,11 +116,13 @@ export const validateJsonBody = <S extends z.ZodTypeAny>(
 
   const out = schema.safeParse(json);
   if (!out.success) {
-
+    // Extract specific error message from Zod if available
+    const specificMessage = out.error.issues[0]?.message || "Unprocessable Entity";
+    
     throw new AppError(
       ErrorCodes.COMMON_UNPROCESSABLE_ENTITY,
       422,
-      "Unprocessable Entity",
+      specificMessage, // Use specific message instead of generic
       { issues: out.error.issues }
     );
   }

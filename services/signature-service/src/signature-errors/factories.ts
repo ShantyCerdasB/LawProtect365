@@ -88,6 +88,26 @@ export const envelopeCreationFailed = (details?: unknown) =>
   new InternalError("Envelope creation failed", SignatureErrorCodes.ENVELOPE_CREATION_FAILED, details);
 
 /**
+ * Creates an UnprocessableEntityError for template validation failures (422).
+ */
+export const envelopeTemplateValidationFailed = (details?: unknown) =>
+  new UnprocessableEntityError(
+    "templateId and templateVersion are required when originType is TEMPLATE",
+    SignatureErrorCodes.ENVELOPE_TEMPLATE_VALIDATION_FAILED,
+    details
+  );
+
+/**
+ * Creates an UnprocessableEntityError for general envelope request validation failures (422).
+ */
+export const envelopeRequestValidationFailed = (message: string, details?: unknown) =>
+  new UnprocessableEntityError(
+    message,
+    SignatureErrorCodes.ENVELOPE_REQUEST_VALIDATION_FAILED,
+    details
+  );
+
+/**
  * Creates an InternalError for when envelope update fails (500).
  */
 export const envelopeUpdateFailed = (details?: unknown) =>

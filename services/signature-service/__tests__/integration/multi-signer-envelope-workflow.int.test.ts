@@ -30,29 +30,31 @@ describe('Multi-Signer Envelope Workflow Integration Tests', () => {
     credentials: { accessKeyId: process.env.AWS_ACCESS_KEY_ID || 'test', secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || 'test' }
   });
 
-  // Use seeded test user from database
-  const testUser = {
-    userId: 'test-user-123', // This matches the seeded user ID
-    email: 'test@example.com'
-  };
-
-  const makeAuthEvent = async (overrides?: any) => {
-    const token = await generateTestJwtToken({ 
-      sub: testUser.userId, 
-      email: testUser.email, 
-      roles: ['admin'], 
-      scopes: [] 
-    });
-    
-    const base = await createApiGatewayEvent({ 
-      includeAuth: false, 
-      authToken: token 
-    });
-    
-    return { ...base, ...overrides };
-  };
-
+  // Get seeded test user from database
+  let testUser: { userId: string; email: string; name: string; role: string };
+  
   beforeAll(async () => {
+    // Query the seeded user from database
+    const { PrismaClient } = await import('@prisma/client');
+    const prisma = new PrismaClient();
+    
+    const user = await prisma.user.findUnique({
+      where: { email: 'test@example.com' }
+    });
+    
+    if (!user) {
+      throw new Error('Test user not found in database. Make sure seed has run.');
+    }
+    
+    testUser = {
+      userId: user.id,
+      email: user.email,
+      name: user.name || 'Test User',
+      role: user.role
+    };
+    
+    await prisma.$disconnect();
+    
     // Upload test PDF to S3
     const testPdf = generateTestPdf();
     const sourceKey = `test-documents/${randomUUID()}.pdf`;
@@ -67,6 +69,27 @@ describe('Multi-Signer Envelope Workflow Integration Tests', () => {
     // Store source key for tests
     (global as any).testSourceKey = sourceKey;
   });
+
+  const makeAuthEvent = async (overrides?: any) => {
+    const token = await generateTestJwtToken({ 
+      sub: testUser.userId, 
+      email: testUser.email, 
+      roles: ['admin'], 
+      scopes: [] 
+    });
+    
+    const base = await createApiGatewayEvent({ 
+      includeAuth: false, 
+      authToken: token,
+      headers: {
+        'x-country': 'US',
+        'x-forwarded-for': '127.0.0.1'
+      }
+    });
+    
+    return { ...base, ...overrides };
+  };
+
 
   describe('CreateEnvelope - Multi Signer Workflow', () => {
     it('should create envelope with OWNER_FIRST signing order', async () => {
@@ -88,18 +111,20 @@ describe('Multi-Signer Envelope Workflow Integration Tests', () => {
       expect(result.statusCode).toBe(201);
       
       const response = JSON.parse(result.body);
-      expect(response).toMatchObject({
+      expect(response.data).toMatchObject({
         id: expect.any(String),
         title: 'Test Multi Signer Envelope - Owner First',
         description: 'Integration test for multi signer envelope with owner first',
         status: 'DRAFT',
         signingOrderType: 'OWNER_FIRST',
-        originType: 'USER_UPLOAD',
-        createdBy: testUser.userId
+        originType: 'TEMPLATE',
+        createdBy: testUser.userId,
+        templateId: 'multi-signer-template-123',
+        templateVersion: '1.0.0'
       });
 
       // Store envelope ID for potential future tests
-      (global as any).testEnvelopeIdOwnerFirst = response.id;
+      (global as any).testEnvelopeIdOwnerFirst = response.data.id;
     });
 
     it('should create envelope with INVITEES_FIRST signing order', async () => {
@@ -121,18 +146,20 @@ describe('Multi-Signer Envelope Workflow Integration Tests', () => {
       expect(result.statusCode).toBe(201);
       
       const response = JSON.parse(result.body);
-      expect(response).toMatchObject({
+      expect(response.data).toMatchObject({
         id: expect.any(String),
         title: 'Test Multi Signer Envelope - Invitees First',
         description: 'Integration test for multi signer envelope with invitees first',
         status: 'DRAFT',
         signingOrderType: 'INVITEES_FIRST',
-        originType: 'USER_UPLOAD',
-        createdBy: testUser.userId
+        originType: 'TEMPLATE',
+        createdBy: testUser.userId,
+        templateId: 'multi-signer-template-456',
+        templateVersion: '2.0.0'
       });
 
       // Store envelope ID for potential future tests
-      (global as any).testEnvelopeIdInviteesFirst = response.id;
+      (global as any).testEnvelopeIdInviteesFirst = response.data.id;
     });
 
     it('should create envelope with template origin and multiple signers', async () => {
@@ -154,15 +181,15 @@ describe('Multi-Signer Envelope Workflow Integration Tests', () => {
       expect(result.statusCode).toBe(201);
       
       const response = JSON.parse(result.body);
-      expect(response).toMatchObject({
+      expect(response.data).toMatchObject({
         id: expect.any(String),
         title: 'Test Multi Signer Template Envelope',
         description: 'Integration test for multi signer template envelope',
         status: 'DRAFT',
         signingOrderType: 'OWNER_FIRST',
         originType: 'TEMPLATE',
-        templateId: 'multi-signer-template-123',
-        templateVersion: '2.0.0',
+        templateId: 'multi-signer-template-789',
+        templateVersion: '3.0.0',
         createdBy: testUser.userId
       });
     });
@@ -182,10 +209,10 @@ describe('Multi-Signer Envelope Workflow Integration Tests', () => {
 
       const result = await createEnvelopeHandler(event) as any;
 
-      expect(result.statusCode).toBe(400);
+      expect(result.statusCode).toBe(422);
       
       const response = JSON.parse(result.body);
-      expect(response.error).toContain('templateId and templateVersion are required when originType is TEMPLATE');
+      expect(response.message).toBe('templateId and templateVersion are required when originType is TEMPLATE');
     });
   });
 

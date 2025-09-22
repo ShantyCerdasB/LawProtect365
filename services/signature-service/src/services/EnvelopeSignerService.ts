@@ -458,14 +458,11 @@ export class EnvelopeSignerService {
    * @param signersData - Array of signer data
    */
   private async validateNoDuplicateEmails(envelopeId: EnvelopeId, signersData: CreateSignerData[]): Promise<void> {
-    // Get envelope to use entity validation
+    // Get envelope to use entity validation (envelope existence already validated in createSignersForEnvelope)
     const envelope = await this.signatureEnvelopeRepository.findById(envelopeId);
-    if (!envelope) {
-      throw envelopeNotFound(`Envelope with ID ${envelopeId.getValue()} not found`);
-    }
 
     // Use entity method to validate duplicate emails in new data
-    envelope.validateNoDuplicateEmails(signersData);
+    envelope!.validateNoDuplicateEmails(signersData);
 
     // Check against existing signers
     for (const signerData of signersData) {

@@ -71,6 +71,13 @@ export default async function globalSetup(): Promise<void> {
     process.env.JWT_AUDIENCE = 'test-client-id';
     process.env.JWKS_URI = 'http://localhost:3000/.well-known/jwks.json';
     
+    // Set required environment variables for shared-ts validation
+    process.env.PROJECT_NAME = 'lawprotect365';
+    process.env.SERVICE_NAME = 'signature-service';
+    process.env.AWS_REGION = 'us-east-1';
+    process.env.ENV = 'dev';
+    process.env.LOG_LEVEL = 'info';
+    
     // Set LocalStack configuration
     process.env.AWS_ENDPOINT_URL = 'http://localhost:4566';
     process.env.USE_LOCALSTACK_KMS = 'true';

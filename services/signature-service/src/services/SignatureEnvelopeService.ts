@@ -9,11 +9,14 @@
 import { SignatureEnvelope } from '../domain/entities/SignatureEnvelope';
 import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
 import { EnvelopeStatus } from '../domain/value-objects/EnvelopeStatus';
+import { SigningOrder } from '../domain/value-objects/SigningOrder';
+import { S3Key } from '../domain/value-objects/S3Key';
 import { SignatureEnvelopeRepository } from '../repositories/SignatureEnvelopeRepository';
 import { SignatureAuditEventService } from './SignatureAuditEventService';
 import { InvitationTokenService } from './InvitationTokenService';
 import { EntityFactory } from '../domain/factories/EntityFactory';
-import { EnvelopeSpec, S3Keys, Hashes, CreateEnvelopeData, UpdateEnvelopeData } from '../domain/types/envelope';
+import { EnvelopeUpdateValidationRule, UpdateEnvelopeData } from '../domain/rules/EnvelopeUpdateValidationRule';
+import { EnvelopeSpec, S3Keys, Hashes, CreateEnvelopeData } from '../domain/types/envelope';
 import { AuditEventType } from '../domain/enums/AuditEventType';
 import { Page } from '@lawprotect/shared-ts';
 import { SignerStatus } from '@prisma/client';
@@ -57,24 +60,25 @@ export class SignatureEnvelopeService {
       // Save to repository
       const createdEnvelope = await this.signatureEnvelopeRepository.create(envelope);
 
-      // Create audit event
-      await this.signatureAuditEventService.createSignerAuditEvent(
-        data.id.getValue(),
-        data.createdBy,
-        AuditEventType.ENVELOPE_CREATED,
-        `Envelope "${data.title}" created`,
-        userId,
-        undefined,
-        undefined,
-        undefined,
-        {
+      // Create audit event (envelope-level event, no signerId required)
+      await this.signatureAuditEventService.createEvent({
+        envelopeId: data.id.getValue(),
+        signerId: undefined, // No signerId for envelope creation events
+        eventType: AuditEventType.ENVELOPE_CREATED,
+        description: `Envelope "${data.title}" created`,
+        userId: userId,
+        userEmail: undefined,
+        ipAddress: undefined,
+        userAgent: undefined,
+        country: undefined,
+        metadata: {
           envelopeId: data.id.getValue(),
           title: data.title,
           signingOrder: data.signingOrder.toString(),
           originType: data.origin.getType(),
           expiresAt: data.expiresAt?.toISOString()
         }
-      );
+      });
 
       return createdEnvelope;
     } catch (error) {
@@ -130,56 +134,73 @@ export class SignatureEnvelopeService {
   }
 
   /**
-   * Updates a signature envelope
+   * Updates a signature envelope with comprehensive validation
    * @param envelopeId - The envelope ID
-   * @param updates - The updates to apply
-   * @param userId - The user making the update
-   * @returns The updated signature envelope
+   * @param updateData - The update data
+   * @param userId - The user making the request
+   * @returns Updated envelope
    */
-  async updateEnvelope(envelopeId: EnvelopeId, updates: UpdateEnvelopeData, userId: string): Promise<SignatureEnvelope> {
+  async updateEnvelope(
+    envelopeId: EnvelopeId,
+    updateData: UpdateEnvelopeData,
+    userId: string
+  ): Promise<SignatureEnvelope> {
     try {
-      // Get existing envelope
-      const existingEnvelope = await this.signatureEnvelopeRepository.findById(envelopeId);
-      if (!existingEnvelope) {
-        throw envelopeNotFound(`Envelope with ID ${envelopeId.getValue()} not found`);
-      }
-
-      // Validate envelope can be modified using entity method
-      if (!existingEnvelope.canBeModified()) {
-        throw invalidEnvelopeState(`Envelope ${envelopeId.getValue()} cannot be modified in current state: ${existingEnvelope.getStatus().getValue()}`);
-      }
-
-      // Update envelope using repository's update method
-      // The repository will handle the entity updates internally
-      const updatedEnvelope = await this.signatureEnvelopeRepository.update(envelopeId, {
-        title: updates.title,
-        description: updates.description,
-        expiresAt: updates.expiresAt,
-        signingOrder: updates.signingOrder,
-        updatedAt: new Date()
-      } as any);
-
-      // Create audit event
-      await this.signatureAuditEventService.createSignerAuditEvent(
-        envelopeId.getValue(),
-        existingEnvelope.getCreatedBy(),
-        AuditEventType.ENVELOPE_UPDATED,
-        `Envelope "${existingEnvelope.getTitle()}" updated`,
+      // 1. Get current envelope with signers
+      const envelope = await this.signatureEnvelopeRepository.getWithSigners(envelopeId);
+      
+      // 2. Validate update using domain rule (includes existence validation)
+      EnvelopeUpdateValidationRule.validateEnvelopeUpdate(
+        envelope!,
+        updateData,
         userId,
-        undefined,
-        undefined,
-        undefined,
-        {
-          envelopeId: envelopeId.getValue(),
-          updates: updates,
-          previousTitle: existingEnvelope.getTitle()
-        }
+        envelope?.getSigners() || []
       );
-
+      
+      // 3. Apply updates to entity
+      if (updateData.title) {
+        (envelope as any).title = updateData.title;
+      }
+      if (updateData.description !== undefined) {
+        (envelope as any).description = updateData.description;
+      }
+      if (updateData.expiresAt !== undefined) {
+        (envelope as any).expiresAt = updateData.expiresAt;
+      }
+      if (updateData.signingOrderType) {
+        (envelope as any).signingOrder = SigningOrder.fromString(updateData.signingOrderType);
+      }
+      if (updateData.sourceKey) {
+        (envelope as any).sourceKey = S3Key.fromString(updateData.sourceKey);
+      }
+      if (updateData.metaKey) {
+        (envelope as any).metaKey = S3Key.fromString(updateData.metaKey);
+      }
+      
+      // 4. Save updated envelope
+      const updatedEnvelope = await this.signatureEnvelopeRepository.update(envelopeId, envelope!);
+      
+      // 5. Create audit event
+      await this.signatureAuditEventService.createEvent({
+        envelopeId: envelopeId.getValue(),
+        signerId: undefined,
+        eventType: AuditEventType.ENVELOPE_UPDATED,
+        description: `Envelope "${envelope!.getTitle()}" updated`,
+        userId: userId,
+        userEmail: undefined,
+        ipAddress: undefined,
+        userAgent: undefined,
+        country: undefined,
+        metadata: {
+          updatedFields: Object.keys(updateData),
+          envelopeId: envelopeId.getValue()
+        }
+      });
+      
       return updatedEnvelope;
     } catch (error) {
       throw envelopeUpdateFailed(
-        `Failed to update envelope ${envelopeId.getValue()}: ${error instanceof Error ? error.message : error}`
+        `Failed to update envelope: ${error instanceof Error ? error.message : error}`
       );
     }
   }

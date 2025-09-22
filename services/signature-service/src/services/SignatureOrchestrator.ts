@@ -9,12 +9,17 @@
 
 import { SignatureEnvelope } from '../domain/entities/SignatureEnvelope';
 import { SignatureEnvelopeService } from './SignatureEnvelopeService';
+import { EnvelopeSignerService } from './EnvelopeSignerService';
+import { S3Service } from './S3Service';
 import { CreateEnvelopeData } from '../domain/types/envelope/CreateEnvelopeData';
+import { UpdateEnvelopeData } from '../domain/rules/EnvelopeUpdateValidationRule';
 import { 
   CreateEnvelopeRequest, 
   CreateEnvelopeResult
 } from '../domain/types/orchestrator';
 import { EntityFactory } from '../domain/factories/EntityFactory';
+import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
+import { invalidEnvelopeState } from '../signature-errors';
 import { uuid } from '@lawprotect/shared-ts';
 
 /**
@@ -34,7 +39,9 @@ import { uuid } from '@lawprotect/shared-ts';
  */
 export class SignatureOrchestrator {
   constructor(
-    private readonly signatureEnvelopeService: SignatureEnvelopeService
+    private readonly signatureEnvelopeService: SignatureEnvelopeService,
+    private readonly envelopeSignerService: EnvelopeSignerService,
+    private readonly s3Service: S3Service
   ) {}
 
   // ===== ENVELOPE CREATION FLOW =====
@@ -74,7 +81,83 @@ export class SignatureOrchestrator {
     return await this.signatureEnvelopeService.createEnvelope(data, userId);
   }
 
+  // ===== ENVELOPE UPDATE FLOW =====
+  
+  /**
+   * Updates an envelope with comprehensive validation and signer management
+   * @param envelopeId - The envelope ID
+   * @param updateData - The update data
+   * @param userId - The user making the request
+   * @returns Updated envelope
+   */
+  async updateEnvelope(
+    envelopeId: EnvelopeId,
+    updateData: UpdateEnvelopeData,
+    userId: string
+  ): Promise<SignatureEnvelope> {
+    try {
+      // 1. Validate S3 keys exist if provided
+      if (updateData.sourceKey || updateData.metaKey) {
+        await this.validateS3KeysExist(updateData.sourceKey, updateData.metaKey);
+      }
+      
+      // 2. Update envelope metadata
+      const updatedEnvelope = await this.signatureEnvelopeService.updateEnvelope(
+        envelopeId,
+        updateData,
+        userId
+      );
+      
+      // 3. Handle signer additions
+      if (updateData.addSigners && updateData.addSigners.length > 0) {
+        const signersData = updateData.addSigners.map(signer => ({
+          ...signer,
+          envelopeId,
+          participantRole: 'SIGNER' as const
+        }));
+        await this.envelopeSignerService.createSignersForEnvelope(
+          envelopeId,
+          signersData
+        );
+      }
+      
+      // 4. Handle signer removals
+      if (updateData.removeSignerIds && updateData.removeSignerIds.length > 0) {
+        for (const signerId of updateData.removeSignerIds) {
+          await this.envelopeSignerService.deleteSigner(
+            EntityFactory.createValueObjects.signerId(signerId)
+          );
+        }
+      }
+      
+      return updatedEnvelope;
+    } catch (error) {
+      this.handleOrchestrationError(error as Error, 'updateEnvelope');
+    }
+  }
+
   // ===== VALIDATIONS =====
+  
+  /**
+   * Validates that S3 keys exist in S3 storage
+   * @param sourceKey - Source document S3 key
+   * @param metaKey - Metadata S3 key
+   */
+  private async validateS3KeysExist(sourceKey?: string, metaKey?: string): Promise<void> {
+    if (sourceKey) {
+      const sourceExists = await this.s3Service.documentExists(sourceKey);
+      if (!sourceExists) {
+        throw invalidEnvelopeState(`Source document with key '${sourceKey}' does not exist in S3`);
+      }
+    }
+    
+    if (metaKey) {
+      const metaExists = await this.s3Service.documentExists(metaKey);
+      if (!metaExists) {
+        throw invalidEnvelopeState(`Metadata document with key '${metaKey}' does not exist in S3`);
+      }
+    }
+  }
   
   // Note: Signing order validation is not needed for CreateEnvelope
   // It will be validated when signers are added via UpdateEnvelope

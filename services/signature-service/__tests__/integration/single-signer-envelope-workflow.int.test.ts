@@ -30,11 +30,45 @@ describe('Single-Signer Envelope Workflow Integration Tests', () => {
     credentials: { accessKeyId: process.env.AWS_ACCESS_KEY_ID || 'test', secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || 'test' }
   });
 
-  // Use seeded test user from database
-  const testUser = {
-    userId: 'test-user-123', // This matches the seeded user ID
-    email: 'test@example.com'
-  };
+  // Get seeded test user from database
+  let testUser: { userId: string; email: string; name: string; role: string };
+  
+  beforeAll(async () => {
+    // Query the seeded user from database
+    const { PrismaClient } = await import('@prisma/client');
+    const prisma = new PrismaClient();
+    
+    const user = await prisma.user.findUnique({
+      where: { email: 'test@example.com' }
+    });
+    
+    if (!user) {
+      throw new Error('Test user not found in database. Make sure seed has run.');
+    }
+    
+    testUser = {
+      userId: user.id,
+      email: user.email,
+      name: user.name || 'Test User',
+      role: user.role
+    };
+    
+    await prisma.$disconnect();
+    
+    // Upload test PDF to S3
+    const testPdf = generateTestPdf();
+    const sourceKey = `test-documents/${randomUUID()}.pdf`;
+    
+    await s3.send(new PutObjectCommand({
+      Bucket: cfg.s3.bucketName,
+      Key: sourceKey,
+      Body: testPdf,
+      ContentType: 'application/pdf'
+    }));
+
+    // Store source key for tests
+    (global as any).testSourceKey = sourceKey;
+  });
 
   const makeAuthEvent = async (overrides?: any) => {
     const base = await createApiGatewayEvent({ 
@@ -43,7 +77,11 @@ describe('Single-Signer Envelope Workflow Integration Tests', () => {
         userId: testUser.userId, 
         email: testUser.email, 
         userAgent: 'jest-test/1.0' 
-      }) 
+      }),
+      headers: {
+        'x-country': 'US',
+        'x-forwarded-for': '127.0.0.1'
+      }
     });
     
     // Override authorizer with test user identity
@@ -60,21 +98,6 @@ describe('Single-Signer Envelope Workflow Integration Tests', () => {
     return { ...base, ...overrides };
   };
 
-  beforeAll(async () => {
-    // Upload test PDF to S3
-    const testPdf = generateTestPdf();
-    const sourceKey = `test-documents/${randomUUID()}.pdf`;
-    
-    await s3.send(new PutObjectCommand({
-      Bucket: cfg.s3.bucketName,
-      Key: sourceKey,
-      Body: testPdf,
-      ContentType: 'application/pdf'
-    }));
-
-    // Store source key for tests
-    (global as any).testSourceKey = sourceKey;
-  });
 
   describe('CreateEnvelope - Single Signer Workflow', () => {
     it('should create envelope successfully with seeded test user', async () => {
@@ -94,7 +117,7 @@ describe('Single-Signer Envelope Workflow Integration Tests', () => {
       expect(result.statusCode).toBe(201);
       
       const response = JSON.parse(result.body);
-      expect(response).toMatchObject({
+      expect(response.data).toMatchObject({
         id: expect.any(String),
         title: 'Test Single Signer Envelope',
         description: 'Integration test for single signer envelope creation',
@@ -107,7 +130,7 @@ describe('Single-Signer Envelope Workflow Integration Tests', () => {
       });
 
       // Store envelope ID for potential future tests
-      (global as any).testEnvelopeId = response.id;
+      (global as any).testEnvelopeId = response.data.id;
     });
 
     it('should create envelope with template origin', async () => {
@@ -129,7 +152,7 @@ describe('Single-Signer Envelope Workflow Integration Tests', () => {
       expect(result.statusCode).toBe(201);
       
       const response = JSON.parse(result.body);
-      expect(response).toMatchObject({
+      expect(response.data).toMatchObject({
         id: expect.any(String),
         title: 'Test Template Envelope',
         description: 'Integration test for template-based envelope creation',
@@ -157,10 +180,10 @@ describe('Single-Signer Envelope Workflow Integration Tests', () => {
 
       const result = await createEnvelopeHandler(event) as any;
 
-      expect(result.statusCode).toBe(400);
+      expect(result.statusCode).toBe(422);
       
       const response = JSON.parse(result.body);
-      expect(response.error).toContain('templateId and templateVersion are required when originType is TEMPLATE');
+      expect(response.message).toBe('templateId and templateVersion are required when originType is TEMPLATE');
     });
   });
 

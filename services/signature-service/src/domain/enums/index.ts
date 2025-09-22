@@ -7,6 +7,7 @@
 
 // Local enums
 export { AuditEventType } from './AuditEventType';
+export { ImmutableEnvelopeFields, IMMUTABLE_ENVELOPE_FIELDS } from './ImmutableEnvelopeFields';
 
 // Prisma enums - Use @prisma/client for: EnvelopeStatus, SignerStatus, SigningOrderType, 
 // UserRole, InvitationTokenStatus, DocumentOriginType, OAuthProvider

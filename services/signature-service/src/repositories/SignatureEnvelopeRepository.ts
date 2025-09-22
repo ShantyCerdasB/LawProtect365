@@ -6,7 +6,7 @@
  * It extends RepositoryBase to provide consistent data access patterns and uses Prisma for PostgreSQL operations.
  */
 
-import { RepositoryBase, Page, SortOrder,RepositoryFactory } from '@lawprotect/shared-ts';
+import { RepositoryBase, Page, RepositoryFactory } from '@lawprotect/shared-ts';
 import { SignatureEnvelope } from '../domain/entities/SignatureEnvelope';
 import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
 import { EnvelopeStatus } from '../domain/value-objects/EnvelopeStatus';
@@ -159,7 +159,7 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
         where: this.whereById(id) as any,
         include: {
           signers: {
-            orderBy: { order: SortOrder.ASC }
+            orderBy: { order: 'asc' }
           }
         }
       });
@@ -192,7 +192,7 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
         data: envelopeData,
         include: {
           signers: {
-            orderBy: { order: SortOrder.ASC }
+            orderBy: { order: 'asc' }
           }
         }
       });
@@ -228,7 +228,7 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
         data: updateData,
         include: {
           signers: {
-            orderBy: { order: SortOrder.ASC }
+            orderBy: { order: 'asc' }
           }
         }
       });
@@ -297,11 +297,11 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
 
       const envelopes = await client.signatureEnvelope.findMany({
         where,
-        orderBy: { createdAt: SortOrder.DESC },
+        orderBy: { createdAt: 'desc' },
         take: limit + SignatureEnvelopeRepository.PAGINATION_OFFSET,
         include: {
           signers: {
-            orderBy: { order: SortOrder.ASC }
+            orderBy: { order: 'asc' }
           }
         }
       });
@@ -343,7 +343,7 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
         where: { id: id.getValue() },
         include: {
           signers: {
-            orderBy: { order: SortOrder.ASC }
+            orderBy: { order: 'asc' }
           }
         }
       });
@@ -373,7 +373,7 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
       include: {
         signers: {
           where: { status },
-          orderBy: { order: SortOrder.ASC }
+          orderBy: { order: 'asc' }
         }
       }
     });
@@ -404,11 +404,11 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
 
     const envelopes = await client.signatureEnvelope.findMany({
       where: whereClause,
-      orderBy: { createdAt: SortOrder.DESC },
+      orderBy: { createdAt: 'desc' },
       take: limit + 1,
       include: {
         signers: {
-          orderBy: { order: SortOrder.ASC }
+          orderBy: { order: 'asc' }
         }
       }
     });
@@ -442,11 +442,11 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
 
     const envelopes = await client.signatureEnvelope.findMany({
       where: whereClause,
-      orderBy: { createdAt: SortOrder.DESC },
+      orderBy: { createdAt: 'desc' },
       take: limit + 1,
       include: {
         signers: {
-          orderBy: { order: SortOrder.ASC }
+          orderBy: { order: 'asc' }
         }
       }
     });
@@ -475,7 +475,7 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
       },
       include: {
         signers: {
-          orderBy: { order: SortOrder.ASC }
+          orderBy: { order: 'asc' }
         }
       }
     });
@@ -507,11 +507,11 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
 
     const envelopes = await client.signatureEnvelope.findMany({
       where: whereClause,
-      orderBy: { expiresAt: SortOrder.ASC },
+      orderBy: { expiresAt: 'asc' },
       take: limit + 1,
       include: {
         signers: {
-          orderBy: { order: SortOrder.ASC }
+          orderBy: { order: 'asc' }
         }
       }
     });
@@ -557,7 +557,7 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
         data: this.toModel(currentEnvelope) as any,
         include: {
           signers: {
-            orderBy: { order: SortOrder.ASC }
+            orderBy: { order: 'asc' }
           }
         }
       });
@@ -608,7 +608,7 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
         data: this.toModel(currentEnvelope) as any,
         include: {
           signers: {
-            orderBy: { order: SortOrder.ASC }
+            orderBy: { order: 'asc' }
           }
         }
       });
@@ -659,7 +659,7 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
         data: this.toModel(currentEnvelope) as any,
         include: {
           signers: {
-            orderBy: { order: SortOrder.ASC }
+            orderBy: { order: 'asc' }
           }
         }
       });
@@ -745,13 +745,13 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
       where: { id: id.getValue() },
       include: {
         signers: {
-          orderBy: { order: SortOrder.ASC }
+          orderBy: { order: 'asc' }
         },
         auditEvents: {
-          orderBy: { createdAt: SortOrder.DESC }
+          orderBy: { createdAt: 'desc' }
         },
         consents: {
-          orderBy: { createdAt: SortOrder.DESC }
+          orderBy: { createdAt: 'desc' }
         }
       }
     });
@@ -783,11 +783,11 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
       where: { id: id.getValue() },
       include: {
         signers: {
-          orderBy: { order: SortOrder.ASC }
+          orderBy: { order: 'asc' }
         },
         auditEvents: {
           where: whereClause,
-          orderBy: { createdAt: SortOrder.DESC },
+          orderBy: { createdAt: 'desc' },
           take: limit + 1
         }
       }
@@ -809,10 +809,10 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
       where: { id: id.getValue() },
       include: {
         signers: {
-          orderBy: { order: SortOrder.ASC }
+          orderBy: { order: 'asc' }
         },
         consents: {
-          orderBy: { createdAt: SortOrder.DESC }
+          orderBy: { createdAt: 'desc' }
         }
       }
     });

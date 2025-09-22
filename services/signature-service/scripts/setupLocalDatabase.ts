@@ -5,8 +5,9 @@
  * It uses the real PostgreSQL database configured in DATABASE_URL.
  */
 
-import { spawn } from 'child_process';
+import { execSync } from 'child_process';
 import { join } from 'path';
+import { existsSync } from 'fs';
 
 /**
  * Runs Prisma migrations on the database
@@ -18,34 +19,32 @@ import { join } from 'path';
  * @throws Error if migrations fail
  */
 export const runMigrations = async (): Promise<void> => {
-  return new Promise((resolve, reject) => {
+  try {
     console.log('🔄 Running Prisma migrations...');
     
     // Use process.cwd() to get the project root, then navigate to shared-ts
-    const projectRoot = process.cwd();
+    // process.cwd() is already in services/signature-service, so we need to go up 2 levels
+    const projectRoot = join(process.cwd(), '..', '..');
     const sharedTsPath = join(projectRoot, 'packages', 'shared-ts');
-    const prismaPath = join(sharedTsPath, 'node_modules', '.bin', 'prisma');
     
-    const child = spawn(prismaPath, ['migrate', 'deploy'], {
+    // Verify the shared-ts directory exists
+    if (!existsSync(sharedTsPath)) {
+      throw new Error(`Shared-ts directory not found at: ${sharedTsPath}`);
+    }
+    
+    // Use the npm script from package.json for better compatibility
+    // This approach works better in CI/CD environments like AWS CodeBuild
+    execSync('npm run prisma:migrate', {
       cwd: sharedTsPath,
-      stdio: 'inherit'
+      stdio: 'inherit',
+      env: { ...process.env }
     });
     
-    child.on('close', (code) => {
-      if (code === 0) {
-        console.log('✅ Prisma migrations completed');
-        resolve();
-      } else {
-        console.error('❌ Failed to run Prisma migrations');
-        reject(new Error(`Prisma migrations failed with code ${code}`));
-      }
-    });
-    
-    child.on('error', (error) => {
-      console.error('❌ Failed to run Prisma migrations:', error);
-      reject(error);
-    });
-  });
+    console.log('✅ Prisma migrations completed');
+  } catch (error) {
+    console.error('❌ Failed to run Prisma migrations:', error);
+    throw error;
+  }
 };
 
 /**
@@ -58,33 +57,32 @@ export const runMigrations = async (): Promise<void> => {
  * @throws Error if seeding fails
  */
 export const seedDatabase = async (): Promise<void> => {
-  return new Promise((resolve) => {
+  try {
     console.log('🌱 Seeding database...');
     
     // Use process.cwd() to get the project root, then navigate to shared-ts
-    const projectRoot = process.cwd();
+    // process.cwd() is already in services/signature-service, so we need to go up 2 levels
+    const projectRoot = join(process.cwd(), '..', '..');
     const sharedTsPath = join(projectRoot, 'packages', 'shared-ts');
-    const tsxPath = join(sharedTsPath, 'node_modules', '.bin', 'tsx');
     
-    const child = spawn(tsxPath, ['prisma/seeds/seed.ts'], {
+    // Verify the shared-ts directory exists
+    if (!existsSync(sharedTsPath)) {
+      throw new Error(`Shared-ts directory not found at: ${sharedTsPath}`);
+    }
+    
+    // Use the npm script from package.json for better compatibility
+    // This approach works better in CI/CD environments like AWS CodeBuild
+    execSync('npm run prisma:seed', {
       cwd: sharedTsPath,
-      stdio: 'inherit'
+      stdio: 'inherit',
+      env: { ...process.env }
     });
     
-    child.on('close', (code) => {
-      if (code === 0) {
-        console.log('✅ Database seeded successfully');
-      } else {
-        console.log('⚠️  Seeding failed, continuing...');
-      }
-      resolve(); // Always resolve, don't fail tests for seeding issues
-    });
-    
-    child.on('error', (error) => {
-      console.log('⚠️  Seeding failed, continuing...', error.message);
-      resolve(); // Always resolve, don't fail tests for seeding issues
-    });
-  });
+    console.log('✅ Database seeded successfully');
+  } catch (error) {
+    console.log('⚠️  Seeding failed, continuing...', error);
+    // Don't throw error for seeding failures
+  }
 };
 
 /**

@@ -9,4 +9,3 @@ export * from './EnvelopeSpec';
 export * from './S3Keys';
 export * from './Hashes';
 export * from './CreateEnvelopeData';
-export * from './UpdateEnvelopeData';

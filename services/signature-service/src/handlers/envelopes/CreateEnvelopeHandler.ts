@@ -111,17 +111,22 @@ export const createEnvelopeHandler = ControllerFactory.createCommand({
   transformResult: async (result: any) => {
     // Transform domain entities to API response format
     return {
-      envelopeId: result.envelope.getId().getValue(),
-      envelope: {
-        id: result.envelope.getId().getValue(),
-        status: result.envelope.getStatus().getValue(),
-        title: result.envelope.getTitle(),
-        description: result.envelope.getDescription(),
-        expiresAt: result.envelope.getExpiresAt(),
-        createdAt: result.envelope.getCreatedAt()
-      }
-      // Note: signers are not created in CreateEnvelope flow
-      // They are added separately via UpdateEnvelope flow
+      id: result.envelope.getId().getValue(),
+      title: result.envelope.getTitle(),
+      description: result.envelope.getDescription(),
+      status: result.envelope.getStatus().getValue(),
+      signingOrderType: result.envelope.getSigningOrder().getType(),
+      originType: result.envelope.getOrigin().getType(),
+      createdBy: result.envelope.getCreatedBy(),
+      sourceKey: result.envelope.getSourceKey()?.getValue(),
+      metaKey: result.envelope.getMetaKey()?.getValue(),
+      expiresAt: result.envelope.getExpiresAt(),
+      createdAt: result.envelope.getCreatedAt(),
+      // Template-specific fields (only present for TEMPLATE origin)
+      ...(result.envelope.getOrigin().getType() === 'TEMPLATE' && {
+        templateId: result.envelope.getOrigin().getTemplateId(),
+        templateVersion: result.envelope.getOrigin().getTemplateVersion()
+      })
     };
   },
   

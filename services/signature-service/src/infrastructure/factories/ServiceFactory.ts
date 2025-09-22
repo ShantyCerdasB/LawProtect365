@@ -130,9 +130,13 @@ export class ServiceFactory {
    */
   static createSignatureOrchestrator(): SignatureOrchestrator {
     const signatureEnvelopeService = this.createSignatureEnvelopeService();
+    const envelopeSignerService = this.createEnvelopeSignerService();
+    const s3Service = this.createS3Service();
 
     return new SignatureOrchestrator(
-      signatureEnvelopeService
+      signatureEnvelopeService,
+      envelopeSignerService,
+      s3Service
     );
   }
 

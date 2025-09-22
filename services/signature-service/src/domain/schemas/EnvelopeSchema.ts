@@ -54,9 +54,24 @@ export const CreateEnvelopeSchema = z.object({
  * Schema for updating an envelope
  */
 export const UpdateEnvelopeSchema = z.object({
+  // Metadata básica
   title: NonEmptyStringSchema.max(255, 'Title must be less than 255 characters').optional(),
   description: z.string().max(1000, 'Description must be less than 1000 characters').optional(),
-  expiresAt: z.date().optional(), customFields: JsonObjectSchema.optional(),
+  expiresAt: z.date().optional(),
+  
+  // Signing order
+  signingOrderType: z.nativeEnum(SigningOrderType).optional(),
+  
+  // S3 keys (format validation handled by S3Key value object)
+  sourceKey: z.string().optional(),
+  metaKey: z.string().optional(),
+  
+  // Signers
+  addSigners: z.array(SignerDataSchema).optional(),
+  removeSignerIds: z.array(UuidV4).optional(),
+  
+  // Legacy fields (keep for backward compatibility)
+  customFields: JsonObjectSchema.optional(),
   tags: z.array(z.string()).optional(),
   reminders: z.object({
     daysBeforeExpiration: z.number().min(1).max(365).optional(),
