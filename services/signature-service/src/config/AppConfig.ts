@@ -34,6 +34,16 @@ export interface SignatureServiceConfig extends AppConfig {
     busName: string;
     source: string;
   };
+  
+  outbox: {
+    tableName: string;
+  };
+  
+  aws: {
+    region: string;
+    accessKeyId: string;
+    secretAccessKey: string;
+  };
 }
 
 /**
@@ -66,6 +76,14 @@ export const loadConfig = (): SignatureServiceConfig => {
     eventbridge: {
       busName: process.env.EVENTBRIDGE_BUS_NAME!,
       source: process.env.EVENTBRIDGE_SOURCE || `${base.projectName}.${base.serviceName}`
+    },
+    outbox: {
+      tableName: process.env.OUTBOX_TABLE_NAME!
+    },
+    aws: {
+      region: process.env.AWS_REGION || 'us-east-1',
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!
     }
   };
 };

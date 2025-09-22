@@ -11,6 +11,9 @@ import './aws/kmsMock';
 import './aws/eventBridgeMock';
 import './aws/ssmMock';
 import './aws/s3Mock';
+import './aws/outboxMock';
+
+// Service Mocks - No service mocks needed, only AWS mocks
 
 // Cognito Mocks
 import './cognito/jwksMock';
@@ -26,4 +29,7 @@ export {
 
 export { cleanupS3MockStorage } from './aws/s3Cleanup';
 
-console.log('🔧 All mocks loaded - AWS services and Cognito JWKS ready for testing');
+// Export mock helpers
+export { outboxMockHelpers } from './aws/outboxMock';
+
+console.log('🔧 All mocks loaded - AWS services, Cognito JWKS, and SendEnvelope mocks ready for testing');

@@ -614,4 +614,109 @@ export class SignatureEnvelopeService {
       );
     }
   }
+
+  /**
+   * Updates the signing order of an envelope with automatic reordering
+   * @param envelopeId - The envelope ID
+   * @param newSigningOrderType - The new signing order type
+   * @param userId - The user making the request
+   * @returns Updated envelope
+   */
+  async updateSigningOrder(
+    envelopeId: EnvelopeId,
+    newSigningOrderType: string,
+    userId: string
+  ): Promise<SignatureEnvelope> {
+    try {
+      // 1. Get current envelope with signers
+      const envelope = await this.signatureEnvelopeRepository.getWithSigners(envelopeId);
+      if (!envelope) {
+        throw envelopeNotFound(`Envelope with ID ${envelopeId.getValue()} not found`);
+      }
+      
+      // 2. Validate access
+      if (envelope.getCreatedBy() !== userId) {
+        throw envelopeAccessDenied(`Only the envelope owner can modify envelope ${envelopeId.getValue()}`);
+      }
+      
+      // 3. Get current signers
+      const existingSigners = envelope.getSigners();
+      
+      // 4. Validate change is possible
+      envelope.validateSigningOrderChange(newSigningOrderType, existingSigners);
+      
+      // 5. Update signing order in envelope
+      envelope.updateSigningOrder(SigningOrder.fromString(newSigningOrderType));
+      
+      // 6. Save updated envelope
+      const updatedEnvelope = await this.signatureEnvelopeRepository.update(envelopeId, envelope);
+      
+      // 7. Create audit event
+      await this.signatureAuditEventService.createEvent({
+        envelopeId: envelopeId.getValue(),
+        signerId: undefined,
+        eventType: AuditEventType.ENVELOPE_UPDATED,
+        description: `Signing order changed to ${newSigningOrderType}`,
+        userId: userId,
+        userEmail: undefined,
+        ipAddress: undefined,
+        userAgent: undefined,
+        country: undefined,
+        metadata: {
+          newSigningOrderType,
+          envelopeId: envelopeId.getValue()
+        }
+      });
+      
+      return updatedEnvelope;
+    } catch (error) {
+      wrapServiceError(error as Error, 'update signing order');
+    }
+  }
+
+  /**
+   * Sends an envelope by validating state and changing to READY_FOR_SIGNATURE
+   * @param envelopeId - The envelope ID to send
+   * @param userId - The user making the request
+   * @returns Updated signature envelope
+   */
+  async sendEnvelope(envelopeId: EnvelopeId, userId: string): Promise<SignatureEnvelope> {
+    try {
+      // 1. Get envelope with signers
+      const envelope = await this.signatureEnvelopeRepository.getWithSigners(envelopeId);
+      if (!envelope) {
+        throw envelopeNotFound(`Envelope with ID ${envelopeId.getValue()} not found`);
+      }
+      
+      // 2. Validate access (only the creator can send)
+      if (envelope.getCreatedBy() !== userId) {
+        throw envelopeAccessDenied('Only envelope owner can send envelope');
+      }
+      
+      // 3. Validate state (not in final state)
+      if (envelope.isInFinalState()) {
+        throw invalidEnvelopeState('Cannot send envelope in final state');
+      }
+      
+      // 4. Validate that has external signers
+      if (!envelope.hasExternalSigners()) {
+        throw invalidEnvelopeState('Envelope must have at least one external signer');
+      }
+      
+      // 5. Validate that external signers have email and full name
+      envelope.validateExternalSigners();
+      
+      // 6. Change status to READY_FOR_SIGNATURE (only if was in DRAFT)
+      if (envelope.getStatus().isDraft()) {
+        envelope.send(); // Changes to READY_FOR_SIGNATURE
+        const updatedEnvelope = await this.signatureEnvelopeRepository.update(envelopeId, envelope);
+        return updatedEnvelope;
+      }
+      
+      // 7. If already in READY_FOR_SIGNATURE, return as-is
+      return envelope;
+    } catch (error) {
+      wrapServiceError(error as Error, 'send envelope');
+    }
+  }
 }

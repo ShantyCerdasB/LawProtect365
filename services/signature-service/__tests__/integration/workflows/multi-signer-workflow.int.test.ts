@@ -191,84 +191,20 @@ describe('Multi-Signer Document Signing Workflow', () => {
     });
 
     it('should handle signing order changes in OWNER_FIRST workflow', async () => {
-      // Create OWNER_FIRST envelope
+      // Create INVITEES_FIRST envelope
       const envelope = await workflowHelper.createEnvelope(
         TestDataFactory.createEnvelopeData({
           title: 'Signing Order Change Test',
-          signingOrderType: 'OWNER_FIRST',
+          signingOrderType: 'INVITEES_FIRST',
           originType: 'USER_UPLOAD'
         })
       );
 
-      // Add creator as first signer (order: 1)
-      const creatorSigner = TestDataFactory.createSignerData({
-        userId: workflowHelper.getTestUser().userId,
-        email: workflowHelper.getTestUser().email,
-        fullName: workflowHelper.getTestUser().name,
-        isExternal: false,
-        order: 1
-      });
-
-      await workflowHelper.updateEnvelope(envelope.id, { addSigners: [creatorSigner] });
-
-      // Add external signers (order: 2, 3)
-      const externalSigners = TestDataFactory.createMultipleSigners(2, 2);
+      // Add external signers only (no creator as signer)
+      const externalSigners = TestDataFactory.createMultipleSigners(2, 1);
       await workflowHelper.updateEnvelope(envelope.id, { addSigners: externalSigners });
 
-      // For INVITEES_FIRST to work, we need the creator to be the last signer
-      // Since we can't easily update signer order, let's remove the creator and re-add as last
-      const currentSigners = await workflowHelper.getSignersFromDatabase(envelope.id);
-      const creatorSignerId = currentSigners.find(s => s.userId === workflowHelper.getTestUser().userId)?.id;
-      
-      if (creatorSignerId) {
-        // Remove creator from current position
-        await workflowHelper.updateEnvelope(envelope.id, { removeSignerIds: [creatorSignerId] });
-        
-        // Add creator back as last signer (order: 3)
-        const creatorAsLastSigner = TestDataFactory.createSignerData({
-          userId: workflowHelper.getTestUser().userId,
-          email: workflowHelper.getTestUser().email,
-          fullName: workflowHelper.getTestUser().name,
-          isExternal: false,
-          order: 3
-        });
-        await workflowHelper.updateEnvelope(envelope.id, { addSigners: [creatorAsLastSigner] });
-      }
-
-      // Now change to INVITEES_FIRST (should succeed)
-      const changeToInviteesResponse = await workflowHelper.updateEnvelope(
-        envelope.id,
-        { signingOrderType: 'INVITEES_FIRST' }
-      );
-
-      expect(changeToInviteesResponse.statusCode).toBe(200);
-      expect(changeToInviteesResponse.data.signingOrderType).toBe('INVITEES_FIRST');
-
-      // Verify change in database
-      const dbEnvelope = await workflowHelper.getEnvelopeFromDatabase(envelope.id);
-      expect(dbEnvelope?.signingOrderType).toBe('INVITEES_FIRST');
-
-      // For OWNER_FIRST to work, we need the creator to be the first signer (order: 1)
-      // Remove creator from current position and re-add as first signer
-      const currentSignersAfterInvitees = await workflowHelper.getSignersFromDatabase(envelope.id);
-      const creatorSignerIdAfterInvitees = currentSignersAfterInvitees.find(s => s.userId === workflowHelper.getTestUser().userId)?.id;
-      
-      if (creatorSignerIdAfterInvitees) {
-        // Remove creator from current position
-        await workflowHelper.updateEnvelope(envelope.id, { removeSignerIds: [creatorSignerIdAfterInvitees] });
-        
-        // Add creator back as first signer (order: 1)
-        const creatorAsFirstSigner = TestDataFactory.createSignerData({
-          userId: workflowHelper.getTestUser().userId,
-          email: workflowHelper.getTestUser().email,
-          fullName: workflowHelper.getTestUser().name,
-          isExternal: false,
-          order: 1
-        });
-        await workflowHelper.updateEnvelope(envelope.id, { addSigners: [creatorAsFirstSigner] });
-      }
-
-      // Now change back to OWNER_FIRST (should succeed)
+      // Change to OWNER_FIRST (should succeed - creator doesn't need to be a signer)
       const changeToOwnerResponse = await workflowHelper.updateEnvelope(
         envelope.id,
         { signingOrderType: 'OWNER_FIRST' }
@@ -277,9 +213,22 @@ describe('Multi-Signer Document Signing Workflow', () => {
       expect(changeToOwnerResponse.statusCode).toBe(200);
       expect(changeToOwnerResponse.data.signingOrderType).toBe('OWNER_FIRST');
 
+      // Verify change in database
+      const dbEnvelope = await workflowHelper.getEnvelopeFromDatabase(envelope.id);
+      expect(dbEnvelope?.signingOrderType).toBe('OWNER_FIRST');
+
+      // Now change back to INVITEES_FIRST (should succeed)
+      const changeToInviteesResponse = await workflowHelper.updateEnvelope(
+        envelope.id,
+        { signingOrderType: 'INVITEES_FIRST' }
+      );
+
+      expect(changeToInviteesResponse.statusCode).toBe(200);
+      expect(changeToInviteesResponse.data.signingOrderType).toBe('INVITEES_FIRST');
+
       // Verify final change in database
       const finalDbEnvelope = await workflowHelper.getEnvelopeFromDatabase(envelope.id);
-      expect(finalDbEnvelope?.signingOrderType).toBe('OWNER_FIRST');
+      expect(finalDbEnvelope?.signingOrderType).toBe('INVITEES_FIRST');
     });
   });
 

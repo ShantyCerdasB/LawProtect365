@@ -141,7 +141,7 @@ export class EnvelopeStatus {
    * Checks if the envelope can be sent
    */
   canBeSent(): boolean {
-    return this.isDraft();
+    return this.isDraft() || this.isReadyForSignature();
   }
 
   /**

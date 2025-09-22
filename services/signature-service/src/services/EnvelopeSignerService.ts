@@ -471,4 +471,27 @@ export class EnvelopeSignerService {
     }
   }
 
+  /**
+   * Updates the signing order of a specific signer
+   * @param signerId - The signer ID to update
+   * @param newOrder - The new order number
+   * @returns Updated signer
+   */
+  async updateSignerOrder(signerId: SignerId, newOrder: number): Promise<EnvelopeSigner> {
+    try {
+      const existingSigner = await this.envelopeSignerRepository.findById(signerId);
+      if (!existingSigner) {
+        throw signerNotFound(`Signer with ID ${signerId.getValue()} not found`);
+      }
+
+      // Update order
+      existingSigner.updateOrder(newOrder);
+
+      // Save to repository
+      return await this.envelopeSignerRepository.update(signerId, existingSigner);
+    } catch (error) {
+      wrapServiceError(error as Error, `update signer order for ${signerId.getValue()}`);
+    }
+  }
+
 }

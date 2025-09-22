@@ -17,6 +17,13 @@
  */
 
 import { WorkflowTestHelper, TestDataFactory } from '../helpers/workflowHelpers';
+import { 
+  verifyInvitationHistory, 
+  verifyNoDuplicateInvitations, 
+  verifyInvitationTokens,
+  verifySignerReceivedInvitation,
+  clearSendEnvelopeMockData 
+} from '../helpers/sendEnvelopeHelpers';
 
 describe('Single-Signer Document Signing Workflow', () => {
   let workflowHelper: WorkflowTestHelper;
@@ -24,6 +31,11 @@ describe('Single-Signer Document Signing Workflow', () => {
   beforeAll(async () => {
     workflowHelper = new WorkflowTestHelper();
     await workflowHelper.initialize();
+  });
+
+  afterEach(() => {
+    // Clear mock data after each test
+    clearSendEnvelopeMockData();
   });
 
   describe('Complete Single-Signer Workflow', () => {
@@ -75,8 +87,48 @@ describe('Single-Signer Document Signing Workflow', () => {
       expect(dbEnvelope?.sourceKey).toBe(newSourceKey);
       expect(dbEnvelope?.metaKey).toBe(newMetaKey);
 
-      // TODO: Implement when handlers are available
+      // Add external signer for single-signer workflow
+      const externalSigner = TestDataFactory.createSignerData({
+        email: 'external.signer@example.com',
+        fullName: 'External Signer',
+        isExternal: true,
+        order: 1
+      });
+
+      const addSignerResponse = await workflowHelper.updateEnvelope(envelope.id, {
+        addSigners: [externalSigner]
+      });
+
+      expect(addSignerResponse.statusCode).toBe(200);
+      expect(addSignerResponse.data.signers).toHaveLength(1);
+      expect(addSignerResponse.data.signers[0].email).toBe('external.signer@example.com');
+
       // Send envelope for signing
+      const sendResponse = await workflowHelper.sendEnvelope(envelope.id, {
+        sendToAll: true,
+        message: 'Please sign this single-signer contract'
+      });
+
+      expect(sendResponse.statusCode).toBe(200);
+      expect(sendResponse.data.success).toBe(true);
+      expect(sendResponse.data.status).toBe('READY_FOR_SIGNATURE');
+      expect(sendResponse.data.tokensGenerated).toBe(1);
+      expect(sendResponse.data.signersNotified).toBe(1);
+
+      // Verify invitation was sent to external signer
+      await verifySignerReceivedInvitation(
+        envelope.id,
+        addSignerResponse.data.signers[0].id,
+        'Please sign this single-signer contract'
+      );
+
+      // Verify no duplicate invitations
+      await verifyNoDuplicateInvitations(envelope.id);
+
+      // Verify invitation tokens were generated
+      await verifyInvitationTokens(envelope.id, 1);
+
+      // TODO: Implement when handlers are available
       // Sign document
       // Complete envelope
       // Download signed document
@@ -120,6 +172,150 @@ describe('Single-Signer Document Signing Workflow', () => {
       // Sign document
       // Complete envelope
       // Download signed document
+    });
+  });
+
+  describe('Single-Signer Send Envelope Workflow', () => {
+    it('should send envelope to external signer with custom message', async () => {
+      // Create envelope with external signer only (owner not signing)
+      const envelope = await workflowHelper.createEnvelope(
+        TestDataFactory.createEnvelopeData({
+          title: 'Single Signer Send Test',
+          description: 'Testing send envelope functionality'
+        })
+      );
+
+      // Add external signer
+      const externalSigner = TestDataFactory.createSignerData({
+        email: 'single.signer@example.com',
+        fullName: 'Single Signer',
+        isExternal: true,
+        order: 1
+      });
+
+      const addSignerResponse = await workflowHelper.updateEnvelope(envelope.id, {
+        addSigners: [externalSigner]
+      });
+
+      const signerId = addSignerResponse.data.signers[0].id;
+
+      // Send envelope with custom message
+      const sendResponse = await workflowHelper.sendEnvelope(envelope.id, {
+        sendToAll: true,
+        message: 'Custom message for single signer'
+      });
+
+      expect(sendResponse.statusCode).toBe(200);
+      expect(sendResponse.data.success).toBe(true);
+      expect(sendResponse.data.status).toBe('READY_FOR_SIGNATURE');
+      expect(sendResponse.data.tokensGenerated).toBe(1);
+      expect(sendResponse.data.signersNotified).toBe(1);
+
+      // Verify invitation with custom message
+      await verifySignerReceivedInvitation(
+        envelope.id,
+        signerId,
+        'Custom message for single signer'
+      );
+
+      // Verify no duplicate invitations
+      await verifyNoDuplicateInvitations(envelope.id);
+    });
+
+    it('should send envelope with default message when no message provided', async () => {
+      // Create envelope with external signer
+      const envelope = await workflowHelper.createEnvelope(
+        TestDataFactory.createEnvelopeData({
+          title: 'Default Message Test',
+          description: 'Testing default message functionality'
+        })
+      );
+
+      // Add external signer
+      const externalSigner = TestDataFactory.createSignerData({
+        email: 'default.signer@example.com',
+        fullName: 'Default Signer',
+        isExternal: true,
+        order: 1
+      });
+
+      const addSignerResponse = await workflowHelper.updateEnvelope(envelope.id, {
+        addSigners: [externalSigner]
+      });
+
+      const signerId = addSignerResponse.data.signers[0].id;
+
+      // Send with sendToAll: true (no custom message)
+      const sendResponse = await workflowHelper.sendEnvelope(envelope.id, {
+        sendToAll: true
+      });
+
+      expect(sendResponse.statusCode).toBe(200);
+      expect(sendResponse.data.success).toBe(true);
+
+      // Verify default message
+      await verifySignerReceivedInvitation(
+        envelope.id,
+        signerId,
+        'You have been invited to sign a document'
+      );
+    });
+
+    it('should handle envelope already in READY_FOR_SIGNATURE state', async () => {
+      // Create envelope and send it (DRAFT → READY_FOR_SIGNATURE)
+      const envelope = await workflowHelper.createEnvelope(
+        TestDataFactory.createEnvelopeData({
+          title: 'Re-send Test',
+          description: 'Testing re-send functionality'
+        })
+      );
+
+      // Add external signer
+      const externalSigner = TestDataFactory.createSignerData({
+        email: 'resend.signer@example.com',
+        fullName: 'Re-send Signer',
+        isExternal: true,
+        order: 1
+      });
+
+      const addSignerResponse = await workflowHelper.updateEnvelope(envelope.id, {
+        addSigners: [externalSigner]
+      });
+
+      const signerId = addSignerResponse.data.signers[0].id;
+
+      // First send
+      const firstSendResponse = await workflowHelper.sendEnvelope(envelope.id, {
+        sendToAll: true,
+        message: 'First invitation'
+      });
+
+      expect(firstSendResponse.statusCode).toBe(200);
+      expect(firstSendResponse.data.status).toBe('READY_FOR_SIGNATURE');
+
+      // Second send (should remain READY_FOR_SIGNATURE)
+      const secondSendResponse = await workflowHelper.sendEnvelope(envelope.id, {
+        sendToAll: true,
+        message: 'Second invitation'
+      });
+
+      expect(secondSendResponse.statusCode).toBe(200);
+      expect(secondSendResponse.data.status).toBe('READY_FOR_SIGNATURE');
+
+      // Verify both invitations were sent (no duplicate prevention in this case)
+      // This tests that the system allows re-sending invitations
+      const invitationEvents = await verifyInvitationHistory(envelope.id, [
+        {
+          signerId,
+          message: 'First invitation',
+          eventType: 'ENVELOPE_INVITATION'
+        },
+        {
+          signerId,
+          message: 'Second invitation',
+          eventType: 'ENVELOPE_INVITATION'
+        }
+      ]);
     });
   });
 

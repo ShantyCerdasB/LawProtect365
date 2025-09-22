@@ -12,6 +12,7 @@ import { loadConfig } from '../../../src/config';
 import { createApiGatewayEvent, generateTestPdf, generateTestJwtToken } from './testHelpers';
 import { createEnvelopeHandler } from '../../../src/handlers/envelopes/CreateEnvelopeHandler';
 import { updateEnvelopeHandler } from '../../../src/handlers/envelopes/UpdateEnvelopeHandler';
+import { sendEnvelopeHandler } from '../../../src/handlers/envelopes/SendEnvelopeHandler';
 
 /**
  * Test user data structure
@@ -277,6 +278,50 @@ export class WorkflowTestHelper {
     
     await prisma.$disconnect();
     return envelope;
+  }
+
+  /**
+   * Send envelope to signers
+   * @param envelopeId - The envelope ID to send
+   * @param options - Send options including message and signer targeting
+   * @returns Send envelope response
+   */
+  async sendEnvelope(
+    envelopeId: string,
+    options: {
+      message?: string;
+      sendToAll?: boolean;
+      signers?: Array<{
+        signerId: string;
+        message?: string;
+      }>;
+    }
+  ): Promise<{ statusCode: number; data: any }> {
+    if (!this.testUser) {
+      throw new Error('Test user not initialized');
+    }
+
+    const authToken = await generateTestJwtToken({
+      sub: this.testUser.userId,
+      email: this.testUser.email,
+      roles: [this.testUser.role]
+    });
+
+    const event = await createApiGatewayEvent({
+      pathParameters: { envelopeId },
+      body: options,
+      headers: {
+        'Authorization': `Bearer ${authToken}`
+      }
+    });
+
+    const result = await sendEnvelopeHandler(event) as any;
+    const response = JSON.parse(result.body);
+    
+    return {
+      statusCode: result.statusCode,
+      data: response
+    };
   }
 }
 

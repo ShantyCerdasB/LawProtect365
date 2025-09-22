@@ -15,11 +15,21 @@ export const SendEnvelopePathSchema = z.object({
 });
 
 /**
- * Schema for sending envelope request body (currently empty, but can be extended)
+ * Schema for sending envelope request body
+ * @description Defines validation rules for envelope sending requests including
+ * message options and signer targeting configuration
  */
 export const SendEnvelopeBodySchema = z.object({
-  // Future: could include custom message, reminder settings, etc.
-}).optional();
+  message: z.string().optional(),
+  sendToAll: z.boolean().optional().default(false),
+  signers: z.array(z.object({
+    signerId: z.string().uuid(),
+    message: z.string().optional()
+  })).optional()
+}).refine(
+  (data) => data.sendToAll || (data.signers && data.signers.length > 0),
+  { message: "Either sendToAll must be true or signers array must be provided" }
+);
 
 /**
  * Combined schema for send envelope request
@@ -33,11 +43,10 @@ export const SendEnvelopeRequestSchema = z.object({
  * Schema for send envelope response
  */
 export const SendEnvelopeResponseSchema = z.object({
+  success: z.boolean(),
   message: z.string(),
-  envelope: z.object({
-    id: z.string().uuid(),
-    status: z.string(),
-    sentAt: z.string().datetime().optional(),
-    title: z.string()
-  })
+  envelopeId: z.string().uuid(),
+  status: z.string(),
+  tokensGenerated: z.number(),
+  signersNotified: z.number()
 });

@@ -422,4 +422,21 @@ export class EnvelopeSigner {
   equals(other: EnvelopeSigner): boolean {
     return this.id.equals(other.id);
   }
+
+  /**
+   * Updates the signing order of this signer
+   * @param newOrder - The new order number
+   */
+  updateOrder(newOrder: number): void {
+    (this as any).order = newOrder;
+    this.updatedAt = new Date();
+  }
+
+  /**
+   * Gets the original order for comparison purposes
+   * @returns The original order number
+   */
+  getOriginalOrder(): number {
+    return this.order;
+  }
 }

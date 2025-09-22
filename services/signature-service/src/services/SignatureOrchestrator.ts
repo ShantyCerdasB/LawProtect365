@@ -10,7 +10,10 @@
 import { SignatureEnvelope } from '../domain/entities/SignatureEnvelope';
 import { SignatureEnvelopeService } from './SignatureEnvelopeService';
 import { EnvelopeSignerService } from './EnvelopeSignerService';
+import { InvitationTokenService } from './InvitationTokenService';
+import { SignatureAuditEventService } from './SignatureAuditEventService';
 import { S3Service } from './S3Service';
+import { OutboxRepository, makeEvent } from '@lawprotect/shared-ts';
 import { CreateEnvelopeData } from '../domain/types/envelope/CreateEnvelopeData';
 import { UpdateEnvelopeData } from '../domain/rules/EnvelopeUpdateValidationRule';
 import { 
@@ -41,7 +44,10 @@ export class SignatureOrchestrator {
   constructor(
     private readonly signatureEnvelopeService: SignatureEnvelopeService,
     private readonly envelopeSignerService: EnvelopeSignerService,
-    private readonly s3Service: S3Service
+    private readonly invitationTokenService: InvitationTokenService,
+    private readonly signatureAuditEventService: SignatureAuditEventService,
+    private readonly s3Service: S3Service,
+    private readonly outboxRepository: OutboxRepository
   ) {}
 
   // ===== ENVELOPE CREATION FLOW =====
@@ -162,7 +168,156 @@ export class SignatureOrchestrator {
   // Note: Signing order validation is not needed for CreateEnvelope
   // It will be validated when signers are added via UpdateEnvelope
 
+  // ===== ENVELOPE SENDING FLOW =====
+  
+  /**
+   * Sends an envelope to external signers by generating invitation tokens
+   * @param envelopeId - The envelope ID to send
+   * @param userId - The user making the request
+   * @param securityContext - Security context for token generation
+   * @param options - Send options including message and signer selection
+   * @returns Promise resolving to send envelope result with confirmation
+   */
+  async sendEnvelope(
+    envelopeId: EnvelopeId,
+    userId: string,
+    securityContext: {
+      ipAddress: string;
+      userAgent: string;
+      country?: string;
+    },
+    options: {
+      message?: string;
+      sendToAll?: boolean;
+      signers?: Array<{
+        signerId: string;
+        message?: string;
+      }>;
+    } = {}
+  ): Promise<{
+    success: boolean;
+    message: string;
+    envelopeId: string;
+    status: string;
+    tokensGenerated: number;
+    signersNotified: number;
+  }> {
+    try {
+      // 1. Validate and change envelope state (in service)
+      const envelope = await this.signatureEnvelopeService.sendEnvelope(envelopeId, userId);
+      
+      // 2. Get external signers
+      const externalSigners = envelope.getExternalSigners();
+      
+      // 3. Determine target signers
+      const targetSigners = options.sendToAll 
+        ? externalSigners
+        : externalSigners.filter(signer => 
+            options.signers!.some(s => s.signerId === signer.getId().getValue())
+          );
+      
+      // 4. Generate invitation tokens for target signers
+      const tokens = await this.invitationTokenService.generateInvitationTokensForSigners(
+        targetSigners,
+        envelopeId,
+        {
+          userId,
+          ipAddress: securityContext.ipAddress,
+          userAgent: securityContext.userAgent,
+          country: securityContext.country
+        }
+      );
+      
+      // 5. Publish notification events for notification service
+      await this.publishNotificationEvent(envelopeId, options, tokens);
+      
+      // 6. Create audit event for envelope sent
+      await this.signatureAuditEventService.createEvent({
+        envelopeId: envelopeId.getValue(),
+        signerId: undefined,
+        eventType: 'ENVELOPE_SENT' as any,
+        description: `Envelope sent to ${targetSigners.length} external signers`,
+        userId: userId,
+        userEmail: undefined,
+        ipAddress: securityContext.ipAddress,
+        userAgent: securityContext.userAgent,
+        country: securityContext.country,
+        metadata: {
+          envelopeId: envelopeId.getValue(),
+          externalSignersCount: targetSigners.length,
+          tokensGenerated: tokens.length,
+          sendToAll: options.sendToAll || false
+        }
+      });
+      
+      return {
+        success: true,
+        message: "Envelope sent successfully",
+        envelopeId: envelopeId.getValue(),
+        status: envelope.getStatus().getValue(),
+        tokensGenerated: tokens.length,
+        signersNotified: targetSigners.length
+      };
+    } catch (error) {
+      this.handleOrchestrationError(error as Error, 'sendEnvelope');
+    }
+  }
+
   // ===== UTILITIES =====
+  
+  /**
+   * Publishes notification events for each signer
+   * @param envelopeId - The envelope ID
+   * @param options - Send options including message and signer selection
+   * @param tokens - Generated invitation tokens
+   * @returns Promise that resolves when all events are published
+   */
+  private async publishNotificationEvent(
+    envelopeId: EnvelopeId,
+    options: {
+      message?: string;
+      sendToAll?: boolean;
+      signers?: Array<{
+        signerId: string;
+        message?: string;
+      }>;
+    },
+    tokens: any[]
+  ): Promise<void> {
+    const envelope = await this.signatureEnvelopeService.getEnvelopeWithSigners(envelopeId);
+    const externalSigners = envelope!.getExternalSigners();
+    
+    // Determine target signers
+    const targetSigners = options.sendToAll 
+      ? externalSigners
+      : externalSigners.filter(signer => 
+          options.signers!.some(s => s.signerId === signer.getId().getValue())
+        );
+    
+    // Publish one event per signer using outbox pattern
+    for (const signer of targetSigners) {
+      const signerOption = options.signers?.find(s => s.signerId === signer.getId().getValue());
+      const message = signerOption?.message || options.message || "You have been invited to sign a document";
+      
+      const event = makeEvent('ENVELOPE_INVITATION', {
+        envelopeId: envelopeId.getValue(),
+        signerId: signer.getId().getValue(),
+        signerEmail: signer.getEmail()!,
+        signerName: signer.getFullName()!,
+        message: message,
+        invitationToken: tokens.find(t => t.signerId === signer.getId().getValue())?.token,
+        metadata: {
+          envelopeTitle: envelope!.getTitle(),
+          envelopeId: envelopeId.getValue(),
+          sentBy: envelope!.getCreatedBy(),
+          sentAt: new Date().toISOString()
+        }
+      });
+      
+      // Save event to outbox for reliable delivery
+      await this.outboxRepository.save(event, uuid());
+    }
+  }
   
   /**
    * Handles orchestration errors

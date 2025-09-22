@@ -6,8 +6,20 @@
  */
 
 import { PrismaClient } from '@prisma/client';
-import { getPrisma, S3Presigner, S3EvidenceStorage } from '@lawprotect/shared-ts';
+import { 
+  getPrisma, 
+  S3Presigner, 
+  S3EvidenceStorage,
+  EventServiceFactory,
+  OutboxRepository,
+  EventBridgeAdapter,
+  EventPublisherService,
+  DynamoDBClientAdapter,
+  EventBridgeClientAdapter
+} from '@lawprotect/shared-ts';
 import { KMSClient } from '@aws-sdk/client-kms';
+import { EventBridgeClient } from '@aws-sdk/client-eventbridge';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { loadConfig } from '../../config/AppConfig';
 import { SignatureEnvelopeService } from '../../services/SignatureEnvelopeService';
 import { EnvelopeSignerService } from '../../services/EnvelopeSignerService';
@@ -33,6 +45,7 @@ import { SignatureAuditEventRepository } from '../../repositories/SignatureAudit
  * - Provide consistent service creation across handlers
  * - Support the new DDD architecture
  */
+
 export class ServiceFactory {
   private static readonly config = loadConfig();
   private static readonly prismaClient = getPrisma({ 
@@ -131,12 +144,18 @@ export class ServiceFactory {
   static createSignatureOrchestrator(): SignatureOrchestrator {
     const signatureEnvelopeService = this.createSignatureEnvelopeService();
     const envelopeSignerService = this.createEnvelopeSignerService();
+    const invitationTokenService = this.createInvitationTokenService();
+    const signatureAuditEventService = this.createSignatureAuditEventService();
     const s3Service = this.createS3Service();
+    const outboxRepository = this.createOutboxRepository();
 
     return new SignatureOrchestrator(
       signatureEnvelopeService,
       envelopeSignerService,
-      s3Service
+      invitationTokenService,
+      signatureAuditEventService,
+      s3Service,
+      outboxRepository
     );
   }
 
@@ -162,6 +181,65 @@ export class ServiceFactory {
       this.config.s3.bucketName,
       signatureAuditEventService
     );
+  }
+
+  /**
+   * Creates an OutboxRepository instance for event publishing
+   * 
+   * @returns Configured OutboxRepository instance
+   */
+  static createOutboxRepository(): OutboxRepository {
+    const dynamoDbClient = new DynamoDBClient({
+      region: this.config.aws.region,
+      credentials: {
+        accessKeyId: this.config.aws.accessKeyId,
+        secretAccessKey: this.config.aws.secretAccessKey
+      }
+    });
+    
+    const ddbAdapter = new DynamoDBClientAdapter(dynamoDbClient);
+    
+    return EventServiceFactory.createOutboxRepository(
+      this.config.outbox.tableName,
+      ddbAdapter
+    );
+  }
+
+  /**
+   * Creates an EventBridgeAdapter instance for event publishing
+   * 
+   * @returns Configured EventBridgeAdapter instance
+   */
+  static createEventBridgeAdapter(): EventBridgeAdapter {
+    const eventBridgeClient = new EventBridgeClient({
+      region: this.config.aws.region,
+      credentials: {
+        accessKeyId: this.config.aws.accessKeyId,
+        secretAccessKey: this.config.aws.secretAccessKey
+      }
+    });
+    
+    const eventBridgeAdapter = new EventBridgeClientAdapter(eventBridgeClient);
+    
+    return EventServiceFactory.createEventBridgeAdapter(
+      {
+        busName: this.config.eventbridge.busName,
+        source: this.config.eventbridge.source
+      },
+      eventBridgeAdapter
+    );
+  }
+
+  /**
+   * Creates an EventPublisherService instance for event publishing
+   * 
+   * @returns Configured EventPublisherService instance
+   */
+  static createEventPublisherService(): EventPublisherService {
+    return EventServiceFactory.createEventPublisherService({
+      outboxRepository: this.createOutboxRepository(),
+      eventBridgeAdapter: this.createEventBridgeAdapter()
+    });
   }
 
   /**

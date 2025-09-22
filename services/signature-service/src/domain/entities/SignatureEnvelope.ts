@@ -663,4 +663,108 @@ export class SignatureEnvelope {
     );
   }
 
+  /**
+   * Reorders signers automatically based on signing order type
+   * External signers can be in any order, only the creator's order matters
+   * @param newSigningOrderType - The new signing order type
+   * @param existingSigners - Current signers in the envelope
+   * @returns Array of signers with updated order
+   */
+  reorderSignersForSigningOrder(
+    newSigningOrderType: any,
+    existingSigners: EnvelopeSigner[]
+  ): EnvelopeSigner[] {
+    const creatorUserId = this.getCreatedBy();
+    const creatorSigner = existingSigners.find(signer => 
+      !signer.getIsExternal() && signer.getUserId() === creatorUserId
+    );
+    
+    const externalSigners = existingSigners.filter(signer => signer.getIsExternal());
+    
+    if (newSigningOrderType === 'OWNER_FIRST') {
+      // Creator first (if present), external signers can be in any order
+      if (creatorSigner) {
+        creatorSigner.updateOrder(1);
+        // External signers can have any order > 1 (no specific order required)
+        externalSigners.forEach((signer, index) => {
+          signer.updateOrder(index + 2); // Just assign sequential numbers
+        });
+      } else {
+        // No creator, external signers can be in any order
+        externalSigners.forEach((signer, index) => {
+          signer.updateOrder(index + 1);
+        });
+      }
+    } else if (newSigningOrderType === 'INVITEES_FIRST') {
+      // External signers first (any order), creator last (if present)
+      externalSigners.forEach((signer, index) => {
+        signer.updateOrder(index + 1);
+      });
+      if (creatorSigner) {
+        creatorSigner.updateOrder(externalSigners.length + 1);
+      }
+    }
+    
+    return existingSigners;
+  }
+
+  /**
+   * Validates if signing order change is possible
+   * @param newSigningOrderType - The new signing order type
+   * @param existingSigners - Current signers in the envelope
+   * @throws invalidEnvelopeState if change is not possible
+   */
+  validateSigningOrderChange(
+    newSigningOrderType: any,
+    existingSigners: EnvelopeSigner[]
+  ): void {
+    if (newSigningOrderType === 'INVITEES_FIRST') {
+      const hasExternalSigners = existingSigners.some(signer => signer.getIsExternal());
+      if (!hasExternalSigners) {
+        throw invalidEnvelopeState('INVITEES_FIRST signing order requires at least one external signer');
+      }
+    }
+  }
+
+  /**
+   * Updates the signing order of the envelope
+   * @param newSigningOrder - The new signing order value object
+   */
+  updateSigningOrder(newSigningOrder: SigningOrder): void {
+    (this as any).signingOrder = newSigningOrder;
+    this.updatedAt = new Date();
+  }
+
+  /**
+   * Checks if the envelope has external signers
+   * @returns True if envelope has at least one external signer
+   */
+  hasExternalSigners(): boolean {
+    return this.signers.some(signer => signer.getIsExternal());
+  }
+
+  /**
+   * Validates that all external signers have required fields
+   * @throws invalidEnvelopeState if any external signer is missing email or full name
+   */
+  validateExternalSigners(): void {
+    const externalSigners = this.signers.filter(signer => signer.getIsExternal());
+    
+    for (const signer of externalSigners) {
+      if (!signer.getEmail() || !signer.getFullName()) {
+        throw invalidEnvelopeState(
+          `External signer ${signer.getId().getValue()} must have email and full name`
+        );
+      }
+    }
+  }
+
+  /**
+   * Gets all external signers in the envelope
+   * @returns Array of external signers
+   */
+  getExternalSigners(): EnvelopeSigner[] {
+    return this.signers.filter(signer => signer.getIsExternal());
+  }
+
 }
