@@ -64,12 +64,36 @@ export class KmsSigner implements KmsPort {
   /** Default KeyId used when a call omits `input.keyId`. */
   private readonly defaultKeyId?: string;
 
-  constructor(client: KMSClient, opts: KmsSignerOptions = {}) {
+  constructor(clientOrOpts?: KMSClient | KmsSignerOptions, opts: KmsSignerOptions = {}) {
+    // Support both constructor patterns:
+    // 1. new KmsSigner(client, opts) - existing pattern
+    // 2. new KmsSigner(opts) - new pattern with external config
+    
+    let client: KMSClient;
+    let finalOpts: KmsSignerOptions;
+    
+    if (clientOrOpts instanceof KMSClient) {
+      // Existing pattern: client provided
+      client = clientOrOpts;
+      finalOpts = opts;
+    } else {
+      // New pattern: create client from external config
+      const config = clientOrOpts || {};
+      client = new KMSClient({
+        region: config.region || process.env.AWS_REGION || 'us-east-1',
+        credentials: config.accessKeyId && config.secretAccessKey ? {
+          accessKeyId: config.accessKeyId,
+          secretAccessKey: config.secretAccessKey
+        } : undefined
+      });
+      finalOpts = config;
+    }
+    
     this.client = client;
-    this.maxAttempts = Math.max(1, opts.maxAttempts ?? 3);
+    this.maxAttempts = Math.max(1, finalOpts.maxAttempts ?? 3);
 
     // Back-compat + preferred names
-    this.defaultKeyId = opts.defaultKeyId ?? opts.signerKeyId;
+    this.defaultKeyId = finalOpts.defaultKeyId ?? finalOpts.signerKeyId;
   }
 
   /**

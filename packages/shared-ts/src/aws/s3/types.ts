@@ -9,6 +9,10 @@ export interface S3PresignerOptions {
   defaultAcl?: "private" | "public-read";
   defaultCacheControl?: string;
   defaultKmsKeyId?: string;
+  // External configuration support
+  region?: string;
+  accessKeyId?: string;
+  secretAccessKey?: string;
 }
 
 export interface S3EvidenceStorageOptions {
@@ -17,6 +21,10 @@ export interface S3EvidenceStorageOptions {
   defaultKmsKeyId?: string;
   defaultCacheControl?: string;
   defaultAcl?: "private" | "public-read";
+  // External configuration support
+  region?: string;
+  accessKeyId?: string;
+  secretAccessKey?: string;
 }
 
 export interface HeadResult {

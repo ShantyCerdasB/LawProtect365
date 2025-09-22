@@ -75,7 +75,7 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
     
     return {
       id: entity.getId?.()?.getValue(),
-      createdBy: entity.getCreatedBy?.()?.getValue(),
+      createdBy: entity.getCreatedBy?.(),
       title: entity.getTitle?.(),
       description: entity.getDescription?.(),
       status: entity.getStatus?.()?.getValue(),

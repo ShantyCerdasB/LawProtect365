@@ -14,6 +14,6 @@ export interface CreateSignerData {
   fullName?: string;
   isExternal: boolean;
   participantRole: string;
-  order: number;
+  order?: number;
   invitedByUserId?: string;
 }

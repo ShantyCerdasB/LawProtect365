@@ -9,8 +9,8 @@
 import { EnvelopeSigner } from '../domain/entities/EnvelopeSigner';
 import { SignerId } from '../domain/value-objects/SignerId';
 import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
-import { Email } from '../domain/value-objects/Email';
 import { SignatureMetadata } from '../domain/value-objects/SignatureMetadata';
+import { EntityFactory } from '../domain/factories/EntityFactory';
 import { SignerStatus } from '@prisma/client';
 import { EnvelopeSignerRepository } from '../repositories/EnvelopeSignerRepository';
 import { SignatureEnvelopeRepository } from '../repositories/SignatureEnvelopeRepository';
@@ -113,7 +113,7 @@ export class EnvelopeSignerService {
           signer.getId().getValue(),
           AuditEventType.SIGNER_ADDED,
           `Signer ${signer.getFullName() || signer.getEmail()?.getValue() || 'Unknown'} added to envelope`,
-          envelope.getCreatedBy().getValue(),
+          envelope.getCreatedBy(),
           signer.getEmail()?.getValue(),
           undefined,
           undefined,
@@ -147,35 +147,8 @@ export class EnvelopeSignerService {
         throw envelopeNotFound(`Envelope with ID ${signerData.envelopeId.getValue()} not found`);
       }
 
-      // Create signer entity
-      const signer = new EnvelopeSigner(
-        SignerId.generate(),
-        signerData.envelopeId,
-        signerData.userId,
-        signerData.isExternal,
-        signerData.email ? Email.fromString(signerData.email) : undefined,
-        signerData.fullName,
-        signerData.invitedByUserId,
-        signerData.participantRole,
-        signerData.order,
-        SignerStatus.PENDING,
-        undefined, // signedAt
-        undefined, // declinedAt
-        undefined, // declineReason
-        undefined, // consentGiven
-        undefined, // consentTimestamp
-        undefined, // documentHash
-        undefined, // signatureHash
-        undefined, // signedS3Key
-        undefined, // kmsKeyId
-        undefined, // algorithm
-        undefined, // ipAddress
-        undefined, // userAgent
-        undefined, // reason
-        undefined, // location
-        new Date(), // createdAt
-        new Date()  // updatedAt
-      );
+      // Create signer entity using EntityFactory
+      const signer = EntityFactory.createEnvelopeSigner(signerData);
 
       // Save to repository
       return await this.envelopeSignerRepository.create(signer);

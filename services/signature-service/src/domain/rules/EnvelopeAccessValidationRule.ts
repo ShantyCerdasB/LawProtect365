@@ -6,13 +6,10 @@
  */
 
 import { SignatureEnvelope } from '../entities/SignatureEnvelope';
-import { EnvelopeId } from '../value-objects/EnvelopeId';
-import { SignerId } from '../value-objects/SignerId';
 import { InvitationToken } from '../entities/InvitationToken';
 import { 
   envelopeAccessDenied,
-  envelopeNotFound,
-  signerNotFound
+  envelopeNotFound
 } from '../../signature-errors';
 
 /**
@@ -44,7 +41,7 @@ export class EnvelopeAccessValidationRule {
     }
 
     // Check if user is the owner/creator
-    if (envelope.getCreatedBy().getValue() === userId) {
+    if (envelope.getCreatedBy() === userId) {
       return envelope;
     }
 
@@ -64,13 +61,12 @@ export class EnvelopeAccessValidationRule {
   /**
    * Validates external user access using invitation token
    * @param envelope - The envelope to validate access for
-   * @param userId - The external user ID
    * @param invitationToken - The invitation token
    * @throws EnvelopeAccessDenied if access is invalid
    */
   private static validateExternalUserAccess(
     envelope: SignatureEnvelope,
-    userId: string,
+    _userId: string,
     invitationToken: InvitationToken
   ): void {
     // Validate token is for this envelope
@@ -116,7 +112,7 @@ export class EnvelopeAccessValidationRule {
     }
 
     // Only the owner can modify envelopes
-    if (envelope.getCreatedBy().getValue() !== userId) {
+    if (envelope.getCreatedBy() !== userId) {
       throw envelopeAccessDenied(
         `Only the envelope owner can modify envelope ${envelope.getId().getValue()}. ` +
         `User ${userId} is not the owner.`
@@ -151,7 +147,7 @@ export class EnvelopeAccessValidationRule {
     }
 
     // Only the owner can delete envelopes
-    if (envelope.getCreatedBy().getValue() !== userId) {
+    if (envelope.getCreatedBy() !== userId) {
       throw envelopeAccessDenied(
         `Only the envelope owner can delete envelope ${envelope.getId().getValue()}. ` +
         `User ${userId} is not the owner.`

@@ -11,17 +11,8 @@ export * from './audit';
 // Envelope types
 export * from './envelope';
 
-// Signing types
-export * from './signing';
-
-// Workflow types
-export * from './WorkflowTypes';
-
-// Infrastructure types
-export * from './infrastructure';
-
-// Signature types
-export * from './signature';
+// Orchestrator types
+export * from './orchestrator';
 
 // Signer types
 export * from './signer';

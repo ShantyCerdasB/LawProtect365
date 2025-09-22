@@ -42,14 +42,14 @@ import {
  * - Handle KMS-specific errors
  */
 export class KmsService {
-  private readonly kmsSigner: KmsSigner;
   private readonly keyValidationRule: KmsKeyValidationRule;
 
   constructor(
     private readonly kmsClient: KMSClient
   ) {
-    this.kmsSigner = new KmsSigner(kmsClient);
-    this.keyValidationRule = new KmsKeyValidationRule(this.kmsSigner);
+    // Create KmsSigner for validation purposes (uses same client)
+    const kmsSigner = new KmsSigner(kmsClient);
+    this.keyValidationRule = new KmsKeyValidationRule(kmsSigner);
   }
 
   /**

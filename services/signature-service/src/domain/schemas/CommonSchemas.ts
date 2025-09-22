@@ -12,7 +12,9 @@ import { z, EmailStringSchema, NonEmptyStringSchema } from '@lawprotect/shared-t
 export const SignerDataSchema = z.object({
   email: EmailStringSchema,
   fullName: NonEmptyStringSchema.max(255, 'Full name must be less than 255 characters'),
-  order: z.number().min(1, 'Order must be at least 1')
+  order: z.number().min(1, 'Order must be at least 1').optional(),
+  isExternal: z.boolean(),
+  userId: z.string().optional()
 });
 
 /**

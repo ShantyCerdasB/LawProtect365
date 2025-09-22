@@ -30,10 +30,9 @@ process.env.KMS_SIGNING_ALGORITHM = 'RSASSA_PSS_SHA_256';
  * S3 service configuration for document storage
  * 
  * @description Defines S3 bucket names for storing evidence and signed documents
- * during integration tests.
+ * during integration tests. Uses the same bucket name as globalSetup.ts
  */
-process.env.EVIDENCE_BUCKET = 'lawprotect365-sign-evidence-test';
-process.env.SIGNED_BUCKET = 'lawprotect365-documents-test';
+process.env.S3_BUCKET_NAME = 'test-evidence';
 
 /**
  * EventBridge service configuration for event publishing

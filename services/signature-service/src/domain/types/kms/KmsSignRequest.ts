@@ -5,9 +5,6 @@
  * signature creation using AWS KMS, containing all necessary parameters for signing.
  */
 
-import { KMSKeyId } from '../../value-objects/KMSKeyId';
-import { SigningAlgorithm } from '../../value-objects/SigningAlgorithm';
-
 /**
  * Request interface for KMS signing operations
  * 

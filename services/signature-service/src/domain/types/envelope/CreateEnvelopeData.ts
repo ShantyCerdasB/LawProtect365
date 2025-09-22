@@ -6,7 +6,6 @@
  */
 
 import { EnvelopeId } from '../../value-objects/EnvelopeId';
-import { SignerId } from '../../value-objects/SignerId';
 import { DocumentOrigin } from '../../value-objects/DocumentOrigin';
 import { SigningOrder } from '../../value-objects/SigningOrder';
 
@@ -18,7 +17,7 @@ export interface CreateEnvelopeData {
   /** Unique identifier for the envelope */
   id: EnvelopeId;
   /** ID of the user who created the envelope */
-  createdBy: SignerId;
+  createdBy: string;
   /** Title of the envelope */
   title: string;
   /** Optional description of the envelope */
@@ -29,4 +28,8 @@ export interface CreateEnvelopeData {
   signingOrder: SigningOrder;
   /** Optional expiration date */
   expiresAt?: Date;
+  /** Source key from Document Service */
+  sourceKey: string;
+  /** Meta key from Document Service */
+  metaKey: string;
 }

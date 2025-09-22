@@ -6,15 +6,13 @@
  * the new architecture with value objects and proper validation.
  */
 
-import { S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
 import { SignerId } from '../domain/value-objects/SignerId';
 import { S3Key } from '../domain/value-objects/S3Key';
 import { SignatureAuditEventService } from './SignatureAuditEventService';
 import { AuditEventType } from '../domain/enums/AuditEventType';
 import { StoreDocumentRequest, RetrieveDocumentRequest, GeneratePresignedUrlRequest, DocumentResult } from '../domain/types/s3';
-import { NotFoundError, BadRequestError, ErrorCodes } from '@lawprotect/shared-ts';
+import {S3Presigner, S3EvidenceStorage,  NotFoundError, BadRequestError, ErrorCodes } from '@lawprotect/shared-ts';
 import { validateStoreDocumentRequest, validateRetrieveDocumentRequest, validateGeneratePresignedUrlRequest } from '../domain/rules/s3/S3ValidationRules';
 import { validateS3StorageForDocument } from '../domain/rules/s3/S3StorageRules';
 import { documentS3Error } from '../signature-errors';
@@ -28,7 +26,8 @@ import { documentS3Error } from '../signature-errors';
  */
 export class S3Service {
   constructor(
-    private readonly s3Client: S3Client,
+    private readonly s3Presigner: S3Presigner,
+    private readonly s3EvidenceStorage: S3EvidenceStorage,
     private readonly bucketName: string,
     private readonly signatureAuditEventService: SignatureAuditEventService
   ) {}
@@ -54,22 +53,19 @@ export class S3Service {
         allowedExtensions: ['pdf']
       });
 
-      // Prepare S3 parameters
-      const putObjectParams = {
-        Bucket: this.bucketName,
-        Key: documentKey,
-        Body: request.documentContent,
-        ContentType: request.contentType.getValue(),
-        Metadata: {
+      // Store document in S3 using S3EvidenceStorage
+      await this.s3EvidenceStorage.putObject({
+        bucket: this.bucketName,
+        key: documentKey,
+        body: request.documentContent,
+        contentType: request.contentType.getValue(),
+        metadata: {
           envelopeId: request.envelopeId.getValue(),
           signerId: request.signerId.getValue(),
           ...(request.metadata?.originalFileName && { originalFileName: request.metadata.originalFileName }),
           ...(request.metadata?.checksum && { checksum: request.metadata.checksum })
         }
-      };
-
-      // Store document in S3
-      await this.s3Client.send(new PutObjectCommand(putObjectParams));
+      });
 
       const documentResult: DocumentResult = {
         documentKey,
@@ -117,22 +113,22 @@ export class S3Service {
       // Validate input using domain rules
       validateRetrieveDocumentRequest(request);
 
-      // Get document metadata
-      const headResult = await this.s3Client.send(new HeadObjectCommand({
-        Bucket: this.bucketName,
-        Key: request.documentKey.getValue()
-      }));
+      // Get document metadata using S3EvidenceStorage
+      const headResult = await this.s3EvidenceStorage.headObject(
+        this.bucketName,
+        request.documentKey.getValue()
+      );
 
-      if (!headResult.ContentType) {
+      if (!headResult.exists) {
         throw new NotFoundError('Document not found or invalid', ErrorCodes.COMMON_NOT_FOUND);
       }
 
       const documentResult: DocumentResult = {
         documentKey: request.documentKey.getValue(),
         s3Location: `s3://${this.bucketName}/${request.documentKey.getValue()}`,
-        contentType: headResult.ContentType,
-        size: headResult.ContentLength,
-        lastModified: headResult.LastModified
+        contentType: headResult.metadata?.contentType || 'application/octet-stream',
+        size: headResult.size,
+        lastModified: headResult.lastModified
       };
 
       // Log audit event
@@ -143,8 +139,8 @@ export class S3Service {
         userId: request.signerId.getValue(),
         metadata: {
           documentKey: request.documentKey.getValue(),
-          contentType: headResult.ContentType,
-          size: headResult.ContentLength
+          contentType: headResult.metadata?.contentType || 'application/octet-stream',
+          size: headResult.size
         }
       });
 
@@ -180,22 +176,22 @@ export class S3Service {
 
       const expiresIn = request.expiresIn || 3600; // Default 1 hour
 
-      let command;
+      let presignedUrl: string;
       if (request.operation.isGet()) {
-        command = new GetObjectCommand({
-          Bucket: this.bucketName,
-          Key: request.documentKey.getValue()
+        presignedUrl = await this.s3Presigner.getObjectUrl({
+          bucket: this.bucketName,
+          key: request.documentKey.getValue(),
+          expiresInSeconds: expiresIn
         });
       } else if (request.operation.isPut()) {
-        command = new PutObjectCommand({
-          Bucket: this.bucketName,
-          Key: request.documentKey.getValue()
+        presignedUrl = await this.s3Presigner.putObjectUrl({
+          bucket: this.bucketName,
+          key: request.documentKey.getValue(),
+          expiresInSeconds: expiresIn
         });
       } else {
         throw new BadRequestError('Unsupported S3 operation', ErrorCodes.COMMON_BAD_REQUEST);
       }
-
-      const presignedUrl = await getSignedUrl(this.s3Client, command, { expiresIn });
 
       // Log audit event
       await this.signatureAuditEventService.createEvent({
@@ -238,17 +234,14 @@ export class S3Service {
       // Validate S3 key format
       const s3Key = S3Key.fromString(documentKey);
 
-      await this.s3Client.send(new HeadObjectCommand({
-        Bucket: this.bucketName,
-        Key: s3Key.getValue()
-      }));
+      const headResult = await this.s3EvidenceStorage.headObject(
+        this.bucketName,
+        s3Key.getValue()
+      );
 
-      return true;
+      return headResult.exists;
     } catch (error: unknown) {
-      if (error && typeof error === 'object' && 'name' in error && 
-          (error.name === 'NoSuchKey' || error.name === 'NotFound')) {
-        return false;
-      }
+      // S3EvidenceStorage already handles NoSuchKey errors
       throw documentS3Error({
         operation: 'documentExists',
         documentKey,
@@ -271,23 +264,24 @@ export class S3Service {
       // Validate S3 key format
       const s3Key = S3Key.fromString(documentKey);
 
-      const headResult = await this.s3Client.send(new HeadObjectCommand({
-        Bucket: this.bucketName,
-        Key: s3Key.getValue()
-      }));
+      const headResult = await this.s3EvidenceStorage.headObject(
+        this.bucketName,
+        s3Key.getValue()
+      );
+
+      if (!headResult.exists) {
+        return null;
+      }
 
       return {
         documentKey: s3Key.getValue(),
         s3Location: `s3://${this.bucketName}/${s3Key.getValue()}`,
-        contentType: headResult.ContentType || 'application/octet-stream',
-        size: headResult.ContentLength,
-        lastModified: headResult.LastModified
+        contentType: headResult.metadata?.contentType || 'application/octet-stream',
+        size: headResult.size,
+        lastModified: headResult.lastModified
       };
     } catch (error: unknown) {
-      if (error && typeof error === 'object' && 'name' in error && 
-          (error.name === 'NoSuchKey' || error.name === 'NotFound')) {
-        return null;
-      }
+      // S3EvidenceStorage already handles NoSuchKey errors
       throw documentS3Error({
         operation: 'getDocumentMetadata',
         documentKey,
@@ -296,36 +290,6 @@ export class S3Service {
     }
   }
 
-  /**
-   * Generates a presigned download URL for a document
-   * @param request - Download URL request with S3 key and expiration
-   * @returns Presigned download URL
-   */
-  async generatePresignedDownloadUrl(request: {
-    s3Key: string;
-    expiresIn: number;
-    contentType?: string;
-  }): Promise<string> {
-    try {
-      // Validate S3 key format
-      const s3Key = S3Key.fromString(request.s3Key);
-
-      const command = new GetObjectCommand({
-        Bucket: this.bucketName,
-        Key: s3Key.getValue()
-      });
-
-      return await getSignedUrl(this.s3Client, command, {
-        expiresIn: request.expiresIn
-      });
-    } catch (error) {
-      throw documentS3Error({
-        operation: 'generatePresignedDownloadUrl',
-        s3Key: request.s3Key,
-        originalError: error instanceof Error ? error.message : error
-      });
-    }
-  }
 
   /**
    * Gets document information including metadata

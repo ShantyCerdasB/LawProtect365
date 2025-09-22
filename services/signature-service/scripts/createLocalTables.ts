@@ -1,12 +1,13 @@
 /**
  * @file createLocalTables.ts
- * @summary Script to create DynamoDB tables for local development and testing
- * @description This script creates all necessary DynamoDB tables in DynamoDB Local
- * for development and testing purposes. It includes proper table schemas with
- * primary keys, global secondary indexes, and billing configuration.
+ * @summary Script to create DynamoDB outbox table for local development and testing
+ * @description This script creates the outbox table in DynamoDB Local for reliable
+ * messaging patterns. The outbox table is used by shared-ts for event publishing
+ * and ensures message delivery guarantees.
  */
 
 import { DynamoDBClient, CreateTableCommand, ListTablesCommand } from "@aws-sdk/client-dynamodb";
+import { createAllTableDefinitions } from './tableDefinitionFactory';
 
 /**
  * Creates a DynamoDB client configured for local development and testing
@@ -27,20 +28,15 @@ const createDynamoDBClient = (): DynamoDBClient => {
   });
 };
 
-import { createAllTableDefinitions } from './tableDefinitionFactory';
-
 /**
  * DynamoDB table definitions used for local development and integration tests
- * of the signature service. The design follows a single-table pattern where
- * each logical entity shares the same table using partition (pk) and sort (sk)
- * keys, plus multiple GSIs for access patterns required by the tests.
+ * of the signature service. The design uses a hybrid architecture where main
+ * data is stored in PostgreSQL with Prisma and outbox events are stored in
+ * DynamoDB Local for reliable messaging patterns.
  * 
- * @description Contains 12 table definitions covering all entities in the signature
- * service: envelopes, signers, signatures, documents, parties, inputs, idempotency,
- * outbox, audit, consent, delegation, global parties, and invitation tokens.
- * 
- * @note These definitions are now generated using the tableDefinitionFactory
- * to eliminate code duplication and improve maintainability.
+ * @description Contains the outbox table definition used by shared-ts for
+ * event publishing and message delivery guarantees. This table follows the
+ * outbox pattern to ensure reliable event publishing.
  */
 const tableDefinitions = createAllTableDefinitions();
 
@@ -92,17 +88,17 @@ const listTables = async (client: DynamoDBClient): Promise<string[]> => {
 };
 
 /**
- * Main execution function that orchestrates the table creation process
+ * Main execution function that orchestrates the outbox table creation process
  * 
- * @description Bootstraps DynamoDB Local by creating the tables declared in
- * `tableDefinitions`. The function is idempotent: if a table already exists,
- * creation is skipped and the script proceeds with the remaining tables.
+ * @description Bootstraps DynamoDB Local by creating the outbox table for
+ * reliable messaging patterns. The function is idempotent: if the table already
+ * exists, creation is skipped.
  * 
- * @returns Promise<void> Resolves when all tables are created successfully
- * @throws Exits process with code 1 if any table creation fails
+ * @returns Promise<void> Resolves when outbox table is created successfully
+ * @throws Exits process with code 1 if table creation fails
  */
 const main = async (): Promise<void> => {
-  console.log('🚀 Starting DynamoDB Local table creation...');
+  console.log('🚀 Starting DynamoDB Local outbox table creation...');
   
   const client = createDynamoDBClient();
   
@@ -111,20 +107,20 @@ const main = async (): Promise<void> => {
     const existingTables = await listTables(client);
     console.log(`📋 Found ${existingTables.length} existing tables:`, existingTables);
     
-    // Create all tables
-    console.log('📝 Creating tables...');
+    // Create outbox table
+    console.log('📝 Creating outbox table...');
     for (const tableDefinition of tableDefinitions) {
       await createTable(client, tableDefinition);
     }
     
-    console.log('✅ All tables created successfully!');
+    console.log('✅ Outbox table created successfully!');
     
     // List final tables
     const finalTables = await listTables(client);
     console.log(`📋 Final table count: ${finalTables.length}`);
     
   } catch (error) {
-    console.error('❌ Failed to create tables:', error);
+    console.error('❌ Failed to create outbox table:', error);
     process.exit(1);
   }
 };
@@ -137,10 +133,10 @@ if (require.main === module) {
 }
 
 /**
- * Exports the shared utilities and table definitions for potential reuse
+ * Exports the shared utilities and outbox table definition for potential reuse
  * by other modules in the signature service.
  * 
- * @description Re-exports DynamoDB utilities and the local table definitions
+ * @description Re-exports DynamoDB utilities and the outbox table definition
  * for use in other parts of the application.
  */
 export { createDynamoDBClient, tableDefinitions, createTable, listTables };

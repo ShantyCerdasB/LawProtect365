@@ -1,8 +1,8 @@
 /**
  * @file globalTeardown.ts
- * @summary Global teardown for Jest tests with DynamoDB Local
- * @description This file cleans up DynamoDB Local after all Jest tests complete.
- * It stops the DynamoDB Local server and performs any necessary cleanup.
+ * @summary Global teardown for Jest tests with hybrid database architecture
+ * @description This file cleans up the test environment after all Jest tests complete.
+ * It stops DynamoDB Local server and performs any necessary resource cleanup.
  */
 
 import { stopDynamoDBLocal } from '../scripts/startDynamoDB';

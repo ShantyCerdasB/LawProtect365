@@ -6,12 +6,5 @@
  */
 
 // Business logic services
-export { EnvelopeService } from './EnvelopeService';
-export { SignerService } from './SignerService';
-export { SignatureService } from './SignatureService';
+
 export { ConsentService } from './ConsentService';
-export { AuditService } from './AuditService';
-
-// Event-specific services
-export * from './events';
-

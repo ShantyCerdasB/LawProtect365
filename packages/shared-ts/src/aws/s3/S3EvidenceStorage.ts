@@ -77,18 +77,42 @@ export class S3EvidenceStorage implements S3Port {
   /**
    * Creates a new {@link S3EvidenceStorage}.
    *
-   * @param client - Preconfigured AWS SDK v3 {@link S3Client}.
+   * @param clientOrOpts - Preconfigured AWS SDK v3 {@link S3Client} or configuration options.
    * @param opts - Optional configuration (retry attempts and domain defaults).
    *
    * @throws {@link Error} If invalid options are provided.
    */
-  constructor(client: S3Client, opts: S3EvidenceStorageOptions = {}) {
+  constructor(clientOrOpts?: S3Client | S3EvidenceStorageOptions, opts: S3EvidenceStorageOptions = {}) {
+    // Support both constructor patterns:
+    // 1. new S3EvidenceStorage(client, opts) - existing pattern
+    // 2. new S3EvidenceStorage(opts) - new pattern with external config
+    
+    let client: S3Client;
+    let finalOpts: S3EvidenceStorageOptions;
+    
+    if (clientOrOpts instanceof S3Client) {
+      // Existing pattern: client provided
+      client = clientOrOpts;
+      finalOpts = opts;
+    } else {
+      // New pattern: create client from external config
+      const config = clientOrOpts || {};
+      client = new S3Client({
+        region: config.region || process.env.AWS_REGION || 'us-east-1',
+        credentials: config.accessKeyId && config.secretAccessKey ? {
+          accessKeyId: config.accessKeyId,
+          secretAccessKey: config.secretAccessKey
+        } : undefined
+      });
+      finalOpts = config;
+    }
+    
     this.s3 = client;
-    this.maxAttempts = Math.max(1, opts.maxAttempts ?? 3);
-    this.defaultBucket = opts.defaultBucket;
-    this.defaultKmsKeyId = opts.defaultKmsKeyId;
-    this.defaultCacheControl = opts.defaultCacheControl;
-    this.defaultAcl = opts.defaultAcl;
+    this.maxAttempts = Math.max(1, finalOpts.maxAttempts ?? 3);
+    this.defaultBucket = finalOpts.defaultBucket;
+    this.defaultKmsKeyId = finalOpts.defaultKmsKeyId;
+    this.defaultCacheControl = finalOpts.defaultCacheControl;
+    this.defaultAcl = finalOpts.defaultAcl;
   }
 
   /**

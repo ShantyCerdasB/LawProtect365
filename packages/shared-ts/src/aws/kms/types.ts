@@ -11,6 +11,10 @@ export interface KmsSignerOptions {
   // Legacy support
   signerKeyId?: string;
   signingAlgorithm?: string;
+  // External configuration support
+  region?: string;
+  accessKeyId?: string;
+  secretAccessKey?: string;
 }
 
 

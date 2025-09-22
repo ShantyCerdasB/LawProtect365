@@ -37,7 +37,7 @@ import {
 export class SignatureEnvelope {
   constructor(
     private readonly id: EnvelopeId,
-    private readonly createdBy: SignerId, // User ID who created the envelope
+    private readonly createdBy: string, // User ID who created the envelope
     private readonly title: string,
     private readonly description: string | undefined,
     private status: EnvelopeStatus,
@@ -73,7 +73,7 @@ export class SignatureEnvelope {
   static fromPersistence(data: any): SignatureEnvelope {
     return new SignatureEnvelope(
       EnvelopeId.fromString(data.id),
-      SignerId.fromString(data.createdBy),
+      data.createdBy,
       data.title,
       data.description,
       EnvelopeStatus.fromString(data.status),
@@ -109,9 +109,9 @@ export class SignatureEnvelope {
 
   /**
    * Gets the user ID who created this envelope
-   * @returns The user ID value object who created the envelope
+   * @returns The user ID who created the envelope
    */
-  getCreatedBy(): SignerId {
+  getCreatedBy(): string {
     return this.createdBy;
   }
 
@@ -485,7 +485,7 @@ export class SignatureEnvelope {
 
     if (this.signingOrder.isOwnerFirst()) {
       // Owner should sign first - find signer with matching ID
-      const ownerSigner = this.signers.find(s => s.getId().getValue() === this.createdBy.getValue());
+      const ownerSigner = this.signers.find(s => s.getUserId() === this.createdBy);
       if (ownerSigner && ownerSigner.getStatus() === SignerStatus.PENDING) {
         return ownerSigner;
       }
@@ -648,6 +648,19 @@ export class SignatureEnvelope {
     if (emails.length !== uniqueEmails.size) {
       throw signerEmailDuplicate('Duplicate email addresses found in signer data');
     }
+  }
+
+  /**
+   * Validates signing order consistency during envelope creation
+   * @param signersData - Array of signer data to validate
+   * @throws invalidEnvelopeState when signing order is inconsistent
+   */
+  validateSigningOrderConsistency(signersData: CreateSignerData[]): void {
+    SigningOrderValidationRule.validateSigningOrderConsistency(
+      this.signingOrder.getType(),
+      signersData,
+      this.createdBy
+    );
   }
 
 }

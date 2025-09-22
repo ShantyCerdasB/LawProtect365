@@ -30,7 +30,7 @@ export class EnvelopeSigner {
   constructor(
     private readonly id: SignerId,
     private readonly envelopeId: EnvelopeId,
-    private readonly userId: string | undefined,
+    private readonly userId: string | null,
     private readonly isExternal: boolean,
     private readonly email: Email | undefined,
     private readonly fullName: string | undefined,
@@ -110,7 +110,7 @@ export class EnvelopeSigner {
   /**
    * Gets the user ID if this is an internal signer
    */
-  getUserId(): string | undefined {
+  getUserId(): string | null {
     return this.userId;
   }
 

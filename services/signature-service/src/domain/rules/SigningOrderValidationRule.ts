@@ -11,8 +11,10 @@ import { SignerId } from '../value-objects/SignerId';
 import { SigningOrderType } from '@prisma/client';
 import { 
   signerNotFound,
-  signerSigningOrderViolation
+  signerSigningOrderViolation,
+  invalidEnvelopeState
 } from '../../signature-errors';
+import { CreateSignerData } from '../types/signer/CreateSignerData';
 
 /**
  * SigningOrderValidationRule - Domain rule for signing order validation
@@ -110,5 +112,72 @@ export class SigningOrderValidationRule {
 
     // For invitees, they can sign in any order
     return;
+  }
+
+  /**
+   * Validates signing order consistency during envelope creation
+   * @param signingOrderType - The signing order type
+   * @param signersData - Array of signer data
+   * @param creatorUserId - The user ID who created the envelope
+   * @throws invalidEnvelopeState when signing order is inconsistent
+   */
+  static validateSigningOrderConsistency(
+    signingOrderType: SigningOrderType,
+    signersData: CreateSignerData[],
+    creatorUserId: string
+  ): void {
+    // Validate INVITEES_FIRST without invitees
+    if (signingOrderType === SigningOrderType.INVITEES_FIRST) {
+      const hasInvitees = signersData.some(signer => signer.isExternal);
+      if (!hasInvitees) {
+        throw invalidEnvelopeState('INVITEES_FIRST signing order requires at least one external signer');
+      }
+    }
+
+    // Validate OWNER_FIRST without creator in signers
+    if (signingOrderType === SigningOrderType.OWNER_FIRST) {
+      const hasCreator = signersData.some(signer => 
+        !signer.isExternal && signer.userId === creatorUserId
+      );
+      if (!hasCreator) {
+        throw invalidEnvelopeState('OWNER_FIRST signing order requires the creator to be included as a signer');
+      }
+    }
+
+    // Validate signer order consistency
+    SigningOrderValidationRule.validateSignerOrderConsistency(signingOrderType, signersData, creatorUserId);
+  }
+
+  /**
+   * Validates that signer order is consistent with signing order type
+   * @param signingOrderType - The signing order type
+   * @param signersData - Array of signer data
+   * @param creatorUserId - The user ID who created the envelope
+   */
+  private static validateSignerOrderConsistency(
+    signingOrderType: SigningOrderType,
+    signersData: CreateSignerData[],
+    creatorUserId: string
+  ): void {
+    if (signingOrderType === SigningOrderType.OWNER_FIRST) {
+      // Creator should be the first signer (order: 1)
+      const creatorSigner = signersData.find(signer => 
+        !signer.isExternal && signer.userId === creatorUserId
+      );
+      if (creatorSigner && creatorSigner.order !== 1) {
+        throw invalidEnvelopeState('OWNER_FIRST signing order requires the creator to be the first signer (order: 1)');
+      }
+    } else if (signingOrderType === SigningOrderType.INVITEES_FIRST) {
+      // Creator should be the last signer
+      const creatorSigner = signersData.find(signer => 
+        !signer.isExternal && signer.userId === creatorUserId
+      );
+      if (creatorSigner) {
+        const maxOrder = Math.max(...signersData.map(s => s.order || 1));
+        if (creatorSigner.order !== maxOrder) {
+          throw invalidEnvelopeState('INVITEES_FIRST signing order requires the creator to be the last signer');
+        }
+      }
+    }
   }
 }

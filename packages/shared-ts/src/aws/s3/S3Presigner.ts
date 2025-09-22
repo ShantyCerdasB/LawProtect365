@@ -83,17 +83,41 @@ export class S3Presigner {
   /**
    * Creates a new {@link S3Presigner}.
    *
-   * @param client - A configured AWS SDK v3 {@link S3Client}.
+   * @param clientOrOpts - A configured AWS SDK v3 {@link S3Client} or configuration options.
    * @param opts - Optional defaults (TTL/ACL/Cache-Control/KMS key).
    *
    * @throws {@link Error} If invalid options are provided.
    */
-  constructor(client: S3Client, opts: S3PresignerOptions = {}) {
+  constructor(clientOrOpts?: S3Client | S3PresignerOptions, opts: S3PresignerOptions = {}) {
+    // Support both constructor patterns:
+    // 1. new S3Presigner(client, opts) - existing pattern
+    // 2. new S3Presigner(opts) - new pattern with external config
+    
+    let client: S3Client;
+    let finalOpts: S3PresignerOptions;
+    
+    if (clientOrOpts instanceof S3Client) {
+      // Existing pattern: client provided
+      client = clientOrOpts;
+      finalOpts = opts;
+    } else {
+      // New pattern: create client from external config
+      const config = clientOrOpts || {};
+      client = new S3Client({
+        region: config.region || process.env.AWS_REGION || 'us-east-1',
+        credentials: config.accessKeyId && config.secretAccessKey ? {
+          accessKeyId: config.accessKeyId,
+          secretAccessKey: config.secretAccessKey
+        } : undefined
+      });
+      finalOpts = config;
+    }
+    
     this.s3 = client;
-    this.defaultTtl = Math.max(1, opts.defaultTtl ?? 900);
-    this.defaultAcl = opts.defaultAcl;
-    this.defaultCacheControl = opts.defaultCacheControl;
-    this.defaultKmsKeyId = opts.defaultKmsKeyId;
+    this.defaultTtl = Math.max(1, finalOpts.defaultTtl ?? 900);
+    this.defaultAcl = finalOpts.defaultAcl;
+    this.defaultCacheControl = finalOpts.defaultCacheControl;
+    this.defaultKmsKeyId = finalOpts.defaultKmsKeyId;
   }
 
   /**

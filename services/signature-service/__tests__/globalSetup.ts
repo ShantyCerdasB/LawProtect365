@@ -1,21 +1,28 @@
 /**
  * @file globalSetup.ts
- * @summary Global setup for Jest tests with DynamoDB Local
- * @description This file sets up DynamoDB Local for all Jest tests.
- * It starts the DynamoDB Local server, creates tables, and ensures
- * the environment is ready for testing.
+ * @summary Global setup for Jest tests with hybrid database architecture
+ * @description This file sets up the complete test environment for Jest tests
+ * using a hybrid architecture: PostgreSQL with Prisma for main data and
+ * DynamoDB Local for outbox events. It starts services, creates databases,
+ * and ensures the environment is ready for testing.
  */
 
+import { config } from 'dotenv';
 import { startDynamoDBLocal, waitForDynamoDBLocal } from '../scripts/startDynamoDB';
 import { createTable, tableDefinitions } from '../scripts/createLocalTables';
+import { runMigrations, seedDatabase } from '../scripts/setupLocalDatabase';
 import { DynamoDBClient, DeleteTableCommand, ListTablesCommand } from '@aws-sdk/client-dynamodb';
+
+// Load environment variables from .env file
+config();
 
 /**
  * Global setup function for Jest test environment
  * 
- * @description Executes once before all tests to prepare the complete test environment.
- * Sets up environment variables, starts DynamoDB Local, cleans existing test tables,
- * and creates fresh test tables with the latest schema definitions.
+ * @description Executes once before all tests to prepare the complete test environment
+ * using a hybrid architecture. Sets up environment variables, starts DynamoDB Local
+ * for outbox events, sets up PostgreSQL with Prisma for main data, and ensures
+ * all services are ready for testing.
  * 
  * @returns Promise<void> Resolves when the test environment is fully prepared
  * @throws Error if any setup step fails, causing all tests to be skipped
@@ -26,59 +33,74 @@ export default async function globalSetup(): Promise<void> {
   try {
     // Set test environment variables
     process.env.NODE_ENV = 'test';
-    process.env.AWS_ENDPOINT_URL = 'http://localhost:8000';
     process.env.AWS_REGION = 'us-east-1';
-    process.env.AWS_ACCESS_KEY_ID = 'fake';
-    process.env.AWS_SECRET_ACCESS_KEY = 'fake';
     
     // Set required shared-ts environment variables
     process.env.PROJECT_NAME = 'lawprotect365';
     process.env.SERVICE_NAME = 'signature-service';
     process.env.ENVIRONMENT = 'test';
     
-    // Set test table names
-    process.env.ENVELOPES_TABLE = 'test-envelopes';
-    process.env.SIGNERS_TABLE = 'test-signers';
-    process.env.SIGNATURES_TABLE = 'test-signatures';
-    process.env.DOCUMENTS_TABLE = 'test-documents';
-    process.env.INPUTS_TABLE = 'test-inputs';
-    process.env.PARTIES_TABLE = 'test-parties';
-    process.env.IDEMPOTENCY_TABLE = 'test-idempotency';
-    process.env.OUTBOX_TABLE = 'test-outbox';
-    process.env.AUDIT_TABLE = 'test-audit';
-    process.env.CONSENT_TABLE = 'test-consent';
-    process.env.DELEGATION_TABLE = 'test-delegation';
-    process.env.GLOBAL_PARTIES_TABLE = 'test-global-parties';
-    process.env.INVITATION_TOKENS_TABLE = 'test-invitation-tokens';
-    process.env.ENVELOPES_GSI1_NAME = 'gsi1';
-    process.env.ENVELOPES_GSI2_NAME = 'gsi2';
+    // Set database configuration (Prisma) - uses real database from .env
+    // DATABASE_URL should be configured in .env file
+    if (!process.env.DATABASE_URL) {
+      throw new Error('DATABASE_URL environment variable is required. Please configure it in your .env file.');
+    }
     
-    // Set other test environment variables
-    process.env.EVIDENCE_BUCKET = 'test-evidence';
-    process.env.SIGNED_BUCKET = 'test-signed';
-    process.env.EVENTS_BUS_NAME = 'test-bus';
-    process.env.EVENTS_SOURCE = 'lawprotect365.signature-service.test';
-    process.env.KMS_SIGNER_KEY_ID = 'test-kms-key';
+    // Set S3 configuration (LocalStack)
+    process.env.S3_BUCKET_NAME = 'test-evidence';
+    process.env.S3_REGION = 'us-east-1';
+    process.env.S3_ACCESS_KEY_ID = 'test';
+    process.env.S3_SECRET_ACCESS_KEY = 'test';
+    
+    // Set KMS configuration (LocalStack)
+    process.env.KMS_SIGNER_KEY_ID = 'alias/test-key-id';
     process.env.KMS_SIGNING_ALGORITHM = 'RSASSA_PSS_SHA_256';
+    process.env.KMS_REGION = 'us-east-1';
+    process.env.KMS_ACCESS_KEY_ID = 'test';
+    process.env.KMS_SECRET_ACCESS_KEY = 'test';
+    
+    // Set EventBridge configuration (LocalStack)
+    process.env.EVENTBRIDGE_BUS_NAME = 'test-bus';
+    process.env.EVENTBRIDGE_SOURCE = 'lawprotect365.signature-service.test';
+    
+    // Set outbox table (DynamoDB Local)
+    process.env.OUTBOX_TABLE = 'test-outbox';
+    
+    // Set JWT configuration
     process.env.JWT_ISSUER = 'https://cognito-idp.us-east-1.amazonaws.com/us-east-1_test';
     process.env.JWT_AUDIENCE = 'test-client-id';
     process.env.JWKS_URI = 'http://localhost:3000/.well-known/jwks.json';
     
+    // Set LocalStack configuration
+    process.env.AWS_ENDPOINT_URL = 'http://localhost:4566';
+    process.env.USE_LOCALSTACK_KMS = 'true';
+    process.env.USE_LOCALSTACK_EVENTBRIDGE = 'true';
+    
+    // Set DynamoDB Local configuration (for outbox only)
+    process.env.DYNAMODB_ENDPOINT = 'http://localhost:8000';
+    process.env.DYNAMODB_ACCESS_KEY_ID = 'fake';
+    process.env.DYNAMODB_SECRET_ACCESS_KEY = 'fake';
+    
     console.log('📋 Test environment variables set');
     
-    // Start DynamoDB Local
-    console.log('🚀 Starting DynamoDB Local...');
+    // Setup database and run Prisma migrations
+    console.log('🗄️ Setting up database...');
+    await runMigrations();
+    await seedDatabase();
+    
+    // Start DynamoDB Local for outbox
+    console.log('🚀 Starting DynamoDB Local for outbox...');
     await startDynamoDBLocal();
     
     // Wait for DynamoDB Local to be ready
     console.log('⏳ Waiting for DynamoDB Local to be ready...');
     await waitForDynamoDBLocal();
     
-    // Optionally delete existing test tables to ensure latest GSIs are applied
+    // Clean existing outbox tables
     try {
       const rawClient = new DynamoDBClient({
-        endpoint: process.env.AWS_ENDPOINT_URL || 'http://localhost:8000',
-        region: process.env.AWS_REGION || 'us-east-1',
+        endpoint: 'http://localhost:8000',
+        region: 'us-east-1',
         credentials: { accessKeyId: 'fake', secretAccessKey: 'fake' }
       });
       const existing = await rawClient.send(new ListTablesCommand({}));
@@ -88,22 +110,15 @@ export default async function globalSetup(): Promise<void> {
           await rawClient.send(new DeleteTableCommand({ TableName: name! }));
         } catch {}
       }
-      // small wait for deletion
       await new Promise(r => setTimeout(r, 500));
     } catch {}
 
-    // Create test tables
-    console.log('📝 Creating test tables...');
+    // Create outbox table
+    console.log('📝 Creating outbox table...');
     const { createDynamoDBClient } = await import('../scripts/createLocalTables');
     const client = createDynamoDBClient();
     
-    // Create tables with test prefixes
-    const testTableDefinitions = tableDefinitions.map(table => ({
-      ...table,
-      TableName: table.TableName.replace('local-', 'test-')
-    }));
-    
-    for (const tableDefinition of testTableDefinitions) {
+    for (const tableDefinition of tableDefinitions) {
       await createTable(client, tableDefinition);
     }
     

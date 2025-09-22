@@ -1,153 +1,99 @@
 /**
- * @fileoverview ServiceFactory - Infrastructure factory for service instantiation
- * @summary Factory for creating service instances with proper dependency injection
+ * @fileoverview ServiceFactory - Infrastructure factory for service instantiation with Prisma
+ * @summary Factory for creating service instances with proper dependency injection using Prisma
  * @description This factory creates service instances with proper dependency injection
- * for serverless environments without container overhead. Lives in infrastructure layer.
+ * for the new DDD architecture using Prisma repositories instead of DynamoDB.
  */
 
-import { loadConfig } from '../../config';
-import { createDynamoDBClient } from '../../utils/dynamodb-client';
-import { S3Client } from '@aws-sdk/client-s3';
-import { KMSClient } from '@aws-sdk/client-kms';
-import { KmsSigner } from '@lawprotect/shared-ts';
 import { PrismaClient } from '@prisma/client';
-import { EnvelopeService } from '../../services/EnvelopeService';
-import { SignerService } from '../../services/SignerService';
+import { getPrisma, S3Presigner, S3EvidenceStorage } from '@lawprotect/shared-ts';
+import { KMSClient } from '@aws-sdk/client-kms';
+import { loadConfig } from '../../config/AppConfig';
+import { SignatureEnvelopeService } from '../../services/SignatureEnvelopeService';
+import { EnvelopeSignerService } from '../../services/EnvelopeSignerService';
 import { InvitationTokenService } from '../../services/InvitationTokenService';
 import { SignatureAuditEventService } from '../../services/SignatureAuditEventService';
-import { S3Service } from '../../services/S3Service';
-import { DocumentAccessService } from '../../services/DocumentAccessService';
-import { SignatureService } from '../../services/SignatureService';
-import { ConsentService } from '../../services/ConsentService';
+import { SignatureOrchestrator } from '../../services/SignatureOrchestrator';
 import { KmsService } from '../../services/KmsService';
-import { SignatureEventService } from '../../services/events/SignatureEventService';
-import { ConsentEventService } from '../../services/events/ConsentEventService';
-import { EnvelopeEventService } from '../../services/events/EnvelopeEventService';
-import { SignerEventService } from '../../services/events/SignerEventService';
-import { EnvelopeRepository } from '../../repositories/EnvelopeRepository';
-import { SignerRepository } from '../../repositories/SignerRepository';
-import { SignatureRepository } from '../../repositories/SignatureRepository';
+import { S3Service } from '../../services/S3Service';
+import { SignatureEnvelopeRepository } from '../../repositories/SignatureEnvelopeRepository';
+import { EnvelopeSignerRepository } from '../../repositories/EnvelopeSignerRepository';
 import { InvitationTokenRepository } from '../../repositories/InvitationTokenRepository';
-import { OutboxRepository } from '@lawprotect/shared-ts';
 import { SignatureAuditEventRepository } from '../../repositories/SignatureAuditEventRepository';
-import { ConsentRepository } from '../../repositories/ConsentRepository';
-import { DocumentRepository } from '../../repositories/DocumentRepository';
 
 /**
- * ServiceFactory - Infrastructure factory for service instantiation
+ * ServiceFactory - Infrastructure factory for service instantiation with Prisma
  * 
  * This factory creates service instances with proper dependency injection
- * for serverless environments without container overhead.
+ * for the new DDD architecture using Prisma repositories.
  * 
  * Responsibilities:
  * - Create service instances with proper dependencies
- * - Manage repository instantiation
- * - Handle configuration loading
+ * - Manage Prisma repository instantiation
  * - Provide consistent service creation across handlers
+ * - Support the new DDD architecture
  */
 export class ServiceFactory {
   private static readonly config = loadConfig();
-  private static readonly ddbClient = createDynamoDBClient(this.config.dynamodb);
-  private static readonly prismaClient = new PrismaClient();
-  private static readonly s3Client = new S3Client({
-    region: this.config.region,
-    ...(process.env.AWS_ENDPOINT_URL ? { endpoint: process.env.AWS_ENDPOINT_URL } : {}),
-    ...(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
-      ? { credentials: { accessKeyId: process.env.AWS_ACCESS_KEY_ID, secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY } }
-      : {})
+  private static readonly prismaClient = getPrisma({ 
+    url: this.config.database.url 
   });
+  
+  // AWS Services with external configuration
+  // KMS Client for signature-specific operations (sign/verify)
   private static readonly kmsClient = new KMSClient({
-    region: this.config.region
+    region: this.config.kms.region,
+    credentials: {
+      accessKeyId: this.config.kms.accessKeyId,
+      secretAccessKey: this.config.kms.secretAccessKey
+    }
   });
-  private static readonly kmsSigner = new KmsSigner(this.kmsClient, {
-    defaultKeyId: this.config.kms.signerKeyId,
-    defaultSigningAlgorithm: this.config.kms.signingAlgorithm
+  
+  private static readonly s3Presigner = new S3Presigner({
+    region: this.config.s3.region,
+    accessKeyId: this.config.s3.accessKeyId,
+    secretAccessKey: this.config.s3.secretAccessKey
+  });
+  
+  private static readonly s3EvidenceStorage = new S3EvidenceStorage({
+    defaultBucket: this.config.s3.bucketName,
+    region: this.config.s3.region,
+    accessKeyId: this.config.s3.accessKeyId,
+    secretAccessKey: this.config.s3.secretAccessKey
   });
 
   /**
-   * Creates an EnvelopeService instance with all required dependencies
+   * Creates a SignatureEnvelopeService instance with all required dependencies
    * 
-   * @returns Configured EnvelopeService instance
+   * @returns Configured SignatureEnvelopeService instance
    */
-  static createEnvelopeService(): EnvelopeService {
-    const envelopeRepository = new EnvelopeRepository(
-      this.config.ddb.envelopesTable,
-      this.ddbClient,
-      {
-        indexName: this.config.ddb.envelopesGsi1Name,
-        gsi2IndexName: this.config.ddb.envelopesGsi2Name
-      }
-    );
-    const signerRepository = new SignerRepository(this.config.ddb.signersTable, this.ddbClient);
-    const signatureRepository = new SignatureRepository(this.config.ddb.signaturesTable, this.ddbClient);
-    const auditService = this.createAuditService();
-    const outboxRepository = new OutboxRepository(this.config.ddb.outboxTable, this.ddbClient);
-    const envelopeEventService = new EnvelopeEventService({
-      outboxRepository,
-      serviceName: 'signature-service',
-      defaultTraceId: undefined
-    });
+  static createSignatureEnvelopeService(): SignatureEnvelopeService {
+    const signatureEnvelopeRepository = new SignatureEnvelopeRepository(this.prismaClient);
+    const signatureAuditEventService = this.createSignatureAuditEventService();
+    const invitationTokenService = this.createInvitationTokenService();
 
-    // Wire shared Documents table (read-only) for business rule validation
-    const documentRepository = new DocumentRepository(this.config.ddb.documentsTable, this.ddbClient);
-
-    return new EnvelopeService(
-      envelopeRepository,
-      signerRepository,
-      signatureRepository,
-      auditService,
-      envelopeEventService,
-      this.config,
-      {
-        getDocument: async (documentId: string) => {
-          return await documentRepository.getByDocumentId(documentId);
-        }
-      }
+    return new SignatureEnvelopeService(
+      signatureEnvelopeRepository,
+      signatureAuditEventService,
+      invitationTokenService
     );
   }
 
   /**
-   * Creates a SignerService instance with all required dependencies
+   * Creates an EnvelopeSignerService instance with all required dependencies
    * 
-   * @returns Configured SignerService instance
+   * @returns Configured EnvelopeSignerService instance
    */
-  static createSignerService(): SignerService {
-    const signerRepository = new SignerRepository(this.config.ddb.signersTable, this.ddbClient);
-    const envelopeRepository = new EnvelopeRepository(this.config.ddb.envelopesTable, this.ddbClient);
-    const auditService = this.createAuditService();
-    const outboxRepository = new OutboxRepository(this.config.ddb.outboxTable, this.ddbClient);
-    const signerEventService = new SignerEventService({
-      outboxRepository,
-      serviceName: 'signature-service',
-      defaultTraceId: undefined
-    });
-    const envelopeEventService = new EnvelopeEventService({
-      outboxRepository,
-      serviceName: 'signature-service',
-      defaultTraceId: undefined
-    });
+  static createEnvelopeSignerService(): EnvelopeSignerService {
+    const envelopeSignerRepository = new EnvelopeSignerRepository(this.prismaClient);
+    const signatureEnvelopeRepository = new SignatureEnvelopeRepository(this.prismaClient);
+    const signatureAuditEventService = this.createSignatureAuditEventService();
 
-    return new SignerService(
-      signerRepository,
-      envelopeRepository,
-      auditService,
-      signerEventService,
-      envelopeEventService
+    return new EnvelopeSignerService(
+      envelopeSignerRepository,
+      signatureEnvelopeRepository,
+      signatureAuditEventService
     );
-  }
-
-  /**
-   * Creates a SignerEventService instance with all required dependencies
-   * 
-   * @returns Configured SignerEventService instance
-   */
-  static createSignerEventService(): SignerEventService {
-    const outboxRepository = new OutboxRepository(this.config.ddb.outboxTable, this.ddbClient);
-    return new SignerEventService({
-      outboxRepository,
-      serviceName: 'signature-service',
-      defaultTraceId: undefined
-    });
   }
 
   /**
@@ -156,120 +102,71 @@ export class ServiceFactory {
    * @returns Configured InvitationTokenService instance
    */
   static createInvitationTokenService(): InvitationTokenService {
-    const invitationTokenRepository = new InvitationTokenRepository(this.config.ddb.invitationTokensTable, this.ddbClient);
-    const auditService = this.createAuditService();
-    const outboxRepository = new OutboxRepository(this.config.ddb.outboxTable, this.ddbClient);
-    const signerEventService = new SignerEventService({
-      outboxRepository,
-      serviceName: 'signature-service',
-      defaultTraceId: undefined
-    });
+    const invitationTokenRepository = new InvitationTokenRepository(this.prismaClient);
+    const envelopeSignerRepository = new EnvelopeSignerRepository(this.prismaClient);
+    const signatureAuditEventService = this.createSignatureAuditEventService();
 
     return new InvitationTokenService(
       invitationTokenRepository,
-      signerEventService,
-      auditService
+      envelopeSignerRepository,
+      signatureAuditEventService
     );
   }
 
+  /**
+   * Creates a SignatureAuditEventService instance with all required dependencies
+   * 
+   * @returns Configured SignatureAuditEventService instance
+   */
   static createSignatureAuditEventService(): SignatureAuditEventService {
     const signatureAuditEventRepository = new SignatureAuditEventRepository(this.prismaClient);
     return new SignatureAuditEventService(signatureAuditEventRepository);
   }
 
   /**
-   * Creates an AuditService instance for backward compatibility
-   * @deprecated Use createSignatureAuditEventService() instead
-   * @returns Configured AuditService instance
-   */
-  static createAuditService(): any {
-    // For now, return the new service wrapped in a compatibility layer
-    // This allows gradual migration without breaking existing code
-    const signatureAuditEventService = this.createSignatureAuditEventService();
-    
-    return {
-      createEvent: (request: any) => signatureAuditEventService.createEvent(request),
-      getAuditEvent: (id: string) => signatureAuditEventService.getAuditEvent({ getValue: () => id } as any),
-      getAuditTrail: (envelopeId: string, limit?: number, cursor?: string) => 
-        signatureAuditEventService.getAuditTrail({ getValue: () => envelopeId } as any),
-      getUserAuditTrail: (userId: string, limit?: number, cursor?: string) => 
-        signatureAuditEventService.getAuditEventsByType({} as any), // Temporary fallback
-      getAuditEventsByType: (eventType: any, limit?: number, cursor?: string) => 
-        signatureAuditEventService.getAuditEventsByType(eventType)
-    };
-  }
-
-  static createS3Service(): S3Service {
-    const auditService = this.createAuditService();
-    
-    return new S3Service(
-      this.s3Client,
-      this.config.s3.signedBucket,
-      auditService,
-      this.config
-    );
-  }
-
-  static createDocumentAccessService(): DocumentAccessService {
-    const invitationTokenService = this.createInvitationTokenService();
-    const s3Service = this.createS3Service();
-    const signerService = this.createSignerService();
-    const envelopeService = this.createEnvelopeService();
-    const auditService = this.createAuditService();
-    return new DocumentAccessService(
-      invitationTokenService,
-      s3Service,
-      signerService,
-      envelopeService,
-      auditService,
-      this.config
-    );
-  }
-
-  /**
-   * Creates a SignatureService instance with all required dependencies
+   * Creates a SignatureOrchestrator instance with all required dependencies
    * 
-   * @returns Configured SignatureService instance
+   * @returns Configured SignatureOrchestrator instance
    */
-  static createSignatureService(): SignatureService {
-    const signatureRepository = new SignatureRepository(this.config.ddb.signaturesTable, this.ddbClient);
-    const consentRepository = new ConsentRepository(this.config.ddb.consentTable, this.ddbClient);
-    const signerRepository = new SignerRepository(this.config.ddb.signersTable, this.ddbClient);
-    const outboxRepository = new OutboxRepository(this.config.ddb.outboxTable, this.ddbClient);
-    const auditRepository = new AuditRepository(this.config.ddb.auditTable, this.ddbClient);
-    
-    const auditService = new AuditService(auditRepository);
-    const consentEventService = new ConsentEventService({ outboxRepository, serviceName: 'ConsentService' });
-    const consentService = new ConsentService(consentRepository, signerRepository, auditService, consentEventService);
-    
-    const signatureEventService = new SignatureEventService({ outboxRepository, serviceName: 'SignatureService' });
-    const s3Service = this.createS3Service();
-    const kmsService = new KmsService(
-      this.kmsSigner,
-      signatureRepository,
-      auditService,
-      s3Service,
-      this.config.kms.signerKeyId
-    );
-    
-    return new SignatureService(
-      signatureRepository,
-      consentService,
-      kmsService,
-      signatureEventService,
-      auditService
+  static createSignatureOrchestrator(): SignatureOrchestrator {
+    const signatureEnvelopeService = this.createSignatureEnvelopeService();
+
+    return new SignatureOrchestrator(
+      signatureEnvelopeService
     );
   }
 
   /**
-   * Creates a ConsentService instance with all required dependencies
+   * Creates a KmsService instance with all required dependencies
+   * 
+   * @returns Configured KmsService instance
    */
-  static createConsentService(): ConsentService {
-    const consentRepository = new ConsentRepository(this.config.ddb.consentTable, this.ddbClient);
-    const signerRepository = new SignerRepository(this.config.ddb.signersTable, this.ddbClient);
-    const auditService = this.createAuditService();
-    const outboxRepository = new OutboxRepository(this.config.ddb.outboxTable, this.ddbClient);
-    const consentEventService = new ConsentEventService({ outboxRepository, serviceName: 'ConsentService' });
-    return new ConsentService(consentRepository, signerRepository, auditService, consentEventService);
+  static createKmsService(): KmsService {
+    return new KmsService(this.kmsClient);
   }
+
+  /**
+   * Creates an S3Service instance with all required dependencies
+   * 
+   * @returns Configured S3Service instance
+   */
+  static createS3Service(): S3Service {
+    const signatureAuditEventService = this.createSignatureAuditEventService();
+    return new S3Service(
+      this.s3Presigner,
+      this.s3EvidenceStorage,
+      this.config.s3.bucketName,
+      signatureAuditEventService
+    );
+  }
+
+  /**
+   * Gets the Prisma client instance
+   * 
+   * @returns PrismaClient instance
+   */
+  static getPrismaClient(): PrismaClient {
+    return this.prismaClient;
+  }
+
 }

@@ -566,3 +566,14 @@ export const invalidSigningOrder = (details?: unknown) =>
  */
 export const eventGenerationFailed = (details?: unknown) =>
   new InternalError("Failed to generate workflow event", SignatureErrorCodes.EVENT_GENERATION_FAILED, details);
+
+// ============================================================================
+// ORCHESTRATOR ERRORS
+// ============================================================================
+
+
+/**
+ * Creates an InternalError for signature creation failures (500).
+ */
+export const signatureCreationFailed = (details?: unknown) =>
+  new InternalError("Signature creation failed", SignatureErrorCodes.SIGNATURE_FAILED, details);

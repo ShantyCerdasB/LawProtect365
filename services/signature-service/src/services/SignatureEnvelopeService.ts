@@ -12,6 +12,7 @@ import { EnvelopeStatus } from '../domain/value-objects/EnvelopeStatus';
 import { SignatureEnvelopeRepository } from '../repositories/SignatureEnvelopeRepository';
 import { SignatureAuditEventService } from './SignatureAuditEventService';
 import { InvitationTokenService } from './InvitationTokenService';
+import { EntityFactory } from '../domain/factories/EntityFactory';
 import { EnvelopeSpec, S3Keys, Hashes, CreateEnvelopeData, UpdateEnvelopeData } from '../domain/types/envelope';
 import { AuditEventType } from '../domain/enums/AuditEventType';
 import { Page } from '@lawprotect/shared-ts';
@@ -50,33 +51,8 @@ export class SignatureEnvelopeService {
    */
   async createEnvelope(data: CreateEnvelopeData, userId: string): Promise<SignatureEnvelope> {
     try {
-      // Create envelope entity
-      const envelope = new SignatureEnvelope(
-        data.id,
-        data.createdBy,
-        data.title,
-        data.description,
-        EnvelopeStatus.draft(), // Initial status
-        [], // signers will be added separately
-        data.signingOrder,
-        data.origin,
-        undefined, // sourceKey
-        undefined, // metaKey
-        undefined, // flattenedKey
-        undefined, // signedKey
-        undefined, // sourceSha256
-        undefined, // flattenedSha256
-        undefined, // signedSha256
-        undefined, // sentAt
-        undefined, // completedAt
-        undefined, // cancelledAt
-        undefined, // declinedAt
-        undefined, // declinedBySignerId
-        undefined, // declinedReason
-        data.expiresAt,
-        new Date(), // createdAt
-        new Date()  // updatedAt
-      );
+      // Create envelope entity using EntityFactory
+      const envelope = EntityFactory.createSignatureEnvelope(data);
 
       // Save to repository
       const createdEnvelope = await this.signatureEnvelopeRepository.create(envelope);
@@ -84,7 +60,7 @@ export class SignatureEnvelopeService {
       // Create audit event
       await this.signatureAuditEventService.createSignerAuditEvent(
         data.id.getValue(),
-        data.createdBy.getValue(),
+        data.createdBy,
         AuditEventType.ENVELOPE_CREATED,
         `Envelope "${data.title}" created`,
         userId,
@@ -186,7 +162,7 @@ export class SignatureEnvelopeService {
       // Create audit event
       await this.signatureAuditEventService.createSignerAuditEvent(
         envelopeId.getValue(),
-        existingEnvelope.getCreatedBy().getValue(),
+        existingEnvelope.getCreatedBy(),
         AuditEventType.ENVELOPE_UPDATED,
         `Envelope "${existingEnvelope.getTitle()}" updated`,
         userId,
@@ -232,7 +208,7 @@ export class SignatureEnvelopeService {
       // Create audit event
       await this.signatureAuditEventService.createSignerAuditEvent(
         envelopeId.getValue(),
-        existingEnvelope.getCreatedBy().getValue(),
+        existingEnvelope.getCreatedBy(),
         AuditEventType.ENVELOPE_DELETED,
         `Envelope "${existingEnvelope.getTitle()}" deleted`,
         userId,
@@ -331,7 +307,7 @@ export class SignatureEnvelopeService {
       // Create audit event
       await this.signatureAuditEventService.createSignerAuditEvent(
         envelopeId.getValue(),
-        updatedEnvelope.getCreatedBy().getValue(),
+        updatedEnvelope.getCreatedBy(),
         AuditEventType.ENVELOPE_UPDATED,
         `S3 keys updated for envelope "${updatedEnvelope.getTitle()}"`,
         userId,
@@ -366,7 +342,7 @@ export class SignatureEnvelopeService {
       // Create audit event
       await this.signatureAuditEventService.createSignerAuditEvent(
         envelopeId.getValue(),
-        updatedEnvelope.getCreatedBy().getValue(),
+        updatedEnvelope.getCreatedBy(),
         AuditEventType.ENVELOPE_UPDATED,
         `Document hashes updated for envelope "${updatedEnvelope.getTitle()}"`,
         userId,
@@ -402,7 +378,7 @@ export class SignatureEnvelopeService {
       // Create audit event
       await this.signatureAuditEventService.createSignerAuditEvent(
         envelopeId.getValue(),
-        updatedEnvelope.getCreatedBy().getValue(),
+        updatedEnvelope.getCreatedBy(),
         AuditEventType.ENVELOPE_UPDATED,
         `Signed document updated for envelope "${updatedEnvelope.getTitle()}"`,
         userId,
@@ -485,7 +461,7 @@ export class SignatureEnvelopeService {
       }
 
       // Check if user is the creator
-      if (envelope.getCreatedBy().getValue() !== userId) {
+      if (envelope.getCreatedBy() !== userId) {
         throw envelopeAccessDenied(`User ${userId} does not have access to envelope ${envelopeId.getValue()}`);
       }
 

@@ -12,49 +12,42 @@ import { SignerDataSchema } from './CommonSchemas';
  * Schema for creating a new envelope with signers
  */
 export const CreateEnvelopeWithSignersSchema = z.object({
-  documentId: UuidV4,
-  createdBy: NonEmptyStringSchema, // Changed from ownerId to createdBy to match Prisma schema
-  title: NonEmptyStringSchema.max(255, 'Title must be less than 255 characters'), // Direct field from Prisma
-  description: z.string().max(1000, 'Description must be less than 1000 characters').optional(), // Direct field from Prisma
-  signingOrderType: z.nativeEnum(SigningOrderType), // Changed from signingOrder to signingOrderType
-  originType: z.nativeEnum(DocumentOriginType), // From Prisma DocumentOriginType enum
-  templateId: z.string().optional(), // Direct field from Prisma
-  templateVersion: z.string().optional(), // Direct field from Prisma
-  // S3 pipeline keys (optional during creation, set by Document Service)
-  sourceKey: z.string().optional(), // From Prisma schema
-  metaKey: z.string().optional(), // From Prisma schema
-  flattenedKey: z.string().optional(), // From Prisma schema
-  signedKey: z.string().optional(), // From Prisma schema
-  // Content integrity hashes (optional during creation, set by Document Service)
-  sourceSha256: z.string().optional(), // From Prisma schema
-  flattenedSha256: z.string().optional(), // From Prisma schema
-  signedSha256: z.string().optional(), // From Prisma schema
-  expiresAt: z.date().optional(), // Direct field from Prisma
+  title: NonEmptyStringSchema.max(255, 'Title must be less than 255 characters'),
+  description: z.string().max(1000, 'Description must be less than 1000 characters').optional(),
+  signingOrderType: z.nativeEnum(SigningOrderType),
+  originType: z.nativeEnum(DocumentOriginType),
+  templateId: z.string().optional(),
+  templateVersion: z.string().optional(),
+  expiresAt: z.date().optional(),
+  sourceKey: z.string().min(1, 'Source key is required'),
+  metaKey: z.string().min(1, 'Meta key is required'),
   signers: z.array(SignerDataSchema).optional()
 });
 
 /**
- * Schema for creating a new envelope (original, without signers)
+ * Schema for creating a new envelope (without signers)
  */
 export const CreateEnvelopeSchema = z.object({
-  documentId: UuidV4,
-  createdBy: NonEmptyStringSchema, // Changed from ownerId to createdBy to match Prisma schema
-  title: NonEmptyStringSchema.max(255, 'Title must be less than 255 characters'), // Direct field from Prisma
-  description: z.string().max(1000, 'Description must be less than 1000 characters').optional(), // Direct field from Prisma
-  signingOrderType: z.nativeEnum(SigningOrderType), // Changed from signingOrder to signingOrderType
-  originType: z.nativeEnum(DocumentOriginType), // From Prisma DocumentOriginType enum
-  templateId: z.string().optional(), // Direct field from Prisma
-  templateVersion: z.string().optional(), // Direct field from Prisma
-  // S3 pipeline keys (optional during creation, set by Document Service)
-  sourceKey: z.string().optional(), // From Prisma schema
-  metaKey: z.string().optional(), // From Prisma schema
-  flattenedKey: z.string().optional(), // From Prisma schema
-  signedKey: z.string().optional(), // From Prisma schema
-  // Content integrity hashes (optional during creation, set by Document Service)
-  sourceSha256: z.string().optional(), // From Prisma schema
-  flattenedSha256: z.string().optional(), // From Prisma schema
-  signedSha256: z.string().optional(), // From Prisma schema
-  expiresAt: z.date().optional() // Direct field from Prisma
+  title: NonEmptyStringSchema.max(255, 'Title must be less than 255 characters'),
+  description: z.string().max(1000, 'Description must be less than 1000 characters').optional(),
+  signingOrderType: z.nativeEnum(SigningOrderType).default(SigningOrderType.OWNER_FIRST).optional(),
+  originType: z.nativeEnum(DocumentOriginType),
+  templateId: z.string().optional(),
+  templateVersion: z.string().optional(),
+  expiresAt: z.date().optional(),
+  sourceKey: z.string().min(1, 'Source key is required'),
+  metaKey: z.string().min(1, 'Meta key is required')
+  // Note: signers are not created in CreateEnvelope flow
+  // They are added separately via UpdateEnvelope flow
+}).refine((data) => {
+  // Validate template fields when originType is TEMPLATE
+  if (data.originType === DocumentOriginType.TEMPLATE) {
+    return data.templateId && data.templateVersion;
+  }
+  return true;
+}, {
+  message: 'templateId and templateVersion are required when originType is TEMPLATE',
+  path: ['templateId', 'templateVersion']
 });
 
 /**
@@ -89,7 +82,7 @@ export const EnvelopeStatusSchema = z.nativeEnum(EnvelopeStatus);
  */
 export const EnvelopeQuerySchema = z.object({
   status: EnvelopeStatusSchema.optional(),
-  createdBy: z.string().optional(), // Changed from ownerId to createdBy to match Prisma schema
+  createdBy: z.string().optional(),
   limit: z.number().min(1).max(100).default(20),
   offset: z.number().min(0).default(0),
   sortBy: z.nativeEnum(EnvelopeSortBy).default(EnvelopeSortBy.CREATED_AT),
