@@ -7,7 +7,7 @@
  */
 
 import { createHash, randomUUID, randomBytes } from 'crypto';
-import { generateRS256Token } from './mockJwksServer';
+import { generateTestJwtToken as generateJwtFromMock } from '../mocks/cognito/jwksMock';
 
 /**
  * Generate a cryptographically secure random string
@@ -364,7 +364,7 @@ export const generateTestJwtToken = async (
   },
   expiresIn: string = '1h'
 ): Promise<string> => {
-  return await generateRS256Token(payload, expiresIn);
+  return await generateJwtFromMock(payload.sub, payload);
 };
 
 /**

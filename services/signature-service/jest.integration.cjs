@@ -31,15 +31,18 @@ module.exports = {
   roots: ["<rootDir>"],
   
   /** Only run integration tests in the integration folder */
-  testMatch: ["<rootDir>/__tests__/integration/**/*.test.ts"],
+  testMatch: [
+    "<rootDir>/__tests__/integration/**/*.test.ts",
+    "<rootDir>/__tests__/integration/**/*.int.test.ts"
+  ],
 
   /**
    * Setup files to run before the test environment is established
    * 
-   * @description Loads AWS realistic mocks before any test environment setup
+   * @description Loads AWS service mocks before any test environment setup
    * to ensure consistent mocking behavior across all tests.
    */
-  setupFiles: ["<rootDir>/__tests__/integration/helpers/awsRealisticMocks.ts"],
+  setupFiles: ["<rootDir>/__tests__/integration/mocks/index.ts"],
   
   /**
    * Setup files to run after the test environment is established

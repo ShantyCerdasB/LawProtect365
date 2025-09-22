@@ -7,7 +7,7 @@
  * appropriate responses that match AWS KMS API structure.
  */
 
-import { jest } from '@jest/globals';
+// Using global jest - no import needed in setupFiles
 
 /**
  * Mock KMS service with realistic behavior

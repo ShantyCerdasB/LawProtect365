@@ -4,3 +4,4 @@ export * from "./codes.js";
 export * from "./errors.js";
 export * from "./mapError.js";
 export * from "./awsErrorsMap.js";
+export * from "./wrapServiceError.js";

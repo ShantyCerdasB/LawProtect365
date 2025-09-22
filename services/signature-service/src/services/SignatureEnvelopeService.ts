@@ -18,7 +18,7 @@ import { EntityFactory } from '../domain/factories/EntityFactory';
 import { EnvelopeUpdateValidationRule, UpdateEnvelopeData } from '../domain/rules/EnvelopeUpdateValidationRule';
 import { EnvelopeSpec, S3Keys, Hashes, CreateEnvelopeData } from '../domain/types/envelope';
 import { AuditEventType } from '../domain/enums/AuditEventType';
-import { Page } from '@lawprotect/shared-ts';
+import { Page, wrapServiceError } from '@lawprotect/shared-ts';
 import { SignerStatus } from '@prisma/client';
 import { 
   envelopeNotFound,
@@ -28,6 +28,7 @@ import {
   envelopeAccessDenied,
   invalidEnvelopeState
 } from '../signature-errors';
+
 
 /**
  * SignatureEnvelopeService implementation
@@ -199,9 +200,7 @@ export class SignatureEnvelopeService {
       
       return updatedEnvelope;
     } catch (error) {
-      throw envelopeUpdateFailed(
-        `Failed to update envelope: ${error instanceof Error ? error.message : error}`
-      );
+      wrapServiceError(error as Error, 'update envelope');
     }
   }
 

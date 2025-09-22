@@ -19,7 +19,7 @@ import {
 } from '../domain/types/orchestrator';
 import { EntityFactory } from '../domain/factories/EntityFactory';
 import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
-import { invalidEnvelopeState } from '../signature-errors';
+import { documentS3NotFound } from '../signature-errors';
 import { uuid } from '@lawprotect/shared-ts';
 
 /**
@@ -144,29 +144,19 @@ export class SignatureOrchestrator {
    * @param metaKey - Metadata S3 key
    */
   private async validateS3KeysExist(sourceKey?: string, metaKey?: string): Promise<void> {
-    console.log('🔍 DEBUG: validateS3KeysExist called with:', { sourceKey, metaKey });
-    
     if (sourceKey) {
-      console.log('🔍 DEBUG: Checking sourceKey existence:', sourceKey);
       const sourceExists = await this.s3Service.documentExists(sourceKey);
-      console.log('🔍 DEBUG: sourceKey exists result:', sourceExists);
       if (!sourceExists) {
-        console.log('🔍 DEBUG: Throwing error for non-existent sourceKey:', sourceKey);
-        throw invalidEnvelopeState(`Source document with key '${sourceKey}' does not exist in S3`);
+        throw documentS3NotFound(`Source document with key '${sourceKey}' does not exist in S3`);
       }
     }
     
     if (metaKey) {
-      console.log('🔍 DEBUG: Checking metaKey existence:', metaKey);
       const metaExists = await this.s3Service.documentExists(metaKey);
-      console.log('🔍 DEBUG: metaKey exists result:', metaExists);
       if (!metaExists) {
-        console.log('🔍 DEBUG: Throwing error for non-existent metaKey:', metaKey);
-        throw invalidEnvelopeState(`Metadata document with key '${metaKey}' does not exist in S3`);
+        throw documentS3NotFound(`Metadata document with key '${metaKey}' does not exist in S3`);
       }
     }
-    
-    console.log('🔍 DEBUG: validateS3KeysExist completed successfully');
   }
   
   // Note: Signing order validation is not needed for CreateEnvelope

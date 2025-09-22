@@ -6,7 +6,7 @@
  * realistic event IDs and handles batch event publishing with proper response structure.
  */
 
-import { jest } from '@jest/globals';
+// Using global jest - no import needed in setupFiles
 
 /**
  * Mock EventBridge service with realistic behavior

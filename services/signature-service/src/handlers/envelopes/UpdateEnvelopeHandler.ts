@@ -67,26 +67,25 @@ export const updateEnvelopeHandler = ControllerFactory.createCommand({
   responseType: 'ok',
   transformResult: async (result: any) => {
     // Transform domain entities to API response format
+    // Note: responseType: 'ok' automatically wraps in { data: ... }, so return the object directly
     return {
-      data: {
-        id: result.envelope.getId().getValue(),
-        title: result.envelope.getTitle(),
-        description: result.envelope.getDescription(),
-        status: result.envelope.getStatus().getValue(),
-        signingOrderType: result.envelope.getSigningOrder().getType(),
-        originType: result.envelope.getOrigin().getType(),
-        createdBy: result.envelope.getCreatedBy(),
-        sourceKey: result.envelope.getSourceKey()?.getValue(),
-        metaKey: result.envelope.getMetaKey()?.getValue(),
-        expiresAt: result.envelope.getExpiresAt(),
-        createdAt: result.envelope.getCreatedAt(),
-        updatedAt: result.envelope.getUpdatedAt(),
-        // Template-specific fields (only present for TEMPLATE origin)
-        ...(result.envelope.getOrigin().getType() === 'TEMPLATE' && {
-          templateId: result.envelope.getOrigin().getTemplateId(),
-          templateVersion: result.envelope.getOrigin().getTemplateVersion()
-        })
-      }
+      id: result.envelope.getId().getValue(),
+      title: result.envelope.getTitle(),
+      description: result.envelope.getDescription(),
+      status: result.envelope.getStatus().getValue(),
+      signingOrderType: result.envelope.getSigningOrder().getType(),
+      originType: result.envelope.getOrigin().getType(),
+      createdBy: result.envelope.getCreatedBy(),
+      sourceKey: result.envelope.getSourceKey()?.getValue(),
+      metaKey: result.envelope.getMetaKey()?.getValue(),
+      expiresAt: result.envelope.getExpiresAt(),
+      createdAt: result.envelope.getCreatedAt(),
+      updatedAt: result.envelope.getUpdatedAt(),
+      // Template-specific fields (only present for TEMPLATE origin)
+      ...(result.envelope.getOrigin().getType() === 'TEMPLATE' && {
+        templateId: result.envelope.getOrigin().getTemplateId(),
+        templateVersion: result.envelope.getOrigin().getTemplateVersion()
+      })
     };
   },
   

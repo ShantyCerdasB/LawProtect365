@@ -57,7 +57,7 @@ export const UpdateEnvelopeSchema = z.object({
   // Metadata básica
   title: NonEmptyStringSchema.max(255, 'Title must be less than 255 characters').optional(),
   description: z.string().max(1000, 'Description must be less than 1000 characters').optional(),
-  expiresAt: z.date().optional(),
+  expiresAt: z.string().datetime().transform((str) => new Date(str)).optional(),
   
   // Signing order
   signingOrderType: z.nativeEnum(SigningOrderType).optional(),

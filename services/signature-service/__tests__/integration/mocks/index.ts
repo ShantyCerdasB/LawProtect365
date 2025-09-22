@@ -24,6 +24,6 @@ export {
   getKeyMetadata 
 } from './cognito/jwksMock';
 
-export { cleanupS3MockStorage } from './aws/s3Mock';
+export { cleanupS3MockStorage } from './aws/s3Cleanup';
 
 console.log('🔧 All mocks loaded - AWS services and Cognito JWKS ready for testing');

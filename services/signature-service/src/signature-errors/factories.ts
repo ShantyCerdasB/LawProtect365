@@ -375,6 +375,12 @@ export const documentS3Error = (details?: unknown) =>
   new InternalError("Document S3 error", SignatureErrorCodes.DOCUMENT_S3_ERROR, details);
 
 /**
+ * Creates a BadRequestError for when a document does not exist in S3 (400).
+ */
+export const documentS3NotFound = (details?: unknown) =>
+  new BadRequestError("Document not found in S3", SignatureErrorCodes.DOCUMENT_S3_ERROR, details);
+
+/**
  * Creates a BadRequestError for when an entity is invalid (400).
  */
 export const invalidEntity = (details?: unknown) =>

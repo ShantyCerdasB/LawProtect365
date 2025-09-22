@@ -54,10 +54,14 @@ const normalizeError = (err: unknown): {
   details?: unknown;
 } => {
   if (err instanceof AppError) {
+    // If there are details and the message is generic, use details as the primary message
+    // This provides more specific error information to the client
+    const shouldUseDetailsAsMessage = err.details && isGenericErrorMessage(err.message);
+    
     return {
       statusCode: err.statusCode,
       code: err.code,
-      message: err.message,
+      message: shouldUseDetailsAsMessage ? String(err.details) : err.message,
       details: err.details
     };
   }
@@ -152,4 +156,28 @@ const isThrottling = (name: string, code: string): boolean => {
 const isZodError = (err: unknown): err is { issues: unknown[] } => {
   const any = err as any;
   return Boolean(any) && Array.isArray(any.issues) && typeof any.name === "string" && any.name === "ZodError";
+};
+
+/**
+ * Checks if an error message is generic and should be replaced with details
+ * @param message The error message to check
+ * @returns True if the message is generic and should be replaced
+ */
+const isGenericErrorMessage = (message: string): boolean => {
+  const genericMessages = [
+    'Invalid envelope state',
+    'Invalid request',
+    'Bad request',
+    'Internal error',
+    'Operation failed',
+    'Validation failed',
+    'Access denied',
+    'Not found',
+    'Conflict',
+    'Unauthorized'
+  ];
+  
+  return genericMessages.some(generic => 
+    message.toLowerCase().includes(generic.toLowerCase())
+  );
 };

@@ -26,7 +26,7 @@ const { publicKey, privateKey } = generateKeyPairSync('rsa', {
  * 
  * @description Imports the private key in PKCS8 format for use with the jose library
  */
-const josePrivateKey = importPKCS8(privateKey, 'RS256');
+let josePrivateKey: any;
 
 /**
  * Store key metadata for better debugging
@@ -56,6 +56,10 @@ const jwksState = { value: null as any };
  * expected by JWT verification libraries, matching Cognito's JWKS structure.
  */
 const initializeJwks = async (): Promise<void> => {
+  // Import private key for signing
+  josePrivateKey = await importPKCS8(privateKey, 'RS256');
+  
+  // Import public key for JWKS
   const josePublicKey = await importSPKI(publicKey, 'RS256');
   const jwk = await exportJWK(josePublicKey);
   

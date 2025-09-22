@@ -6,7 +6,7 @@
  */
 
 import { stopDynamoDBLocal } from '../scripts/startDynamoDB';
-import { cleanupS3MockStorage } from './integration/mocks/aws/s3Mock';
+import { cleanupS3MockStorage } from './integration/mocks/aws/s3Cleanup';
 
 /**
  * Cleans up the test environment after all Jest tests complete

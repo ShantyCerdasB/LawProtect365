@@ -25,12 +25,12 @@ import {
   signerNotFound,
   signerCreationFailed,
   signerUpdateFailed,
-  signerDeleteFailed,
   signerSigningOrderViolation,
   signerAlreadySigned,
   signerEmailDuplicate,
   envelopeNotFound
 } from '../signature-errors';
+import { wrapServiceError } from '@lawprotect/shared-ts';
 
 /**
  * EnvelopeSignerService implementation
@@ -128,9 +128,7 @@ export class EnvelopeSignerService {
 
       return createdSigners;
     } catch (error) {
-      throw signerCreationFailed(
-        `Failed to create signers for envelope ${envelopeId.getValue()}: ${error instanceof Error ? error.message : error}`
-      );
+      wrapServiceError(error as Error, `create signers for envelope ${envelopeId.getValue()}`);
     }
   }
 
@@ -259,9 +257,7 @@ export class EnvelopeSignerService {
 
       await this.envelopeSignerRepository.delete(signerId);
     } catch (error) {
-      throw signerDeleteFailed(
-        `Failed to delete signer ${signerId.getValue()}: ${error instanceof Error ? error.message : error}`
-      );
+      wrapServiceError(error as Error, `delete signer ${signerId.getValue()}`);
     }
   }
 

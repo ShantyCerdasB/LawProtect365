@@ -6,7 +6,7 @@
  * used in the signature service.
  */
 
-import { jest } from '@jest/globals';
+// Using global jest - no import needed in setupFiles
 
 /**
  * Mock SSM service with realistic behavior
