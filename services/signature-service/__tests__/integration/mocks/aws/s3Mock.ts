@@ -377,10 +377,10 @@ jest.mock('@aws-sdk/client-s3', () => {
                 };
               }
               
-              // Object not found - throw NoSuchKey error
+              // Object not found - throw NotFound error (S3EvidenceStorage expects "NotFound" name)
               console.log('🔍 Mock S3Client: Object not found:', { key, exists: false });
-              const error = new Error('NoSuchKey');
-              (error as any).name = 'NoSuchKey';
+              const error = new Error('NotFound');
+              (error as any).name = 'NotFound';
               (error as any).$metadata = { httpStatusCode: 404 };
               throw error;
             }
