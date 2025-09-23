@@ -224,7 +224,15 @@ export class SignatureOrchestrator {
     status: string;
     tokensGenerated: number;
     signersNotified: number;
+    tokens: Array<{
+      signerId: string;
+      email?: string;
+      token: string;
+      expiresAt: Date;
+    }>;
   }> {
+    // ✅ DEBUG: Log sendEnvelope start
+    
     try {
       // 1. Validate and change envelope state (in service)
       const envelope = await this.signatureEnvelopeService.sendEnvelope(envelopeId, userId);
@@ -240,7 +248,7 @@ export class SignatureOrchestrator {
           );
       
       // 4. Generate invitation tokens for target signers
-      const tokens = await this.invitationTokenService.generateInvitationTokensForSigners(
+      const tokenResults = await this.invitationTokenService.generateInvitationTokensForSigners(
         targetSigners,
         envelopeId,
         {
@@ -251,8 +259,10 @@ export class SignatureOrchestrator {
         }
       );
       
+      // ✅ DEBUG: Log token generation results
+      
       // 5. Publish notification events for notification service
-      await this.publishNotificationEvent(envelopeId, options, tokens);
+      await this.publishNotificationEvent(envelopeId, options, tokenResults);
       
       // 6. Create audit event for envelope sent
       await this.signatureAuditEventService.createEvent({
@@ -268,7 +278,7 @@ export class SignatureOrchestrator {
         metadata: {
           envelopeId: envelopeId.getValue(),
           externalSignersCount: targetSigners.length,
-          tokensGenerated: tokens.length,
+          tokensGenerated: tokenResults.length,
           sendToAll: options.sendToAll || false
         }
       });
@@ -278,8 +288,14 @@ export class SignatureOrchestrator {
         message: "Envelope sent successfully",
         envelopeId: envelopeId.getValue(),
         status: envelope.getStatus().getValue(),
-        tokensGenerated: tokens.length,
-        signersNotified: targetSigners.length
+        tokensGenerated: tokenResults.length,
+        signersNotified: targetSigners.length,
+        tokens: tokenResults.map(t => ({
+          signerId: t.signerId,
+          email: t.email,
+          token: t.token,  // ✅ Incluir token original para tests
+          expiresAt: t.expiresAt
+        }))
       };
     } catch (error) {
       this.handleOrchestrationError(error as Error, 'sendEnvelope');
@@ -292,7 +308,7 @@ export class SignatureOrchestrator {
    * Publishes notification events for each signer
    * @param envelopeId - The envelope ID
    * @param options - Send options including message and signer selection
-   * @param tokens - Generated invitation tokens
+   * @param tokenResults - Generated invitation token results
    * @returns Promise that resolves when all events are published
    */
   private async publishNotificationEvent(
@@ -305,7 +321,13 @@ export class SignatureOrchestrator {
         message?: string;
       }>;
     },
-    tokens: any[]
+    tokenResults: Array<{
+      token: string;
+      entity: any;
+      signerId: string;
+      email?: string;
+      expiresAt: Date;
+    }>
   ): Promise<void> {
     const envelope = await this.signatureEnvelopeService.getEnvelopeWithSigners(envelopeId);
     const externalSigners = envelope!.getExternalSigners();
@@ -328,7 +350,7 @@ export class SignatureOrchestrator {
         signerEmail: signer.getEmail()!,
         signerName: signer.getFullName()!,
         message: message,
-        invitationToken: tokens.find(t => t.signerId === signer.getId().getValue())?.token,
+        invitationToken: tokenResults.find(t => t.signerId === signer.getId().getValue())?.token,
         metadata: {
           envelopeTitle: envelope!.getTitle(),
           envelopeId: envelopeId.getValue(),
@@ -422,7 +444,7 @@ export class SignatureOrchestrator {
       // Build specification
       const spec: EnvelopeSpec = {
         createdBy: userId,
-        status: status
+        status: status  // ✅ status ya es EnvelopeStatus value object desde el schema
       };
 
       // Get envelopes with pagination

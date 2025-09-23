@@ -1,116 +1,49 @@
 /**
  * @fileoverview workflowHelpers - Shared utilities for integration workflow tests
- * @summary Provides common workflow operations and test data factories
+ * @summary Provides common workflow operations and test utilities
  * @description This module contains shared utilities for integration tests, including
- * workflow operations, test data factories, and common assertions. These helpers
+ * workflow operations, database helpers, and common assertions. These helpers
  * reduce code duplication and provide consistent test patterns across all workflow tests.
+ * Type definitions are imported from testTypes.ts and test data factories from testDataFactory.ts.
  */
 
-import { randomUUID } from 'crypto';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { loadConfig } from '../../../src/config';
-import { createApiGatewayEvent, generateTestPdf, generateTestJwtToken } from './testHelpers';
-import { createEnvelopeHandler } from '../../../src/handlers/envelopes/CreateEnvelopeHandler';
-import { updateEnvelopeHandler } from '../../../src/handlers/envelopes/UpdateEnvelopeHandler';
-import { sendEnvelopeHandler } from '../../../src/handlers/envelopes/SendEnvelopeHandler';
-import { getEnvelopeHandler } from '../../../src/handlers/envelopes/GetEnvelopeHandler';
-import { getEnvelopesByUserHandler } from '../../../src/handlers/envelopes/GetEnvelopesByUserHandler';
+import { TestDataFactory, SignerData } from './testDataFactory';
+import { TestUser, EnvelopeData } from './testTypes';
+import { TestEnvironmentManager } from './testEnvironmentManager';
+import { EnvelopeOperations } from './envelopeOperations';
+import { DatabaseHelper } from './databaseHelper';
+import { AuditHelper } from './auditHelper';
 
-/**
- * Test user data structure
- */
-export interface TestUser {
-  userId: string;
-  email: string;
-  name: string;
-  role: string;
-}
 
-/**
- * Envelope data structure for tests
- */
-export interface EnvelopeData {
-  id: string;
-  title: string;
-  description: string;
-  status: string;
-  signingOrderType: string;
-  originType: string;
-  createdBy: string;
-  sourceKey?: string;
-  metaKey?: string;
-  templateId?: string;
-  templateVersion?: string;
-}
-
-/**
- * Signer data structure for tests
- */
-export interface SignerData {
-  email: string;
-  fullName: string;
-  isExternal: boolean;
-  order: number;
-  userId?: string;
-}
 
 /**
  * Workflow test helper class
  * Provides common operations for integration workflow tests
  */
 export class WorkflowTestHelper {
-  private cfg = loadConfig();
-  private s3 = new S3Client({
-    region: this.cfg.s3.region,
-    endpoint: process.env.AWS_ENDPOINT_URL,
-    forcePathStyle: true,
-    credentials: { 
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID || 'test', 
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || 'test' 
-    }
-  });
+  private environmentManager: TestEnvironmentManager;
+  private envelopeOperations: EnvelopeOperations | null = null;
+  private databaseHelper: DatabaseHelper;
+  private auditHelper: AuditHelper;
 
-  private testUser: TestUser | null = null;
-  private testSourceKey: string | null = null;
+  constructor() {
+    this.environmentManager = new TestEnvironmentManager();
+    this.databaseHelper = new DatabaseHelper();
+    this.auditHelper = new AuditHelper();
+  }
 
   /**
    * Initialize test environment with seeded user and test document
    * @returns Promise that resolves when initialization is complete
    */
   async initialize(): Promise<void> {
-    // Get seeded test user from database
-    const { PrismaClient } = await import('@prisma/client');
-    const prisma = new PrismaClient();
+    await this.environmentManager.initialize();
     
-    const user = await prisma.user.findUnique({
-      where: { email: 'test@example.com' }
-    });
-    
-    if (!user) {
-      throw new Error('Test user not found in database. Make sure seed has run.');
-    }
-    
-    this.testUser = {
-      userId: user.id,
-      email: user.email,
-      name: user.name || 'Test User',
-      role: user.role
-    };
-    
-    await prisma.$disconnect();
-    
-    // Upload test PDF to S3
-    const testPdf = generateTestPdf();
-    const sourceKey = `test-documents/${randomUUID()}.pdf`;
-    
-    await this.s3.send(new PutObjectCommand({
-      Bucket: this.cfg.s3.bucketName,
-      Key: sourceKey,
-      Body: testPdf,
-      ContentType: 'application/pdf'
-    }));
-    
-    this.testSourceKey = sourceKey;
+    // Initialize envelope operations with test user and source key
+    this.envelopeOperations = new EnvelopeOperations(
+      this.environmentManager.getTestUser(),
+      this.environmentManager.getTestSourceKey()
+    );
   }
 
   /**
@@ -119,10 +52,7 @@ export class WorkflowTestHelper {
    * @throws Error if test user is not initialized
    */
   getTestUser(): TestUser {
-    if (!this.testUser) {
-      throw new Error('Test user not initialized. Call initialize() first.');
-    }
-    return this.testUser;
+    return this.environmentManager.getTestUser();
   }
 
   /**
@@ -131,10 +61,7 @@ export class WorkflowTestHelper {
    * @throws Error if test source key is not initialized
    */
   getTestSourceKey(): string {
-    if (!this.testSourceKey) {
-      throw new Error('Test source key not initialized. Call initialize() first.');
-    }
-    return this.testSourceKey;
+    return this.environmentManager.getTestSourceKey();
   }
 
   /**
@@ -143,23 +70,7 @@ export class WorkflowTestHelper {
    * @returns Promise that resolves to the authenticated event
    */
   async makeAuthEvent(overrides?: any): Promise<any> {
-    const token = await generateTestJwtToken({ 
-      sub: this.getTestUser().userId, 
-      email: this.getTestUser().email, 
-      roles: ['admin'], 
-      scopes: [] 
-    });
-    
-    const base = await createApiGatewayEvent({ 
-      includeAuth: false, 
-      authToken: token,
-      headers: {
-        'x-country': 'US',
-        'x-forwarded-for': '127.0.0.1'
-      }
-    });
-    
-    return { ...base, ...overrides };
+    return this.environmentManager.makeAuthEvent(overrides);
   }
 
   /**
@@ -177,31 +88,10 @@ export class WorkflowTestHelper {
     sourceKey?: string;
     metaKey?: string;
   }): Promise<EnvelopeData> {
-    const event = await this.makeAuthEvent({
-      body: JSON.stringify({
-        title: envelopeData.title,
-        description: envelopeData.description,
-        signingOrderType: envelopeData.signingOrderType || 'OWNER_FIRST',
-        originType: envelopeData.originType,
-        templateId: envelopeData.templateId,
-        templateVersion: envelopeData.templateVersion,
-        sourceKey: envelopeData.sourceKey || this.getTestSourceKey(),
-        metaKey: envelopeData.metaKey || `test-meta/${randomUUID()}.json`
-      })
-    });
-
-    const result = await createEnvelopeHandler(event) as any;
-    const response = JSON.parse(result.body);
-
-    if (result.statusCode !== 201) {
-      // Preserve the original error structure
-      const error = new Error(response.message);
-      (error as any).statusCode = result.statusCode;
-      (error as any).message = response.message;
-      throw error;
+    if (!this.envelopeOperations) {
+      throw new Error('WorkflowTestHelper not initialized. Call initialize() first.');
     }
-
-    return response.data;
+    return this.envelopeOperations.createEnvelope(envelopeData);
   }
 
   /**
@@ -214,18 +104,10 @@ export class WorkflowTestHelper {
     statusCode: number;
     data: any;
   }> {
-    const event = await this.makeAuthEvent({
-      pathParameters: { id: envelopeId },
-      body: JSON.stringify(updateData)
-    });
-    
-    const result = await updateEnvelopeHandler(event) as any;
-    const response = JSON.parse(result.body);
-    
-    return { 
-      statusCode: result.statusCode, 
-      data: response.data || response // For errors, response doesn't have 'data' field
-    };
+    if (!this.envelopeOperations) {
+      throw new Error('WorkflowTestHelper not initialized. Call initialize() first.');
+    }
+    return this.envelopeOperations.updateEnvelope(envelopeId, updateData);
   }
 
   /**
@@ -244,7 +126,10 @@ export class WorkflowTestHelper {
     statusCode: number;
     data: any;
   }> {
-    return this.updateEnvelope(envelopeId, metadata);
+    if (!this.envelopeOperations) {
+      throw new Error('WorkflowTestHelper not initialized. Call initialize() first.');
+    }
+    return this.envelopeOperations.updateMetadata(envelopeId, metadata);
   }
 
   /**
@@ -253,16 +138,7 @@ export class WorkflowTestHelper {
    * @returns Promise that resolves to array of signers
    */
   async getSignersFromDatabase(envelopeId: string): Promise<any[]> {
-    const { PrismaClient } = await import('@prisma/client');
-    const prisma = new PrismaClient();
-    
-    const signers = await prisma.envelopeSigner.findMany({
-      where: { envelopeId },
-      orderBy: { order: 'asc' }
-    });
-    
-    await prisma.$disconnect();
-    return signers;
+    return this.databaseHelper.getSignersFromDatabase(envelopeId);
   }
 
   /**
@@ -271,15 +147,7 @@ export class WorkflowTestHelper {
    * @returns Promise that resolves to envelope data
    */
   async getEnvelopeFromDatabase(envelopeId: string): Promise<any> {
-    const { PrismaClient } = await import('@prisma/client');
-    const prisma = new PrismaClient();
-    
-    const envelope = await prisma.signatureEnvelope.findUnique({
-      where: { id: envelopeId }
-    });
-    
-    await prisma.$disconnect();
-    return envelope;
+    return this.databaseHelper.getEnvelopeFromDatabase(envelopeId);
   }
 
   /**
@@ -299,32 +167,10 @@ export class WorkflowTestHelper {
       }>;
     }
   ): Promise<{ statusCode: number; data: any }> {
-    if (!this.testUser) {
-      throw new Error('Test user not initialized');
+    if (!this.envelopeOperations) {
+      throw new Error('WorkflowTestHelper not initialized. Call initialize() first.');
     }
-
-    const authToken = await generateTestJwtToken({
-      sub: this.testUser.userId,
-      email: this.testUser.email,
-      roles: [this.testUser.role]
-    });
-
-    const event = await createApiGatewayEvent({
-      pathParameters: { envelopeId },
-      body: options,
-      headers: {
-        'Authorization': `Bearer ${authToken}`,
-        'x-country': 'US' // Required for SendEnvelope security context
-      }
-    });
-
-    const result = await sendEnvelopeHandler(event) as any;
-    const response = JSON.parse(result.body);
-    
-    return {
-      statusCode: result.statusCode,
-      data: response.data // Access the actual data from ControllerFactory response
-    };
+    return this.envelopeOperations.sendEnvelope(envelopeId, options);
   }
 
   /**
@@ -333,32 +179,10 @@ export class WorkflowTestHelper {
    * @returns Get envelope response
    */
   async getEnvelope(envelopeId: string): Promise<{ statusCode: number; data: any }> {
-    if (!this.testUser) {
-      throw new Error('Test user not initialized');
+    if (!this.envelopeOperations) {
+      throw new Error('WorkflowTestHelper not initialized. Call initialize() first.');
     }
-
-    const authToken = await generateTestJwtToken({
-      sub: this.testUser.userId,
-      email: this.testUser.email,
-      roles: [this.testUser.role]
-    });
-
-    const event = await createApiGatewayEvent({
-      pathParameters: { id: envelopeId },
-      headers: {
-        'Authorization': `Bearer ${authToken}`,
-        'x-country': 'US',
-        'x-forwarded-for': '127.0.0.1'
-      }
-    });
-
-    const result = await getEnvelopeHandler(event) as any;
-    const response = JSON.parse(result.body);
-    
-    return {
-      statusCode: result.statusCode,
-      data: response.data || response
-    };
+    return this.envelopeOperations.getEnvelope(envelopeId);
   }
 
   /**
@@ -368,23 +192,10 @@ export class WorkflowTestHelper {
    * @returns Get envelope response
    */
   async getEnvelopeWithToken(envelopeId: string, invitationToken: string): Promise<{ statusCode: number; data: any }> {
-    const event = await createApiGatewayEvent({
-      pathParameters: { id: envelopeId },
-      queryStringParameters: { invitationToken },
-      headers: {
-        'x-country': 'US',
-        'x-forwarded-for': '127.0.0.1',
-        'user-agent': 'Test User Agent'
-      }
-    });
-
-    const result = await getEnvelopeHandler(event) as any;
-    const response = JSON.parse(result.body);
-    
-    return {
-      statusCode: result.statusCode,
-      data: response.data || response
-    };
+    if (!this.envelopeOperations) {
+      throw new Error('WorkflowTestHelper not initialized. Call initialize() first.');
+    }
+    return this.envelopeOperations.getEnvelopeWithToken(envelopeId, invitationToken);
   }
 
   /**
@@ -397,35 +208,10 @@ export class WorkflowTestHelper {
     limit: number;
     cursor?: string;
   }): Promise<{ statusCode: number; data: any }> {
-    if (!this.testUser) {
-      throw new Error('Test user not initialized');
+    if (!this.envelopeOperations) {
+      throw new Error('WorkflowTestHelper not initialized. Call initialize() first.');
     }
-
-    const authToken = await generateTestJwtToken({
-      sub: this.testUser.userId,
-      email: this.testUser.email,
-      roles: [this.testUser.role]
-    });
-
-    const event = await createApiGatewayEvent({
-      queryStringParameters: {
-        ...filters,
-        limit: filters.limit.toString()
-      },
-      headers: {
-        'Authorization': `Bearer ${authToken}`,
-        'x-country': 'US',
-        'x-forwarded-for': '127.0.0.1'
-      }
-    });
-
-    const result = await getEnvelopesByUserHandler(event) as any;
-    const response = JSON.parse(result.body);
-    
-    return {
-      statusCode: result.statusCode,
-      data: response.data || response
-    };
+    return this.envelopeOperations.getEnvelopesByUser(filters);
   }
 
   /**
@@ -434,16 +220,7 @@ export class WorkflowTestHelper {
    * @returns Array of audit events
    */
   async getAuditEventsFromDatabase(envelopeId: string): Promise<any[]> {
-    const { PrismaClient } = await import('@prisma/client');
-    const prisma = new PrismaClient();
-    
-    const auditEvents = await prisma.signatureAuditEvent.findMany({
-      where: { envelopeId },
-      orderBy: { createdAt: 'desc' }
-    });
-    
-    await prisma.$disconnect();
-    return auditEvents;
+    return this.databaseHelper.getAuditEventsFromDatabase(envelopeId);
   }
 
   /**
@@ -454,94 +231,7 @@ export class WorkflowTestHelper {
    * @returns Promise that resolves when verification is complete
    */
   async verifyAuditEvent(envelopeId: string, eventType: string, signerId?: string): Promise<void> {
-    const auditEvents = await this.getAuditEventsFromDatabase(envelopeId);
-    
-    const matchingEvent = auditEvents.find(event => 
-      event.eventType === eventType && 
-      (!signerId || event.signerId === signerId)
-    );
-    
-    if (!matchingEvent) {
-      throw new Error(`Audit event not found: ${eventType} for envelope ${envelopeId}`);
-    }
-    
-      // Verify audit event has required fields for external user access
-      if (eventType === 'DOCUMENT_ACCESSED') {
-        expect(matchingEvent.userId).toBeDefined(); // Should be email for external users
-        expect(matchingEvent.userEmail).toBeDefined();
-        expect(matchingEvent.ipAddress).toBeDefined();
-        expect(matchingEvent.userAgent).toBeDefined();
-        expect(matchingEvent.metadata).toBeDefined();
-        
-        const metadata = matchingEvent.metadata as any;
-        expect(metadata.accessType).toBe('EXTERNAL');
-        expect(metadata.invitationTokenId).toBeDefined();
-        expect(metadata.externalUserIdentifier).toBeDefined(); // email_fullName format
-      }
+    return this.auditHelper.verifyAuditEvent(envelopeId, eventType, signerId);
   }
 }
 
-/**
- * Test data factory for creating test data
- */
-export class TestDataFactory {
-  /**
-   * Create envelope data with defaults
-   * @param overrides - Optional overrides for the envelope data
-   * @returns Envelope data object
-   */
-  static createEnvelopeData(overrides?: Partial<{
-    title: string;
-    description: string;
-    signingOrderType: string;
-    originType: string;
-    templateId: string;
-    templateVersion: string;
-  }>): {
-    title: string;
-    description: string;
-    signingOrderType: string;
-    originType: string;
-    templateId?: string;
-    templateVersion?: string;
-  } {
-    return {
-      title: 'Test Envelope',
-      description: 'Test Description',
-      signingOrderType: 'OWNER_FIRST',
-      originType: 'USER_UPLOAD',
-      ...overrides
-    };
-  }
-
-  /**
-   * Create signer data with defaults
-   * @param overrides - Optional overrides for the signer data
-   * @returns Signer data object
-   */
-  static createSignerData(overrides?: Partial<SignerData>): SignerData {
-    return {
-      email: `signer${randomUUID().substring(0, 8)}@example.com`,
-      fullName: 'Test Signer',
-      isExternal: true,
-      order: 1,
-      ...overrides
-    };
-  }
-
-  /**
-   * Create multiple signers for testing
-   * @param count - Number of signers to create
-   * @param baseOrder - Starting order number
-   * @returns Array of signer data objects
-   */
-  static createMultipleSigners(count: number, baseOrder: number = 1): SignerData[] {
-    return Array.from({ length: count }, (_, index) => 
-      this.createSignerData({
-        email: `signer${index + 1}@example.com`,
-        fullName: `Signer ${index + 1}`,
-        order: baseOrder + index
-      })
-    );
-  }
-}

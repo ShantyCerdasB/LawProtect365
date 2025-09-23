@@ -102,7 +102,8 @@ export const updateEnvelopeHandler = ControllerFactory.createCommand({
               fullName: signer.getFullName(),
               isExternal: signer.getIsExternal(),
               order: signer.getOrder(),
-              status: signer.getStatus() // getStatus() returns SignerStatus enum directly
+              status: signer.getStatus(), // getStatus() returns SignerStatus enum directly
+              userId: signer.getUserId() // ✅ AGREGAR: userId para tracking de external users
             };
           })
         })

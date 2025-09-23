@@ -12,7 +12,83 @@
  * - Complete envelope and signer information retrieval
  */
 
-import { WorkflowTestHelper, TestDataFactory } from '../helpers/workflowHelpers';
+import { WorkflowTestHelper } from '../helpers/workflowHelpers';
+import { TestDataFactory } from '../helpers/testDataFactory';
+
+// ✅ MOCK LOCAL DEL SIGNATURE ORCHESTRATOR (MISMO PATRÓN QUE TESTS QUE PASAN)
+jest.mock('../../../src/services/SignatureOrchestrator', () => {
+  const actual = jest.requireActual('../../../src/services/SignatureOrchestrator');
+  return {
+    ...actual,
+    SignatureOrchestrator: jest.fn().mockImplementation((...args) => {
+      const instance = new actual.SignatureOrchestrator(...args);
+      
+      // Mock the publishNotificationEvent method
+      instance.publishNotificationEvent = jest.fn().mockImplementation(async (envelopeId: any, options: any, tokens: any[]) => {
+        console.log('🔧 Mocked publishNotificationEvent called:', {
+          envelopeId: envelopeId?.getValue?.() || envelopeId,
+          options,
+          tokensCount: tokens?.length || 0
+        });
+        
+        // Register invitation in outboxMock for verification
+        const { outboxMockHelpers } = require('../mocks');
+        const envelopeIdStr = envelopeId?.getValue?.() || envelopeId;
+        
+        // Simulate invitation registration for each token
+        for (const token of tokens || []) {
+          const signerId = token.signerId?.getValue?.() || token.signerId;
+          if (signerId) {
+            // Access the internal Maps directly from the outboxMock module
+            const outboxMockModule = require('../mocks/aws/outboxMock');
+            
+            // Get the internal Maps (they are defined at module level)
+            const invitationHistory = outboxMockModule.invitationHistory || new Map();
+            const publishedEvents = outboxMockModule.publishedEvents || new Map();
+            
+            // Initialize tracking for this envelope if not exists
+            if (!invitationHistory.has(envelopeIdStr)) {
+              invitationHistory.set(envelopeIdStr, new Set());
+            }
+            
+            if (!publishedEvents.has(envelopeIdStr)) {
+              publishedEvents.set(envelopeIdStr, []);
+            }
+            
+            // Register invitation (allow duplicates for re-send scenarios)
+            invitationHistory.get(envelopeIdStr).add(signerId);
+            
+            // Register event
+            publishedEvents.get(envelopeIdStr).push({
+              type: 'ENVELOPE_INVITATION',
+              payload: {
+                envelopeId: envelopeIdStr,
+                signerId: signerId,
+                eventType: 'ENVELOPE_INVITATION',
+                message: options.message || 'You have been invited to sign a document'
+              },
+              detail: {
+                envelopeId: envelopeIdStr,
+                signerId: signerId,
+                eventType: 'ENVELOPE_INVITATION',
+                message: options.message || 'You have been invited to sign a document'
+              },
+              id: `mock-${Date.now()}-${Math.random()}`,
+              timestamp: new Date().toISOString()
+            });
+            
+            console.log('✅ Mocked invitation registered:', { envelopeId: envelopeIdStr, signerId });
+          }
+        }
+        
+        console.log('✅ Mocked publishNotificationEvent completed successfully');
+        return Promise.resolve();
+      });
+      
+      return instance;
+    })
+  };
+});
 
 describe('Get Envelope Workflow', () => {
   let workflowHelper: WorkflowTestHelper;
@@ -86,7 +162,8 @@ describe('Get Envelope Workflow', () => {
     });
 
     it('should fail when owner tries to access non-existent envelope', async () => {
-      const nonExistentId = '00000000-0000-0000-0000-000000000000';
+      const { TestUtils } = await import('../../helpers/testUtils');
+      const nonExistentId = TestUtils.generateUuid(); // Generate a valid UUID that doesn't exist
       
       const getResponse = await workflowHelper.getEnvelope(nonExistentId);
 
@@ -116,32 +193,40 @@ describe('Get Envelope Workflow', () => {
         addSigners: [externalSigner]
       });
 
-      // Send envelope to generate invitation token
-      await workflowHelper.sendEnvelope(envelope.id, {
-        sendToAll: true,
-        message: 'Please sign this document'
-      });
-
-      // Get invitation token from database
+      // Create a test invitation token directly in database
       const { PrismaClient } = await import('@prisma/client');
+      const { sha256Hex } = await import('@lawprotect/shared-ts');
+      const { TestUtils } = await import('../../helpers/testUtils');
       const prisma = new PrismaClient();
       
-      const invitationToken = await prisma.invitationToken.findFirst({
-        where: { 
+      // Create a unique test token for this test execution
+      const testToken = `test-token-${TestUtils.generateUuid()}`;
+      const testTokenHash = sha256Hex(testToken);
+      
+      const invitationToken = await prisma.invitationToken.create({
+        data: {
+          id: TestUtils.generateUuid(), // ✅ Use TestUtils.generateUuid()
           envelopeId: envelope.id,
-          signerId: addSignerResponse.data.signers[0].id
+          signerId: addSignerResponse.data.signers[0].id,
+          tokenHash: testTokenHash,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+          createdBy: TestUtils.generateUuid(), // ✅ Use TestUtils.generateUuid()
+          ipAddress: '127.0.0.1',
+          userAgent: 'Test User Agent',
+          country: 'US',
+          status: 'ACTIVE'
         }
       });
       
       await prisma.$disconnect();
 
       expect(invitationToken).toBeDefined();
-      expect(invitationToken?.tokenHash).toBeDefined();
+      expect(invitationToken.tokenHash).toBe(testTokenHash);
 
-      // Get envelope as external user
+      // Get envelope as external user using the original token
       const getResponse = await workflowHelper.getEnvelopeWithToken(
         envelope.id, 
-        invitationToken!.tokenHash
+        testToken  // ✅ Use original token, not hash
       );
 
       expect(getResponse.statusCode).toBe(200);
@@ -162,6 +247,29 @@ describe('Get Envelope Workflow', () => {
         })
       );
 
+      // Configure envelope metadata (required before adding signers)
+      const updateResponse = await workflowHelper.updateMetadata(envelope.id, {
+        title: 'Updated Audit Event Test',
+        description: 'Updated description for audit event test',
+        expiresAt: new Date('2024-12-31T23:59:59Z').toISOString()
+      });
+
+      expect(updateResponse.statusCode).toBe(200);
+      expect(updateResponse.data.title).toBe('Updated Audit Event Test');
+
+      // Update S3 keys (required before adding signers)
+      const newSourceKey = `test-documents/audit-test-${Date.now()}.pdf`;
+      const newMetaKey = `test-meta/audit-test-${Date.now()}.json`;
+      
+      const s3UpdateResponse = await workflowHelper.updateMetadata(envelope.id, {
+        sourceKey: newSourceKey,
+        metaKey: newMetaKey
+      });
+
+      expect(s3UpdateResponse.statusCode).toBe(200);
+      expect(s3UpdateResponse.data.sourceKey).toBe(newSourceKey);
+      expect(s3UpdateResponse.data.metaKey).toBe(newMetaKey);
+
       const externalSigner = TestDataFactory.createSignerData({
         email: 'audit.test@example.com',
         fullName: 'Audit Test User',
@@ -172,29 +280,40 @@ describe('Get Envelope Workflow', () => {
       const addSignerResponse = await workflowHelper.updateEnvelope(envelope.id, {
         addSigners: [externalSigner]
       });
+      
+      console.log('🔍 addSignerResponse:', {
+        statusCode: addSignerResponse.statusCode,
+        success: addSignerResponse.data?.success,
+        signersCount: addSignerResponse.data?.signers?.length
+      });
 
       // Send envelope to generate invitation token
-      await workflowHelper.sendEnvelope(envelope.id, {
+      console.log('🔍 About to call sendEnvelope...');
+      const sendResponse = await workflowHelper.sendEnvelope(envelope.id, {
         sendToAll: true
       });
-
-      // Get invitation token
-      const { PrismaClient } = await import('@prisma/client');
-      const prisma = new PrismaClient();
       
-      const invitationToken = await prisma.invitationToken.findFirst({
-        where: { 
-          envelopeId: envelope.id,
-          signerId: addSignerResponse.data.signers[0].id
-        }
+      console.log('🔍 sendResponse:', {
+        statusCode: sendResponse.statusCode,
+        success: sendResponse.data?.success,
+        tokensGenerated: sendResponse.data?.tokensGenerated,
+        tokensLength: sendResponse.data?.tokens?.length
       });
-      
-      await prisma.$disconnect();
+
+      // Verify send was successful
+      expect(sendResponse.statusCode).toBe(200);
+      expect(sendResponse.data.success).toBe(true);
+      expect(sendResponse.data.tokensGenerated).toBe(1);
+
+      // Get the token from the send response
+      expect(sendResponse.data.tokens).toBeDefined();
+      expect(sendResponse.data.tokens).toHaveLength(1);
+      const invitationToken = sendResponse.data.tokens[0].token;
 
       // Get envelope as external user (this should create audit event)
       const getResponse = await workflowHelper.getEnvelopeWithToken(
         envelope.id, 
-        invitationToken!.tokenHash
+        invitationToken  // ✅ Use token from sendEnvelope response
       );
 
       expect(getResponse.statusCode).toBe(200);

@@ -16,7 +16,8 @@
  * Other handlers (GetEnvelope, SignDocument, etc.) are commented out until implementation.
  */
 
-import { WorkflowTestHelper, TestDataFactory } from '../helpers/workflowHelpers';
+import { WorkflowTestHelper } from '../helpers/workflowHelpers';
+import { TestDataFactory } from '../helpers/testDataFactory';
 import { 
   verifyInvitationHistory, 
   verifyNoDuplicateInvitations, 

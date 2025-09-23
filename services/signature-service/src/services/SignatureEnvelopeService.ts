@@ -533,7 +533,12 @@ export class SignatureEnvelopeService {
 
       return envelope;
     } catch (error) {
-      if (error instanceof Error && error.message.includes('access')) {
+      // Preserve specific error types (404, 403, etc.)
+      if (error instanceof Error && (
+        error.message.includes('access') || 
+        error.message.includes('not found') ||
+        error.message.includes('Envelope with ID')
+      )) {
         throw error;
       }
       throw envelopeAccessDenied(
@@ -551,8 +556,10 @@ export class SignatureEnvelopeService {
    */
   async validateExternalUserAccess(envelopeId: EnvelopeId, invitationToken: string): Promise<SignatureEnvelope> {
     try {
+      
       // Validate invitation token
       const token = await this.invitationTokenService.validateInvitationToken(invitationToken);
+      
       
       // Verify token is for this envelope
       if (token.getEnvelopeId().getValue() !== envelopeId.getValue()) {
@@ -567,9 +574,18 @@ export class SignatureEnvelopeService {
 
       return envelope;
     } catch (error) {
-      if (error instanceof Error && error.message.includes('access')) {
-        throw error;
+      // Preserve original token validation errors (401 Unauthorized)
+      if (error && typeof error === 'object' && 'code' in error) {
+        const errorCode = (error as any).code;
+        if (errorCode === 'INVITATION_TOKEN_INVALID' || 
+            errorCode === 'INVITATION_TOKEN_EXPIRED' ||
+            errorCode === 'INVITATION_TOKEN_ALREADY_USED' ||
+            errorCode === 'INVITATION_TOKEN_REVOKED') {
+          throw error; // Preserve original 401/409 errors
+        }
       }
+      
+      // Only wrap non-token errors in envelopeAccessDenied (403)
       throw envelopeAccessDenied(
         `Failed to validate external user access to envelope ${envelopeId.getValue()}: ${error instanceof Error ? error.message : error}`
       );

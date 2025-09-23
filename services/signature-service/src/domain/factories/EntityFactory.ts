@@ -6,7 +6,6 @@
  * It follows the Abstract Factory pattern to create different types of entities based on input data.
  */
 
-import * as crypto from 'crypto';
 import { EnvelopeId } from '../value-objects/EnvelopeId';
 import { SignerId } from '../value-objects/SignerId';
 import { InvitationTokenId } from '../value-objects/InvitationTokenId';
@@ -110,7 +109,7 @@ export abstract class EntityFactory {
     
     // ✅ External users NO tienen userId (null), Internal users SÍ tienen userId
     const userId = data.isExternal 
-      ? null  // External users no van en la tabla User
+      ? null  // ✅ null explícito para external users
       : (data.userId || null);  // Internal users deben tener userId
     
     return new EnvelopeSigner(
@@ -271,20 +270,4 @@ export abstract class EntityFactory {
     signingOrder: (type: string): SigningOrder => SigningOrder.fromString(type)
   };
 
-  /**
-   * Generates a unique userId for external users based on email and fullName
-   * @param email - The external user's email
-   * @param fullName - The external user's full name
-   * @returns Unique UUID string identifier for external user
-   */
-  static generateExternalUserId(email: string, fullName: string): string {
-    const normalizedEmail = email.toLowerCase().trim();
-    const normalizedName = fullName.toLowerCase().trim().replace(/\s+/g, '_');
-    const hash = crypto.createHash('sha256')
-      .update(`${normalizedEmail}_${normalizedName}`)
-      .digest('hex');
-    
-    // Convert to valid UUID format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-    return `${hash.substring(0,8)}-${hash.substring(8,12)}-${hash.substring(12,16)}-${hash.substring(16,20)}-${hash.substring(20,32)}`;
-  }
 }

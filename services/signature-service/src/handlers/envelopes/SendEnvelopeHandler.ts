@@ -117,7 +117,8 @@ export const sendEnvelopeHandler = ControllerFactory.createCommand({
       envelopeId: result.envelopeId,
       status: result.status,
       tokensGenerated: result.tokensGenerated,
-      signersNotified: result.signersNotified
+      signersNotified: result.signersNotified,
+      tokens: result.tokens // ✅ Incluir tokens para tests
     };
   },
   

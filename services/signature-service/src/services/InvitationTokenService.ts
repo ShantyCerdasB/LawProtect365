@@ -24,6 +24,17 @@ import {
 import { randomToken, sha256Hex } from '@lawprotect/shared-ts';
 
 /**
+ * Result of invitation token generation containing both the original token and entity
+ */
+export interface InvitationTokenResult {
+  token: string;           // Original token for frontend use
+  entity: InvitationToken; // Complete entity for audit and tracking
+  signerId: string;
+  email?: string;
+  expiresAt: Date;
+}
+
+/**
  * InvitationTokenService implementation
  * 
  * Provides business logic for invitation token operations including generation, validation,
@@ -45,7 +56,7 @@ export class InvitationTokenService {
    * @param envelopeId - The envelope ID
    * @param securityContext - Security context from middleware
    * @param actorEmail - Email of the actor (optional, for owner-only scenarios)
-   * @returns Array of created invitation tokens
+   * @returns Array of invitation token results containing both original token and entity
    */
   async generateInvitationTokensForSigners(
     signers: EnvelopeSigner[],
@@ -57,9 +68,9 @@ export class InvitationTokenService {
       country?: string;
     },
     actorEmail?: string
-  ): Promise<InvitationToken[]> {
+  ): Promise<InvitationTokenResult[]> {
     try {
-      const tokens: InvitationToken[] = [];
+      const results: InvitationTokenResult[] = [];
       
       for (const signer of signers) {
         // Skip token generation for owner-only scenarios (actor signing themselves)
@@ -112,10 +123,17 @@ export class InvitationTokenService {
           }
         );
 
-        tokens.push(createdToken);
+        // Add result with both original token and entity
+        results.push({
+          token,                    // ✅ Original token for frontend use
+          entity: createdToken,     // Complete entity for audit and tracking
+          signerId: signer.getId().getValue(),
+          email: signer.getEmail()?.getValue(),
+          expiresAt: expiresAt
+        });
       }
 
-      return tokens;
+      return results;
     } catch (error) {
       throw invitationTokenInvalid(
         `Failed to generate invitation tokens: ${error instanceof Error ? error.message : error}`

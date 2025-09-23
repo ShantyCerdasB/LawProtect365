@@ -377,6 +377,9 @@ export class InvitationTokenRepository extends RepositoryBase<InvitationToken, I
     try {
       // Hash the token to search in database
       const tokenHash = this.hashToken(token);
+      
+      // ✅ AGREGAR LOGGING PARA DEBUG
+      
       return await this.findByTokenHash(tokenHash);
     } catch (error) {
       console.error('Failed to get invitation token by token', {

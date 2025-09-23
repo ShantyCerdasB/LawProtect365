@@ -16,7 +16,8 @@
  * Other handlers (SendEnvelope, SignDocument, etc.) are commented out until implementation.
  */
 
-import { WorkflowTestHelper, TestDataFactory } from '../helpers/workflowHelpers';
+import { WorkflowTestHelper } from '../helpers/workflowHelpers';
+import { TestDataFactory } from '../helpers/testDataFactory';
 
 describe('Multi-Signer Document Signing Workflow', () => {
   let workflowHelper: WorkflowTestHelper;

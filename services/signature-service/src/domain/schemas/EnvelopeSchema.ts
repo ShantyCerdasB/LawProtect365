@@ -5,8 +5,9 @@
  * operations including creation, updates, and status transitions.
  */
 
-import { z, UuidV4, NonEmptyStringSchema, JsonObjectSchema, EnvelopeStatus, SigningOrderType, DocumentOriginType, EnvelopeSortBy, SortOrder } from '@lawprotect/shared-ts';
+import { z, UuidV4, NonEmptyStringSchema, JsonObjectSchema, SigningOrderType, DocumentOriginType, EnvelopeSortBy, SortOrder } from '@lawprotect/shared-ts';
 import { SignerDataSchema } from './CommonSchemas';
+import { EnvelopeStatus } from '../value-objects/EnvelopeStatus';
 
 /**
  * Schema for creating a new envelope with signers
@@ -88,9 +89,9 @@ export const EnvelopeIdSchema = z.object({
 });
 
 /**
- * Schema for envelope status
+ * Schema for envelope status - converts string to EnvelopeStatus value object
  */
-export const EnvelopeStatusSchema = z.nativeEnum(EnvelopeStatus);
+export const EnvelopeStatusSchema = z.string().transform(val => EnvelopeStatus.fromString(val));
 
 /**
  * Schema for envelope query parameters
@@ -117,9 +118,15 @@ export const GetEnvelopeQuerySchema = z.object({
  */
 export const GetEnvelopesByUserQuerySchema = z.object({
   status: EnvelopeStatusSchema.optional(),
-  limit: z.number().min(1).max(100), // Requerido por el frontend
+  limit: z.union([z.string(), z.number()])
+    .transform(val => typeof val === 'string' ? parseInt(val, 10) : val)
+    .pipe(z.number().min(1).max(100))
+    .optional(), // ✅ Hacer opcional para permitir que se omita del query string
   cursor: z.string().optional(),
   includeSigners: z.string().optional().transform(val => val !== 'false') // Default true
+}).refine(data => data.limit !== undefined && data.limit !== null, {
+  message: "Pagination limit is required",
+  path: ["limit"]
 });
 
 /**

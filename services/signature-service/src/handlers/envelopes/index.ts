@@ -10,4 +10,4 @@ export * from './UpdateEnvelopeHandler';
 export * from './GetEnvelopeHandler';
 export * from './DeleteEnvelopeHandler';
 export * from './SendEnvelopeHandler';
-export * from './DownloadSignedDocumentHandler';
+export * from './DownloadDocumentHandler';

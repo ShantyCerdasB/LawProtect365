@@ -72,13 +72,6 @@ export const getEnvelopeHandler = ControllerFactory.createQuery({
           params.securityContext
         );
       } catch (error) {
-        console.error('❌ GetEnvelopeHandler.execute ERROR:', {
-          error: error instanceof Error ? error.message : error,
-          stack: error instanceof Error ? error.stack : undefined,
-          envelopeId: params.envelopeId?.getValue(),
-          userId: params.userId,
-          hasInvitationToken: !!params.invitationToken
-        });
         throw error;
       }
     }
@@ -87,13 +80,9 @@ export const getEnvelopeHandler = ControllerFactory.createQuery({
   // Parameter extraction - transforms HTTP request to domain parameters
   extractParams: (path: any, _body: any, query: any, context: any) => ({
     envelopeId: EnvelopeId.fromString(path.id),
-    userId: context.auth?.userId, // Puede ser undefined para external users
+    userId: context.auth?.userId === 'external-user' ? undefined : context.auth?.userId, // ✅ Distinguir entre usuarios reales y external users
     invitationToken: query.invitationToken, // Para external users
-    securityContext: context.auth ? {
-      ipAddress: context.auth.ipAddress,
-      userAgent: context.auth.userAgent,
-      country: context.auth.country
-    } : undefined
+    securityContext: context.securityContext // ✅ Usar securityContext del middleware
   }),
   
   // Response configuration
@@ -154,7 +143,7 @@ export const getEnvelopeHandler = ControllerFactory.createQuery({
   },
   
   // Security configuration
-  requireAuth: false, // Permite acceso sin auth para external users
-  requiredRoles: [], // No requiere roles específicos
+  requireAuth: true, // ✅ Permite tanto usuarios autenticados como external users con invitation tokens
+  requiredRoles: undefined, // No requiere roles específicos
   includeSecurityContext: true
 });

@@ -27,69 +27,8 @@ export const publishedEvents = new Map<string, any[]>();
  * with duplicate invitation prevention. The mock tracks invitation history per envelope
  * and prevents duplicate invitations to the same signer.
  */
-jest.mock('@lawprotect/shared-ts', () => {
-  const actual = jest.requireActual('@lawprotect/shared-ts');
-  
-  return {
-    ...actual,
-    OutboxRepository: jest.fn().mockImplementation(() => {
-      return {
-    save: jest.fn().mockImplementation((record: any, id: string) => {
-      // Handle OutboxRecord structure (from makeEvent)
-      let envelopeId: string | undefined;
-      let signerId: string | undefined;
-      let eventType: string | undefined;
-
-      if (record?.payload) {
-        // New structure: data is in record.payload
-        envelopeId = record.payload.envelopeId;
-        signerId = record.payload.signerId;
-        eventType = record.type; // Event type is in record.type
-      } else if (record?.detail) {
-        // Old structure: data is in record.detail (fallback)
-        envelopeId = record.detail.envelopeId;
-        signerId = record.detail.signerId;
-        eventType = record.detail.eventType;
-      } else {
-        return Promise.resolve();
-      }
-      
-      if (!envelopeId || !signerId) {
-        return Promise.resolve();
-      }
-      
-      // Initialize tracking for this envelope if not exists
-      if (!invitationHistory.has(envelopeId)) {
-        invitationHistory.set(envelopeId, new Set());
-      }
-      
-      if (!publishedEvents.has(envelopeId)) {
-        publishedEvents.set(envelopeId, []);
-      }
-      
-      // Track invitation (allow duplicates for re-send scenarios)
-      if (eventType === 'ENVELOPE_INVITATION') {
-        invitationHistory.get(envelopeId)!.add(signerId);
-      }
-      
-      // Track all events
-      publishedEvents.get(envelopeId)!.push({
-        ...record,
-        id,
-        timestamp: new Date().toISOString()
-      });
-      
-      return Promise.resolve();
-    }),
-    
-    markAsDispatched: jest.fn().mockResolvedValue(undefined),
-    markAsFailed: jest.fn().mockResolvedValue(undefined),
-    getPendingEvents: jest.fn().mockResolvedValue([]),
-    deleteEvent: jest.fn().mockResolvedValue(undefined)
-      };
-    })
-  };
-});
+// ✅ MOCK DEL OUTBOX REPOSITORY (PATRÓN SIMPLIFICADO)
+// Nota: Este mock se aplicará solo cuando se use localmente en los tests
 
 /**
  * Helper functions for test verification

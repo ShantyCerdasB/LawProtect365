@@ -31,7 +31,6 @@ import {
 export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelope, EnvelopeId, EnvelopeSpec> {
   private static readonly PAGINATION_OFFSET = 1;
   private static readonly SLICE_START_INDEX = 0;
-  private static readonly SLICE_LAST_INDEX = -1;
   private static readonly MIN_COUNT_THRESHOLD = 0;
   
   constructor(protected readonly prisma: PrismaClient) {
@@ -308,7 +307,7 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
 
       const items = envelopes.slice(SignatureEnvelopeRepository.SLICE_START_INDEX, limit).map((envelope: any) => this.toDomain(envelope));
       const nextCursor = envelopes.length > limit ? 
-        RepositoryFactory.createCursor(envelopes[limit + SignatureEnvelopeRepository.SLICE_LAST_INDEX], ['id']) : 
+        RepositoryFactory.createCursor(envelopes[limit], ['id']) : 
         undefined;
 
       return { items, nextCursor };
@@ -396,15 +395,29 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
     const whereClause: any = { createdBy: userId };
     
     if (cursor) {
-      const cursorData = RepositoryFactory.decodeCursor<{ id: string }>(cursor);
-      if (cursorData?.id) {
-        whereClause.id = { lt: cursorData.id };
+      const cursorData = RepositoryFactory.decodeCursor<{ createdAt: string; id: string }>(cursor);
+      if (cursorData?.createdAt && cursorData?.id) {
+        // With DESC order: createdAt DESC, id DESC
+        // Get elements that are "before" the cursor in the sort order
+        // This means: createdAt < cursorDate OR (createdAt = cursorDate AND id < cursorId)
+        whereClause.OR = [
+          { createdAt: { lt: new Date(cursorData.createdAt) } },
+          {
+            AND: [
+              { createdAt: new Date(cursorData.createdAt) },
+              { id: { lt: cursorData.id } }
+            ]
+          }
+        ];
       }
     }
 
     const envelopes = await client.signatureEnvelope.findMany({
       where: whereClause,
-      orderBy: { createdAt: 'desc' },
+      orderBy: [
+        { createdAt: 'desc' },
+        { id: 'desc' } // Secondary sort for deterministic ordering
+      ],
       take: limit + 1,
       include: {
         signers: {
@@ -416,7 +429,7 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
     return RepositoryFactory.createPage(
       envelopes,
       limit,
-      (envelope: any) => RepositoryFactory.createCursor(envelope, ['id'])
+      (envelope: any) => RepositoryFactory.createCursor(envelope, ['createdAt', 'id'])
     );
   }
 

@@ -48,6 +48,16 @@ function extractInvitationTokenFromBody(body: any): string | null {
 }
 
 /**
+ * Extracts invitation token from query parameters
+ */
+function extractInvitationTokenFromQuery(query: any): string | null {
+  if (query?.invitationToken && typeof query.invitationToken === 'string') {
+    return query.invitationToken;
+  }
+  return null;
+}
+
+/**
  * JWT Authentication middleware
  * 
  * This middleware only handles JWT token verification and creates authentication context.
@@ -66,9 +76,10 @@ export const withJwtAuth = (opts: JwtVerifyOptions = {}): BeforeMiddleware => {
       );
 
 
-      // Step 1.5: Check for invitation token in request body if no JWT token
+      // Step 1.5: Check for invitation token in request body or query parameters if no JWT token
       if (!token) {
-        const invitationToken = extractInvitationTokenFromBody(evt.body);
+        const invitationToken = extractInvitationTokenFromBody(evt.body) || 
+                               extractInvitationTokenFromQuery(evt.queryStringParameters);
         if (invitationToken) {
           
           // Create auth context for invitation token

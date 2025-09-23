@@ -13,7 +13,8 @@
  */
 
 import { randomUUID } from 'crypto';
-import { WorkflowTestHelper, TestDataFactory } from '../helpers/workflowHelpers';
+import { WorkflowTestHelper } from '../helpers/workflowHelpers';
+import { TestDataFactory } from '../helpers/testDataFactory';
 
 describe('Envelope Validation Edge Cases', () => {
   let workflowHelper: WorkflowTestHelper;

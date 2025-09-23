@@ -45,6 +45,30 @@ async function main() {
       role: testUser.role
     });
 
+    // Create second test user for security testing
+    const testUser2 = await prisma.user.upsert({
+      where: { email: 'test2@example.com' },
+      update: {
+        // Update existing user if found
+        name: 'Test User 2',
+        role: UserRole.ADMIN,
+        updatedAt: new Date()
+      },
+      create: {
+        id: '660e8400-e29b-41d4-a716-446655440001', // Valid UUID for second test user
+        email: 'test2@example.com',
+        name: 'Test User 2',
+        role: UserRole.ADMIN
+      }
+    });
+
+    console.log('✅ Second test user created/updated:', {
+      id: testUser2.id,
+      email: testUser2.email,
+      name: testUser2.name,
+      role: testUser2.role
+    });
+
     // Note: External users are NOT stored in the User table
     // They are handled separately as EnvelopeSigner entities with isExternal=true
 

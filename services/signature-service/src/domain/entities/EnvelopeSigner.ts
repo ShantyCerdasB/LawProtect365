@@ -66,7 +66,7 @@ export class EnvelopeSigner {
     return new EnvelopeSigner(
       SignerId.fromString(data.id),
       EnvelopeId.fromString(data.envelopeId),
-      data.userId,
+      data.userId || null, // ✅ Convertir undefined a null para external users
       data.isExternal,
       Email.fromStringOrUndefined(data.email),
       data.fullName,
