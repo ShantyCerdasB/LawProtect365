@@ -54,12 +54,9 @@ jest.mock('@lawprotect/shared-ts', () => ({
   ...jest.requireActual('@lawprotect/shared-ts'),
   S3EvidenceStorage: jest.fn().mockImplementation(() => ({
     headObject: jest.fn().mockImplementation(async (bucket: string, key: string) => {
-      console.log('🔍 S3EvidenceStorage.headObject called with:', { bucket, key });
-      
       // Check if object exists in memory first
       if (bucketStorage.has(bucket) && bucketStorage.get(bucket)!.has(key)) {
         const contentLength = bucketStorage.get(bucket)!.get(key)!.length;
-        console.log('🔍 Object found in memory:', { key, exists: true });
         return {
           exists: true,
           size: contentLength,
@@ -73,7 +70,6 @@ jest.mock('@lawprotect/shared-ts', () => ({
       try {
         const filePath = getObjectPath(bucket, key);
         const stats = await fs.stat(filePath);
-        console.log('🔍 Object found on disk:', { key, exists: true });
         return {
           exists: true,
           size: stats.size,
@@ -86,7 +82,6 @@ jest.mock('@lawprotect/shared-ts', () => ({
         // BUT only if they don't contain "non-existent" in the key
         if ((key.startsWith('test-documents/') || key.startsWith('test-meta/')) && 
             !key.includes('non-existent')) {
-          console.log('🔍 Simulating existing document:', { key, exists: true });
           return {
             exists: true,
             size: 1024, // Simulate 1KB file
@@ -97,7 +92,6 @@ jest.mock('@lawprotect/shared-ts', () => ({
         }
         
         // Object not found - return exists: false
-        console.log('🔍 Object not found:', { key, exists: false });
         return {
           exists: false
         };
@@ -246,7 +240,6 @@ jest.mock('@aws-sdk/client-s3', () => ({
       if (commandName === 'HeadObjectCommand') {
         const { Bucket, Key } = input;
         
-        console.log('🔍 DEBUG: HeadObjectCommand called with:', { Bucket, Key });
         
         if (!Bucket || !Key) {
           throw new Error('Bucket and Key are required for HeadObject');
@@ -277,7 +270,6 @@ jest.mock('@aws-sdk/client-s3', () => ({
           } as any;
         } catch (statError) {
           // Object not found - throw proper AWS error that S3EvidenceStorage will catch
-          console.log('🔍 DEBUG: Object not found, throwing NotFound error for:', Key);
           const notFoundError = new Error('NotFound') as any;
           notFoundError.name = 'NotFound';
           notFoundError.$metadata = { httpStatusCode: 404 };
@@ -330,23 +322,17 @@ jest.mock('@aws-sdk/client-s3', () => {
   
   return {
     S3Client: jest.fn().mockImplementation((config: any) => {
-      console.log('🔧 S3Client mock created with config:', config);
-      
       return {
         send: jest.fn().mockImplementation(async (command: any) => {
-          console.log('🔍 S3Client.send called with command:', command.name || command.constructor.name);
           
           // Handle HeadObjectCommand (used by headObject)
           if (command.name === 'HeadObjectCommand' || command.constructor.name === 'HeadObjectCommand') {
             const bucket = command.input.Bucket;
             const key = command.input.Key;
             
-            console.log('🔍 Mock S3Client: HeadObjectCommand for:', { bucket, key });
-            
             // Check if object exists in memory first
             if (bucketStorage.has(bucket) && bucketStorage.get(bucket)!.has(key)) {
               const contentLength = bucketStorage.get(bucket)!.get(key)!.length;
-              console.log('🔍 Mock S3Client: Object found in memory:', { key, exists: true });
               return {
                 ContentLength: contentLength,
                 ETag: `"${Buffer.from(key + Date.now()).toString('hex')}"`,
@@ -358,7 +344,6 @@ jest.mock('@aws-sdk/client-s3', () => {
             try {
               const filePath = getObjectPath(bucket, key);
               const stats = statSync(filePath);
-              console.log('🔍 Mock S3Client: Object found on disk:', { key, exists: true });
               return {
                 ContentLength: stats.size,
                 ETag: `"${Buffer.from(key + Date.now()).toString('hex')}"`,
@@ -369,7 +354,6 @@ jest.mock('@aws-sdk/client-s3', () => {
               // BUT only if they don't contain "non-existent" in the key
               if ((key.startsWith('test-documents/') || key.startsWith('test-meta/')) && 
                   !key.includes('non-existent')) {
-                console.log('🔍 Mock S3Client: Simulating existing document:', { key, exists: true });
                 return {
                   ContentLength: 1024,
                   ETag: `"${Buffer.from(key + Date.now()).toString('hex')}"`,
@@ -378,7 +362,6 @@ jest.mock('@aws-sdk/client-s3', () => {
               }
               
               // Object not found - throw NotFound error (S3EvidenceStorage expects "NotFound" name)
-              console.log('🔍 Mock S3Client: Object not found:', { key, exists: false });
               const error = new Error('NotFound');
               (error as any).name = 'NotFound';
               (error as any).$metadata = { httpStatusCode: 404 };
@@ -392,8 +375,6 @@ jest.mock('@aws-sdk/client-s3', () => {
             const key = command.input.Key;
             const body = command.input.Body;
             
-            console.log('🔍 Mock S3Client: PutObjectCommand for:', { bucket, key });
-            
             // Store object in memory
             if (!bucketStorage.has(bucket)) {
               bucketStorage.set(bucket, new Map());
@@ -405,9 +386,8 @@ jest.mock('@aws-sdk/client-s3', () => {
               const filePath = getObjectPath(bucket, key);
               await fs.mkdir(path.dirname(filePath), { recursive: true });
               await fs.writeFile(filePath, body);
-              console.log('🔍 Mock S3Client: Object stored on disk:', { key });
             } catch (writeError) {
-              console.log('⚠️ Mock S3Client: Failed to write to disk:', writeError);
+              // Ignore write errors
             }
             
             return {
@@ -417,7 +397,6 @@ jest.mock('@aws-sdk/client-s3', () => {
           }
           
           // Handle other commands
-          console.log('🔍 Mock S3Client: Handling command:', command.constructor.name);
           return { success: true };
         })
       };
@@ -432,4 +411,3 @@ jest.mock('@aws-sdk/client-s3', () => {
 });
 
 
-console.log('🔧 S3 mock loaded - realistic object storage with temporary file system');

@@ -90,32 +90,20 @@ export class EnvelopeSignerService {
    */
   async createSignersForEnvelope(envelopeId: EnvelopeId, signersData: CreateSignerData[]): Promise<EnvelopeSigner[]> {
     try {
-      console.log('🔍 EnvelopeSignerService.createSignersForEnvelope START:', {
-        envelopeId: envelopeId.getValue(),
-        signersCount: signersData.length
-      });
-      
       // Validate envelope exists
-      console.log('🔍 Validating envelope exists...');
       const envelope = await this.signatureEnvelopeRepository.findById(envelopeId);
       if (!envelope) {
         throw envelopeNotFound(`Envelope with ID ${envelopeId.getValue()} not found`);
       }
-      console.log('✅ Envelope exists:', envelope.getId().getValue());
 
       // Validate no duplicate emails
-      console.log('🔍 Validating no duplicate emails...');
       await this.validateNoDuplicateEmails(envelopeId, signersData);
-      console.log('✅ No duplicate emails found');
 
       // Create signers with proper order assignment
-      console.log('🔍 Creating signers...');
       const createdSigners: EnvelopeSigner[] = [];
       for (const signerData of signersData) {
-        console.log('🔍 Creating signer:', { email: signerData.email, fullName: signerData.fullName });
         const signer = await this.createSigner(signerData);
         createdSigners.push(signer);
-        console.log('✅ Signer created:', signer.getId().getValue());
       }
 
       // Create audit events for all signers
@@ -151,42 +139,20 @@ export class EnvelopeSignerService {
    */
   async createSigner(signerData: CreateSignerData): Promise<EnvelopeSigner> {
     try {
-      console.log('🔍 EnvelopeSignerService.createSigner START:', {
-        envelopeId: signerData.envelopeId.getValue(),
-        email: signerData.email,
-        fullName: signerData.fullName,
-        isExternal: signerData.isExternal
-      });
-      
       // Validate envelope exists
-      console.log('🔍 Validating envelope exists in createSigner...');
       const envelope = await this.signatureEnvelopeRepository.findById(signerData.envelopeId);
       if (!envelope) {
         throw envelopeNotFound(`Envelope with ID ${signerData.envelopeId.getValue()} not found`);
       }
-      console.log('✅ Envelope exists in createSigner:', envelope.getId().getValue());
 
       // Create signer entity using EntityFactory
-      console.log('🔍 Creating signer entity using EntityFactory...');
       const signer = EntityFactory.createEnvelopeSigner(signerData);
-      console.log('✅ Signer entity created:', signer.getId().getValue());
 
       // Save to repository
-      console.log('🔍 Saving signer to repository...');
       const savedSigner = await this.envelopeSignerRepository.create(signer);
-      console.log('✅ Signer saved to repository:', savedSigner.getId().getValue());
       
       return savedSigner;
     } catch (error) {
-      console.error('❌ EnvelopeSignerService.createSigner ERROR:', {
-        error: error instanceof Error ? error.message : error,
-        stack: error instanceof Error ? error.stack : undefined,
-        signerData: {
-          envelopeId: signerData.envelopeId.getValue(),
-          email: signerData.email,
-          fullName: signerData.fullName
-        }
-      });
       throw signerCreationFailed(
         `Failed to create signer: ${error instanceof Error ? error.message : error}`
       );

@@ -23,6 +23,12 @@ describe('Envelope Validation Edge Cases', () => {
     await workflowHelper.initialize();
   });
 
+  afterEach(() => {
+    // Clear mock data after each test to prevent interference
+    const { outboxMockHelpers } = require('../mocks');
+    outboxMockHelpers.clearAllMockData();
+  });
+
   describe('S3 Key Validation', () => {
     it('should fail when S3 keys do not exist', async () => {
       // Create envelope with valid S3 key

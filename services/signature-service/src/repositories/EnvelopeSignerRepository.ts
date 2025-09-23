@@ -182,15 +182,8 @@ export class EnvelopeSignerRepository extends RepositoryBase<EnvelopeSigner, Sig
    */
   async create(entity: EnvelopeSigner): Promise<EnvelopeSigner> {
     try {
-      console.log('🔍 EnvelopeSignerRepository.create START:', {
-        signerId: entity.getId().getValue(),
-        envelopeId: entity.getEnvelopeId().getValue(),
-        email: entity.getEmail()?.getValue(),
-        fullName: entity.getFullName()
-      });
       
       const modelData = this.toModel(entity) as any;
-      console.log('🔍 Model data prepared:', modelData);
       
       const created = await this.prisma.envelopeSigner.create({
         data: modelData,
@@ -199,10 +192,9 @@ export class EnvelopeSignerRepository extends RepositoryBase<EnvelopeSigner, Sig
           user: true
         }
       });
-      console.log('✅ Signer created in database:', created.id);
+
 
       const domainEntity = this.toDomain(created);
-      console.log('✅ Domain entity created:', domainEntity.getId().getValue());
       
       return domainEntity;
     } catch (error) {

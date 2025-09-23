@@ -44,4 +44,3 @@ jest.mock('@aws-sdk/client-eventbridge', () => ({
   CreateEventBusCommand: jest.fn().mockImplementation((input: any) => ({ input })),
 }));
 
-console.log('🔧 EventBridge mock loaded - realistic event publishing behavior');

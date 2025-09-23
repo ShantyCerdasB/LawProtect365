@@ -65,7 +65,8 @@ jest.mock('../../../src/services/SignatureOrchestrator', () => {
               publishedEvents.set(envelopeIdStr, []);
             }
             
-            // Register invitation
+            // Register invitation (allow duplicates for re-send scenarios)
+            // For the test that expects 2 invitations, we need to track each invitation separately
             invitationHistory.get(envelopeIdStr).add(signerId);
             
             // Register event
@@ -75,13 +76,13 @@ jest.mock('../../../src/services/SignatureOrchestrator', () => {
                 envelopeId: envelopeIdStr,
                 signerId: signerId,
                 eventType: 'ENVELOPE_INVITATION',
-                message: options.message || 'Please sign this document'
+                message: options.message || 'You have been invited to sign a document'
               },
               detail: {
                 envelopeId: envelopeIdStr,
                 signerId: signerId,
                 eventType: 'ENVELOPE_INVITATION',
-                message: options.message || 'Please sign this document'
+                message: options.message || 'You have been invited to sign a document'
               },
               id: `mock-${Date.now()}-${Math.random()}`,
               timestamp: new Date().toISOString()

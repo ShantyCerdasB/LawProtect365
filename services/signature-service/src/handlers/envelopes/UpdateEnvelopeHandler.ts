@@ -36,26 +36,14 @@ export const updateEnvelopeHandler = ControllerFactory.createCommand({
 
     try {
       // Use SignatureOrchestrator to update envelope
-      console.log('🔍 Calling signatureOrchestrator.updateEnvelope...');
       const result = await this.signatureOrchestrator.updateEnvelope(
         params.envelopeId,
         params.updateData,
         params.userId
       );
-      console.log('✅ signatureOrchestrator.updateEnvelope completed:', {
-        hasEnvelope: !!result.envelope,
-        hasSigners: !!result.signers,
-        signersCount: result.signers?.length || 0
-      });
 
       return result;
     } catch (error) {
-      console.error('❌ UpdateEnvelopeHandler.execute ERROR:', {
-        error: error instanceof Error ? error.message : error,
-        stack: error instanceof Error ? error.stack : undefined,
-        envelopeId: params.envelopeId?.getValue(),
-        updateData: params.updateData
-      });
       throw error;
     }
   }
@@ -82,11 +70,7 @@ export const updateEnvelopeHandler = ControllerFactory.createCommand({
   responseType: 'ok',
   transformResult: async (result: any) => {
     try {
-      console.log('🔍 UpdateEnvelopeHandler.transformResult START:', {
-        hasEnvelope: !!result.envelope,
-        hasSigners: !!result.signers,
-        signersCount: result.signers?.length || 0
-      });
+
       
       // Transform domain entities to API response format
       // Note: responseType: 'ok' automatically wraps in { data: ... }, so return the object directly
@@ -111,11 +95,7 @@ export const updateEnvelopeHandler = ControllerFactory.createCommand({
         // Signers opcionales - solo incluidos si se actualizaron
         ...(result.signers && {
           signers: result.signers.map((signer: any) => {
-            console.log('🔍 Transforming signer:', {
-              signerId: signer.getId().getValue(),
-              email: signer.getEmail()?.getValue(),
-              fullName: signer.getFullName()
-            });
+
             return {
               id: signer.getId().getValue(),
               email: signer.getEmail()?.getValue(),
@@ -127,12 +107,6 @@ export const updateEnvelopeHandler = ControllerFactory.createCommand({
           })
         })
       };
-      
-      console.log('✅ UpdateEnvelopeHandler.transformResult completed:', {
-        responseId: response.id,
-        hasSigners: !!response.signers,
-        signersCount: response.signers?.length || 0
-      });
       
       return response;
     } catch (error) {

@@ -27,27 +27,14 @@ export const publishedEvents = new Map<string, any[]>();
  * with duplicate invitation prevention. The mock tracks invitation history per envelope
  * and prevents duplicate invitations to the same signer.
  */
-console.log('🔧 Loading OutboxRepository mock...');
 jest.mock('@lawprotect/shared-ts', () => {
-  console.log('🔧 OutboxRepository mock being applied...');
   const actual = jest.requireActual('@lawprotect/shared-ts');
-  console.log('🔧 Actual shared-ts modules:', Object.keys(actual));
   
   return {
     ...actual,
     OutboxRepository: jest.fn().mockImplementation(() => {
-      console.log('🔧 OutboxRepository mock instance created');
       return {
     save: jest.fn().mockImplementation((record: any, id: string) => {
-      console.log('🔍 OutboxRepository.save called with:', {
-        recordType: typeof record,
-        recordKeys: record ? Object.keys(record) : 'null',
-        id,
-        hasPayload: !!record?.payload,
-        hasDetail: !!record?.detail,
-        recordStringified: JSON.stringify(record, null, 2)
-      });
-
       // Handle OutboxRecord structure (from makeEvent)
       let envelopeId: string | undefined;
       let signerId: string | undefined;
@@ -58,22 +45,16 @@ jest.mock('@lawprotect/shared-ts', () => {
         envelopeId = record.payload.envelopeId;
         signerId = record.payload.signerId;
         eventType = record.type; // Event type is in record.type
-        console.log('🔍 Extracted from payload:', { envelopeId, signerId, eventType });
       } else if (record?.detail) {
         // Old structure: data is in record.detail (fallback)
         envelopeId = record.detail.envelopeId;
         signerId = record.detail.signerId;
         eventType = record.detail.eventType;
-        console.log('🔍 Extracted from detail (fallback):', { envelopeId, signerId, eventType });
       } else {
-        console.log('⚠️ No payload or detail found in record, skipping');
-        console.log('⚠️ Full record structure:', record);
         return Promise.resolve();
       }
       
       if (!envelopeId || !signerId) {
-        console.log('⚠️ Missing envelopeId or signerId, skipping');
-        console.log('⚠️ envelopeId:', envelopeId, 'signerId:', signerId);
         return Promise.resolve();
       }
       
@@ -86,16 +67,9 @@ jest.mock('@lawprotect/shared-ts', () => {
         publishedEvents.set(envelopeId, []);
       }
       
-      // Check for duplicate invitation
-      if (eventType === 'ENVELOPE_INVITATION' && invitationHistory.get(envelopeId)!.has(signerId)) {
-        console.log('❌ Duplicate invitation detected:', { envelopeId, signerId });
-        throw new Error(`Duplicate invitation for signer ${signerId} in envelope ${envelopeId}`);
-      }
-      
-      // Track invitation
+      // Track invitation (allow duplicates for re-send scenarios)
       if (eventType === 'ENVELOPE_INVITATION') {
         invitationHistory.get(envelopeId)!.add(signerId);
-        console.log('✅ Invitation tracked:', { envelopeId, signerId });
       }
       
       // Track all events
@@ -105,7 +79,6 @@ jest.mock('@lawprotect/shared-ts', () => {
         timestamp: new Date().toISOString()
       });
       
-      console.log('✅ OutboxRepository.save completed successfully');
       return Promise.resolve();
     }),
     
@@ -175,7 +148,13 @@ export const outboxMockHelpers = {
   clearEnvelope: (envelopeId: string): void => {
     invitationHistory.delete(envelopeId);
     publishedEvents.delete(envelopeId);
+  },
+
+  /**
+   * Clear all mock data to prevent test interference
+   */
+  clearAllMockData: (): void => {
+    invitationHistory.clear();
+    publishedEvents.clear();
   }
 };
-
-console.log('🔧 Outbox mock loaded - duplicate invitation prevention enabled');

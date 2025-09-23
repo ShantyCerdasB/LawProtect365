@@ -26,6 +26,12 @@ describe('Multi-Signer Document Signing Workflow', () => {
     await workflowHelper.initialize();
   });
 
+  afterEach(() => {
+    // Clear mock data after each test to prevent interference
+    const { outboxMockHelpers } = require('../mocks');
+    outboxMockHelpers.clearAllMockData();
+  });
+
   describe('INVITEES_FIRST Multi-Signer Workflow', () => {
     it('should complete full INVITEES_FIRST multi-signer workflow', async () => {
       // Create envelope with INVITEES_FIRST
