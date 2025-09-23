@@ -22,7 +22,7 @@ import {
 } from '../domain/types/orchestrator';
 import { EntityFactory } from '../domain/factories/EntityFactory';
 import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
-import { documentS3NotFound } from '../signature-errors';
+import { documentS3NotFound, envelopeNotFound } from '../signature-errors';
 import { uuid } from '@lawprotect/shared-ts';
 
 /**
@@ -100,8 +100,9 @@ export class SignatureOrchestrator {
     envelopeId: EnvelopeId,
     updateData: UpdateEnvelopeData,
     userId: string
-  ): Promise<SignatureEnvelope> {
+  ): Promise<{ envelope: SignatureEnvelope; signers?: any[] }> {
     try {
+
       // 1. Validate S3 keys exist if provided
       if (updateData.sourceKey || updateData.metaKey) {
         await this.validateS3KeysExist(updateData.sourceKey, updateData.metaKey);
@@ -116,15 +117,25 @@ export class SignatureOrchestrator {
       
       // 3. Handle signer additions
       if (updateData.addSigners && updateData.addSigners.length > 0) {
+        console.log('🔍 Adding signers to envelope:', {
+          envelopeId: envelopeId.getValue(),
+          signersCount: updateData.addSigners.length,
+          signers: updateData.addSigners
+        });
+        
         const signersData = updateData.addSigners.map(signer => ({
           ...signer,
           envelopeId,
-          participantRole: 'SIGNER' as const
+          participantRole: 'SIGNER' as const,
+          invitedByUserId: userId // Set the user who is inviting the signer
         }));
+        
+        console.log('🔍 Calling envelopeSignerService.createSignersForEnvelope...');
         await this.envelopeSignerService.createSignersForEnvelope(
           envelopeId,
           signersData
         );
+        console.log('✅ envelopeSignerService.createSignersForEnvelope completed');
       }
       
       // 4. Handle signer removals
@@ -136,7 +147,28 @@ export class SignatureOrchestrator {
         }
       }
       
-      return updatedEnvelope;
+      // Solo obtener signers si se agregaron/removieron signers
+      if ((updateData.addSigners && updateData.addSigners.length > 0) || 
+          (updateData.removeSignerIds && updateData.removeSignerIds.length > 0)) {
+        console.log('🔍 Getting envelope with signers...');
+        const envelopeWithSigners = await this.signatureEnvelopeService.getEnvelopeWithSigners(envelopeId);
+        if (!envelopeWithSigners) {
+          throw envelopeNotFound(`Envelope with ID ${envelopeId.getValue()} not found`);
+        }
+        console.log('✅ Envelope with signers retrieved:', {
+          envelopeId: envelopeWithSigners.getId().getValue(),
+          signersCount: envelopeWithSigners.getSigners().length
+        });
+        return {
+          envelope: updatedEnvelope,
+          signers: envelopeWithSigners.getSigners()
+        };
+      }
+
+      return {
+        envelope: updatedEnvelope,
+        signers: undefined
+      };
     } catch (error) {
       this.handleOrchestrationError(error as Error, 'updateEnvelope');
     }
@@ -203,20 +235,46 @@ export class SignatureOrchestrator {
     signersNotified: number;
   }> {
     try {
+      console.log('🔍 SignatureOrchestrator.sendEnvelope START:', {
+        envelopeId: envelopeId.getValue(),
+        userId,
+        options
+      });
+
       // 1. Validate and change envelope state (in service)
+      console.log('🔍 Calling signatureEnvelopeService.sendEnvelope...');
       const envelope = await this.signatureEnvelopeService.sendEnvelope(envelopeId, userId);
+      console.log('✅ signatureEnvelopeService.sendEnvelope completed:', {
+        envelopeId: envelope.getId().getValue(),
+        status: envelope.getStatus().getValue()
+      });
       
       // 2. Get external signers
+      console.log('🔍 Getting external signers...');
       const externalSigners = envelope.getExternalSigners();
+      console.log('✅ External signers retrieved:', {
+        count: externalSigners.length,
+        signers: externalSigners.map(s => ({
+          id: s.getId().getValue(),
+          email: s.getEmail()?.getValue(),
+          fullName: s.getFullName()
+        }))
+      });
       
       // 3. Determine target signers
+      console.log('🔍 Determining target signers...');
       const targetSigners = options.sendToAll 
         ? externalSigners
         : externalSigners.filter(signer => 
             options.signers!.some(s => s.signerId === signer.getId().getValue())
           );
+      console.log('✅ Target signers determined:', {
+        count: targetSigners.length,
+        sendToAll: options.sendToAll
+      });
       
       // 4. Generate invitation tokens for target signers
+      console.log('🔍 Generating invitation tokens...');
       const tokens = await this.invitationTokenService.generateInvitationTokensForSigners(
         targetSigners,
         envelopeId,
@@ -227,9 +285,14 @@ export class SignatureOrchestrator {
           country: securityContext.country
         }
       );
+      console.log('✅ Invitation tokens generated:', {
+        count: tokens.length
+      });
       
       // 5. Publish notification events for notification service
+      console.log('🔍 Publishing notification events...');
       await this.publishNotificationEvent(envelopeId, options, tokens);
+      console.log('✅ Notification events published');
       
       // 6. Create audit event for envelope sent
       await this.signatureAuditEventService.createEvent({
@@ -284,8 +347,23 @@ export class SignatureOrchestrator {
     },
     tokens: any[]
   ): Promise<void> {
+    console.log('🔍 publishNotificationEvent START:', {
+      envelopeId: envelopeId.getValue(),
+      options,
+      tokensCount: tokens.length
+    });
+
     const envelope = await this.signatureEnvelopeService.getEnvelopeWithSigners(envelopeId);
     const externalSigners = envelope!.getExternalSigners();
+    
+    console.log('🔍 External signers retrieved:', {
+      count: externalSigners.length,
+      signers: externalSigners.map(s => ({
+        id: s.getId().getValue(),
+        email: s.getEmail()?.getValue(),
+        fullName: s.getFullName()
+      }))
+    });
     
     // Determine target signers
     const targetSigners = options.sendToAll 
@@ -294,10 +372,21 @@ export class SignatureOrchestrator {
           options.signers!.some(s => s.signerId === signer.getId().getValue())
         );
     
+    console.log('🔍 Target signers determined:', {
+      count: targetSigners.length,
+      sendToAll: options.sendToAll
+    });
+    
     // Publish one event per signer using outbox pattern
     for (const signer of targetSigners) {
       const signerOption = options.signers?.find(s => s.signerId === signer.getId().getValue());
       const message = signerOption?.message || options.message || "You have been invited to sign a document";
+      
+      console.log('🔍 Creating event for signer:', {
+        signerId: signer.getId().getValue(),
+        signerEmail: signer.getEmail()?.getValue(),
+        message
+      });
       
       const event = makeEvent('ENVELOPE_INVITATION', {
         envelopeId: envelopeId.getValue(),
@@ -314,9 +403,20 @@ export class SignatureOrchestrator {
         }
       });
       
+      console.log('🔍 Event created:', {
+        eventType: event.type,
+        eventKeys: Object.keys(event),
+        hasPayload: !!event.payload,
+        payloadKeys: event.payload ? Object.keys(event.payload) : 'none'
+      });
+      
+      console.log('🔍 Calling outboxRepository.save...');
       // Save event to outbox for reliable delivery
       await this.outboxRepository.save(event, uuid());
+      console.log('✅ outboxRepository.save completed for signer:', signer.getId().getValue());
     }
+    
+    console.log('✅ publishNotificationEvent completed');
   }
   
   /**

@@ -682,40 +682,70 @@ export class SignatureEnvelopeService {
    */
   async sendEnvelope(envelopeId: EnvelopeId, userId: string): Promise<SignatureEnvelope> {
     try {
+      console.log('🔍 SignatureEnvelopeService.sendEnvelope START:', {
+        envelopeId: envelopeId.getValue(),
+        userId
+      });
+
       // 1. Get envelope with signers
+      console.log('🔍 Getting envelope with signers...');
       const envelope = await this.signatureEnvelopeRepository.getWithSigners(envelopeId);
       if (!envelope) {
         throw envelopeNotFound(`Envelope with ID ${envelopeId.getValue()} not found`);
       }
+      console.log('✅ Envelope retrieved:', {
+        envelopeId: envelope.getId().getValue(),
+        status: envelope.getStatus().getValue(),
+        createdBy: envelope.getCreatedBy(),
+        signersCount: envelope.getSigners().length
+      });
       
       // 2. Validate access (only the creator can send)
+      console.log('🔍 Validating access...');
       if (envelope.getCreatedBy() !== userId) {
         throw envelopeAccessDenied('Only envelope owner can send envelope');
       }
+      console.log('✅ Access validated');
       
       // 3. Validate state (not in final state)
+      console.log('🔍 Validating state...');
       if (envelope.isInFinalState()) {
         throw invalidEnvelopeState('Cannot send envelope in final state');
       }
+      console.log('✅ State validated');
       
       // 4. Validate that has external signers
+      console.log('🔍 Validating external signers...');
       if (!envelope.hasExternalSigners()) {
         throw invalidEnvelopeState('Envelope must have at least one external signer');
       }
+      console.log('✅ External signers validated');
       
       // 5. Validate that external signers have email and full name
+      console.log('🔍 Validating external signers data...');
       envelope.validateExternalSigners();
+      console.log('✅ External signers data validated');
       
       // 6. Change status to READY_FOR_SIGNATURE (only if was in DRAFT)
+      console.log('🔍 Checking envelope status...');
       if (envelope.getStatus().isDraft()) {
+        console.log('🔍 Changing status to READY_FOR_SIGNATURE...');
         envelope.send(); // Changes to READY_FOR_SIGNATURE
         const updatedEnvelope = await this.signatureEnvelopeRepository.update(envelopeId, envelope);
+        console.log('✅ Status changed to READY_FOR_SIGNATURE');
         return updatedEnvelope;
       }
       
       // 7. If already in READY_FOR_SIGNATURE, return as-is
+      console.log('✅ Envelope already in READY_FOR_SIGNATURE');
       return envelope;
     } catch (error) {
+      console.error('❌ SignatureEnvelopeService.sendEnvelope ERROR:', {
+        error: error instanceof Error ? error.message : error,
+        stack: error instanceof Error ? error.stack : undefined,
+        envelopeId: envelopeId.getValue(),
+        userId
+      });
       wrapServiceError(error as Error, 'send envelope');
     }
   }

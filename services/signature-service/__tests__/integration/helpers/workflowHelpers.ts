@@ -212,13 +212,22 @@ export class WorkflowTestHelper {
     statusCode: number;
     data: any;
   }> {
+    console.log('🔍 WorkflowHelper.updateEnvelope START:', { envelopeId, updateData });
+    
     const event = await this.makeAuthEvent({
       pathParameters: { id: envelopeId },
       body: JSON.stringify(updateData)
     });
     
+    console.log('🔍 WorkflowHelper.updateEnvelope calling handler...');
     const result = await updateEnvelopeHandler(event) as any;
+    console.log('🔍 WorkflowHelper.updateEnvelope handler result:', { 
+      statusCode: result.statusCode, 
+      body: result.body 
+    });
+    
     const response = JSON.parse(result.body);
+    console.log('🔍 WorkflowHelper.updateEnvelope parsed response:', response);
     
     return { 
       statusCode: result.statusCode, 
@@ -297,30 +306,47 @@ export class WorkflowTestHelper {
       }>;
     }
   ): Promise<{ statusCode: number; data: any }> {
+    console.log('🔍 WorkflowHelper.sendEnvelope START:', {
+      envelopeId,
+      options
+    });
+
     if (!this.testUser) {
       throw new Error('Test user not initialized');
     }
 
+    console.log('🔍 Generating auth token...');
     const authToken = await generateTestJwtToken({
       sub: this.testUser.userId,
       email: this.testUser.email,
       roles: [this.testUser.role]
     });
+    console.log('✅ Auth token generated');
 
+    console.log('🔍 Creating API Gateway event...');
     const event = await createApiGatewayEvent({
       pathParameters: { envelopeId },
       body: options,
       headers: {
-        'Authorization': `Bearer ${authToken}`
+        'Authorization': `Bearer ${authToken}`,
+        'x-country': 'US' // Required for SendEnvelope security context
       }
     });
+    console.log('✅ API Gateway event created');
 
+    console.log('🔍 Calling sendEnvelopeHandler...');
     const result = await sendEnvelopeHandler(event) as any;
+    console.log('🔍 sendEnvelopeHandler result:', {
+      statusCode: result.statusCode,
+      body: result.body
+    });
+
     const response = JSON.parse(result.body);
+    console.log('🔍 sendEnvelope parsed response:', response);
     
     return {
       statusCode: result.statusCode,
-      data: response
+      data: response.data // Access the actual data from ControllerFactory response
     };
   }
 }

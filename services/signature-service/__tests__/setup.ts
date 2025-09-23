@@ -10,6 +10,7 @@ import { startMockJwksServer, stopMockJwksServer } from './integration/mocks/cog
 // Load all mocks from centralized location
 import './integration/mocks';
 
+
 // Load environment variables from .env file
 config();
 
@@ -32,8 +33,15 @@ if (!process.env.DATABASE_URL) {
 beforeAll(async () => {
   await startMockJwksServer();
   
+  // Configure environment variables for S3
+  process.env.S3_BUCKET_NAME = 'test-bucket';
+  process.env.S3_REGION = 'us-east-1';
+  process.env.S3_ACCESS_KEY_ID = 'test-access-key';
+  process.env.S3_SECRET_ACCESS_KEY = 'test-secret-key';
+  
   // KMS operations are now handled by mocks - no LocalStack setup needed
   console.log('✅ Mock JWKS server started - KMS operations use mocks');
+  console.log('✅ S3Client mock configured - S3 operations use mock client');
 }, 10000);
 
 /**

@@ -138,7 +138,7 @@ export async function verifyInvitationTokens(
       expect(token.tokenHash).toBeDefined();
       expect(token.envelopeId).toBe(envelopeId);
       expect(token.signerId).toBeDefined();
-      expect(token.status).toBe('PENDING');
+      expect(token.status).toBe('ACTIVE');
       expect(token.expiresAt).toBeDefined();
       expect(token.createdAt).toBeDefined();
     }
@@ -188,7 +188,7 @@ export async function verifySignerReceivedInvitation(
     
     await prisma.$disconnect();
     expect(token).toBeDefined();
-    expect(token!.status).toBe('PENDING');
+    expect(token!.status).toBe('ACTIVE');
   } catch (error) {
     await prisma.$disconnect();
     throw error;

@@ -35,7 +35,7 @@ describe('Envelope Validation Edge Cases', () => {
 
       // Attempt to update with non-existent S3 key
       const updateResponse = await workflowHelper.updateMetadata(envelope.id, {
-        sourceKey: 'non-existent-document.pdf'
+        sourceKey: 'test-documents/non-existent-document.pdf'
       });
 
       // Should fail with 400 error

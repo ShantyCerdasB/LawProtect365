@@ -182,19 +182,35 @@ export class EnvelopeSignerRepository extends RepositoryBase<EnvelopeSigner, Sig
    */
   async create(entity: EnvelopeSigner): Promise<EnvelopeSigner> {
     try {
+      console.log('🔍 EnvelopeSignerRepository.create START:', {
+        signerId: entity.getId().getValue(),
+        envelopeId: entity.getEnvelopeId().getValue(),
+        email: entity.getEmail()?.getValue(),
+        fullName: entity.getFullName()
+      });
+      
+      const modelData = this.toModel(entity) as any;
+      console.log('🔍 Model data prepared:', modelData);
+      
       const created = await this.prisma.envelopeSigner.create({
-        data: this.toModel(entity) as any,
+        data: modelData,
         include: {
           envelope: true,
           user: true
         }
       });
+      console.log('✅ Signer created in database:', created.id);
 
-      return this.toDomain(created);
+      const domainEntity = this.toDomain(created);
+      console.log('✅ Domain entity created:', domainEntity.getId().getValue());
+      
+      return domainEntity;
     } catch (error) {
-      console.error('Failed to create signer', {
+      console.error('❌ EnvelopeSignerRepository.create ERROR:', {
         error: error instanceof Error ? error.message : error,
-        signerId: entity.getId().getValue()
+        stack: error instanceof Error ? error.stack : undefined,
+        signerId: entity.getId().getValue(),
+        envelopeId: entity.getEnvelopeId().getValue()
       });
       throw documentS3Error({
         operation: 'create',

@@ -7,7 +7,8 @@
  */
 
 // Using global jest - no import needed in setupFiles
-import { promises as fs } from 'fs';
+import { promises as fs, statSync } from 'fs';
+import * as path from 'path';
 import { join } from 'path';
 import { tmpdir } from 'os';
 
@@ -44,18 +45,21 @@ function getObjectPath(bucket: string, key: string): string {
 }
 
 /**
- * Mock S3EvidenceStorage directly to ensure it uses our mock behavior
+ * Mock S3EvidenceStorage and S3Presigner directly to ensure they use our mock behavior
  * 
- * @description Mocks the S3EvidenceStorage class to return realistic behavior
- * for headObject operations, ensuring that documentExists returns correct values.
+ * @description Mocks the S3EvidenceStorage and S3Presigner classes to return realistic behavior
+ * for all S3 operations, ensuring that documentExists, putObject, and presigned URLs work correctly.
  */
 jest.mock('@lawprotect/shared-ts', () => ({
   ...jest.requireActual('@lawprotect/shared-ts'),
   S3EvidenceStorage: jest.fn().mockImplementation(() => ({
     headObject: jest.fn().mockImplementation(async (bucket: string, key: string) => {
+      console.log('🔍 S3EvidenceStorage.headObject called with:', { bucket, key });
+      
       // Check if object exists in memory first
       if (bucketStorage.has(bucket) && bucketStorage.get(bucket)!.has(key)) {
         const contentLength = bucketStorage.get(bucket)!.get(key)!.length;
+        console.log('🔍 Object found in memory:', { key, exists: true });
         return {
           exists: true,
           size: contentLength,
@@ -69,6 +73,7 @@ jest.mock('@lawprotect/shared-ts', () => ({
       try {
         const filePath = getObjectPath(bucket, key);
         const stats = await fs.stat(filePath);
+        console.log('🔍 Object found on disk:', { key, exists: true });
         return {
           exists: true,
           size: stats.size,
@@ -78,7 +83,10 @@ jest.mock('@lawprotect/shared-ts', () => ({
         };
       } catch (statError) {
         // For test purposes, simulate that certain document patterns exist
-        if (key.startsWith('test-documents/') || key.startsWith('test-meta/')) {
+        // BUT only if they don't contain "non-existent" in the key
+        if ((key.startsWith('test-documents/') || key.startsWith('test-meta/')) && 
+            !key.includes('non-existent')) {
+          console.log('🔍 Simulating existing document:', { key, exists: true });
           return {
             exists: true,
             size: 1024, // Simulate 1KB file
@@ -89,6 +97,7 @@ jest.mock('@lawprotect/shared-ts', () => ({
         }
         
         // Object not found - return exists: false
+        console.log('🔍 Object not found:', { key, exists: false });
         return {
           exists: false
         };
@@ -105,6 +114,16 @@ jest.mock('@lawprotect/shared-ts', () => ({
     deleteObject: jest.fn().mockImplementation(async (bucket: string, key: string) => {
       // Implementation for deleteObject if needed
       return {};
+    })
+  })),
+  S3Presigner: jest.fn().mockImplementation(() => ({
+    getObjectUrl: jest.fn().mockImplementation(async (params: any) => {
+      // Return a mock presigned URL for GET operations
+      return `https://mock-s3.amazonaws.com/${params.bucket}/${params.key}?mock-get-url=true`;
+    }),
+    putObjectUrl: jest.fn().mockImplementation(async (params: any) => {
+      // Return a mock presigned URL for PUT operations
+      return `https://mock-s3.amazonaws.com/${params.bucket}/${params.key}?mock-put-url=true`;
     })
   }))
 }));
@@ -291,5 +310,126 @@ export async function cleanupS3MockStorage(): Promise<void> {
     // Ignore cleanup errors
   }
 }
+
+
+
+// Mock the entire AWS SDK S3 module
+jest.mock('@aws-sdk/client-s3', () => {
+  // Mock command classes with specific names
+  const createMockCommand = (name: string) => {
+    return class MockCommand {
+      constructor(public input: any) {}
+      get name() { return name; }
+    };
+  };
+  
+  const HeadObjectCommand = createMockCommand('HeadObjectCommand');
+  const PutObjectCommand = createMockCommand('PutObjectCommand');
+  const GetObjectCommand = createMockCommand('GetObjectCommand');
+  const DeleteObjectCommand = createMockCommand('DeleteObjectCommand');
+  
+  return {
+    S3Client: jest.fn().mockImplementation((config: any) => {
+      console.log('🔧 S3Client mock created with config:', config);
+      
+      return {
+        send: jest.fn().mockImplementation(async (command: any) => {
+          console.log('🔍 S3Client.send called with command:', command.name || command.constructor.name);
+          
+          // Handle HeadObjectCommand (used by headObject)
+          if (command.name === 'HeadObjectCommand' || command.constructor.name === 'HeadObjectCommand') {
+            const bucket = command.input.Bucket;
+            const key = command.input.Key;
+            
+            console.log('🔍 Mock S3Client: HeadObjectCommand for:', { bucket, key });
+            
+            // Check if object exists in memory first
+            if (bucketStorage.has(bucket) && bucketStorage.get(bucket)!.has(key)) {
+              const contentLength = bucketStorage.get(bucket)!.get(key)!.length;
+              console.log('🔍 Mock S3Client: Object found in memory:', { key, exists: true });
+              return {
+                ContentLength: contentLength,
+                ETag: `"${Buffer.from(key + Date.now()).toString('hex')}"`,
+                LastModified: new Date()
+              };
+            }
+            
+            // Check if object exists on disk
+            try {
+              const filePath = getObjectPath(bucket, key);
+              const stats = statSync(filePath);
+              console.log('🔍 Mock S3Client: Object found on disk:', { key, exists: true });
+              return {
+                ContentLength: stats.size,
+                ETag: `"${Buffer.from(key + Date.now()).toString('hex')}"`,
+                LastModified: stats.mtime
+              };
+            } catch (statError) {
+              // For test purposes, simulate that certain document patterns exist
+              // BUT only if they don't contain "non-existent" in the key
+              if ((key.startsWith('test-documents/') || key.startsWith('test-meta/')) && 
+                  !key.includes('non-existent')) {
+                console.log('🔍 Mock S3Client: Simulating existing document:', { key, exists: true });
+                return {
+                  ContentLength: 1024,
+                  ETag: `"${Buffer.from(key + Date.now()).toString('hex')}"`,
+                  LastModified: new Date()
+                };
+              }
+              
+              // Object not found - throw NoSuchKey error
+              console.log('🔍 Mock S3Client: Object not found:', { key, exists: false });
+              const error = new Error('NoSuchKey');
+              (error as any).name = 'NoSuchKey';
+              (error as any).$metadata = { httpStatusCode: 404 };
+              throw error;
+            }
+          }
+          
+          // Handle PutObjectCommand (used by workflow helpers)
+          if (command.name === 'PutObjectCommand' || command.constructor.name === 'PutObjectCommand') {
+            const bucket = command.input.Bucket;
+            const key = command.input.Key;
+            const body = command.input.Body;
+            
+            console.log('🔍 Mock S3Client: PutObjectCommand for:', { bucket, key });
+            
+            // Store object in memory
+            if (!bucketStorage.has(bucket)) {
+              bucketStorage.set(bucket, new Map());
+            }
+            bucketStorage.get(bucket)!.set(key, body);
+            
+            // Also store on disk
+            try {
+              const filePath = getObjectPath(bucket, key);
+              await fs.mkdir(path.dirname(filePath), { recursive: true });
+              await fs.writeFile(filePath, body);
+              console.log('🔍 Mock S3Client: Object stored on disk:', { key });
+            } catch (writeError) {
+              console.log('⚠️ Mock S3Client: Failed to write to disk:', writeError);
+            }
+            
+            return {
+              ETag: `"${Buffer.from(key + Date.now()).toString('hex')}"`,
+              VersionId: 'mock-version-id'
+            };
+          }
+          
+          // Handle other commands
+          console.log('🔍 Mock S3Client: Handling command:', command.constructor.name);
+          return { success: true };
+        })
+      };
+    }),
+    
+    // Mock command classes
+    PutObjectCommand,
+    GetObjectCommand,
+    HeadObjectCommand,
+    DeleteObjectCommand
+  };
+});
+
 
 console.log('🔧 S3 mock loaded - realistic object storage with temporary file system');

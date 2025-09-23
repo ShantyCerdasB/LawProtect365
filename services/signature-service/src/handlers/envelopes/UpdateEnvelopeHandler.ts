@@ -32,18 +32,33 @@ export const updateEnvelopeHandler = ControllerFactory.createCommand({
      * @param params - Extracted parameters from request
      * @returns Promise resolving to updated envelope
      */
-    async execute(params: any) {
+  async execute(params: any) {
+
+    try {
       // Use SignatureOrchestrator to update envelope
+      console.log('🔍 Calling signatureOrchestrator.updateEnvelope...');
       const result = await this.signatureOrchestrator.updateEnvelope(
         params.envelopeId,
         params.updateData,
         params.userId
       );
+      console.log('✅ signatureOrchestrator.updateEnvelope completed:', {
+        hasEnvelope: !!result.envelope,
+        hasSigners: !!result.signers,
+        signersCount: result.signers?.length || 0
+      });
 
-      return {
-        envelope: result
-      };
+      return result;
+    } catch (error) {
+      console.error('❌ UpdateEnvelopeHandler.execute ERROR:', {
+        error: error instanceof Error ? error.message : error,
+        stack: error instanceof Error ? error.stack : undefined,
+        envelopeId: params.envelopeId?.getValue(),
+        updateData: params.updateData
+      });
+      throw error;
     }
+  }
   },
   
   // Parameter extraction - transforms HTTP request to domain parameters
@@ -66,27 +81,72 @@ export const updateEnvelopeHandler = ControllerFactory.createCommand({
   // Response configuration
   responseType: 'ok',
   transformResult: async (result: any) => {
-    // Transform domain entities to API response format
-    // Note: responseType: 'ok' automatically wraps in { data: ... }, so return the object directly
-    return {
-      id: result.envelope.getId().getValue(),
-      title: result.envelope.getTitle(),
-      description: result.envelope.getDescription(),
-      status: result.envelope.getStatus().getValue(),
-      signingOrderType: result.envelope.getSigningOrder().getType(),
-      originType: result.envelope.getOrigin().getType(),
-      createdBy: result.envelope.getCreatedBy(),
-      sourceKey: result.envelope.getSourceKey()?.getValue(),
-      metaKey: result.envelope.getMetaKey()?.getValue(),
-      expiresAt: result.envelope.getExpiresAt(),
-      createdAt: result.envelope.getCreatedAt(),
-      updatedAt: result.envelope.getUpdatedAt(),
-      // Template-specific fields (only present for TEMPLATE origin)
-      ...(result.envelope.getOrigin().getType() === 'TEMPLATE' && {
-        templateId: result.envelope.getOrigin().getTemplateId(),
-        templateVersion: result.envelope.getOrigin().getTemplateVersion()
-      })
-    };
+    try {
+      console.log('🔍 UpdateEnvelopeHandler.transformResult START:', {
+        hasEnvelope: !!result.envelope,
+        hasSigners: !!result.signers,
+        signersCount: result.signers?.length || 0
+      });
+      
+      // Transform domain entities to API response format
+      // Note: responseType: 'ok' automatically wraps in { data: ... }, so return the object directly
+      const response = {
+        id: result.envelope.getId().getValue(),
+        title: result.envelope.getTitle(),
+        description: result.envelope.getDescription(),
+        status: result.envelope.getStatus().getValue(),
+        signingOrderType: result.envelope.getSigningOrder().getType(),
+        originType: result.envelope.getOrigin().getType(),
+        createdBy: result.envelope.getCreatedBy(),
+        sourceKey: result.envelope.getSourceKey()?.getValue(),
+        metaKey: result.envelope.getMetaKey()?.getValue(),
+        expiresAt: result.envelope.getExpiresAt(),
+        createdAt: result.envelope.getCreatedAt(),
+        updatedAt: result.envelope.getUpdatedAt(),
+        // Template-specific fields (only present for TEMPLATE origin)
+        ...(result.envelope.getOrigin().getType() === 'TEMPLATE' && {
+          templateId: result.envelope.getOrigin().getTemplateId(),
+          templateVersion: result.envelope.getOrigin().getTemplateVersion()
+        }),
+        // Signers opcionales - solo incluidos si se actualizaron
+        ...(result.signers && {
+          signers: result.signers.map((signer: any) => {
+            console.log('🔍 Transforming signer:', {
+              signerId: signer.getId().getValue(),
+              email: signer.getEmail()?.getValue(),
+              fullName: signer.getFullName()
+            });
+            return {
+              id: signer.getId().getValue(),
+              email: signer.getEmail()?.getValue(),
+              fullName: signer.getFullName(),
+              isExternal: signer.getIsExternal(),
+              order: signer.getOrder(),
+              status: signer.getStatus() // getStatus() returns SignerStatus enum directly
+            };
+          })
+        })
+      };
+      
+      console.log('✅ UpdateEnvelopeHandler.transformResult completed:', {
+        responseId: response.id,
+        hasSigners: !!response.signers,
+        signersCount: response.signers?.length || 0
+      });
+      
+      return response;
+    } catch (error) {
+      console.error('❌ UpdateEnvelopeHandler.transformResult ERROR:', {
+        error: error instanceof Error ? error.message : error,
+        stack: error instanceof Error ? error.stack : undefined,
+        result: {
+          hasEnvelope: !!result.envelope,
+          hasSigners: !!result.signers,
+          signersCount: result.signers?.length || 0
+        }
+      });
+      throw error;
+    }
   },
   
   // Security configuration

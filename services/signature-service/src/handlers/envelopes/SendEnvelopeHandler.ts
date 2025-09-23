@@ -71,18 +71,43 @@ export const sendEnvelopeHandler = ControllerFactory.createCommand({
      * @returns Promise resolving to send envelope result
      */
     async execute(params: any) {
-      const result = await this.signatureOrchestrator.sendEnvelope(
-        params.envelopeId,
-        params.userId,
-        params.securityContext,
-        {
-          message: params.message,
-          sendToAll: params.sendToAll,
-          signers: params.signers
-        }
-      );
+      console.log('🔍 SendEnvelopeHandler.execute START:', {
+        envelopeId: params.envelopeId?.getValue(),
+        userId: params.userId,
+        message: params.message,
+        sendToAll: params.sendToAll,
+        signers: params.signers
+      });
 
-      return result;
+      try {
+        const result = await this.signatureOrchestrator.sendEnvelope(
+          params.envelopeId,
+          params.userId,
+          params.securityContext,
+          {
+            message: params.message,
+            sendToAll: params.sendToAll,
+            signers: params.signers
+          }
+        );
+
+        console.log('✅ SendEnvelopeHandler.execute completed:', {
+          success: result.success,
+          status: result.status,
+          tokensGenerated: result.tokensGenerated,
+          signersNotified: result.signersNotified
+        });
+
+        return result;
+      } catch (error) {
+        console.error('❌ SendEnvelopeHandler.execute ERROR:', {
+          error: error instanceof Error ? error.message : error,
+          stack: error instanceof Error ? error.stack : undefined,
+          envelopeId: params.envelopeId?.getValue(),
+          userId: params.userId
+        });
+        throw error;
+      }
     }
   },
   
