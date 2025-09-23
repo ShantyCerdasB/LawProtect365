@@ -329,3 +329,19 @@ export class DocumentAccessDeniedError extends HttpError<string> {
     super(403, code, message, details);
   }
 }
+
+/** 400 Bad Request - Pagination limit required */
+export class PaginationLimitRequiredError extends HttpError<string> {
+  /**
+   * @param message Defaults to `"Pagination limit is required"`.
+   * @param code Defaults to {@link ErrorCodes.PAGINATION_LIMIT_REQUIRED}.
+   * @param details Optional structured details.
+   */
+  constructor(
+    message = "Pagination limit is required",
+    code: string = ErrorCodes.PAGINATION_LIMIT_REQUIRED,
+    details?: unknown
+  ) {
+    super(400, code, message, details);
+  }
+}

@@ -8,6 +8,7 @@
  */
 
 import { SignatureEnvelope } from '../domain/entities/SignatureEnvelope';
+import { EnvelopeSigner } from '../domain/entities/EnvelopeSigner';
 import { SignatureEnvelopeService } from './SignatureEnvelopeService';
 import { EnvelopeSignerService } from './EnvelopeSignerService';
 import { InvitationTokenService } from './InvitationTokenService';
@@ -22,8 +23,11 @@ import {
 } from '../domain/types/orchestrator';
 import { EntityFactory } from '../domain/factories/EntityFactory';
 import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
+import { EnvelopeStatus } from '../domain/value-objects/EnvelopeStatus';
+import { AccessType } from '../domain/enums/AccessType';
+import { EnvelopeSpec } from '../domain/types/envelope';
 import { documentS3NotFound, envelopeNotFound } from '../signature-errors';
-import { uuid } from '@lawprotect/shared-ts';
+import { uuid, paginationLimitRequired } from '@lawprotect/shared-ts';
 
 /**
  * SignatureOrchestrator - Orchestrates signature service workflows
@@ -338,6 +342,112 @@ export class SignatureOrchestrator {
     }
   }
   
+  /**
+   * Gets a single envelope by ID with access validation and audit tracking
+   * @param envelopeId - The envelope ID
+   * @param userId - The user ID (for authenticated users)
+   * @param invitationToken - The invitation token (for external users)
+   * @param securityContext - Security context for audit tracking
+   * @returns The envelope with complete signer information and access type
+   */
+  async getEnvelope(
+    envelopeId: EnvelopeId,
+    userId?: string,
+    invitationToken?: string,
+    securityContext?: {
+      ipAddress: string;
+      userAgent: string;
+      country?: string;
+    }
+  ): Promise<{
+    envelope: SignatureEnvelope;
+    signers: EnvelopeSigner[];
+    accessType: AccessType;
+  }> {
+    try {
+      // Validate access using existing service method
+      const envelope = await this.signatureEnvelopeService.validateUserAccess(
+        envelopeId, 
+        userId, 
+        invitationToken
+      );
+
+      // Determine access type
+      const accessType = invitationToken ? AccessType.EXTERNAL : AccessType.OWNER;
+
+      // ✅ SIEMPRE obtener signers con información completa (service maneja audit para external users)
+      const envelopeWithSigners = await this.signatureEnvelopeService.getEnvelopeWithSigners(
+        envelopeId,
+        securityContext,
+        invitationToken
+      );
+      const signers = envelopeWithSigners?.getSigners() || [];
+
+      return {
+        envelope,
+        signers,
+        accessType
+      };
+    } catch (error) {
+      this.handleOrchestrationError(error as Error, 'get envelope');
+    }
+  }
+
+  /**
+   * Lists envelopes for authenticated users with filtering and pagination
+   * @param userId - The user ID
+   * @param filters - Filter options
+   * @returns Page of envelopes with complete signer information
+   */
+  async listEnvelopesByUser(
+    userId: string,
+    filters: {
+      status?: EnvelopeStatus;
+      limit?: number;
+      cursor?: string;
+    } = {}
+  ): Promise<{
+    envelopes: SignatureEnvelope[];
+    signers: EnvelopeSigner[][];
+    nextCursor?: string;
+    totalCount?: number;
+  }> {
+    try {
+      const { status, limit, cursor } = filters;
+
+      if (limit === undefined || limit === null) {
+        throw paginationLimitRequired('Frontend must provide pagination limit');
+      }
+
+      // Build specification
+      const spec: EnvelopeSpec = {
+        createdBy: userId,
+        status: status
+      };
+
+      // Get envelopes with pagination
+      const result = await this.signatureEnvelopeService.listEnvelopes(spec, limit, cursor);
+
+      // ✅ SIEMPRE obtener signers para cada envelope con información completa
+      const signers = await Promise.all(
+        result.items.map(envelope => 
+          this.signatureEnvelopeService.getEnvelopeWithSigners(envelope.getId())
+            .then(envelopeWithSigners => envelopeWithSigners?.getSigners() || [])
+        )
+      );
+
+      return {
+        envelopes: result.items,
+        signers,
+        nextCursor: result.nextCursor
+      };
+    } catch (error) {
+      this.handleOrchestrationError(error as Error, 'list envelopes by user');
+    }
+  }
+
+  // Audit for external access is handled in SignatureEnvelopeService.getEnvelopeWithSigners
+
   /**
    * Handles orchestration errors
    * @param error - The error that occurred

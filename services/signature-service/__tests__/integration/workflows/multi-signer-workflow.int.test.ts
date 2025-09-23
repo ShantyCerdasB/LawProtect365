@@ -65,6 +65,17 @@ describe('Multi-Signer Document Signing Workflow', () => {
       expect(dbSigners[0].email).toBe('signer1@example.com');
       expect(dbSigners[1].email).toBe('signer2@example.com');
       expect(dbSigners[2].email).toBe('signer3@example.com');
+      
+      // Verify external user tracking - external signers should have userId = null
+      dbSigners.forEach(signer => {
+        if (signer.isExternal) {
+          expect(signer.userId).toBeNull(); // External users have null userId
+          expect(signer.email).toBeDefined();
+          expect(signer.fullName).toBeDefined();
+        } else {
+          expect(signer.userId).toBeDefined(); // Internal users have real userId
+        }
+      });
 
       // Configure envelope metadata
       const updateResponse = await workflowHelper.updateMetadata(envelope.id, {

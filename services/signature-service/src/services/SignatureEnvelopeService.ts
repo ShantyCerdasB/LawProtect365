@@ -18,6 +18,7 @@ import { EntityFactory } from '../domain/factories/EntityFactory';
 import { EnvelopeUpdateValidationRule, UpdateEnvelopeData } from '../domain/rules/EnvelopeUpdateValidationRule';
 import { EnvelopeSpec, S3Keys, Hashes, CreateEnvelopeData } from '../domain/types/envelope';
 import { AuditEventType } from '../domain/enums/AuditEventType';
+import { AccessType } from '../domain/enums/AccessType';
 import { Page, wrapServiceError } from '@lawprotect/shared-ts';
 import { SignerStatus } from '@prisma/client';
 import { 
@@ -109,9 +110,54 @@ export class SignatureEnvelopeService {
    * @param envelopeId - The envelope ID
    * @returns The signature envelope with signers or null if not found
    */
-  async getEnvelopeWithSigners(envelopeId: EnvelopeId): Promise<SignatureEnvelope | null> {
+  async getEnvelopeWithSigners(
+    envelopeId: EnvelopeId,
+    securityContext?: {
+      ipAddress: string;
+      userAgent: string;
+      country?: string;
+    },
+    invitationToken?: string
+  ): Promise<SignatureEnvelope | null> {
     try {
-      return await this.signatureEnvelopeRepository.getWithSigners(envelopeId);
+      const envelopeWithSigners = await this.signatureEnvelopeRepository.getWithSigners(envelopeId);
+
+      // Create audit event when an external user accesses the envelope successfully
+      if (invitationToken && securityContext) {
+        const token = await this.invitationTokenService.validateInvitationToken(invitationToken);
+
+        // Only audit if token matches the envelope being accessed
+        if (token.getEnvelopeId().getValue() === envelopeId.getValue()) {
+          // Get signer information for audit
+          const signer = envelopeWithSigners?.getSigners().find(s => 
+            s.getId().getValue() === token.getSignerId().getValue()
+          );
+          
+          // ✅ NO usar try-catch - si audit falla, la operación debe fallar
+          await this.signatureAuditEventService.createEvent({
+            envelopeId: envelopeId.getValue(),
+            signerId: token.getSignerId().getValue(),
+            eventType: AuditEventType.DOCUMENT_ACCESSED,
+            description: 'External user accessed envelope document via invitation token',
+            userId: signer?.getEmail()?.getValue() || 'external-user', // ✅ Use email as identifier for external users
+            userEmail: signer?.getEmail()?.getValue(), // ✅ Use email real del signer
+            ipAddress: securityContext.ipAddress,
+            userAgent: securityContext.userAgent,
+            country: securityContext.country,
+            metadata: {
+              accessType: AccessType.EXTERNAL,
+              invitationTokenId: token.getId().getValue(),
+              signerId: token.getSignerId().getValue(),
+              signerEmail: signer?.getEmail()?.getValue(),
+              signerFullName: signer?.getFullName(),
+              externalUserIdentifier: `${signer?.getEmail()?.getValue()}_${signer?.getFullName()}`, // ✅ Unique identifier for external users
+              accessTimestamp: new Date().toISOString()
+            }
+          });
+        }
+      }
+
+      return envelopeWithSigners;
     } catch (error) {
       throw envelopeNotFound(
         `Failed to get envelope with signers ${envelopeId.getValue()}: ${error instanceof Error ? error.message : error}`

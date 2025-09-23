@@ -105,6 +105,24 @@ export const EnvelopeQuerySchema = z.object({
 });
 
 /**
+ * Schema for GetEnvelope query parameters
+ */
+export const GetEnvelopeQuerySchema = z.object({
+  invitationToken: z.string().optional(), // Para external users
+  includeSigners: z.string().optional().transform(val => val !== 'false') // Default true
+});
+
+/**
+ * Schema for GetEnvelopesByUser query parameters
+ */
+export const GetEnvelopesByUserQuerySchema = z.object({
+  status: EnvelopeStatusSchema.optional(),
+  limit: z.number().min(1).max(100), // Requerido por el frontend
+  cursor: z.string().optional(),
+  includeSigners: z.string().optional().transform(val => val !== 'false') // Default true
+});
+
+/**
  * Type inference from schemas
  */
 export type CreateEnvelopeWithSignersRequest = z.infer<typeof CreateEnvelopeWithSignersSchema>;
@@ -112,3 +130,5 @@ export type CreateEnvelopeRequest = z.infer<typeof CreateEnvelopeSchema>;
 export type UpdateEnvelopeRequest = z.infer<typeof UpdateEnvelopeSchema>;
 export type EnvelopeIdParams = z.infer<typeof EnvelopeIdSchema>;
 export type EnvelopeQuery = z.infer<typeof EnvelopeQuerySchema>;
+export type GetEnvelopeQuery = z.infer<typeof GetEnvelopeQuerySchema>;
+export type GetEnvelopesByUserQuery = z.infer<typeof GetEnvelopesByUserQuerySchema>;

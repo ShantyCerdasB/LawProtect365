@@ -100,20 +100,23 @@ export abstract class EntityFactory {
    * @returns New EnvelopeSigner instance
    */
   static createEnvelopeSigner(data: CreateSignerData): EnvelopeSigner {
-    if (!data.isExternal && !data.email) {
-      throw new Error('Internal signers must have email');
-    }
-    if (!data.isExternal && !data.fullName) {
-      throw new Error('Internal signers must have fullName');
-    }
+    // ✅ Solo validar external signers
     if (data.isExternal && !data.fullName) {
       throw new Error('External signers must have fullName');
     }
+    if (data.isExternal && !data.email) {
+      throw new Error('External signers must have email');
+    }
+    
+    // ✅ External users NO tienen userId (null), Internal users SÍ tienen userId
+    const userId = data.isExternal 
+      ? null  // External users no van en la tabla User
+      : (data.userId || null);  // Internal users deben tener userId
     
     return new EnvelopeSigner(
       SignerId.generate(),
       data.envelopeId,
-      data.isExternal ? null : (data.userId || null),
+      userId, // ✅ null para external users, userId real para internal users
       data.isExternal,
       data.email ? Email.fromString(data.email) : undefined,
       data.fullName,
@@ -272,16 +275,16 @@ export abstract class EntityFactory {
    * Generates a unique userId for external users based on email and fullName
    * @param email - The external user's email
    * @param fullName - The external user's full name
-   * @returns Unique string identifier for external user
+   * @returns Unique UUID string identifier for external user
    */
   static generateExternalUserId(email: string, fullName: string): string {
     const normalizedEmail = email.toLowerCase().trim();
     const normalizedName = fullName.toLowerCase().trim().replace(/\s+/g, '_');
     const hash = crypto.createHash('sha256')
       .update(`${normalizedEmail}_${normalizedName}`)
-      .digest('hex')
-      .substring(0, 8);
+      .digest('hex');
     
-    return `ext_${hash}`;
+    // Convert to valid UUID format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+    return `${hash.substring(0,8)}-${hash.substring(8,12)}-${hash.substring(12,16)}-${hash.substring(16,20)}-${hash.substring(20,32)}`;
   }
 }

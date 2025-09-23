@@ -13,6 +13,8 @@ import { createApiGatewayEvent, generateTestPdf, generateTestJwtToken } from './
 import { createEnvelopeHandler } from '../../../src/handlers/envelopes/CreateEnvelopeHandler';
 import { updateEnvelopeHandler } from '../../../src/handlers/envelopes/UpdateEnvelopeHandler';
 import { sendEnvelopeHandler } from '../../../src/handlers/envelopes/SendEnvelopeHandler';
+import { getEnvelopeHandler } from '../../../src/handlers/envelopes/GetEnvelopeHandler';
+import { getEnvelopesByUserHandler } from '../../../src/handlers/envelopes/GetEnvelopesByUserHandler';
 
 /**
  * Test user data structure
@@ -323,6 +325,159 @@ export class WorkflowTestHelper {
       statusCode: result.statusCode,
       data: response.data // Access the actual data from ControllerFactory response
     };
+  }
+
+  /**
+   * Get envelope by ID (authenticated user)
+   * @param envelopeId - The envelope ID to get
+   * @returns Get envelope response
+   */
+  async getEnvelope(envelopeId: string): Promise<{ statusCode: number; data: any }> {
+    if (!this.testUser) {
+      throw new Error('Test user not initialized');
+    }
+
+    const authToken = await generateTestJwtToken({
+      sub: this.testUser.userId,
+      email: this.testUser.email,
+      roles: [this.testUser.role]
+    });
+
+    const event = await createApiGatewayEvent({
+      pathParameters: { id: envelopeId },
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'x-country': 'US',
+        'x-forwarded-for': '127.0.0.1'
+      }
+    });
+
+    const result = await getEnvelopeHandler(event) as any;
+    const response = JSON.parse(result.body);
+    
+    return {
+      statusCode: result.statusCode,
+      data: response.data || response
+    };
+  }
+
+  /**
+   * Get envelope by ID with invitation token (external user)
+   * @param envelopeId - The envelope ID to get
+   * @param invitationToken - The invitation token for external access
+   * @returns Get envelope response
+   */
+  async getEnvelopeWithToken(envelopeId: string, invitationToken: string): Promise<{ statusCode: number; data: any }> {
+    const event = await createApiGatewayEvent({
+      pathParameters: { id: envelopeId },
+      queryStringParameters: { invitationToken },
+      headers: {
+        'x-country': 'US',
+        'x-forwarded-for': '127.0.0.1',
+        'user-agent': 'Test User Agent'
+      }
+    });
+
+    const result = await getEnvelopeHandler(event) as any;
+    const response = JSON.parse(result.body);
+    
+    return {
+      statusCode: result.statusCode,
+      data: response.data || response
+    };
+  }
+
+  /**
+   * Get envelopes by user with pagination and filtering
+   * @param filters - Query filters including status, limit, and cursor
+   * @returns Get envelopes response
+   */
+  async getEnvelopesByUser(filters: {
+    status?: string;
+    limit: number;
+    cursor?: string;
+  }): Promise<{ statusCode: number; data: any }> {
+    if (!this.testUser) {
+      throw new Error('Test user not initialized');
+    }
+
+    const authToken = await generateTestJwtToken({
+      sub: this.testUser.userId,
+      email: this.testUser.email,
+      roles: [this.testUser.role]
+    });
+
+    const event = await createApiGatewayEvent({
+      queryStringParameters: {
+        ...filters,
+        limit: filters.limit.toString()
+      },
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'x-country': 'US',
+        'x-forwarded-for': '127.0.0.1'
+      }
+    });
+
+    const result = await getEnvelopesByUserHandler(event) as any;
+    const response = JSON.parse(result.body);
+    
+    return {
+      statusCode: result.statusCode,
+      data: response.data || response
+    };
+  }
+
+  /**
+   * Get audit events from database for verification
+   * @param envelopeId - The envelope ID to get audit events for
+   * @returns Array of audit events
+   */
+  async getAuditEventsFromDatabase(envelopeId: string): Promise<any[]> {
+    const { PrismaClient } = await import('@prisma/client');
+    const prisma = new PrismaClient();
+    
+    const auditEvents = await prisma.signatureAuditEvent.findMany({
+      where: { envelopeId },
+      orderBy: { createdAt: 'desc' }
+    });
+    
+    await prisma.$disconnect();
+    return auditEvents;
+  }
+
+  /**
+   * Verify audit event was created for external user access
+   * @param envelopeId - The envelope ID
+   * @param eventType - The expected event type
+   * @param signerId - The signer ID
+   * @returns Promise that resolves when verification is complete
+   */
+  async verifyAuditEvent(envelopeId: string, eventType: string, signerId?: string): Promise<void> {
+    const auditEvents = await this.getAuditEventsFromDatabase(envelopeId);
+    
+    const matchingEvent = auditEvents.find(event => 
+      event.eventType === eventType && 
+      (!signerId || event.signerId === signerId)
+    );
+    
+    if (!matchingEvent) {
+      throw new Error(`Audit event not found: ${eventType} for envelope ${envelopeId}`);
+    }
+    
+      // Verify audit event has required fields for external user access
+      if (eventType === 'DOCUMENT_ACCESSED') {
+        expect(matchingEvent.userId).toBeDefined(); // Should be email for external users
+        expect(matchingEvent.userEmail).toBeDefined();
+        expect(matchingEvent.ipAddress).toBeDefined();
+        expect(matchingEvent.userAgent).toBeDefined();
+        expect(matchingEvent.metadata).toBeDefined();
+        
+        const metadata = matchingEvent.metadata as any;
+        expect(metadata.accessType).toBe('EXTERNAL');
+        expect(metadata.invitationTokenId).toBeDefined();
+        expect(metadata.externalUserIdentifier).toBeDefined(); // email_fullName format
+      }
   }
 }
 

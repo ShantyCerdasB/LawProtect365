@@ -102,6 +102,20 @@ export class EnvelopeSignerService {
       // Create signers with proper order assignment
       const createdSigners: EnvelopeSigner[] = [];
       for (const signerData of signersData) {
+        // ✅ External users tracking: verificar si ya existe el mismo email+fullName
+        if (signerData.isExternal && signerData.email && signerData.fullName) {
+          const existingSigner = await this.findExistingExternalSigner(
+            signerData.email,
+            signerData.fullName
+          );
+          
+          if (existingSigner) {
+            // ✅ External users siempre tienen userId = null, no reutilizamos userId
+            // El tracking se hace por email + fullName, no por userId
+            console.log(`External user ${signerData.email} (${signerData.fullName}) already exists in system`);
+          }
+        }
+        
         const signer = await this.createSigner(signerData);
         createdSigners.push(signer);
       }
@@ -200,6 +214,33 @@ export class EnvelopeSignerService {
     } catch (error) {
       throw signerNotFound(
         `Failed to get signers for user ${userId}: ${error instanceof Error ? error.message : error}`
+      );
+    }
+  }
+
+  /**
+   * Finds existing external signer by email and fullName across all envelopes
+   * @param email - Signer email
+   * @param fullName - Signer full name
+   * @returns Existing signer or null
+   */
+  async findExistingExternalSigner(email: string, fullName: string): Promise<EnvelopeSigner | null> {
+    try {
+      const signers = await this.envelopeSignerRepository.list({
+        email: email.toLowerCase(),
+        isExternal: true
+      });
+      
+      // ✅ Validar por AMBOS email Y fullName (case-insensitive)
+      const existingSigner = signers.items.find(signer => 
+        signer.getEmail()?.getValue().toLowerCase() === email.toLowerCase() &&
+        signer.getFullName()?.toLowerCase() === fullName.toLowerCase()
+      );
+      
+      return existingSigner || null;
+    } catch (error) {
+      throw signerNotFound(
+        `Failed to find existing external signer: ${error instanceof Error ? error.message : error}`
       );
     }
   }

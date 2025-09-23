@@ -29,7 +29,10 @@ export const ErrorCodes = {
   INVITATION_TOKEN_ALREADY_USED: "INVITATION_TOKEN_ALREADY_USED",
   INVITATION_NOT_FOUND: "INVITATION_NOT_FOUND",
   CONSENT_NOT_RECORDED: "CONSENT_NOT_RECORDED",
-  DOCUMENT_ACCESS_DENIED: "DOCUMENT_ACCESS_DENIED"} as const;
+  DOCUMENT_ACCESS_DENIED: "DOCUMENT_ACCESS_DENIED",
+  
+  // Pagination errors
+  PAGINATION_LIMIT_REQUIRED: "PAGINATION_LIMIT_REQUIRED"} as const;
 
 /** Union of built-in shared error code strings. */
 export type ErrorCode = keyof typeof ErrorCodes;
