@@ -110,7 +110,14 @@ export class SigningOrderValidationRule {
       return;
     }
 
-    // For invitees, they can sign in any order
+    // For invitees (external signers), they can sign in any order
+    // If no owner is present as a signer, all signers are invitees and can sign freely
+    if (currentSigner.getIsExternal()) {
+      return; // Invitees can sign in any order
+    }
+
+    // If we reach here, it's an internal signer but not the owner
+    // This shouldn't happen in INVITEES_FIRST, but if it does, allow it
     return;
   }
 

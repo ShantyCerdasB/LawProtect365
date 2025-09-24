@@ -56,6 +56,13 @@ export class ConsentService {
    */
   async createConsent(request: CreateConsentRequest, userId: string): Promise<Consent> {
     try {
+      console.log('🔍 DEBUG ConsentService.createConsent called:');
+      console.log('  - request.id:', request.id.getValue());
+      console.log('  - request.envelopeId:', request.envelopeId.getValue());
+      console.log('  - request.signerId:', request.signerId.getValue());
+      console.log('  - request.country:', request.country);
+      console.log('  - userId:', userId);
+
       // Validate business rules
       await this.validateConsentCreation(request);
 
@@ -72,6 +79,10 @@ export class ConsentService {
         userAgent: request.userAgent,
         country: request.country
       });
+
+      console.log('🔍 DEBUG Consent entity created:');
+      console.log('  - consent.getId():', consent.getId().getValue());
+      console.log('  - consent.getCountry():', consent.getCountry());
 
       // Validate compliance using entity method
       consent.validateForCompliance();

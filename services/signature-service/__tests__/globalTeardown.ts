@@ -19,21 +19,14 @@ import { cleanupS3MockStorage } from './integration/mocks/aws/s3Cleanup';
  * @throws Never throws errors to avoid masking test failures
  */
 export default async function globalTeardown(): Promise<void> {
-  console.log('🛑 Starting global test teardown...');
-  
   try {
     // Stop DynamoDB Local
-    console.log('🛑 Stopping DynamoDB Local...');
     await stopDynamoDBLocal();
     
     // Clean up S3 mock storage
-    console.log('🧹 Cleaning up S3 mock storage...');
     await cleanupS3MockStorage();
     
-    console.log('✅ Global test teardown completed successfully!');
-    
   } catch (error) {
-    console.error('❌ Global test teardown failed:', error);
     // Don't throw error in teardown to avoid masking test failures
   }
 }

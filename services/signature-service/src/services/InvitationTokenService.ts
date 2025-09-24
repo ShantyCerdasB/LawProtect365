@@ -199,17 +199,21 @@ export class InvitationTokenService {
   }
 
   /**
-   * Marks an invitation token as used
-   * @param token - The token to mark as used
-   * @param userId - The user who used the token
+   * Marks an invitation token as viewed (for GET /envelopes)
+   * @param token - The token to mark as viewed
+   * @param securityContext - Security context with IP, user agent, country
    * @returns The updated invitation token
    */
-  async markTokenAsUsed(token: string, userId: string): Promise<InvitationToken> {
+  async markTokenAsViewed(token: string, securityContext: {
+    ipAddress?: string;
+    userAgent?: string;
+    country?: string;
+  }): Promise<InvitationToken> {
     try {
       const invitationToken = await this.validateInvitationToken(token);
       
-      // Mark token as used using entity method
-      invitationToken.markAsUsed(userId);
+      // Mark token as viewed using entity method
+      invitationToken.markAsViewed(securityContext);
 
       // Update in repository
       const updatedToken = await this.invitationTokenRepository.update(
@@ -222,20 +226,71 @@ export class InvitationTokenService {
         invitationToken.getEnvelopeId().getValue(),
         invitationToken.getSignerId().getValue(),
         AuditEventType.INVITATION_TOKEN_USED,
-        `Invitation token used by user ${userId}`,
-        userId,
+        `Invitation token viewed by external signer`,
+        'external-user', // Use external-user for external users
         undefined,
-        invitationToken.getIpAddress(),
-        invitationToken.getUserAgent(),
+        securityContext.ipAddress,
+        securityContext.userAgent,
         {
-          usedAt: invitationToken.getUsedAt()?.toISOString()
+          viewCount: updatedToken.getViewCount(),
+          lastViewedAt: updatedToken.getLastViewedAt()?.toISOString(),
+          country: securityContext.country
         }
       );
 
       return updatedToken;
     } catch (error) {
       throw invitationTokenInvalid(
-        `Failed to mark token as used: ${error instanceof Error ? error.message : error}`
+        `Failed to mark token as viewed: ${error instanceof Error ? error.message : error}`
+      );
+    }
+  }
+
+  /**
+   * Marks an invitation token as signed (for POST /envelopes/sign)
+   * @param token - The token to mark as signed
+   * @param signerId - The signer who signed the document
+   * @param securityContext - Security context with IP, user agent, country
+   * @returns The updated invitation token
+   */
+  async markTokenAsSigned(token: string, signerId: string, securityContext: {
+    ipAddress?: string;
+    userAgent?: string;
+    country?: string;
+  }): Promise<InvitationToken> {
+    try {
+      const invitationToken = await this.validateInvitationToken(token);
+      
+      // Mark token as signed using entity method
+      invitationToken.markAsSigned(signerId, securityContext);
+
+      // Update in repository
+      const updatedToken = await this.invitationTokenRepository.update(
+        invitationToken.getId(),
+        invitationToken
+      );
+
+      // Create audit event
+      await this.signatureAuditEventService.createSignerAuditEvent(
+        invitationToken.getEnvelopeId().getValue(),
+        invitationToken.getSignerId().getValue(),
+        AuditEventType.INVITATION_TOKEN_USED,
+        `Invitation token used for signing by ${signerId}`,
+        'external-user', // Use external-user for external users
+        undefined,
+        securityContext.ipAddress,
+        securityContext.userAgent,
+        {
+          signedAt: updatedToken.getSignedAt()?.toISOString(),
+          signedBy: updatedToken.getSignedBy(),
+          country: securityContext.country
+        }
+      );
+
+      return updatedToken;
+    } catch (error) {
+      throw invitationTokenInvalid(
+        `Failed to mark token as signed: ${error instanceof Error ? error.message : error}`
       );
     }
   }

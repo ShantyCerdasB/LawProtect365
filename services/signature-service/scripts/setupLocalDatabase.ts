@@ -20,7 +20,7 @@ import { existsSync } from 'fs';
  */
 export const runMigrations = async (): Promise<void> => {
   try {
-    console.log('🔄 Running Prisma migrations...');
+
     
     // Use process.cwd() to get the project root, then navigate to shared-ts
     // process.cwd() is already in services/signature-service, so we need to go up 2 levels
@@ -40,7 +40,7 @@ export const runMigrations = async (): Promise<void> => {
       env: { ...process.env }
     });
     
-    console.log('✅ Prisma migrations completed');
+
   } catch (error) {
     console.error('❌ Failed to run Prisma migrations:', error);
     throw error;
@@ -58,7 +58,7 @@ export const runMigrations = async (): Promise<void> => {
  */
 export const seedDatabase = async (): Promise<void> => {
   try {
-    console.log('🌱 Seeding database...');
+
     
     // Use process.cwd() to get the project root, then navigate to shared-ts
     // process.cwd() is already in services/signature-service, so we need to go up 2 levels
@@ -78,9 +78,8 @@ export const seedDatabase = async (): Promise<void> => {
       env: { ...process.env }
     });
     
-    console.log('✅ Database seeded successfully');
+
   } catch (error) {
-    console.log('⚠️  Seeding failed, continuing...', error);
     // Don't throw error for seeding failures
   }
 };
@@ -96,13 +95,12 @@ export const seedDatabase = async (): Promise<void> => {
  * @throws Error if any setup step fails
  */
 const main = async (): Promise<void> => {
-  console.log('🚀 Starting database setup for integration tests...');
-  
+
   try {
     await runMigrations();
     await seedDatabase();
     
-    console.log('✅ Database setup completed successfully!');
+
   } catch (error) {
     console.error('❌ Database setup failed:', error);
     process.exit(1);

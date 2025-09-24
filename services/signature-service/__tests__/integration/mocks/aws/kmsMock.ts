@@ -73,4 +73,3 @@ jest.mock('@aws-sdk/client-kms', () => ({
   CreateAliasCommand: jest.fn().mockImplementation((input: any) => ({ input })),
 }));
 
-console.log('🔧 KMS mock loaded - realistic signing and verification behavior');

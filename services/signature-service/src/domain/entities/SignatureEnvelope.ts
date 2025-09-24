@@ -13,7 +13,7 @@ import { DocumentOrigin } from '../value-objects/DocumentOrigin';
 import { EnvelopeStatus } from '../value-objects/EnvelopeStatus';
 import { S3Key } from '../value-objects/S3Key';
 import { DocumentHash } from '../value-objects/DocumentHash';
-import { SignerStatus } from '@prisma/client';
+import { SignerStatus, SigningOrderType } from '@prisma/client';
 import { roundTo } from '@lawprotect/shared-ts';
 import { EnvelopeSigner } from './EnvelopeSigner';
 import { CreateSignerData } from '../types/signer/CreateSignerData';
@@ -409,6 +409,7 @@ export class SignatureEnvelope {
     }
 
     this.status = EnvelopeStatus.readyForSignature();
+    (this as any).sentAt = new Date();
     this.updatedAt = new Date();
   }
 
@@ -652,17 +653,49 @@ export class SignatureEnvelope {
   }
 
   /**
+   * Auto-corrects signing order if inconsistent with signers
+   * @param signersData - Array of signer data
+   * @returns Updated signing order type if correction was made, null otherwise
+   */
+  autoCorrectSigningOrder(signersData: CreateSignerData[]): SigningOrderType | null {
+    const currentType = this.signingOrder.getType();
+    const creatorSigner = signersData.find(signer => 
+      !signer.isExternal && signer.userId === this.createdBy
+    );
+
+    // If OWNER_FIRST but no owner as signer, change to INVITEES_FIRST
+    if (currentType === SigningOrderType.OWNER_FIRST && !creatorSigner) {
+      return SigningOrderType.INVITEES_FIRST;
+    }
+
+    return null; // No correction needed
+  }
+
+  /**
    * Validates signing order consistency during envelope creation
    * @param signersData - Array of signer data to validate
-   * @throws invalidEnvelopeState when signing order is inconsistent
+   * @returns Corrected signing order type if auto-correction was applied, null otherwise
+   * @throws invalidEnvelopeState when signing order is inconsistent and cannot be auto-corrected
    */
-  validateSigningOrderConsistency(signersData: CreateSignerData[]): void {
+  validateSigningOrderConsistency(signersData: CreateSignerData[]): SigningOrderType | null {
+    // First try to auto-correct
+    const correctedType = this.autoCorrectSigningOrder(signersData);
+    
+    if (correctedType) {
+      // Return the corrected type instead of throwing error
+      return correctedType;
+    }
+
+    // If no correction needed, validate normally
     SigningOrderValidationRule.validateSigningOrderConsistency(
       this.signingOrder.getType(),
       signersData,
       this.createdBy
     );
+    
+    return null; // No correction needed
   }
+
 
   /**
    * Reorders signers automatically based on signing order type

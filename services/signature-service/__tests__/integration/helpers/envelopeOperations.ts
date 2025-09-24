@@ -12,6 +12,7 @@ import { updateEnvelopeHandler } from '../../../src/handlers/envelopes/UpdateEnv
 import { sendEnvelopeHandler } from '../../../src/handlers/envelopes/SendEnvelopeHandler';
 import { getEnvelopeHandler } from '../../../src/handlers/envelopes/GetEnvelopeHandler';
 import { getEnvelopesByUserHandler } from '../../../src/handlers/envelopes/GetEnvelopesByUserHandler';
+import { signDocumentHandler } from '../../../src/handlers/signing/SignDocumentHandler';
 import { TestUser, EnvelopeData } from './testTypes';
 
 /**
@@ -268,4 +269,102 @@ export class EnvelopeOperations {
       data: response.data || response
     };
   }
+
+  /**
+   * Sign document with invitation token (external user)
+   * @param envelopeId - The envelope ID to sign
+   * @param signerId - The signer ID
+   * @param invitationToken - The invitation token for external access
+   * @param consent - Consent information
+   * @returns Sign document response
+   */
+  async signDocument(
+    envelopeId: string,
+    signerId: string,
+    invitationToken: string,
+    consent: {
+      given: boolean;
+      timestamp: string;
+      text: string;
+      ipAddress?: string;
+      userAgent?: string;
+      country?: string;
+    }
+  ): Promise<{ statusCode: number; data: any }> {
+    const event = await createApiGatewayEvent({
+      includeAuth: false,  // ✅ Para external users
+      pathParameters: { id: envelopeId }, // ✅ Cambiar envelopeId por id
+      body: JSON.stringify({
+        invitationToken,
+        signerId,
+        flattenedKey: "test-flattened-document.pdf", // Mock flattened document key
+        consent
+      }),
+      headers: {
+        'x-country': 'US',
+        'x-forwarded-for': '127.0.0.1',
+        'user-agent': 'Test User Agent'
+      }
+    });
+
+    const result = await signDocumentHandler(event) as any;
+    const response = JSON.parse(result.body);
+    
+    return {
+      statusCode: result.statusCode,
+      data: response.data || response
+    };
+  }
+
+  /**
+   * Sign document as authenticated user (owner)
+   * @param envelopeId - The envelope ID to sign
+   * @param signerId - The signer ID
+   * @param consent - Consent information
+   * @returns Sign document response
+   */
+  async signDocumentAsOwner(
+    envelopeId: string,
+    signerId: string,
+    consent: {
+      given: boolean;
+      timestamp: string;
+      text: string;
+      ipAddress?: string;
+      userAgent?: string;
+      country?: string;
+    }
+  ): Promise<{ statusCode: number; data: any }> {
+    const authToken = await generateTestJwtToken({
+      sub: this.testUser.userId,
+      email: this.testUser.email,
+      roles: [this.testUser.role]
+    });
+
+    const event = await createApiGatewayEvent({
+      includeAuth: false,
+      authToken: authToken,
+      pathParameters: { id: envelopeId }, // ✅ Cambiar envelopeId por id
+      body: JSON.stringify({
+        envelopeId,
+        signerId,
+        flattenedKey: "test-flattened-document.pdf", // Mock flattened document key
+        consent
+      }),
+      headers: {
+        'x-country': 'US',
+        'x-forwarded-for': '127.0.0.1',
+        'user-agent': 'Test User Agent'
+      }
+    });
+
+    const result = await signDocumentHandler(event) as any;
+    const response = JSON.parse(result.body);
+    
+    return {
+      statusCode: result.statusCode,
+      data: response.data || response
+    };
+  }
+
 }

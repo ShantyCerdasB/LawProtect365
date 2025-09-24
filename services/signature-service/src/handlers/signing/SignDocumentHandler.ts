@@ -9,6 +9,7 @@
 import { ControllerFactory } from '@lawprotect/shared-ts';
 import { ServiceFactory } from '../../infrastructure/factories/ServiceFactory';
 import { SignDocumentRequestSchema } from '../../domain/schemas/SigningHandlersSchema';
+import { EnvelopeIdSchema } from '../../domain/schemas/EnvelopeSchema';
 
 /**
  * SignDocumentHandler - Production-ready handler using ControllerFactory
@@ -43,6 +44,7 @@ import { SignDocumentRequestSchema } from '../../domain/schemas/SigningHandlersS
  */
 export const signDocumentHandler = ControllerFactory.createCommand({
   // Validation schemas
+  pathSchema: EnvelopeIdSchema,
   bodySchema: SignDocumentRequestSchema,
   
   // Service configuration - use new DDD architecture
@@ -73,10 +75,18 @@ export const signDocumentHandler = ControllerFactory.createCommand({
   },
   
   // Parameter extraction - transforms HTTP request to domain parameters
-  extractParams: (_path: any, body: any, _query: any, context: any) => ({
-    request: body,
+  extractParams: (path: any, body: any, _query: any, context: any) => ({
+    request: {
+      ...body,
+      envelopeId: path.id, // ✅ Extract envelopeId from pathParameters
+      signerId: body.signerId // ✅ Extract signerId from body
+    },
     userId: context.auth?.userId === 'external-user' ? undefined : context.auth?.userId, // ✅ Distinguir entre usuarios reales y external users
-    securityContext: context.securityContext // ✅ Usar securityContext del middleware
+    securityContext: {
+      ipAddress: context.auth?.ipAddress || context.securityContext?.ipAddress,
+      userAgent: context.auth?.userAgent || context.securityContext?.userAgent,
+      country: context.auth?.country || context.securityContext?.country
+    }
   }),
   
   // Response configuration

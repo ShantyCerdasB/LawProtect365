@@ -340,16 +340,51 @@ export class SignatureOrchestrator {
       const envelopeId = EntityFactory.createValueObjects.envelopeId(request.envelopeId);
       const signerId = EntityFactory.createValueObjects.signerId(request.signerId);
       
+      console.log('🔍 DEBUG signDocument - envelopeId:', envelopeId.getValue());
+      console.log('🔍 DEBUG signDocument - signerId:', signerId.getValue());
+      console.log('🔍 DEBUG signDocument - userId:', userId);
+      console.log('🔍 DEBUG signDocument - invitationToken:', request.invitationToken ? 'present' : 'not present');
+      
       const envelope = await this.signatureEnvelopeService.validateUserAccess(
         envelopeId,
         userId,
         request.invitationToken
       );
       
+      console.log('🔍 DEBUG signDocument - envelope from validateUserAccess:');
+      console.log('  - ID:', envelope.getId().getValue());
+      console.log('  - Status:', envelope.getStatus().getValue());
+      console.log('  - CreatedBy:', envelope.getCreatedBy());
+      
+      // Mark invitation token as signed if provided
+      if (request.invitationToken) {
+        try {
+          await this.invitationTokenService.markTokenAsSigned(
+            request.invitationToken,
+            signerId.getValue(),
+            {
+              ipAddress: securityContext.ipAddress,
+              userAgent: securityContext.userAgent,
+              country: securityContext.country
+            }
+          );
+          console.log('✅ Invitation token marked as signed');
+        } catch (error) {
+          console.warn('Failed to mark invitation token as signed:', error);
+          // Don't fail the signing process if token marking fails
+        }
+      }
+      
       const envelopeWithSigners = await this.signatureEnvelopeService.getEnvelopeWithSigners(envelopeId);
       if (!envelopeWithSigners) {
         throw envelopeNotFound(`Envelope with ID ${envelopeId.getValue()} not found`);
       }
+      
+      console.log('🔍 DEBUG signDocument - envelopeWithSigners:');
+      console.log('  - ID:', envelopeWithSigners.getId().getValue());
+      console.log('  - Status:', envelopeWithSigners.getStatus().getValue());
+      console.log('  - CreatedBy:', envelopeWithSigners.getCreatedBy());
+      console.log('  - Signers count:', envelopeWithSigners.getSigners().length);
       
       const allSigners = envelopeWithSigners.getSigners();
       const signer = allSigners.find(s => s.getId().getValue() === request.signerId);
@@ -366,6 +401,11 @@ export class SignatureOrchestrator {
       );
       
       // 3. Create consent record
+      console.log('🔍 DEBUG consent creation:');
+      console.log('  - request.consent.country:', request.consent.country);
+      console.log('  - securityContext.country:', securityContext.country);
+      console.log('  - Final country value:', request.consent.country || securityContext.country);
+      
       const consent = await this.consentService.createConsent({
         id: EntityFactory.createValueObjects.consentId(uuid()),
         envelopeId,
@@ -380,13 +420,27 @@ export class SignatureOrchestrator {
       }, userId);
       
       // 4. Get document from S3 and apply signature
-      const flattenedKey = envelope.getFlattenedKey();
+      // Use flattenedKey from request if provided, otherwise use envelope's flattenedKey
+      const flattenedKey = request.flattenedKey 
+        ? EntityFactory.createValueObjects.s3Key(request.flattenedKey)
+        : envelope.getFlattenedKey();
+      
       if (!flattenedKey) {
-        throw new Error(`Envelope ${envelopeId.getValue()} does not have a flattened document ready for signing`);
+        throw new Error(`Envelope ${envelopeId.getValue()} does not have a flattened document ready for signing. Please provide flattenedKey in the request or configure it in the envelope.`);
+      }
+      
+      // 5. Store flattenedKey if it's from request (first time flattening)
+      if (request.flattenedKey && !envelope.getFlattenedKey()) {
+        await this.signatureEnvelopeService.updateFlattenedKey(
+          envelopeId,
+          request.flattenedKey,
+          userId
+        );
       }
       
       const documentContent = await this.s3Service.getDocumentContent(flattenedKey.getValue());
-      const documentHash = sha256Hex(documentContent);
+      const flattenedHash = sha256Hex(documentContent);
+      const documentHash = flattenedHash; // Use flattened hash for KMS signing
       
       // 6. Sign document with KMS
       const kmsResult = await this._kmsService.sign({
@@ -399,7 +453,7 @@ export class SignatureOrchestrator {
       const signature = {
         id: uuid(),
         signedContent: Buffer.from('signed-content'), // Will be replaced with actual signed PDF
-        sha256: kmsResult.signatureHash,
+        sha256: sha256Hex(Buffer.from(kmsResult.signatureBytes)), // Generate SHA-256 hash of the signature bytes
         timestamp: kmsResult.signedAt.toISOString()
       };
       
@@ -422,7 +476,7 @@ export class SignatureOrchestrator {
       // 10. Link consent with signature
       await this.consentService.linkConsentWithSignature(
         consent.getId(),
-        EntityFactory.createValueObjects.signerId(signature.id)
+        signerId
       );
       
       // 11. Update envelope with signed document using service method
@@ -430,10 +484,22 @@ export class SignatureOrchestrator {
         envelopeId,
         flattenedKey.getValue(),
         signature.sha256,
+        signerId.getValue(),
         userId
       );
       
-      // 12. Create audit event
+      // 12. Update envelope hashes (flattenedSha256 and signedSha256)
+      await this.signatureEnvelopeService.updateHashes(
+        envelopeId,
+        {
+          sourceSha256: undefined, // sourceSha256 (calculated during document upload)
+          flattenedSha256: flattenedHash, // flattenedSha256
+          signedSha256: signature.sha256 // signedSha256
+        },
+        userId
+      );
+      
+      // 13. Create audit event
       await this.signatureAuditEventService.createEvent({
         envelopeId: envelopeId.getValue(),
         signerId: signerId.getValue(),
@@ -456,19 +522,37 @@ export class SignatureOrchestrator {
         }
       });
       
-      // 13. Check if envelope is complete and update status if needed
+      // 14. Check if envelope is complete and update status if needed
       const finalEnvelope = await this.signatureEnvelopeService.getEnvelopeWithSigners(envelopeId);
+      console.log('🔍 DEBUG envelope completion check:');
+      console.log('  - Final envelope exists:', !!finalEnvelope);
+      console.log('  - Final envelope status:', finalEnvelope?.getStatus().getValue());
+      console.log('  - Final envelope isCompleted():', finalEnvelope?.isCompleted());
+      console.log('  - Final envelope signers count:', finalEnvelope?.getSigners().length);
+      console.log('  - Final envelope signers statuses:', finalEnvelope?.getSigners().map(s => s.getStatus()));
+      
+      let responseEnvelope = finalEnvelope;
+      
       if (finalEnvelope?.isCompleted()) {
+        console.log('✅ Envelope is completed, calling completeEnvelope...');
         // Complete the envelope using the service method
         await this.signatureEnvelopeService.completeEnvelope(envelopeId, userId);
+        console.log('✅ Envelope completed successfully');
+        
+        // Get the updated envelope after completion
+        responseEnvelope = await this.signatureEnvelopeService.getEnvelopeWithSigners(envelopeId);
+        console.log('🔍 DEBUG after completion:');
+        console.log('  - Response envelope status:', responseEnvelope?.getStatus().getValue());
+      } else {
+        console.log('❌ Envelope is not completed yet');
       }
       
       return {
         message: 'Document signed successfully',
         envelope: {
-          id: envelope.getId().getValue(),
-          status: envelope.getStatus().getValue(),
-          progress: envelope.calculateProgress()
+          id: responseEnvelope?.getId().getValue() || envelope.getId().getValue(),
+          status: responseEnvelope?.getStatus().getValue() || envelope.getStatus().getValue(),
+          progress: responseEnvelope?.calculateProgress() || envelope.calculateProgress()
         },
         signature: {
           id: signature.id,
@@ -575,6 +659,24 @@ export class SignatureOrchestrator {
         userId, 
         invitationToken
       );
+
+      // Mark invitation token as viewed if provided (for external users)
+      if (invitationToken && securityContext) {
+        try {
+          await this.invitationTokenService.markTokenAsViewed(
+            invitationToken,
+            {
+              ipAddress: securityContext.ipAddress,
+              userAgent: securityContext.userAgent,
+              country: securityContext.country
+            }
+          );
+          console.log('✅ Invitation token marked as viewed');
+        } catch (error) {
+          console.warn('Failed to mark invitation token as viewed:', error);
+          // Don't fail the get envelope process if token marking fails
+        }
+      }
 
       // Determine access type
       const accessType = invitationToken ? AccessType.EXTERNAL : AccessType.OWNER;

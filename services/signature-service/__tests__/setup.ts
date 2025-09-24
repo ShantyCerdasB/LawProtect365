@@ -40,8 +40,6 @@ beforeAll(async () => {
   process.env.S3_SECRET_ACCESS_KEY = 'test-secret-key';
   
   // KMS operations are now handled by mocks - no LocalStack setup needed
-  console.log('✅ Mock JWKS server started - KMS operations use mocks');
-  console.log('✅ S3Client mock configured - S3 operations use mock client');
 }, 10000);
 
 /**

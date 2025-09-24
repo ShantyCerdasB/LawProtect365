@@ -25,6 +25,15 @@ import {
   verifySignerReceivedInvitation,
   clearSendEnvelopeMockData 
 } from '../helpers/sendEnvelopeHelpers';
+import { 
+  verifySignatureInDatabase,
+  verifyConsentRecord,
+  verifyEnvelopeCompletion,
+  verifyEnvelopeProgress,
+  verifySigningAuditEvent,
+  createTestConsent,
+  getSigningVerificationSummary
+} from '../helpers/signDocumentHelpers';
 
 // Mock SignatureOrchestrator.publishNotificationEvent to avoid OutboxRepository issues
 jest.mock('../../../src/services/SignatureOrchestrator', () => {
@@ -36,11 +45,6 @@ jest.mock('../../../src/services/SignatureOrchestrator', () => {
       
       // Mock the publishNotificationEvent method
       instance.publishNotificationEvent = jest.fn().mockImplementation(async (envelopeId: any, options: any, tokens: any[]) => {
-        console.log('🔧 Mocked publishNotificationEvent called:', {
-          envelopeId: envelopeId?.getValue?.() || envelopeId,
-          options,
-          tokensCount: tokens?.length || 0
-        });
         
         // Register invitation in outboxMock for verification
         const { outboxMockHelpers } = require('../mocks');
@@ -89,11 +93,9 @@ jest.mock('../../../src/services/SignatureOrchestrator', () => {
               timestamp: new Date().toISOString()
             });
             
-            console.log('✅ Mocked invitation registered:', { envelopeId: envelopeIdStr, signerId });
           }
         }
         
-        console.log('✅ Mocked publishNotificationEvent completed successfully');
         return Promise.resolve();
       });
       
@@ -206,10 +208,51 @@ describe('Single-Signer Document Signing Workflow', () => {
       // Verify invitation tokens were generated
       await verifyInvitationTokens(envelope.id, 1);
 
-      // TODO: Implement when handlers are available
-      // Sign document
-      // Complete envelope
-      // Download signed document
+      // Get invitation token from send response
+      expect(sendResponse.data.tokens).toBeDefined();
+      expect(sendResponse.data.tokens).toHaveLength(1);
+      const invitationToken = sendResponse.data.tokens[0].token;
+      
+      // Sign document with external signer
+      const consent = createTestConsent({
+        text: 'I agree to sign this single-signer contract electronically'
+      });
+      
+      const signResponse = await workflowHelper.signDocument(
+        envelope.id,
+        addSignerResponse.data.signers[0].id,
+        invitationToken,
+        consent
+      );
+      
+      expect(signResponse.statusCode).toBe(200);
+      expect(signResponse.data.message).toBe('Document signed successfully');
+      expect(signResponse.data.signature).toBeDefined();
+      expect(signResponse.data.signature.signerId).toBe(addSignerResponse.data.signers[0].id);
+      expect(signResponse.data.signature.envelopeId).toBe(envelope.id);
+      expect(signResponse.data.envelope.status).toBe('COMPLETED');
+      expect(signResponse.data.envelope.progress).toBe(100);
+      
+      // Verify signature in database
+      await verifySignatureInDatabase(envelope.id, addSignerResponse.data.signers[0].id);
+      
+      // Verify consent record
+      await verifyConsentRecord(envelope.id, addSignerResponse.data.signers[0].id, consent);
+      
+      // Verify envelope completion
+      await verifyEnvelopeCompletion(envelope.id, 'COMPLETED');
+      
+      // Verify audit event
+      await verifySigningAuditEvent(envelope.id, addSignerResponse.data.signers[0].id);
+      
+      // Get comprehensive verification summary
+      const summary = await getSigningVerificationSummary(envelope.id);
+      expect(summary.envelope.status).toBe('COMPLETED');
+      expect(summary.signers).toHaveLength(1);
+      expect(summary.signers[0].status).toBe('SIGNED');
+      expect(summary.signatures).toHaveLength(1);
+      expect(summary.consents).toHaveLength(1);
+      expect(summary.auditEvents.length).toBeGreaterThan(0);
     });
 
     it('should complete single-signer workflow with template origin', async () => {
@@ -452,14 +495,182 @@ describe('Single-Signer Document Signing Workflow', () => {
     });
   });
 
+  describe('SignDocument - Single Signer Workflow', () => {
+    it('should complete full single-signer signing workflow', async () => {
+      // Create envelope
+      const envelope = await workflowHelper.createEnvelope(
+        TestDataFactory.createEnvelopeData({
+          title: 'Single Signer Signing Test',
+          description: 'Testing complete signing workflow'
+        })
+      );
+
+      // Add external signer
+      const externalSigner = TestDataFactory.createSignerData({
+        email: 'signer.test@example.com',
+        fullName: 'Test Signer',
+        isExternal: true,
+        order: 1
+      });
+
+      const addSignerResponse = await workflowHelper.updateEnvelope(envelope.id, {
+        addSigners: [externalSigner]
+      });
+
+      expect(addSignerResponse.data.signers).toBeDefined();
+      const signerId = addSignerResponse.data.signers[0].id;
+
+      // Send envelope
+      const sendResponse = await workflowHelper.sendEnvelope(envelope.id, {
+        sendToAll: true,
+        message: 'Please sign this document'
+      });
+
+      expect(sendResponse.statusCode).toBe(200);
+      expect(sendResponse.data.status).toBe('READY_FOR_SIGNATURE');
+
+      // Get invitation token
+      const { PrismaClient } = await import('@prisma/client');
+      const prisma = new PrismaClient();
+      const tokenRecord = await prisma.invitationToken.findFirst({
+        where: { envelopeId: envelope.id }
+      });
+      await prisma.$disconnect();
+      
+      expect(tokenRecord).toBeDefined();
+      const invitationToken = sendResponse.data.tokens[0].token;
+
+      // Sign document
+      const consent = createTestConsent({
+        text: 'I agree to sign this document electronically'
+      });
+
+      const signResponse = await workflowHelper.signDocument(
+        envelope.id,
+        signerId,
+        invitationToken,
+        consent
+      );
+
+      expect(signResponse.statusCode).toBe(200);
+      expect(signResponse.data.message).toBe('Document signed successfully');
+      expect(signResponse.data.signature.signerId).toBe(signerId);
+      expect(signResponse.data.envelope.status).toBe('COMPLETED');
+      expect(signResponse.data.envelope.progress).toBe(100);
+
+      // Verify all database records
+      await verifySignatureInDatabase(envelope.id, signerId);
+      await verifyConsentRecord(envelope.id, signerId, consent);
+      await verifyEnvelopeCompletion(envelope.id, 'COMPLETED');
+      await verifySigningAuditEvent(envelope.id, signerId);
+    });
+
+    it('should validate consent is required', async () => {
+      // Create envelope and setup signer
+      const envelope = await workflowHelper.createEnvelope(
+        TestDataFactory.createEnvelopeData({
+          title: 'Consent Validation Test'
+        })
+      );
+
+      const externalSigner = TestDataFactory.createSignerData({
+        email: 'consent.test@example.com',
+        fullName: 'Consent Test Signer',
+        isExternal: true,
+        order: 1
+      });
+
+      await workflowHelper.updateEnvelope(envelope.id, {
+        addSigners: [externalSigner]
+      });
+
+      const sendResponse = await workflowHelper.sendEnvelope(envelope.id, {
+        sendToAll: true
+      });
+
+      // Get invitation token from send response
+      expect(sendResponse.data.tokens).toBeDefined();
+      expect(sendResponse.data.tokens).toHaveLength(1);
+      const invitationToken = sendResponse.data.tokens[0].token;
+      const signerId = (await workflowHelper.getSignersFromDatabase(envelope.id))[0].id;
+
+      // Try to sign without consent
+      const consentWithoutGiven = createTestConsent({
+        given: false, // ❌ Consent not given
+        text: 'I do not agree to sign this document'
+      });
+
+      const signResponse = await workflowHelper.signDocument(
+        envelope.id,
+        signerId,
+        invitationToken,
+        consentWithoutGiven
+      );
+
+      expect(signResponse.statusCode).toBe(400);
+      expect(signResponse.data.message).toContain('Consent must be given');
+    });
+
+    it('should prevent double signing', async () => {
+      // Create envelope and setup signer
+      const envelope = await workflowHelper.createEnvelope(
+        TestDataFactory.createEnvelopeData({
+          title: 'Double Signing Prevention Test'
+        })
+      );
+
+      const externalSigner = TestDataFactory.createSignerData({
+        email: 'double.test@example.com',
+        fullName: 'Double Test Signer',
+        isExternal: true,
+        order: 1
+      });
+
+      await workflowHelper.updateEnvelope(envelope.id, {
+        addSigners: [externalSigner]
+      });
+
+      const sendResponse = await workflowHelper.sendEnvelope(envelope.id, {
+        sendToAll: true
+      });
+
+      // Get invitation token from send response
+      expect(sendResponse.data.tokens).toBeDefined();
+      expect(sendResponse.data.tokens).toHaveLength(1);
+      const invitationToken = sendResponse.data.tokens[0].token;
+      const signerId = (await workflowHelper.getSignersFromDatabase(envelope.id))[0].id;
+
+      // First signing (should succeed)
+      const consent = createTestConsent({
+        text: 'I agree to sign this document'
+      });
+
+      const firstSignResponse = await workflowHelper.signDocument(
+        envelope.id,
+        signerId,
+        invitationToken,
+        consent
+      );
+
+      expect(firstSignResponse.statusCode).toBe(200);
+
+      // Second signing (should fail)
+      const secondSignResponse = await workflowHelper.signDocument(
+        envelope.id,
+        signerId,
+        invitationToken,
+        consent
+      );
+
+      expect(secondSignResponse.statusCode).toBe(409);
+      expect(secondSignResponse.data.message).toContain('already signed');
+    });
+  });
+
   /*
   // TODO: Re-implement these tests after refactoring other handlers
   describe('GetEnvelope - Single Signer Workflow', () => {
     // Tests for GetEnvelopeHandler
-  });
-
-  describe('SignDocument - Single Signer Workflow', () => {
-    // Tests for SignDocumentHandler
   });
 
   describe('DownloadSignedDocument - Single Signer Workflow', () => {

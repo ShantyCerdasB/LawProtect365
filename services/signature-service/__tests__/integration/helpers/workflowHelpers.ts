@@ -233,5 +233,58 @@ export class WorkflowTestHelper {
   async verifyAuditEvent(envelopeId: string, eventType: string, signerId?: string): Promise<void> {
     return this.auditHelper.verifyAuditEvent(envelopeId, eventType, signerId);
   }
+
+  /**
+   * Sign document with invitation token (external user)
+   * @param envelopeId - The envelope ID to sign
+   * @param signerId - The signer ID
+   * @param invitationToken - The invitation token for external access
+   * @param consent - Consent information
+   * @returns Sign document response
+   */
+  async signDocument(
+    envelopeId: string,
+    signerId: string,
+    invitationToken: string,
+    consent: {
+      given: boolean;
+      timestamp: string;
+      text: string;
+      ipAddress?: string;
+      userAgent?: string;
+      country?: string;
+    }
+  ): Promise<{ statusCode: number; data: any }> {
+    if (!this.envelopeOperations) {
+      throw new Error('WorkflowTestHelper not initialized. Call initialize() first.');
+    }
+    return this.envelopeOperations.signDocument(envelopeId, signerId, invitationToken, consent);
+  }
+
+  /**
+   * Sign document as authenticated user (owner)
+   * @param envelopeId - The envelope ID to sign
+   * @param signerId - The signer ID
+   * @param consent - Consent information
+   * @returns Sign document response
+   */
+  async signDocumentAsOwner(
+    envelopeId: string,
+    signerId: string,
+    consent: {
+      given: boolean;
+      timestamp: string;
+      text: string;
+      ipAddress?: string;
+      userAgent?: string;
+      country?: string;
+    }
+  ): Promise<{ statusCode: number; data: any }> {
+    if (!this.envelopeOperations) {
+      throw new Error('WorkflowTestHelper not initialized. Call initialize() first.');
+    }
+    return this.envelopeOperations.signDocumentAsOwner(envelopeId, signerId, consent);
+  }
+
 }
 

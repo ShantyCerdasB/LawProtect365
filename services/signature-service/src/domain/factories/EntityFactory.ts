@@ -26,7 +26,7 @@ import { CreateEnvelopeData } from '../types/envelope/CreateEnvelopeData';
 import { CreateSignerData } from '../types/signer/CreateSignerData';
 import { CreateConsentRequest } from '../types/consent/CreateConsentRequest';
 
-import { SignerStatus } from '@prisma/client';
+import { InvitationTokenStatus, SignerStatus } from '@prisma/client';
 
 /**
  * Abstract factory for creating domain entities and value objects
@@ -161,13 +161,17 @@ export abstract class EntityFactory {
       data.envelopeId,
       data.signerId,
       data.tokenHash,
-      'ACTIVE' as any, // status
+      InvitationTokenStatus.ACTIVE, // status
       data.expiresAt,
       undefined, // sentAt
       undefined, // lastSentAt
       0, // resendCount
       undefined, // usedAt
       undefined, // usedBy
+      0, // viewCount
+      undefined, // lastViewedAt
+      undefined, // signedAt
+      undefined, // signedBy
       undefined, // revokedAt
       undefined, // revokedReason
       data.createdBy,

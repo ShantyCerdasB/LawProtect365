@@ -81,6 +81,7 @@ export class ConsentRepository extends RepositoryBase<Consent, ConsentId, Consen
       consentText: entity.getConsentText?.(),
       ipAddress: entity.getIpAddress?.(),
       userAgent: entity.getUserAgent?.(),
+      country: entity.getCountry?.(),
       createdAt: entity.getCreatedAt?.(),
       updatedAt: entity.getUpdatedAt?.()
     };
@@ -172,13 +173,26 @@ export class ConsentRepository extends RepositoryBase<Consent, ConsentId, Consen
    */
   async create(entity: Consent): Promise<Consent> {
     try {
+      console.log('🔍 DEBUG ConsentRepository.create called:');
+      console.log('  - entity.getId():', entity.getId().getValue());
+      console.log('  - entity.getCountry():', entity.getCountry());
+      
+      const modelData = this.toModel(entity) as any;
+      console.log('🔍 DEBUG toModel result:');
+      console.log('  - modelData.country:', modelData.country);
+      console.log('  - modelData.id:', modelData.id);
+      
       const created = await this.prisma.consent.create({
-        data: this.toModel(entity) as any
+        data: modelData
       });
+
+      console.log('🔍 DEBUG Prisma create result:');
+      console.log('  - created.id:', created.id);
+      console.log('  - created.country:', created.country);
 
       return this.toDomain(created);
     } catch (error) {
-      console.error('Failed to create consent', {
+      console.error('❌ Failed to create consent', {
         error: error instanceof Error ? error.message : error,
         consentId: entity.getId().getValue()
       });

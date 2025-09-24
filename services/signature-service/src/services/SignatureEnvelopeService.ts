@@ -14,13 +14,14 @@ import { S3Key } from '../domain/value-objects/S3Key';
 import { SignatureEnvelopeRepository } from '../repositories/SignatureEnvelopeRepository';
 import { SignatureAuditEventService } from './SignatureAuditEventService';
 import { InvitationTokenService } from './InvitationTokenService';
+import { S3Service } from './S3Service';
 import { EntityFactory } from '../domain/factories/EntityFactory';
 import { EnvelopeUpdateValidationRule, UpdateEnvelopeData } from '../domain/rules/EnvelopeUpdateValidationRule';
 import { EnvelopeSpec, S3Keys, Hashes, CreateEnvelopeData } from '../domain/types/envelope';
 import { AuditEventType } from '../domain/enums/AuditEventType';
 import { AccessType } from '../domain/enums/AccessType';
-import { Page, wrapServiceError } from '@lawprotect/shared-ts';
-import { SignerStatus } from '@prisma/client';
+import { Page, wrapServiceError, sha256Hex } from '@lawprotect/shared-ts';
+import { SignerStatus, SigningOrderType } from '@prisma/client';
 import { 
   envelopeNotFound,
   envelopeCreationFailed,
@@ -45,7 +46,8 @@ export class SignatureEnvelopeService {
   constructor(
     private readonly signatureEnvelopeRepository: SignatureEnvelopeRepository,
     private readonly signatureAuditEventService: SignatureAuditEventService,
-    private readonly invitationTokenService: InvitationTokenService
+    private readonly invitationTokenService: InvitationTokenService,
+    private readonly s3Service: S3Service
   ) {}
 
   /**
@@ -61,6 +63,24 @@ export class SignatureEnvelopeService {
 
       // Save to repository
       const createdEnvelope = await this.signatureEnvelopeRepository.create(envelope);
+
+      // Calculate sourceSha256 if sourceKey is provided
+      if (data.sourceKey) {
+        try {
+          const sourceDocumentContent = await this.s3Service.getDocumentContent(data.sourceKey);
+          const sourceHash = sha256Hex(sourceDocumentContent);
+          
+          // Update envelope with source hash
+          await this.updateHashes(
+            data.id,
+            { sourceSha256: sourceHash },
+            userId
+          );
+        } catch (error) {
+          // Log error but don't fail envelope creation if source hash calculation fails
+          console.warn(`Failed to calculate sourceSha256 for envelope ${data.id.getValue()}:`, error);
+        }
+      }
 
       // Create audit event (envelope-level event, no signerId required)
       await this.signatureAuditEventService.createEvent({
@@ -207,7 +227,43 @@ export class SignatureEnvelopeService {
         envelope.getSigners()
       );
       
-      // 3. Apply updates to entity using entity methods
+      // 3. Check for signing order auto-correction when adding signers
+      let correctedSigningOrder: SigningOrderType | null = null;
+      if (updateData.addSigners && updateData.addSigners.length > 0) {
+        // Create temporary signers data for validation
+        const allSignersData = [
+          ...envelope.getSigners().map(signer => ({
+            envelopeId: envelope.getId(),
+            userId: signer.getUserId() || undefined,
+            email: signer.getEmail()?.getValue() || '',
+            fullName: signer.getFullName() || '',
+            isExternal: signer.getIsExternal(),
+            order: signer.getOrder(),
+            participantRole: 'SIGNER' as const
+          })),
+          ...updateData.addSigners.map(signer => ({
+            envelopeId: envelope.getId(),
+            userId: signer.userId || undefined,
+            email: signer.email,
+            fullName: signer.fullName,
+            isExternal: signer.isExternal,
+            order: signer.order || 1,
+            participantRole: 'SIGNER' as const
+          }))
+        ];
+        
+        // Check if auto-correction is needed
+        correctedSigningOrder = envelope.validateSigningOrderConsistency(allSignersData);
+        
+        if (correctedSigningOrder) {
+          console.log(`🔧 Auto-correcting signing order from ${envelope.getSigningOrder().getType()} to ${correctedSigningOrder}`);
+          // Update the envelope directly with the corrected signing order
+          const newSigningOrder = new SigningOrder(correctedSigningOrder);
+          envelope.updateSigningOrder(newSigningOrder);
+        }
+      }
+      
+      // 4. Apply updates to entity using entity methods
       if (updateData.title) {
         envelope.updateTitle(updateData.title);
       }
@@ -404,25 +460,27 @@ export class SignatureEnvelopeService {
    * @param userId - The user making the update
    * @returns The updated signature envelope
    */
-  async updateHashes(envelopeId: EnvelopeId, hashes: Hashes, userId: string): Promise<SignatureEnvelope> {
+  async updateHashes(envelopeId: EnvelopeId, hashes: Hashes, userId?: string): Promise<SignatureEnvelope> {
     try {
       const updatedEnvelope = await this.signatureEnvelopeRepository.updateHashes(envelopeId, hashes);
 
-      // Create audit event
-      await this.signatureAuditEventService.createSignerAuditEvent(
-        envelopeId.getValue(),
-        updatedEnvelope.getCreatedBy(),
-        AuditEventType.ENVELOPE_UPDATED,
-        `Document hashes updated for envelope "${updatedEnvelope.getTitle()}"`,
-        userId,
-        undefined,
-        undefined,
-        undefined,
-        {
-          envelopeId: envelopeId.getValue(),
-          hashes: hashes
-        }
-      );
+      // Create audit event if userId provided
+      if (userId) {
+        await this.signatureAuditEventService.createSignerAuditEvent(
+          envelopeId.getValue(),
+          updatedEnvelope.getCreatedBy(),
+          AuditEventType.ENVELOPE_UPDATED,
+          `Document hashes updated for envelope "${updatedEnvelope.getTitle()}"`,
+          userId,
+          undefined,
+          undefined,
+          undefined,
+          {
+            envelopeId: envelopeId.getValue(),
+            hashes: hashes
+          }
+        );
+      }
 
       return updatedEnvelope;
     } catch (error) {
@@ -437,17 +495,18 @@ export class SignatureEnvelopeService {
    * @param envelopeId - The envelope ID
    * @param signedKey - The signed document S3 key
    * @param signedSha256 - The signed document hash
+   * @param signerId - The ID of the signer who signed the document
    * @param userId - The user making the update
    * @returns The updated signature envelope
    */
-  async updateSignedDocument(envelopeId: EnvelopeId, signedKey: string, signedSha256: string, userId: string): Promise<SignatureEnvelope> {
+  async updateSignedDocument(envelopeId: EnvelopeId, signedKey: string, signedSha256: string, signerId: string, userId: string): Promise<SignatureEnvelope> {
     try {
       const updatedEnvelope = await this.signatureEnvelopeRepository.updateSignedDocument(envelopeId, signedKey, signedSha256);
 
       // Create audit event
       await this.signatureAuditEventService.createSignerAuditEvent(
         envelopeId.getValue(),
-        updatedEnvelope.getCreatedBy(),
+        signerId,
         AuditEventType.ENVELOPE_UPDATED,
         `Signed document updated for envelope "${updatedEnvelope.getTitle()}"`,
         userId,
@@ -817,6 +876,52 @@ export class SignatureEnvelopeService {
     } catch (error) {
       throw envelopeUpdateFailed(
         `Failed to complete envelope ${envelopeId.getValue()}: ${error instanceof Error ? error.message : error}`
+      );
+    }
+  }
+
+
+  /**
+   * Updates flattened key for an envelope
+   * @param envelopeId - The envelope ID
+   * @param flattenedKey - The flattened document S3 key
+   * @param userId - The user making the update
+   * @returns The updated signature envelope
+   */
+  async updateFlattenedKey(
+    envelopeId: EnvelopeId,
+    flattenedKey: string,
+    userId?: string
+  ): Promise<SignatureEnvelope> {
+    try {
+      const updatedEnvelope = await this.signatureEnvelopeRepository.updateFlattenedKey(
+        envelopeId,
+        flattenedKey
+      );
+
+      // Create audit event if userId provided
+      if (userId) {
+        await this.signatureAuditEventService.createEvent({
+          envelopeId: envelopeId.getValue(),
+          signerId: undefined,
+          eventType: AuditEventType.ENVELOPE_UPDATED,
+          description: `Flattened key updated for envelope "${updatedEnvelope.getTitle()}"`,
+          userId: userId,
+          userEmail: undefined,
+          ipAddress: undefined,
+          userAgent: undefined,
+          country: undefined,
+          metadata: {
+            envelopeId: envelopeId.getValue(),
+            flattenedKey: flattenedKey
+          }
+        });
+      }
+
+      return updatedEnvelope;
+    } catch (error) {
+      throw envelopeUpdateFailed(
+        `Failed to update flattened key for envelope ${envelopeId.getValue()}: ${error instanceof Error ? error.message : error}`
       );
     }
   }

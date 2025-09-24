@@ -34,6 +34,10 @@ export class InvitationToken {
     private resendCount: number,
     private usedAt: Date | undefined,
     private usedBy: string | undefined,
+    private viewCount: number,
+    private lastViewedAt: Date | undefined,
+    private signedAt: Date | undefined,
+    private signedBy: string | undefined,
     private revokedAt: Date | undefined,
     private revokedReason: string | undefined,
     private createdBy: string | undefined,
@@ -129,6 +133,34 @@ export class InvitationToken {
   }
 
   /**
+   * Gets the view count
+   */
+  getViewCount(): number {
+    return this.viewCount;
+  }
+
+  /**
+   * Gets the last viewed timestamp
+   */
+  getLastViewedAt(): Date | undefined {
+    return this.lastViewedAt;
+  }
+
+  /**
+   * Gets the signed timestamp
+   */
+  getSignedAt(): Date | undefined {
+    return this.signedAt;
+  }
+
+  /**
+   * Gets the user who signed the document
+   */
+  getSignedBy(): string | undefined {
+    return this.signedBy;
+  }
+
+  /**
    * Gets the revoked timestamp
    */
   getRevokedAt(): Date | undefined {
@@ -216,26 +248,89 @@ export class InvitationToken {
   }
 
   /**
-   * Marks the token as used
-   * @param usedBy - User who used the token
+   * Marks the token as viewed (for GET /envelopes)
+   * @param securityContext - Security context with IP, user agent, country
    * @throws invitationTokenExpired when token has expired
-   * @throws invitationTokenAlreadyUsed when token has already been used
    * @throws invitationTokenRevoked when token has been revoked
    */
-  markAsUsed(usedBy: string): void {
+  markAsViewed(securityContext: {
+    ipAddress?: string;
+    userAgent?: string;
+    country?: string;
+  }): void {
     if (this.isExpired()) {
       throw invitationTokenExpired('Invitation token has expired');
-    }
-    if (this.status === InvitationTokenStatus.USED) {
-      throw invitationTokenAlreadyUsed('Invitation token has already been used');
     }
     if (this.status === InvitationTokenStatus.REVOKED) {
       throw invitationTokenRevoked('Invitation token has been revoked');
     }
 
-    this.status = InvitationTokenStatus.USED;
+    // Update status to VIEWED if it's ACTIVE
+    if (this.status === InvitationTokenStatus.ACTIVE) {
+      this.status = InvitationTokenStatus.VIEWED;
+    }
+
+    // Update view tracking
+    this.viewCount++;
+    this.lastViewedAt = new Date();
     this.usedAt = new Date();
-    this.usedBy = usedBy;
+    this.usedBy = this.signerId.getValue();
+
+    // Update security context
+    if (securityContext.ipAddress) {
+      this.ipAddress = securityContext.ipAddress;
+    }
+    if (securityContext.userAgent) {
+      this.userAgent = securityContext.userAgent;
+    }
+    if (securityContext.country) {
+      this.country = securityContext.country;
+    }
+
+    this.updatedAt = new Date();
+  }
+
+  /**
+   * Marks the token as signed (for POST /envelopes/sign)
+   * @param signerId - ID of the signer who signed
+   * @param securityContext - Security context with IP, user agent, country
+   * @throws invitationTokenExpired when token has expired
+   * @throws invitationTokenAlreadyUsed when token has already been signed
+   * @throws invitationTokenRevoked when token has been revoked
+   */
+  markAsSigned(signerId: string, securityContext: {
+    ipAddress?: string;
+    userAgent?: string;
+    country?: string;
+  }): void {
+    if (this.isExpired()) {
+      throw invitationTokenExpired('Invitation token has expired');
+    }
+    if (this.status === InvitationTokenStatus.SIGNED) {
+      throw invitationTokenAlreadyUsed('Invitation token has already been used for signing');
+    }
+    if (this.status === InvitationTokenStatus.REVOKED) {
+      throw invitationTokenRevoked('Invitation token has been revoked');
+    }
+
+    // Update status to SIGNED
+    this.status = InvitationTokenStatus.SIGNED;
+    this.signedAt = new Date();
+    this.signedBy = signerId;
+    this.usedAt = new Date();
+    this.usedBy = signerId;
+
+    // Update security context
+    if (securityContext.ipAddress) {
+      this.ipAddress = securityContext.ipAddress;
+    }
+    if (securityContext.userAgent) {
+      this.userAgent = securityContext.userAgent;
+    }
+    if (securityContext.country) {
+      this.country = securityContext.country;
+    }
+
     this.updatedAt = new Date();
   }
 
@@ -265,7 +360,7 @@ export class InvitationToken {
    * Checks if the token has been used
    */
   isUsed(): boolean {
-    return this.status === InvitationTokenStatus.USED;
+    return this.status === InvitationTokenStatus.SIGNED;
   }
 
   /**
@@ -352,6 +447,10 @@ export class InvitationToken {
       0, // resendCount
       undefined, // usedAt
       undefined, // usedBy
+      0, // viewCount
+      undefined, // lastViewedAt
+      undefined, // signedAt
+      undefined, // signedBy
       undefined, // revokedAt
       undefined, // revokedReason
       params.createdBy,
@@ -381,6 +480,10 @@ export class InvitationToken {
       data.resendCount,
       data.usedAt,
       data.usedBy,
+      data.viewCount || 0,
+      data.lastViewedAt,
+      data.signedAt,
+      data.signedBy,
       data.revokedAt,
       data.revokedReason,
       data.createdBy,

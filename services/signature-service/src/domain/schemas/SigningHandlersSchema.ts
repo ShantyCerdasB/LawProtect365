@@ -19,6 +19,9 @@ export const SignDocumentRequestSchema = z.object({
   envelopeId: UuidV4.optional(),
   signerId: UuidV4.optional(),
   
+  // Document key (flattened document ready for signing)
+  flattenedKey: z.string().optional(),
+  
   // Consent data (required for all cases)
   consent: z.object({
     given: z.boolean(),

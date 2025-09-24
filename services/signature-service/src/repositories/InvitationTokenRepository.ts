@@ -83,6 +83,10 @@ export class InvitationTokenRepository extends RepositoryBase<InvitationToken, I
       resendCount: entity.getResendCount?.(),
       usedAt: entity.getUsedAt?.(),
       usedBy: entity.getUsedBy?.(),
+      viewCount: entity.getViewCount?.(),
+      lastViewedAt: entity.getLastViewedAt?.(),
+      signedAt: entity.getSignedAt?.(),
+      signedBy: entity.getSignedBy?.(),
       revokedAt: entity.getRevokedAt?.(),
       revokedReason: entity.getRevokedReason?.(),
       createdBy: entity.getCreatedBy?.(),
@@ -169,7 +173,7 @@ export class InvitationTokenRepository extends RepositoryBase<InvitationToken, I
       where.status = spec.isActive ? InvitationTokenStatus.ACTIVE : { not: InvitationTokenStatus.ACTIVE };
     }
     if (spec.isUsed !== undefined) {
-      where.status = spec.isUsed ? InvitationTokenStatus.USED : { not: InvitationTokenStatus.USED };
+      where.status = spec.isUsed ? InvitationTokenStatus.SIGNED : { not: InvitationTokenStatus.SIGNED };
     }
     if (spec.isRevoked !== undefined) {
       where.status = spec.isRevoked ? InvitationTokenStatus.REVOKED : { not: InvitationTokenStatus.REVOKED };

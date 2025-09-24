@@ -64,10 +64,11 @@ enum UserRole {
 
 /// Invitation token lifecycle
 enum InvitationTokenStatus {
-  ACTIVE
-  USED
-  REVOKED
-  EXPIRED
+  ACTIVE    // Token válido, nunca usado
+  VIEWED    // Token usado para ver documento, puede seguir viendo
+  SIGNED    // Token usado para firmar, no puede firmar de nuevo
+  REVOKED   // Token revocado por el owner
+  EXPIRED   // Token expirado
 }
 
 /// Document origin used to produce the envelope
@@ -268,6 +269,7 @@ model Consent {
   consentText      String
   ipAddress        String
   userAgent        String
+  country          String?
 
   /// Relations
   envelope SignatureEnvelope @relation(fields: [envelopeId], references: [id], onDelete: Cascade)
@@ -303,6 +305,10 @@ model InvitationToken {
   /// Usage/rotation
   usedAt       DateTime?
   usedBy       String?
+  viewCount    Int      @default(0)  // Contador de vistas
+  lastViewedAt DateTime?             // Última vez que se vio
+  signedAt     DateTime?             // Cuándo se firmó
+  signedBy     String?  @db.Uuid     // Quién firmó (signerId)
   revokedAt    DateTime?
   revokedReason String?
   createdBy    String?  @db.Uuid

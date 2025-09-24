@@ -32,4 +32,3 @@ export { cleanupS3MockStorage } from './aws/s3Cleanup';
 // Export mock helpers
 export { outboxMockHelpers } from './aws/outboxMock';
 
-console.log('🔧 All mocks loaded - AWS services, Cognito JWKS, and SendEnvelope mocks ready for testing');

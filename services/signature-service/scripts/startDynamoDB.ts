@@ -52,20 +52,15 @@ let dynamoDBPort: number = 8000;
 export const startDynamoDBLocal = async (config: Partial<DynamoDBLocalConfig> = {}): Promise<void> => {
   const finalConfig = { ...defaultConfig, ...config };
   
-  console.log('🚀 Starting DynamoDB Local...');
-  console.log('📋 Configuration:', finalConfig);
-  
   try {
     // Use the programmatic API to start DynamoDB Local
     const port = finalConfig.port;
     dynamoDBPort = port;
     
-    console.log(`🔧 Starting DynamoDB Local on port ${port}...`);
     
     // Start DynamoDB Local using the programmatic API
     await DynamoDBLocal.launch(port, null, [], false, true);
     
-    console.log('✅ DynamoDB Local started successfully!');
     
     // Wait a moment for the server to be fully ready
     await new Promise(resolve => setTimeout(resolve, 2000));
@@ -87,15 +82,12 @@ export const startDynamoDBLocal = async (config: Partial<DynamoDBLocalConfig> = 
  */
 export const stopDynamoDBLocal = async (): Promise<void> => {
   try {
-    console.log('🛑 Stopping DynamoDB Local...');
     
     // Use the programmatic API to stop DynamoDB Local
     DynamoDBLocal.stop(dynamoDBPort);
     
-    console.log('✅ DynamoDB Local stopped successfully!');
     
   } catch (error: any) {
-    console.log(`⚠️  DynamoDB Local was not running or already stopped: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };
 
@@ -135,13 +127,11 @@ export const waitForDynamoDBLocal = async (
   maxRetries: number = 30,
   retryDelay: number = 1000
 ): Promise<void> => {
-  console.log('⏳ Waiting for DynamoDB Local to be ready...');
   
   for (let i = 0; i < maxRetries; i++) {
     try {
       const isRunning = await isDynamoDBLocalRunning();
       if (isRunning) {
-        console.log('✅ DynamoDB Local is ready!');
         return;
       }
     } catch (error) {
@@ -149,7 +139,6 @@ export const waitForDynamoDBLocal = async (
       console.debug(`DynamoDB Local startup check failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
     
-    console.log(`⏳ Attempt ${i + 1}/${maxRetries} - waiting ${retryDelay}ms...`);
     await new Promise(resolve => setTimeout(resolve, retryDelay));
   }
   
@@ -169,7 +158,6 @@ const main = async (): Promise<void> => {
     // Check if already running
     const isRunning = await isDynamoDBLocalRunning();
     if (isRunning) {
-      console.log('✅ DynamoDB Local is already running');
       process.exit(0);
     }
     
@@ -179,7 +167,6 @@ const main = async (): Promise<void> => {
     // Wait for it to be ready
     await waitForDynamoDBLocal();
     
-    console.log('🎉 DynamoDB Local is ready for use!');
     process.exit(0);
     
   } catch (error) {

@@ -52,4 +52,3 @@ jest.mock('@aws-sdk/client-ssm', () => ({
   GetParametersCommand: jest.fn().mockImplementation((input: any) => ({ input })),
 }));
 
-console.log('🔧 SSM mock loaded - realistic parameter retrieval behavior');

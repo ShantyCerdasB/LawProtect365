@@ -876,4 +876,36 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
       });
     }
   }
+
+
+  /**
+   * Updates flattened key for an envelope
+   * @param envelopeId - The envelope ID
+   * @param flattenedKey - The flattened document S3 key
+   * @returns The updated signature envelope
+   */
+  async updateFlattenedKey(
+    envelopeId: EnvelopeId,
+    flattenedKey: string
+  ): Promise<SignatureEnvelope> {
+    try {
+      const updated = await this.prisma.signatureEnvelope.update({
+        where: { id: envelopeId.getValue() },
+        data: { flattenedKey },
+        include: {
+          signers: {
+            orderBy: { order: 'asc' }
+          }
+        }
+      });
+
+      return this.toDomain(updated);
+    } catch (error) {
+      throw documentS3Error({
+        operation: 'updateFlattenedKey',
+        envelopeId: envelopeId.getValue(),
+        originalError: error instanceof Error ? error.message : error
+      });
+    }
+  }
 }

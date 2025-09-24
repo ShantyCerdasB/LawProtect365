@@ -26,8 +26,6 @@ config();
  * @throws Error when setup fails, causing all tests to be skipped
  */
 export default async function globalSetup(): Promise<void> {
-  console.log('🚀 Starting global test setup...');
-  
   try {
     // Set test environment variables
     process.env.NODE_ENV = 'test';
@@ -86,19 +84,15 @@ export default async function globalSetup(): Promise<void> {
     process.env.DYNAMODB_ACCESS_KEY_ID = 'fake';
     process.env.DYNAMODB_SECRET_ACCESS_KEY = 'fake';
     
-    console.log('📋 Test environment variables set');
-    
-    // Setup database and run Prisma migrations
-    console.log('🗄️ Setting up database...');
     await runMigrations();
     await seedDatabase();
     
     // Start DynamoDB Local for outbox
-    console.log('🚀 Starting DynamoDB Local for outbox...');
+
     await startDynamoDBLocal();
     
     // Wait for DynamoDB Local to be ready
-    console.log('⏳ Waiting for DynamoDB Local to be ready...');
+
     await waitForDynamoDBLocal();
     
     // Clean existing outbox tables
@@ -118,8 +112,7 @@ export default async function globalSetup(): Promise<void> {
       await new Promise(r => setTimeout(r, 500));
     } catch {}
 
-    // Create outbox table
-    console.log('📝 Creating outbox table...');
+
     const { createDynamoDBClient } = await import('../scripts/createLocalTables');
     const client = createDynamoDBClient();
     
@@ -127,7 +120,6 @@ export default async function globalSetup(): Promise<void> {
       await createTable(client, tableDefinition);
     }
     
-    console.log('✅ Global test setup completed successfully!');
     
   } catch (error) {
     console.error('❌ Global test setup failed:', error);

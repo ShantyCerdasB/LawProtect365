@@ -86,11 +86,13 @@ export class ServiceFactory {
     const signatureEnvelopeRepository = new SignatureEnvelopeRepository(this.prismaClient);
     const signatureAuditEventService = this.createSignatureAuditEventService();
     const invitationTokenService = this.createInvitationTokenService();
+    const s3Service = this.createS3Service();
 
     return new SignatureEnvelopeService(
       signatureEnvelopeRepository,
       signatureAuditEventService,
-      invitationTokenService
+      invitationTokenService,
+      s3Service
     );
   }
 

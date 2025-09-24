@@ -12,6 +12,8 @@ export interface SignDocumentRequest {
   signerId: string;
   /** Invitation token for external users */
   invitationToken?: string;
+  /** S3 key of the flattened document ready for signing */
+  flattenedKey?: string;
   /** Hash of the document to be signed */
   documentHash: string;
   /** Hash of the signature */

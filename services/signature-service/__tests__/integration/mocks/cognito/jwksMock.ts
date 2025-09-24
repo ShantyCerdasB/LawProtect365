@@ -145,7 +145,6 @@ let server: any = null;
  */
 export async function startMockJwksServer(): Promise<void> {
   if (server) {
-    console.log('⚠️  Mock JWKS server already running');
     return;
   }
   
@@ -153,21 +152,14 @@ export async function startMockJwksServer(): Promise<void> {
     await initializeJwks();
     
     server = app.listen(PORT, () => {
-      console.log(`🚀 Mock JWKS server started on port ${PORT}`);
-      console.log(`📋 JWKS endpoint: http://localhost:${PORT}/.well-known/jwks.json`);
     });
     
     // Handle server errors
     server.on('error', (error: any) => {
-      if (error.code === 'EADDRINUSE') {
-        console.log(`⚠️  Port ${PORT} already in use, server might already be running`);
-      } else {
-        console.error('❌ Mock JWKS server error:', error);
-      }
+      // Server error handling
     });
     
   } catch (error) {
-    console.error('❌ Failed to start mock JWKS server:', error);
     throw error;
   }
 }
@@ -180,13 +172,11 @@ export async function startMockJwksServer(): Promise<void> {
  */
 export async function stopMockJwksServer(): Promise<void> {
   if (!server) {
-    console.log('⚠️  Mock JWKS server not running');
     return;
   }
   
   return new Promise((resolve) => {
     server.close(() => {
-      console.log('🛑 Mock JWKS server stopped');
       server = null;
       resolve();
     });
