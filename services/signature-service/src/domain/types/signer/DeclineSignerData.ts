@@ -12,4 +12,8 @@ export interface DeclineSignerData {
   reason: string;
   userId?: string; // Optional for external users
   invitationToken?: string;
+  // Security context for audit tracking
+  ipAddress?: string;
+  userAgent?: string;
+  country?: string;
 }

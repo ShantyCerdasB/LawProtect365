@@ -312,6 +312,21 @@ export class EnvelopeSigner {
   }
 
   /**
+   * Validates that the signer can decline (does not require consent)
+   * @throws signerAlreadySigned when signer has already signed
+   * @throws signerAlreadyDeclined when signer has already declined
+   */
+  private validateCanDecline(): void {
+    if (this.status === SignerStatus.SIGNED) {
+      throw signerAlreadySigned('Signer has already signed');
+    }
+    if (this.status === SignerStatus.DECLINED) {
+      throw signerAlreadyDeclined('Signer has already declined');
+    }
+    // Note: Decline does not require consent, unlike signing
+  }
+
+  /**
    * Marks the signer as signed with cryptographic evidence
    * @param documentHash - Hash of the document before signing
    * @param signatureHash - Hash of the signature
@@ -349,15 +364,21 @@ export class EnvelopeSigner {
   /**
    * Marks the signer as declined
    * @param reason - Reason for declining
+   * @param ipAddress - IP address of the signer
+   * @param userAgent - User agent of the signer
+   * @param country - Country of the signer
    * @throws signerAlreadySigned when signer has already signed
    * @throws signerAlreadyDeclined when signer has already declined
    */
-  decline(reason: string): void {
-    this.validateCanPerformAction();
+  decline(reason: string, ipAddress?: string, userAgent?: string, country?: string): void {
+    this.validateCanDecline();
 
     this.status = SignerStatus.DECLINED;
     this.declinedAt = new Date();
     this.declineReason = reason;
+    this.ipAddress = ipAddress;
+    this.userAgent = userAgent;
+    this.location = country;
     this.updatedAt = new Date();
   }
 

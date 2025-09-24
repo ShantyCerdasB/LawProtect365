@@ -13,6 +13,7 @@ import { sendEnvelopeHandler } from '../../../src/handlers/envelopes/SendEnvelop
 import { getEnvelopeHandler } from '../../../src/handlers/envelopes/GetEnvelopeHandler';
 import { getEnvelopesByUserHandler } from '../../../src/handlers/envelopes/GetEnvelopesByUserHandler';
 import { signDocumentHandler } from '../../../src/handlers/signing/SignDocumentHandler';
+import { declineSignerHandler } from '../../../src/handlers/signing/DeclineSignerHandler';
 import { TestUser, EnvelopeData } from './testTypes';
 
 /**
@@ -361,6 +362,58 @@ export class EnvelopeOperations {
     const result = await signDocumentHandler(event) as any;
     const response = JSON.parse(result.body);
     
+    return {
+      statusCode: result.statusCode,
+      data: response.data || response
+    };
+  }
+
+  /**
+   * Decline signer with invitation token
+   * @param envelopeId - ID of the envelope
+   * @param signerId - ID of the signer declining
+   * @param invitationToken - Invitation token for the signer
+   * @param reason - Reason for declining
+   * @returns Promise that resolves to the decline response
+   */
+  async declineSigner(
+    envelopeId: string,
+    signerId: string,
+    invitationToken: string,
+    reason: string
+  ): Promise<{ statusCode: number; data: any }> {
+    console.log('🔍 Decline request params:', { envelopeId, signerId, invitationToken, reason });
+
+    const token = await generateTestJwtToken({
+      sub: this.testUser.userId, 
+      email: this.testUser.email, 
+      roles: ['admin'], 
+      scopes: [] 
+    });
+    
+    const event = await createApiGatewayEvent({
+      includeAuth: true,
+      authToken: token,
+      pathParameters: { id: envelopeId, signerId },
+      body: JSON.stringify({
+        invitationToken,
+        reason: reason || 'No reason provided',
+        metadata: {
+          ipAddress: '127.0.0.1',
+          userAgent: 'test-agent',
+          timestamp: new Date().toISOString()
+        }
+      }),
+      headers: {
+        'x-country': 'US',
+        'x-forwarded-for': '127.0.0.1',
+        'user-agent': 'Test User Agent'
+      }
+    });
+    
+    const result = await declineSignerHandler(event) as any;
+    const response = JSON.parse(result.body);
+
     return {
       statusCode: result.statusCode,
       data: response.data || response

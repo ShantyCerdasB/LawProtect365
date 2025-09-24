@@ -46,7 +46,6 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
     try {
       return SignatureEnvelope.fromPersistence(model as any);
     } catch (error) {
-      // Log error for debugging
       console.error('Failed to map envelope from persistence', { 
         error: error instanceof Error ? error.message : error,
         envelopeId: (model as any)?.id 
@@ -186,7 +185,8 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
     const client = tx || this.prisma;
     
     try {
-      const envelopeData = this.toModel(data) as any;
+      const envelopeDataRaw = this.toModel(data) as any;
+      const { createdAt: _c1, updatedAt: _u1, ...envelopeData } = envelopeDataRaw;
       const created = await client.signatureEnvelope.create({
         data: envelopeData,
         include: {
@@ -221,7 +221,9 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
     const client = tx || this.prisma;
     
     try {
-      const updateData = this.toModel(patch) as any;
+      const updateDataRaw = this.toModel(patch) as any;
+      const { id: _omitId, createdAt: _c2, updatedAt: _u2, ...updateData } = updateDataRaw;
+
       const updated = await client.signatureEnvelope.update({
         where: this.whereById(id) as any,
         data: updateData,
@@ -286,17 +288,28 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
     
     try {
       const where = this.whereFromSpec(spec) as any;
-      
+
       if (cursor) {
-        const cursorData = RepositoryFactory.decodeCursor<{ id: string }>(cursor);
-        if (cursorData?.id) {
-          where.id = { lt: cursorData.id };
+        const cursorData = RepositoryFactory.decodeCursor<{ createdAt: string; id: string }>(cursor);
+        if (cursorData?.createdAt && cursorData?.id) {
+          where.OR = [
+            { createdAt: { lt: new Date(cursorData.createdAt) } },
+            {
+              AND: [
+                { createdAt: new Date(cursorData.createdAt) },
+                { id: { lt: cursorData.id } }
+              ]
+            }
+          ];
         }
       }
 
       const envelopes = await client.signatureEnvelope.findMany({
         where,
-        orderBy: { createdAt: 'desc' },
+        orderBy: [
+          { createdAt: 'desc' },
+          { id: 'desc' }
+        ],
         take: limit + SignatureEnvelopeRepository.PAGINATION_OFFSET,
         include: {
           signers: {
@@ -305,10 +318,13 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
         }
       });
 
-      const items = envelopes.slice(SignatureEnvelopeRepository.SLICE_START_INDEX, limit).map((envelope: any) => this.toDomain(envelope));
-      const nextCursor = envelopes.length > limit ? 
-        RepositoryFactory.createCursor(envelopes[limit], ['id']) : 
-        undefined;
+      const items = envelopes
+        .slice(SignatureEnvelopeRepository.SLICE_START_INDEX, limit)
+        .map((envelope: any) => this.toDomain(envelope));
+
+      const nextCursor = envelopes.length > limit
+        ? RepositoryFactory.createCursor(envelopes[limit], ['createdAt', 'id'])
+        : undefined;
 
       return { items, nextCursor };
     } catch (error) {
@@ -353,7 +369,11 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
         error: error instanceof Error ? error.message : error,
         envelopeId: id.getValue() 
       });
-      throw new Error(`Failed to retrieve envelope: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw documentS3Error({
+        operation: 'getWithSigners',
+        envelopeId: id.getValue(),
+        originalError: error instanceof Error ? error.message : error
+      });
     }
   }
 
@@ -380,7 +400,6 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
     return envelope ? this.toDomain(envelope) : null;
   }
 
-
   /**
    * Finds envelopes by creator user ID
    * @param userId - User ID who created the envelopes
@@ -397,9 +416,6 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
     if (cursor) {
       const cursorData = RepositoryFactory.decodeCursor<{ createdAt: string; id: string }>(cursor);
       if (cursorData?.createdAt && cursorData?.id) {
-        // With DESC order: createdAt DESC, id DESC
-        // Get elements that are "before" the cursor in the sort order
-        // This means: createdAt < cursorDate OR (createdAt = cursorDate AND id < cursorId)
         whereClause.OR = [
           { createdAt: { lt: new Date(cursorData.createdAt) } },
           {
@@ -416,7 +432,7 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
       where: whereClause,
       orderBy: [
         { createdAt: 'desc' },
-        { id: 'desc' } // Secondary sort for deterministic ordering
+        { id: 'desc' }
       ],
       take: limit + 1,
       include: {
@@ -447,15 +463,26 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
     const whereClause: any = { status: status.getValue() };
     
     if (cursor) {
-      const cursorData = RepositoryFactory.decodeCursor<{ id: string }>(cursor);
-      if (cursorData?.id) {
-        whereClause.id = { lt: cursorData.id };
+      const cursorData = RepositoryFactory.decodeCursor<{ createdAt: string; id: string }>(cursor);
+      if (cursorData?.createdAt && cursorData?.id) {
+        whereClause.OR = [
+          { createdAt: { lt: new Date(cursorData.createdAt) } },
+          {
+            AND: [
+              { createdAt: new Date(cursorData.createdAt) },
+              { id: { lt: cursorData.id } }
+            ]
+          }
+        ];
       }
     }
 
     const envelopes = await client.signatureEnvelope.findMany({
       where: whereClause,
-      orderBy: { createdAt: 'desc' },
+      orderBy: [
+        { createdAt: 'desc' },
+        { id: 'desc' }
+      ],
       take: limit + 1,
       include: {
         signers: {
@@ -467,7 +494,7 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
     return RepositoryFactory.createPage(
       envelopes,
       limit,
-      (envelope: any) => RepositoryFactory.createCursor(envelope, ['id'])
+      (envelope: any) => RepositoryFactory.createCursor(envelope, ['createdAt', 'id'])
     );
   }
 
@@ -512,15 +539,26 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
     };
     
     if (cursor) {
-      const cursorData = RepositoryFactory.decodeCursor<{ id: string }>(cursor);
-      if (cursorData?.id) {
-        whereClause.id = { lt: cursorData.id };
+      const cursorData = RepositoryFactory.decodeCursor<{ expiresAt: string; id: string }>(cursor);
+      if (cursorData?.expiresAt && cursorData?.id) {
+        whereClause.OR = [
+          { expiresAt: { gt: new Date(cursorData.expiresAt) } },
+          {
+            AND: [
+              { expiresAt: new Date(cursorData.expiresAt) },
+              { id: { gt: cursorData.id } }
+            ]
+          }
+        ];
       }
     }
 
     const envelopes = await client.signatureEnvelope.findMany({
       where: whereClause,
-      orderBy: { expiresAt: 'asc' },
+      orderBy: [
+        { expiresAt: 'asc' },
+        { id: 'asc' }
+      ],
       take: limit + 1,
       include: {
         signers: {
@@ -532,12 +570,9 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
     return RepositoryFactory.createPage(
       envelopes,
       limit,
-      (envelope: any) => RepositoryFactory.createCursor(envelope, ['id'])
+      (envelope: any) => RepositoryFactory.createCursor(envelope, ['expiresAt', 'id'])
     );
   }
-
-
-
 
   /**
    * Updates S3 keys for envelope
@@ -550,13 +585,11 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
     const client = tx || this.prisma;
     
     try {
-      // Get current envelope
       const currentEnvelope = await this.findById(id, tx);
       if (!currentEnvelope) {
         throw envelopeNotFound({ envelopeId: id.getValue() });
       }
 
-      // Update S3 keys using entity method
       currentEnvelope.updateS3Keys(
         s3Keys.sourceKey ? S3Key.fromString(s3Keys.sourceKey) : undefined,
         s3Keys.metaKey ? S3Key.fromString(s3Keys.metaKey) : undefined,
@@ -564,10 +597,13 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
         s3Keys.signedKey ? S3Key.fromString(s3Keys.signedKey) : undefined
       );
 
-      // Persist changes
       const updated = await client.signatureEnvelope.update({
         where: { id: id.getValue() },
-        data: this.toModel(currentEnvelope) as any,
+        data: ((): any => {
+          const raw = this.toModel(currentEnvelope) as any;
+          const { id: _omitId, createdAt: _c3, updatedAt: _u3, ...rest } = raw;
+          return rest;
+        })(),
         include: {
           signers: {
             orderBy: { order: 'asc' }
@@ -602,23 +638,24 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
     const client = tx || this.prisma;
     
     try {
-      // Get current envelope
       const currentEnvelope = await this.findById(id, tx);
       if (!currentEnvelope) {
         throw envelopeNotFound({ envelopeId: id.getValue() });
       }
 
-      // Update hashes using entity method
       currentEnvelope.updateHashes(
         hashes.sourceSha256 ? DocumentHash.fromString(hashes.sourceSha256) : undefined,
         hashes.flattenedSha256 ? DocumentHash.fromString(hashes.flattenedSha256) : undefined,
         hashes.signedSha256 ? DocumentHash.fromString(hashes.signedSha256) : undefined
       );
 
-      // Persist changes
       const updated = await client.signatureEnvelope.update({
         where: { id: id.getValue() },
-        data: this.toModel(currentEnvelope) as any,
+        data: ((): any => {
+          const raw = this.toModel(currentEnvelope) as any;
+          const { id: _omitId, createdAt: _c4, updatedAt: _u4, ...rest } = raw;
+          return rest;
+        })(),
         include: {
           signers: {
             orderBy: { order: 'asc' }
@@ -654,22 +691,23 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
     const client = tx || this.prisma;
     
     try {
-      // Get current envelope
       const currentEnvelope = await this.findById(id, tx);
       if (!currentEnvelope) {
         throw envelopeNotFound({ envelopeId: id.getValue() });
       }
 
-      // Update signed document using entity method
       currentEnvelope.updateSignedDocument(
         S3Key.fromString(signedKey),
         DocumentHash.fromString(signedSha256)
       );
 
-      // Persist changes
       const updated = await client.signatureEnvelope.update({
         where: { id: id.getValue() },
-        data: this.toModel(currentEnvelope) as any,
+        data: ((): any => {
+          const raw = this.toModel(currentEnvelope) as any;
+          const { id: _omitId, createdAt: _c5, updatedAt: _u5, ...rest } = raw;
+          return rest;
+        })(),
         include: {
           signers: {
             orderBy: { order: 'asc' }
@@ -726,7 +764,7 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
       }
     });
 
-      return count > SignatureEnvelopeRepository.MIN_COUNT_THRESHOLD;
+    return count > SignatureEnvelopeRepository.MIN_COUNT_THRESHOLD;
   }
 
   /**
@@ -742,7 +780,7 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
       where: { id: id.getValue() }
     });
 
-      return count > SignatureEnvelopeRepository.MIN_COUNT_THRESHOLD;
+    return count > SignatureEnvelopeRepository.MIN_COUNT_THRESHOLD;
   }
 
   /**
@@ -786,9 +824,17 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
     const whereClause: any = { envelopeId: id.getValue() };
     
     if (cursor) {
-      const cursorData = RepositoryFactory.decodeCursor<{ id: string }>(cursor);
-      if (cursorData?.id) {
-        whereClause.id = { lt: cursorData.id };
+      const cursorData = RepositoryFactory.decodeCursor<{ createdAt: string; id: string }>(cursor);
+      if (cursorData?.createdAt && cursorData?.id) {
+        whereClause.OR = [
+          { createdAt: { lt: new Date(cursorData.createdAt) } },
+          {
+            AND: [
+              { createdAt: new Date(cursorData.createdAt) },
+              { id: { lt: cursorData.id } }
+            ]
+          }
+        ];
       }
     }
 
@@ -800,7 +846,10 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
         },
         auditEvents: {
           where: whereClause,
-          orderBy: { createdAt: 'desc' },
+          orderBy: [
+            { createdAt: 'desc' },
+            { id: 'desc' }
+          ],
           take: limit + 1
         }
       }
@@ -843,19 +892,20 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
     const client = tx || this.prisma;
     
     try {
-      // Get current envelope
       const currentEnvelope = await this.findById(id, tx);
       if (!currentEnvelope) {
         throw envelopeNotFound({ envelopeId: id.getValue() });
       }
 
-      // Complete envelope using entity method
       currentEnvelope.complete();
 
-      // Persist changes
       const updated = await client.signatureEnvelope.update({
         where: { id: id.getValue() },
-        data: this.toModel(currentEnvelope) as any,
+        data: ((): any => {
+          const raw = this.toModel(currentEnvelope) as any;
+          const { id: _omitId, createdAt: _c6, updatedAt: _u6, ...rest } = raw;
+          return rest;
+        })(),
         include: {
           signers: {
             orderBy: { order: 'asc' }
@@ -877,19 +927,22 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
     }
   }
 
-
   /**
    * Updates flattened key for an envelope
    * @param envelopeId - The envelope ID
    * @param flattenedKey - The flattened document S3 key
+   * @param tx - Optional transaction context
    * @returns The updated signature envelope
    */
   async updateFlattenedKey(
     envelopeId: EnvelopeId,
-    flattenedKey: string
+    flattenedKey: string,
+    tx?: any
   ): Promise<SignatureEnvelope> {
+    const client = tx || this.prisma;
+
     try {
-      const updated = await this.prisma.signatureEnvelope.update({
+      const updated = await client.signatureEnvelope.update({
         where: { id: envelopeId.getValue() },
         data: { flattenedKey },
         include: {

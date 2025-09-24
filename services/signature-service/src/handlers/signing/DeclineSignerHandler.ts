@@ -5,14 +5,12 @@
  * including validation, status updates, and notification dispatch.
  */
 
-import { ControllerFactory } from '@lawprotect/shared-ts';
+import { ControllerFactory, UuidV4 } from '@lawprotect/shared-ts';
 import { ServiceFactory } from '../../infrastructure/factories/ServiceFactory';
-import { DeclineSignerRequestSchema } from '../../domain/schemas/SigningHandlersSchema';
-import { EnvelopeIdSchema } from '../../domain/schemas/EnvelopeSchema';
-import { SignerIdSchema } from '../../domain/schemas/SignerSchema';
+import { DeclineSignerRequestSchema, DeclineSignerResponse } from '../../domain/schemas/SigningHandlersSchema';
+import { z } from 'zod';
 import { EnvelopeId } from '../../domain/value-objects/EnvelopeId';
 import { SignerId } from '../../domain/value-objects/SignerId';
-import { z } from 'zod';
 
 /**
  * DeclineSignerHandler - Production-ready handler using ControllerFactory
@@ -37,16 +35,31 @@ import { z } from 'zod';
 export const declineSignerHandler = ControllerFactory.createCommand({
   // Validation schemas
   pathSchema: z.object({
-    id: EnvelopeIdSchema,
-    signerId: SignerIdSchema
+    id: UuidV4,
+    signerId: UuidV4
   }),
   bodySchema: DeclineSignerRequestSchema,
   
   // Service configuration - use new DDD architecture
   appServiceClass: class {
-    private signatureOrchestrator = ServiceFactory.createSignatureOrchestrator();
+    private readonly signatureOrchestrator: any;
     
-    async execute(params: any) {
+    constructor() {
+      this.signatureOrchestrator = ServiceFactory.createSignatureOrchestrator();
+    }
+    
+    /**
+     * Executes the signer decline orchestration
+     * 
+     * @param params - Extracted parameters from request
+     * @returns Promise resolving to decline result
+     */
+    async execute(params: {
+      envelopeId: EnvelopeId;
+      signerId: SignerId;
+      request: any;
+      securityContext: any;
+    }) {
       try {
         return await this.signatureOrchestrator.declineSigner(
           params.envelopeId,
@@ -65,8 +78,27 @@ export const declineSignerHandler = ControllerFactory.createCommand({
     envelopeId: EnvelopeId.fromString(path.id),
     signerId: SignerId.fromString(path.signerId),
     request: body,
-    securityContext: context.securityContext
+    securityContext: {
+      ipAddress: context.auth?.ipAddress || context.securityContext?.ipAddress,
+      userAgent: context.auth?.userAgent || context.securityContext?.userAgent,
+      country: context.auth?.country || context.securityContext?.country
+    }
   }),
+  
+  // Response configuration
+  responseType: 'ok',
+  transformResult: async (result: any): Promise<DeclineSignerResponse> => {
+    return {
+      message: result.message,
+      decline: {
+        signerId: result.declineInfo.signerId,
+        envelopeId: result.envelope.id,
+        reason: result.declineInfo.reason,
+        declinedAt: result.declineInfo.declinedAt,
+        envelopeStatus: result.envelope.status
+      }
+    };
+  },
   
   // Middleware configuration
   includeSecurityContext: true,

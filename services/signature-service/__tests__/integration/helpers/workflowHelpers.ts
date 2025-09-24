@@ -286,5 +286,25 @@ export class WorkflowTestHelper {
     return this.envelopeOperations.signDocumentAsOwner(envelopeId, signerId, consent);
   }
 
+  /**
+   * Decline signer with invitation token
+   * @param envelopeId - ID of the envelope
+   * @param signerId - ID of the signer declining
+   * @param invitationToken - Invitation token for the signer
+   * @param reason - Reason for declining
+   * @returns Promise that resolves to the decline response
+   */
+  async declineSigner(
+    envelopeId: string,
+    signerId: string,
+    invitationToken: string,
+    reason: string
+  ): Promise<{ statusCode: number; data: any }> {
+    if (!this.envelopeOperations) {
+      throw new Error('WorkflowTestHelper not initialized. Call initialize() first.');
+    }
+    return this.envelopeOperations.declineSigner(envelopeId, signerId, invitationToken, reason);
+  }
+
 }
 

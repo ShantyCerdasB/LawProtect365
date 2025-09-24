@@ -30,6 +30,7 @@ import {
   signerEmailDuplicate,
   envelopeNotFound
 } from '../signature-errors';
+import { ConflictError, BadRequestError, NotFoundError } from '@lawprotect/shared-ts';
 import { wrapServiceError } from '@lawprotect/shared-ts';
 
 /**
@@ -422,7 +423,7 @@ export class EnvelopeSignerService {
       }
 
       // Use entity method to decline
-      signer.decline(declineData.reason);
+      signer.decline(declineData.reason, declineData.ipAddress, declineData.userAgent, declineData.country);
 
       // Update in repository
       const updatedSigner = await this.envelopeSignerRepository.update(declineData.signerId, signer);
@@ -435,9 +436,9 @@ export class EnvelopeSignerService {
         `Signer ${signer.getFullName() || signer.getEmail()?.getValue() || 'Unknown'} declined to sign`,
         declineData.userId || `external-user:${signer.getFullName() || signer.getEmail()?.getValue() || 'Unknown'}`, // ✅ Consistente con otros handlers
         signer.getEmail()?.getValue(),
-        undefined,
-        undefined,
-        undefined, // country
+        declineData.ipAddress,    // ✅ Use security context from request
+        declineData.userAgent,    // ✅ Use security context from request
+        declineData.country,      // ✅ Use security context from request
         {
           declineReason: declineData.reason,
           declinedAt: updatedSigner.getDeclinedAt()?.toISOString()
@@ -446,6 +447,12 @@ export class EnvelopeSignerService {
 
       return updatedSigner;
     } catch (error) {
+      // Only wrap technical errors, not business validation errors
+      if (error instanceof ConflictError || error instanceof BadRequestError || error instanceof NotFoundError) {
+        throw error; // Re-throw business errors as-is
+      }
+      
+      // Only wrap unexpected technical errors
       throw signerUpdateFailed(
         `Failed to decline signer: ${error instanceof Error ? error.message : error}`
       );

@@ -250,8 +250,6 @@ export class SignatureOrchestrator {
       expiresAt: Date;
     }>;
   }> {
-    // ✅ DEBUG: Log sendEnvelope start
-    
     try {
       // 1. Validate and change envelope state (in service)
       const envelope = await this.signatureEnvelopeService.sendEnvelope(envelopeId, userId);
@@ -260,10 +258,11 @@ export class SignatureOrchestrator {
       const externalSigners = envelope.getExternalSigners();
       
       // 3. Determine target signers
-      const targetSigners = options.sendToAll 
+      const selected = options.signers ?? [];
+      const targetSigners = options.sendToAll
         ? externalSigners
-        : externalSigners.filter(signer => 
-            options.signers!.some(s => s.signerId === signer.getId().getValue())
+        : externalSigners.filter(signer =>
+            selected.some(s => s.signerId === signer.getId().getValue())
           );
       
       // 4. Generate invitation tokens for target signers
@@ -277,8 +276,6 @@ export class SignatureOrchestrator {
           country: securityContext.country
         }
       );
-      
-      // ✅ DEBUG: Log token generation results
       
       // 5. Publish notification events for notification service
       await this.publishNotificationEvent(envelopeId, options, tokenResults);
@@ -344,10 +341,7 @@ export class SignatureOrchestrator {
       const envelopeId = EntityFactory.createValueObjects.envelopeId(request.envelopeId);
       const signerId = EntityFactory.createValueObjects.signerId(request.signerId);
       
-      console.log('🔍 DEBUG signDocument - envelopeId:', envelopeId.getValue());
-      console.log('🔍 DEBUG signDocument - signerId:', signerId.getValue());
-      console.log('🔍 DEBUG signDocument - userId:', userId);
-      console.log('🔍 DEBUG signDocument - invitationToken:', request.invitationToken ? 'present' : 'not present');
+      // Debug info available if needed
       
       const envelope = await this.signatureEnvelopeService.validateUserAccess(
         envelopeId,
@@ -355,10 +349,7 @@ export class SignatureOrchestrator {
         request.invitationToken
       );
       
-      console.log('🔍 DEBUG signDocument - envelope from validateUserAccess:');
-      console.log('  - ID:', envelope.getId().getValue());
-      console.log('  - Status:', envelope.getStatus().getValue());
-      console.log('  - CreatedBy:', envelope.getCreatedBy());
+      // Envelope validated successfully
       
       // Mark invitation token as signed if provided
       if (request.invitationToken) {
@@ -372,7 +363,7 @@ export class SignatureOrchestrator {
               country: securityContext.country
             }
           );
-          console.log('✅ Invitation token marked as signed');
+          // Invitation token marked as signed
         } catch (error) {
           console.warn('Failed to mark invitation token as signed:', error);
           // Don't fail the signing process if token marking fails
@@ -384,11 +375,7 @@ export class SignatureOrchestrator {
         throw envelopeNotFound(`Envelope with ID ${envelopeId.getValue()} not found`);
       }
       
-      console.log('🔍 DEBUG signDocument - envelopeWithSigners:');
-      console.log('  - ID:', envelopeWithSigners.getId().getValue());
-      console.log('  - Status:', envelopeWithSigners.getStatus().getValue());
-      console.log('  - CreatedBy:', envelopeWithSigners.getCreatedBy());
-      console.log('  - Signers count:', envelopeWithSigners.getSigners().length);
+      // Envelope with signers retrieved
       
       const allSigners = envelopeWithSigners.getSigners();
       const signer = allSigners.find(s => s.getId().getValue() === request.signerId);
@@ -405,10 +392,6 @@ export class SignatureOrchestrator {
       );
       
       // 3. Create consent record
-      console.log('🔍 DEBUG consent creation:');
-      console.log('  - request.consent.country:', request.consent.country);
-      console.log('  - securityContext.country:', securityContext.country);
-      console.log('  - Final country value:', request.consent.country || securityContext.country);
       
       const consent = await this.consentService.createConsent({
         id: EntityFactory.createValueObjects.consentId(uuid()),
@@ -529,27 +512,15 @@ export class SignatureOrchestrator {
       
       // 14. Check if envelope is complete and update status if needed
       const finalEnvelope = await this.signatureEnvelopeService.getEnvelopeWithSigners(envelopeId);
-      console.log('🔍 DEBUG envelope completion check:');
-      console.log('  - Final envelope exists:', !!finalEnvelope);
-      console.log('  - Final envelope status:', finalEnvelope?.getStatus().getValue());
-      console.log('  - Final envelope isCompleted():', finalEnvelope?.isCompleted());
-      console.log('  - Final envelope signers count:', finalEnvelope?.getSigners().length);
-      console.log('  - Final envelope signers statuses:', finalEnvelope?.getSigners().map(s => s.getStatus()));
       
       let responseEnvelope = finalEnvelope;
       
       if (finalEnvelope?.isCompleted()) {
-        console.log('✅ Envelope is completed, calling completeEnvelope...');
         // Complete the envelope using the service method
         await this.signatureEnvelopeService.completeEnvelope(envelopeId, userId);
-        console.log('✅ Envelope completed successfully');
         
         // Get the updated envelope after completion
         responseEnvelope = await this.signatureEnvelopeService.getEnvelopeWithSigners(envelopeId);
-        console.log('🔍 DEBUG after completion:');
-        console.log('  - Response envelope status:', responseEnvelope?.getStatus().getValue());
-      } else {
-        console.log('❌ Envelope is not completed yet');
       }
       
       return {
@@ -604,10 +575,11 @@ export class SignatureOrchestrator {
     const externalSigners = envelope!.getExternalSigners();
     
     // Determine target signers
-    const targetSigners = options.sendToAll 
+    const selected = options.signers ?? [];
+    const targetSigners = options.sendToAll
       ? externalSigners
-      : externalSigners.filter(signer => 
-          options.signers!.some(s => s.signerId === signer.getId().getValue())
+      : externalSigners.filter(signer =>
+          selected.some(s => s.signerId === signer.getId().getValue())
         );
     
     // Publish one event per signer using outbox pattern
@@ -676,7 +648,7 @@ export class SignatureOrchestrator {
               country: securityContext.country
             }
           );
-          console.log('✅ Invitation token marked as viewed');
+          // Invitation token marked as viewed
         } catch (error) {
           console.warn('Failed to mark invitation token as viewed:', error);
           // Don't fail the get envelope process if token marking fails
@@ -779,7 +751,10 @@ export class SignatureOrchestrator {
   ): Promise<{
     success: boolean;
     message: string;
-    envelope: any;
+    envelope: {
+      id: string;
+      status: string;
+    };
     declineInfo: {
       signerId: string;
       reason: string;
@@ -806,8 +781,20 @@ export class SignatureOrchestrator {
         signerId,
         reason: request.reason,
         userId: undefined, // Para usuarios externos, se maneja internamente
-        invitationToken: request.invitationToken
+        invitationToken: request.invitationToken,
+        // Pass security context for audit tracking
+        ipAddress: securityContext.ipAddress,
+        userAgent: securityContext.userAgent,
+        country: securityContext.country
       });
+
+      // Update envelope status to DECLINED when any signer declines
+      await this.signatureEnvelopeService.updateEnvelopeStatusAfterDecline(
+        envelopeId,
+        signerId,
+        request.reason,
+        undefined // userId for external users
+      );
 
       // 4. Publish decline notification event
       await this.publishDeclineNotificationEvent(envelopeId, signerId, request.reason, signer, securityContext);
@@ -821,7 +808,10 @@ export class SignatureOrchestrator {
       return {
         success: true,
         message: 'Signer declined successfully',
-        envelope: updatedEnvelope.toResponse(),
+        envelope: {
+          id: updatedEnvelope.getId().getValue(),
+          status: updatedEnvelope.getStatus().getValue()
+        },
         declineInfo: {
           signerId: signerId.getValue(),
           reason: request.reason,
@@ -854,6 +844,9 @@ export class SignatureOrchestrator {
     }
   ): Promise<void> {
     const envelope = await this.signatureEnvelopeService.getEnvelopeWithSigners(envelopeId);
+    if (!envelope) {
+      throw envelopeNotFound(`Envelope with ID ${envelopeId.getValue()} not found`);
+    }
     
     const event = makeEvent('SIGNER_DECLINED', {
       envelopeId: envelopeId.getValue(),

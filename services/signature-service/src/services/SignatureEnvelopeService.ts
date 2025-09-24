@@ -11,6 +11,7 @@ import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
 import { EnvelopeStatus } from '../domain/value-objects/EnvelopeStatus';
 import { SigningOrder } from '../domain/value-objects/SigningOrder';
 import { S3Key } from '../domain/value-objects/S3Key';
+import { SignerId } from '../domain/value-objects/SignerId';
 import { SignatureEnvelopeRepository } from '../repositories/SignatureEnvelopeRepository';
 import { SignatureAuditEventService } from './SignatureAuditEventService';
 import { InvitationTokenService } from './InvitationTokenService';
@@ -926,6 +927,62 @@ export class SignatureEnvelopeService {
     } catch (error) {
       throw envelopeUpdateFailed(
         `Failed to update flattened key for envelope ${envelopeId.getValue()}: ${error instanceof Error ? error.message : error}`
+      );
+    }
+  }
+
+  /**
+   * Updates envelope status to DECLINED after a signer declines
+   * @param envelopeId - The envelope ID
+   * @param declinedBySignerId - ID of the signer who declined
+   * @param declineReason - Reason for declining
+   * @param userId - The user ID (optional for external users)
+   * @returns Updated envelope
+   */
+  async updateEnvelopeStatusAfterDecline(
+    envelopeId: EnvelopeId,
+    declinedBySignerId: SignerId,
+    declineReason: string,
+    userId?: string
+  ): Promise<SignatureEnvelope> {
+    try {
+      // Get envelope with signers
+      const envelope = await this.getEnvelopeWithSigners(envelopeId);
+      if (!envelope) {
+        throw envelopeNotFound(`Envelope with ID ${envelopeId.getValue()} not found`);
+      }
+
+      // Set decline-specific fields and update envelope status to DECLINED
+      envelope.setDeclinedInfo(declinedBySignerId.getValue(), declineReason);
+
+      // Update in repository
+      const updatedEnvelope = await this.signatureEnvelopeRepository.update(envelopeId, envelope);
+
+      // Create audit event if userId provided
+      if (userId) {
+        await this.signatureAuditEventService.createEvent({
+          envelopeId: envelopeId.getValue(),
+          signerId: declinedBySignerId.getValue(),
+          eventType: AuditEventType.ENVELOPE_DECLINED,
+          description: `Envelope declined by signer ${declinedBySignerId.getValue()}`,
+          userId: userId,
+          userEmail: undefined,
+          ipAddress: undefined,
+          userAgent: undefined,
+          country: undefined,
+          metadata: {
+            envelopeId: envelopeId.getValue(),
+            declinedBySignerId: declinedBySignerId.getValue(),
+            declineReason: declineReason,
+            declinedAt: updatedEnvelope.getDeclinedAt()?.toISOString()
+          }
+        });
+      }
+
+      return updatedEnvelope;
+    } catch (error) {
+      throw envelopeUpdateFailed(
+        `Failed to update envelope status after decline for envelope ${envelopeId.getValue()}: ${error instanceof Error ? error.message : error}`
       );
     }
   }

@@ -625,6 +625,19 @@ export class SignatureEnvelope {
   }
 
   /**
+   * Sets decline information for the envelope
+   * @param declinedBySignerId - ID of the signer who declined
+   * @param declineReason - Reason for declining
+   */
+  setDeclinedInfo(declinedBySignerId: string, declineReason: string): void {
+    (this as any).declinedAt = new Date();
+    (this as any).declinedBySignerId = SignerId.fromString(declinedBySignerId);
+    (this as any).declinedReason = declineReason;
+    this.status = EnvelopeStatus.declined();
+    this.updatedAt = new Date();
+  }
+
+  /**
    * Validates signing order for a signer
    * @param signerId - The signer attempting to sign
    * @param userId - The user ID
