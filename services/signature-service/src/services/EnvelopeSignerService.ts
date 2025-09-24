@@ -433,7 +433,7 @@ export class EnvelopeSignerService {
         declineData.signerId.getValue(),
         AuditEventType.SIGNER_DECLINED,
         `Signer ${signer.getFullName() || signer.getEmail()?.getValue() || 'Unknown'} declined to sign`,
-        declineData.userId,
+        declineData.userId || `external-user:${signer.getFullName() || signer.getEmail()?.getValue() || 'Unknown'}`, // ✅ Consistente con otros handlers
         signer.getEmail()?.getValue(),
         undefined,
         undefined,

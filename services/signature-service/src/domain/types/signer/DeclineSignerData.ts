@@ -10,6 +10,6 @@ import { SignerId } from '../../value-objects/SignerId';
 export interface DeclineSignerData {
   signerId: SignerId;
   reason: string;
-  userId: string;
+  userId?: string; // Optional for external users
   invitationToken?: string;
 }

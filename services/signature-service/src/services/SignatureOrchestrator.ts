@@ -29,12 +29,16 @@ import { EnvelopeStatus } from '../domain/value-objects/EnvelopeStatus';
 import { AccessType } from '../domain/enums/AccessType';
 import { EnvelopeSpec } from '../domain/types/envelope';
 import { documentS3NotFound, envelopeNotFound } from '../signature-errors';
-import { uuid, paginationLimitRequired } from '@lawprotect/shared-ts';
+import { paginationLimitRequired } from '@lawprotect/shared-ts';
 import { SigningFlowValidationRule } from '../domain/rules/SigningFlowValidationRule';
 import { ConsentService } from './ConsentService';
 import { KmsService } from './KmsService';
 import { sha256Hex } from '@lawprotect/shared-ts';
 import { getDefaultSigningAlgorithm } from '../domain/enums/SigningAlgorithmEnum';
+import { DeclineSignerRequest } from '../domain/schemas/SigningHandlersSchema';
+import { SignerId } from '../domain/value-objects/SignerId';
+import { signerNotFound } from '../signature-errors';
+import { v4 as uuid } from 'uuid';
 
 /**
  * SignatureOrchestrator - Orchestrates signature service workflows
@@ -754,6 +758,123 @@ export class SignatureOrchestrator {
   }
 
   // Audit for external access is handled in SignatureEnvelopeService.getEnvelopeWithSigners
+
+  /**
+   * Declines a signer with proper validation and notification
+   * @param envelopeId - The envelope ID
+   * @param signerId - The signer ID
+   * @param request - The decline request data
+   * @param securityContext - Security context for audit tracking
+   * @returns Decline result with updated envelope
+   */
+  async declineSigner(
+    envelopeId: EnvelopeId,
+    signerId: SignerId,
+    request: DeclineSignerRequest,
+    securityContext: {
+      ipAddress: string;
+      userAgent: string;
+      country: string;
+    }
+  ): Promise<{
+    success: boolean;
+    message: string;
+    envelope: any;
+    declineInfo: {
+      signerId: string;
+      reason: string;
+      declinedAt: string;
+    };
+  }> {
+    try {
+      // 1. Validate user access (owner or external via invitation token)
+      const envelope = await this.signatureEnvelopeService.validateUserAccess(
+        envelopeId,
+        undefined, // userId - will be determined by invitation token
+        request.invitationToken
+      );
+
+      // 2. Get the specific signer from the envelope
+      const signer = envelope.getSigners().find(s => s.getId().getValue() === signerId.getValue());
+      
+      if (!signer) {
+        throw signerNotFound(`Signer with ID ${signerId.getValue()} not found in envelope`);
+      }
+
+      // 3. Decline the signer (la entidad ya valida que no esté firmado/declinado)
+      await this.envelopeSignerService.declineSigner({
+        signerId,
+        reason: request.reason,
+        userId: undefined, // Para usuarios externos, se maneja internamente
+        invitationToken: request.invitationToken
+      });
+
+      // 4. Publish decline notification event
+      await this.publishDeclineNotificationEvent(envelopeId, signerId, request.reason, signer, securityContext);
+
+      // 5. Get updated envelope for response
+      const updatedEnvelope = await this.signatureEnvelopeService.getEnvelopeWithSigners(envelopeId);
+      if (!updatedEnvelope) {
+        throw envelopeNotFound(`Envelope with ID ${envelopeId.getValue()} not found after decline`);
+      }
+
+      return {
+        success: true,
+        message: 'Signer declined successfully',
+        envelope: updatedEnvelope.toResponse(),
+        declineInfo: {
+          signerId: signerId.getValue(),
+          reason: request.reason,
+          declinedAt: new Date().toISOString()
+        }
+      };
+
+    } catch (error) {
+      this.handleOrchestrationError(error as Error, 'decline signer');
+    }
+  }
+
+  /**
+   * Publishes decline notification event using the same pattern as sendEnvelope
+   * @param envelopeId - The envelope ID
+   * @param signerId - The signer ID
+   * @param reason - The decline reason
+   * @param signer - The signer entity
+   * @param securityContext - Security context for audit tracking
+   */
+  private async publishDeclineNotificationEvent(
+    envelopeId: EnvelopeId,
+    signerId: SignerId,
+    reason: string,
+    signer: EnvelopeSigner,
+    securityContext: {
+      ipAddress: string;
+      userAgent: string;
+      country: string;
+    }
+  ): Promise<void> {
+    const envelope = await this.signatureEnvelopeService.getEnvelopeWithSigners(envelopeId);
+    
+    const event = makeEvent('SIGNER_DECLINED', {
+      envelopeId: envelopeId.getValue(),
+      signerId: signerId.getValue(),
+      signerEmail: signer.getEmail()?.getValue(),
+      signerName: signer.getFullName(),
+      declineReason: reason,
+      metadata: {
+        envelopeTitle: envelope.getTitle(),
+        envelopeId: envelopeId.getValue(),
+        declinedAt: new Date().toISOString(),
+        declinedBy: signer.getFullName() || signer.getEmail()?.getValue() || 'Unknown',
+        ipAddress: securityContext.ipAddress,
+        userAgent: securityContext.userAgent,
+        country: securityContext.country
+      }
+    });
+    
+    // Save event to outbox for reliable delivery (same pattern as sendEnvelope)
+    await this.outboxRepository.save(event, uuid());
+  }
 
   /**
    * Handles orchestration errors
