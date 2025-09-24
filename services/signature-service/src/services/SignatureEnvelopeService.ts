@@ -311,6 +311,50 @@ export class SignatureEnvelopeService {
   }
 
   /**
+   * Cancels a signature envelope (changes status to CANCELLED)
+   * @param envelopeId - The envelope ID
+   * @param userId - The user cancelling the envelope
+   * @returns The cancelled envelope
+   */
+  async cancelEnvelope(envelopeId: EnvelopeId, userId: string): Promise<SignatureEnvelope> {
+    try {
+      // Get existing envelope
+      const existingEnvelope = await this.signatureEnvelopeRepository.findById(envelopeId);
+      if (!existingEnvelope) {
+        throw envelopeNotFound(`Envelope with ID ${envelopeId.getValue()} not found`);
+      }
+
+      // Cancel envelope using entity method (includes authorization and validation)
+      existingEnvelope.cancel(userId);
+      const cancelledEnvelope = await this.signatureEnvelopeRepository.update(envelopeId, existingEnvelope);
+
+      // Create audit event
+      await this.signatureAuditEventService.createEvent({
+        envelopeId: envelopeId.getValue(),
+        signerId: undefined,
+        eventType: AuditEventType.ENVELOPE_CANCELLED,
+        description: `Envelope "${existingEnvelope.getTitle()}" cancelled`,
+        userId: userId,
+        userEmail: undefined,
+        ipAddress: undefined,
+        userAgent: undefined,
+        country: undefined,
+        metadata: {
+          envelopeId: envelopeId.getValue(),
+          title: existingEnvelope.getTitle(),
+          cancelledAt: cancelledEnvelope.getUpdatedAt().toISOString()
+        }
+      });
+
+      return cancelledEnvelope;
+    } catch (error) {
+      throw envelopeUpdateFailed(
+        `Failed to cancel envelope ${envelopeId.getValue()}: ${error instanceof Error ? error.message : error}`
+      );
+    }
+  }
+
+  /**
    * Deletes a signature envelope
    * @param envelopeId - The envelope ID
    * @param userId - The user deleting the envelope

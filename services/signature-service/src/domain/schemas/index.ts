@@ -62,3 +62,10 @@ export {
   type AuditEventResponse,
   type AuditTrailResponse
 } from './AuditSchema';
+
+export {
+  CancelEnvelopeRequestSchema,
+  CancelEnvelopeResponseSchema,
+  type CancelEnvelopeRequest,
+  type CancelEnvelopeResponse
+} from './CancelEnvelopeSchema';

@@ -22,6 +22,9 @@ import { SigningOrderValidationRule } from '../rules/SigningOrderValidationRule'
 import { 
   invalidEnvelopeState, 
   envelopeCompleted,
+  envelopeExpired,
+  envelopeDeclined,
+  envelopeAccessDenied,
   signerEmailDuplicate,
   signerNotFound,
   signerCannotBeRemoved,
@@ -440,12 +443,35 @@ export class SignatureEnvelope {
 
   /**
    * Cancels the envelope
-   * Only allowed if envelope is not already completed
+   * Only allowed if envelope is not already completed, expired, declined, or cancelled and user is authorized
+   * @param userId - The user ID attempting to cancel the envelope
+   * @throws envelopeAccessDenied when user is not authorized to cancel the envelope
    * @throws envelopeCompleted when trying to cancel a completed envelope
+   * @throws envelopeExpired when trying to cancel an expired envelope
+   * @throws envelopeDeclined when trying to cancel a declined envelope
+   * @throws invalidEnvelopeState when trying to cancel an already cancelled envelope
    */
-  cancel(): void {
+  cancel(userId: string): void {
+    // Validate authorization - only the creator can cancel the envelope
+    if (this.createdBy !== userId) {
+      throw envelopeAccessDenied(`User ${userId} is not authorized to cancel envelope ${this.id.getValue()}`);
+    }
+
+    // Validate envelope can be cancelled based on current status
     if (this.status.isCompleted()) {
       throw envelopeCompleted('Cannot cancel completed envelope');
+    }
+    
+    if (this.status.isExpired()) {
+      throw envelopeExpired('Cannot cancel expired envelope');
+    }
+    
+    if (this.status.isDeclined()) {
+      throw envelopeDeclined('Cannot cancel declined envelope');
+    }
+    
+    if (this.status.isCancelled()) {
+      throw invalidEnvelopeState('Cannot cancel already cancelled envelope');
     }
     
     this.status = EnvelopeStatus.cancelled();

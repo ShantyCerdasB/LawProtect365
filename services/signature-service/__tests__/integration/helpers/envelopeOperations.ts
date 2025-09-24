@@ -14,6 +14,7 @@ import { getEnvelopeHandler } from '../../../src/handlers/envelopes/GetEnvelopeH
 import { getEnvelopesByUserHandler } from '../../../src/handlers/envelopes/GetEnvelopesByUserHandler';
 import { signDocumentHandler } from '../../../src/handlers/signing/SignDocumentHandler';
 import { declineSignerHandler } from '../../../src/handlers/signing/DeclineSignerHandler';
+import { cancelEnvelopeHandler } from '../../../src/handlers/envelopes/CancelEnvelopeHandler';
 import { TestUser, EnvelopeData } from './testTypes';
 
 /**
@@ -412,6 +413,39 @@ export class EnvelopeOperations {
     });
     
     const result = await declineSignerHandler(event) as any;
+    const response = JSON.parse(result.body);
+
+    return {
+      statusCode: result.statusCode,
+      data: response.data || response
+    };
+  }
+
+  /**
+   * Cancel an envelope
+   * @param envelopeId - ID of the envelope to cancel
+   * @returns Promise that resolves to the cancellation response
+   */
+  async cancelEnvelope(envelopeId: string): Promise<{ statusCode: number; data: any }> {
+    const token = await generateTestJwtToken({
+      sub: this.testUser.userId, 
+      email: this.testUser.email, 
+      roles: ['admin'], 
+      scopes: [] 
+    });
+    
+    const event = await createApiGatewayEvent({
+      includeAuth: true,
+      authToken: token,
+      pathParameters: { id: envelopeId },
+      body: {}, // Empty body for cancellation
+      headers: {
+        'x-forwarded-for': '127.0.0.1',
+        'user-agent': 'Test User Agent'
+      }
+    });
+    
+    const result = await cancelEnvelopeHandler(event) as any;
     const response = JSON.parse(result.body);
 
     return {

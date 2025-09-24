@@ -306,5 +306,17 @@ export class WorkflowTestHelper {
     return this.envelopeOperations.declineSigner(envelopeId, signerId, invitationToken, reason);
   }
 
+  /**
+   * Cancel an envelope
+   * @param envelopeId - ID of the envelope to cancel
+   * @returns Promise that resolves to the cancellation response
+   */
+  async cancelEnvelope(envelopeId: string): Promise<{ statusCode: number; data: any }> {
+    if (!this.envelopeOperations) {
+      throw new Error('WorkflowTestHelper not initialized. Call initialize() first.');
+    }
+    return this.envelopeOperations.cancelEnvelope(envelopeId);
+  }
+
 }
 

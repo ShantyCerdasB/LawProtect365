@@ -113,6 +113,31 @@ export class SignatureOrchestrator {
   // ===== ENVELOPE UPDATE FLOW =====
   
   /**
+   * Cancels an envelope with comprehensive validation and access control
+   * @param envelopeId - The envelope ID
+   * @param userId - The user cancelling the envelope
+   * @param securityContext - Security context for audit tracking
+   * @returns Cancelled envelope
+   */
+  async cancelEnvelope(
+    envelopeId: EnvelopeId,
+    userId: string,
+    securityContext: { ipAddress?: string; userAgent?: string; country?: string }
+  ): Promise<{ envelope: SignatureEnvelope }> {
+    try {
+      // 1. Cancel envelope using service (includes validation and authorization)
+      const cancelledEnvelope = await this.signatureEnvelopeService.cancelEnvelope(envelopeId, userId);
+
+      // 2. Publish cancellation notification event
+      await this.publishCancellationNotificationEvent(envelopeId, userId, securityContext);
+
+      return { envelope: cancelledEnvelope };
+    } catch (error) {
+      throw this.handleOrchestrationError(error as Error, 'cancel envelope');
+    }
+  }
+
+  /**
    * Updates an envelope with comprehensive validation and signer management
    * @param envelopeId - The envelope ID
    * @param updateData - The update data
@@ -867,6 +892,50 @@ export class SignatureOrchestrator {
     
     // Save event to outbox for reliable delivery (same pattern as sendEnvelope)
     await this.outboxRepository.save(event, uuid());
+  }
+
+  /**
+   * Publishes a cancellation notification event to the outbox
+   * @param envelopeId - The envelope ID
+   * @param userId - The user ID who cancelled the envelope
+   * @param securityContext - Security context for audit tracking
+   */
+  private async publishCancellationNotificationEvent(
+    envelopeId: EnvelopeId,
+    userId: string,
+    securityContext: { ipAddress?: string; userAgent?: string; country?: string }
+  ): Promise<void> {
+    try {
+      const envelope = await this.signatureEnvelopeService.getEnvelopeWithSigners(envelopeId);
+      if (!envelope) {
+        throw envelopeNotFound(`Envelope with ID ${envelopeId.getValue()} not found`);
+      }
+
+      const event = makeEvent('ENVELOPE_CANCELLED', {
+        envelopeId: envelopeId.getValue(),
+        cancelledByUserId: userId,
+        envelopeTitle: envelope.getTitle(),
+        envelopeStatus: envelope.getStatus().getValue(),
+        metadata: {
+          envelopeId: envelopeId.getValue(),
+          cancelledAt: new Date().toISOString(),
+          cancelledBy: userId,
+          ipAddress: securityContext.ipAddress,
+          userAgent: securityContext.userAgent,
+          country: securityContext.country
+        }
+      });
+
+      // Save event to outbox for reliable delivery (same pattern as sendEnvelope)
+      await this.outboxRepository.save(event, uuid());
+    } catch (error) {
+      console.error('Failed to publish cancellation notification event', {
+        error: error instanceof Error ? error.message : error,
+        envelopeId: envelopeId.getValue(),
+        userId
+      });
+      // Don't throw - this is a side effect, not critical for the main flow
+    }
   }
 
   /**
