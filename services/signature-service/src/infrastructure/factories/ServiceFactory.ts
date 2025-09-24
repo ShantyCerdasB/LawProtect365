@@ -32,6 +32,8 @@ import { SignatureEnvelopeRepository } from '../../repositories/SignatureEnvelop
 import { EnvelopeSignerRepository } from '../../repositories/EnvelopeSignerRepository';
 import { InvitationTokenRepository } from '../../repositories/InvitationTokenRepository';
 import { SignatureAuditEventRepository } from '../../repositories/SignatureAuditEventRepository';
+import { ConsentService } from '../../services/ConsentService';
+import { ConsentRepository } from '../../repositories/ConsentRepository';
 
 /**
  * ServiceFactory - Infrastructure factory for service instantiation with Prisma
@@ -137,6 +139,18 @@ export class ServiceFactory {
   }
 
   /**
+   * Creates a ConsentService instance with all required dependencies
+   * 
+   * @returns Configured ConsentService instance
+   */
+  static createConsentService(): ConsentService {
+    const consentRepository = new ConsentRepository(this.prismaClient);
+    const signatureAuditEventService = this.createSignatureAuditEventService();
+    const invitationTokenService = this.createInvitationTokenService();
+    return new ConsentService(consentRepository, signatureAuditEventService, invitationTokenService);
+  }
+
+  /**
    * Creates a SignatureOrchestrator instance with all required dependencies
    * 
    * @returns Configured SignatureOrchestrator instance
@@ -148,6 +162,8 @@ export class ServiceFactory {
     const signatureAuditEventService = this.createSignatureAuditEventService();
     const s3Service = this.createS3Service();
     const outboxRepository = this.createOutboxRepository();
+    const consentService = this.createConsentService();
+    const kmsService = this.createKmsService();
 
     return new SignatureOrchestrator(
       signatureEnvelopeService,
@@ -155,7 +171,9 @@ export class ServiceFactory {
       invitationTokenService,
       signatureAuditEventService,
       s3Service,
-      outboxRepository
+      outboxRepository,
+      consentService,
+      kmsService
     );
   }
 

@@ -832,4 +832,48 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
 
     return envelope ? this.toDomain(envelope) : null;
   }
+
+  /**
+   * Completes an envelope using entity method
+   * @param id - Envelope ID
+   * @param tx - Optional transaction context
+   * @returns Updated SignatureEnvelope
+   */
+  async completeEnvelope(id: EnvelopeId, tx?: any): Promise<SignatureEnvelope> {
+    const client = tx || this.prisma;
+    
+    try {
+      // Get current envelope
+      const currentEnvelope = await this.findById(id, tx);
+      if (!currentEnvelope) {
+        throw envelopeNotFound({ envelopeId: id.getValue() });
+      }
+
+      // Complete envelope using entity method
+      currentEnvelope.complete();
+
+      // Persist changes
+      const updated = await client.signatureEnvelope.update({
+        where: { id: id.getValue() },
+        data: this.toModel(currentEnvelope) as any,
+        include: {
+          signers: {
+            orderBy: { order: 'asc' }
+          }
+        }
+      });
+
+      return this.toDomain(updated);
+    } catch (error) {
+      console.error('Failed to complete envelope', {
+        error: error instanceof Error ? error.message : error,
+        envelopeId: id.getValue()
+      });
+      throw documentS3Error({
+        operation: 'completeEnvelope',
+        envelopeId: id.getValue(),
+        originalError: error instanceof Error ? error.message : error
+      });
+    }
+  }
 }

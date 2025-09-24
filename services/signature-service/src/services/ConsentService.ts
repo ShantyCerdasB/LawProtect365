@@ -69,7 +69,8 @@ export class ConsentService {
         consentTimestamp: request.consentTimestamp,
         consentText: request.consentText,
         ipAddress: request.ipAddress,
-        userAgent: request.userAgent
+        userAgent: request.userAgent,
+        country: request.country
       });
 
       // Validate compliance using entity method

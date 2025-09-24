@@ -781,4 +781,40 @@ export class SignatureEnvelopeService {
       wrapServiceError(error as Error, 'send envelope');
     }
   }
+
+  /**
+   * Completes an envelope when all signers have signed
+   * @param envelopeId - The envelope ID to complete
+   * @param userId - The user making the request
+   * @returns Updated signature envelope
+   */
+  async completeEnvelope(envelopeId: EnvelopeId, userId: string): Promise<SignatureEnvelope> {
+    try {
+      // Complete envelope using repository method (which uses entity method)
+      const updatedEnvelope = await this.signatureEnvelopeRepository.completeEnvelope(envelopeId);
+
+      // Create audit event
+      await this.signatureAuditEventService.createEvent({
+        envelopeId: envelopeId.getValue(),
+        signerId: undefined,
+        eventType: AuditEventType.ENVELOPE_COMPLETED,
+        description: `Envelope "${updatedEnvelope.getTitle()}" completed - all signers have signed`,
+        userId: userId,
+        userEmail: undefined,
+        ipAddress: undefined,
+        userAgent: undefined,
+        country: undefined,
+        metadata: {
+          envelopeId: envelopeId.getValue(),
+          completedAt: updatedEnvelope.getCompletedAt()?.toISOString()
+        }
+      });
+
+      return updatedEnvelope;
+    } catch (error) {
+      throw envelopeUpdateFailed(
+        `Failed to complete envelope ${envelopeId.getValue()}: ${error instanceof Error ? error.message : error}`
+      );
+    }
+  }
 }

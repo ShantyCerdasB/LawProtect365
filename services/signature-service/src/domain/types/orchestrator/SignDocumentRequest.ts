@@ -7,9 +7,9 @@
 
 export interface SignDocumentRequest {
   /** Envelope ID for authenticated users */
-  envelopeId?: string;
+  envelopeId: string;
   /** Signer ID for authenticated users */
-  signerId?: string;
+  signerId: string;
   /** Invitation token for external users */
   invitationToken?: string;
   /** Hash of the document to be signed */
@@ -38,5 +38,7 @@ export interface SignDocumentRequest {
     ipAddress?: string;
     /** User agent of the signer */
     userAgent?: string;
+    /** Country of the signer */
+    country?: string;
   };
 }

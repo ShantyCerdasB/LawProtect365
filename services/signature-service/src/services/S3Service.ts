@@ -12,7 +12,7 @@ import { S3Key } from '../domain/value-objects/S3Key';
 import { SignatureAuditEventService } from './SignatureAuditEventService';
 import { AuditEventType } from '../domain/enums/AuditEventType';
 import { StoreDocumentRequest, RetrieveDocumentRequest, GeneratePresignedUrlRequest, DocumentResult } from '../domain/types/s3';
-import {S3Presigner, S3EvidenceStorage,  NotFoundError, BadRequestError, ErrorCodes } from '@lawprotect/shared-ts';
+import {S3Presigner, S3EvidenceStorage,  NotFoundError, BadRequestError, ErrorCodes, getDocumentContent } from '@lawprotect/shared-ts';
 import { validateStoreDocumentRequest, validateRetrieveDocumentRequest, validateGeneratePresignedUrlRequest } from '../domain/rules/s3/S3ValidationRules';
 import { validateS3StorageForDocument } from '../domain/rules/s3/S3StorageRules';
 import { documentS3Error } from '../signature-errors';
@@ -318,6 +318,33 @@ export class S3Service {
     } catch (error) {
       throw documentS3Error({
         operation: 'getDocumentInfo',
+        s3Key,
+        originalError: error instanceof Error ? error.message : error
+      });
+    }
+  }
+
+  /**
+   * Gets document content from S3
+   * @param s3Key - S3 key of the document to retrieve
+   * @returns Promise resolving to document content as Buffer
+   * @throws NotFoundError when document is not found
+   * @throws Error when download fails
+   */
+  async getDocumentContent(s3Key: string): Promise<Buffer> {
+    try {
+      // Validate S3 key format
+      const s3KeyObj = S3Key.fromString(s3Key);
+      
+      // Use shared utility function
+      return await getDocumentContent(
+        this.s3EvidenceStorage,
+        this.bucketName,
+        s3KeyObj.getValue()
+      );
+    } catch (error) {
+      throw documentS3Error({
+        operation: 'getDocumentContent',
         s3Key,
         originalError: error instanceof Error ? error.message : error
       });

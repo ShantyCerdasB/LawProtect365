@@ -9,7 +9,8 @@ export {
   toHttpUrl,
   guessContentType,
   basename as s3Basename,
-  dirname as s3Dirname} from "./s3.js";
+  dirname as s3Dirname,
+  getDocumentContent} from "./s3.js";
 
 export {
   toPosix,

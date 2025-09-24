@@ -33,6 +33,7 @@ export class Consent {
     private readonly consentText: string,
     private readonly ipAddress: string,
     private readonly userAgent: string,
+    private readonly country: string | undefined,
     private readonly createdAt: Date,
     private readonly updatedAt: Date
   ) {}
@@ -101,6 +102,13 @@ export class Consent {
   }
 
   /**
+   * Gets the country of the signer
+   */
+  getCountry(): string | undefined {
+    return this.country;
+  }
+
+  /**
    * Gets the creation timestamp
    */
   getCreatedAt(): Date {
@@ -129,6 +137,7 @@ export class Consent {
     consentText: string;
     ipAddress: string;
     userAgent: string;
+    country?: string;
   }): Consent {
     const now = new Date();
     return new Consent(
@@ -141,6 +150,7 @@ export class Consent {
       params.consentText,
       params.ipAddress,
       params.userAgent,
+      params.country,
       now,
       now
     );
@@ -162,6 +172,7 @@ export class Consent {
       this.consentText,
       this.ipAddress,
       this.userAgent,
+      this.country,
       this.createdAt,
       new Date()
     );
@@ -206,6 +217,7 @@ export class Consent {
       consentText: this.consentText,
       ipAddress: this.ipAddress,
       userAgent: this.userAgent,
+      country: this.country,
       createdAt: this.createdAt.toISOString(),
       updatedAt: this.updatedAt.toISOString()
     };
@@ -227,6 +239,7 @@ export class Consent {
       data.consentText,
       data.ipAddress,
       data.userAgent,
+      data.country,
       data.createdAt,
       data.updatedAt
     );

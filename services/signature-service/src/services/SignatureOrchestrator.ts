@@ -19,7 +19,9 @@ import { CreateEnvelopeData } from '../domain/types/envelope/CreateEnvelopeData'
 import { UpdateEnvelopeData } from '../domain/rules/EnvelopeUpdateValidationRule';
 import { 
   CreateEnvelopeRequest, 
-  CreateEnvelopeResult
+  CreateEnvelopeResult,
+  SignDocumentRequest,
+  SignDocumentResult
 } from '../domain/types/orchestrator';
 import { EntityFactory } from '../domain/factories/EntityFactory';
 import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
@@ -28,6 +30,10 @@ import { AccessType } from '../domain/enums/AccessType';
 import { EnvelopeSpec } from '../domain/types/envelope';
 import { documentS3NotFound, envelopeNotFound } from '../signature-errors';
 import { uuid, paginationLimitRequired } from '@lawprotect/shared-ts';
+import { SigningFlowValidationRule } from '../domain/rules/SigningFlowValidationRule';
+import { ConsentService } from './ConsentService';
+import { KmsService } from './KmsService';
+import { sha256Hex } from '@lawprotect/shared-ts';
 
 /**
  * SignatureOrchestrator - Orchestrates signature service workflows
@@ -45,14 +51,22 @@ import { uuid, paginationLimitRequired } from '@lawprotect/shared-ts';
  * - Provide unified error handling
  */
 export class SignatureOrchestrator {
+  private readonly signingFlowValidationRule: SigningFlowValidationRule;
+
   constructor(
     private readonly signatureEnvelopeService: SignatureEnvelopeService,
     private readonly envelopeSignerService: EnvelopeSignerService,
     private readonly invitationTokenService: InvitationTokenService,
     private readonly signatureAuditEventService: SignatureAuditEventService,
     private readonly s3Service: S3Service,
-    private readonly outboxRepository: OutboxRepository
-  ) {}
+    private readonly outboxRepository: OutboxRepository,
+    private readonly consentService: ConsentService,
+    private readonly _kmsService: KmsService // Will be used for actual document signing in future implementation
+  ) {
+    this.signingFlowValidationRule = new SigningFlowValidationRule();
+    // Temporary reference to avoid unused variable error - will be used for actual signing
+    void this._kmsService;
+  }
 
   // ===== ENVELOPE CREATION FLOW =====
   
@@ -299,6 +313,173 @@ export class SignatureOrchestrator {
       };
     } catch (error) {
       this.handleOrchestrationError(error as Error, 'sendEnvelope');
+    }
+  }
+
+  // ===== DOCUMENT SIGNING FLOW =====
+  
+  /**
+   * Signs a document in an envelope with comprehensive validation and orchestration
+   * @param request - The signing request with envelope, signer, and consent information
+   * @param userId - The user ID (for authenticated users)
+   * @param securityContext - Security context for audit tracking
+   * @returns Promise resolving to signing result with updated envelope and signer
+   */
+  async signDocument(
+    request: SignDocumentRequest,
+    userId: string,
+    securityContext: {
+      ipAddress: string;
+      userAgent: string;
+      country?: string;
+    }
+  ): Promise<SignDocumentResult> {
+    try {
+      // 1. Validate access and get envelope with signers
+      const envelopeId = EntityFactory.createValueObjects.envelopeId(request.envelopeId);
+      const signerId = EntityFactory.createValueObjects.signerId(request.signerId);
+      
+      const envelope = await this.signatureEnvelopeService.validateUserAccess(
+        envelopeId,
+        userId,
+        request.invitationToken
+      );
+      
+      const envelopeWithSigners = await this.signatureEnvelopeService.getEnvelopeWithSigners(envelopeId);
+      if (!envelopeWithSigners) {
+        throw envelopeNotFound(`Envelope with ID ${envelopeId.getValue()} not found`);
+      }
+      
+      const allSigners = envelopeWithSigners.getSigners();
+      const signer = allSigners.find(s => s.getId().getValue() === request.signerId);
+      if (!signer) {
+        throw new Error(`Signer with ID ${request.signerId} not found in envelope`);
+      }
+      
+      // 2. Validate signing flow using domain rule
+      this.signingFlowValidationRule.validateSigningFlow(
+        envelope,
+        signer,
+        userId,
+        allSigners
+      );
+      
+      // 3. Create consent record
+      const consent = await this.consentService.createConsent({
+        id: EntityFactory.createValueObjects.consentId(uuid()),
+        envelopeId,
+        signerId,
+        signatureId: undefined, // Will be linked after signature creation
+        consentGiven: request.consent.given,
+        consentTimestamp: new Date(request.consent.timestamp),
+        consentText: request.consent.text,
+        ipAddress: request.consent.ipAddress || securityContext.ipAddress,
+        userAgent: request.consent.userAgent || securityContext.userAgent,
+        country: request.consent.country || securityContext.country
+      }, userId);
+      
+      // 4. Get document from S3 and apply signature
+      const flattenedKey = envelope.getFlattenedKey();
+      if (!flattenedKey) {
+        throw new Error(`Envelope ${envelopeId.getValue()} does not have a flattened document ready for signing`);
+      }
+      
+      const documentContent = await this.s3Service.getDocumentContent(flattenedKey.getValue());
+      const documentHash = sha256Hex(documentContent);
+      
+      // 6. Sign document with KMS
+      const kmsResult = await this._kmsService.sign({
+        documentHash: documentHash,
+        kmsKeyId: process.env.KMS_SIGNER_KEY_ID!,
+        algorithm: process.env.KMS_SIGNING_ALGORITHM || 'RSASSA_PSS_SHA_256'
+      });
+      
+      // 7. Create signature object
+      const signature = {
+        id: uuid(),
+        signedContent: Buffer.from('signed-content'), // Will be replaced with actual signed PDF
+        sha256: kmsResult.signatureHash,
+        timestamp: kmsResult.signedAt.toISOString()
+      };
+      
+      // 8. No need to store document again - it's already in S3 with visual signatures
+      
+      // 9. Update signer as signed
+      await this.envelopeSignerService.markSignerAsSigned(
+        signerId,
+        {
+          documentHash: documentHash,
+          signatureHash: signature.sha256,
+          signedS3Key: flattenedKey.getValue(), // Use the original flattened key
+          kmsKeyId: process.env.KMS_SIGNER_KEY_ID!,
+          algorithm: process.env.KMS_SIGNING_ALGORITHM || 'RSASSA_PSS_SHA_256',
+          ipAddress: securityContext.ipAddress,
+          userAgent: securityContext.userAgent
+        }
+      );
+      
+      // 10. Link consent with signature
+      await this.consentService.linkConsentWithSignature(
+        consent.getId(),
+        EntityFactory.createValueObjects.signerId(signature.id)
+      );
+      
+      // 11. Update envelope with signed document using service method
+      await this.signatureEnvelopeService.updateSignedDocument(
+        envelopeId,
+        flattenedKey.getValue(),
+        signature.sha256,
+        userId
+      );
+      
+      // 12. Create audit event
+      await this.signatureAuditEventService.createEvent({
+        envelopeId: envelopeId.getValue(),
+        signerId: signerId.getValue(),
+        eventType: 'DOCUMENT_SIGNED' as any,
+        description: `Document signed by ${signer.getFullName() || 'Unknown'}`,
+        userId: userId,
+        userEmail: signer.getEmail()?.getValue(),
+        ipAddress: securityContext.ipAddress,
+        userAgent: securityContext.userAgent,
+        country: securityContext.country,
+        metadata: {
+          envelopeId: envelopeId.getValue(),
+          signerId: signerId.getValue(),
+          signatureId: signature.id,
+          signedDocumentKey: flattenedKey.getValue(),
+          consentId: consent.getId().getValue(),
+          documentHash: documentHash,
+          signatureHash: signature.sha256,
+          kmsKeyId: process.env.KMS_SIGNER_KEY_ID!
+        }
+      });
+      
+      // 13. Check if envelope is complete and update status if needed
+      const finalEnvelope = await this.signatureEnvelopeService.getEnvelopeWithSigners(envelopeId);
+      if (finalEnvelope?.isCompleted()) {
+        // Complete the envelope using the service method
+        await this.signatureEnvelopeService.completeEnvelope(envelopeId, userId);
+      }
+      
+      return {
+        message: 'Document signed successfully',
+        envelope: {
+          id: envelope.getId().getValue(),
+          status: envelope.getStatus().getValue(),
+          progress: 100 // Mock progress
+        },
+        signature: {
+          id: signature.id,
+          signerId: signerId.getValue(),
+          envelopeId: envelopeId.getValue(),
+          signedAt: signature.timestamp,
+          algorithm: 'RSASSA_PSS_SHA_256',
+          hash: signature.sha256
+        }
+      };
+    } catch (error) {
+      this.handleOrchestrationError(error as Error, 'signDocument');
     }
   }
 

@@ -7,7 +7,7 @@
  * 
  * @deprecated This handler is temporarily commented out during refactoring to new DDD architecture.
  * It will be refactored to use the new SignatureOrchestrator and updated services.
- */
+  */
 
 /*
 // TODO: Refactor this handler to use new DDD architecture

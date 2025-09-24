@@ -15,8 +15,8 @@ export const SignDocumentRequestSchema = z.object({
   invitationToken: z.string().optional(),
   
   // For authenticated users (when no invitation token)
-  envelopeId: UuidV4.optional(),
-  signerId: UuidV4.optional(),
+  envelopeId: UuidV4,
+  signerId: UuidV4,
   
   // Signature data (required for both cases)
   documentHash: z.string().regex(/^[a-f0-9]{64}$/i, 'Document hash must be a valid SHA-256 hash'),
@@ -37,7 +37,8 @@ export const SignDocumentRequestSchema = z.object({
     timestamp: z.string().datetime(),
     text: z.string(),
     ipAddress: z.string().optional(),
-    userAgent: z.string().optional()
+    userAgent: z.string(),
+    country: z.string(),
   })
 }).refine(
   (data) => data.invitationToken || (data.envelopeId && data.signerId),

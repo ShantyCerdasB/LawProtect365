@@ -190,3 +190,65 @@ export const guessContentType = (filename: string): string | undefined => {
     xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"};
   return map[ext];
 };
+
+/**
+ * Downloads document content from S3
+ * @param s3Storage - S3EvidenceStorage instance
+ * @param bucketName - S3 bucket name
+ * @param s3Key - S3 object key
+ * @returns Promise resolving to document content as Buffer
+ * @throws NotFoundError when document is not found
+ * @throws Error when download fails
+ * @example
+ * const content = await getDocumentContent(s3Storage, 'my-bucket', 'documents/file.pdf');
+ */
+export async function getDocumentContent(
+  s3Storage: any, // S3EvidenceStorage type
+  bucketName: string,
+  s3Key: string
+): Promise<Buffer> {
+  try {
+    const result = await s3Storage.getObject(bucketName, s3Key);
+    
+    if (!result.body) {
+      throw new Error('Document content is empty');
+    }
+
+    // Convert to Buffer if needed
+    if (result.body instanceof Buffer) {
+      return result.body;
+    } else if (result.body instanceof Uint8Array) {
+      return Buffer.from(result.body);
+    } else {
+      // Handle ReadableStream case
+      const chunks: Uint8Array[] = [];
+      const reader = result.body.getReader();
+      
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          chunks.push(value);
+        }
+      } finally {
+        reader.releaseLock();
+      }
+      
+      const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
+      const resultBuffer = new Uint8Array(totalLength);
+      let offset = 0;
+      
+      for (const chunk of chunks) {
+        resultBuffer.set(chunk, offset);
+        offset += chunk.length;
+      }
+      
+      return Buffer.from(resultBuffer);
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('NoSuchKey')) {
+      throw new Error(`Document not found: ${s3Key}`);
+    }
+    throw new Error(`Failed to download document from S3: ${error instanceof Error ? error.message : error}`);
+  }
+}
