@@ -65,6 +65,35 @@ export class WorkflowTestHelper {
   }
 
   /**
+   * Get the second test user data (for authorization testing)
+   * @returns Second test user data
+   */
+  getSecondTestUser(): TestUser {
+    return {
+      userId: '660e8400-e29b-41d4-a716-446655440001',
+      email: 'test2@example.com',
+      name: 'Test User 2',
+      role: 'ADMIN'
+    };
+  }
+
+  /**
+   * Generate JWT token for testing
+   * @param userId - User ID for the token
+   * @param email - Email for the token
+   * @returns Promise that resolves to JWT token
+   */
+  async generateTestJwtToken(userId: string, email: string): Promise<string> {
+    const { generateTestJwtToken } = await import('./testHelpers');
+    return generateTestJwtToken({
+      sub: userId,
+      email: email,
+      roles: ['admin'],
+      scopes: []
+    });
+  }
+
+  /**
    * Create authenticated API Gateway event
    * @param overrides - Optional overrides for the event
    * @returns Promise that resolves to the authenticated event
@@ -221,6 +250,32 @@ export class WorkflowTestHelper {
    */
   async getAuditEventsFromDatabase(envelopeId: string): Promise<any[]> {
     return this.databaseHelper.getAuditEventsFromDatabase(envelopeId);
+  }
+
+
+  /**
+   * Cancel envelope with custom token (for authorization testing)
+   * @param envelopeId - ID of the envelope to cancel
+   * @param customToken - Custom JWT token
+   * @returns Promise that resolves to the cancellation response
+   */
+  async cancelEnvelopeWithToken(envelopeId: string, customToken: string): Promise<{ statusCode: number; data: any }> {
+    if (!this.envelopeOperations) {
+      throw new Error('WorkflowTestHelper not initialized. Call initialize() first.');
+    }
+    return this.envelopeOperations.cancelEnvelope(envelopeId, customToken);
+  }
+
+  /**
+   * Cancel envelope without authentication (for external signer testing)
+   * @param envelopeId - ID of the envelope to cancel
+   * @returns Promise that resolves to the cancellation response
+   */
+  async cancelEnvelopeWithoutAuth(envelopeId: string): Promise<{ statusCode: number; data: any }> {
+    if (!this.envelopeOperations) {
+      throw new Error('WorkflowTestHelper not initialized. Call initialize() first.');
+    }
+    return this.envelopeOperations.cancelEnvelopeWithoutAuth(envelopeId);
   }
 
   /**

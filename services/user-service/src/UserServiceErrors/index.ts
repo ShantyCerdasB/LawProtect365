@@ -17,6 +17,9 @@ export {
   oauthClaimsInsufficient,
   oauthTokenInvalid,
   oauthTokenExpired,
+  oauthLinkEmailMismatch,
+  oauthAccountAlreadyLinked,
+  oauthProviderAlreadyAttached,
   
   // Account errors
   accountNotFound,
@@ -49,12 +52,17 @@ export {
   accessDenied,
   roleInsufficient,
   scopeInsufficient,
+  roleChangeNotAllowed,
+  insufficientPrivileges,
+  roleAmbiguousFromIdp,
   
   // Validation errors
   validationFailed,
   emailAlreadyVerified,
   emailMissing,
   nameMissing,
+  invalidStatusTransition,
+  suspendReasonRequired,
   
   // Rate limiting / Security errors
   rateLimitExceeded,

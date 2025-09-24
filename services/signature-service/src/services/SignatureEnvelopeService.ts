@@ -348,6 +348,20 @@ export class SignatureEnvelopeService {
 
       return cancelledEnvelope;
     } catch (error) {
+      // Re-throw business validation errors directly (they have correct HTTP status codes)
+      // Check for specific error types from signature-errors
+      if (error && typeof error === 'object' && 'code' in error) {
+        const errorCode = (error as any).code;
+        if (errorCode === 'ENVELOPE_ACCESS_DENIED' || 
+            errorCode === 'ENVELOPE_COMPLETED' || 
+            errorCode === 'ENVELOPE_EXPIRED' || 
+            errorCode === 'ENVELOPE_DECLINED' || 
+            errorCode === 'INVALID_ENVELOPE_STATE') {
+          throw error;
+        }
+      }
+      
+      // Only wrap unexpected errors
       throw envelopeUpdateFailed(
         `Failed to cancel envelope ${envelopeId.getValue()}: ${error instanceof Error ? error.message : error}`
       );

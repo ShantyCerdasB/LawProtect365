@@ -96,6 +96,46 @@ jest.mock('../../../src/services/SignatureOrchestrator', () => {
         return Promise.resolve();
       });
 
+      // Mock the publishDeclineNotificationEvent method
+      instance.publishDeclineNotificationEvent = jest.fn().mockImplementation(async (
+        envelopeId: any,
+        signerId: any,
+        reason: any,
+        signer: any,
+        securityContext: any
+      ) => {
+        // Register decline event in outboxMock for verification
+        const outboxMockModule = require('../mocks/aws/outboxMock');
+        const publishedEvents = outboxMockModule.publishedEvents || new Map();
+        
+        const envelopeIdStr = envelopeId?.getValue?.() || envelopeId;
+        
+        if (!publishedEvents.has(envelopeIdStr)) {
+          publishedEvents.set(envelopeIdStr, []);
+        }
+        
+        // Register decline event
+        publishedEvents.get(envelopeIdStr).push({
+          type: 'SIGNER_DECLINED',
+          payload: {
+            envelopeId: envelopeIdStr,
+            signerId: signerId?.getValue?.() || signerId,
+            declineReason: reason,
+            eventType: 'SIGNER_DECLINED'
+          },
+          detail: {
+            envelopeId: envelopeIdStr,
+            signerId: signerId?.getValue?.() || signerId,
+            declineReason: reason,
+            eventType: 'SIGNER_DECLINED'
+          },
+          id: `mock-decline-${Date.now()}-${Math.random()}`,
+          timestamp: new Date().toISOString()
+        });
+        
+        return Promise.resolve();
+      });
+
       // Mock the publishCancellationNotificationEvent method
       instance.publishCancellationNotificationEvent = jest.fn().mockImplementation(async (
         envelopeId: any, 
@@ -139,42 +179,35 @@ jest.mock('../../../src/services/SignatureOrchestrator', () => {
 
 describe('Cancel Envelope Workflow', () => {
   let workflowHelper: WorkflowTestHelper;
-  let testData: any;
 
   beforeAll(async () => {
     workflowHelper = new WorkflowTestHelper();
     await workflowHelper.initialize();
-    testData = TestDataFactory.createTestData();
   });
 
-  afterAll(async () => {
-    await workflowHelper.cleanup();
-  });
-
-  beforeEach(async () => {
-    // Clear mock data before each test
-    await clearSendEnvelopeMockData();
-    await clearCancellationMockData();
+  afterEach(() => {
+    // Clear mock data after each test
+    clearSendEnvelopeMockData();
+    clearCancellationMockData();
   });
 
   describe('Basic Cancel Envelope Workflow', () => {
     it('should cancel envelope in DRAFT status', async () => {
       // 1. Create envelope
-      const createResponse = await workflowHelper.createEnvelope(
-        testData.envelopeData.title,
-        testData.envelopeData.description,
-        testData.envelopeData.originType,
-        testData.envelopeData.signingOrderType,
-        testData.envelopeData.expiresAt,
-        testData.envelopeData.sourceKey,
-        testData.envelopeData.metaKey
+      const envelope = await workflowHelper.createEnvelope(
+        TestDataFactory.createEnvelopeData({
+          title: 'Cancel Test Contract',
+          description: 'Testing cancel workflow in DRAFT status',
+          signingOrderType: 'OWNER_FIRST',
+          originType: 'USER_UPLOAD'
+        })
       );
 
-      expect(createResponse.statusCode).toBe(201);
-      expect(createResponse.data.id).toBeDefined();
-      expect(createResponse.data.status).toBe('DRAFT');
+      expect(envelope.id).toBeDefined();
+      expect(envelope.status).toBe('DRAFT');
+      expect(envelope.title).toBe('Cancel Test Contract');
 
-      const envelopeId = createResponse.data.id;
+      const envelopeId = envelope.id;
 
       // 2. Cancel envelope
       const cancelResponse = await workflowHelper.cancelEnvelope(envelopeId);
@@ -189,13 +222,13 @@ describe('Cancel Envelope Workflow', () => {
       await verifyEnvelopeCancelled(envelopeId);
 
       // 4. Verify cancellation audit event
-      await verifyCancellationAuditEvent(envelopeId, testData.userId);
+      await verifyCancellationAuditEvent(envelopeId, envelope.createdBy);
 
       // 5. Verify cancellation notification event
-      await verifyCancellationNotificationEvent(envelopeId, testData.userId);
+      await verifyCancellationNotificationEvent(envelopeId, envelope.createdBy);
 
       // 6. Get comprehensive verification summary
-      const summary = await getCancellationVerificationSummary(envelopeId, testData.userId);
+      const summary = await getCancellationVerificationSummary(envelopeId, envelope.createdBy);
       expect(summary.envelope.status).toBe('CANCELLED');
       expect(summary.auditEvent.eventType).toBe('ENVELOPE_CANCELLED');
       expect(summary.notificationEvent.type).toBe('ENVELOPE_CANCELLED');
@@ -203,31 +236,35 @@ describe('Cancel Envelope Workflow', () => {
 
     it('should cancel envelope in READY_FOR_SIGNATURE status', async () => {
       // 1. Create envelope
-      const createResponse = await workflowHelper.createEnvelope(
-        testData.envelopeData.title,
-        testData.envelopeData.description,
-        testData.envelopeData.originType,
-        testData.envelopeData.signingOrderType,
-        testData.envelopeData.expiresAt,
-        testData.envelopeData.sourceKey,
-        testData.envelopeData.metaKey
+      const envelope = await workflowHelper.createEnvelope(
+        TestDataFactory.createEnvelopeData({
+          title: 'Cancel Test Contract Ready',
+          description: 'Testing cancel workflow in READY_FOR_SIGNATURE status',
+          signingOrderType: 'OWNER_FIRST',
+          originType: 'USER_UPLOAD'
+        })
       );
 
-      expect(createResponse.statusCode).toBe(201);
-      const envelopeId = createResponse.data.id;
+      expect(envelope.id).toBeDefined();
+      expect(envelope.status).toBe('DRAFT');
+      const envelopeId = envelope.id;
 
       // 2. Add signers
-      const signerIds = await workflowHelper.addSignersToEnvelope(envelopeId, [
-        { email: 'signer1@example.com', fullName: 'Signer One' },
-        { email: 'signer2@example.com', fullName: 'Signer Two' }
-      ]);
+      const signers = TestDataFactory.createMultipleSigners(2, 1);
+      const addSignersResponse = await workflowHelper.updateEnvelope(envelopeId, {
+        addSigners: signers
+      });
 
-      expect(signerIds).toHaveLength(2);
+      expect(addSignersResponse.statusCode).toBe(200);
+      expect(addSignersResponse.data.signers).toHaveLength(2);
+      const signerIds = addSignersResponse.data.signers.map((s: any) => s.id);
 
       // 3. Send envelope
-      const sendResponse = await workflowHelper.sendEnvelope(envelopeId);
+      const sendResponse = await workflowHelper.sendEnvelope(envelopeId, {
+        sendToAll: true
+      });
       expect(sendResponse.statusCode).toBe(200);
-      expect(sendResponse.data.envelope.status).toBe('READY_FOR_SIGNATURE');
+      expect(sendResponse.data.status).toBe('READY_FOR_SIGNATURE');
 
       // 4. Cancel envelope
       const cancelResponse = await workflowHelper.cancelEnvelope(envelopeId);
@@ -240,141 +277,201 @@ describe('Cancel Envelope Workflow', () => {
       await verifyEnvelopeCancelled(envelopeId);
 
       // 6. Verify cancellation audit event
-      await verifyCancellationAuditEvent(envelopeId, testData.userId);
+      await verifyCancellationAuditEvent(envelopeId, envelope.createdBy);
 
       // 7. Verify cancellation notification event
-      await verifyCancellationNotificationEvent(envelopeId, testData.userId);
+      await verifyCancellationNotificationEvent(envelopeId, envelope.createdBy);
     });
   });
 
   describe('Authorization Validation', () => {
     it('should prevent cancellation by non-creator', async () => {
       // 1. Create envelope with user A
-      const createResponse = await workflowHelper.createEnvelope(
-        testData.envelopeData.title,
-        testData.envelopeData.description,
-        testData.envelopeData.originType,
-        testData.envelopeData.signingOrderType,
-        testData.envelopeData.expiresAt,
-        testData.envelopeData.sourceKey,
-        testData.envelopeData.metaKey
+      const envelope = await workflowHelper.createEnvelope(
+        TestDataFactory.createEnvelopeData({
+          title: 'Authorization Test Contract',
+          description: 'Testing authorization for cancel workflow',
+          signingOrderType: 'OWNER_FIRST',
+          originType: 'USER_UPLOAD'
+        })
       );
 
-      expect(createResponse.statusCode).toBe(201);
-      const envelopeId = createResponse.data.id;
+      expect(envelope.id).toBeDefined();
+      const envelopeId = envelope.id;
 
-      // 2. Try to cancel with different user (simulate by changing userId in testData)
-      const originalUserId = testData.userId;
-      testData.userId = 'different-user-id';
+      // 2. Try to cancel with different user (user B)
+      const nonCreatorUser = workflowHelper.getSecondTestUser();
+      const token = await workflowHelper.generateTestJwtToken(nonCreatorUser.userId, nonCreatorUser.email);
 
-      const cancelResponse = await workflowHelper.cancelEnvelope(envelopeId);
-
+      const cancelResponse = await workflowHelper.cancelEnvelopeWithToken(envelopeId, token);
       expect(cancelResponse.statusCode).toBe(403);
-      expect(cancelResponse.data.message).toContain('not authorized');
+      expect(cancelResponse.data.message).toContain(`User ${nonCreatorUser.userId} is not authorized to cancel envelope`);
 
-      // 3. Restore original userId
-      testData.userId = originalUserId;
+      // 3. Verify envelope status remains DRAFT
+      const currentEnvelope = await workflowHelper.getEnvelopeFromDatabase(envelopeId);
+      expect(currentEnvelope?.status).toBe('DRAFT');
+    });
 
-      // 4. Verify envelope is still in original status
-      const envelope = await workflowHelper.getEnvelope(envelopeId);
-      expect(envelope.data.status).toBe('DRAFT');
+    it('should prevent cancellation by external signer (no authentication)', async () => {
+      // 1. Create envelope
+      const envelope = await workflowHelper.createEnvelope(
+        TestDataFactory.createEnvelopeData({
+          title: 'External Signer Test Contract',
+          description: 'Testing external signer cannot cancel envelope',
+          signingOrderType: 'OWNER_FIRST',
+          originType: 'USER_UPLOAD'
+        })
+      );
+
+      expect(envelope.id).toBeDefined();
+      const envelopeId = envelope.id;
+
+      // 2. Add external signer
+      const signers = TestDataFactory.createMultipleSigners(1, 1);
+      const addSignersResponse = await workflowHelper.updateEnvelope(envelopeId, {
+        addSigners: signers
+      });
+
+      expect(addSignersResponse.statusCode).toBe(200);
+      const signerIds = addSignersResponse.data.signers.map((s: any) => s.id);
+
+      // 3. Send envelope to get invitation tokens
+      const sendResponse = await workflowHelper.sendEnvelope(envelopeId, {
+        sendToAll: true
+      });
+      expect(sendResponse.statusCode).toBe(200);
+
+      // 4. Try to cancel without authentication (simulating external signer)
+      // This should fail because CancelEnvelopeHandler requires authentication
+      const cancelResponse = await workflowHelper.cancelEnvelopeWithoutAuth(envelopeId);
+      expect(cancelResponse.statusCode).toBe(401);
+      expect(cancelResponse.data.message).toContain('Missing bearer token');
+
+      // 5. Verify envelope status remains READY_FOR_SIGNATURE
+      const currentEnvelope = await workflowHelper.getEnvelopeFromDatabase(envelopeId);
+      expect(currentEnvelope?.status).toBe('READY_FOR_SIGNATURE');
     });
   });
 
   describe('Status Validation', () => {
     it('should prevent cancellation of completed envelope', async () => {
       // 1. Create envelope
-      const createResponse = await workflowHelper.createEnvelope(
-        testData.envelopeData.title,
-        testData.envelopeData.description,
-        testData.envelopeData.originType,
-        testData.envelopeData.signingOrderType,
-        testData.envelopeData.expiresAt,
-        testData.envelopeData.sourceKey,
-        testData.envelopeData.metaKey
+      const envelope = await workflowHelper.createEnvelope(
+        TestDataFactory.createEnvelopeData({
+          title: 'Completed Test Contract',
+          description: 'Testing cancel workflow with completed envelope',
+          signingOrderType: 'OWNER_FIRST',
+          originType: 'USER_UPLOAD'
+        })
       );
 
-      expect(createResponse.statusCode).toBe(201);
-      const envelopeId = createResponse.data.id;
+      expect(envelope.id).toBeDefined();
+      const envelopeId = envelope.id;
 
       // 2. Add signer
-      const signerIds = await workflowHelper.addSignersToEnvelope(envelopeId, [
-        { email: 'signer1@example.com', fullName: 'Signer One' }
-      ]);
+      const signers = TestDataFactory.createMultipleSigners(1, 1);
+      const addSignersResponse = await workflowHelper.updateEnvelope(envelopeId, {
+        addSigners: signers
+      });
+
+      expect(addSignersResponse.statusCode).toBe(200);
+      const signerIds = addSignersResponse.data.signers.map((s: any) => s.id);
 
       // 3. Send envelope
-      const sendResponse = await workflowHelper.sendEnvelope(envelopeId);
+      const sendResponse = await workflowHelper.sendEnvelope(envelopeId, {
+        sendToAll: true
+      });
       expect(sendResponse.statusCode).toBe(200);
 
-      // 4. Sign document (complete the envelope)
+      // 4. Get invitation tokens from send response
+      expect(sendResponse.data.tokens).toBeDefined();
+      expect(sendResponse.data.tokens).toHaveLength(1);
+      const invitationTokens = sendResponse.data.tokens.map((t: any) => t.token);
+
+      // 5. Sign document (complete the envelope)
       const signResponse = await workflowHelper.signDocument(
         envelopeId,
         signerIds[0],
-        'test-invitation-token',
-        'test-consent-text',
-        'test-ip-address',
-        'test-user-agent',
-        'test-country'
+        invitationTokens[0],
+        {
+          given: true,
+          timestamp: new Date().toISOString(),
+          text: 'test-consent-text',
+          ipAddress: 'test-ip-address',
+          userAgent: 'test-user-agent',
+          country: 'test-country'
+        }
       );
 
       expect(signResponse.statusCode).toBe(200);
       expect(signResponse.data.envelope.status).toBe('COMPLETED');
 
-      // 5. Try to cancel completed envelope
+      // 6. Try to cancel completed envelope
       const cancelResponse = await workflowHelper.cancelEnvelope(envelopeId);
 
       expect(cancelResponse.statusCode).toBe(409);
       expect(cancelResponse.data.message).toContain('completed');
 
-      // 6. Verify envelope is still completed
-      const envelope = await workflowHelper.getEnvelope(envelopeId);
-      expect(envelope.data.status).toBe('COMPLETED');
+      // 7. Verify envelope is still completed
+      const envelopeResponse = await workflowHelper.getEnvelope(envelopeId);
+      expect(envelopeResponse.data.status).toBe('COMPLETED');
     });
 
     it('should prevent cancellation of declined envelope', async () => {
       // 1. Create envelope
-      const createResponse = await workflowHelper.createEnvelope(
-        testData.envelopeData.title,
-        testData.envelopeData.description,
-        testData.envelopeData.originType,
-        testData.envelopeData.signingOrderType,
-        testData.envelopeData.expiresAt,
-        testData.envelopeData.sourceKey,
-        testData.envelopeData.metaKey
+      const envelope = await workflowHelper.createEnvelope(
+        TestDataFactory.createEnvelopeData({
+          title: 'Declined Test Contract',
+          description: 'Testing cancel workflow with declined envelope',
+          signingOrderType: 'OWNER_FIRST',
+          originType: 'USER_UPLOAD'
+        })
       );
 
-      expect(createResponse.statusCode).toBe(201);
-      const envelopeId = createResponse.data.id;
+      expect(envelope.id).toBeDefined();
+      const envelopeId = envelope.id;
 
       // 2. Add signer
-      const signerIds = await workflowHelper.addSignersToEnvelope(envelopeId, [
-        { email: 'signer1@example.com', fullName: 'Signer One' }
-      ]);
+      const signers = TestDataFactory.createMultipleSigners(1, 1);
+      const addSignersResponse = await workflowHelper.updateEnvelope(envelopeId, {
+        addSigners: signers
+      });
+
+      expect(addSignersResponse.statusCode).toBe(200);
+      const signerIds = addSignersResponse.data.signers.map((s: any) => s.id);
 
       // 3. Send envelope
-      const sendResponse = await workflowHelper.sendEnvelope(envelopeId);
+      const sendResponse = await workflowHelper.sendEnvelope(envelopeId, {
+        sendToAll: true
+      });
       expect(sendResponse.statusCode).toBe(200);
+      expect(sendResponse.data.status).toBe('READY_FOR_SIGNATURE');
 
-      // 4. Decline document
+      // 4. Get invitation tokens from send response
+      expect(sendResponse.data.tokens).toBeDefined();
+      expect(sendResponse.data.tokens).toHaveLength(1);
+      const invitationTokens = sendResponse.data.tokens.map((t: any) => t.token);
+
+      // 5. Decline document
       const declineResponse = await workflowHelper.declineSigner(
         envelopeId,
         signerIds[0],
-        'test-invitation-token',
+        invitationTokens[0],
         'Test decline reason'
       );
 
       expect(declineResponse.statusCode).toBe(200);
       expect(declineResponse.data.decline.envelopeStatus).toBe('DECLINED');
 
-      // 5. Try to cancel declined envelope
+      // 6. Try to cancel declined envelope
       const cancelResponse = await workflowHelper.cancelEnvelope(envelopeId);
 
       expect(cancelResponse.statusCode).toBe(409);
       expect(cancelResponse.data.message).toContain('declined');
 
-      // 6. Verify envelope is still declined
-      const envelope = await workflowHelper.getEnvelope(envelopeId);
-      expect(envelope.data.status).toBe('DECLINED');
+      // 7. Verify envelope is still declined
+      const envelopeResponse = await workflowHelper.getEnvelope(envelopeId);
+      expect(envelopeResponse.data.status).toBe('DECLINED');
     });
   });
 });

@@ -424,10 +424,11 @@ export class EnvelopeOperations {
   /**
    * Cancel an envelope
    * @param envelopeId - ID of the envelope to cancel
+   * @param customToken - Optional custom JWT token (for testing different users)
    * @returns Promise that resolves to the cancellation response
    */
-  async cancelEnvelope(envelopeId: string): Promise<{ statusCode: number; data: any }> {
-    const token = await generateTestJwtToken({
+  async cancelEnvelope(envelopeId: string, customToken?: string): Promise<{ statusCode: number; data: any }> {
+    const token = customToken || await generateTestJwtToken({
       sub: this.testUser.userId, 
       email: this.testUser.email, 
       roles: ['admin'], 
@@ -437,6 +438,31 @@ export class EnvelopeOperations {
     const event = await createApiGatewayEvent({
       includeAuth: true,
       authToken: token,
+      pathParameters: { id: envelopeId },
+      body: {}, // Empty body for cancellation
+      headers: {
+        'x-forwarded-for': '127.0.0.1',
+        'user-agent': 'Test User Agent'
+      }
+    });
+    
+    const result = await cancelEnvelopeHandler(event) as any;
+    const response = JSON.parse(result.body);
+
+    return {
+      statusCode: result.statusCode,
+      data: response.data || response
+    };
+  }
+
+  /**
+   * Cancel an envelope without authentication (for testing external signers)
+   * @param envelopeId - ID of the envelope to cancel
+   * @returns Promise that resolves to the cancellation response
+   */
+  async cancelEnvelopeWithoutAuth(envelopeId: string): Promise<{ statusCode: number; data: any }> {
+    const event = await createApiGatewayEvent({
+      includeAuth: false, // No authentication
       pathParameters: { id: envelopeId },
       body: {}, // Empty body for cancellation
       headers: {

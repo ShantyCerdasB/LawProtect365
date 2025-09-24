@@ -37,6 +37,9 @@ export const cancelEnvelopeHandler = ControllerFactory.createCommand({
   pathSchema: z.object({ id: UuidV4 }), // Only envelopeId in path
   bodySchema: CancelEnvelopeRequestSchema, // Empty body
   
+  // Authentication required
+  requireAuth: true,
+  
   // Service configuration - use new DDD architecture
   appServiceClass: class {
     private readonly signatureOrchestrator: any;

@@ -349,3 +349,79 @@ export const deviceNotTrusted = (details?: unknown) =>
  */
 export const ipAddressBlocked = (details?: unknown) =>
   new ForbiddenError("IP address blocked", UserErrorCodes.IP_ADDRESS_BLOCKED, details);
+
+// ============================================================================
+// OAUTH LINKING ERRORS
+// ============================================================================
+
+/**
+ * Creates a ConflictError for OAuth link email mismatch (409).
+ * @param details - Optional additional error details
+ * @returns ConflictError instance
+ */
+export const oauthLinkEmailMismatch = (details?: unknown) =>
+  new ConflictError("OAuth account email does not match user email", UserErrorCodes.OAUTH_LINK_EMAIL_MISMATCH, details);
+
+/**
+ * Creates a ConflictError for OAuth account already linked (409).
+ * @param details - Optional additional error details
+ * @returns ConflictError instance
+ */
+export const oauthAccountAlreadyLinked = (details?: unknown) =>
+  new ConflictError("OAuth account is already linked to another user", UserErrorCodes.OAUTH_ACCOUNT_ALREADY_LINKED, details);
+
+/**
+ * Creates a ConflictError for OAuth provider already attached (409).
+ * @param details - Optional additional error details
+ * @returns ConflictError instance
+ */
+export const oauthProviderAlreadyAttached = (details?: unknown) =>
+  new ConflictError("OAuth provider is already attached to this user", UserErrorCodes.OAUTH_PROVIDER_ALREADY_ATTACHED, details);
+
+// ============================================================================
+// ROLE AND AUTHORIZATION ERRORS
+// ============================================================================
+
+/**
+ * Creates a ForbiddenError for role change not allowed (403).
+ * @param details - Optional additional error details
+ * @returns ForbiddenError instance
+ */
+export const roleChangeNotAllowed = (details?: unknown) =>
+  new ForbiddenError("Role change is not allowed", UserErrorCodes.ROLE_CHANGE_NOT_ALLOWED, details);
+
+/**
+ * Creates a ForbiddenError for insufficient privileges (403).
+ * @param details - Optional additional error details
+ * @returns ForbiddenError instance
+ */
+export const insufficientPrivileges = (details?: unknown) =>
+  new ForbiddenError("Insufficient privileges for this operation", UserErrorCodes.INSUFFICIENT_PRIVILEGES, details);
+
+/**
+ * Creates a ConflictError for ambiguous role from IdP (409).
+ * @param details - Optional additional error details
+ * @returns ConflictError instance
+ */
+export const roleAmbiguousFromIdp = (details?: unknown) =>
+  new ConflictError("Role mapping from IdP is ambiguous", UserErrorCodes.ROLE_AMBIGUOUS_FROM_IDP, details);
+
+// ============================================================================
+// STATUS TRANSITION ERRORS
+// ============================================================================
+
+/**
+ * Creates a ConflictError for invalid status transition (409).
+ * @param details - Optional additional error details
+ * @returns ConflictError instance
+ */
+export const invalidStatusTransition = (details?: unknown) =>
+  new ConflictError("Invalid account status transition", UserErrorCodes.INVALID_STATUS_TRANSITION, details);
+
+/**
+ * Creates a BadRequestError for missing suspend reason (400).
+ * @param details - Optional additional error details
+ * @returns BadRequestError instance
+ */
+export const suspendReasonRequired = (details?: unknown) =>
+  new BadRequestError("Suspension reason is required", UserErrorCodes.SUSPEND_REASON_REQUIRED, details);
