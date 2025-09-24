@@ -195,44 +195,47 @@ export class SignatureEnvelopeService {
     try {
       // 1. Get current envelope with signers
       const envelope = await this.signatureEnvelopeRepository.getWithSigners(envelopeId);
+      if (!envelope) {
+        throw envelopeNotFound(`Envelope with ID ${envelopeId.getValue()} not found`);
+      }
       
       // 2. Validate update using domain rule (includes existence validation)
       EnvelopeUpdateValidationRule.validateEnvelopeUpdate(
-        envelope!,
+        envelope,
         updateData,
         userId,
-        envelope?.getSigners() || []
+        envelope.getSigners()
       );
       
-      // 3. Apply updates to entity
+      // 3. Apply updates to entity using entity methods
       if (updateData.title) {
-        (envelope as any).title = updateData.title;
+        envelope.updateTitle(updateData.title);
       }
       if (updateData.description !== undefined) {
-        (envelope as any).description = updateData.description;
+        envelope.updateDescription(updateData.description);
       }
       if (updateData.expiresAt !== undefined) {
-        (envelope as any).expiresAt = updateData.expiresAt;
+        envelope.updateExpiresAt(updateData.expiresAt);
       }
       if (updateData.signingOrderType) {
-        (envelope as any).signingOrder = SigningOrder.fromString(updateData.signingOrderType);
+        envelope.updateSigningOrder(SigningOrder.fromString(updateData.signingOrderType));
       }
       if (updateData.sourceKey) {
-        (envelope as any).sourceKey = S3Key.fromString(updateData.sourceKey);
+        envelope.updateSourceKey(S3Key.fromString(updateData.sourceKey));
       }
       if (updateData.metaKey) {
-        (envelope as any).metaKey = S3Key.fromString(updateData.metaKey);
+        envelope.updateMetaKey(S3Key.fromString(updateData.metaKey));
       }
       
       // 4. Save updated envelope
-      const updatedEnvelope = await this.signatureEnvelopeRepository.update(envelopeId, envelope!);
+      const updatedEnvelope = await this.signatureEnvelopeRepository.update(envelopeId, envelope);
       
       // 5. Create audit event
       await this.signatureAuditEventService.createEvent({
         envelopeId: envelopeId.getValue(),
         signerId: undefined,
         eventType: AuditEventType.ENVELOPE_UPDATED,
-        description: `Envelope "${envelope!.getTitle()}" updated`,
+        description: `Envelope "${envelope.getTitle()}" updated`,
         userId: userId,
         userEmail: undefined,
         ipAddress: undefined,

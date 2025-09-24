@@ -14,6 +14,7 @@ import { EnvelopeStatus } from '../value-objects/EnvelopeStatus';
 import { S3Key } from '../value-objects/S3Key';
 import { DocumentHash } from '../value-objects/DocumentHash';
 import { SignerStatus } from '@prisma/client';
+import { roundTo } from '@lawprotect/shared-ts';
 import { EnvelopeSigner } from './EnvelopeSigner';
 import { CreateSignerData } from '../types/signer/CreateSignerData';
 import { SigningOrderValidationRule } from '../rules/SigningOrderValidationRule';
@@ -736,6 +737,51 @@ export class SignatureEnvelope {
   }
 
   /**
+   * Updates the envelope title
+   * @param newTitle - The new title
+   */
+  updateTitle(newTitle: string): void {
+    (this as any).title = newTitle;
+    this.updatedAt = new Date();
+  }
+
+  /**
+   * Updates the envelope description
+   * @param newDescription - The new description
+   */
+  updateDescription(newDescription: string): void {
+    (this as any).description = newDescription;
+    this.updatedAt = new Date();
+  }
+
+  /**
+   * Updates the envelope expiration date
+   * @param newExpiresAt - The new expiration date
+   */
+  updateExpiresAt(newExpiresAt: Date): void {
+    (this as any).expiresAt = newExpiresAt;
+    this.updatedAt = new Date();
+  }
+
+  /**
+   * Updates the source document S3 key
+   * @param newSourceKey - The new source S3 key
+   */
+  updateSourceKey(newSourceKey: S3Key): void {
+    (this as any).sourceKey = newSourceKey;
+    this.updatedAt = new Date();
+  }
+
+  /**
+   * Updates the metadata document S3 key
+   * @param newMetaKey - The new metadata S3 key
+   */
+  updateMetaKey(newMetaKey: S3Key): void {
+    (this as any).metaKey = newMetaKey;
+    this.updatedAt = new Date();
+  }
+
+  /**
    * Checks if the envelope has external signers
    * @returns True if envelope has at least one external signer
    */
@@ -765,6 +811,47 @@ export class SignatureEnvelope {
    */
   getExternalSigners(): EnvelopeSigner[] {
     return this.signers.filter(signer => signer.getIsExternal());
+  }
+
+  /**
+   * Calculates the signing progress of the envelope
+   * @returns Progress percentage (0-100) based on signed signers
+   */
+  calculateProgress(): number {
+    if (this.signers.length === 0) {
+      return 0;
+    }
+
+    const signedCount = this.signers.filter(signer => signer.getStatus() === SignerStatus.SIGNED).length;
+    const totalCount = this.signers.length;
+    
+    return roundTo((signedCount / totalCount) * 100, 0);
+  }
+
+  /**
+   * Gets detailed progress information for the envelope
+   * @returns Object with progress statistics
+   */
+  getProgressInfo(): {
+    total: number;
+    signed: number;
+    pending: number;
+    declined: number;
+    percentage: number;
+  } {
+    const total = this.signers.length;
+    const signed = this.signers.filter(signer => signer.getStatus() === SignerStatus.SIGNED).length;
+    const declined = this.signers.filter(signer => signer.getStatus() === SignerStatus.DECLINED).length;
+    const pending = total - signed - declined;
+    const percentage = total === 0 ? 0 : roundTo((signed / total) * 100, 0);
+
+    return {
+      total,
+      signed,
+      pending,
+      declined,
+      percentage
+    };
   }
 
 }

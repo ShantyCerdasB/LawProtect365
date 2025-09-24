@@ -34,6 +34,7 @@ import { SigningFlowValidationRule } from '../domain/rules/SigningFlowValidation
 import { ConsentService } from './ConsentService';
 import { KmsService } from './KmsService';
 import { sha256Hex } from '@lawprotect/shared-ts';
+import { getDefaultSigningAlgorithm } from '../domain/enums/SigningAlgorithmEnum';
 
 /**
  * SignatureOrchestrator - Orchestrates signature service workflows
@@ -391,7 +392,7 @@ export class SignatureOrchestrator {
       const kmsResult = await this._kmsService.sign({
         documentHash: documentHash,
         kmsKeyId: process.env.KMS_SIGNER_KEY_ID!,
-        algorithm: process.env.KMS_SIGNING_ALGORITHM || 'RSASSA_PSS_SHA_256'
+        algorithm: getDefaultSigningAlgorithm()
       });
       
       // 7. Create signature object
@@ -412,7 +413,7 @@ export class SignatureOrchestrator {
           signatureHash: signature.sha256,
           signedS3Key: flattenedKey.getValue(), // Use the original flattened key
           kmsKeyId: process.env.KMS_SIGNER_KEY_ID!,
-          algorithm: process.env.KMS_SIGNING_ALGORITHM || 'RSASSA_PSS_SHA_256',
+          algorithm: getDefaultSigningAlgorithm(),
           ipAddress: securityContext.ipAddress,
           userAgent: securityContext.userAgent
         }
@@ -467,14 +468,14 @@ export class SignatureOrchestrator {
         envelope: {
           id: envelope.getId().getValue(),
           status: envelope.getStatus().getValue(),
-          progress: 100 // Mock progress
+          progress: envelope.calculateProgress()
         },
         signature: {
           id: signature.id,
           signerId: signerId.getValue(),
           envelopeId: envelopeId.getValue(),
           signedAt: signature.timestamp,
-          algorithm: 'RSASSA_PSS_SHA_256',
+          algorithm: getDefaultSigningAlgorithm(),
           hash: signature.sha256
         }
       };

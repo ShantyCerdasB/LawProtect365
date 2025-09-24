@@ -9,27 +9,15 @@ import { z, UuidV4, NonEmptyStringSchema } from '@lawprotect/shared-ts';
 
 /**
  * Schema for document signing request (supports both authenticated users and invitation tokens)
+ * Simplified to only include user-provided data - orchestrator handles the rest
  */
 export const SignDocumentRequestSchema = z.object({
   // For invitation token users
   invitationToken: z.string().optional(),
   
   // For authenticated users (when no invitation token)
-  envelopeId: UuidV4,
-  signerId: UuidV4,
-  
-  // Signature data (required for both cases)
-  documentHash: z.string().regex(/^[a-f0-9]{64}$/i, 'Document hash must be a valid SHA-256 hash'),
-  signatureHash: z.string().regex(/^[a-f0-9]{64}$/i, 'Signature hash must be a valid SHA-256 hash'),
-  algorithm: NonEmptyStringSchema,
-  kmsKeyId: NonEmptyStringSchema,
-  s3Key: NonEmptyStringSchema,
-  
-  // Optional metadata
-  reason: z.string().max(255, 'Reason must be less than 255 characters').optional(),
-  location: z.string().max(255, 'Location must be less than 255 characters').optional(),
-  ipAddress: z.string().ip().optional(),
-  userAgent: z.string().optional(),
+  envelopeId: UuidV4.optional(),
+  signerId: UuidV4.optional(),
   
   // Consent data (required for all cases)
   consent: z.object({
@@ -37,8 +25,8 @@ export const SignDocumentRequestSchema = z.object({
     timestamp: z.string().datetime(),
     text: z.string(),
     ipAddress: z.string().optional(),
-    userAgent: z.string(),
-    country: z.string(),
+    userAgent: z.string().optional(),
+    country: z.string().optional(),
   })
 }).refine(
   (data) => data.invitationToken || (data.envelopeId && data.signerId),
