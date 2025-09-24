@@ -297,6 +297,7 @@ export class EnvelopeSigner {
    * Validates that the signer can perform signing or declining actions
    * @throws signerAlreadySigned when signer has already signed
    * @throws signerAlreadyDeclined when signer has already declined
+   * @throws invalidSignerState when signer has not given consent
    */
   private validateCanPerformAction(): void {
     if (this.status === SignerStatus.SIGNED) {
@@ -304,6 +305,9 @@ export class EnvelopeSigner {
     }
     if (this.status === SignerStatus.DECLINED) {
       throw signerAlreadyDeclined('Signer has already declined');
+    }
+    if (!this.hasGivenConsent()) {
+      throw invalidSignerState('Signer must give consent before signing');
     }
   }
 

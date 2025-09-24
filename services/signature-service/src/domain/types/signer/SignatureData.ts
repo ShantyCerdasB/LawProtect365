@@ -15,4 +15,5 @@ export interface SignatureData {
   userAgent?: string;
   reason?: string;
   location?: string;
+  consentText?: string;
 }

@@ -105,6 +105,19 @@ export class InvitationTokenService {
         // Save to repository
         const createdToken = await this.invitationTokenRepository.create(invitationToken);
 
+        // Mark token as sent
+        createdToken.markAsSent(
+          securityContext.ipAddress,
+          securityContext.userAgent,
+          securityContext.country
+        );
+
+        // Update token in repository with sent information
+        const sentToken = await this.invitationTokenRepository.update(
+          createdToken.getId(),
+          createdToken
+        );
+
         // Create audit event
         await this.signatureAuditEventService.createSignerAuditEvent(
           envelopeId.getValue(),
@@ -115,6 +128,7 @@ export class InvitationTokenService {
           signer.getEmail()?.getValue(),
           securityContext.ipAddress,
           securityContext.userAgent,
+          securityContext.country, // Pass country as parameter
           {
             tokenId: createdToken.getId().getValue(),
             signerEmail: signer.getEmail()?.getValue(),
@@ -126,7 +140,7 @@ export class InvitationTokenService {
         // Add result with both original token and entity
         results.push({
           token,                    // ✅ Original token for frontend use
-          entity: createdToken,     // Complete entity for audit and tracking
+          entity: sentToken,        // Complete entity for audit and tracking
           signerId: signer.getId().getValue(),
           email: signer.getEmail()?.getValue(),
           expiresAt: expiresAt
@@ -221,20 +235,24 @@ export class InvitationTokenService {
         invitationToken
       );
 
+      // Get signer information for audit event
+      const signer = await this.envelopeSignerRepository.findById(invitationToken.getSignerId());
+      const signerName = signer?.getFullName() || signer?.getEmail()?.getValue() || 'Unknown';
+
       // Create audit event
       await this.signatureAuditEventService.createSignerAuditEvent(
         invitationToken.getEnvelopeId().getValue(),
         invitationToken.getSignerId().getValue(),
         AuditEventType.INVITATION_TOKEN_USED,
         `Invitation token viewed by external signer`,
-        'external-user', // Use external-user for external users
-        undefined,
+        `external-user:${signerName}`, // Use full name for external users
+        signer?.getEmail()?.getValue(), // Use signer email
         securityContext.ipAddress,
         securityContext.userAgent,
+        securityContext.country, // Pass country as parameter
         {
           viewCount: updatedToken.getViewCount(),
-          lastViewedAt: updatedToken.getLastViewedAt()?.toISOString(),
-          country: securityContext.country
+          lastViewedAt: updatedToken.getLastViewedAt()?.toISOString()
         }
       );
 
@@ -270,20 +288,24 @@ export class InvitationTokenService {
         invitationToken
       );
 
+      // Get signer information for audit event
+      const signer = await this.envelopeSignerRepository.findById(invitationToken.getSignerId());
+      const signerName = signer?.getFullName() || signer?.getEmail()?.getValue() || 'Unknown';
+
       // Create audit event
       await this.signatureAuditEventService.createSignerAuditEvent(
         invitationToken.getEnvelopeId().getValue(),
         invitationToken.getSignerId().getValue(),
         AuditEventType.INVITATION_TOKEN_USED,
-        `Invitation token used for signing by ${signerId}`,
-        'external-user', // Use external-user for external users
-        undefined,
+        `Invitation token used for signing by ${signerName}`,
+        `external-user:${signerName}`, // Use full name for external users
+        signer?.getEmail()?.getValue(), // Use signer email
         securityContext.ipAddress,
         securityContext.userAgent,
+        securityContext.country, // Pass country as parameter
         {
           signedAt: updatedToken.getSignedAt()?.toISOString(),
-          signedBy: updatedToken.getSignedBy(),
-          country: securityContext.country
+          signedBy: updatedToken.getSignedBy()
         }
       );
 
@@ -325,6 +347,7 @@ export class InvitationTokenService {
         undefined,
         invitationToken.getIpAddress(),
         invitationToken.getUserAgent(),
+        invitationToken.getCountry(), // Pass country as parameter
         {
           revokedAt: invitationToken.getRevokedAt()?.toISOString(),
           revokedReason: reason

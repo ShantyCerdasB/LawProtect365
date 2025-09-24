@@ -67,6 +67,7 @@ export class EnvelopeSignerService {
     userEmail?: string,
     ipAddress?: string,
     userAgent?: string,
+    country?: string,
     metadata?: Record<string, unknown>
   ): Promise<void> {
     await this.signatureAuditEventService.createSignerAuditEvent(
@@ -78,6 +79,7 @@ export class EnvelopeSignerService {
       userEmail,
       ipAddress,
       userAgent,
+      country,
       metadata
     );
   }
@@ -131,6 +133,7 @@ export class EnvelopeSignerService {
           signer.getEmail()?.getValue(),
           undefined,
           undefined,
+          undefined, // country
           {
             signerId: signer.getId().getValue(),
             isExternal: signer.getIsExternal(),
@@ -346,12 +349,21 @@ export class EnvelopeSignerService {
         throw signerNotFound(`Signer with ID ${signerId.getValue()} not found`);
       }
 
+      // Record consent if consentText is provided
+      if (signatureData.consentText && signatureData.ipAddress && signatureData.userAgent) {
+        signer.recordConsent(
+          signatureData.consentText,
+          signatureData.ipAddress,
+          signatureData.userAgent
+        );
+      }
+
       // Create signature metadata
       const metadata = new SignatureMetadata(
-        signatureData.ipAddress,
-        signatureData.userAgent,
         signatureData.reason,
-        signatureData.location
+        signatureData.location,
+        signatureData.ipAddress,
+        signatureData.userAgent
       );
 
       // Use entity method to sign
@@ -373,10 +385,11 @@ export class EnvelopeSignerService {
         signerId.getValue(),
         AuditEventType.SIGNER_SIGNED,
         `Signer ${signer.getFullName() || signer.getEmail()?.getValue() || 'Unknown'} signed the document`,
-        signer.getUserId() || 'external-user',
+        signer.getUserId() || `external-user:${signer.getFullName() || signer.getEmail()?.getValue() || 'Unknown'}`, // Use full name for external users
         signer.getEmail()?.getValue(),
         signatureData.ipAddress,
         signatureData.userAgent,
+        signatureData.location, // Pass location as country parameter
         {
           signatureHash: signatureData.signatureHash,
           documentHash: signatureData.documentHash,
@@ -424,6 +437,7 @@ export class EnvelopeSignerService {
         signer.getEmail()?.getValue(),
         undefined,
         undefined,
+        undefined, // country
         {
           declineReason: declineData.reason,
           declinedAt: updatedSigner.getDeclinedAt()?.toISOString()
@@ -463,6 +477,7 @@ export class EnvelopeSignerService {
           signer.getEmail()?.getValue(),
           undefined,
           undefined,
+          undefined, // country
           {
             signerEmail: signer.getEmail()?.getValue(),
             signerFullName: signer.getFullName()

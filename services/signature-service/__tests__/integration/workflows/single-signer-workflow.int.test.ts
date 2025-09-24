@@ -607,7 +607,7 @@ describe('Single-Signer Document Signing Workflow', () => {
         consentWithoutGiven
       );
 
-      expect(signResponse.statusCode).toBe(400);
+      expect(signResponse.statusCode).toBe(422);
       expect(signResponse.data.message).toContain('Consent must be given');
     });
 
@@ -663,7 +663,7 @@ describe('Single-Signer Document Signing Workflow', () => {
       );
 
       expect(secondSignResponse.statusCode).toBe(409);
-      expect(secondSignResponse.data.message).toContain('already signed');
+      expect(secondSignResponse.data.message).toContain('already been used');
     });
   });
 

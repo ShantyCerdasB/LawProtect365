@@ -11,6 +11,7 @@ import { ConsentId } from '../domain/value-objects/ConsentId';
 import { SignerId } from '../domain/value-objects/SignerId';
 import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
 import { ConsentRepository } from '../repositories/ConsentRepository';
+import { EnvelopeSignerRepository } from '../repositories/EnvelopeSignerRepository';
 import { SignatureAuditEventService } from './SignatureAuditEventService';
 import { InvitationTokenService } from './InvitationTokenService';
 import { CreateConsentRequest } from '../domain/types/consent/CreateConsentRequest';
@@ -31,6 +32,7 @@ import {
 export class ConsentService {
   constructor(
     private readonly consentRepository: ConsentRepository,
+    private readonly envelopeSignerRepository: EnvelopeSignerRepository,
     private readonly signatureAuditEventService: SignatureAuditEventService,
     private readonly invitationTokenService: InvitationTokenService
   ) {}
@@ -90,16 +92,21 @@ export class ConsentService {
       // Save to repository
       const createdConsent = await this.consentRepository.create(consent);
 
+      // Get signer information for audit event
+      const signer = await this.envelopeSignerRepository.findById(request.signerId);
+      const signerName = signer?.getFullName() || signer?.getEmail()?.getValue() || 'Unknown';
+
       // Create audit event
       await this.signatureAuditEventService.createSignerAuditEvent(
         request.envelopeId.getValue(),
         request.signerId.getValue(),
         AuditEventType.CONSENT_GIVEN,
-        `Consent given by signer ${request.signerId.getValue()}`,
-        userId,
-        request.userEmail,
+        `Consent given by signer ${signerName}`,
+        userId || `external-user:${signerName}`, // Use full name for external users
+        request.userEmail || signer?.getEmail()?.getValue(), // Use signer email if not provided
         request.ipAddress,
         request.userAgent,
+        request.country, // Pass country as parameter
         {
           consentId: createdConsent.getId().getValue(),
           consentGiven: request.consentGiven,

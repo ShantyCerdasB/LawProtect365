@@ -317,7 +317,7 @@ describe('Get Envelopes By User Workflow', () => {
       expect(testEnvelope.title).toBe('Complete Info Test');
       expect(testEnvelope.description).toBe('Testing complete information retrieval');
       expect(testEnvelope.status).toBe('DRAFT');
-      expect(testEnvelope.signingOrderType).toBe('OWNER_FIRST');
+      expect(testEnvelope.signingOrderType).toBe('INVITEES_FIRST');
       expect(testEnvelope.originType).toBe('TEMPLATE');
       expect(testEnvelope.templateId).toBe('complete-template-123');
       expect(testEnvelope.templateVersion).toBe('2.0.0');

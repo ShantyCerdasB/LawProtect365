@@ -340,6 +340,7 @@ export class SignatureEnvelopeService {
         undefined,
         undefined,
         undefined,
+        undefined, // country
         {
           envelopeId: envelopeId.getValue(),
           title: existingEnvelope.getTitle()
@@ -439,6 +440,7 @@ export class SignatureEnvelopeService {
         undefined,
         undefined,
         undefined,
+        undefined, // country
         {
           envelopeId: envelopeId.getValue(),
           s3Keys: s3Keys
@@ -466,20 +468,21 @@ export class SignatureEnvelopeService {
 
       // Create audit event if userId provided
       if (userId) {
-        await this.signatureAuditEventService.createSignerAuditEvent(
-          envelopeId.getValue(),
-          updatedEnvelope.getCreatedBy(),
-          AuditEventType.ENVELOPE_UPDATED,
-          `Document hashes updated for envelope "${updatedEnvelope.getTitle()}"`,
-          userId,
-          undefined,
-          undefined,
-          undefined,
-          {
+        await this.signatureAuditEventService.createEvent({
+          envelopeId: envelopeId.getValue(),
+          signerId: undefined, // No signerId for envelope-level events
+          eventType: AuditEventType.ENVELOPE_UPDATED,
+          description: `Document hashes updated for envelope "${updatedEnvelope.getTitle()}"`,
+          userId: userId,
+          userEmail: undefined,
+          ipAddress: undefined,
+          userAgent: undefined,
+          country: undefined,
+          metadata: {
             envelopeId: envelopeId.getValue(),
             hashes: hashes
           }
-        );
+        });
       }
 
       return updatedEnvelope;
@@ -513,6 +516,7 @@ export class SignatureEnvelopeService {
         undefined,
         undefined,
         undefined,
+        undefined, // country
         {
           envelopeId: envelopeId.getValue(),
           signedKey: signedKey,

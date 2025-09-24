@@ -43,6 +43,7 @@ export class SignatureAuditEventService {
    * @param userEmail - The user email
    * @param ipAddress - Optional IP address
    * @param userAgent - Optional user agent
+   * @param country - Optional country
    * @param metadata - Optional metadata
    */
   async createSignerAuditEvent(
@@ -54,6 +55,7 @@ export class SignatureAuditEventService {
     userEmail?: string,
     ipAddress?: string,
     userAgent?: string,
+    country?: string,
     metadata?: Record<string, unknown>
   ): Promise<SignatureAuditEvent> {
     return this.createEvent({
@@ -65,7 +67,7 @@ export class SignatureAuditEventService {
       userEmail,
       ipAddress,
       userAgent,
-      country: undefined,
+      country,
       metadata: metadata || {}
     });
   }
