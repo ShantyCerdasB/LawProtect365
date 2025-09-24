@@ -469,7 +469,8 @@ export class SignatureOrchestrator {
           kmsKeyId: process.env.KMS_SIGNER_KEY_ID!,
           algorithm: getDefaultSigningAlgorithm(),
           ipAddress: securityContext.ipAddress,
-          userAgent: securityContext.userAgent
+          userAgent: securityContext.userAgent,
+          consentText: request.consent.text // Add consent text for recordConsent
         }
       );
       
