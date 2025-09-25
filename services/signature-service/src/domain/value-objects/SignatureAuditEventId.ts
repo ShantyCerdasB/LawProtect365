@@ -63,6 +63,9 @@ export class SignatureAuditEventId extends Identifier<string> {
    * Checks if this SignatureAuditEventId equals another SignatureAuditEventId
    */
   equals(other: SignatureAuditEventId): boolean {
+    if (!other || typeof other.getValue !== 'function') {
+      return false;
+    }
     return this.getValue() === other.getValue();
   }
 

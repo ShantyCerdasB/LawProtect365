@@ -326,14 +326,12 @@ describe('Get Envelopes By User Workflow', () => {
       expect(testEnvelope.updatedAt).toBeDefined();
 
       // Verify complete signer information
-      const envelopeSigners = getResponse.data.signers.find((signers: any[]) => 
-        signers.some((signer: any) => signer.email === 'complete1@example.com')
-      );
+      const envelopeSigners = this.findEnvelopeSigners(getResponse.data.signers, 'complete1@example.com');
       expect(envelopeSigners).toBeDefined();
       expect(envelopeSigners).toHaveLength(2);
 
-      const signer1 = envelopeSigners.find((s: any) => s.email === 'complete1@example.com');
-      const signer2 = envelopeSigners.find((s: any) => s.email === 'complete2@example.com');
+      const signer1 = this.findSignerByEmail(envelopeSigners, 'complete1@example.com');
+      const signer2 = this.findSignerByEmail(envelopeSigners, 'complete2@example.com');
 
       expect(signer1).toBeDefined();
       expect(signer1.email).toBe('complete1@example.com');
@@ -378,4 +376,26 @@ describe('Get Envelopes By User Workflow', () => {
       expect(getResponse.data.message).toContain("Limit cannot exceed 100");
     });
   });
+
+  /**
+   * Helper method to find envelope signers by email
+   * @param signers - Array of signer arrays
+   * @param email - Email to search for
+   * @returns Array of signers for the envelope
+   */
+  private findEnvelopeSigners(signers: any[][], email: string): any[] {
+    return signers.find((signerArray: any[]) => 
+      signerArray.some((signer: any) => signer.email === email)
+    ) || [];
+  }
+
+  /**
+   * Helper method to find a signer by email
+   * @param signers - Array of signers
+   * @param email - Email to search for
+   * @returns Signer object or undefined
+   */
+  private findSignerByEmail(signers: any[], email: string): any {
+    return signers.find((signer: any) => signer.email === email);
+  }
 });

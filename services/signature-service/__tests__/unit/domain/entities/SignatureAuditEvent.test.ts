@@ -8,7 +8,9 @@
 import { SignatureAuditEvent } from '../../../../src/domain/entities/SignatureAuditEvent';
 import { EnvelopeId } from '../../../../src/domain/value-objects/EnvelopeId';
 import { SignerId } from '../../../../src/domain/value-objects/SignerId';
-import { TestUtils } from '../../../helpers/testUtils';
+import { SignatureAuditEventId } from '../../../../src/domain/value-objects/SignatureAuditEventId';
+import { AuditEventType } from '../../../../src/domain/enums/AuditEventType';
+import { TestUtils, TEST_CONSTANTS } from '../../../helpers/testUtils';
 import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
 
 // Helper function to create SignatureAuditEvent with custom parameters
@@ -16,7 +18,7 @@ function createAuditEventWithParams(params: {
   id?: string;
   envelopeId?: string;
   signerId?: string;
-  eventType?: string;
+  eventType?: AuditEventType;
   description?: string;
   userId?: string;
   userEmail?: string;
@@ -27,10 +29,10 @@ function createAuditEventWithParams(params: {
   createdAt?: Date;
 }): SignatureAuditEvent {
   return new SignatureAuditEvent(
-    params.id || TestUtils.generateUuid(),
+    params.id ? new SignatureAuditEventId(params.id) : TestUtils.generateSignatureAuditEventId(),
     new EnvelopeId(params.envelopeId || TestUtils.generateUuid()),
     params.signerId ? new SignerId(params.signerId) : undefined,
-    params.eventType || 'ENVELOPE_CREATED',
+    params.eventType || AuditEventType.ENVELOPE_CREATED,
     params.description || 'Test audit event',
     params.userId,
     params.userEmail,
@@ -57,7 +59,7 @@ describe('SignatureAuditEvent', () => {
         id,
         envelopeId,
         signerId,
-        eventType: 'SIGNATURE_COMPLETED',
+        eventType: AuditEventType.SIGNATURE_CREATED,
         description: 'Document signed successfully',
         userId,
         userEmail: 'signer@example.com',
@@ -68,10 +70,10 @@ describe('SignatureAuditEvent', () => {
         createdAt
       });
 
-      expect(event.getId()).toBe(id);
+      expect(event.getId().getValue()).toBe(id);
       expect(event.getEnvelopeId().getValue()).toBe(envelopeId);
       expect(event.getSignerId()?.getValue()).toBe(signerId);
-      expect(event.getEventType()).toBe('SIGNATURE_COMPLETED');
+      expect(event.getEventType()).toBe(AuditEventType.SIGNATURE_CREATED);
       expect(event.getDescription()).toBe('Document signed successfully');
       expect(event.getUserId()).toBe(userId);
       expect(event.getUserEmail()).toBe('signer@example.com');
@@ -84,7 +86,7 @@ describe('SignatureAuditEvent', () => {
 
     it('should create audit event with minimal properties', () => {
       const event = createAuditEventWithParams({
-        eventType: 'ENVELOPE_VIEWED',
+        eventType: AuditEventType.DOCUMENT_ACCESSED,
         description: 'Envelope accessed',
         signerId: undefined,
         userId: undefined,
@@ -95,7 +97,7 @@ describe('SignatureAuditEvent', () => {
         metadata: undefined
       });
 
-      expect(event.getEventType()).toBe('ENVELOPE_VIEWED');
+      expect(event.getEventType()).toBe(AuditEventType.DOCUMENT_ACCESSED);
       expect(event.getDescription()).toBe('Envelope accessed');
       expect(event.getSignerId()).toBeUndefined();
       expect(event.getUserId()).toBeUndefined();
@@ -109,7 +111,7 @@ describe('SignatureAuditEvent', () => {
     it('should create audit event without signer ID', () => {
       const event = createAuditEventWithParams({
         signerId: undefined,
-        eventType: 'ENVELOPE_CREATED',
+        eventType: AuditEventType.ENVELOPE_CREATED,
         description: 'New envelope created'
       });
 
@@ -123,7 +125,7 @@ describe('SignatureAuditEvent', () => {
     it('should identify signer events correctly', () => {
       const signerEvent = createAuditEventWithParams({
         signerId: TestUtils.generateUuid(),
-        eventType: 'SIGNATURE_STARTED',
+        eventType: AuditEventType.SIGNATURE_CREATED,
         description: 'Signer started signing process'
       });
 
@@ -134,7 +136,7 @@ describe('SignatureAuditEvent', () => {
     it('should identify envelope events correctly', () => {
       const envelopeEvent = createAuditEventWithParams({
         signerId: undefined,
-        eventType: 'ENVELOPE_SENT',
+        eventType: AuditEventType.ENVELOPE_SENT,
         description: 'Envelope sent to signers'
       });
 
@@ -144,11 +146,11 @@ describe('SignatureAuditEvent', () => {
 
     it('should handle various signer event types', () => {
       const signerEventTypes = [
-        'SIGNATURE_STARTED',
-        'SIGNATURE_COMPLETED',
-        'SIGNATURE_DECLINED',
-        'DOCUMENT_VIEWED',
-        'CONSENT_GIVEN'
+        AuditEventType.SIGNATURE_CREATED,
+        AuditEventType.SIGNATURE_CREATED,
+        AuditEventType.SIGNER_DECLINED,
+        AuditEventType.DOCUMENT_ACCESSED,
+        AuditEventType.CONSENT_GIVEN
       ];
 
       signerEventTypes.forEach(eventType => {
@@ -165,11 +167,11 @@ describe('SignatureAuditEvent', () => {
 
     it('should handle various envelope event types', () => {
       const envelopeEventTypes = [
-        'ENVELOPE_CREATED',
-        'ENVELOPE_SENT',
-        'ENVELOPE_COMPLETED',
-        'ENVELOPE_CANCELLED',
-        'ENVELOPE_EXPIRED'
+        AuditEventType.ENVELOPE_CREATED,
+        AuditEventType.ENVELOPE_SENT,
+        AuditEventType.ENVELOPE_COMPLETED,
+        AuditEventType.ENVELOPE_CANCELLED,
+        AuditEventType.ENVELOPE_EXPIRED
       ];
 
       envelopeEventTypes.forEach(eventType => {
@@ -238,15 +240,17 @@ describe('SignatureAuditEvent', () => {
         location: 'New York'
       };
 
+      const ipAddress = generateTestIpAddress();
+      
       const event = createAuditEventWithParams({
         id,
         envelopeId,
         signerId,
-        eventType: 'SIGNATURE_COMPLETED',
+        eventType: AuditEventType.SIGNATURE_CREATED,
         description: 'Document signed with digital signature',
         userId,
         userEmail: 'signer@example.com',
-        ipAddress: generateTestIpAddress(),
+        ipAddress,
         userAgent: 'Firefox/89.0',
         country: 'US',
         metadata,
@@ -259,11 +263,11 @@ describe('SignatureAuditEvent', () => {
         id,
         envelopeId,
         signerId,
-        eventType: 'SIGNATURE_COMPLETED',
+        eventType: AuditEventType.SIGNATURE_CREATED,
         description: 'Document signed with digital signature',
         userId,
         userEmail: 'signer@example.com',
-        ipAddress: generateTestIpAddress(),
+        ipAddress,
         userAgent: 'Firefox/89.0',
         country: 'US',
         createdAt,
@@ -295,7 +299,7 @@ describe('SignatureAuditEvent', () => {
 
     it('should include all required fields in summary', () => {
       const event = createAuditEventWithParams({
-        eventType: 'ENVELOPE_CREATED',
+        eventType: AuditEventType.ENVELOPE_CREATED,
         description: 'New envelope created by user'
       });
 
@@ -392,7 +396,7 @@ describe('SignatureAuditEvent', () => {
     });
 
     it('should handle events with IPv6 addresses', () => {
-      const ipv6Address = '2001:0db8:85a3:0000:0000:8a2e:0370:7334';
+      const ipv6Address = TEST_CONSTANTS.IPV6_TEST_ADDRESS;
       
       const event = createAuditEventWithParams({
         ipAddress: ipv6Address

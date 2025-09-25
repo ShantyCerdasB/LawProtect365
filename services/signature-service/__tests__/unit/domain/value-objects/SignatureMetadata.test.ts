@@ -7,6 +7,7 @@
 
 import { SignatureMetadata } from '../../../../src/domain/value-objects/SignatureMetadata';
 import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
+import { TEST_CONSTANTS } from '../../../helpers/testUtils';
 
 describe('SignatureMetadata', () => {
   describe('Constructor and Getters', () => {
@@ -304,7 +305,7 @@ describe('SignatureMetadata', () => {
     });
 
     it('should handle IPv6 addresses', () => {
-      const ipv6Address = '2001:0db8:85a3:0000:0000:8a2e:0370:7334';
+      const ipv6Address = TEST_CONSTANTS.IPV6_TEST_ADDRESS;
       
       const metadata = new SignatureMetadata(undefined, undefined, ipv6Address);
 

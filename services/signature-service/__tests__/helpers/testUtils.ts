@@ -6,9 +6,21 @@
  */
 
 import { uuid, sha256Hex } from '@lawprotect/shared-ts';
-import { SignerId } from '@/domain/value-objects/SignerId';
-import { EnvelopeId } from '@/domain/value-objects/EnvelopeId';
-import { ConsentId } from '@/domain/value-objects/ConsentId';
+import { SignerId } from '../../src/domain/value-objects/SignerId';
+import { EnvelopeId } from '../../src/domain/value-objects/EnvelopeId';
+import { ConsentId } from '../../src/domain/value-objects/ConsentId';
+import { SignatureAuditEventId } from '../../src/domain/value-objects/SignatureAuditEventId';
+
+/**
+ * Test constants for consistent test data
+ */
+export const TEST_CONSTANTS = {
+  /**
+   * Standard IPv6 test address for testing network-related functionality
+   * This is a reserved documentation IPv6 address (RFC 3849)
+   */
+  IPV6_TEST_ADDRESS: '2001:0db8:85a3:0000:0000:8a2e:0370:7334'
+} as const;
 
 /**
  * Test data generation utilities
@@ -45,6 +57,14 @@ export class TestUtils {
    */
   static generateConsentId(): ConsentId {
     return ConsentId.generate();
+  }
+
+  /**
+   * Generates a SignatureAuditEventId for testing
+   * @returns A valid SignatureAuditEventId instance
+   */
+  static generateSignatureAuditEventId(): SignatureAuditEventId {
+    return SignatureAuditEventId.generate();
   }
 
   /**

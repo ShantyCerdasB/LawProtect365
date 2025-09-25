@@ -16,7 +16,7 @@ import {
   consentIpRequired,
   consentUserAgentRequired
 } from '../../../../src/signature-errors';
-import { TestUtils } from '../../../helpers/testUtils';
+import { TestUtils, TEST_CONSTANTS } from '../../../helpers/testUtils';
 import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
 
 // Helper function to create Consent with custom parameters
@@ -30,6 +30,7 @@ function createConsentWithParams(params: {
   consentText?: string;
   ipAddress?: string;
   userAgent?: string;
+  country?: string;
   createdAt?: Date;
   updatedAt?: Date;
 }): Consent {
@@ -43,6 +44,7 @@ function createConsentWithParams(params: {
     params.consentText || 'I consent to electronic signing',
     params.ipAddress || generateTestIpAddress(),
     params.userAgent || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+    params.country,
     params.createdAt || new Date('2024-01-01T00:00:00Z'),
     params.updatedAt || new Date('2024-01-01T00:00:00Z')
   );
@@ -363,6 +365,8 @@ describe('Consent', () => {
       const createdAt = new Date('2024-01-01T00:00:00Z');
       const updatedAt = new Date('2024-01-01T00:00:00Z');
 
+      const ipAddress = generateTestIpAddress();
+      
       const consent = createConsentWithParams({
         id,
         envelopeId,
@@ -371,7 +375,7 @@ describe('Consent', () => {
         consentGiven: true,
         consentTimestamp,
         consentText: 'I consent to electronic signing',
-        ipAddress: generateTestIpAddress(),
+        ipAddress,
         userAgent: 'Mozilla/5.0',
         createdAt,
         updatedAt
@@ -387,7 +391,7 @@ describe('Consent', () => {
         consentGiven: true,
         consentTimestamp: consentTimestamp.toISOString(),
         consentText: 'I consent to electronic signing',
-        ipAddress: generateTestIpAddress(),
+        ipAddress,
         userAgent: 'Mozilla/5.0',
         createdAt: createdAt.toISOString(),
         updatedAt: updatedAt.toISOString()
@@ -434,7 +438,7 @@ describe('Consent', () => {
 
   describe('Edge Cases', () => {
     it('should handle consent with very long IP address', () => {
-      const longIpAddress = '2001:0db8:85a3:0000:0000:8a2e:0370:7334'; // IPv6
+      const longIpAddress = TEST_CONSTANTS.IPV6_TEST_ADDRESS; // IPv6
       
       const consent = createConsentWithParams({
         consentGiven: true,

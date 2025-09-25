@@ -15,9 +15,6 @@ import { ExternalIdpClaims } from "../ValueObjects/ExternalIdpClaims";
 import { OAuthAccount } from "./OAuthAccount";
 import { UserAccountStatus, UserRole } from "@prisma/client";
 import { 
-  accountAlreadyExists, 
-  accountCreationFailed, 
-  accountUpdateFailed,
   mfaDisableNotAllowed 
 } from "@/UserServiceErrors";
 

@@ -21,12 +21,6 @@ import { secureRandomString, generateTestIpAddress } from '../helpers/testHelper
 import { 
   clearSendEnvelopeMockData 
 } from '../helpers/sendEnvelopeHelpers';
-import { 
-  verifySignatureInDatabase,
-  verifyConsentRecord,
-  createTestConsent,
-  getSigningVerificationSummary
-} from '../helpers/signDocumentHelpers';
 import {
   verifyDownloadAuditEvent,
   verifyDownloadResponse,

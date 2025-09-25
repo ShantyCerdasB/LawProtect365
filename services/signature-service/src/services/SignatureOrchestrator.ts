@@ -14,7 +14,7 @@ import { EnvelopeSignerService } from './EnvelopeSignerService';
 import { InvitationTokenService } from './InvitationTokenService';
 import { SignatureAuditEventService } from './SignatureAuditEventService';
 import { S3Service } from './S3Service';
-import { OutboxRepository, makeEvent, paginationLimitRequired, sha256Hex } from '@lawprotect/shared-ts';
+import { OutboxRepository, makeEvent, paginationLimitRequired, sha256Hex, NotificationType } from '@lawprotect/shared-ts';
 import { CreateEnvelopeData } from '../domain/types/envelope/CreateEnvelopeData';
 import { UpdateEnvelopeData } from '../domain/rules/EnvelopeUpdateValidationRule';
 import { 
@@ -39,7 +39,6 @@ import { DeclineSignerRequest } from '../domain/schemas/SigningHandlersSchema';
 import { SignerId } from '../domain/value-objects/SignerId';
 import { v4 as uuid } from 'uuid';
 import { SignerReminderTrackingService } from './SignerReminderTrackingService';
-import { NotificationType } from '@lawprotect/shared-ts';
 import { loadConfig } from '../config/AppConfig';
 
 /**

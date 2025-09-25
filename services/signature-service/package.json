@@ -14,7 +14,7 @@
     "pretest:integration": "npm run dynamodb:start && npm run dynamodb:create-tables",
     "test:integration": "npm run pretest:integration && jest --config ./jest.integration.cjs && npm run posttest:integration",
     "test:integration:coverage": "npm run pretest:integration && jest --coverage --config ./jest.integration.cjs && npm run posttest:integration",
-    "posttest:integration": "npm run dynamodb:stop",
+    "posttest:integration": "npm run dynamodb:stop >nul 2>&1",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "dynamodb:start": "tsx scripts/startDynamoDB.ts",
     "dynamodb:stop": "taskkill /F /IM java.exe /FI \"WINDOWTITLE eq DynamoDB Local*\" >nul 2>&1 || pkill -f dynamodb-local >/dev/null 2>&1 || true",
