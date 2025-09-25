@@ -59,6 +59,38 @@ export class SignatureAuditEventRepository extends RepositoryBase<SignatureAudit
     }
   }
 
+  protected toCreateModel(entity: SignatureAuditEvent): any {
+    return {
+      id: entity.getId().getValue(),
+      envelopeId: entity.getEnvelopeId().getValue(),
+      signerId: entity.getSignerId()?.getValue(),
+      eventType: entity.getEventType(),
+      eventData: entity.getMetadata(),
+      userId: entity.getUserId(),
+      ipAddress: entity.getIpAddress(),
+      userAgent: entity.getUserAgent(),
+      timestamp: entity.getCreatedAt()
+    };
+  }
+
+  protected toUpdateModel(patch: Partial<SignatureAuditEvent> | Record<string, unknown>): any {
+    const p: any = patch;
+    const out: any = {};
+    const has = (k: string) => Object.prototype.hasOwnProperty.call(p, k);
+    const set = (k: string, v: unknown) => { if (v !== undefined) out[k] = v; };
+
+    set('envelopeId', p.getEnvelopeId?.()?.getValue?.() ?? (has('envelopeId') ? p.envelopeId : undefined));
+    set('signerId', p.getSignerId?.()?.getValue?.() ?? (has('signerId') ? p.signerId : undefined));
+    set('eventType', p.getEventType?.() ?? (has('eventType') ? p.eventType : undefined));
+    set('eventData', p.getMetadata?.() ?? (has('eventData') ? p.eventData : undefined));
+    set('userId', p.getUserId?.() ?? (has('userId') ? p.userId : undefined));
+    set('ipAddress', p.getIpAddress?.() ?? (has('ipAddress') ? p.ipAddress : undefined));
+    set('userAgent', p.getUserAgent?.() ?? (has('userAgent') ? p.userAgent : undefined));
+    set('timestamp', p.getCreatedAt?.() ?? (has('timestamp') ? p.timestamp : undefined));
+
+    return out;
+  }
+
   /**
    * Maps domain entity to Prisma model
    * @param entity - Domain entity

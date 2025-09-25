@@ -40,6 +40,7 @@ export class Consent {
 
   /**
    * Gets the consent unique identifier
+   * @returns The consent identifier value object
    */
   getId(): ConsentId {
     return this.id;
@@ -47,6 +48,7 @@ export class Consent {
 
   /**
    * Gets the envelope ID this consent belongs to
+   * @returns The envelope identifier value object
    */
   getEnvelopeId(): EnvelopeId {
     return this.envelopeId;
@@ -54,6 +56,7 @@ export class Consent {
 
   /**
    * Gets the signer ID who gave consent
+   * @returns The signer identifier value object
    */
   getSignerId(): SignerId {
     return this.signerId;
@@ -61,6 +64,7 @@ export class Consent {
 
   /**
    * Gets the signature ID linked to this consent
+   * @returns The signature identifier value object or undefined
    */
   getSignatureId(): SignerId | undefined {
     return this.signatureId;
@@ -68,6 +72,7 @@ export class Consent {
 
   /**
    * Gets whether consent was given
+   * @returns True if consent was given, false otherwise
    */
   getConsentGiven(): boolean {
     return this.consentGiven;
@@ -75,6 +80,7 @@ export class Consent {
 
   /**
    * Gets the timestamp when consent was given
+   * @returns The consent timestamp as Date object
    */
   getConsentTimestamp(): Date {
     return this.consentTimestamp;
@@ -82,6 +88,7 @@ export class Consent {
 
   /**
    * Gets the consent text that was shown to the signer
+   * @returns The consent text string
    */
   getConsentText(): string {
     return this.consentText;
@@ -89,6 +96,7 @@ export class Consent {
 
   /**
    * Gets the IP address of the signer when consent was given
+   * @returns The IP address string
    */
   getIpAddress(): string {
     return this.ipAddress;
@@ -96,6 +104,7 @@ export class Consent {
 
   /**
    * Gets the user agent of the signer's browser
+   * @returns The user agent string
    */
   getUserAgent(): string {
     return this.userAgent;
@@ -103,6 +112,7 @@ export class Consent {
 
   /**
    * Gets the country of the signer
+   * @returns The country string or undefined
    */
   getCountry(): string | undefined {
     return this.country;
@@ -110,6 +120,7 @@ export class Consent {
 
   /**
    * Gets the creation timestamp
+   * @returns The creation timestamp as Date object
    */
   getCreatedAt(): Date {
     return this.createdAt;
@@ -117,15 +128,21 @@ export class Consent {
 
   /**
    * Gets the last update timestamp
+   * @returns The last update timestamp as Date object
    */
   getUpdatedAt(): Date {
     return this.updatedAt;
   }
 
   /**
-   * Creates a new consent instance
-   * @param params - Consent creation parameters
-   * @returns New consent instance
+   * Creates a new consent instance with validation
+   * @param params - Consent creation parameters with required fields
+   * @returns New consent instance with validated data
+   * @throws consentNotGiven when consentGiven is false
+   * @throws consentTimestampRequired when timestamp is missing
+   * @throws consentTextRequired when consent text is empty
+   * @throws consentIpRequired when IP address is missing
+   * @throws consentUserAgentRequired when user agent is missing
    */
   static create(params: {
     id: ConsentId;
@@ -139,6 +156,27 @@ export class Consent {
     userAgent: string;
     country?: string;
   }): Consent {
+    // Validate invariants before construction
+    if (!params.consentGiven) {
+      throw consentNotGiven('Consent must be given for legal compliance');
+    }
+    
+    if (!params.consentTimestamp) {
+      throw consentTimestampRequired('Consent timestamp is required for legal compliance');
+    }
+    
+    if (!params.consentText || params.consentText.trim().length === 0) {
+      throw consentTextRequired('Consent text is required for legal compliance');
+    }
+    
+    if (!params.ipAddress || params.ipAddress.trim().length === 0) {
+      throw consentIpRequired('IP address is required for legal compliance');
+    }
+    
+    if (!params.userAgent || params.userAgent.trim().length === 0) {
+      throw consentUserAgentRequired('User agent is required for legal compliance');
+    }
+
     const now = new Date();
     return new Consent(
       params.id,
@@ -157,11 +195,16 @@ export class Consent {
   }
 
   /**
-   * Updates the signature ID link
-   * @param signatureId - New signature ID to link
-   * @returns New consent instance with updated signature ID
+   * Links this consent with a signature ID (idempotent operation)
+   * @param signatureId - The signature ID to link
+   * @returns This instance if already linked, or new instance with updated signature link
    */
   linkWithSignature(signatureId: SignerId): Consent {
+    // Idempotent: return this if already linked to same signature
+    if (this.signatureId?.getValue() === signatureId.getValue()) {
+      return this;
+    }
+    
     return new Consent(
       this.id,
       this.envelopeId,
@@ -174,12 +217,17 @@ export class Consent {
       this.userAgent,
       this.country,
       this.createdAt,
-      new Date()
+      new Date() // Update timestamp only when actually changing
     );
   }
 
   /**
    * Validates that the consent is valid for legal compliance
+   * @throws consentNotGiven when consent is not given
+   * @throws consentTimestampRequired when timestamp is missing
+   * @throws consentTextRequired when consent text is empty
+   * @throws consentIpRequired when IP address is missing
+   * @throws consentUserAgentRequired when user agent is missing
    */
   validateForCompliance(): void {
     if (!this.consentGiven) {
@@ -205,6 +253,7 @@ export class Consent {
 
   /**
    * Converts consent to plain object for serialization
+   * @returns Plain object representation of the consent
    */
   toJSON(): Record<string, unknown> {
     return {
@@ -224,9 +273,9 @@ export class Consent {
   }
 
   /**
-   * Creates a Consent from persistence data
-   * @param data - Prisma Consent data
-   * @returns Consent instance
+   * Creates a Consent from persistence data with proper type conversion
+   * @param data - Raw persistence data from database
+   * @returns Consent instance with properly typed fields
    */
   static fromPersistence(data: any): Consent {
     return new Consent(
@@ -234,14 +283,14 @@ export class Consent {
       EnvelopeId.fromString(data.envelopeId),
       SignerId.fromString(data.signerId),
       data.signatureId ? SignerId.fromString(data.signatureId) : undefined,
-      data.consentGiven,
-      data.consentTimestamp,
+      Boolean(data.consentGiven), // Ensure boolean
+      new Date(data.consentTimestamp), // Convert to Date
       data.consentText,
       data.ipAddress,
       data.userAgent,
       data.country,
-      data.createdAt,
-      data.updatedAt
+      new Date(data.createdAt), // Convert to Date
+      new Date(data.updatedAt)  // Convert to Date
     );
   }
 }

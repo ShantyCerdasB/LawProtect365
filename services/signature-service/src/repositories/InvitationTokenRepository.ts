@@ -58,6 +58,62 @@ export class InvitationTokenRepository extends RepositoryBase<InvitationToken, I
     }
   }
 
+  protected toCreateModel(entity: InvitationToken): any {
+    return {
+      id: entity.getId().getValue(),
+      envelopeId: entity.getEnvelopeId().getValue(),
+      signerId: entity.getSignerId().getValue(),
+      tokenHash: entity.getTokenHash(),
+      status: entity.getStatus(),
+      expiresAt: entity.getExpiresAt(),
+      sentAt: entity.getSentAt(),
+      lastSentAt: entity.getLastSentAt(),
+      resendCount: entity.getResendCount(),
+      usedAt: entity.getUsedAt(),
+      usedBy: entity.getUsedBy(),
+      viewCount: entity.getViewCount(),
+      lastViewedAt: entity.getLastViewedAt(),
+      signedAt: entity.getSignedAt(),
+      signedBy: entity.getSignedBy(),
+      revokedAt: entity.getRevokedAt(),
+      revokedReason: entity.getRevokedReason(),
+      createdBy: entity.getCreatedBy(),
+      ipAddress: entity.getIpAddress(),
+      userAgent: entity.getUserAgent(),
+      country: entity.getCountry()
+    };
+  }
+
+  protected toUpdateModel(patch: Partial<InvitationToken> | Record<string, unknown>): any {
+    const p: any = patch;
+    const out: any = {};
+    const has = (k: string) => Object.prototype.hasOwnProperty.call(p, k);
+    const set = (k: string, v: unknown) => { if (v !== undefined) out[k] = v; };
+
+    set('envelopeId', p.getEnvelopeId?.()?.getValue?.() ?? (has('envelopeId') ? p.envelopeId : undefined));
+    set('signerId', p.getSignerId?.()?.getValue?.() ?? (has('signerId') ? p.signerId : undefined));
+    set('tokenHash', p.getTokenHash?.() ?? (has('tokenHash') ? p.tokenHash : undefined));
+    set('status', p.getStatus?.() ?? (has('status') ? p.status : undefined));
+    set('expiresAt', p.getExpiresAt?.() ?? (has('expiresAt') ? p.expiresAt : undefined));
+    set('sentAt', p.getSentAt?.() ?? (has('sentAt') ? p.sentAt : undefined));
+    set('lastSentAt', p.getLastSentAt?.() ?? (has('lastSentAt') ? p.lastSentAt : undefined));
+    set('resendCount', p.getResendCount?.() ?? (has('resendCount') ? p.resendCount : undefined));
+    set('usedAt', p.getUsedAt?.() ?? (has('usedAt') ? p.usedAt : undefined));
+    set('usedBy', p.getUsedBy?.() ?? (has('usedBy') ? p.usedBy : undefined));
+    set('viewCount', p.getViewCount?.() ?? (has('viewCount') ? p.viewCount : undefined));
+    set('lastViewedAt', p.getLastViewedAt?.() ?? (has('lastViewedAt') ? p.lastViewedAt : undefined));
+    set('signedAt', p.getSignedAt?.() ?? (has('signedAt') ? p.signedAt : undefined));
+    set('signedBy', p.getSignedBy?.() ?? (has('signedBy') ? p.signedBy : undefined));
+    set('revokedAt', p.getRevokedAt?.() ?? (has('revokedAt') ? p.revokedAt : undefined));
+    set('revokedReason', p.getRevokedReason?.() ?? (has('revokedReason') ? p.revokedReason : undefined));
+    set('createdBy', p.getCreatedBy?.() ?? (has('createdBy') ? p.createdBy : undefined));
+    set('ipAddress', p.getIpAddress?.() ?? (has('ipAddress') ? p.ipAddress : undefined));
+    set('userAgent', p.getUserAgent?.() ?? (has('userAgent') ? p.userAgent : undefined));
+    set('country', p.getCountry?.() ?? (has('country') ? p.country : undefined));
+
+    return out;
+  }
+
   /**
    * Maps domain entity to Prisma model
    * @param entity - Domain entity

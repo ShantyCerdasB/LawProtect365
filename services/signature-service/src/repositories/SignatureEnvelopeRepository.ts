@@ -58,6 +58,62 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
     }
   }
 
+  protected toCreateModel(entity: SignatureEnvelope): any {
+    return {
+      id: entity.getId().getValue(),
+      createdBy: entity.getCreatedBy(),
+      title: entity.getTitle(),
+      description: entity.getDescription(),
+      status: entity.getStatus().getValue(),
+      signingOrder: entity.getSigningOrder(),
+      origin: entity.getOrigin(),
+      sourceKey: entity.getSourceKey()?.getValue(),
+      metaKey: entity.getMetaKey()?.getValue(),
+      flattenedKey: entity.getFlattenedKey()?.getValue(),
+      signedKey: entity.getSignedKey()?.getValue(),
+      sourceSha256: entity.getSourceSha256()?.getValue(),
+      flattenedSha256: entity.getFlattenedSha256()?.getValue(),
+      signedSha256: entity.getSignedSha256()?.getValue(),
+      sentAt: entity.getSentAt(),
+      completedAt: entity.getCompletedAt(),
+      cancelledAt: entity.getCancelledAt(),
+      declinedAt: entity.getDeclinedAt(),
+      declinedBySignerId: entity.getDeclinedBySignerId()?.getValue(),
+      declinedReason: entity.getDeclinedReason(),
+      expiresAt: entity.getExpiresAt()
+    };
+  }
+
+  protected toUpdateModel(patch: Partial<SignatureEnvelope> | Record<string, unknown>): any {
+    const p: any = patch;
+    const out: any = {};
+    const has = (k: string) => Object.prototype.hasOwnProperty.call(p, k);
+    const set = (k: string, v: unknown) => { if (v !== undefined) out[k] = v; };
+
+    set('createdBy', p.getCreatedBy?.() ?? (has('createdBy') ? p.createdBy : undefined));
+    set('title', p.getTitle?.() ?? (has('title') ? p.title : undefined));
+    set('description', p.getDescription?.() ?? (has('description') ? p.description : undefined));
+    set('status', p.getStatus?.()?.getValue?.() ?? (has('status') ? p.status : undefined));
+    set('signingOrder', p.getSigningOrder?.() ?? (has('signingOrder') ? p.signingOrder : undefined));
+    set('origin', p.getOrigin?.() ?? (has('origin') ? p.origin : undefined));
+    set('sourceKey', p.getSourceKey?.()?.getValue?.() ?? (has('sourceKey') ? p.sourceKey : undefined));
+    set('metaKey', p.getMetaKey?.()?.getValue?.() ?? (has('metaKey') ? p.metaKey : undefined));
+    set('flattenedKey', p.getFlattenedKey?.()?.getValue?.() ?? (has('flattenedKey') ? p.flattenedKey : undefined));
+    set('signedKey', p.getSignedKey?.()?.getValue?.() ?? (has('signedKey') ? p.signedKey : undefined));
+    set('sourceSha256', p.getSourceSha256?.()?.getValue?.() ?? (has('sourceSha256') ? p.sourceSha256 : undefined));
+    set('flattenedSha256', p.getFlattenedSha256?.()?.getValue?.() ?? (has('flattenedSha256') ? p.flattenedSha256 : undefined));
+    set('signedSha256', p.getSignedSha256?.()?.getValue?.() ?? (has('signedSha256') ? p.signedSha256 : undefined));
+    set('sentAt', p.getSentAt?.() ?? (has('sentAt') ? p.sentAt : undefined));
+    set('completedAt', p.getCompletedAt?.() ?? (has('completedAt') ? p.completedAt : undefined));
+    set('cancelledAt', p.getCancelledAt?.() ?? (has('cancelledAt') ? p.cancelledAt : undefined));
+    set('declinedAt', p.getDeclinedAt?.() ?? (has('declinedAt') ? p.declinedAt : undefined));
+    set('declinedBySignerId', p.getDeclinedBySignerId?.()?.getValue?.() ?? (has('declinedBySignerId') ? p.declinedBySignerId : undefined));
+    set('declinedReason', p.getDeclinedReason?.() ?? (has('declinedReason') ? p.declinedReason : undefined));
+    set('expiresAt', p.getExpiresAt?.() ?? (has('expiresAt') ? p.expiresAt : undefined));
+
+    return out;
+  }
+
   /**
    * Maps domain entity to Prisma model
    * @param entity - SignatureEnvelope domain entity

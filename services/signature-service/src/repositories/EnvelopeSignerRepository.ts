@@ -13,8 +13,7 @@ import { SignerId } from '../domain/value-objects/SignerId';
 import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
 import { SignerSpec } from '../domain/types/signer';
 import { 
-  documentS3Error,
-  invalidEntity
+  documentS3Error
 } from '../signature-errors';
 
 /**
@@ -55,47 +54,66 @@ export class EnvelopeSignerRepository extends RepositoryBase<EnvelopeSigner, Sig
     }
   }
 
-  /**
-   * Maps domain entity to Prisma model
-   * @param entity - Domain entity
-   * @returns Prisma model data
-   */
-  protected toModel(entity: Partial<EnvelopeSigner>): unknown {
-    if (!entity || typeof entity.getId !== 'function') {
-      throw invalidEntity({
-        operation: 'toModel',
-        reason: 'Entity missing getId method or is null/undefined'
-      });
-    }
-
+  protected toCreateModel(entity: EnvelopeSigner): any {
     return {
-      id: entity.getId?.()?.getValue(),
-      envelopeId: entity.getEnvelopeId?.()?.getValue(),
-      userId: entity.getUserId?.(),
-      isExternal: entity.getIsExternal?.(),
-      email: entity.getEmail?.()?.getValue(),
-      fullName: entity.getFullName?.(),
-      invitedByUserId: entity.getInvitedByUserId?.(),
-      participantRole: entity.getParticipantRole?.(),
-      order: entity.getOrder?.(),
-      status: entity.getStatus?.(),
-      signedAt: entity.getSignedAt?.(),
-      declinedAt: entity.getDeclinedAt?.(),
-      declineReason: entity.getDeclineReason?.(),
-      consentGiven: entity.getConsentGiven?.(),
-      consentTimestamp: entity.getConsentTimestamp?.(),
-      documentHash: entity.getDocumentHash?.(),
-      signatureHash: entity.getSignatureHash?.(),
-      signedS3Key: entity.getSignedS3Key?.(),
-      kmsKeyId: entity.getKmsKeyId?.(),
-      algorithm: entity.getAlgorithm?.(),
-      ipAddress: entity.getIpAddress?.(),
-      userAgent: entity.getUserAgent?.(),
-      reason: entity.getReason?.(),
-      location: entity.getLocation?.(),
-      createdAt: entity.getCreatedAt?.(),
-      updatedAt: entity.getUpdatedAt?.()
+      id: entity.getId().getValue(),
+      envelopeId: entity.getEnvelopeId().getValue(),
+      userId: entity.getUserId(),
+      isExternal: entity.getIsExternal(),
+      email: entity.getEmail()?.getValue(),
+      fullName: entity.getFullName(),
+      invitedByUserId: entity.getInvitedByUserId(),
+      participantRole: entity.getParticipantRole(),
+      order: entity.getOrder(),
+      status: entity.getStatus(),
+      signedAt: entity.getSignedAt(),
+      declinedAt: entity.getDeclinedAt(),
+      declineReason: entity.getDeclineReason(),
+      consentGiven: entity.getConsentGiven(),
+      consentTimestamp: entity.getConsentTimestamp(),
+      documentHash: entity.getDocumentHash(),
+      signatureHash: entity.getSignatureHash(),
+      signedS3Key: entity.getSignedS3Key(),
+      kmsKeyId: entity.getKmsKeyId(),
+      algorithm: entity.getAlgorithm(),
+      ipAddress: entity.getIpAddress(),
+      userAgent: entity.getUserAgent(),
+      reason: entity.getReason(),
+      location: entity.getLocation()
     };
+  }
+
+  protected toUpdateModel(patch: Partial<EnvelopeSigner> | Record<string, unknown>): any {
+    const p: any = patch;
+    const out: any = {};
+    const has = (k: string) => Object.prototype.hasOwnProperty.call(p, k);
+    const set = (k: string, v: unknown) => { if (v !== undefined) out[k] = v; };
+
+    set('envelopeId', p.getEnvelopeId?.()?.getValue?.() ?? (has('envelopeId') ? p.envelopeId : undefined));
+    set('userId', p.getUserId?.() ?? (has('userId') ? p.userId : undefined));
+    set('isExternal', p.getIsExternal?.() ?? (has('isExternal') ? p.isExternal : undefined));
+    set('email', p.getEmail?.()?.getValue?.() ?? (has('email') ? p.email : undefined));
+    set('fullName', p.getFullName?.() ?? (has('fullName') ? p.fullName : undefined));
+    set('invitedByUserId', p.getInvitedByUserId?.() ?? (has('invitedByUserId') ? p.invitedByUserId : undefined));
+    set('participantRole', p.getParticipantRole?.() ?? (has('participantRole') ? p.participantRole : undefined));
+    set('order', p.getOrder?.() ?? (has('order') ? p.order : undefined));
+    set('status', p.getStatus?.() ?? (has('status') ? p.status : undefined));
+    set('signedAt', p.getSignedAt?.() ?? (has('signedAt') ? p.signedAt : undefined));
+    set('declinedAt', p.getDeclinedAt?.() ?? (has('declinedAt') ? p.declinedAt : undefined));
+    set('declineReason', p.getDeclineReason?.() ?? (has('declineReason') ? p.declineReason : undefined));
+    set('consentGiven', p.getConsentGiven?.() ?? (has('consentGiven') ? p.consentGiven : undefined));
+    set('consentTimestamp', p.getConsentTimestamp?.() ?? (has('consentTimestamp') ? p.consentTimestamp : undefined));
+    set('documentHash', p.getDocumentHash?.() ?? (has('documentHash') ? p.documentHash : undefined));
+    set('signatureHash', p.getSignatureHash?.() ?? (has('signatureHash') ? p.signatureHash : undefined));
+    set('signedS3Key', p.getSignedS3Key?.() ?? (has('signedS3Key') ? p.signedS3Key : undefined));
+    set('kmsKeyId', p.getKmsKeyId?.() ?? (has('kmsKeyId') ? p.kmsKeyId : undefined));
+    set('algorithm', p.getAlgorithm?.() ?? (has('algorithm') ? p.algorithm : undefined));
+    set('ipAddress', p.getIpAddress?.() ?? (has('ipAddress') ? p.ipAddress : undefined));
+    set('userAgent', p.getUserAgent?.() ?? (has('userAgent') ? p.userAgent : undefined));
+    set('reason', p.getReason?.() ?? (has('reason') ? p.reason : undefined));
+    set('location', p.getLocation?.() ?? (has('location') ? p.location : undefined));
+
+    return out;
   }
 
   /**
@@ -183,7 +201,7 @@ export class EnvelopeSignerRepository extends RepositoryBase<EnvelopeSigner, Sig
   async create(entity: EnvelopeSigner): Promise<EnvelopeSigner> {
     try {
       
-      const modelData = this.toModel(entity) as any;
+      const modelData = this.toCreateModel(entity) as any;
       
       const created = await this.prisma.envelopeSigner.create({
         data: modelData,
@@ -222,7 +240,7 @@ export class EnvelopeSignerRepository extends RepositoryBase<EnvelopeSigner, Sig
     try {
       const updated = await this.prisma.envelopeSigner.update({
         where: this.whereById(id),
-        data: this.toModel(entity) as any,
+        data: this.toUpdateModel(entity) as any,
         include: {
           envelope: true,
           user: true

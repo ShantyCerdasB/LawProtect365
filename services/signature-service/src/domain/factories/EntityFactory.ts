@@ -198,7 +198,8 @@ export abstract class EntityFactory {
       consentTimestamp: data.consentTimestamp,
       consentText: data.consentText,
       ipAddress: data.ipAddress,
-      userAgent: data.userAgent
+      userAgent: data.userAgent,
+      country: data.country
     });
   }
 

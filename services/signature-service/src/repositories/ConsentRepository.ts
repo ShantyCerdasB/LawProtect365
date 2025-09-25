@@ -6,16 +6,15 @@
  * the repository pattern and extends RepositoryBase for consistent data access patterns.
  */
 
-import { PrismaClient } from '@prisma/client';
-import { RepositoryBase, Page, RepositoryFactory } from '@lawprotect/shared-ts';
+import { PrismaClient, Prisma } from '@prisma/client';
+import { RepositoryBase, Page, decodeCursor, listPage, textContainsInsensitive, rangeFilter } from '@lawprotect/shared-ts';
 import { Consent } from '../domain/entities/Consent';
 import { ConsentId } from '../domain/value-objects/ConsentId';
 import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
 import { SignerId } from '../domain/value-objects/SignerId';
 import { ConsentSpec } from '../domain/types/consent';
 import { 
-  documentS3Error,
-  invalidEntity
+  repositoryError
 } from '../signature-errors';
 
 /**
@@ -27,11 +26,6 @@ import {
  * consent compliance tracking.
  */
 export class ConsentRepository extends RepositoryBase<Consent, ConsentId, ConsentSpec> {
-  private static readonly PAGINATION_OFFSET = 1;
-  private static readonly SLICE_START_INDEX = 0;
-  private static readonly SLICE_LAST_INDEX = -1;
-  private static readonly MIN_COUNT_THRESHOLD = 0;
-  private static readonly DEFAULT_PAGE_LIMIT = 20;
   
   constructor(protected readonly prisma: PrismaClient) {
     super(prisma);
@@ -42,49 +36,60 @@ export class ConsentRepository extends RepositoryBase<Consent, ConsentId, Consen
    * @param model - Prisma model data
    * @returns Domain entity
    */
-  protected toDomain(model: unknown): Consent {
+  protected toDomain(model: Prisma.ConsentUncheckedCreateInput | Prisma.ConsentGetPayload<any> | unknown): Consent {
     try {
       return Consent.fromPersistence(model as any);
     } catch (error) {
-      console.error('Failed to map consent from persistence', {
-        error: error instanceof Error ? error.message : error,
-        consentId: (model as any)?.id
-      });
-      throw documentS3Error({
+      throw repositoryError({
         operation: 'toDomain',
         consentId: (model as any)?.id,
-        originalError: error instanceof Error ? error.message : error
+        cause: error
       });
     }
   }
 
   /**
-   * Maps domain entity to Prisma model
+   * Maps domain entity to Prisma create input
    * @param entity - Domain entity
-   * @returns Prisma model data
+   * @returns Prisma create input data
    */
-  protected toModel(entity: Partial<Consent>): unknown {
-    if (!entity || typeof entity.getId !== 'function') {
-      throw invalidEntity({
-        operation: 'toModel',
-        reason: 'Entity missing getId method or is null/undefined'
-      });
-    }
-
+  protected toCreateModel(entity: Consent): Prisma.ConsentUncheckedCreateInput {
     return {
-      id: entity.getId?.()?.getValue(),
-      envelopeId: entity.getEnvelopeId?.()?.getValue(),
-      signerId: entity.getSignerId?.()?.getValue(),
-      signatureId: entity.getSignatureId?.()?.getValue(),
-      consentGiven: entity.getConsentGiven?.(),
-      consentTimestamp: entity.getConsentTimestamp?.(),
-      consentText: entity.getConsentText?.(),
-      ipAddress: entity.getIpAddress?.(),
-      userAgent: entity.getUserAgent?.(),
-      country: entity.getCountry?.(),
-      createdAt: entity.getCreatedAt?.(),
-      updatedAt: entity.getUpdatedAt?.()
+      id: entity.getId().getValue(),
+      envelopeId: entity.getEnvelopeId().getValue(),
+      signerId: entity.getSignerId().getValue(),
+      signatureId: entity.getSignatureId()?.getValue() || null,
+      consentGiven: entity.getConsentGiven(),
+      consentTimestamp: entity.getConsentTimestamp(),
+      consentText: entity.getConsentText(),
+      ipAddress: entity.getIpAddress(),
+      userAgent: entity.getUserAgent(),
+      country: entity.getCountry()
     };
+  }
+
+
+  protected toUpdateModel(patch: Partial<Consent> | Record<string, unknown>): Prisma.ConsentUncheckedUpdateInput {
+    const p: any = patch;
+    const out: any = {};
+    const has = (k: string) => Object.prototype.hasOwnProperty.call(p, k);
+    const set = (k: string, v: unknown) => { if (v !== undefined) out[k] = v; };
+
+    set('envelopeId', p.getEnvelopeId?.()?.getValue?.() ?? (has('envelopeId') ? p.envelopeId : undefined));
+    set('signerId',   p.getSignerId?.()?.getValue?.()   ?? (has('signerId')   ? p.signerId   : undefined));
+
+    const sigGetterVal = p.getSignatureId?.()?.getValue?.();
+    const sigDtoVal    = has('signatureId') ? p.signatureId : undefined; // allow string or null
+    if (sigGetterVal !== undefined || sigDtoVal !== undefined) out.signatureId = sigGetterVal ?? sigDtoVal;
+
+    set('consentGiven',     p.getConsentGiven?.()     ?? (has('consentGiven')     ? p.consentGiven     : undefined));
+    set('consentTimestamp', p.getConsentTimestamp?.() ?? (has('consentTimestamp') ? p.consentTimestamp : undefined));
+    set('consentText',      p.getConsentText?.()      ?? (has('consentText')      ? p.consentText      : undefined));
+    set('ipAddress',        p.getIpAddress?.()        ?? (has('ipAddress')        ? p.ipAddress        : undefined));
+    set('userAgent',        p.getUserAgent?.()        ?? (has('userAgent')        ? p.userAgent        : undefined));
+    set('country',          p.getCountry?.()          ?? (has('country')          ? p.country          : undefined));
+
+    return out;
   }
 
   /**
@@ -103,40 +108,22 @@ export class ConsentRepository extends RepositoryBase<Consent, ConsentId, Consen
    */
   protected whereFromSpec(spec: ConsentSpec): any {
     const where: any = {};
+    const unwrap = (v: any) => v?.getValue ? v.getValue() : v;
 
-    if (spec.envelopeId) {
-      where.envelopeId = spec.envelopeId;
-    }
-    if (spec.signerId) {
-      where.signerId = spec.signerId;
-    }
-    if (spec.signatureId) {
-      where.signatureId = spec.signatureId;
-    }
-    if (spec.consentGiven !== undefined) {
-      where.consentGiven = spec.consentGiven;
-    }
-    if (spec.consentText) {
-      where.consentText = { contains: spec.consentText };
-    }
-    if (spec.ipAddress) {
-      where.ipAddress = spec.ipAddress;
-    }
-    if (spec.userAgent) {
-      where.userAgent = { contains: spec.userAgent };
-    }
-    if (spec.consentBefore) {
-      where.consentTimestamp = { ...where.consentTimestamp, lt: spec.consentBefore };
-    }
-    if (spec.consentAfter) {
-      where.consentTimestamp = { ...where.consentTimestamp, gte: spec.consentAfter };
-    }
-    if (spec.createdBefore) {
-      where.createdAt = { ...where.createdAt, lt: spec.createdBefore };
-    }
-    if (spec.createdAfter) {
-      where.createdAt = { ...where.createdAt, gte: spec.createdAfter };
-    }
+    if (spec.envelopeId) where.envelopeId = unwrap(spec.envelopeId);
+    if (spec.signerId)   where.signerId   = unwrap(spec.signerId);
+    if (spec.signatureId)where.signatureId= unwrap(spec.signatureId);
+    if (spec.consentGiven !== undefined) where.consentGiven = spec.consentGiven;
+
+    where.consentText = textContainsInsensitive(spec.consentText);
+    if (spec.ipAddress) where.ipAddress = spec.ipAddress;
+    where.userAgent = textContainsInsensitive(spec.userAgent);
+
+    const tsRange = rangeFilter(spec.consentBefore, spec.consentAfter);
+    if (tsRange) where.consentTimestamp = tsRange;
+
+    const createdRange = rangeFilter(spec.createdBefore, spec.createdAfter);
+    if (createdRange) where.createdAt = createdRange;
 
     return where;
   }
@@ -151,17 +138,12 @@ export class ConsentRepository extends RepositoryBase<Consent, ConsentId, Consen
       const consent = await this.prisma.consent.findUnique({
         where: this.whereById(id)
       });
-
       return consent ? this.toDomain(consent) : null;
     } catch (error) {
-      console.error('Failed to find consent by ID', {
-        error: error instanceof Error ? error.message : error,
-        consentId: id.getValue()
-      });
-      throw documentS3Error({
+      throw repositoryError({
         operation: 'findById',
         consentId: id.getValue(),
-        originalError: error instanceof Error ? error.message : error
+        cause: error
       });
     }
   }
@@ -171,35 +153,18 @@ export class ConsentRepository extends RepositoryBase<Consent, ConsentId, Consen
    * @param entity - Consent entity
    * @returns Created consent entity
    */
-  async create(entity: Consent): Promise<Consent> {
+  async create(entity: Consent, tx?: Prisma.TransactionClient): Promise<Consent> {
     try {
-      console.log('🔍 DEBUG ConsentRepository.create called:');
-      console.log('  - entity.getId():', entity.getId().getValue());
-      console.log('  - entity.getCountry():', entity.getCountry());
-      
-      const modelData = this.toModel(entity) as any;
-      console.log('🔍 DEBUG toModel result:');
-      console.log('  - modelData.country:', modelData.country);
-      console.log('  - modelData.id:', modelData.id);
-      
-      const created = await this.prisma.consent.create({
+      const modelData = this.toCreateModel(entity);
+      const created = await (tx || this.prisma).consent.create({
         data: modelData
       });
-
-      console.log('🔍 DEBUG Prisma create result:');
-      console.log('  - created.id:', created.id);
-      console.log('  - created.country:', created.country);
-
       return this.toDomain(created);
     } catch (error) {
-      console.error('❌ Failed to create consent', {
-        error: error instanceof Error ? error.message : error,
-        consentId: entity.getId().getValue()
-      });
-      throw documentS3Error({
+      throw repositoryError({
         operation: 'create',
         consentId: entity.getId().getValue(),
-        originalError: error instanceof Error ? error.message : error
+        cause: error
       });
     }
   }
@@ -210,23 +175,18 @@ export class ConsentRepository extends RepositoryBase<Consent, ConsentId, Consen
    * @param entity - Updated consent entity
    * @returns Updated consent entity
    */
-  async update(id: ConsentId, entity: Partial<Consent>): Promise<Consent> {
+  async update(id: ConsentId, entity: Partial<Consent>, tx?: Prisma.TransactionClient): Promise<Consent> {
     try {
-      const updated = await this.prisma.consent.update({
+      const updated = await (tx || this.prisma).consent.update({
         where: this.whereById(id),
-        data: this.toModel(entity) as any
+        data: this.toUpdateModel(entity)
       });
-
       return this.toDomain(updated);
     } catch (error) {
-      console.error('Failed to update consent', {
-        error: error instanceof Error ? error.message : error,
-        consentId: id.getValue()
-      });
-      throw documentS3Error({
+      throw repositoryError({
         operation: 'update',
         consentId: id.getValue(),
-        originalError: error instanceof Error ? error.message : error
+        cause: error
       });
     }
   }
@@ -234,68 +194,55 @@ export class ConsentRepository extends RepositoryBase<Consent, ConsentId, Consen
   /**
    * Deletes a consent
    * @param id - Consent ID
+   * @param tx - Optional transactional context
    */
-  async delete(id: ConsentId): Promise<void> {
+  async delete(id: ConsentId, tx?: Prisma.TransactionClient): Promise<void> {
     try {
-      await this.prisma.consent.delete({
+      await (tx || this.prisma).consent.delete({
         where: this.whereById(id)
       });
     } catch (error) {
-      console.error('Failed to delete consent', {
-        error: error instanceof Error ? error.message : error,
-        consentId: id.getValue()
-      });
-      throw documentS3Error({
+      throw repositoryError({
         operation: 'delete',
         consentId: id.getValue(),
-        originalError: error instanceof Error ? error.message : error
+        cause: error
       });
     }
   }
 
+
   /**
-   * Lists consents with pagination
-   * @param spec - Query specification
-   * @param limit - Maximum number of results
-   * @param cursor - Pagination cursor
-   * @returns Page of consent entities
+   * Lists consents using cursor-based pagination.
+   * Results are ordered by createdAt DESC, id DESC.
+   * @param {ConsentSpec} spec - Filter specification.
+   * @param {number} [limit=20] - Maximum number of results to return.
+   * @param {string} [cursor] - Opaque pagination cursor.
+   * @returns {Promise<Page<Consent>>} Page with items and nextCursor.
    */
-  async list(spec: ConsentSpec, limit: number = ConsentRepository.DEFAULT_PAGE_LIMIT, cursor?: string): Promise<Page<Consent>> {
+  async list(spec: ConsentSpec, limit: number = 20, cursor?: string): Promise<Page<Consent>> {
     try {
       const where = this.whereFromSpec(spec);
-      
-      const consents = await this.prisma.consent.findMany({
-        where,
-        take: limit + ConsentRepository.PAGINATION_OFFSET,
-        cursor: cursor ? RepositoryFactory.decodeCursor(cursor) as any : undefined,
-        orderBy: { createdAt: 'desc' }
-      });
 
-      const hasNextPage = consents.length > limit;
-      const results = hasNextPage ? consents.slice(ConsentRepository.SLICE_START_INDEX, limit) : consents;
-      const nextCursor = hasNextPage ? RepositoryFactory.createCursor(results[results.length + ConsentRepository.SLICE_LAST_INDEX], ['id']) : undefined;
-
-      return {
-        items: results.map((consent: any) => this.toDomain(consent)),
-        nextCursor
+      type Decoded = { createdAt: string | Date; id: string };
+      const decoded = cursor ? decodeCursor<Decoded>(cursor) : undefined;
+      const cfg = {
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }] as Array<Record<string, 'asc' | 'desc'>>,
+        cursorFields: ['createdAt', 'id'],
+        normalizeCursor: (d?: { createdAt: string | Date; id: string }) =>
+          d ? { id: d.id, createdAt: d.createdAt instanceof Date ? d.createdAt : new Date(d.createdAt) } : undefined
       };
+
+      const { rows, nextCursor } = await listPage<Prisma.ConsentGetPayload<any>>(this.prisma.consent, where, limit, decoded, cfg);
+      return { items: rows.map(r => this.toDomain(r)), nextCursor };
     } catch (error) {
-      console.error('Failed to list consents', {
-        error: error instanceof Error ? error.message : error,
-        spec
-      });
-      throw documentS3Error({
-        operation: 'list',
-        spec,
-        originalError: error instanceof Error ? error.message : error
-      });
+      throw repositoryError({ operation: 'list', spec, cause: error });
     }
   }
 
   /**
-   * Finds consents by envelope ID
-   * @param envelopeId - Envelope ID
-   * @returns Array of consent entities
+   * Finds consents by envelope identifier
+   * @param envelopeId - The envelope identifier value object
+   * @returns Array of consent entities ordered by creation date
    */
   async findByEnvelopeId(envelopeId: EnvelopeId): Promise<Consent[]> {
     try {
@@ -303,25 +250,20 @@ export class ConsentRepository extends RepositoryBase<Consent, ConsentId, Consen
         where: { envelopeId: envelopeId.getValue() },
         orderBy: { createdAt: 'desc' }
       });
-
       return consents.map((consent: any) => this.toDomain(consent));
     } catch (error) {
-      console.error('Failed to find consents by envelope ID', {
-        error: error instanceof Error ? error.message : error,
-        envelopeId: envelopeId.getValue()
-      });
-      throw documentS3Error({
+      throw repositoryError({
         operation: 'findByEnvelopeId',
         envelopeId: envelopeId.getValue(),
-        originalError: error instanceof Error ? error.message : error
+        cause: error
       });
     }
   }
 
   /**
-   * Finds consents by signer ID
-   * @param signerId - Signer ID
-   * @returns Array of consent entities
+   * Finds consents by signer identifier
+   * @param signerId - The signer identifier value object
+   * @returns Array of consent entities ordered by creation date
    */
   async findBySignerId(signerId: SignerId): Promise<Consent[]> {
     try {
@@ -329,218 +271,72 @@ export class ConsentRepository extends RepositoryBase<Consent, ConsentId, Consen
         where: { signerId: signerId.getValue() },
         orderBy: { createdAt: 'desc' }
       });
-
       return consents.map((consent: any) => this.toDomain(consent));
     } catch (error) {
-      console.error('Failed to find consents by signer ID', {
-        error: error instanceof Error ? error.message : error,
-        signerId: signerId.getValue()
-      });
-      throw documentS3Error({
+      throw repositoryError({
         operation: 'findBySignerId',
         signerId: signerId.getValue(),
-        originalError: error instanceof Error ? error.message : error
+        cause: error
       });
     }
   }
 
   /**
-   * Finds consent by signer and envelope
-   * @param signerId - Signer ID
-   * @param envelopeId - Envelope ID
-   * @returns Consent entity or null
+   * Finds consent by signer and envelope combination using composite unique key
+   * @param signerId - The signer identifier value object
+   * @param envelopeId - The envelope identifier value object
+   * @returns Consent entity or null when not found
    */
   async findBySignerAndEnvelope(signerId: SignerId, envelopeId: EnvelopeId): Promise<Consent | null> {
     try {
-      const consent = await this.prisma.consent.findFirst({
+      const consent = await this.prisma.consent.findUnique({
         where: { 
-          signerId: signerId.getValue(),
-          envelopeId: envelopeId.getValue()
+          envelopeId_signerId: { 
+            envelopeId: envelopeId.getValue(),
+            signerId: signerId.getValue() 
+          }
         }
       });
-
       return consent ? this.toDomain(consent) : null;
     } catch (error) {
-      console.error('Failed to find consent by signer and envelope', {
-        error: error instanceof Error ? error.message : error,
-        signerId: signerId.getValue(),
-        envelopeId: envelopeId.getValue()
-      });
-      throw documentS3Error({
+      throw repositoryError({
         operation: 'findBySignerAndEnvelope',
         signerId: signerId.getValue(),
         envelopeId: envelopeId.getValue(),
-        originalError: error instanceof Error ? error.message : error
+        cause: error
       });
     }
   }
 
   /**
-   * Finds consent by signature ID
-   * @param signatureId - Signature ID
-   * @returns Consent entity or null
+   * Finds consent by the signer who acted as the actual signer.
+   * Note: signatureId is not unique, so this returns the first match found.
+   * @param actingSignerId - The ID of the EnvelopeSigner who performed the signing action
+   * @returns Consent entity or null when not found
    */
-  async findBySignatureId(signatureId: SignerId): Promise<Consent | null> {
+  async findByActingSignerId(actingSignerId: SignerId): Promise<Consent | null> {
     try {
       const consent = await this.prisma.consent.findFirst({
-        where: { signatureId: signatureId.getValue() }
+        where: { signatureId: actingSignerId.getValue() }
       });
-
       return consent ? this.toDomain(consent) : null;
     } catch (error) {
-      console.error('Failed to find consent by signature ID', {
-        error: error instanceof Error ? error.message : error,
-        signatureId: signatureId.getValue()
-      });
-      throw documentS3Error({
-        operation: 'findBySignatureId',
-        signatureId: signatureId.getValue(),
-        originalError: error instanceof Error ? error.message : error
+      throw repositoryError({
+        operation: 'findByActingSignerId',
+        actingSignerId: actingSignerId.getValue(),
+        cause: error
       });
     }
   }
 
-  /**
-   * Finds consents by IP address
-   * @param ipAddress - IP address
-   * @returns Array of consent entities
-   */
-  async findByIpAddress(ipAddress: string): Promise<Consent[]> {
-    try {
-      const consents = await this.prisma.consent.findMany({
-        where: { ipAddress },
-        orderBy: { createdAt: 'desc' }
-      });
 
-      return consents.map((consent: any) => this.toDomain(consent));
-    } catch (error) {
-      console.error('Failed to find consents by IP address', {
-        error: error instanceof Error ? error.message : error,
-        ipAddress
-      });
-      throw documentS3Error({
-        operation: 'findByIpAddress',
-        ipAddress,
-        originalError: error instanceof Error ? error.message : error
-      });
-    }
-  }
+
+
 
   /**
-   * Finds consents by user agent
-   * @param userAgent - User agent string
-   * @returns Array of consent entities
-   */
-  async findByUserAgent(userAgent: string): Promise<Consent[]> {
-    try {
-      const consents = await this.prisma.consent.findMany({
-        where: { userAgent: { contains: userAgent } },
-        orderBy: { createdAt: 'desc' }
-      });
-
-      return consents.map((consent: any) => this.toDomain(consent));
-    } catch (error) {
-      console.error('Failed to find consents by user agent', {
-        error: error instanceof Error ? error.message : error,
-        userAgent
-      });
-      throw documentS3Error({
-        operation: 'findByUserAgent',
-        userAgent,
-        originalError: error instanceof Error ? error.message : error
-      });
-    }
-  }
-
-  /**
-   * Finds consents by timestamp range
-   * @param startDate - Start date
-   * @param endDate - End date
-   * @returns Array of consent entities
-   */
-  async findByTimestampRange(startDate: Date, endDate: Date): Promise<Consent[]> {
-    try {
-      const consents = await this.prisma.consent.findMany({
-        where: { 
-          consentTimestamp: {
-            gte: startDate,
-            lte: endDate
-          }
-        },
-        orderBy: { consentTimestamp: 'desc' }
-      });
-
-      return consents.map((consent: any) => this.toDomain(consent));
-    } catch (error) {
-      console.error('Failed to find consents by timestamp range', {
-        error: error instanceof Error ? error.message : error,
-        startDate,
-        endDate
-      });
-      throw documentS3Error({
-        operation: 'findByTimestampRange',
-        startDate,
-        endDate,
-        originalError: error instanceof Error ? error.message : error
-      });
-    }
-  }
-
-  /**
-   * Finds consents by consent given status
-   * @param consentGiven - Whether consent was given
-   * @param limit - Maximum number of results
-   * @param cursor - Optional cursor for pagination
-   * @returns Page of consent entities
-   */
-  async findByConsentGiven(consentGiven: boolean, limit: number, cursor?: string): Promise<Page<Consent>> {
-    try {
-      const whereClause: any = {
-        consentGiven
-      };
-      
-      if (cursor) {
-        const cursorData = RepositoryFactory.decodeCursor<{ id: string }>(cursor);
-        if (cursorData?.id) {
-          whereClause.id = { lt: cursorData.id };
-        }
-      }
-
-      const consents = await this.prisma.consent.findMany({
-        where: whereClause,
-        orderBy: { createdAt: 'desc' },
-        take: limit + ConsentRepository.PAGINATION_OFFSET
-      });
-
-      const hasNextPage = consents.length > limit;
-      const results = hasNextPage ? consents.slice(ConsentRepository.SLICE_START_INDEX, limit) : consents;
-      const nextCursor = hasNextPage ? RepositoryFactory.createCursor(results[results.length + ConsentRepository.SLICE_LAST_INDEX], ['id']) : undefined;
-
-      return {
-        items: results.map((consent: any) => this.toDomain(consent)),
-        nextCursor
-      };
-    } catch (error) {
-      console.error('Failed to find consents by consent given status', {
-        error: error instanceof Error ? error.message : error,
-        consentGiven,
-        limit,
-        cursor
-      });
-      throw documentS3Error({
-        operation: 'findByConsentGiven',
-        consentGiven,
-        limit,
-        cursor,
-        originalError: error instanceof Error ? error.message : error
-      });
-    }
-  }
-
-  /**
-   * Counts consents by envelope ID
-   * @param envelopeId - Envelope ID
-   * @returns Number of consents
+   * Counts consents by envelope identifier
+   * @param envelopeId - The envelope identifier value object
+   * @returns Number of consents for the envelope
    */
   async countByEnvelopeId(envelopeId: EnvelopeId): Promise<number> {
     try {
@@ -548,87 +344,63 @@ export class ConsentRepository extends RepositoryBase<Consent, ConsentId, Consen
         where: { envelopeId: envelopeId.getValue() }
       });
     } catch (error) {
-      console.error('Failed to count consents by envelope ID', {
-        error: error instanceof Error ? error.message : error,
-        envelopeId: envelopeId.getValue()
-      });
-      throw documentS3Error({
+      throw repositoryError({
         operation: 'countByEnvelopeId',
         envelopeId: envelopeId.getValue(),
-        originalError: error instanceof Error ? error.message : error
+        cause: error
       });
     }
   }
 
   /**
-   * Checks if consent exists by signer and envelope
-   * @param signerId - Signer ID
-   * @param envelopeId - Envelope ID
-   * @returns True if consent exists
+   * Checks if consent exists for signer and envelope combination
+   * @param signerId - The signer identifier value object
+   * @param envelopeId - The envelope identifier value object
+   * @returns True if consent exists, false otherwise
    */
   async existsBySignerAndEnvelope(signerId: SignerId, envelopeId: EnvelopeId): Promise<boolean> {
     try {
-      const count = await this.prisma.consent.count({
+      return (await this.prisma.consent.count({
         where: { 
           signerId: signerId.getValue(),
           envelopeId: envelopeId.getValue()
         }
-      });
-
-      return count > ConsentRepository.MIN_COUNT_THRESHOLD;
+      })) > 0;
     } catch (error) {
-      console.error('Failed to check if consent exists by signer and envelope', {
-        error: error instanceof Error ? error.message : error,
-        signerId: signerId.getValue(),
-        envelopeId: envelopeId.getValue()
-      });
-      throw documentS3Error({
+      throw repositoryError({
         operation: 'existsBySignerAndEnvelope',
         signerId: signerId.getValue(),
         envelopeId: envelopeId.getValue(),
-        originalError: error instanceof Error ? error.message : error
+        cause: error
       });
     }
   }
 
   /**
-   * Updates consent using entity methods
-   * @param id - Consent ID
-   * @param updateFn - Function to update the entity
-   * @returns Updated consent entity
+   * Updates a consent entity using a function that returns the new instance.
+   * @param {ConsentId} id - The consent identifier.
+   * @param {(consent: Consent) => Consent} updateFn - Pure updater returning a new entity.
+   * @param {Prisma.TransactionClient} [tx] - Optional transaction client.
+   * @returns {Promise<Consent>} The updated consent.
    */
-  async updateWithEntity(id: ConsentId, updateFn: (consent: Consent) => void): Promise<Consent> {
+  async updateWithEntity(
+    id: ConsentId,
+    updateFn: (consent: Consent) => Consent,
+    tx?: Prisma.TransactionClient
+  ): Promise<Consent> {
     try {
-      // Get current consent
-      const currentConsent = await this.findById(id);
-      if (!currentConsent) {
-        throw documentS3Error({
-          operation: 'updateWithEntity',
-          consentId: id.getValue(),
-          originalError: 'Consent not found'
-        });
+      const current = await this.findById(id);
+      if (!current) {
+        throw repositoryError({ operation: 'updateWithEntity', consentId: id.getValue(), cause: new Error('Consent not found') });
       }
-
-      // Apply entity method
-      updateFn(currentConsent);
-
-      // Persist changes
-      const updated = await this.prisma.consent.update({
+      const next = updateFn(current) ?? current;
+      const updated = await (tx || this.prisma).consent.update({
         where: this.whereById(id),
-        data: this.toModel(currentConsent) as any
+        data: this.toUpdateModel(next),
       });
-
       return this.toDomain(updated);
     } catch (error) {
-      console.error('Failed to update consent with entity method', {
-        error: error instanceof Error ? error.message : error,
-        consentId: id.getValue()
-      });
-      throw documentS3Error({
-        operation: 'updateWithEntity',
-        consentId: id.getValue(),
-        originalError: error instanceof Error ? error.message : error
-      });
+      throw repositoryError({ operation: 'updateWithEntity', consentId: id.getValue(), cause: error });
     }
   }
 }

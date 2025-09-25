@@ -44,10 +44,16 @@ export abstract class RepositoryBase<TDomain, TId = string, TSpec = unknown> {
   protected abstract toDomain(row: unknown): TDomain;
 
   /**
-   * Maps a domain entity (or partial patch) to a persistence model.
-   * @param entity - Domain entity or patch.
+   * Maps a domain entity to persistence create input.
+   * @param entity - Complete domain entity for creation.
    */
-  protected abstract toModel(entity: Partial<TDomain>): unknown;
+  protected abstract toCreateModel(entity: TDomain): unknown;
+
+  /**
+   * Maps a partial entity/DTO to persistence update input (only defined fields).
+   * @param patch - Partial domain entity or DTO for updates.
+   */
+  protected abstract toUpdateModel(patch: Partial<TDomain> | Record<string, unknown>): unknown;
 
   /**
    * Builds a persistence-level filter for a primary identifier.

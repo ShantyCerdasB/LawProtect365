@@ -218,6 +218,12 @@ export const signatureFailed = (details?: unknown) =>
   new InternalError("Signature failed", SignatureErrorCodes.SIGNATURE_FAILED, details);
 
 /**
+ * Creates an InternalError for repository/persistence failures (500).
+ */
+export const repositoryError = (details?: unknown) =>
+  new InternalError("Repository operation failed", SignatureErrorCodes.REPOSITORY_ERROR, details);
+
+/**
  * Creates an UnprocessableEntityError for signature hash mismatches (422).
  */
 export const signatureHashMismatch = (details?: unknown) =>
