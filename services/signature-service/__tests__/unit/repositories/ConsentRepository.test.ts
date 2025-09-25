@@ -1,19 +1,8 @@
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 
-// Mock the shared-ts module BEFORE importing the repository
-const mockListPage = jest.fn() as any;
-const mockDecodeCursor = jest.fn() as any;
-
-jest.unstable_mockModule('@lawprotect/shared-ts', async () => {
-  const real = await import('@lawprotect/shared-ts');
-  return {
-    ...real,
-    decodeCursor: mockDecodeCursor,
-    listPage: mockListPage,
-    textContainsInsensitive: real.textContainsInsensitive,
-    rangeFilter: real.rangeFilter,
-  };
-});
+// Setup cursor pagination mocks BEFORE importing the repository
+import { setupCursorPaginationMocks } from '../../helpers/mocks/cursorPagination';
+const { mockListPage, mockDecodeCursor } = setupCursorPaginationMocks();
 
 // Import AFTER the mock is set up
 import type { Prisma } from '@prisma/client';
@@ -24,10 +13,10 @@ import { EnvelopeId } from '../../../src/domain/value-objects/EnvelopeId';
 import { SignerId } from '../../../src/domain/value-objects/SignerId';
 import { TestUtils } from '../../helpers/testUtils';
 import {
-  createPrismaMock,
-  createTransactionMock,
-  type PrismaConsentMock,
-} from './helpers/prisma-mock';
+  createConsentPrismaMock,
+  createSingleModelTransactionMock,
+  type PrismaModelMock,
+} from '../../helpers/mocks/prisma';
 import {
   consentPersistenceRow,
   consentEntity,
@@ -35,23 +24,23 @@ import {
   consentDto,
   partialConsentEntity,
   consentVO,
-} from './helpers/builders';
+} from '../../helpers/builders/consent';
 import {
   mockRepositoryMethod,
   mockRepositoryMethodError,
   createMockPage,
-} from './helpers/repository-mock-helpers';
+} from '../../helpers/mocks/repository';
 
 describe('ConsentRepository - Internal Methods', () => {
   let repository: ConsentRepository;
-  let prismaMock: { consent: PrismaConsentMock };
-  let consentOps: PrismaConsentMock;
+  let prismaMock: { consent: PrismaModelMock };
+  let consentOps: PrismaModelMock;
   let shared: any;
 
   beforeEach(async () => {
     shared = await import('@lawprotect/shared-ts');
-    const { prisma, consent } = createPrismaMock();
-    prismaMock = prisma as unknown as { consent: PrismaConsentMock };
+    const { prisma, consent } = createConsentPrismaMock();
+    prismaMock = prisma as unknown as { consent: PrismaModelMock };
     consentOps = consent;
     repository = new ConsentRepository(prismaMock as any);
     jest.clearAllMocks();
@@ -185,7 +174,7 @@ describe('ConsentRepository - Internal Methods', () => {
     it('create uses tx when provided', async () => {
       const entity = consentEntity({ signatureId: null });
       const row = consentPersistenceRow();
-      const tx = createTransactionMock(consentOps);
+      const tx = createSingleModelTransactionMock(consentOps);
       (tx.consent.create as any).mockResolvedValueOnce(row);
       const spy = jest.spyOn(Consent, 'fromPersistence').mockReturnValueOnce({} as any);
       const out = await repository.create(entity, tx as any);
@@ -225,6 +214,7 @@ describe('ConsentRepository - Internal Methods', () => {
       });
       
       const page = await repository.list(consentSpec(), 2);
+      
       expect(mockListPage).toHaveBeenCalledWith(
         expect.anything(),
         expect.anything(),
@@ -342,7 +332,7 @@ describe('ConsentRepository - Internal Methods', () => {
       consentOps.findUnique.mockResolvedValueOnce(consentPersistenceRow({ id: id.getValue() }));
       const mapSpy1 = jest.spyOn(Consent, 'fromPersistence').mockReturnValueOnce(start as any);
       const updatedRow = consentPersistenceRow({ consentText: 'NEW' });
-      const tx = createTransactionMock(consentOps);
+      const tx = createSingleModelTransactionMock(consentOps);
       (tx.consent.update as any).mockResolvedValueOnce(updatedRow);
       const mapSpy2 = jest.spyOn(Consent, 'fromPersistence').mockReturnValueOnce({} as any);
       const out = await repository.updateWithEntity(

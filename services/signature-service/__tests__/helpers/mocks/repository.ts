@@ -1,7 +1,8 @@
 /**
- * @fileoverview RepositoryMockHelpers - Helper functions for mocking repository methods
+ * @fileoverview Repository Mock Helpers - Helper functions for mocking repository methods
  * @summary Utility functions for mocking repository methods in tests
- * @description Provides reusable mock helpers for repository testing, especially for methods that use external dependencies like shared-ts functions
+ * @description Provides reusable mock helpers for repository testing, especially for methods
+ * that use external dependencies. This module focuses solely on repository method mocking.
  */
 
 import { jest } from '@jest/globals';

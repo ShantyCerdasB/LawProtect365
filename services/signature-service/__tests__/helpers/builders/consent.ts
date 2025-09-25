@@ -1,16 +1,26 @@
 /**
- * @fileoverview Test Builders - Reusable test data builders for repository tests
+ * @fileoverview Consent Test Builders - Reusable test data builders for consent repository tests
+ * @summary Provides builders for creating test data related to consent entities
+ * @description This module provides builders for creating consent-related test data including
+ * entities, persistence rows, DTOs, and specifications. It follows the builder pattern
+ * for creating test data with sensible defaults and override capabilities.
  */
 
-import { Consent } from '../../../../src/domain/entities/Consent';
-import { ConsentId } from '../../../../src/domain/value-objects/ConsentId';
-import { EnvelopeId } from '../../../../src/domain/value-objects/EnvelopeId';
-import { SignerId } from '../../../../src/domain/value-objects/SignerId';
-import { ConsentSpec } from '../../../../src/domain/types/consent';
-import { TestUtils } from '../../../helpers/testUtils';
-import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
+import { Consent } from '../../../src/domain/entities/Consent';
+import { ConsentId } from '../../../src/domain/value-objects/ConsentId';
+import { EnvelopeId } from '../../../src/domain/value-objects/EnvelopeId';
+import { SignerId } from '../../../src/domain/value-objects/SignerId';
+import { ConsentSpec } from '../../../src/domain/types/consent';
+import { TestUtils } from '../testUtils';
+import { generateTestIpAddress } from '../../integration/helpers/testHelpers';
 
-/** Persistence row (determinístico) */
+/**
+ * Creates a persistence row for consent with sensible defaults
+ * @param overrides - Partial data to override defaults
+ * @returns Consent persistence row
+ * @example
+ * const row = consentPersistenceRow({ consentGiven: false });
+ */
 export function consentPersistenceRow(overrides: Partial<any> = {}) {
   const base = {
     id: TestUtils.generateUuid(),
@@ -29,7 +39,13 @@ export function consentPersistenceRow(overrides: Partial<any> = {}) {
   return { ...base, ...overrides };
 }
 
-/** Entidad de dominio (determinística) */
+/**
+ * Creates a consent entity with sensible defaults
+ * @param overrides - Partial data to override defaults
+ * @returns Consent entity
+ * @example
+ * const entity = consentEntity({ consentGiven: false });
+ */
 export function consentEntity(overrides: Partial<{
   id: string;
   envelopeId: string;
@@ -66,7 +82,13 @@ export function consentEntity(overrides: Partial<{
   });
 }
 
-/** Spec de filtros (rangos coherentes) */
+/**
+ * Creates a consent specification for filtering
+ * @param overrides - Partial data to override defaults
+ * @returns ConsentSpec object
+ * @example
+ * const spec = consentSpec({ consentGiven: false });
+ */
 export function consentSpec(overrides: Partial<ConsentSpec> = {}): ConsentSpec {
   return {
     envelopeId: TestUtils.generateUuid(),
@@ -85,7 +107,13 @@ export function consentSpec(overrides: Partial<ConsentSpec> = {}): ConsentSpec {
   };
 }
 
-/** Parcial de entidad para updates (getters solamente en campos presentes) */
+/**
+ * Creates a partial consent entity for updates (getters only for present fields)
+ * @param overrides - Partial data to override defaults
+ * @returns Partial consent entity with getters
+ * @example
+ * const partial = partialConsentEntity({ consentGiven: false });
+ */
 export function partialConsentEntity(overrides: Partial<{
   consentGiven: boolean;
   consentText: string;
@@ -102,7 +130,13 @@ export function partialConsentEntity(overrides: Partial<{
   return partial;
 }
 
-/** DTO plano para updates */
+/**
+ * Creates a consent DTO for updates
+ * @param overrides - Partial data to override defaults
+ * @returns Consent DTO object
+ * @example
+ * const dto = consentDto({ consentGiven: false });
+ */
 export function consentDto(overrides: Partial<{
   consentGiven: boolean;
   consentText: string;
@@ -120,7 +154,9 @@ export function consentDto(overrides: Partial<{
   };
 }
 
-/** VOs de conveniencia */
+/**
+ * Convenience value object builders
+ */
 export const consentVO = {
   id: (v?: string) => ConsentId.fromString(v ?? TestUtils.generateUuid()),
   envId: (v?: string) => EnvelopeId.fromString(v ?? TestUtils.generateUuid()),

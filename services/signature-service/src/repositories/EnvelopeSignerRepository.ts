@@ -357,43 +357,6 @@ export class EnvelopeSignerRepository extends RepositoryBase<EnvelopeSigner, Sig
   }
 
   /**
-   * Finds a signer by email and envelope ID
-   * @param email - Signer email
-   * @param envelopeId - Envelope ID
-   * @returns Signer entity or null
-   */
-  async findByEmail(email: string, envelopeId: EnvelopeId): Promise<EnvelopeSigner | null> {
-    try {
-      const signer = await this.prisma.envelopeSigner.findUnique({
-        where: {
-          envelopeId_email: {
-            envelopeId: envelopeId.getValue(),
-            email: email.toLowerCase()
-          }
-        },
-        include: {
-          envelope: true,
-          user: true
-        }
-      });
-
-      return signer ? this.toDomain(signer) : null;
-    } catch (error) {
-      console.error('Failed to find signer by email', {
-        error: error instanceof Error ? error.message : error,
-        email,
-        envelopeId: envelopeId.getValue()
-      });
-      throw documentS3Error({
-        operation: 'findByEmail',
-        email,
-        envelopeId: envelopeId.getValue(),
-        originalError: error instanceof Error ? error.message : error
-      });
-    }
-  }
-
-  /**
    * Finds signers by user ID
    * @param userId - User ID
    * @returns Array of signer entities
@@ -456,30 +419,6 @@ export class EnvelopeSignerRepository extends RepositoryBase<EnvelopeSigner, Sig
         operation: 'findByStatus',
         status,
         envelopeId: envelopeId?.getValue(),
-        originalError: error instanceof Error ? error.message : error
-      });
-    }
-  }
-
-
-  /**
-   * Counts signers for an envelope
-   * @param envelopeId - Envelope ID
-   * @returns Number of signers
-   */
-  async countByEnvelopeId(envelopeId: EnvelopeId): Promise<number> {
-    try {
-      return await this.prisma.envelopeSigner.count({
-        where: { envelopeId: envelopeId.getValue() }
-      });
-    } catch (error) {
-      console.error('Failed to count signers by envelope ID', {
-        error: error instanceof Error ? error.message : error,
-        envelopeId: envelopeId.getValue()
-      });
-      throw documentS3Error({
-        operation: 'countByEnvelopeId',
-        envelopeId: envelopeId.getValue(),
         originalError: error instanceof Error ? error.message : error
       });
     }
