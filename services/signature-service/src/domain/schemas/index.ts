@@ -69,3 +69,12 @@ export {
   type CancelEnvelopeRequest,
   type CancelEnvelopeResponse
 } from './CancelEnvelopeSchema';
+
+export {
+  DownloadDocumentPathSchema,
+  DownloadDocumentQuerySchema,
+  DownloadDocumentResponseSchema,
+  type DownloadDocumentPath,
+  type DownloadDocumentQuery,
+  type DownloadDocumentResponse
+} from './DownloadSignedDocumentSchema';

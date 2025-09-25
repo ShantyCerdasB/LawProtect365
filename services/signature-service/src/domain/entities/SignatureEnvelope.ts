@@ -640,6 +640,15 @@ export class SignatureEnvelope {
   }
 
   /**
+   * Gets the latest signed document key for download
+   * Priority: signedKey > flattenedKey > sourceKey
+   * @returns The most recent document version available for download
+   */
+  getLatestSignedDocumentKey(): S3Key | undefined {
+    return this.signedKey || this.flattenedKey || this.sourceKey;
+  }
+
+  /**
    * Updates signed document information
    * @param signedKey - S3 key for signed document
    * @param signedSha256 - SHA-256 hash of signed document

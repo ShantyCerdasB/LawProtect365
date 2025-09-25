@@ -480,4 +480,116 @@ export class EnvelopeOperations {
     };
   }
 
+  /**
+   * Download document for authenticated user
+   * @param envelopeId - ID of the envelope to download
+   * @returns Promise that resolves to the download response
+   */
+  async downloadDocument(envelopeId: string): Promise<{ statusCode: number; data: any }> {
+    const token = await generateTestJwtToken({
+      sub: this.testUser.userId, 
+      email: this.testUser.email, 
+      roles: ['admin'], 
+      scopes: [] 
+    });
+    
+    const event = await createApiGatewayEvent({
+      includeAuth: true,
+      authToken: token,
+      pathParameters: { envelopeId: envelopeId },
+      queryStringParameters: {}, // No query parameters needed for authenticated user
+      headers: {
+        'x-forwarded-for': '127.0.0.1',
+        'user-agent': 'Test User Agent'
+      }
+    });
+    
+    const { downloadDocumentHandler } = await import('../../../src/handlers/envelopes/DownloadDocumentHandler');
+    const result = await downloadDocumentHandler(event) as any;
+    const response = JSON.parse(result.body);
+
+    return {
+      statusCode: result.statusCode,
+      data: response.data || response
+    };
+  }
+
+  /**
+   * Download document with invitation token or custom JWT token
+   * @param envelopeId - ID of the envelope to download
+   * @param invitationToken - The invitation token (for external users)
+   * @param customToken - Custom JWT token (for testing different users)
+   * @returns Promise that resolves to the download response
+   */
+  async downloadDocumentWithToken(
+    envelopeId: string, 
+    invitationToken?: string, 
+    customToken?: string
+  ): Promise<{ statusCode: number; data: any }> {
+    const token = customToken || await generateTestJwtToken({
+      sub: this.testUser.userId, 
+      email: this.testUser.email, 
+      roles: ['admin'], 
+      scopes: [] 
+    });
+    
+    const event = await createApiGatewayEvent({
+      includeAuth: !!customToken, // Only include auth if custom token provided
+      authToken: customToken ? token : undefined,
+      pathParameters: { envelopeId: envelopeId },
+      queryStringParameters: invitationToken ? { invitationToken } : {},
+      headers: {
+        'x-forwarded-for': '127.0.0.1',
+        'user-agent': 'Test User Agent'
+      }
+    });
+    
+    const { downloadDocumentHandler } = await import('../../../src/handlers/envelopes/DownloadDocumentHandler');
+    const result = await downloadDocumentHandler(event) as any;
+    const response = JSON.parse(result.body);
+
+    return {
+      statusCode: result.statusCode,
+      data: response.data || response
+    };
+  }
+
+  /**
+   * Download document with custom expiration time
+   * @param envelopeId - ID of the envelope to download
+   * @param expiresIn - Custom expiration time in seconds
+   * @returns Promise that resolves to the download response
+   */
+  async downloadDocumentWithCustomExpiration(
+    envelopeId: string, 
+    expiresIn: number
+  ): Promise<{ statusCode: number; data: any }> {
+    const token = await generateTestJwtToken({
+      sub: this.testUser.userId, 
+      email: this.testUser.email, 
+      roles: ['admin'], 
+      scopes: [] 
+    });
+    
+    const event = await createApiGatewayEvent({
+      includeAuth: true,
+      authToken: token,
+      pathParameters: { envelopeId: envelopeId },
+      queryStringParameters: { expiresIn: expiresIn.toString() },
+      headers: {
+        'x-forwarded-for': '127.0.0.1',
+        'user-agent': 'Test User Agent'
+      }
+    });
+    
+    const { downloadDocumentHandler } = await import('../../../src/handlers/envelopes/DownloadDocumentHandler');
+    const result = await downloadDocumentHandler(event) as any;
+    const response = JSON.parse(result.body);
+
+    return {
+      statusCode: result.statusCode,
+      data: response.data || response
+    };
+  }
+
 }

@@ -939,6 +939,38 @@ export class SignatureOrchestrator {
   }
 
   /**
+   * Downloads the latest signed document for an envelope
+   * @param envelopeId - The envelope ID
+   * @param userId - The user ID (for authenticated users)
+   * @param invitationToken - The invitation token (for external users)
+   * @param securityContext - Security context for audit tracking
+   * @returns Download URL and expiration information
+   */
+  async downloadDocument(
+    envelopeId: EnvelopeId,
+    userId?: string,
+    invitationToken?: string,
+    expiresIn?: number,
+    securityContext?: {
+      ipAddress?: string;
+      userAgent?: string;
+      country?: string;
+    }
+  ): Promise<{ downloadUrl: string; expiresIn: number }> {
+    try {
+      return await this.signatureEnvelopeService.downloadDocument(
+        envelopeId,
+        userId,
+        invitationToken,
+        expiresIn,
+        securityContext
+      );
+    } catch (error) {
+      this.handleOrchestrationError(error as Error, 'download document');
+    }
+  }
+
+  /**
    * Handles orchestration errors
    * @param error - The error that occurred
    * @param operation - The operation that failed

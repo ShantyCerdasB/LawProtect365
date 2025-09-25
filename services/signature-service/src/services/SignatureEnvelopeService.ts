@@ -12,6 +12,7 @@ import { EnvelopeStatus } from '../domain/value-objects/EnvelopeStatus';
 import { SigningOrder } from '../domain/value-objects/SigningOrder';
 import { S3Key } from '../domain/value-objects/S3Key';
 import { SignerId } from '../domain/value-objects/SignerId';
+import { S3Operation } from '../domain/value-objects/S3Operation';
 import { SignatureEnvelopeRepository } from '../repositories/SignatureEnvelopeRepository';
 import { SignatureAuditEventService } from './SignatureAuditEventService';
 import { InvitationTokenService } from './InvitationTokenService';
@@ -22,6 +23,7 @@ import { EnvelopeSpec, S3Keys, Hashes, CreateEnvelopeData } from '../domain/type
 import { AuditEventType } from '../domain/enums/AuditEventType';
 import { AccessType } from '../domain/enums/AccessType';
 import { Page, wrapServiceError, sha256Hex } from '@lawprotect/shared-ts';
+import { loadConfig } from '../config/AppConfig';
 import { SignerStatus, SigningOrderType } from '@prisma/client';
 import { 
   envelopeNotFound,
@@ -29,7 +31,8 @@ import {
   envelopeUpdateFailed,
   envelopeDeleteFailed,
   envelopeAccessDenied,
-  invalidEnvelopeState
+  invalidEnvelopeState,
+  envelopeExpirationInvalid
 } from '../signature-errors';
 
 
@@ -1041,6 +1044,126 @@ export class SignatureEnvelopeService {
     } catch (error) {
       throw envelopeUpdateFailed(
         `Failed to update envelope status after decline for envelope ${envelopeId.getValue()}: ${error instanceof Error ? error.message : error}`
+      );
+    }
+  }
+
+  /**
+   * Downloads the latest signed document for an envelope
+   * @param envelopeId - The envelope ID
+   * @param userId - The user ID (for authenticated users)
+   * @param invitationToken - The invitation token (for external users)
+   * @param securityContext - Security context for audit tracking
+   * @returns Download URL and expiration information
+   */
+  async downloadDocument(
+    envelopeId: EnvelopeId,
+    userId?: string,
+    invitationToken?: string,
+    expiresIn?: number,
+    securityContext?: {
+      ipAddress?: string;
+      userAgent?: string;
+      country?: string;
+    }
+  ): Promise<{ downloadUrl: string; expiresIn: number }> {
+    try {
+      // Validate access using existing service method
+      const envelope = await this.validateUserAccess(envelopeId, userId, invitationToken);
+
+      // Get the latest signed document key
+      const documentKey = envelope.getLatestSignedDocumentKey();
+      if (!documentKey) {
+        throw envelopeNotFound(`No document available for download in envelope ${envelopeId.getValue()}`);
+      }
+
+             // Generate presigned URL with configurable expiration
+             const config = loadConfig();
+             const finalExpiresIn = expiresIn || config.documentDownload.defaultExpirationSeconds;
+             
+             // Validate expiration time is within allowed range
+             if (finalExpiresIn < config.documentDownload.minExpirationSeconds || 
+                 finalExpiresIn > config.documentDownload.maxExpirationSeconds) {
+               throw envelopeExpirationInvalid(
+                 `Document download expiration time must be between ${config.documentDownload.minExpirationSeconds} and ${config.documentDownload.maxExpirationSeconds} seconds, got ${finalExpiresIn}`
+               );
+             }
+             
+             // For external users, use a proper SignerId from the envelope
+             let signerIdForS3: SignerId;
+             if (userId) {
+               // Authenticated user - use their ID
+               signerIdForS3 = SignerId.fromString(userId);
+             } else {
+               // External user - find the signer from the envelope
+               const signers = envelope.getSigners();
+               if (signers.length === 0) {
+                 throw envelopeNotFound(`No signers found in envelope ${envelopeId.getValue()}`);
+               }
+               // Use the first signer's ID for external users
+               signerIdForS3 = signers[0].getId();
+             }
+             
+             const downloadUrl = await this.s3Service.generatePresignedUrl({
+               envelopeId,
+               signerId: signerIdForS3,
+               documentKey,
+               operation: S3Operation.get(),
+               expiresIn: finalExpiresIn
+             });
+
+      // Record download audit event
+      // For external users, find the signer to get proper identification
+      let auditUserId: string;
+      let auditUserEmail: string | undefined;
+      
+      if (userId) {
+        // Authenticated user
+        auditUserId = userId;
+        auditUserEmail = undefined; // Will be filled by audit service if available
+      } else {
+        // External user - find the signer from the envelope
+        const signers = envelope.getSigners();
+        if (signers.length > 0) {
+          const signer = signers[0]; // Use first signer for external users
+          const signerName = signer.getFullName() || signer.getEmail()?.getValue() || 'Unknown';
+          auditUserId = `external-user:${signerName}`;
+          auditUserEmail = signer.getEmail()?.getValue();
+        } else {
+          auditUserId = `external-user:${invitationToken}`;
+          auditUserEmail = undefined;
+        }
+      }
+      
+      await this.s3Service.recordDownloadAction({
+        envelopeId: envelopeId.getValue(),
+        userId: auditUserId,
+        userEmail: auditUserEmail,
+        s3Key: documentKey.getValue(),
+        ipAddress: securityContext?.ipAddress,
+        userAgent: securityContext?.userAgent,
+        country: securityContext?.country
+      });
+
+      return {
+        downloadUrl,
+        expiresIn: finalExpiresIn
+      };
+    } catch (error) {
+      // Re-throw business validation errors directly
+      if (error && typeof error === 'object' && 'code' in error) {
+        const errorCode = (error as any).code;
+        if (errorCode === 'ENVELOPE_ACCESS_DENIED' || 
+            errorCode === 'INVITATION_TOKEN_INVALID' || 
+            errorCode === 'INVITATION_TOKEN_EXPIRED' ||
+            errorCode === 'INVITATION_TOKEN_ALREADY_USED' ||
+            errorCode === 'INVITATION_TOKEN_REVOKED') {
+          throw error;
+        }
+      }
+      
+      throw envelopeUpdateFailed(
+        `Failed to download document for envelope ${envelopeId.getValue()}: ${error instanceof Error ? error.message : error}`
       );
     }
   }

@@ -290,6 +290,52 @@ export class WorkflowTestHelper {
   }
 
   /**
+   * Download document for authenticated user
+   * @param envelopeId - The envelope ID to download
+   * @returns Download response
+   */
+  async downloadDocument(envelopeId: string): Promise<{ statusCode: number; data: any }> {
+    if (!this.envelopeOperations) {
+      throw new Error('WorkflowTestHelper not initialized. Call initialize() first.');
+    }
+    return this.envelopeOperations.downloadDocument(envelopeId);
+  }
+
+  /**
+   * Download document with invitation token or custom JWT token
+   * @param envelopeId - The envelope ID to download
+   * @param invitationToken - The invitation token (for external users)
+   * @param customToken - Custom JWT token (for testing different users)
+   * @returns Download response
+   */
+  async downloadDocumentWithToken(
+    envelopeId: string, 
+    invitationToken?: string, 
+    customToken?: string
+  ): Promise<{ statusCode: number; data: any }> {
+    if (!this.envelopeOperations) {
+      throw new Error('WorkflowTestHelper not initialized. Call initialize() first.');
+    }
+    return this.envelopeOperations.downloadDocumentWithToken(envelopeId, invitationToken, customToken);
+  }
+
+  /**
+   * Download document with custom expiration time
+   * @param envelopeId - The envelope ID to download
+   * @param expiresIn - Custom expiration time in seconds
+   * @returns Download response
+   */
+  async downloadDocumentWithCustomExpiration(
+    envelopeId: string, 
+    expiresIn: number
+  ): Promise<{ statusCode: number; data: any }> {
+    if (!this.envelopeOperations) {
+      throw new Error('WorkflowTestHelper not initialized. Call initialize() first.');
+    }
+    return this.envelopeOperations.downloadDocumentWithCustomExpiration(envelopeId, expiresIn);
+  }
+
+  /**
    * Sign document with invitation token (external user)
    * @param envelopeId - The envelope ID to sign
    * @param signerId - The signer ID

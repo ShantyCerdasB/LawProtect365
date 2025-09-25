@@ -44,6 +44,12 @@ export interface SignatureServiceConfig extends AppConfig {
     accessKeyId: string;
     secretAccessKey: string;
   };
+  
+  documentDownload: {
+    defaultExpirationSeconds: number;
+    maxExpirationSeconds: number;
+    minExpirationSeconds: number;
+  };
 }
 
 /**
@@ -84,6 +90,11 @@ export const loadConfig = (): SignatureServiceConfig => {
       region: process.env.AWS_REGION || 'us-east-1',
       accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
       secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!
+    },
+    documentDownload: {
+      defaultExpirationSeconds: parseInt(process.env.DOCUMENT_DOWNLOAD_DEFAULT_EXPIRATION_SECONDS || '3600'), // 1 hour
+      maxExpirationSeconds: parseInt(process.env.DOCUMENT_DOWNLOAD_MAX_EXPIRATION_SECONDS || '86400'), // 24 hours
+      minExpirationSeconds: parseInt(process.env.DOCUMENT_DOWNLOAD_MIN_EXPIRATION_SECONDS || '300') // 5 minutes
     }
   };
 };
