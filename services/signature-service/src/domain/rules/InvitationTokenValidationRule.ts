@@ -62,6 +62,37 @@ export class InvitationTokenValidationRule {
   }
 
   /**
+   * Validates that a viewer has access to use an invitation token (read-only)
+   * @param token - The invitation token
+   * @throws invitationTokenInvalid if token is not valid for viewer access
+   */
+  static validateViewerTokenAccess(token: InvitationToken): void {
+    if (!token) {
+      throw invitationTokenInvalid('Token is required');
+    }
+
+    // Check if token is expired
+    if (token.isExpired()) {
+      throw invitationTokenExpired({
+        tokenId: token.getId().getValue(),
+        expiresAt: token.getExpiresAt()?.toISOString()
+      });
+    }
+
+    // Check if token has been revoked
+    if (token.isRevoked()) {
+      throw invitationTokenRevoked({
+        tokenId: token.getId().getValue(),
+        revokedAt: token.getRevokedAt()?.toISOString(),
+        revokedReason: token.getRevokedReason()
+      });
+    }
+
+    // For viewer tokens, we don't check if they're used since viewers can access multiple times
+    // until the token expires
+  }
+
+  /**
    * Validates that a signer has access to use an invitation token
    * @param token - The invitation token
    * @param signer - The signer attempting to use the token

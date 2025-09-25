@@ -1,6 +1,6 @@
 import type { AppContext } from "../../app/AppContext.js";
-import { deepRedact } from "../logger/redact.js";
-import { toErr, DEFAULT_REDACT_KEYS } from "../logger/logger.js";
+import { deepRedact } from "../redact.js";
+// import { toErr, DEFAULT_REDACT_KEYS } from "../logger.js";
 
 /**
  * Async domain/application operation signature.
@@ -57,7 +57,7 @@ export const withLogging = <I, O>(op: AsyncOp<I, O>, opts: LoggingOptions = {}):
 
     ctx.logger[level](`${name}:start`, {
       opKey: opts.opKey,
-      ...(opts.includeInput ? { input: deepRedact(input, DEFAULT_REDACT_KEYS) } : {})
+      ...(opts.includeInput ? { input: deepRedact(input, {}) } : {})
     });
 
     try {
@@ -67,13 +67,13 @@ export const withLogging = <I, O>(op: AsyncOp<I, O>, opts: LoggingOptions = {}):
       ctx.logger[level](`${name}:ok`, {
         opKey: opts.opKey,
         ms,
-        ...(opts.includeOutput ? { output: deepRedact(output, DEFAULT_REDACT_KEYS) } : {})
+        ...(opts.includeOutput ? { output: deepRedact(output, {}) } : {})
       });
 
       return output;
     } catch (e) {
       const ms = Date.now() - start;
-      ctx.logger.error(`${name}:error`, { opKey: opts.opKey, ms, err: toErr(e) });
+      ctx.logger.error(`${name}:error`, { opKey: opts.opKey, ms, err: String(e) });
       throw e;
     }
   };

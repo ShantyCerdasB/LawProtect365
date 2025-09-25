@@ -1,8 +1,6 @@
-// @fileoverview Prisma Schema - Signature Service Core Models
-// @summary Relational models for envelopes, signers, invitation tokens and audit
-// @description Minimal relational data model to support envelope lifecycle, signer
-// evidence, external invitation token rotation/usage, and full audit trail.
-// PDFs live in S3 and are referenced by immutable keys and SHA-256 hashes.
+// Signature Service – Core Data Model
+// Stores users, envelopes, signers, invitation tokens, consents, and audit events.
+// Binary PDFs live in S3 and are referenced via immutable keys and SHA-256 hashes.
 
 generator client {
   provider = "prisma-client-js"
@@ -57,6 +55,11 @@ enum UserRole {
   EXTERNAL_USER
 }
 
+enum ParticipantRole {
+  SIGNER
+  VIEWER
+}
+
 enum InvitationTokenStatus {
   ACTIVE
   VIEWED
@@ -77,20 +80,31 @@ enum OAuthProvider {
 }
 
 model User {
-  id                String            @id @default(uuid()) @db.Uuid
-  email             String            @unique @db.Citext
-  name              String
-  givenName         String?
-  lastName          String?
-  role              UserRole          @default(CUSTOMER)
-  mfaEnabled        Boolean           @default(false)
-  lastLoginAt       DateTime?
-  status            UserAccountStatus @default(ACTIVE)
-  suspendedUntil    DateTime?
-  deletedAt         DateTime?
+  /// Primary identity for internal users.
+  id                 String            @id @default(uuid()) @db.Uuid
+  /// Login and contact address (case-insensitive, unique).
+  email              String            @unique @db.Citext
+  /// Display name.
+  name               String
+  /// Optional given/last names for normalization.
+  givenName          String?
+  lastName           String?
+  /// Access role within the app.
+  role               UserRole          @default(CUSTOMER)
+  /// Whether MFA is enabled on the account.
+  mfaEnabled         Boolean           @default(false)
+  /// Timestamp of the most recent login.
+  lastLoginAt        DateTime?
+  /// Lifecycle status (soft-delete uses DELETED + deletedAt).
+  status             UserAccountStatus @default(ACTIVE)
+  /// When suspended, until what time.
+  suspendedUntil     DateTime?
+  /// Soft-delete timestamp (must be set when status=DELETED).
+  deletedAt          DateTime?
+  /// Optional reason for deactivation or deletion.
   deactivationReason String?
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
 
   oauthAccounts     OAuthAccount[]
   createdEnvelopes  SignatureEnvelope[] @relation("EnvelopeCreator")
@@ -103,11 +117,13 @@ model User {
 }
 
 model OAuthAccount {
-  id                 String   @id @default(uuid()) @db.Uuid
-  userId             String   @db.Uuid
-  provider           OAuthProvider
-  providerAccountId  String
-  createdAt          DateTime @default(now())
+  /// Federated identity link (e.g., Google Workspace, Microsoft 365, Apple).
+  id                String         @id @default(uuid()) @db.Uuid
+  userId            String         @db.Uuid
+  provider          OAuthProvider
+  /// Provider-side account identifier (must be non-empty).
+  providerAccountId String
+  createdAt         DateTime       @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -117,62 +133,78 @@ model OAuthAccount {
 }
 
 model SignatureEnvelope {
-  id               String           @id @default(uuid()) @db.Uuid
-  createdBy        String           @db.Uuid
-  title            String
-  description      String?
-  status           EnvelopeStatus   @default(DRAFT)
-  signingOrderType SigningOrderType @default(OWNER_FIRST)
-  originType       DocumentOriginType
-  templateId       String?
-  templateVersion  String?
-  sourceKey        String?
-  metaKey          String?
-  flattenedKey     String?
-  signedKey        String?
-  sourceSha256     String?
-  flattenedSha256  String?
-  signedSha256     String?
-  sentAt           DateTime?
-  completedAt      DateTime?
-  cancelledAt      DateTime?
-  declinedAt       DateTime?
-  declinedBySignerId String?        @db.Uuid
-  declinedReason   String?
-  expiresAt        DateTime?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  /// Envelope metadata and document references.
+  id                 String           @id @default(uuid()) @db.Uuid
+  createdBy          String           @db.Uuid
+  title              String
+  description        String?
+  status             EnvelopeStatus   @default(DRAFT)
+  signingOrderType   SigningOrderType @default(OWNER_FIRST)
+  originType         DocumentOriginType
+  /// Template linkage when originType=TEMPLATE.
+  templateId         String?
+  templateVersion    String?
+  /// S3 keys for different document stages.
+  sourceKey          String?
+  metaKey            String?
+  flattenedKey       String?
+  signedKey          String?
+  /// SHA-256 hashes (hex-encoded, 64 chars).
+  sourceSha256       String?
+  flattenedSha256    String?
+  signedSha256       String?
+  /// State timestamps.
+  sentAt             DateTime?
+  completedAt        DateTime?
+  cancelledAt        DateTime?
+  declinedAt         DateTime?
+  declinedBySignerId String?         @db.Uuid
+  declinedReason     String?
+  expiresAt          DateTime?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
 
-  creator     User                 @relation("EnvelopeCreator", fields: [createdBy], references: [id])
-  signers     EnvelopeSigner[]
-  auditEvents SignatureAuditEvent[]
-  consents    Consent[]
+  creator         User               @relation("EnvelopeCreator", fields: [createdBy], references: [id])
+  signers         EnvelopeSigner[]
+  auditEvents     SignatureAuditEvent[]
+  consents        Consent[]
+  /// Who declined the envelope (FK enforced in SQL migration).
+  declinedBySigner EnvelopeSigner?   @relation("DeclinedBySigner", fields: [declinedBySignerId], references: [id])
 
   @@index([status])
   @@index([createdBy])
 }
 
 model EnvelopeSigner {
+  /// A participant (signer/viewer) per envelope, internal or external.
   id               String  @id @default(uuid()) @db.Uuid
   envelopeId       String  @db.Uuid
+  /// Internal user linkage (nullable for external signers).
   userId           String? @db.Uuid
+  /// Convenience flag for external participants (derived from userId null).
   isExternal       Boolean @default(false)
+  /// External contact email (nullable when userId is set).
   email            String? @db.Citext
+  /// External display name (nullable when userId is set).
   fullName         String?
   invitedByUserId  String? @db.Uuid
-  participantRole  String  @default("SIGNER")
+  participantRole  ParticipantRole @default(SIGNER)
+  /// Ordering within the envelope flow (not enforced unique by request).
   order            Int
   status           SignerStatus @default(PENDING)
   signedAt         DateTime?
   declinedAt       DateTime?
   declineReason    String?
+  /// Optional per-signer consent snapshot.
   consentGiven     Boolean?   @default(false)
   consentTimestamp DateTime?
+  /// Cryptographic evidence fields (optional).
   documentHash     String?
   signatureHash    String?
   signedS3Key      String?
   kmsKeyId         String?
   algorithm        String?
+  /// Evidence context.
   ipAddress        String?
   userAgent        String?
   location         String?
@@ -181,20 +213,28 @@ model EnvelopeSigner {
 
   envelope  SignatureEnvelope @relation(fields: [envelopeId], references: [id], onDelete: Cascade)
   user      User?             @relation(fields: [userId], references: [id])
+  /// Reverse relation for SignatureEnvelope.declinedBySigner
+  declinedEnvelopes SignatureEnvelope[] @relation("DeclinedBySigner")
 
   auditEvents          SignatureAuditEvent[]
   consents             Consent[] @relation("ConsentSigner")
   consentsAsSignature  Consent[] @relation("ConsentSignature")
+  invitationTokens     InvitationToken[]
 
+  /// Prevent duplicate external invite by email within the same envelope.
   @@unique([envelopeId, email])
+  /// Prevent inviting the same internal user twice to the same envelope.
+  @@unique([envelopeId, userId], map: "envelope_signer_unique_envelope_user_uidx")
   @@index([envelopeId, order])
   @@index([userId])
 }
 
 model Consent {
+  /// One consent snapshot per envelope/signer (extend if you add consent types).
   id               String   @id @default(uuid()) @db.Uuid
   envelopeId       String   @db.Uuid
   signerId         String   @db.Uuid
+  /// Optional: who signed on their behalf.
   signatureId      String?  @db.Uuid
   consentGiven     Boolean
   consentTimestamp DateTime
@@ -214,9 +254,11 @@ model Consent {
 }
 
 model InvitationToken {
+  /// External invitation link lifecycle per signer.
   id            String  @id @default(uuid()) @db.Uuid
   envelopeId    String  @db.Uuid
   signerId      String  @db.Uuid
+  /// Store a hash of the token (never the raw token).
   tokenHash     String  @unique
   status        InvitationTokenStatus @default(ACTIVE)
   expiresAt     DateTime?
@@ -238,15 +280,21 @@ model InvitationToken {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  /// Relation to the signer this token belongs to
+  signer        EnvelopeSigner @relation(fields: [signerId], references: [id], onDelete: Cascade)
+
   @@index([envelopeId, signerId])
   @@index([signerId, status])
   @@index([status, expiresAt])
+  // Note: the "one ACTIVE token per signer" is enforced via a partial unique index in SQL migration.
 }
 
 model SignatureAuditEvent {
+  /// Immutable audit trail for envelope/signature actions.
   id          String   @id @default(uuid()) @db.Uuid
   envelopeId  String   @db.Uuid
   signerId    String?  @db.Uuid
+  /// Event type string (consider migrating to an enum later).
   eventType   String
   description String
   userId      String?
@@ -266,6 +314,7 @@ model SignatureAuditEvent {
 }
 
 model UserAuditEvent {
+  /// Audit trail for user profile, auth and account lifecycle changes.
   id          String          @id @default(uuid()) @db.Uuid
   userId      String          @db.Uuid
   action      UserAuditAction

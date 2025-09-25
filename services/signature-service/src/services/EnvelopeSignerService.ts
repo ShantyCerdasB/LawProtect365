@@ -86,6 +86,81 @@ export class EnvelopeSignerService {
   }
 
   /**
+   * Creates a viewer participant for an envelope (read-only access)
+   * @param envelopeId - The envelope ID
+   * @param email - Email address of the viewer
+   * @param fullName - Full name of the viewer
+   * @param userId - The user creating the viewer
+   * @returns Created viewer participant
+   */
+  async createViewerParticipant(
+    envelopeId: EnvelopeId,
+    email: string,
+    fullName: string,
+    userId: string
+  ): Promise<EnvelopeSigner> {
+    try {
+      // Validate envelope exists
+      const envelope = await this.signatureEnvelopeRepository.findById(envelopeId);
+      if (!envelope) {
+        throw envelopeNotFound(`Envelope with ID ${envelopeId.getValue()} not found`);
+      }
+
+      // Get existing signers for validation
+      const existingSigners = await this.envelopeSignerRepository.findByEnvelopeId(envelopeId);
+      
+      // Validate that viewer doesn't already exist (using envelope entity validation)
+      envelope.validateViewerNotExists(email, existingSigners);
+
+      // Create viewer participant data
+      const viewerData: CreateSignerData = {
+        envelopeId,
+        email,
+        fullName,
+        isExternal: true,
+        participantRole: 'VIEWER',
+        order: 999, // High order number to place viewers at the end
+        invitedByUserId: userId
+      };
+
+      // Create viewer entity
+      const viewer = EntityFactory.createEnvelopeSigner(viewerData);
+
+      // Save to repository
+      const createdViewer = await this.envelopeSignerRepository.create(viewer);
+
+      // Create audit event
+      await this.signatureAuditEventService.createSignerAuditEvent(
+        envelopeId.getValue(),
+        createdViewer.getId().getValue(),
+        AuditEventType.SIGNATURE_CREATED,
+        `Viewer participant created: ${fullName} (${email})`,
+        userId,
+        email,
+        undefined,
+        undefined,
+        undefined,
+        {
+          participantRole: 'VIEWER',
+          viewerEmail: email,
+          viewerName: fullName,
+          envelopeId: envelopeId.getValue()
+        }
+      );
+
+      return createdViewer;
+    } catch (error) {
+      // Re-throw the original error if it's already an AppError
+      if (error instanceof Error && 'statusCode' in error) {
+        throw error;
+      }
+      throw signerCreationFailed(
+        `Failed to create viewer participant: ${error instanceof Error ? error.message : error}`
+      );
+    }
+  }
+
+  /**
    * Creates signers for an envelope
    * @param envelopeId - The envelope ID
    * @param signersData - Array of signer data to create

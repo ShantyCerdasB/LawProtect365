@@ -1,4 +1,5 @@
 import type { APIGatewayProxyResultV2 } from "aws-lambda";
+import type { ZodIssue } from "zod";
 import { AppError } from "./AppError.js";
 import { ErrorCodes } from "./codes.js";
 import { MapErrorOptions } from "../types/mapErrorOptions.js";
@@ -68,10 +69,14 @@ const normalizeError = (err: unknown): {
 
   // ZodError → 422
   if (isZodError(err)) {
+    // Extract the first error message from Zod issues
+    const firstIssue = err.issues[0] as ZodIssue | undefined;
+    const specificMessage = firstIssue?.message || "Unprocessable Entity";
+    
     return {
       statusCode: 422,
       code: ErrorCodes.COMMON_UNPROCESSABLE_ENTITY,
-      message: "Unprocessable Entity",
+      message: specificMessage,
       details: { issues: err.issues }
     };
   }

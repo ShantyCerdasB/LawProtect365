@@ -163,7 +163,7 @@ export const signerEmailRequired = (details?: unknown) =>
  * Creates a ConflictError for duplicate signer email (409).
  */
 export const signerEmailDuplicate = (details?: unknown) =>
-  new ConflictError("Signer email already exists in envelope", SignatureErrorCodes.SIGNER_EMAIL_DUPLICATE, details);
+  new ConflictError(typeof details === 'string' ? details : "Signer email already exists in envelope", SignatureErrorCodes.SIGNER_EMAIL_DUPLICATE, details);
 
 /**
  * Creates a ConflictError for when a signer cannot be removed (409).

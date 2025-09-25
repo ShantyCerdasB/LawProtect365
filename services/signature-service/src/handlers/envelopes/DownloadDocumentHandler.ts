@@ -6,11 +6,10 @@
  * Supports both authenticated users (JWT) and external users (invitation tokens).
  */
 
-import { ControllerFactory, UuidV4 } from '@lawprotect/shared-ts';
+import { ControllerFactory } from '@lawprotect/shared-ts';
 import { ServiceFactory } from '../../infrastructure/factories/ServiceFactory';
 import { DownloadDocumentPathSchema, DownloadDocumentQuerySchema, DownloadDocumentResponse } from '../../domain/schemas/DownloadSignedDocumentSchema';
 import { EnvelopeId } from '../../domain/value-objects/EnvelopeId';
-import { z } from 'zod';
 
 export const downloadDocumentHandler = ControllerFactory.createQuery({
   pathSchema: DownloadDocumentPathSchema,

@@ -701,6 +701,23 @@ export class SignatureEnvelope {
   }
 
   /**
+   * Validates that a viewer with the given email doesn't already exist
+   * @param email - Email address to check
+   * @param existingSigners - Array of existing signers to check against
+   * @throws signerEmailDuplicate when viewer with email already exists
+   */
+  validateViewerNotExists(email: string, existingSigners: EnvelopeSigner[]): void {
+    const existingViewer = existingSigners.find(signer => 
+      signer.getEmail()?.getValue().toLowerCase() === email.toLowerCase() &&
+      signer.getParticipantRole() === 'VIEWER'
+    );
+    
+    if (existingViewer) {
+      throw signerEmailDuplicate(`Viewer with email ${email} already exists in envelope`);
+    }
+  }
+
+  /**
    * Auto-corrects signing order if inconsistent with signers
    * @param signersData - Array of signer data
    * @returns Updated signing order type if correction was made, null otherwise

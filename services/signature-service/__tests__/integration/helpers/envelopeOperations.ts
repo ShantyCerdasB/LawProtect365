@@ -667,4 +667,100 @@ startxref
     return Buffer.from(mockSignedPdfContent, 'utf-8');
   }
 
+  /**
+   * Share document view with external viewer
+   * @param envelopeId - ID of the envelope to share
+   * @param viewerData - Viewer data (email, fullName, message, expiresIn)
+   * @returns Promise that resolves to the share response
+   */
+  async shareDocumentView(
+    envelopeId: string, 
+    viewerData: { email: string; fullName: string; message?: string; expiresIn?: number }
+  ): Promise<{ statusCode: number; data: any }> {
+    const token = await generateTestJwtToken({ 
+      sub: this.testUser.userId, 
+      email: this.testUser.email, 
+      roles: ['admin'], 
+      scopes: [] 
+    });
+    
+    const event = await createApiGatewayEvent({ 
+      includeAuth: false, 
+      authToken: token,
+      pathParameters: { envelopeId },
+      body: viewerData
+    });
+    
+    const handler = require('../../../src/handlers/signing/ShareDocumentViewHandler').shareDocumentViewHandler;
+    const result = await handler(event, {} as any, () => {});
+    const response = JSON.parse(result.body);
+    
+    return {
+      statusCode: result.statusCode,
+      data: response.data || response
+    };
+  }
+
+  /**
+   * Share document view as a specific user
+   * @param envelopeId - ID of the envelope to share
+   * @param viewerData - Viewer data (email, fullName, message, expiresIn)
+   * @param user - User to share as
+   * @returns Promise that resolves to the share response
+   */
+  async shareDocumentViewAsUser(
+    envelopeId: string, 
+    viewerData: { email: string; fullName: string; message?: string; expiresIn?: number },
+    user: any
+  ): Promise<{ statusCode: number; data: any }> {
+    const token = await generateTestJwtToken({ 
+      sub: user.userId, 
+      email: user.email, 
+      roles: ['admin'], 
+      scopes: [] 
+    });
+    
+    const event = await createApiGatewayEvent({ 
+      includeAuth: false, 
+      authToken: token,
+      pathParameters: { envelopeId },
+      body: viewerData
+    });
+    
+    const handler = require('../../../src/handlers/signing/ShareDocumentViewHandler').shareDocumentViewHandler;
+    const result = await handler(event, {} as any, () => {});
+    const response = JSON.parse(result.body);
+    
+    return {
+      statusCode: result.statusCode,
+      data: response.data || response
+    };
+  }
+
+  /**
+   * Share document view without authentication
+   * @param envelopeId - ID of the envelope to share
+   * @param viewerData - Viewer data (email, fullName, message, expiresIn)
+   * @returns Promise that resolves to the share response
+   */
+  async shareDocumentViewWithoutAuth(
+    envelopeId: string, 
+    viewerData: { email: string; fullName: string; message?: string; expiresIn?: number }
+  ): Promise<{ statusCode: number; data: any }> {
+    const event = await createApiGatewayEvent({ 
+      includeAuth: false, 
+      pathParameters: { envelopeId },
+      body: viewerData
+    });
+    
+    const handler = require('../../../src/handlers/signing/ShareDocumentViewHandler').shareDocumentViewHandler;
+    const result = await handler(event, {} as any, () => {});
+    const response = JSON.parse(result.body);
+    
+    return {
+      statusCode: result.statusCode,
+      data: response.data || response
+    };
+  }
+
 }

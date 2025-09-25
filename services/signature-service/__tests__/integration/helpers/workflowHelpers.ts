@@ -419,5 +419,74 @@ export class WorkflowTestHelper {
     return this.envelopeOperations.cancelEnvelope(envelopeId);
   }
 
+  /**
+   * Share document view with external viewer
+   * @param envelopeId - ID of the envelope to share
+   * @param viewerData - Viewer data (email, fullName, message, expiresIn)
+   * @returns Promise that resolves to the share response
+   */
+  async shareDocumentView(
+    envelopeId: string, 
+    viewerData: { email: string; fullName: string; message?: string; expiresIn?: number }
+  ): Promise<{ statusCode: number; data: any }> {
+    if (!this.envelopeOperations) {
+      throw new Error('WorkflowTestHelper not initialized. Call initialize() first.');
+    }
+    return this.envelopeOperations.shareDocumentView(envelopeId, viewerData);
+  }
+
+  /**
+   * Share document view as a specific user
+   * @param envelopeId - ID of the envelope to share
+   * @param viewerData - Viewer data (email, fullName, message, expiresIn)
+   * @param user - User to share as
+   * @returns Promise that resolves to the share response
+   */
+  async shareDocumentViewAsUser(
+    envelopeId: string, 
+    viewerData: { email: string; fullName: string; message?: string; expiresIn?: number },
+    user: any
+  ): Promise<{ statusCode: number; data: any }> {
+    if (!this.envelopeOperations) {
+      throw new Error('WorkflowTestHelper not initialized. Call initialize() first.');
+    }
+    return this.envelopeOperations.shareDocumentViewAsUser(envelopeId, viewerData, user);
+  }
+
+  /**
+   * Share document view without authentication
+   * @param envelopeId - ID of the envelope to share
+   * @param viewerData - Viewer data (email, fullName, message, expiresIn)
+   * @returns Promise that resolves to the share response
+   */
+  async shareDocumentViewWithoutAuth(
+    envelopeId: string, 
+    viewerData: { email: string; fullName: string; message?: string; expiresIn?: number }
+  ): Promise<{ statusCode: number; data: any }> {
+    if (!this.envelopeOperations) {
+      throw new Error('WorkflowTestHelper not initialized. Call initialize() first.');
+    }
+    return this.envelopeOperations.shareDocumentViewWithoutAuth(envelopeId, viewerData);
+  }
+
+  /**
+   * Get viewer participant by envelope ID and email
+   * @param envelopeId - ID of the envelope
+   * @param email - Email of the viewer
+   * @returns Promise that resolves to the viewer participant data
+   */
+  async getViewerParticipant(envelopeId: string, email: string): Promise<any> {
+    return this.databaseHelper.getViewerParticipant(envelopeId, email);
+  }
+
+  /**
+   * Get invitation token by token string
+   * @param token - The invitation token
+   * @returns Promise that resolves to the invitation token data
+   */
+  async getInvitationToken(token: string): Promise<any> {
+    return this.databaseHelper.getInvitationToken(token);
+  }
+
 }
 

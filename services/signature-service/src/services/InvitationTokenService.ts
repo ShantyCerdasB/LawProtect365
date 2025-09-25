@@ -156,6 +156,101 @@ export class InvitationTokenService {
   }
 
   /**
+   * Generates invitation token for a viewer (read-only access)
+   * @param signerId - The real signerId from the created viewer participant
+   * @param email - Email address of the viewer
+   * @param fullName - Full name of the viewer
+   * @param envelopeId - The envelope ID
+   * @param securityContext - Security context from middleware
+   * @param expiresInDays - Optional expiration time in days (default: 7)
+   * @returns Invitation token result for viewer
+   */
+  async generateViewerInvitationToken(
+    signerId: SignerId,
+    email: string,
+    fullName: string,
+    envelopeId: EnvelopeId,
+    securityContext: {
+      userId: string;
+      ipAddress: string;
+      userAgent: string;
+      country?: string;
+    },
+    expiresInDays: number = 7
+  ): Promise<InvitationTokenResult> {
+    try {
+      // Generate secure token
+      const token = this.generateSecureToken();
+      const tokenHash = this.hashToken(token);
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + expiresInDays);
+
+      // Validate expiration
+      InvitationTokenValidationRule.validateExpiration(expiresAt);
+
+      // Create invitation token entity for viewer using the real signerId
+      const invitationToken = InvitationToken.create({
+        envelopeId,
+        signerId: signerId, // Use the real signerId from the created viewer
+        tokenHash,
+        expiresAt,
+        createdBy: securityContext.userId,
+        ipAddress: securityContext.ipAddress,
+        userAgent: securityContext.userAgent,
+        country: securityContext.country
+      });
+
+      // Save to repository
+      const createdToken = await this.invitationTokenRepository.create(invitationToken);
+
+      // Mark token as sent
+      createdToken.markAsSent(
+        securityContext.ipAddress,
+        securityContext.userAgent,
+        securityContext.country
+      );
+
+      // Update token in repository with sent information
+      const sentToken = await this.invitationTokenRepository.update(
+        createdToken.getId(),
+        createdToken
+      );
+
+      // Create audit event for viewer invitation
+      await this.signatureAuditEventService.createSignerAuditEvent(
+        envelopeId.getValue(),
+        signerId.getValue(), // Use the real signerId
+        AuditEventType.INVITATION_ISSUED,
+        `View invitation issued to ${email} (${fullName})`,
+        securityContext.userId,
+        email,
+        securityContext.ipAddress,
+        securityContext.userAgent,
+        securityContext.country,
+        {
+          tokenId: createdToken.getId().getValue(),
+          viewerEmail: email,
+          viewerName: fullName,
+          expiresAt: expiresAt.toISOString(),
+          participantRole: 'VIEWER'
+        }
+      );
+
+      return {
+        token,                    // Original token for frontend use
+        entity: sentToken,        // Complete entity for audit and tracking
+        signerId: signerId.getValue(), // Use the real signerId
+        email: email,
+        expiresAt: expiresAt
+      };
+    } catch (error) {
+      throw invitationTokenInvalid(
+        `Failed to generate viewer invitation token: ${error instanceof Error ? error.message : error}`
+      );
+    }
+  }
+
+  /**
    * Validates an invitation token
    * @param token - The token to validate
    * @returns The invitation token if valid

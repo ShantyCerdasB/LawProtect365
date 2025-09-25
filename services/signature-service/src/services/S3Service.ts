@@ -413,7 +413,6 @@ export class S3Service {
     try {
       // Generate document key for signed document
       const documentKey = this.generateSignedDocumentKey(request.envelopeId, request.signerId);
-      const s3Key = S3Key.fromString(documentKey);
 
       // Store signed document in S3
       await this.s3EvidenceStorage.putObject({

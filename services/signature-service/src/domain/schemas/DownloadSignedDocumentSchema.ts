@@ -6,7 +6,7 @@
  * and response formatting.
  */
 
-import { z, UuidV4, DocumentDownloadFormat } from '@lawprotect/shared-ts';
+import { z, UuidV4 } from '@lawprotect/shared-ts';
 
 /**
  * Schema for envelope ID in path parameters

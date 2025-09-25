@@ -61,4 +61,61 @@ export class DatabaseHelper {
     await prisma.$disconnect();
     return auditEvents;
   }
+
+  /**
+   * Get viewer participant by envelope ID and email
+   * @param envelopeId - The envelope ID
+   * @param email - The viewer email
+   * @returns Viewer participant data
+   */
+  async getViewerParticipant(envelopeId: string, email: string): Promise<any> {
+    const { PrismaClient } = await import('@prisma/client');
+    const prisma = new PrismaClient();
+    
+    const viewerParticipant = await prisma.envelopeSigner.findFirst({
+      where: { 
+        envelopeId,
+        email: email.toLowerCase(),
+        participantRole: 'VIEWER'
+      }
+    });
+    
+    await prisma.$disconnect();
+    return viewerParticipant;
+  }
+
+  /**
+   * Get invitation token by token string
+   * @param token - The invitation token
+   * @returns Invitation token data
+   */
+  async getInvitationToken(token: string): Promise<any> {
+    const { PrismaClient } = await import('@prisma/client');
+    const prisma = new PrismaClient();
+    
+    // Hash the token to find it in the database
+    const crypto = await import('crypto');
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    
+    const invitationToken = await prisma.invitationToken.findFirst({
+      where: { tokenHash }
+    });
+    
+    if (!invitationToken) {
+      await prisma.$disconnect();
+      return null;
+    }
+    
+    // Get the signer information separately
+    const signer = await prisma.envelopeSigner.findUnique({
+      where: { id: invitationToken.signerId }
+    });
+    
+    await prisma.$disconnect();
+    
+    return {
+      ...invitationToken,
+      signer
+    };
+  }
 }

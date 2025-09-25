@@ -31,6 +31,7 @@ import { EnvelopeSpec } from '../domain/types/envelope';
 import { documentS3NotFound, envelopeNotFound } from '../signature-errors';
 import { paginationLimitRequired } from '@lawprotect/shared-ts';
 import { SigningFlowValidationRule } from '../domain/rules/SigningFlowValidationRule';
+import { EnvelopeAccessValidationRule } from '../domain/rules/EnvelopeAccessValidationRule';
 import { ConsentService } from './ConsentService';
 import { KmsService } from './KmsService';
 import { sha256Hex } from '@lawprotect/shared-ts';
@@ -340,6 +341,118 @@ export class SignatureOrchestrator {
       };
     } catch (error) {
       this.handleOrchestrationError(error as Error, 'sendEnvelope');
+    }
+  }
+
+  /**
+   * Shares document view access with an external user (read-only)
+   * @param envelopeId - The envelope ID
+   * @param email - Email address of the viewer
+   * @param fullName - Full name of the viewer
+   * @param message - Optional custom message
+   * @param expiresInDays - Optional expiration time in days (default: 7)
+   * @param userId - The user sharing the document
+   * @param securityContext - Security context for audit tracking
+   * @returns Promise resolving to viewer invitation result
+   */
+  async shareDocumentView(
+    envelopeId: EnvelopeId,
+    email: string,
+    fullName: string,
+    message: string | undefined,
+    expiresInDays: number | undefined,
+    userId: string,
+    securityContext: {
+      ipAddress: string;
+      userAgent: string;
+      country?: string;
+    }
+  ): Promise<{
+    success: boolean;
+    message: string;
+    envelopeId: string;
+    viewerEmail: string;
+    viewerName: string;
+    token: string;
+    expiresAt: Date;
+    expiresInDays: number;
+  }> {
+    try {
+      // 1. Validate envelope exists and user has access
+      const envelope = await this.signatureEnvelopeService.getEnvelopeWithSigners(envelopeId);
+      if (!envelope) {
+        throw envelopeNotFound(`Envelope with ID ${envelopeId.getValue()} not found`);
+      }
+
+      // 2. Validate authorization - only the owner can share document view
+      EnvelopeAccessValidationRule.validateEnvelopeModificationAccess(envelope, userId);
+
+      // 3. Create viewer participant
+      const viewer = await this.envelopeSignerService.createViewerParticipant(
+        envelopeId,
+        email,
+        fullName,
+        userId
+      );
+
+      // 4. Generate viewer invitation token using the real signerId
+      const tokenResult = await this.invitationTokenService.generateViewerInvitationToken(
+        viewer.getId(), // Use the real signerId from the created viewer
+        email,
+        fullName,
+        envelopeId,
+        {
+          userId,
+          ipAddress: securityContext.ipAddress,
+          userAgent: securityContext.userAgent,
+          country: securityContext.country
+        },
+        expiresInDays || 7
+      );
+
+      // 5. Publish notification event for viewer invitation
+      await this.publishViewerNotificationEvent(
+        envelopeId,
+        email,
+        fullName,
+        message || "You have been granted view access to a document",
+        tokenResult.token,
+        tokenResult.expiresAt
+      );
+
+      // 6. Create audit event for document view sharing
+      await this.signatureAuditEventService.createEvent({
+        envelopeId: envelopeId.getValue(),
+        signerId: viewer.getId().getValue(),
+        eventType: 'DOCUMENT_VIEW_SHARED' as any,
+        description: `Document view access shared with ${fullName} (${email})`,
+        userId: userId,
+        userEmail: undefined,
+        ipAddress: securityContext.ipAddress,
+        userAgent: securityContext.userAgent,
+        country: securityContext.country,
+        metadata: {
+          envelopeId: envelopeId.getValue(),
+          viewerEmail: email,
+          viewerName: fullName,
+          tokenId: tokenResult.entity.getId().getValue(),
+          expiresAt: tokenResult.expiresAt.toISOString(),
+          expiresInDays: expiresInDays || 7
+        }
+      });
+
+      return {
+        success: true,
+        message: `Document view access successfully shared with ${fullName}`,
+        envelopeId: envelopeId.getValue(),
+        viewerEmail: email,
+        viewerName: fullName,
+        token: tokenResult.token,
+        expiresAt: tokenResult.expiresAt,
+        expiresInDays: expiresInDays || 7
+      };
+    } catch (error) {
+      this.handleOrchestrationError(error as Error, 'share document view');
     }
   }
 
@@ -659,6 +772,46 @@ export class SignatureOrchestrator {
       // Save event to outbox for reliable delivery
       await this.outboxRepository.save(event, uuid());
     }
+  }
+
+  /**
+   * Publishes notification event for viewer invitation
+   * @param envelopeId - The envelope ID
+   * @param email - Email address of the viewer
+   * @param fullName - Full name of the viewer
+   * @param message - Custom message for the viewer
+   * @param token - Invitation token for the viewer
+   * @param expiresAt - Token expiration date
+   * @returns Promise that resolves when event is published
+   */
+  private async publishViewerNotificationEvent(
+    envelopeId: EnvelopeId,
+    email: string,
+    fullName: string,
+    message: string,
+    token: string,
+    expiresAt: Date
+  ): Promise<void> {
+    const envelope = await this.signatureEnvelopeService.getEnvelopeWithSigners(envelopeId);
+    
+    const event = makeEvent('DOCUMENT_VIEW_INVITATION', {
+      envelopeId: envelopeId.getValue(),
+      viewerEmail: email,
+      viewerName: fullName,
+      message: message,
+      invitationToken: token,
+      expiresAt: expiresAt.toISOString(),
+      metadata: {
+        envelopeTitle: envelope!.getTitle(),
+        envelopeId: envelopeId.getValue(),
+        sentBy: envelope!.getCreatedBy(),
+        sentAt: new Date().toISOString(),
+        participantRole: 'VIEWER'
+      }
+    });
+    
+    // Save event to outbox for reliable delivery
+    await this.outboxRepository.save(event, uuid());
   }
   
   /**
