@@ -18,7 +18,7 @@ export const downloadDocumentHandler = ControllerFactory.createQuery({
   
   includeSecurityContext: true,
   requireAuth: true, // Allow external users via invitation token
-  requiredRoles: undefined // Will be determined by invitation token or JWT
+  requiredRoles: undefined, // Will be determined by invitation token or JWT
   
   appServiceClass: class {
     private readonly signatureOrchestrator: any;

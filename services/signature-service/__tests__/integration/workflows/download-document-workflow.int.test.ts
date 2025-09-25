@@ -280,7 +280,7 @@ describe('Download Document Workflow', () => {
       const token = await workflowHelper.generateTestJwtToken(nonAuthorizedUser.userId, nonAuthorizedUser.email);
 
       const downloadResponse = await workflowHelper.downloadDocumentWithToken(envelopeId, undefined, token);
-      verifyDownloadFailure(downloadResponse, 403, 'not authorized');
+      verifyDownloadFailure(downloadResponse, 403, 'Access denied to envelope');
     });
 
     it('should prevent download with invalid invitation token', async () => {
@@ -300,7 +300,7 @@ describe('Download Document Workflow', () => {
       // 2. Try to download with invalid invitation token
       const downloadResponse = await workflowHelper.downloadDocumentWithToken(envelopeId, 'invalid-token');
 
-      verifyDownloadFailure(downloadResponse, 401, 'invalid');
+      verifyDownloadFailure(downloadResponse, 401, 'Invalid invitation token');
     });
   });
 
@@ -344,12 +344,12 @@ describe('Download Document Workflow', () => {
       expect(envelope.id).toBeDefined();
       const envelopeId = envelope.id;
 
-      // 2. Try to download with invalid expiration (too short: 60 seconds)
+      // 2. Try to download with invalid expiration (too short: 60 seconds, below minimum of 300)
       const invalidExpiration = 60;
       const downloadResponse = await workflowHelper.downloadDocumentWithCustomExpiration(envelopeId, invalidExpiration);
 
       // 3. Verify download failure
-      verifyDownloadFailure(downloadResponse, 400, 'expiration time must be between');
+      verifyDownloadFailure(downloadResponse, 400, 'Expiration time must be within configured limits');
     });
 
     it('should reject download with invalid expiration time (too long)', async () => {
@@ -366,12 +366,12 @@ describe('Download Document Workflow', () => {
       expect(envelope.id).toBeDefined();
       const envelopeId = envelope.id;
 
-      // 2. Try to download with invalid expiration (too long: 2 days = 172800 seconds)
+      // 2. Try to download with invalid expiration (too long: 2 days = 172800 seconds, above maximum of 86400)
       const invalidExpiration = 172800;
       const downloadResponse = await workflowHelper.downloadDocumentWithCustomExpiration(envelopeId, invalidExpiration);
 
       // 3. Verify download failure
-      verifyDownloadFailure(downloadResponse, 400, 'expiration time must be between');
+      verifyDownloadFailure(downloadResponse, 400, 'Expiration time must be within configured limits');
     });
   });
 });

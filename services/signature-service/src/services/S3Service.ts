@@ -168,10 +168,14 @@ export class S3Service {
    */
   async generatePresignedUrl(request: GeneratePresignedUrlRequest): Promise<string> {
     try {
-      // Validate input using domain rules
+      // Load configuration for consistent validation
+      const { loadConfig } = await import('../config/AppConfig');
+      const config = loadConfig();
+      
+      // Validate input using domain rules with consistent configuration
       validateGeneratePresignedUrlRequest(request, {
-        maxExpirationTime: 86400, // 24 hours (user can choose up to 1 day)
-        minExpirationTime: 300    // 5 minutes minimum
+        maxExpirationTime: config.documentDownload.maxExpirationSeconds, // 24 hours
+        minExpirationTime: config.documentDownload.minExpirationSeconds  // 5 minutes
       });
 
       const expiresIn = request.expiresIn || 3600; // Default 1 hour
@@ -396,6 +400,70 @@ export class S3Service {
   }
 
   /**
+   * Stores a signed document in S3
+   * @param request - Signed document storage request
+   * @returns Document result with S3 location and metadata
+   */
+  async storeSignedDocument(request: {
+    envelopeId: EnvelopeId;
+    signerId: SignerId;
+    signedDocumentContent: Buffer;
+    contentType: string;
+  }): Promise<DocumentResult> {
+    try {
+      // Generate document key for signed document
+      const documentKey = this.generateSignedDocumentKey(request.envelopeId, request.signerId);
+      const s3Key = S3Key.fromString(documentKey);
+
+      // Store signed document in S3
+      await this.s3EvidenceStorage.putObject({
+        bucket: this.bucketName,
+        key: documentKey,
+        body: request.signedDocumentContent,
+        contentType: request.contentType,
+        metadata: {
+          envelopeId: request.envelopeId.getValue(),
+          signerId: request.signerId.getValue(),
+          documentType: 'signed',
+          checksum: this.calculateChecksum(request.signedDocumentContent)
+        }
+      });
+
+      const documentResult: DocumentResult = {
+        documentKey,
+        s3Location: `s3://${this.bucketName}/${documentKey}`,
+        contentType: request.contentType,
+        size: request.signedDocumentContent.length
+      };
+
+      // Log audit event
+      await this.signatureAuditEventService.createSignerAuditEvent(
+        request.envelopeId.getValue(),
+        request.signerId.getValue(),
+        'DOCUMENT_STORED' as any,
+        `Signed document stored for envelope "${request.envelopeId.getValue()}"`,
+        'system',
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        {
+          envelopeId: request.envelopeId.getValue(),
+          signerId: request.signerId.getValue(),
+          s3Key: documentKey,
+          documentType: 'signed'
+        }
+      );
+
+      return documentResult;
+    } catch (error: unknown) {
+      throw new Error(
+        `Failed to store signed document for envelope ${request.envelopeId.getValue()}: ${error instanceof Error ? error.message : error}`
+      );
+    }
+  }
+
+  /**
    * Generates a document key for S3 storage
    * @param envelopeId - Envelope ID for the document
    * @param signerId - Signer ID for the document
@@ -404,6 +472,27 @@ export class S3Service {
   private generateDocumentKey(envelopeId: EnvelopeId, signerId: SignerId): string {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     return `envelopes/${envelopeId.getValue()}/signers/${signerId.getValue()}/document-${timestamp}.pdf`;
+  }
+
+  /**
+   * Generates a signed document key for S3 storage
+   * @param envelopeId - Envelope ID for the document
+   * @param signerId - Signer ID for the document
+   * @returns S3 key for signed document storage
+   */
+  private generateSignedDocumentKey(envelopeId: EnvelopeId, signerId: SignerId): string {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    return `envelopes/${envelopeId.getValue()}/signers/${signerId.getValue()}/signed-document-${timestamp}.pdf`;
+  }
+
+  /**
+   * Calculates checksum for document content
+   * @param content - Document content buffer
+   * @returns Checksum string
+   */
+  private calculateChecksum(content: Buffer): string {
+    const crypto = require('crypto');
+    return crypto.createHash('sha256').update(content).digest('hex');
   }
 
 }

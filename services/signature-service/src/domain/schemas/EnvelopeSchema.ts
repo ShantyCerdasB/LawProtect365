@@ -120,7 +120,7 @@ export const GetEnvelopesByUserQuerySchema = z.object({
   status: EnvelopeStatusSchema.optional(),
   limit: z.union([z.string(), z.number()])
     .transform(val => typeof val === 'string' ? parseInt(val, 10) : val)
-    .pipe(z.number().min(1).max(100))
+    .pipe(z.number().min(1, "Limit must be at least 1").max(100, "Limit cannot exceed 100"))
     .optional(), // ✅ Hacer opcional para permitir que se omita del query string
   cursor: z.string().optional(),
   includeSigners: z.string().optional().transform(val => val !== 'false') // Default true

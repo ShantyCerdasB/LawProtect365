@@ -293,13 +293,18 @@ export class EnvelopeOperations {
       country?: string;
     }
   ): Promise<{ statusCode: number; data: any }> {
+    // Generate mock signed document (PDF with visual signature)
+    const mockSignedPdf = this.generateMockSignedPdf();
+    const signedDocumentBase64 = mockSignedPdf.toString('base64');
+    
     const event = await createApiGatewayEvent({
       includeAuth: false,  // ✅ Para external users
       pathParameters: { id: envelopeId }, // ✅ Cambiar envelopeId por id
       body: JSON.stringify({
         invitationToken,
         signerId,
-        flattenedKey: "test-flattened-document.pdf", // Mock flattened document key
+        flattenedKey: "test-flattened-document.pdf", // Mock flattened document key (fallback)
+        signedDocument: signedDocumentBase64, // Mock signed document with visual signature
         consent
       }),
       headers: {
@@ -343,6 +348,10 @@ export class EnvelopeOperations {
       roles: [this.testUser.role]
     });
 
+    // Generate mock signed document (PDF with visual signature)
+    const mockSignedPdf = this.generateMockSignedPdf();
+    const signedDocumentBase64 = mockSignedPdf.toString('base64');
+
     const event = await createApiGatewayEvent({
       includeAuth: false,
       authToken: authToken,
@@ -350,7 +359,8 @@ export class EnvelopeOperations {
       body: JSON.stringify({
         envelopeId,
         signerId,
-        flattenedKey: "test-flattened-document.pdf", // Mock flattened document key
+        flattenedKey: "test-flattened-document.pdf", // Mock flattened document key (fallback)
+        signedDocument: signedDocumentBase64, // Mock signed document with visual signature
         consent
       }),
       headers: {
@@ -590,6 +600,71 @@ export class EnvelopeOperations {
       statusCode: result.statusCode,
       data: response.data || response
     };
+  }
+
+  /**
+   * Generate mock signed PDF for testing
+   * @returns Buffer containing a mock signed PDF
+   */
+  private generateMockSignedPdf(): Buffer {
+    // Generate a mock PDF with visual signature applied
+    const mockSignedPdfContent = `%PDF-1.4
+1 0 obj
+<<
+/Type /Catalog
+/Pages 2 0 R
+>>
+endobj
+
+2 0 obj
+<<
+/Type /Pages
+/Kids [3 0 R]
+/Count 1
+>>
+endobj
+
+3 0 obj
+<<
+/Type /Page
+/Parent 2 0 R
+/MediaBox [0 0 612 792]
+/Contents 4 0 R
+>>
+endobj
+
+4 0 obj
+<<
+/Length 100
+>>
+stream
+BT
+/F1 12 Tf
+72 720 Td
+(Signed Document) Tj
+72 700 Td
+(Signature Applied) Tj
+ET
+endstream
+endobj
+
+xref
+0 5
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000206 00000 n 
+trailer
+<<
+/Size 5
+/Root 1 0 R
+>>
+startxref
+350
+%%EOF`;
+
+    return Buffer.from(mockSignedPdfContent, 'utf-8');
   }
 
 }

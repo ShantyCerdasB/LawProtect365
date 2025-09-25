@@ -98,12 +98,27 @@ jest.mock('@lawprotect/shared-ts', () => ({
       }
     }),
     putObject: jest.fn().mockImplementation(async (params: any) => {
-      // Implementation for putObject if needed
+      // Store the object in mock storage
+      const { bucket, key, body } = params;
+      
+      // Initialize bucket storage if it doesn't exist
+      if (!bucketStorage.has(bucket)) {
+        bucketStorage.set(bucket, new Map());
+      }
+      
+      // Store the object
+      bucketStorage.get(bucket)!.set(key, Buffer.from(body));
+      
       return {};
     }),
     getObject: jest.fn().mockImplementation(async (bucket: string, key: string) => {
-      // Implementation for getObject if needed
-      return { body: Buffer.from('test content') };
+      // Get the object from mock storage
+      const bucketMap = bucketStorage.get(bucket);
+      if (!bucketMap || !bucketMap.has(key)) {
+        throw new Error(`Object not found: ${bucket}/${key}`);
+      }
+      
+      return { body: bucketMap.get(key)! };
     }),
     deleteObject: jest.fn().mockImplementation(async (bucket: string, key: string) => {
       // Implementation for deleteObject if needed

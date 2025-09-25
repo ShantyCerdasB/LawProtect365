@@ -374,8 +374,8 @@ describe('Get Envelopes By User Workflow', () => {
 
       // Should return 400 for invalid limit
       expect(getResponse.statusCode).toBe(400);
-      // ✅ FIX: El mensaje puede ser "Invalid query parameters" o contener "100"
-      expect(getResponse.data.message).toMatch(/limit|100|query parameters/i);
+      // ✅ FIX: El mensaje específico de Zod para límite muy grande
+      expect(getResponse.data.message).toContain("Limit cannot exceed 100");
     });
   });
 });

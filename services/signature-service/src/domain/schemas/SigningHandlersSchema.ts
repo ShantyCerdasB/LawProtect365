@@ -22,6 +22,9 @@ export const SignDocumentRequestSchema = z.object({
   // Document key (flattened document ready for signing)
   flattenedKey: z.string().optional(),
   
+  // Signed document (PDF with visual signature applied)
+  signedDocument: z.string().optional(), // Base64 del PDF firmado
+  
   // Consent data (required for all cases)
   consent: z.object({
     given: z.boolean(),

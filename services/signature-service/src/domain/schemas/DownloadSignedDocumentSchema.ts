@@ -20,7 +20,20 @@ export const DownloadDocumentPathSchema = z.object({
  * Supports both authenticated users and external users with invitation tokens
  */
 export const DownloadDocumentQuerySchema = z.object({
-  expiresIn: z.number().min(300).max(86400).optional(), // 5 minutes to 24 hours, no default
+  expiresIn: z.string().optional()
+    .transform((val) => val ? parseInt(val, 10) : undefined)
+    .refine((val) => {
+      if (val === undefined) return true;
+      if (isNaN(val)) return false;
+      
+      // Import configuration dynamically to avoid circular dependencies
+      const { loadConfig } = require('../../config/AppConfig');
+      const config = loadConfig();
+      return val >= config.documentDownload.minExpirationSeconds && 
+             val <= config.documentDownload.maxExpirationSeconds;
+    }, {
+      message: "Expiration time must be within configured limits"
+    }),
   invitationToken: z.string().optional() // For external users
 });
 

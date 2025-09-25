@@ -14,6 +14,8 @@ export interface SignDocumentRequest {
   invitationToken?: string;
   /** S3 key of the flattened document ready for signing */
   flattenedKey?: string;
+  /** Signed document (PDF with visual signature applied) */
+  signedDocument?: string;
   /** Hash of the document to be signed */
   documentHash: string;
   /** Hash of the signature */

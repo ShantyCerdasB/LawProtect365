@@ -431,28 +431,49 @@ export class SignatureOrchestrator {
         country: request.consent.country || securityContext.country
       }, userId);
       
-      // 4. Get document from S3 and apply signature
-      // Use flattenedKey from request if provided, otherwise use envelope's flattenedKey
-      const flattenedKey = request.flattenedKey 
-        ? EntityFactory.createValueObjects.s3Key(request.flattenedKey)
-        : envelope.getFlattenedKey();
+      // 4. Handle signed document from frontend
+      let signedDocumentKey: string;
+      let documentContent: Buffer;
+      let documentHash: string;
       
-      if (!flattenedKey) {
-        throw new Error(`Envelope ${envelopeId.getValue()} does not have a flattened document ready for signing. Please provide flattenedKey in the request or configure it in the envelope.`);
-      }
-      
-      // 5. Store flattenedKey if it's from request (first time flattening)
-      if (request.flattenedKey && !envelope.getFlattenedKey()) {
-        await this.signatureEnvelopeService.updateFlattenedKey(
+      if (request.signedDocument) {
+        // Frontend sent signed document (with visual signature applied)
+        const signedDocumentBuffer = Buffer.from(request.signedDocument, 'base64');
+        
+        // Store the signed document in S3
+        const signedDocumentResult = await this.s3Service.storeSignedDocument({
           envelopeId,
-          request.flattenedKey,
-          userId
-        );
+          signerId,
+          signedDocumentContent: signedDocumentBuffer,
+          contentType: 'application/pdf'
+        });
+        
+        signedDocumentKey = signedDocumentResult.documentKey;
+        documentContent = signedDocumentBuffer;
+        documentHash = sha256Hex(signedDocumentBuffer);
+      } else {
+        // Fallback to flattened document (legacy behavior)
+        const flattenedKey = request.flattenedKey 
+          ? EntityFactory.createValueObjects.s3Key(request.flattenedKey)
+          : envelope.getFlattenedKey();
+        
+        if (!flattenedKey) {
+          throw new Error(`Envelope ${envelopeId.getValue()} does not have a flattened document ready for signing. Please provide either signedDocument or flattenedKey in the request.`);
+        }
+        
+        // Store flattenedKey if it's from request (first time flattening)
+        if (request.flattenedKey && !envelope.getFlattenedKey()) {
+          await this.signatureEnvelopeService.updateFlattenedKey(
+            envelopeId,
+            request.flattenedKey,
+            userId
+          );
+        }
+        
+        documentContent = await this.s3Service.getDocumentContent(flattenedKey.getValue());
+        documentHash = sha256Hex(documentContent);
+        signedDocumentKey = flattenedKey.getValue(); // Use flattened key as fallback
       }
-      
-      const documentContent = await this.s3Service.getDocumentContent(flattenedKey.getValue());
-      const flattenedHash = sha256Hex(documentContent);
-      const documentHash = flattenedHash; // Use flattened hash for KMS signing
       
       // 6. Sign document with KMS
       const kmsResult = await this._kmsService.sign({
@@ -469,7 +490,7 @@ export class SignatureOrchestrator {
         timestamp: kmsResult.signedAt.toISOString()
       };
       
-      // 8. No need to store document again - it's already in S3 with visual signatures
+      // 8. Signed document is now stored in S3 (if provided by frontend)
       
       // 9. Update signer as signed
       await this.envelopeSignerService.markSignerAsSigned(
@@ -477,7 +498,7 @@ export class SignatureOrchestrator {
         {
           documentHash: documentHash,
           signatureHash: signature.sha256,
-          signedS3Key: flattenedKey.getValue(), // Use the original flattened key
+          signedS3Key: signedDocumentKey, // Use the signed document key
           kmsKeyId: process.env.KMS_SIGNER_KEY_ID!,
           algorithm: getDefaultSigningAlgorithm(),
           ipAddress: securityContext.ipAddress,
@@ -493,9 +514,17 @@ export class SignatureOrchestrator {
       );
       
       // 11. Update envelope with signed document using service method
+      console.log('🔍 DEBUG Updating envelope with signed document:', {
+        envelopeId: envelopeId.getValue(),
+        signedDocumentKey,
+        signatureSha256: signature.sha256,
+        signerId: signerId.getValue(),
+        userId
+      });
+      
       await this.signatureEnvelopeService.updateSignedDocument(
         envelopeId,
-        flattenedKey.getValue(),
+        signedDocumentKey,
         signature.sha256,
         signerId.getValue(),
         userId
@@ -506,8 +535,8 @@ export class SignatureOrchestrator {
         envelopeId,
         {
           sourceSha256: undefined, // sourceSha256 (calculated during document upload)
-          flattenedSha256: flattenedHash, // flattenedSha256
-          signedSha256: signature.sha256 // signedSha256
+          flattenedSha256: undefined, // flattenedSha256 (not used when signedDocument is provided)
+          signedSha256: documentHash // signedSha256 (hash of the signed document)
         },
         userId
       );
@@ -527,7 +556,7 @@ export class SignatureOrchestrator {
           envelopeId: envelopeId.getValue(),
           signerId: signerId.getValue(),
           signatureId: signature.id,
-          signedDocumentKey: flattenedKey.getValue(),
+          signedDocumentKey: signedDocumentKey,
           consentId: consent.getId().getValue(),
           documentHash: documentHash,
           signatureHash: signature.sha256,

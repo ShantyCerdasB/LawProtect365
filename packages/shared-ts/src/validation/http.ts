@@ -49,10 +49,14 @@ export const validateQuery = <S extends z.ZodTypeAny>(
   const normalized = Object.fromEntries(Object.entries(src));
   const out = schema.safeParse(normalized);
   if (!out.success) {
+    // Use specific error message from schema if available, otherwise use generic message
+    const firstIssue = out.error.issues[0];
+    const errorMessage = firstIssue?.message || "Invalid query parameters";
+    
     throw new AppError(
       ErrorCodes.COMMON_BAD_REQUEST,
       400,
-      "Invalid query parameters",
+      errorMessage,
       { issues: out.error.issues }
     );
   }
