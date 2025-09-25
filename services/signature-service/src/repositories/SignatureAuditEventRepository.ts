@@ -332,6 +332,32 @@ export class SignatureAuditEventRepository extends RepositoryBase<SignatureAudit
   }
 
   /**
+   * Gets all audit events for an envelope (no pagination)
+   * @param envelopeId - Envelope ID
+   * @returns Array of all audit event entities
+   */
+  async getAllByEnvelope(envelopeId: string): Promise<SignatureAuditEvent[]> {
+    try {
+      const auditEvents = await this.prisma.signatureAuditEvent.findMany({
+        where: { envelopeId },
+        orderBy: { createdAt: 'desc' } // Más recientes primero
+      });
+
+      return auditEvents.map((auditEvent: any) => this.toDomain(auditEvent));
+    } catch (error) {
+      console.error('Failed to get all audit events by envelope', {
+        error: error instanceof Error ? error.message : error,
+        envelopeId
+      });
+      throw documentS3Error({
+        operation: 'getAllByEnvelope',
+        envelopeId,
+        originalError: error instanceof Error ? error.message : error
+      });
+    }
+  }
+
+  /**
    * Gets audit trail for a user
    * @param userId - User ID
    * @param limit - Maximum number of results

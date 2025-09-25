@@ -24,10 +24,14 @@ export const validatePath = <S extends z.ZodTypeAny>(
   const input = { ...(evt.pathParameters ?? {}) } as Record<string, unknown>;
   const out = schema.safeParse(input);
   if (!out.success) {
+    // Extract the first error message from Zod issues
+    const firstIssue = out.error.issues[0];
+    const specificMessage = firstIssue?.message || "Invalid path parameters";
+    
     throw new AppError(
       ErrorCodes.COMMON_BAD_REQUEST,
       400,
-      "Invalid path parameters",
+      specificMessage,
       { issues: out.error.issues }
     );
   }

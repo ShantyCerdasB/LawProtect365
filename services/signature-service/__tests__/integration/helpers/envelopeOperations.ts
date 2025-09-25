@@ -12,6 +12,7 @@ import { updateEnvelopeHandler } from '../../../src/handlers/envelopes/UpdateEnv
 import { sendEnvelopeHandler } from '../../../src/handlers/envelopes/SendEnvelopeHandler';
 import { getEnvelopeHandler } from '../../../src/handlers/envelopes/GetEnvelopeHandler';
 import { getEnvelopesByUserHandler } from '../../../src/handlers/envelopes/GetEnvelopesByUserHandler';
+import { getAuditTrailHandler } from '../../../src/handlers/audit/GetAuditTrailHandler';
 import { signDocumentHandler } from '../../../src/handlers/signing/SignDocumentHandler';
 import { declineSignerHandler } from '../../../src/handlers/signing/DeclineSignerHandler';
 import { cancelEnvelopeHandler } from '../../../src/handlers/envelopes/CancelEnvelopeHandler';
@@ -755,6 +756,60 @@ startxref
     
     const handler = require('../../../src/handlers/signing/ShareDocumentViewHandler').shareDocumentViewHandler;
     const result = await handler(event, {} as any, () => {});
+    const response = JSON.parse(result.body);
+    
+    return {
+      statusCode: result.statusCode,
+      data: response.data || response
+    };
+  }
+
+  /**
+   * Get audit trail for an envelope
+   * @param envelopeId - ID of the envelope
+   * @param user - User to get audit trail as
+   * @returns Promise that resolves to the audit trail response
+   */
+  async getAuditTrail(
+    envelopeId: string, 
+    user: any
+  ): Promise<{ statusCode: number; data: any }> {
+    const token = await generateTestJwtToken({ 
+      sub: user.userId, 
+      email: user.email, 
+      roles: ['admin'], 
+      scopes: [] 
+    });
+    
+    const event = await createApiGatewayEvent({ 
+      includeAuth: false, 
+      authToken: token,
+      pathParameters: { id: envelopeId }
+    });
+    
+    const result = await getAuditTrailHandler(event) as any;
+    const response = JSON.parse(result.body);
+    
+    return {
+      statusCode: result.statusCode,
+      data: response.data || response
+    };
+  }
+
+  /**
+   * Get audit trail without authentication
+   * @param envelopeId - ID of the envelope
+   * @returns Promise that resolves to the audit trail response
+   */
+  async getAuditTrailWithoutAuth(
+    envelopeId: string
+  ): Promise<{ statusCode: number; data: any }> {
+    const event = await createApiGatewayEvent({ 
+      includeAuth: false, 
+      pathParameters: { id: envelopeId }
+    });
+    
+    const result = await getAuditTrailHandler(event) as any;
     const response = JSON.parse(result.body);
     
     return {

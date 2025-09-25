@@ -488,5 +488,35 @@ export class WorkflowTestHelper {
     return this.databaseHelper.getInvitationToken(token);
   }
 
+  /**
+   * Get audit trail for an envelope
+   * @param envelopeId - ID of the envelope
+   * @param user - User to get audit trail as
+   * @returns Promise that resolves to the audit trail response
+   */
+  async getAuditTrail(
+    envelopeId: string, 
+    user: any
+  ): Promise<{ statusCode: number; data: any }> {
+    if (!this.envelopeOperations) {
+      throw new Error('WorkflowTestHelper not initialized. Call initialize() first.');
+    }
+    return this.envelopeOperations.getAuditTrail(envelopeId, user);
+  }
+
+  /**
+   * Get audit trail without authentication
+   * @param envelopeId - ID of the envelope
+   * @returns Promise that resolves to the audit trail response
+   */
+  async getAuditTrailWithoutAuth(
+    envelopeId: string
+  ): Promise<{ statusCode: number; data: any }> {
+    if (!this.envelopeOperations) {
+      throw new Error('WorkflowTestHelper not initialized. Call initialize() first.');
+    }
+    return this.envelopeOperations.getAuditTrailWithoutAuth(envelopeId);
+  }
+
 }
 

@@ -1153,6 +1153,61 @@ export class SignatureOrchestrator {
   }
 
   /**
+   * Gets complete audit trail for an envelope
+   * @param envelopeId - The envelope ID
+   * @param userId - The user requesting the audit trail
+   * @returns Promise resolving to audit trail result
+   */
+  async getAuditTrail(
+    envelopeId: EnvelopeId,
+    userId: string
+  ): Promise<{
+    envelopeId: string;
+    events: Array<{
+      id: string;
+      eventType: string;
+      description: string;
+      userEmail?: string;
+      userName?: string;
+      createdAt: Date;
+      metadata?: Record<string, any>;
+    }>;
+  }> {
+    try {
+      // 1. Validate envelope exists and user has access
+      const envelope = await this.signatureEnvelopeService.getEnvelopeWithSigners(envelopeId);
+      if (!envelope) {
+        throw envelopeNotFound(`Envelope with ID ${envelopeId.getValue()} not found`);
+      }
+
+      // 2. Validate authorization - only the owner can access audit trail
+      EnvelopeAccessValidationRule.validateEnvelopeModificationAccess(envelope, userId);
+
+      // 3. Get all audit events for the envelope
+      const auditEvents = await this.signatureAuditEventService.getAllByEnvelope(envelopeId.getValue());
+
+      // 4. Transform events to frontend-friendly format
+      const transformedEvents = auditEvents.map((event: any) => ({
+        id: event.getId().getValue(),
+        eventType: event.getEventType(),
+        description: event.getDescription(),
+        userEmail: event.getUserEmail(),
+        userName: event.getUserEmail(),
+        createdAt: event.getCreatedAt(),
+        metadata: event.getMetadata()
+      }));
+
+      return {
+        envelopeId: envelopeId.getValue(),
+        events: transformedEvents
+      };
+    } catch (error) {
+      this.handleOrchestrationError(error as Error, 'get audit trail');
+    }
+  }
+
+
+  /**
    * Handles orchestration errors
    * @param error - The error that occurred
    * @param operation - The operation that failed

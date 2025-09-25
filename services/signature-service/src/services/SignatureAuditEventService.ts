@@ -240,4 +240,13 @@ export class SignatureAuditEventService {
       lastActivity
     };
   }
+
+  /**
+   * Gets all audit events for an envelope (no pagination)
+   * @param envelopeId - Envelope ID
+   * @returns Array of all audit event entities
+   */
+  async getAllByEnvelope(envelopeId: string): Promise<SignatureAuditEvent[]> {
+    return this.signatureAuditEventRepository.getAllByEnvelope(envelopeId);
+  }
 }

@@ -137,5 +137,13 @@ export type CreateEnvelopeRequest = z.infer<typeof CreateEnvelopeSchema>;
 export type UpdateEnvelopeRequest = z.infer<typeof UpdateEnvelopeSchema>;
 export type EnvelopeIdParams = z.infer<typeof EnvelopeIdSchema>;
 export type EnvelopeQuery = z.infer<typeof EnvelopeQuerySchema>;
+/**
+ * Schema for getting audit trail (no query parameters needed)
+ */
+export const GetAuditTrailQuerySchema = z.object({
+  // No query parameters needed since we get all events
+});
+
 export type GetEnvelopeQuery = z.infer<typeof GetEnvelopeQuerySchema>;
 export type GetEnvelopesByUserQuery = z.infer<typeof GetEnvelopesByUserQuerySchema>;
+export type GetAuditTrailQuery = z.infer<typeof GetAuditTrailQuerySchema>;
