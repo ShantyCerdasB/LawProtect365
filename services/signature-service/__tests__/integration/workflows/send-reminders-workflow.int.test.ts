@@ -23,7 +23,6 @@ import { setupReminderMock } from '../helpers/mockSetupHelper';
 setupReminderMock();
 
 import { WorkflowTestHelper } from '../helpers/workflowHelpers';
-import { TestDataFactory } from '../helpers/testDataFactory';
 import { setupEnvelopeWithSigners, setupBasicEnvelope } from '../helpers/testSetupHelpers';
 
 describe('Send Reminders Workflow Integration Tests', () => {

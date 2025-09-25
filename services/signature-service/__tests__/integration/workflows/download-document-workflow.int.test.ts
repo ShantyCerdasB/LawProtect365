@@ -21,7 +21,7 @@ setupReminderMock();
 
 import { WorkflowTestHelper } from '../helpers/workflowHelpers';
 import { TestDataFactory } from '../helpers/testDataFactory';
-import { secureRandomString, generateTestIpAddress } from '../helpers/testHelpers';
+import { generateTestIpAddress } from '../helpers/testHelpers';
 import { 
   clearSendEnvelopeMockData 
 } from '../helpers/sendEnvelopeHelpers';
@@ -263,10 +263,9 @@ describe('Download Document Workflow', () => {
       });
       expect(sendResponse.statusCode).toBe(200);
 
-      // 4. Get invitation tokens
+      // 4. Verify tokens were generated
       expect(sendResponse.data.tokens).toBeDefined();
       expect(sendResponse.data.tokens).toHaveLength(1);
-      const invitationTokens = sendResponse.data.tokens.map((t: any) => t.token);
 
       // 5. Download document with custom expiration (30 minutes = 1800 seconds)
       const customExpiration = 1800;

@@ -18,7 +18,6 @@ setupReminderMock();
 
 import { WorkflowTestHelper } from '../helpers/workflowHelpers';
 import { TestDataFactory } from '../helpers/testDataFactory';
-import { secureRandomString } from '../helpers/testHelpers';
 
 describe('Get Envelopes By User Workflow', () => {
   let workflowHelper: WorkflowTestHelper;

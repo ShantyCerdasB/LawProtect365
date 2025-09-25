@@ -42,6 +42,7 @@ export const downloadDocumentHandler = ControllerFactory.createQuery({
           params.securityContext
         );
       } catch (error) {
+        // Re-throw the error to be handled by the error middleware
         throw error;
       }
     }

@@ -6,6 +6,7 @@
  */
 
 import { z, UuidV4, SignerStatus } from '@lawprotect/shared-ts';
+import { EnvelopeCommonFieldsSchema } from './CommonSchemas';
 
 /**
  * Schema for envelope ID in path parameters
@@ -70,33 +71,9 @@ export const GetEnvelopeResponseSchema = z.object({
     status: z.string(), // Will be EnvelopeStatus enum value
     signingOrderType: z.string(), // Will be SigningOrderType enum value
     originType: z.string(), // Will be DocumentOriginType enum value
-    templateId: z.string().optional(),
-    templateVersion: z.string().optional(),
     
-    // S3 pipeline keys
-    sourceKey: z.string().optional(),
-    metaKey: z.string().optional(),
-    flattenedKey: z.string().optional(),
-    signedKey: z.string().optional(),
-    
-    // Content integrity hashes
-    sourceSha256: z.string().optional(),
-    flattenedSha256: z.string().optional(),
-    signedSha256: z.string().optional(),
-    
-    // Lifecycle timestamps
-    sentAt: z.string().datetime().optional(),
-    completedAt: z.string().datetime().optional(),
-    cancelledAt: z.string().datetime().optional(),
-    declinedAt: z.string().datetime().optional(),
-    declinedBySignerId: z.string().uuid().optional(),
-    declinedReason: z.string().optional(),
-    expiresAt: z.string().datetime().optional(),
-    
-    // Audit timestamps
-    createdAt: z.string().datetime(),
-    updatedAt: z.string().datetime(),
-    
+    // Common envelope fields (template, S3 keys, hashes, timestamps)
+  }).merge(EnvelopeCommonFieldsSchema).extend({
     // Optional fields for backward compatibility (not in Prisma schema)
     customFields: z.record(z.unknown()).optional(),
     tags: z.array(z.string()).optional(),

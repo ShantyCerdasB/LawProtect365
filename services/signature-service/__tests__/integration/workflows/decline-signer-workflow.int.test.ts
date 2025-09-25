@@ -24,7 +24,7 @@ setupDeclineSignerMock();
 
 import { WorkflowTestHelper } from '../helpers/workflowHelpers';
 import { TestDataFactory } from '../helpers/testDataFactory';
-import { secureRandomString, generateTestIpAddress } from '../helpers/testHelpers';
+import { generateTestIpAddress } from '../helpers/testHelpers';
 import { 
   verifyInvitationTokens,
   clearSendEnvelopeMockData 
@@ -33,8 +33,7 @@ import {
   verifySignatureInDatabase,
   verifyConsentRecord,
   verifyEnvelopeProgress,
-  createTestConsent,
-  getSigningVerificationSummary
+  createTestConsent
 } from '../helpers/signDocumentHelpers';
 import {
   verifySignerDeclined,

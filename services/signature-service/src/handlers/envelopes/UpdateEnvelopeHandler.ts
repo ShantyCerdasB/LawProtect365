@@ -42,9 +42,10 @@ export const updateEnvelopeHandler = ControllerFactory.createCommand({
       );
 
       return result;
-    } catch (error) {
-      throw error;
-    }
+      } catch (error) {
+        // Re-throw the error to be handled by the error middleware
+        throw error;
+      }
   }
   },
   

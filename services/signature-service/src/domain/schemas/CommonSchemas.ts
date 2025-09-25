@@ -34,7 +34,71 @@ export const EnvelopeMetadataSchema = z.object({
 });
 
 /**
+ * Common template fields schema for envelopes
+ */
+export const EnvelopeTemplateFieldsSchema = z.object({
+  templateId: z.string().optional(),
+  templateVersion: z.string().optional()
+});
+
+/**
+ * Common S3 pipeline keys schema for envelopes
+ */
+export const EnvelopeS3KeysSchema = z.object({
+  sourceKey: z.string().optional(),
+  metaKey: z.string().optional(),
+  flattenedKey: z.string().optional(),
+  signedKey: z.string().optional()
+});
+
+/**
+ * Common content integrity hashes schema for envelopes
+ */
+export const EnvelopeContentHashesSchema = z.object({
+  sourceSha256: z.string().regex(/^[a-f0-9]{64}$/i, 'Source hash must be a valid SHA-256 hash').optional(),
+  flattenedSha256: z.string().regex(/^[a-f0-9]{64}$/i, 'Flattened hash must be a valid SHA-256 hash').optional(),
+  signedSha256: z.string().regex(/^[a-f0-9]{64}$/i, 'Signed hash must be a valid SHA-256 hash').optional()
+});
+
+/**
+ * Common lifecycle timestamps schema for envelopes
+ */
+export const EnvelopeLifecycleTimestampsSchema = z.object({
+  sentAt: z.string().datetime().optional(),
+  completedAt: z.string().datetime().optional(),
+  cancelledAt: z.string().datetime().optional(),
+  declinedAt: z.string().datetime().optional(),
+  declinedBySignerId: z.string().uuid().optional(),
+  declinedReason: z.string().optional(),
+  expiresAt: z.string().datetime().optional()
+});
+
+/**
+ * Common audit timestamps schema for envelopes
+ */
+export const EnvelopeAuditTimestampsSchema = z.object({
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime()
+});
+
+/**
+ * Combined common envelope fields schema
+ * Contains all shared fields between GetEnvelope and UpdateEnvelope schemas
+ */
+export const EnvelopeCommonFieldsSchema = EnvelopeTemplateFieldsSchema
+  .merge(EnvelopeS3KeysSchema)
+  .merge(EnvelopeContentHashesSchema)
+  .merge(EnvelopeLifecycleTimestampsSchema)
+  .merge(EnvelopeAuditTimestampsSchema);
+
+/**
  * Type inference from common schemas
  */
 export type SignerData = z.infer<typeof SignerDataSchema>;
 export type EnvelopeMetadata = z.infer<typeof EnvelopeMetadataSchema>;
+export type EnvelopeTemplateFields = z.infer<typeof EnvelopeTemplateFieldsSchema>;
+export type EnvelopeS3Keys = z.infer<typeof EnvelopeS3KeysSchema>;
+export type EnvelopeContentHashes = z.infer<typeof EnvelopeContentHashesSchema>;
+export type EnvelopeLifecycleTimestamps = z.infer<typeof EnvelopeLifecycleTimestampsSchema>;
+export type EnvelopeAuditTimestamps = z.infer<typeof EnvelopeAuditTimestampsSchema>;
+export type EnvelopeCommonFields = z.infer<typeof EnvelopeCommonFieldsSchema>;

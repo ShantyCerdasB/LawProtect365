@@ -160,6 +160,7 @@ export async function startMockJwksServer(): Promise<void> {
     });
     
   } catch (error) {
+    // Re-throw the error to be handled by the caller
     throw error;
   }
 }

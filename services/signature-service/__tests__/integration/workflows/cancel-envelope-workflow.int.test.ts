@@ -23,14 +23,13 @@ setupCancelEnvelopeMock();
 
 import { WorkflowTestHelper } from '../helpers/workflowHelpers';
 import { TestDataFactory } from '../helpers/testDataFactory';
-import { secureRandomString, generateTestIpAddress } from '../helpers/testHelpers';
+import { generateTestIpAddress } from '../helpers/testHelpers';
 import { 
   clearSendEnvelopeMockData 
 } from '../helpers/sendEnvelopeHelpers';
 import {
   verifyEnvelopeCancelled,
   verifyCancellationAuditEvent,
-  verifyCancellationNotificationEvent,
   getCancellationVerificationSummary,
   clearCancellationMockData
 } from '../helpers/cancelEnvelopeHelpers';
