@@ -118,7 +118,6 @@ export class SigningOrderValidationRule {
 
     // If we reach here, it's an internal signer but not the owner
     // This shouldn't happen in INVITEES_FIRST, but if it does, allow it
-    return;
   }
 
   /**

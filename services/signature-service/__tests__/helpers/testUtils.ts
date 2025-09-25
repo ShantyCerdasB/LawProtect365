@@ -90,7 +90,9 @@ export class TestUtils {
    * @returns A test IP address
    */
   static createTestIpAddress(): string {
-    return '192.168.1.1';
+    // Import generateTestIpAddress from testHelpers to avoid circular dependency
+    const { generateTestIpAddress } = require('../integration/helpers/testHelpers');
+    return generateTestIpAddress();
   }
 
   /**

@@ -17,7 +17,7 @@
     "posttest:integration": "npm run dynamodb:stop",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "dynamodb:start": "tsx scripts/startDynamoDB.ts",
-    "dynamodb:stop": "taskkill /F /IM java.exe /FI \"WINDOWTITLE eq DynamoDB Local*\" 2>nul || pkill -f dynamodb-local || true",
+    "dynamodb:stop": "taskkill /F /IM java.exe /FI \"WINDOWTITLE eq DynamoDB Local*\" >nul 2>&1 || pkill -f dynamodb-local >/dev/null 2>&1 || true",
     "dynamodb:create-tables": "tsx scripts/createLocalTables.ts"
   },
   "dependencies": {

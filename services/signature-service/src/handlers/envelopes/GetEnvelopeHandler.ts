@@ -8,8 +8,7 @@
 
 import { ControllerFactory } from '@lawprotect/shared-ts';
 import { ServiceFactory } from '../../infrastructure/factories/ServiceFactory';
-import { GetEnvelopeQuerySchema } from '../../domain/schemas/EnvelopeSchema';
-import { EnvelopeIdSchema } from '../../domain/schemas/EnvelopeSchema';
+import { GetEnvelopeQuerySchema, EnvelopeIdSchema } from '../../domain/schemas/EnvelopeSchema';
 import { EnvelopeId } from '../../domain/value-objects/EnvelopeId';
 
 /**

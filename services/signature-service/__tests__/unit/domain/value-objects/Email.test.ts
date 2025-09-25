@@ -7,7 +7,6 @@
 
 import { Email } from '../../../../src/domain/value-objects/Email';
 import { BadRequestError } from '@lawprotect/shared-ts';
-import { TestUtils } from '../../../helpers/testUtils';
 
 describe('Email', () => {
   describe('Constructor and Validation', () => {

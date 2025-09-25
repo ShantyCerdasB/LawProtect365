@@ -7,7 +7,7 @@
  */
 
 // Using global jest - no import needed in setupFiles
-import { promises as fs, statSync } from 'fs';
+import { promises as fs } from 'fs';
 import * as path from 'path';
 import { join } from 'path';
 import { tmpdir } from 'os';
@@ -30,6 +30,7 @@ async function initializeTempStorage(): Promise<void> {
     await fs.mkdir(tempStorageDir, { recursive: true });
   } catch (error) {
     // Directory might already exist, ignore error
+    console.debug('Directory creation ignored:', error);
   }
 }
 
@@ -263,6 +264,7 @@ async function handleDeleteObject(input: any): Promise<any> {
       await fs.unlink(filePath);
     } catch (error) {
       // File might not exist, ignore error
+      console.debug('File deletion ignored:', error);
     }
   }
   
@@ -360,5 +362,6 @@ export async function cleanupS3MockStorage(): Promise<void> {
     bucketStorage.clear();
   } catch (error) {
     // Ignore cleanup errors
+    console.debug('Cleanup error ignored:', error);
   }
 }

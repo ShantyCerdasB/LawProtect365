@@ -9,6 +9,7 @@
 import { MultiUserTestHelper } from '../helpers/multiUserTestHelper';
 import { TestDataFactory } from '../helpers/testDataFactory';
 import { TestUtils } from '../../helpers/testUtils';
+import { secureRandomString } from '../helpers/testHelpers';
 
 // Mock SignatureOrchestrator to bypass OutboxRepository
 jest.mock('../../../src/services/SignatureOrchestrator', () => {
@@ -67,7 +68,7 @@ jest.mock('../../../src/services/SignatureOrchestrator', () => {
                 eventType: 'ENVELOPE_INVITATION',
                 message: options.message || 'You have been invited to sign a document'
               },
-              id: `mock-${Date.now()}-${Math.random()}`,
+              id: `mock-${Date.now()}-${secureRandomString(8)}`,
               timestamp: new Date().toISOString()
             });
 

@@ -205,7 +205,7 @@ export abstract class EntityFactory {
   /**
    * Factory methods for creating value objects from primitive types
    */
-  static createValueObjects = {
+  static readonly createValueObjects = {
     /**
      * Creates EnvelopeId from string
      * @param value - The string value to convert

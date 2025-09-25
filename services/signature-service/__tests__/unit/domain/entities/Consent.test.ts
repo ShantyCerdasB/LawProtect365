@@ -17,6 +17,7 @@ import {
   consentUserAgentRequired
 } from '../../../../src/signature-errors';
 import { TestUtils } from '../../../helpers/testUtils';
+import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
 
 // Helper function to create Consent with custom parameters
 function createConsentWithParams(params: {
@@ -40,7 +41,7 @@ function createConsentWithParams(params: {
     params.consentGiven ?? true,
     params.consentTimestamp || new Date('2024-01-01T00:00:00Z'),
     params.consentText || 'I consent to electronic signing',
-    params.ipAddress || '192.168.1.1',
+    params.ipAddress || generateTestIpAddress(),
     params.userAgent || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
     params.createdAt || new Date('2024-01-01T00:00:00Z'),
     params.updatedAt || new Date('2024-01-01T00:00:00Z')
@@ -57,6 +58,7 @@ describe('Consent', () => {
       const consentTimestamp = new Date('2024-01-01T10:00:00Z');
       const createdAt = new Date('2024-01-01T00:00:00Z');
       const updatedAt = new Date('2024-01-01T00:00:00Z');
+      const ipAddress = generateTestIpAddress();
 
       const consent = createConsentWithParams({
         id,
@@ -66,7 +68,7 @@ describe('Consent', () => {
         consentGiven: true,
         consentTimestamp,
         consentText: 'I agree to electronic signing',
-        ipAddress: '10.0.0.1',
+        ipAddress: ipAddress,
         userAgent: 'Chrome/91.0.4472.124',
         createdAt,
         updatedAt
@@ -79,23 +81,24 @@ describe('Consent', () => {
       expect(consent.getConsentGiven()).toBe(true);
       expect(consent.getConsentTimestamp()).toEqual(consentTimestamp);
       expect(consent.getConsentText()).toBe('I agree to electronic signing');
-      expect(consent.getIpAddress()).toBe('10.0.0.1');
+      expect(consent.getIpAddress()).toBe(ipAddress);
       expect(consent.getUserAgent()).toBe('Chrome/91.0.4472.124');
       expect(consent.getCreatedAt()).toEqual(createdAt);
       expect(consent.getUpdatedAt()).toEqual(updatedAt);
     });
 
     it('should create consent with minimal properties', () => {
+      const ipAddress = generateTestIpAddress();
       const consent = createConsentWithParams({
         consentGiven: false,
         consentText: 'I do not consent',
-        ipAddress: '127.0.0.1',
+        ipAddress: ipAddress,
         userAgent: 'Test Agent'
       });
 
       expect(consent.getConsentGiven()).toBe(false);
       expect(consent.getConsentText()).toBe('I do not consent');
-      expect(consent.getIpAddress()).toBe('127.0.0.1');
+      expect(consent.getIpAddress()).toBe(ipAddress);
       expect(consent.getUserAgent()).toBe('Test Agent');
       expect(consent.getSignatureId()).toBeUndefined();
     });
@@ -116,6 +119,7 @@ describe('Consent', () => {
       const signerId = new SignerId(TestUtils.generateUuid());
       const signatureId = new SignerId(TestUtils.generateUuid());
       const consentTimestamp = new Date('2024-01-01T10:00:00Z');
+      const ipAddress = generateTestIpAddress();
 
       const consent = Consent.create({
         id,
@@ -125,7 +129,7 @@ describe('Consent', () => {
         consentGiven: true,
         consentTimestamp,
         consentText: 'I consent to electronic signing',
-        ipAddress: '192.168.1.100',
+        ipAddress: ipAddress,
         userAgent: 'Firefox/89.0'
       });
 
@@ -136,7 +140,7 @@ describe('Consent', () => {
       expect(consent.getConsentGiven()).toBe(true);
       expect(consent.getConsentTimestamp()).toEqual(consentTimestamp);
       expect(consent.getConsentText()).toBe('I consent to electronic signing');
-      expect(consent.getIpAddress()).toBe('192.168.1.100');
+      expect(consent.getIpAddress()).toBe(ipAddress);
       expect(consent.getUserAgent()).toBe('Firefox/89.0');
       expect(consent.getCreatedAt()).toBeInstanceOf(Date);
       expect(consent.getUpdatedAt()).toBeInstanceOf(Date);
@@ -156,7 +160,7 @@ describe('Consent', () => {
         consentGiven: false,
         consentTimestamp,
         consentText: 'I do not consent',
-        ipAddress: '10.0.0.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Safari/14.1'
       });
 
@@ -206,7 +210,7 @@ describe('Consent', () => {
       const consent = createConsentWithParams({
         consentGiven: true,
         consentText: 'I consent to electronic signing',
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Mozilla/5.0'
       });
 
@@ -217,7 +221,7 @@ describe('Consent', () => {
       const consent = createConsentWithParams({
         consentGiven: false,
         consentText: 'I do not consent',
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Mozilla/5.0'
       });
 
@@ -230,7 +234,7 @@ describe('Consent', () => {
       const consent = createConsentWithParams({
         consentGiven: true,
         consentText: 'I consent to electronic signing',
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Mozilla/5.0'
       });
 
@@ -245,7 +249,7 @@ describe('Consent', () => {
       const consent = createConsentWithParams({
         consentGiven: true,
         consentText: 'I consent to electronic signing',
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Mozilla/5.0'
       });
 
@@ -260,7 +264,7 @@ describe('Consent', () => {
       const consent = createConsentWithParams({
         consentGiven: true,
         consentText: '   ',
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Mozilla/5.0'
       });
 
@@ -272,7 +276,7 @@ describe('Consent', () => {
       const consent = createConsentWithParams({
         consentGiven: true,
         consentText: 'I consent to electronic signing',
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Mozilla/5.0'
       });
 
@@ -299,7 +303,7 @@ describe('Consent', () => {
       const consent = createConsentWithParams({
         consentGiven: true,
         consentText: 'I consent to electronic signing',
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Mozilla/5.0'
       });
 
@@ -314,7 +318,7 @@ describe('Consent', () => {
       const consent = createConsentWithParams({
         consentGiven: true,
         consentText: 'I consent to electronic signing',
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: '   '
       });
 
@@ -328,7 +332,7 @@ describe('Consent', () => {
       const consent = createConsentWithParams({
         consentGiven: true,
         consentText: longConsentText,
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Mozilla/5.0'
       });
 
@@ -341,7 +345,7 @@ describe('Consent', () => {
       const consent = createConsentWithParams({
         consentGiven: true,
         consentText: specialConsentText,
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Mozilla/5.0'
       });
 
@@ -367,7 +371,7 @@ describe('Consent', () => {
         consentGiven: true,
         consentTimestamp,
         consentText: 'I consent to electronic signing',
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Mozilla/5.0',
         createdAt,
         updatedAt
@@ -383,7 +387,7 @@ describe('Consent', () => {
         consentGiven: true,
         consentTimestamp: consentTimestamp.toISOString(),
         consentText: 'I consent to electronic signing',
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Mozilla/5.0',
         createdAt: createdAt.toISOString(),
         updatedAt: updatedAt.toISOString()
@@ -391,11 +395,12 @@ describe('Consent', () => {
     });
 
     it('should serialize consent to JSON without signature ID', () => {
+      const ipAddress = generateTestIpAddress();
       const consent = createConsentWithParams({
         signatureId: undefined,
         consentGiven: false,
         consentText: 'I do not consent',
-        ipAddress: '127.0.0.1',
+        ipAddress: ipAddress,
         userAgent: 'Test Agent'
       });
 
@@ -404,7 +409,7 @@ describe('Consent', () => {
       expect(json.signatureId).toBeUndefined();
       expect(json.consentGiven).toBe(false);
       expect(json.consentText).toBe('I do not consent');
-      expect(json.ipAddress).toBe('127.0.0.1');
+      expect(json.ipAddress).toBe(ipAddress);
       expect(json.userAgent).toBe('Test Agent');
     });
 
@@ -448,7 +453,7 @@ describe('Consent', () => {
       const consent = createConsentWithParams({
         consentGiven: true,
         consentText: 'I consent to electronic signing',
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: longUserAgent
       });
 
@@ -462,7 +467,7 @@ describe('Consent', () => {
       const consent = createConsentWithParams({
         consentGiven: true,
         consentText: unicodeConsentText,
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Mozilla/5.0'
       });
 
@@ -477,7 +482,7 @@ describe('Consent', () => {
         consentGiven: true,
         consentTimestamp: futureTimestamp,
         consentText: 'I consent to electronic signing',
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Mozilla/5.0'
       });
 
@@ -492,7 +497,7 @@ describe('Consent', () => {
         consentGiven: true,
         consentTimestamp: pastTimestamp,
         consentText: 'I consent to electronic signing',
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Mozilla/5.0'
       });
 

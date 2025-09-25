@@ -8,7 +8,7 @@
 import { randomUUID } from 'crypto';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { loadConfig } from '../../../src/config';
-import { generateTestPdf, generateTestJwtToken, createApiGatewayEvent } from './testHelpers';
+import { generateTestPdf, generateTestJwtToken, createApiGatewayEvent, generateTestIpAddress } from './testHelpers';
 import { TestUser } from './testTypes';
 
 /**
@@ -111,7 +111,7 @@ export class TestEnvironmentManager {
       authToken: token,
       headers: {
         'x-country': 'US',
-        'x-forwarded-for': '127.0.0.1'
+        'x-forwarded-for': generateTestIpAddress()
       }
     });
     

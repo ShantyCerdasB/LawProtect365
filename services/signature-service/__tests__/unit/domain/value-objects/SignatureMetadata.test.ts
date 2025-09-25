@@ -6,34 +6,37 @@
  */
 
 import { SignatureMetadata } from '../../../../src/domain/value-objects/SignatureMetadata';
+import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
 
 describe('SignatureMetadata', () => {
   describe('Constructor and Getters', () => {
     it('should create SignatureMetadata with all properties', () => {
+      const ipAddress = generateTestIpAddress();
       const metadata = new SignatureMetadata(
         'Contract signing',
         'New York, NY',
-        '192.168.1.100',
+        ipAddress,
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
       );
 
       expect(metadata.getReason()).toBe('Contract signing');
       expect(metadata.getLocation()).toBe('New York, NY');
-      expect(metadata.getIpAddress()).toBe('192.168.1.100');
+      expect(metadata.getIpAddress()).toBe(ipAddress);
       expect(metadata.getUserAgent()).toBe('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
     });
 
     it('should create SignatureMetadata with partial properties', () => {
+      const ipAddress = generateTestIpAddress();
       const metadata = new SignatureMetadata(
         'Agreement signing',
         undefined,
-        '10.0.0.1',
+        ipAddress,
         undefined
       );
 
       expect(metadata.getReason()).toBe('Agreement signing');
       expect(metadata.getLocation()).toBeUndefined();
-      expect(metadata.getIpAddress()).toBe('10.0.0.1');
+      expect(metadata.getIpAddress()).toBe(ipAddress);
       expect(metadata.getUserAgent()).toBeUndefined();
     });
 
@@ -58,10 +61,11 @@ describe('SignatureMetadata', () => {
 
   describe('Static Factory Methods', () => {
     it('should create SignatureMetadata from object with all properties', () => {
+      const ipAddress = generateTestIpAddress();
       const obj = {
         reason: 'Legal document signing',
         location: 'San Francisco, CA',
-        ipAddress: '172.16.0.1',
+        ipAddress: ipAddress,
         userAgent: 'Chrome/91.0.4472.124'
       };
 
@@ -69,21 +73,22 @@ describe('SignatureMetadata', () => {
 
       expect(metadata.getReason()).toBe('Legal document signing');
       expect(metadata.getLocation()).toBe('San Francisco, CA');
-      expect(metadata.getIpAddress()).toBe('172.16.0.1');
+      expect(metadata.getIpAddress()).toBe(ipAddress);
       expect(metadata.getUserAgent()).toBe('Chrome/91.0.4472.124');
     });
 
     it('should create SignatureMetadata from object with partial properties', () => {
+      const ipAddress = generateTestIpAddress();
       const obj = {
         reason: 'Contract execution',
-        ipAddress: '192.168.0.1'
+        ipAddress: ipAddress
       };
 
       const metadata = SignatureMetadata.fromObject(obj);
 
       expect(metadata.getReason()).toBe('Contract execution');
       expect(metadata.getLocation()).toBeUndefined();
-      expect(metadata.getIpAddress()).toBe('192.168.0.1');
+      expect(metadata.getIpAddress()).toBe(ipAddress);
       expect(metadata.getUserAgent()).toBeUndefined();
     });
 
@@ -167,8 +172,8 @@ describe('SignatureMetadata', () => {
     });
 
     it('should return false when IP address differs', () => {
-      const metadata1 = new SignatureMetadata(undefined, undefined, '192.168.1.1');
-      const metadata2 = new SignatureMetadata(undefined, undefined, '192.168.1.2');
+      const metadata1 = new SignatureMetadata(undefined, undefined, generateTestIpAddress());
+      const metadata2 = new SignatureMetadata(undefined, undefined, generateTestIpAddress());
 
       expect(metadata1.equals(metadata2)).toBe(false);
     });
@@ -318,7 +323,7 @@ describe('SignatureMetadata', () => {
     it('should handle special characters in all fields', () => {
       const specialReason = 'Signing with special chars: @#$%^&*()_+-=[]{}|;:,.<>?';
       const specialLocation = 'Location with unicode: 中文 العربية';
-      const specialIp = '192.168.1.1';
+      const specialIp = generateTestIpAddress();
       const specialUserAgent = 'Browser/1.0 (OS; U; en-US) with special chars!';
       
       const metadata = new SignatureMetadata(specialReason, specialLocation, specialIp, specialUserAgent);
@@ -370,23 +375,24 @@ describe('SignatureMetadata', () => {
     });
 
     it('should handle mixed undefined and defined values', () => {
+      const ipAddress = generateTestIpAddress();
       const metadata = new SignatureMetadata(
         'Defined reason',
         undefined,
-        '192.168.1.1',
+        ipAddress,
         undefined
       );
 
       expect(metadata.getReason()).toBe('Defined reason');
       expect(metadata.getLocation()).toBeUndefined();
-      expect(metadata.getIpAddress()).toBe('192.168.1.1');
+      expect(metadata.getIpAddress()).toBe(ipAddress);
       expect(metadata.getUserAgent()).toBeUndefined();
 
       const obj = metadata.toObject();
       expect(obj).toEqual({
         reason: 'Defined reason',
         location: undefined,
-        ipAddress: '192.168.1.1',
+        ipAddress: ipAddress,
         userAgent: undefined
       });
     });

@@ -17,6 +17,7 @@
 
 import { WorkflowTestHelper } from '../helpers/workflowHelpers';
 import { TestDataFactory } from '../helpers/testDataFactory';
+import { secureRandomString } from '../helpers/testHelpers';
 
 // Mock SignatureOrchestrator.publishNotificationEvent and publishReminderNotificationEvent to avoid OutboxRepository issues
 jest.mock('../../../src/services/SignatureOrchestrator', () => {
@@ -83,7 +84,7 @@ jest.mock('../../../src/services/SignatureOrchestrator', () => {
             reminderCount,
             eventType: 'REMINDER_NOTIFICATION'
           },
-          id: `mock-reminder-${Date.now()}-${Math.random()}`,
+          id: `mock-reminder-${Date.now()}-${secureRandomString(8)}`,
           timestamp: new Date().toISOString()
         });
         
@@ -224,7 +225,6 @@ describe('Send Reminders Workflow Integration Tests', () => {
         addSigners: signers
       });
       expect(addSignersResponse.statusCode).toBe(200);
-      const signerIds = addSignersResponse.data.signers.map((s: any) => s.id);
 
       // 3. Send envelope
       const sendResponse = await helper.sendEnvelope(envelopeId, {
@@ -277,7 +277,6 @@ describe('Send Reminders Workflow Integration Tests', () => {
         addSigners: signers
       });
       expect(addSignersResponse.statusCode).toBe(200);
-      const signerIds = addSignersResponse.data.signers.map((s: any) => s.id);
 
       // 3. Send envelope
       const sendResponse = await helper.sendEnvelope(envelopeId, {

@@ -3,6 +3,7 @@ import type {
   APIGatewayProxyResultV2,
   APIGatewayProxyStructuredResultV2
 } from "aws-lambda";
+import type { RequestSecurityContext } from "../security/index.js";
 
 /**
  * Standard HTTP status codes used across services.
@@ -28,8 +29,11 @@ export enum HttpStatus {
 /** Alias for simple string headers. */
 export type Headers = Record<string, string>;
 
-/** API Gateway v2 event. */
-export type ApiEvent = APIGatewayProxyEventV2;
+/** API Gateway v2 event with extended properties. */
+export interface ApiEvent extends APIGatewayProxyEventV2 {
+  auth?: any;
+  securityContext?: RequestSecurityContext;
+}
 
 /** Union response (may be a string). */
 export type ApiResponse = APIGatewayProxyResultV2;

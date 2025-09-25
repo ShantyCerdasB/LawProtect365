@@ -9,6 +9,7 @@ import { Signature } from '../../../../src/domain/value-objects/Signature';
 import { SignatureMetadata } from '../../../../src/domain/value-objects/SignatureMetadata';
 import { BadRequestError } from '@lawprotect/shared-ts';
 import { TestUtils } from '../../../helpers/testUtils';
+import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
 
 // Mock the validation functions
 jest.mock('@lawprotect/shared-ts', () => ({
@@ -62,7 +63,7 @@ describe('Signature', () => {
       const kmsKeyId = 'arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012';
       const algorithm = 'RSA-SHA256';
       const signedAt = new Date();
-      const metadata = new SignatureMetadata('I agree to the terms', 'New York, NY', '192.168.1.1', 'Mozilla/5.0');
+      const metadata = new SignatureMetadata('I agree to the terms', 'New York, NY', generateTestIpAddress(), 'Mozilla/5.0');
 
       const signature = new Signature(
         signerId,
@@ -136,7 +137,7 @@ describe('Signature', () => {
         getSignedAt: () => signedAt,
         getReason: () => 'I agree to the terms',
         getLocation: () => 'New York, NY',
-        getIpAddress: () => '192.168.1.1',
+        getIpAddress: () => generateTestIpAddress(),
         getUserAgent: () => 'Mozilla/5.0'
       };
 
@@ -312,7 +313,7 @@ describe('Signature', () => {
       const kmsKeyId = 'arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012';
       const algorithm = 'RSA-SHA256';
       const signedAt = new Date();
-      const metadata = new SignatureMetadata(undefined, undefined, '192.168.1.1');
+      const metadata = new SignatureMetadata(undefined, undefined, generateTestIpAddress());
 
       const signature = new Signature(
         signerId,
@@ -325,7 +326,7 @@ describe('Signature', () => {
         metadata
       );
 
-      expect(signature.getIpAddress()).toBe('192.168.1.1');
+      expect(signature.getIpAddress()).toBe(metadata.getIpAddress());
     });
 
     it('should get user agent from metadata', () => {
@@ -683,7 +684,7 @@ describe('Signature', () => {
       const kmsKeyId = 'arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012';
       const algorithm = 'RSA-SHA256';
       const signedAt = new Date();
-      const metadata = new SignatureMetadata('I agree', 'NYC', '192.168.1.1', 'Mozilla/5.0');
+      const metadata = new SignatureMetadata('I agree', 'NYC', generateTestIpAddress(), 'Mozilla/5.0');
 
       const signature = new Signature(
         signerId,
@@ -707,7 +708,7 @@ describe('Signature', () => {
       expect(summary.signedS3Key).toBe(signedS3Key);
       expect(summary.reason).toBe('I agree');
       expect(summary.location).toBe('NYC');
-      expect(summary.ipAddress).toBe('192.168.1.1');
+      expect(summary.ipAddress).toBe(metadata.getIpAddress());
       expect(summary.userAgent).toBe('Mozilla/5.0');
     });
 

@@ -14,7 +14,7 @@ import { EnvelopeSignerService } from './EnvelopeSignerService';
 import { InvitationTokenService } from './InvitationTokenService';
 import { SignatureAuditEventService } from './SignatureAuditEventService';
 import { S3Service } from './S3Service';
-import { OutboxRepository, makeEvent } from '@lawprotect/shared-ts';
+import { OutboxRepository, makeEvent, paginationLimitRequired, sha256Hex } from '@lawprotect/shared-ts';
 import { CreateEnvelopeData } from '../domain/types/envelope/CreateEnvelopeData';
 import { UpdateEnvelopeData } from '../domain/rules/EnvelopeUpdateValidationRule';
 import { 
@@ -26,19 +26,17 @@ import {
 import { EntityFactory } from '../domain/factories/EntityFactory';
 import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
 import { EnvelopeStatus } from '../domain/value-objects/EnvelopeStatus';
+import { ConsentId } from '../domain/value-objects/ConsentId';
 import { AccessType } from '../domain/enums/AccessType';
 import { EnvelopeSpec } from '../domain/types/envelope';
-import { documentS3NotFound, envelopeNotFound } from '../signature-errors';
-import { paginationLimitRequired } from '@lawprotect/shared-ts';
+import { documentS3NotFound, envelopeNotFound, signerNotFound } from '../signature-errors';
 import { SigningFlowValidationRule } from '../domain/rules/SigningFlowValidationRule';
 import { EnvelopeAccessValidationRule } from '../domain/rules/EnvelopeAccessValidationRule';
 import { ConsentService } from './ConsentService';
 import { KmsService } from './KmsService';
-import { sha256Hex } from '@lawprotect/shared-ts';
 import { getDefaultSigningAlgorithm } from '../domain/enums/SigningAlgorithmEnum';
 import { DeclineSignerRequest } from '../domain/schemas/SigningHandlersSchema';
 import { SignerId } from '../domain/value-objects/SignerId';
-import { signerNotFound } from '../signature-errors';
 import { v4 as uuid } from 'uuid';
 import { SignerReminderTrackingService } from './SignerReminderTrackingService';
 import { NotificationType } from '@lawprotect/shared-ts';
@@ -484,9 +482,19 @@ export class SignatureOrchestrator {
       const { signedDocumentKey, documentHash } = await this.handleDocumentSigning(request, envelopeId, signerId, userId);
       const signature = await this.performKmsSigning(documentHash);
       
-      await this.updateSignerAndConsent(signerId, signature, signedDocumentKey, documentHash, request.consent.text, securityContext);
+      await this.updateSignerAndConsent(signerId, signature, signedDocumentKey, documentHash, request.consent.text, securityContext, consent.getId());
       await this.updateEnvelopeWithSignature(envelopeId, signedDocumentKey, signature.sha256, documentHash, signerId.getValue(), userId);
-      await this.createSigningAuditEvent(envelopeId, signerId, signer, signature, signedDocumentKey, consent, documentHash, userId, securityContext);
+      await this.createSigningAuditEvent({
+        envelopeId,
+        signerId,
+        signer,
+        signature,
+        signedDocumentKey,
+        consent,
+        documentHash,
+        userId,
+        securityContext
+      });
       
       const responseEnvelope = await this.finalizeEnvelopeIfComplete(envelopeId, userId);
       
@@ -707,7 +715,8 @@ export class SignatureOrchestrator {
     signedDocumentKey: string,
     documentHash: string,
     consentText: string,
-    securityContext: { ipAddress: string; userAgent: string; country?: string }
+    securityContext: { ipAddress: string; userAgent: string; country?: string },
+    consentId: ConsentId
   ): Promise<void> {
     await this.envelopeSignerService.markSignerAsSigned(signerId, {
       documentHash,
@@ -721,7 +730,7 @@ export class SignatureOrchestrator {
     });
     
     await this.consentService.linkConsentWithSignature(
-      EntityFactory.createValueObjects.consentId(uuid()), // This should be the actual consent ID
+      consentId, // Use the actual consent ID that was created
       signerId
     );
   }
@@ -764,45 +773,37 @@ export class SignatureOrchestrator {
 
   /**
    * Creates signing audit event
-   * @param envelopeId - Envelope ID
-   * @param signerId - Signer ID
-   * @param signer - Signer entity
-   * @param signature - Signature object
-   * @param signedDocumentKey - Signed document key
-   * @param consent - Consent entity
-   * @param documentHash - Document hash
-   * @param userId - User ID
-   * @param securityContext - Security context
+   * @param config - Configuration object containing all required parameters
    */
-  private async createSigningAuditEvent(
-    envelopeId: EnvelopeId,
-    signerId: SignerId,
-    signer: any,
-    signature: { id: string; sha256: string },
-    signedDocumentKey: string,
-    consent: any,
-    documentHash: string,
-    userId: string,
-    securityContext: { ipAddress: string; userAgent: string; country?: string }
-  ): Promise<void> {
+  private async createSigningAuditEvent(config: {
+    envelopeId: EnvelopeId;
+    signerId: SignerId;
+    signer: any;
+    signature: { id: string; sha256: string };
+    signedDocumentKey: string;
+    consent: any;
+    documentHash: string;
+    userId: string;
+    securityContext: { ipAddress: string; userAgent: string; country?: string };
+  }): Promise<void> {
     await this.signatureAuditEventService.createEvent({
-      envelopeId: envelopeId.getValue(),
-      signerId: signerId.getValue(),
+      envelopeId: config.envelopeId.getValue(),
+      signerId: config.signerId.getValue(),
       eventType: 'DOCUMENT_SIGNED' as any,
-      description: `Document signed by ${signer.getFullName() || 'Unknown'}`,
-      userId,
-      userEmail: signer.getEmail()?.getValue(),
-      ipAddress: securityContext.ipAddress,
-      userAgent: securityContext.userAgent,
-      country: securityContext.country,
+      description: `Document signed by ${config.signer.getFullName() || 'Unknown'}`,
+      userId: config.userId,
+      userEmail: config.signer.getEmail()?.getValue(),
+      ipAddress: config.securityContext.ipAddress,
+      userAgent: config.securityContext.userAgent,
+      country: config.securityContext.country,
       metadata: {
-        envelopeId: envelopeId.getValue(),
-        signerId: signerId.getValue(),
-        signatureId: signature.id,
-        signedDocumentKey,
-        consentId: consent.getId().getValue(),
-        documentHash,
-        signatureHash: signature.sha256,
+        envelopeId: config.envelopeId.getValue(),
+        signerId: config.signerId.getValue(),
+        signatureId: config.signature.id,
+        signedDocumentKey: config.signedDocumentKey,
+        consentId: config.consent.getId().getValue(),
+        documentHash: config.documentHash,
+        signatureHash: config.signature.sha256,
         kmsKeyId: process.env.KMS_SIGNER_KEY_ID!
       }
     });
@@ -1147,8 +1148,8 @@ export class SignatureOrchestrator {
       await this.signatureEnvelopeService.updateEnvelopeStatusAfterDecline(
         envelopeId,
         signerId,
-        request.reason,
-        undefined // userId for external users
+        request.reason
+        // userId omitted for external users
       );
 
       // 4. Publish decline notification event

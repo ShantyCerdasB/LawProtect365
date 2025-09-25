@@ -11,6 +11,7 @@ import { EnvelopeId } from '../../../../src/domain/value-objects/EnvelopeId';
 import { SignerId } from '../../../../src/domain/value-objects/SignerId';
 import { InvitationTokenStatus } from '@prisma/client';
 import { TestUtils } from '../../../helpers/testUtils';
+import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
 import { 
   invitationTokenExpired,
   invitationTokenAlreadyUsed,
@@ -71,6 +72,7 @@ describe('InvitationToken', () => {
       const tokenHash = TestUtils.generateSha256Hash();
       const createdAt = new Date('2024-01-01');
       const updatedAt = new Date('2024-01-02');
+      const ipAddress = generateTestIpAddress();
 
       const token = createInvitationTokenWithParams({
         id: tokenId,
@@ -87,7 +89,7 @@ describe('InvitationToken', () => {
         revokedAt: undefined,
         revokedReason: undefined,
         createdBy: 'user-123',
-        ipAddress: '192.168.1.1',
+        ipAddress: ipAddress,
         userAgent: 'Mozilla/5.0',
         country: 'US',
         createdAt: createdAt,
@@ -109,7 +111,7 @@ describe('InvitationToken', () => {
       expect(token.getRevokedAt()).toBeUndefined();
       expect(token.getRevokedReason()).toBeUndefined();
       expect(token.getCreatedBy()).toBe('user-123');
-      expect(token.getIpAddress()).toBe('192.168.1.1');
+      expect(token.getIpAddress()).toBe(ipAddress);
       expect(token.getUserAgent()).toBe('Mozilla/5.0');
       expect(token.getCountry()).toBe('US');
       expect(token.getCreatedAt()).toEqual(createdAt);
@@ -168,7 +170,7 @@ describe('InvitationToken', () => {
   describe('Metadata', () => {
     it('should return metadata object with all fields', () => {
       const token = createInvitationTokenWithParams({
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Mozilla/5.0',
         country: 'US'
       });
@@ -176,7 +178,7 @@ describe('InvitationToken', () => {
       const metadata = token.getMetadata();
 
       expect(metadata).toEqual({
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Mozilla/5.0',
         country: 'US'
       });
@@ -200,7 +202,7 @@ describe('InvitationToken', () => {
 
     it('should return metadata object with partial fields', () => {
       const token = createInvitationTokenWithParams({
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: undefined,
         country: 'US'
       });
@@ -208,7 +210,7 @@ describe('InvitationToken', () => {
       const metadata = token.getMetadata();
 
       expect(metadata).toEqual({
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: undefined,
         country: 'US'
       });
@@ -370,7 +372,7 @@ describe('InvitationToken', () => {
         resendCount: 0
       });
 
-      const ipAddress = '192.168.1.1';
+      const ipAddress = generateTestIpAddress();
       const userAgent = 'Mozilla/5.0';
       const country = 'US';
 
@@ -596,14 +598,14 @@ describe('InvitationToken', () => {
 
     it('should handle token with special characters in metadata', () => {
       const token = createInvitationTokenWithParams({
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         country: 'US'
       });
 
       const metadata = token.getMetadata();
 
-      expect(metadata.ipAddress).toBe('192.168.1.1');
+      expect(metadata.ipAddress).toBe(ipAddress);
       expect(metadata.userAgent).toBe('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
       expect(metadata.country).toBe('US');
     });

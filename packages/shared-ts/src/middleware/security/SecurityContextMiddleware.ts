@@ -55,7 +55,7 @@ export const withSecurityContext = (): BeforeMiddleware => {
     const securityContext: RequestSecurityContext = {
       userId: baseContext.userId,
       ipAddress: baseContext.ipAddress!,
-      userAgent: (baseContext.userAgent || evt.requestContext?.http?.userAgent)!,
+      userAgent: baseContext.userAgent || evt.requestContext?.http?.userAgent || '',
       accessType: baseContext.accessType || AccessType.DIRECT,
       permission,
       timestamp: new Date(),
@@ -64,7 +64,7 @@ export const withSecurityContext = (): BeforeMiddleware => {
     };
 
     // Attach security context to event
-    (evt as any).securityContext = securityContext;
+    evt.securityContext = securityContext;
     
   };
 };

@@ -5,7 +5,7 @@
  * configurable middleware pipelines, validation, and error handling.
  */
 
-import type { HandlerFn } from "../../http/httpTypes.js";
+import type { HandlerFn, ApiEvent } from "../../http/httpTypes.js";
 import { compose } from "../../http/middleware.js";
 import { withRequestContext } from "../../http/withRequestContext.js";
 import { withObservability } from "../../http/withObservability.js";
@@ -130,10 +130,10 @@ export class ControllerFactory {
   /**
    * Extracts authentication and security context from event
    */
-  private static extractContext(evt: any) {
+  private static extractContext(evt: ApiEvent) {
     return {
-      auth: (evt as any).auth,
-      securityContext: (evt as any).securityContext
+      auth: evt.auth,
+      securityContext: evt.securityContext
     };
   }
 

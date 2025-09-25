@@ -7,8 +7,7 @@
 
 import { ControllerFactory, VALID_COGNITO_ROLES, SigningOrderType } from '@lawprotect/shared-ts';
 import { ServiceFactory } from '../../infrastructure/factories/ServiceFactory';
-import { UpdateEnvelopeSchema } from '../../domain/schemas/EnvelopeSchema';
-import { EnvelopeIdSchema } from '../../domain/schemas/EnvelopeSchema';
+import { UpdateEnvelopeSchema, EnvelopeIdSchema } from '../../domain/schemas/EnvelopeSchema';
 import { EnvelopeId } from '../../domain/value-objects/EnvelopeId';
 import { UpdateEnvelopeData } from '../../domain/rules/EnvelopeUpdateValidationRule';
 

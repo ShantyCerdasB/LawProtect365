@@ -6,7 +6,7 @@
  * for JWT token validation during integration tests.
  */
 
-import { generateKeyPairSync, randomBytes } from 'crypto';
+import { generateKeyPairSync } from 'crypto';
 import { SignJWT, importPKCS8, exportJWK, importSPKI } from 'jose';
 import express from 'express';
 
@@ -156,7 +156,7 @@ export async function startMockJwksServer(): Promise<void> {
     
     // Handle server errors
     server.on('error', (error: any) => {
-      // Server error handling
+      console.error('JWKS mock server error:', error);
     });
     
   } catch (error) {

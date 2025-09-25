@@ -169,7 +169,11 @@ export class InvitationTokenRepository extends RepositoryBase<InvitationToken, I
    */
   private addBooleanFlags(where: any, spec: InvitationTokenSpec): void {
     if (spec.isExpired !== undefined) {
-      this.addExpiredFlag(where, spec.isExpired);
+      if (spec.isExpired) {
+        this.addExpiredTokenFilter(where);
+      } else {
+        this.addNonExpiredTokenFilter(where);
+      }
     }
     if (spec.isActive !== undefined) {
       where.status = spec.isActive ? InvitationTokenStatus.ACTIVE : { not: InvitationTokenStatus.ACTIVE };
@@ -183,25 +187,28 @@ export class InvitationTokenRepository extends RepositoryBase<InvitationToken, I
   }
 
   /**
-   * Adds expired flag logic to where clause
+   * Adds expired token filter to where clause
    * @param where - Where clause object
-   * @param isExpired - Whether to find expired tokens
    */
-  private addExpiredFlag(where: any, isExpired: boolean): void {
-    if (isExpired) {
-      where.OR = [
-        { status: InvitationTokenStatus.EXPIRED },
-        { expiresAt: { lt: new Date() } }
-      ];
-    } else {
-      where.AND = [
-        { status: { not: InvitationTokenStatus.EXPIRED } },
-        { OR: [
-          { expiresAt: null },
-          { expiresAt: { gte: new Date() } }
-        ]}
-      ];
-    }
+  private addExpiredTokenFilter(where: any): void {
+    where.OR = [
+      { status: InvitationTokenStatus.EXPIRED },
+      { expiresAt: { lt: new Date() } }
+    ];
+  }
+
+  /**
+   * Adds non-expired token filter to where clause
+   * @param where - Where clause object
+   */
+  private addNonExpiredTokenFilter(where: any): void {
+    where.AND = [
+      { status: { not: InvitationTokenStatus.EXPIRED } },
+      { OR: [
+        { expiresAt: null },
+        { expiresAt: { gte: new Date() } }
+      ]}
+    ];
   }
 
   /**

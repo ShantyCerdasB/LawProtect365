@@ -30,8 +30,7 @@ import {
   signerEmailDuplicate,
   envelopeNotFound
 } from '../signature-errors';
-import { ConflictError, BadRequestError, NotFoundError } from '@lawprotect/shared-ts';
-import { wrapServiceError } from '@lawprotect/shared-ts';
+import { ConflictError, BadRequestError, NotFoundError, wrapServiceError } from '@lawprotect/shared-ts';
 
 /**
  * EnvelopeSignerService implementation

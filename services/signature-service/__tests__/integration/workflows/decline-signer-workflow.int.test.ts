@@ -20,19 +20,15 @@
 
 import { WorkflowTestHelper } from '../helpers/workflowHelpers';
 import { TestDataFactory } from '../helpers/testDataFactory';
+import { secureRandomString } from '../helpers/testHelpers';
 import { 
-  verifyInvitationHistory, 
-  verifyNoDuplicateInvitations, 
   verifyInvitationTokens,
-  verifySignerReceivedInvitation,
   clearSendEnvelopeMockData 
 } from '../helpers/sendEnvelopeHelpers';
 import { 
   verifySignatureInDatabase,
   verifyConsentRecord,
-  verifyEnvelopeCompletion,
   verifyEnvelopeProgress,
-  verifySigningAuditEvent,
   createTestConsent,
   getSigningVerificationSummary
 } from '../helpers/signDocumentHelpers';
@@ -97,7 +93,7 @@ jest.mock('../../../src/services/SignatureOrchestrator', () => {
                 eventType: 'ENVELOPE_INVITATION',
                 message: options.message || 'You have been invited to sign a document'
               },
-              id: `mock-${Date.now()}-${Math.random()}`,
+              id: `mock-${Date.now()}-${secureRandomString(8)}`,
               timestamp: new Date().toISOString()
             });
             
@@ -141,7 +137,7 @@ jest.mock('../../../src/services/SignatureOrchestrator', () => {
             declineReason: reason,
             eventType: 'SIGNER_DECLINED'
           },
-          id: `mock-decline-${Date.now()}-${Math.random()}`,
+          id: `mock-decline-${Date.now()}-${secureRandomString(8)}`,
           timestamp: new Date().toISOString()
         });
         

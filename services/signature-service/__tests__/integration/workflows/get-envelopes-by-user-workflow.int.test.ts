@@ -14,6 +14,7 @@
 
 import { WorkflowTestHelper } from '../helpers/workflowHelpers';
 import { TestDataFactory } from '../helpers/testDataFactory';
+import { secureRandomString } from '../helpers/testHelpers';
 
 // ✅ MOCK LOCAL DEL SIGNATURE ORCHESTRATOR (MISMO PATRÓN QUE TESTS QUE PASAN)
 jest.mock('../../../src/services/SignatureOrchestrator', () => {
@@ -72,7 +73,7 @@ jest.mock('../../../src/services/SignatureOrchestrator', () => {
                 eventType: 'ENVELOPE_INVITATION',
                 message: options.message || 'You have been invited to sign a document'
               },
-              id: `mock-${Date.now()}-${Math.random()}`,
+              id: `mock-${Date.now()}-${secureRandomString(8)}`,
               timestamp: new Date().toISOString()
             });
             

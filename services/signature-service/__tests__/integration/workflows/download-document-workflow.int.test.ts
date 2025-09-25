@@ -17,30 +17,21 @@
 
 import { WorkflowTestHelper } from '../helpers/workflowHelpers';
 import { TestDataFactory } from '../helpers/testDataFactory';
+import { secureRandomString, generateTestIpAddress } from '../helpers/testHelpers';
 import { 
-  verifyInvitationHistory, 
-  verifyNoDuplicateInvitations, 
-  verifyInvitationTokens,
-  verifySignerReceivedInvitation,
   clearSendEnvelopeMockData 
 } from '../helpers/sendEnvelopeHelpers';
 import { 
   verifySignatureInDatabase,
   verifyConsentRecord,
-  verifyEnvelopeCompletion,
-  verifyEnvelopeProgress,
-  verifySigningAuditEvent,
   createTestConsent,
   getSigningVerificationSummary
 } from '../helpers/signDocumentHelpers';
 import {
   verifyDownloadAuditEvent,
-  verifyDownloadUrl,
-  verifyDownloadExpiration,
   verifyDownloadResponse,
   verifyDownloadWithCustomExpiration,
   verifyDownloadFailure,
-  getDownloadVerificationSummary,
   clearDownloadMockData
 } from '../helpers/downloadDocumentHelpers';
 
@@ -96,7 +87,7 @@ jest.mock('../../../src/services/SignatureOrchestrator', () => {
                 eventType: 'ENVELOPE_INVITATION',
                 message: options.message || 'You have been invited to sign a document'
               },
-              id: `mock-${Date.now()}-${Math.random()}`,
+              id: `mock-${Date.now()}-${secureRandomString(8)}`,
               timestamp: new Date().toISOString()
             });
             
@@ -191,7 +182,7 @@ describe('Download Document Workflow', () => {
           given: true,
           timestamp: new Date().toISOString(),
           text: 'test-consent-text',
-          ipAddress: '192.168.1.1',
+          ipAddress: generateTestIpAddress(),
           userAgent: 'test-user-agent',
           country: 'US'
         }
@@ -233,7 +224,6 @@ describe('Download Document Workflow', () => {
       });
 
       expect(addSignersResponse.statusCode).toBe(200);
-      const signerIds = addSignersResponse.data.signers.map((s: any) => s.id);
 
       // 3. Send envelope
       const sendResponse = await workflowHelper.sendEnvelope(envelopeId, {

@@ -8,14 +8,13 @@
 import { randomUUID } from 'crypto';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { loadConfig } from '../../../src/config';
-import { createApiGatewayEvent, generateTestPdf, generateTestJwtToken } from './testHelpers';
+import { createApiGatewayEvent, generateTestPdf, generateTestJwtToken, generateTestIpAddress } from './testHelpers';
 import { createEnvelopeHandler } from '../../../src/handlers/envelopes/CreateEnvelopeHandler';
 import { updateEnvelopeHandler } from '../../../src/handlers/envelopes/UpdateEnvelopeHandler';
 import { sendEnvelopeHandler } from '../../../src/handlers/envelopes/SendEnvelopeHandler';
 import { getEnvelopeHandler } from '../../../src/handlers/envelopes/GetEnvelopeHandler';
 import { getEnvelopesByUserHandler } from '../../../src/handlers/envelopes/GetEnvelopesByUserHandler';
 import { TestUser, EnvelopeData } from './testTypes';
-import { TestDataFactory } from './testDataFactory';
 
 /**
  * Helper for multi-user security testing
@@ -131,7 +130,7 @@ export class MultiUserTestHelper {
       authToken: token,
       headers: {
         'x-country': 'US',
-        'x-forwarded-for': '127.0.0.1'
+        'x-forwarded-for': generateTestIpAddress()
       }
     });
     
@@ -298,7 +297,7 @@ export class MultiUserTestHelper {
       queryStringParameters: { invitationToken },
       headers: {
         'x-country': 'US',
-        'x-forwarded-for': '127.0.0.1',
+        'x-forwarded-for': generateTestIpAddress(),
         'user-agent': 'Test User Agent'
       }
     });
@@ -340,7 +339,7 @@ export class MultiUserTestHelper {
       ),
       headers: {
         'x-country': 'US',
-        'x-forwarded-for': '127.0.0.1'
+        'x-forwarded-for': generateTestIpAddress()
       }
     });
 
@@ -373,7 +372,7 @@ export class MultiUserTestHelper {
       pathParameters: { id: envelopeId },
       headers: {
         'x-country': 'US',
-        'x-forwarded-for': '127.0.0.1'
+        'x-forwarded-for': generateTestIpAddress()
       }
     });
 

@@ -100,6 +100,7 @@ export const stopDynamoDBLocal = async (): Promise<void> => {
     
     
   } catch (error: any) {
+    console.debug('DynamoDB Local stop error (ignored):', error);
   }
 };
 

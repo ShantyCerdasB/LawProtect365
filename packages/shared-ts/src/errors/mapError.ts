@@ -62,7 +62,7 @@ const normalizeError = (err: unknown): {
     return {
       statusCode: err.statusCode,
       code: err.code,
-      message: shouldUseDetailsAsMessage ? String(err.details) : err.message,
+      message: shouldUseDetailsAsMessage ? JSON.stringify(err.details) : err.message,
       details: err.details
     };
   }

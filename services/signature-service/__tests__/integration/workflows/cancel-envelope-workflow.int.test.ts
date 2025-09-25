@@ -19,11 +19,8 @@
 
 import { WorkflowTestHelper } from '../helpers/workflowHelpers';
 import { TestDataFactory } from '../helpers/testDataFactory';
+import { secureRandomString, generateTestIpAddress } from '../helpers/testHelpers';
 import { 
-  verifyInvitationHistory, 
-  verifyNoDuplicateInvitations, 
-  verifyInvitationTokens,
-  verifySignerReceivedInvitation,
   clearSendEnvelopeMockData 
 } from '../helpers/sendEnvelopeHelpers';
 import {
@@ -85,7 +82,7 @@ jest.mock('../../../src/services/SignatureOrchestrator', () => {
                 eventType: 'ENVELOPE_INVITATION',
                 message: options.message || 'You have been invited to sign a document'
               },
-              id: `mock-${Date.now()}-${Math.random()}`,
+              id: `mock-${Date.now()}-${secureRandomString(8)}`,
               timestamp: new Date().toISOString()
             });
             
@@ -128,7 +125,7 @@ jest.mock('../../../src/services/SignatureOrchestrator', () => {
             declineReason: reason,
             eventType: 'SIGNER_DECLINED'
           },
-          id: `mock-decline-${Date.now()}-${Math.random()}`,
+          id: `mock-decline-${Date.now()}-${secureRandomString(8)}`,
           timestamp: new Date().toISOString()
         });
         
@@ -164,7 +161,7 @@ jest.mock('../../../src/services/SignatureOrchestrator', () => {
             cancelledByUserId: userId,
             eventType: 'ENVELOPE_CANCELLED'
           },
-          id: `mock-cancel-${Date.now()}-${Math.random()}`,
+          id: `mock-cancel-${Date.now()}-${secureRandomString(8)}`,
           timestamp: new Date().toISOString()
         });
         
@@ -394,7 +391,7 @@ describe('Cancel Envelope Workflow', () => {
           given: true,
           timestamp: new Date().toISOString(),
           text: 'test-consent-text',
-          ipAddress: '192.168.1.1',
+          ipAddress: generateTestIpAddress(),
           userAgent: 'test-user-agent',
           country: 'US'
         }

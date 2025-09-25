@@ -17,6 +17,7 @@
 
 import { WorkflowTestHelper } from '../helpers/workflowHelpers';
 import { TestDataFactory } from '../helpers/testDataFactory';
+import { secureRandomString } from '../helpers/testHelpers';
 
 // Temporary inline functions until import issue is resolved
 const { outboxMockHelpers } = require('../mocks/aws/outboxMock');
@@ -108,7 +109,7 @@ jest.mock('../../../src/services/SignatureOrchestrator', () => {
             expiresAt: expiresAt.toISOString(),
             participantRole: 'VIEWER'
           },
-          id: `mock-viewer-${Date.now()}-${Math.random()}`,
+          id: `mock-viewer-${Date.now()}-${secureRandomString(8)}`,
           timestamp: new Date().toISOString()
         });
         

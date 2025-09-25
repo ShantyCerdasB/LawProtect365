@@ -9,6 +9,7 @@ import { SignatureAuditEvent } from '../../../../src/domain/entities/SignatureAu
 import { EnvelopeId } from '../../../../src/domain/value-objects/EnvelopeId';
 import { SignerId } from '../../../../src/domain/value-objects/SignerId';
 import { TestUtils } from '../../../helpers/testUtils';
+import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
 
 // Helper function to create SignatureAuditEvent with custom parameters
 function createAuditEventWithParams(params: {
@@ -50,6 +51,7 @@ describe('SignatureAuditEvent', () => {
       const userId = TestUtils.generateUuid();
       const createdAt = new Date('2024-01-01T10:00:00Z');
       const metadata = { action: 'sign', documentId: 'doc-123' };
+      const ipAddress = generateTestIpAddress();
 
       const event = createAuditEventWithParams({
         id,
@@ -59,7 +61,7 @@ describe('SignatureAuditEvent', () => {
         description: 'Document signed successfully',
         userId,
         userEmail: 'signer@example.com',
-        ipAddress: '10.0.0.1',
+        ipAddress: ipAddress,
         userAgent: 'Chrome/91.0.4472.124',
         country: 'CA',
         metadata,
@@ -73,7 +75,7 @@ describe('SignatureAuditEvent', () => {
       expect(event.getDescription()).toBe('Document signed successfully');
       expect(event.getUserId()).toBe(userId);
       expect(event.getUserEmail()).toBe('signer@example.com');
-      expect(event.getIpAddress()).toBe('10.0.0.1');
+      expect(event.getIpAddress()).toBe(ipAddress);
       expect(event.getUserAgent()).toBe('Chrome/91.0.4472.124');
       expect(event.getCountry()).toBe('CA');
       expect(event.getMetadata()).toEqual(metadata);
@@ -244,7 +246,7 @@ describe('SignatureAuditEvent', () => {
         description: 'Document signed with digital signature',
         userId,
         userEmail: 'signer@example.com',
-        ipAddress: '192.168.1.100',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Firefox/89.0',
         country: 'US',
         metadata,
@@ -261,7 +263,7 @@ describe('SignatureAuditEvent', () => {
         description: 'Document signed with digital signature',
         userId,
         userEmail: 'signer@example.com',
-        ipAddress: '192.168.1.100',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Firefox/89.0',
         country: 'US',
         createdAt,

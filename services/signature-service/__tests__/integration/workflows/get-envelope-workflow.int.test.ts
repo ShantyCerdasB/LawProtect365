@@ -14,6 +14,7 @@
 
 import { WorkflowTestHelper } from '../helpers/workflowHelpers';
 import { TestDataFactory } from '../helpers/testDataFactory';
+import { secureRandomString, generateTestIpAddress } from '../helpers/testHelpers';
 
 // ✅ MOCK LOCAL DEL SIGNATURE ORCHESTRATOR (MISMO PATRÓN QUE TESTS QUE PASAN)
 jest.mock('../../../src/services/SignatureOrchestrator', () => {
@@ -72,7 +73,7 @@ jest.mock('../../../src/services/SignatureOrchestrator', () => {
                 eventType: 'ENVELOPE_INVITATION',
                 message: options.message || 'You have been invited to sign a document'
               },
-              id: `mock-${Date.now()}-${Math.random()}`,
+              id: `mock-${Date.now()}-${secureRandomString(8)}`,
               timestamp: new Date().toISOString()
             });
             
@@ -210,7 +211,7 @@ describe('Get Envelope Workflow', () => {
           tokenHash: testTokenHash,
           expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
           createdBy: TestUtils.generateUuid(), // ✅ Use TestUtils.generateUuid()
-          ipAddress: '127.0.0.1',
+          ipAddress: generateTestIpAddress(),
           userAgent: 'Test User Agent',
           country: 'US',
           status: 'ACTIVE'

@@ -12,6 +12,7 @@ import { Email } from '../../../../src/domain/value-objects/Email';
 import { SignatureMetadata } from '../../../../src/domain/value-objects/SignatureMetadata';
 import { SignerStatus } from '@prisma/client';
 import { TestUtils } from '../../../helpers/testUtils';
+import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
 import { 
   invalidSignerState, 
   signerAlreadySigned,
@@ -86,6 +87,7 @@ describe('EnvelopeSigner', () => {
       const email = 'test@example.com';
       const createdAt = new Date('2024-01-01');
       const updatedAt = new Date('2024-01-02');
+      const ipAddress = generateTestIpAddress();
 
       const signer = createEnvelopeSignerWithParams({
         id: signerId,
@@ -106,7 +108,7 @@ describe('EnvelopeSigner', () => {
         signedS3Key: 'signed-document.pdf',
         kmsKeyId: 'kms-key-123',
         algorithm: 'RSA-SHA256',
-        ipAddress: '192.168.1.1',
+        ipAddress: ipAddress,
         userAgent: 'Mozilla/5.0',
         reason: 'Legal compliance',
         location: 'New York, NY',
@@ -132,7 +134,7 @@ describe('EnvelopeSigner', () => {
       expect(signer.getSignedS3Key()).toBe('signed-document.pdf');
       expect(signer.getKmsKeyId()).toBe('kms-key-123');
       expect(signer.getAlgorithm()).toBe('RSA-SHA256');
-      expect(signer.getIpAddress()).toBe('192.168.1.1');
+      expect(signer.getIpAddress()).toBe(ipAddress);
       expect(signer.getUserAgent()).toBe('Mozilla/5.0');
       expect(signer.getReason()).toBe('Legal compliance');
       expect(signer.getLocation()).toBe('New York, NY');
@@ -251,10 +253,11 @@ describe('EnvelopeSigner', () => {
       const signedS3Key = 'signed-document.pdf';
       const kmsKeyId = 'kms-key-123';
       const algorithm = 'RSA-SHA256';
+      const ipAddress = generateTestIpAddress();
       const metadata = SignatureMetadata.fromObject({
         reason: 'Legal compliance',
         location: 'New York, NY',
-        ipAddress: '192.168.1.1',
+        ipAddress: ipAddress,
         userAgent: 'Mozilla/5.0'
       });
 
@@ -269,7 +272,7 @@ describe('EnvelopeSigner', () => {
       expect(signer.getAlgorithm()).toBe(algorithm);
       expect(signer.getReason()).toBe('Legal compliance');
       expect(signer.getLocation()).toBe('New York, NY');
-      expect(signer.getIpAddress()).toBe('192.168.1.1');
+      expect(signer.getIpAddress()).toBe(ipAddress);
       expect(signer.getUserAgent()).toBe('Mozilla/5.0');
     });
 
@@ -349,7 +352,7 @@ describe('EnvelopeSigner', () => {
       });
 
       const consentText = 'I agree to sign this document electronically';
-      const ipAddress = '192.168.1.1';
+      const ipAddress = generateTestIpAddress();
       const userAgent = 'Mozilla/5.0';
 
       signer.recordConsent(consentText, ipAddress, userAgent);
@@ -363,21 +366,21 @@ describe('EnvelopeSigner', () => {
     it('should throw error when consent text is empty', () => {
       const signer = createEnvelopeSignerWithParams({});
 
-      expect(() => signer.recordConsent('', '192.168.1.1', 'Mozilla/5.0'))
+      expect(() => signer.recordConsent('', generateTestIpAddress(), 'Mozilla/5.0'))
         .toThrow(consentTextRequired('Consent text cannot be empty'));
     });
 
     it('should throw error when consent text is only whitespace', () => {
       const signer = createEnvelopeSignerWithParams({});
 
-      expect(() => signer.recordConsent('   ', '192.168.1.1', 'Mozilla/5.0'))
+      expect(() => signer.recordConsent('   ', generateTestIpAddress(), 'Mozilla/5.0'))
         .toThrow(consentTextRequired('Consent text cannot be empty'));
     });
 
     it('should throw error when consent text is null', () => {
       const signer = createEnvelopeSignerWithParams({});
 
-      expect(() => signer.recordConsent(null as any, '192.168.1.1', 'Mozilla/5.0'))
+      expect(() => signer.recordConsent(null as any, generateTestIpAddress(), 'Mozilla/5.0'))
         .toThrow(consentTextRequired('Consent text cannot be empty'));
     });
   });
@@ -444,7 +447,7 @@ describe('EnvelopeSigner', () => {
         signedAt: new Date('2024-01-02'),
         reason: 'Legal compliance',
         location: 'New York, NY',
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Mozilla/5.0'
       });
 

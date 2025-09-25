@@ -23,8 +23,8 @@ ALTER TABLE "EnvelopeSigner"
   ADD CONSTRAINT envelope_signer_consent_coherence_chk
   CHECK (
     ("consentGiven" IS NULL AND "consentTimestamp" IS NULL)
-    OR ("consentGiven" = FALSE AND "consentTimestamp" IS NULL)
-    OR ("consentGiven" = TRUE AND "consentTimestamp" IS NOT NULL)
+    OR (NOT "consentGiven" AND "consentTimestamp" IS NULL)
+    OR ("consentGiven" AND "consentTimestamp" IS NOT NULL)
   );
 
 -- Valid IP format if provided
@@ -37,15 +37,18 @@ ALTER TABLE "EnvelopeSigner"
 -- SignatureEnvelope
 -- =========================
 -- SHA-256 hex format (64 lowercase hex chars) if provided
--- Using consistent regex pattern for SHA-256 validation
+-- Using consistent regex pattern for SHA-256 validation: '^[0-9a-f]{64}$'
+-- This pattern ensures exactly 64 lowercase hexadecimal characters
 ALTER TABLE "SignatureEnvelope"
   ADD CONSTRAINT signature_envelope_source_sha_chk
   CHECK ("sourceSha256" IS NULL OR "sourceSha256" ~ '^[0-9a-f]{64}$');
 
+-- Using same SHA-256 regex pattern as above for consistency
 ALTER TABLE "SignatureEnvelope"
   ADD CONSTRAINT signature_envelope_flattened_sha_chk
   CHECK ("flattenedSha256" IS NULL OR "flattenedSha256" ~ '^[0-9a-f]{64}$');
 
+-- Using same SHA-256 regex pattern as above for consistency
 ALTER TABLE "SignatureEnvelope"
   ADD CONSTRAINT signature_envelope_signed_sha_chk
   CHECK ("signedSha256" IS NULL OR "signedSha256" ~ '^[0-9a-f]{64}$');

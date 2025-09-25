@@ -7,8 +7,7 @@
 
 import { ControllerFactory, VALID_COGNITO_ROLES } from '@lawprotect/shared-ts';
 import { ServiceFactory } from '../../infrastructure/factories/ServiceFactory';
-import { GetAuditTrailQuerySchema } from '../../domain/schemas/EnvelopeSchema';
-import { EnvelopeIdSchema } from '../../domain/schemas/EnvelopeSchema';
+import { GetAuditTrailQuerySchema, EnvelopeIdSchema } from '../../domain/schemas/EnvelopeSchema';
 import { EnvelopeId } from '../../domain/value-objects/EnvelopeId';
 
 /**

@@ -5,6 +5,8 @@
  * including signature verification, consent validation, and envelope completion checks.
  */
 
+import { generateTestIpAddress } from './testHelpers';
+
 /**
  * Interface for consent data
  */
@@ -105,7 +107,7 @@ export async function verifyConsentRecord(
     expect(consent).toBeDefined();
     expect(consent!.consentGiven).toBe(expectedConsent.given);
     expect(consent!.consentText).toBe(expectedConsent.text);
-    expect(consent!.ipAddress).toBe(expectedConsent.ipAddress || '127.0.0.1');
+    expect(consent!.ipAddress).toBe(expectedConsent.ipAddress || generateTestIpAddress());
     expect(consent!.userAgent).toBe(expectedConsent.userAgent || 'Test User Agent');
     expect(consent!.country).toBe(expectedConsent.country || 'US');
     expect(consent!.signatureId).toBeDefined(); // Should be linked to signature
@@ -339,7 +341,7 @@ export function createTestConsent(overrides?: Partial<ConsentData>): ConsentData
     given: true,
     timestamp: new Date().toISOString(),
     text: 'I agree to sign this document electronically',
-    ipAddress: '127.0.0.1',
+    ipAddress: generateTestIpAddress(),
     userAgent: 'Test User Agent',
     country: 'US',
     ...overrides

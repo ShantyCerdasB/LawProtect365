@@ -13,7 +13,8 @@ import type {
 import type {
   OutboxListResult, 
   OutboxCountResult,
-  OutboxQueryOptions
+  OutboxQueryOptions,
+  OutboxDdbItem
 } from './outbox-ddb-types.js';
 import { 
   outboxToDdbItem, 
@@ -226,10 +227,10 @@ export class OutboxRepository {
         ScanIndexForward: true // Oldest first
       });
 
-      const items = (result.Items ?? []) as Array<Record<string, unknown>>;
+      const items = result.Items ?? [];
       return items
         .filter(isOutboxDdbItem)
-        .map(item => outboxFromDdbItem(item as any));
+        .map(item => outboxFromDdbItem(item as unknown as OutboxDdbItem));
     } catch (err) {
       throw mapAwsError(err, 'OutboxRepository.pullPending');
     }
@@ -278,8 +279,8 @@ export class OutboxRepository {
       }
 
       const result = await this.ddb.query!(queryParams);
-      const items = (result.Items ?? []) as Array<Record<string, unknown>>;
-      const records = items.filter(isOutboxDdbItem).map(item => outboxFromDdbItem(item as any));
+      const items = result.Items ?? [];
+      const records = items.filter(isOutboxDdbItem).map(item => outboxFromDdbItem(item as unknown as OutboxDdbItem));
 
       return {
         items: records,

@@ -27,6 +27,7 @@ export default async function globalTeardown(): Promise<void> {
     await cleanupS3MockStorage();
     
   } catch (error) {
-    // Don't throw error in teardown to avoid masking test failures
+    // Log error but don't throw to avoid masking test failures
+    console.warn('Global teardown error:', error);
   }
 }

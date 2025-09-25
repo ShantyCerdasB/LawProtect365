@@ -5,11 +5,10 @@
  * including reminders and invitation resends with proper validation and authorization.
  */
 
-import { ControllerFactory, VALID_COGNITO_ROLES } from '@lawprotect/shared-ts';
+import { ControllerFactory, VALID_COGNITO_ROLES, NotificationType } from '@lawprotect/shared-ts';
 import { ServiceFactory } from '../../infrastructure/factories/ServiceFactory';
 import { SendNotificationPathSchema, SendNotificationRequestSchema } from '../../domain/schemas/SendNotificationSchema';
 import { EnvelopeId } from '../../domain/value-objects/EnvelopeId';
-import { NotificationType } from '@lawprotect/shared-ts';
 
 /**
  * Handler for sending notifications to signers

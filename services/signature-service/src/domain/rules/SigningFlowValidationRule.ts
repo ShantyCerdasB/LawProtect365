@@ -18,7 +18,6 @@ import {
  * Domain rule for validating signing flow operations
  */
 export class SigningFlowValidationRule {
-  constructor() {}
 
   /**
    * Validates complete signing flow for a signer

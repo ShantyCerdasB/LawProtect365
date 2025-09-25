@@ -42,6 +42,8 @@ function extractInvitationTokenFromBody(body: any): string | null {
       return parsed.invitationToken;
     }
   } catch (e) {
+    // Ignore JSON parsing errors for invitation token
+    console.debug('Failed to parse invitation token from query:', e);
   }
   
   return null;

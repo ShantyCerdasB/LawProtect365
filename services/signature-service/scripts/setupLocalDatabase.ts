@@ -81,6 +81,7 @@ export const seedDatabase = async (): Promise<void> => {
 
   } catch (error) {
     // Don't throw error for seeding failures
+    console.warn('Database seeding failed:', error);
   }
 };
 

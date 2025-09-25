@@ -6,7 +6,7 @@
  */
 
 import { randomUUID } from 'crypto';
-import { createApiGatewayEvent, generateTestJwtToken } from './testHelpers';
+import { createApiGatewayEvent, generateTestJwtToken, generateTestIpAddress } from './testHelpers';
 import { createEnvelopeHandler } from '../../../src/handlers/envelopes/CreateEnvelopeHandler';
 import { updateEnvelopeHandler } from '../../../src/handlers/envelopes/UpdateEnvelopeHandler';
 import { sendEnvelopeHandler } from '../../../src/handlers/envelopes/SendEnvelopeHandler';
@@ -52,7 +52,7 @@ export class EnvelopeOperations {
       authToken: token,
       headers: {
         'x-country': 'US',
-        'x-forwarded-for': '127.0.0.1'
+        'x-forwarded-for': generateTestIpAddress()
       },
       body: JSON.stringify({
         title: envelopeData.title,
@@ -104,7 +104,7 @@ export class EnvelopeOperations {
       body: JSON.stringify(updateData),
       headers: {
         'x-country': 'US',
-        'x-forwarded-for': '127.0.0.1'
+        'x-forwarded-for': generateTestIpAddress()
       }
     });
     
@@ -195,7 +195,7 @@ export class EnvelopeOperations {
       pathParameters: { id: envelopeId },
       headers: {
         'x-country': 'US',
-        'x-forwarded-for': '127.0.0.1'
+        'x-forwarded-for': generateTestIpAddress()
       }
     });
 
@@ -221,7 +221,7 @@ export class EnvelopeOperations {
       queryStringParameters: { invitationToken },
       headers: {
         'x-country': 'US',
-        'x-forwarded-for': '127.0.0.1',
+        'x-forwarded-for': generateTestIpAddress(),
         'user-agent': 'Test User Agent'
       }
     });
@@ -261,7 +261,7 @@ export class EnvelopeOperations {
       ),
       headers: {
         'x-country': 'US',
-        'x-forwarded-for': '127.0.0.1'
+        'x-forwarded-for': generateTestIpAddress()
       }
     });
 
@@ -311,7 +311,7 @@ export class EnvelopeOperations {
       }),
       headers: {
         'x-country': 'US',
-        'x-forwarded-for': '127.0.0.1',
+        'x-forwarded-for': generateTestIpAddress(),
         'user-agent': 'Test User Agent'
       }
     });
@@ -367,7 +367,7 @@ export class EnvelopeOperations {
       }),
       headers: {
         'x-country': 'US',
-        'x-forwarded-for': '127.0.0.1',
+        'x-forwarded-for': generateTestIpAddress(),
         'user-agent': 'Test User Agent'
       }
     });
@@ -412,14 +412,14 @@ export class EnvelopeOperations {
         invitationToken,
         reason: reason || 'No reason provided',
         metadata: {
-          ipAddress: '127.0.0.1',
+          ipAddress: generateTestIpAddress(),
           userAgent: 'test-agent',
           timestamp: new Date().toISOString()
         }
       }),
       headers: {
         'x-country': 'US',
-        'x-forwarded-for': '127.0.0.1',
+        'x-forwarded-for': generateTestIpAddress(),
         'user-agent': 'Test User Agent'
       }
     });
@@ -453,7 +453,7 @@ export class EnvelopeOperations {
       pathParameters: { id: envelopeId },
       body: {}, // Empty body for cancellation
       headers: {
-        'x-forwarded-for': '127.0.0.1',
+        'x-forwarded-for': generateTestIpAddress(),
         'user-agent': 'Test User Agent'
       }
     });
@@ -478,7 +478,7 @@ export class EnvelopeOperations {
       pathParameters: { id: envelopeId },
       body: {}, // Empty body for cancellation
       headers: {
-        'x-forwarded-for': '127.0.0.1',
+        'x-forwarded-for': generateTestIpAddress(),
         'user-agent': 'Test User Agent'
       }
     });
@@ -511,7 +511,7 @@ export class EnvelopeOperations {
       pathParameters: { envelopeId: envelopeId },
       queryStringParameters: {}, // No query parameters needed for authenticated user
       headers: {
-        'x-forwarded-for': '127.0.0.1',
+        'x-forwarded-for': generateTestIpAddress(),
         'user-agent': 'Test User Agent'
       }
     });
@@ -551,7 +551,7 @@ export class EnvelopeOperations {
       pathParameters: { envelopeId: envelopeId },
       queryStringParameters: invitationToken ? { invitationToken } : {},
       headers: {
-        'x-forwarded-for': '127.0.0.1',
+        'x-forwarded-for': generateTestIpAddress(),
         'user-agent': 'Test User Agent'
       }
     });
@@ -589,7 +589,7 @@ export class EnvelopeOperations {
       pathParameters: { envelopeId: envelopeId },
       queryStringParameters: { expiresIn: expiresIn.toString() },
       headers: {
-        'x-forwarded-for': '127.0.0.1',
+        'x-forwarded-for': generateTestIpAddress(),
         'user-agent': 'Test User Agent'
       }
     });

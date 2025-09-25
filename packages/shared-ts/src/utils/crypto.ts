@@ -189,9 +189,9 @@ export function hexToUint8Array(hex: string): Uint8Array {
 
   const bytes = new Uint8Array(hex.length / 2);
   for (let i = 0; i < hex.length; i += 2) {
-    const byte = parseInt(hex.substr(i, 2), 16);
+    const byte = parseInt(hex.substring(i, i + 2), 16);
     if (isNaN(byte)) {
-      throw new Error(`Invalid hex character at position ${i}: ${hex.substr(i, 2)}`);
+      throw new Error(`Invalid hex character at position ${i}: ${hex.substring(i, i + 2)}`);
     }
     bytes[i / 2] = byte;
   }

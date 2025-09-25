@@ -64,7 +64,7 @@ export class RoleMappingPolicy {
       const highestPrecedence = RoleMappingPolicy.ROLE_PRECEDENCE[highest];
       
       return currentPrecedence > highestPrecedence ? current : highest;
-    });
+    }, mappedRoles[0]); // Start with first role as initial value
 
     // Check for ambiguous high-precedence roles
     const highPrecedenceRoles = mappedRoles.filter(

@@ -275,7 +275,7 @@ export const createApiGatewayEvent = async (overrides: {
       'Content-Type': 'application/json',
       'user-agent': 'Test User Agent',
       'x-country': 'US',
-      'x-forwarded-for': '127.0.0.1',
+      'x-forwarded-for': generateTestIpAddress(),
       ...(authToken && { 'Authorization': `Bearer ${authToken}` }),
       ...overrides.headers
     },
