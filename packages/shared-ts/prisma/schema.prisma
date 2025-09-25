@@ -168,6 +168,7 @@ model SignatureEnvelope {
   signers         EnvelopeSigner[]
   auditEvents     SignatureAuditEvent[]
   consents        Consent[]
+  reminderTracking SignerReminderTracking[]
   /// Who declined the envelope (FK enforced in SQL migration).
   declinedBySigner EnvelopeSigner?   @relation("DeclinedBySigner", fields: [declinedBySignerId], references: [id])
 
@@ -220,6 +221,7 @@ model EnvelopeSigner {
   consents             Consent[] @relation("ConsentSigner")
   consentsAsSignature  Consent[] @relation("ConsentSignature")
   invitationTokens     InvitationToken[]
+  reminderTracking     SignerReminderTracking[]
 
   /// Prevent duplicate external invite by email within the same envelope.
   @@unique([envelopeId, email])
@@ -329,4 +331,23 @@ model UserAuditEvent {
 
   @@index([userId, createdAt])
   @@index([action, createdAt])
+}
+
+model SignerReminderTracking {
+  /// Tracks reminder history and limits for each signer per envelope
+  id                    String   @id @default(uuid()) @db.Uuid
+  signerId              String   @db.Uuid
+  envelopeId            String   @db.Uuid
+  lastReminderAt        DateTime?
+  reminderCount         Int      @default(0)
+  lastReminderMessage   String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  signer    EnvelopeSigner    @relation(fields: [signerId], references: [id], onDelete: Cascade)
+  envelope  SignatureEnvelope @relation(fields: [envelopeId], references: [id], onDelete: Cascade)
+
+  @@unique([signerId, envelopeId])
+  @@index([envelopeId])
+  @@index([signerId])
 }

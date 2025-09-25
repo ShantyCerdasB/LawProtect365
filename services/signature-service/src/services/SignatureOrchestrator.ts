@@ -40,6 +40,9 @@ import { DeclineSignerRequest } from '../domain/schemas/SigningHandlersSchema';
 import { SignerId } from '../domain/value-objects/SignerId';
 import { signerNotFound } from '../signature-errors';
 import { v4 as uuid } from 'uuid';
+import { SignerReminderTrackingService } from './SignerReminderTrackingService';
+import { NotificationType } from '@lawprotect/shared-ts';
+import { loadConfig } from '../config/AppConfig';
 
 /**
  * SignatureOrchestrator - Orchestrates signature service workflows
@@ -67,7 +70,8 @@ export class SignatureOrchestrator {
     private readonly s3Service: S3Service,
     private readonly outboxRepository: OutboxRepository,
     private readonly consentService: ConsentService,
-    private readonly _kmsService: KmsService // Will be used for actual document signing in future implementation
+    private readonly _kmsService: KmsService, // Will be used for actual document signing in future implementation
+    private readonly signerReminderTrackingService: SignerReminderTrackingService
   ) {
     this.signingFlowValidationRule = new SigningFlowValidationRule();
     // Temporary reference to avoid unused variable error - will be used for actual signing
@@ -1206,6 +1210,233 @@ export class SignatureOrchestrator {
     }
   }
 
+  // ===== REMINDER NOTIFICATIONS FLOW =====
+
+  /**
+   * Sends reminders to pending signers
+   * @param envelopeId - The envelope ID
+   * @param request - The reminder request
+   * @param userId - The user ID sending the reminders
+   * @param securityContext - Security context for audit tracking
+   * @returns Reminder sending result
+   */
+  async sendReminders(
+    envelopeId: EnvelopeId,
+    request: {
+      type: NotificationType.REMINDER;
+      signerIds?: string[];
+      message?: string;
+    },
+    userId: string,
+    securityContext: { ipAddress?: string; userAgent?: string; country?: string }
+  ): Promise<{
+    success: boolean;
+    message: string;
+    envelopeId: string;
+    remindersSent: number;
+    signersNotified: Array<{
+      id: string;
+      email: string;
+      name: string;
+      reminderCount: number;
+      lastReminderAt: Date;
+    }>;
+    skippedSigners: Array<{
+      id: string;
+      email: string;
+      reason: string;
+    }>;
+  }> {
+    try {
+      // 1. Validate envelope exists and user has access
+      const envelope = await this.signatureEnvelopeService.getEnvelopeWithSigners(envelopeId);
+      if (!envelope) {
+        throw envelopeNotFound(`Envelope with ID ${envelopeId.getValue()} not found`);
+      }
+
+      // 2. Validate authorization - only the owner can send reminders
+      EnvelopeAccessValidationRule.validateEnvelopeModificationAccess(envelope, userId);
+
+      // 3. Get pending signers
+      const pendingSigners = await this.envelopeSignerService.getPendingSigners(envelopeId);
+      
+      if (pendingSigners.length === 0) {
+        return {
+          success: true,
+          message: 'No pending signers to remind',
+          envelopeId: envelopeId.getValue(),
+          remindersSent: 0,
+          signersNotified: [],
+          skippedSigners: []
+        };
+      }
+
+      // 4. Filter signers if specific IDs provided
+      const signersToRemind = request.signerIds 
+        ? pendingSigners.filter(signer => 
+            request.signerIds!.includes(signer.getId().getValue())
+          )
+        : pendingSigners;
+
+      if (signersToRemind.length === 0) {
+        return {
+          success: true,
+          message: 'No matching pending signers found',
+          envelopeId: envelopeId.getValue(),
+          remindersSent: 0,
+          signersNotified: [],
+          skippedSigners: []
+        };
+      }
+
+      // 5. Get reminder configuration from config
+      const config = loadConfig();
+      const maxReminders = config.reminders.maxRemindersPerSigner;
+      const minHoursBetween = config.reminders.minHoursBetweenReminders;
+
+      const signersNotified: Array<{
+        id: string;
+        email: string;
+        name: string;
+        reminderCount: number;
+        lastReminderAt: Date;
+      }> = [];
+
+      const skippedSigners: Array<{
+        id: string;
+        email: string;
+        reason: string;
+      }> = [];
+
+      // 6. Process each signer
+      for (const signer of signersToRemind) {
+        const signerId = signer.getId();
+        const email = signer.getEmail()?.getValue() || 'Unknown';
+        const name = signer.getFullName() || email;
+
+        // Check if reminder can be sent
+        const { canSend, reason } = await this.signerReminderTrackingService.canSendReminder(
+          signerId,
+          envelopeId,
+          maxReminders,
+          minHoursBetween
+        );
+
+        if (!canSend) {
+          skippedSigners.push({
+            id: signerId.getValue(),
+            email,
+            reason: reason || 'Unknown reason'
+          });
+          continue;
+        }
+
+        // Record reminder sent
+        const updatedTracking = await this.signerReminderTrackingService.recordReminderSent(
+          signerId,
+          envelopeId,
+          request.message
+        );
+
+        // Get existing invitation tokens for this signer
+        const invitationTokens = await this.invitationTokenService.getTokensBySigner(signerId);
+        const activeToken = invitationTokens.find(token => !token.isExpired());
+        
+        if (!activeToken) {
+          skippedSigners.push({
+            id: signerId.getValue(),
+            email,
+            reason: 'No active invitation token found'
+          });
+          continue;
+        }
+
+        // Update invitation token lastSentAt and resendCount
+        await this.invitationTokenService.updateTokenSent(activeToken.getId());
+
+        // Publish reminder notification event
+        await this.publishReminderNotificationEvent(
+          envelopeId,
+          signerId,
+          request.message || 'Please sign the document',
+          updatedTracking.getReminderCount()
+        );
+
+        // Create audit event for reminder sent
+        await this.signatureAuditEventService.createEvent({
+          envelopeId: envelopeId.getValue(),
+          signerId: signerId.getValue(),
+          eventType: 'SIGNER_REMINDER_SENT' as any,
+          description: `Reminder sent to signer ${name} (${email})`,
+          userId,
+          ipAddress: securityContext.ipAddress,
+          userAgent: securityContext.userAgent,
+          country: securityContext.country,
+          metadata: {
+            reminderCount: updatedTracking.getReminderCount(),
+            message: request.message,
+            lastReminderAt: updatedTracking.getLastReminderAt()?.toISOString()
+          }
+        });
+
+        signersNotified.push({
+          id: signerId.getValue(),
+          email,
+          name,
+          reminderCount: updatedTracking.getReminderCount(),
+          lastReminderAt: updatedTracking.getLastReminderAt() || new Date()
+        });
+      }
+
+      return {
+        success: true,
+        message: `Reminders sent to ${signersNotified.length} signers`,
+        envelopeId: envelopeId.getValue(),
+        remindersSent: signersNotified.length,
+        signersNotified,
+        skippedSigners
+      };
+    } catch (error) {
+      this.handleOrchestrationError(error as Error, 'send reminders');
+    }
+  }
+
+  /**
+   * Publishes reminder notification event
+   * @param envelopeId - The envelope ID
+   * @param signerId - The signer ID
+   * @param message - The reminder message
+   * @param reminderCount - The current reminder count
+   * @param securityContext - Security context for audit tracking
+   * @returns Promise that resolves when event is published
+   */
+  private async publishReminderNotificationEvent(
+    envelopeId: EnvelopeId,
+    signerId: SignerId,
+    message: string,
+    reminderCount: number
+  ): Promise<void> {
+    try {
+      const event = makeEvent('REMINDER_NOTIFICATION', {
+        envelopeId: envelopeId.getValue(),
+        signerId: signerId.getValue(),
+        message,
+        reminderCount,
+        timestamp: new Date().toISOString(),
+        source: 'signature-service',
+        version: '1.0'
+      });
+
+      await this.outboxRepository.save(event);
+    } catch (error) {
+      console.error('Failed to publish reminder notification event', {
+        error: error instanceof Error ? error.message : error,
+        envelopeId: envelopeId.getValue(),
+        signerId: signerId.getValue()
+      });
+      throw error;
+    }
+  }
 
   /**
    * Handles orchestration errors

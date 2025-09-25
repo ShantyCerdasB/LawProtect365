@@ -518,5 +518,47 @@ export class WorkflowTestHelper {
     return this.envelopeOperations.getAuditTrailWithoutAuth(envelopeId);
   }
 
+  /**
+   * Send notification (reminder or resend) to signers
+   * @param envelopeId - ID of the envelope
+   * @param request - Notification request data
+   * @returns Promise that resolves to the notification response
+   */
+  async sendNotification(
+    envelopeId: string,
+    request: {
+      type: 'reminder' | 'resend';
+      signerIds?: string[];
+      message?: string;
+    }
+  ): Promise<{ statusCode: number; data: any }> {
+    if (!this.envelopeOperations) {
+      throw new Error('WorkflowTestHelper not initialized. Call initialize() first.');
+    }
+    return this.envelopeOperations.sendNotification(envelopeId, request);
+  }
+
+  /**
+   * Send notification as a different user
+   * @param envelopeId - ID of the envelope
+   * @param request - Notification request data
+   * @param user - User to send as
+   * @returns Promise that resolves to the notification response
+   */
+  async sendNotificationAsUser(
+    envelopeId: string,
+    request: {
+      type: 'reminder' | 'resend';
+      signerIds?: string[];
+      message?: string;
+    },
+    user: TestUser
+  ): Promise<{ statusCode: number; data: any }> {
+    if (!this.envelopeOperations) {
+      throw new Error('WorkflowTestHelper not initialized. Call initialize() first.');
+    }
+    return this.envelopeOperations.sendNotificationAsUser(envelopeId, request, user);
+  }
+
 }
 

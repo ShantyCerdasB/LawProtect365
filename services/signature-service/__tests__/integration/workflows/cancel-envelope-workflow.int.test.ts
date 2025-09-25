@@ -397,9 +397,9 @@ describe('Cancel Envelope Workflow', () => {
           given: true,
           timestamp: new Date().toISOString(),
           text: 'test-consent-text',
-          ipAddress: 'test-ip-address',
+          ipAddress: '192.168.1.1',
           userAgent: 'test-user-agent',
-          country: 'test-country'
+          country: 'US'
         }
       );
 

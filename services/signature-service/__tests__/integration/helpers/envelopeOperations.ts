@@ -16,6 +16,7 @@ import { getAuditTrailHandler } from '../../../src/handlers/audit/GetAuditTrailH
 import { signDocumentHandler } from '../../../src/handlers/signing/SignDocumentHandler';
 import { declineSignerHandler } from '../../../src/handlers/signing/DeclineSignerHandler';
 import { cancelEnvelopeHandler } from '../../../src/handlers/envelopes/CancelEnvelopeHandler';
+import { sendNotificationHandler } from '../../../src/handlers/notifications/SendNotificationHandler';
 import { TestUser, EnvelopeData } from './testTypes';
 
 /**
@@ -810,6 +811,82 @@ startxref
     });
     
     const result = await getAuditTrailHandler(event) as any;
+    const response = JSON.parse(result.body);
+    
+    return {
+      statusCode: result.statusCode,
+      data: response.data || response
+    };
+  }
+
+  /**
+   * Send notification (reminder or resend) to signers
+   * @param envelopeId - ID of the envelope
+   * @param request - Notification request data
+   * @returns Promise that resolves to the notification response
+   */
+  async sendNotification(
+    envelopeId: string,
+    request: {
+      type: 'reminder' | 'resend';
+      signerIds?: string[];
+      message?: string;
+    }
+  ): Promise<{ statusCode: number; data: any }> {
+    const token = await generateTestJwtToken({ 
+      sub: this.testUser.userId, 
+      email: this.testUser.email, 
+      roles: ['admin'], 
+      scopes: [] 
+    });
+    
+    const event = await createApiGatewayEvent({ 
+      includeAuth: false, 
+      authToken: token,
+      pathParameters: { envelopeId },
+      body: request
+    });
+    
+    const result = await sendNotificationHandler(event) as any;
+    const response = JSON.parse(result.body);
+    
+    return {
+      statusCode: result.statusCode,
+      data: response.data || response
+    };
+  }
+
+  /**
+   * Send notification as a different user
+   * @param envelopeId - ID of the envelope
+   * @param request - Notification request data
+   * @param user - User to send as
+   * @returns Promise that resolves to the notification response
+   */
+  async sendNotificationAsUser(
+    envelopeId: string,
+    request: {
+      type: 'reminder' | 'resend';
+      signerIds?: string[];
+      message?: string;
+    },
+    user: TestUser
+  ): Promise<{ statusCode: number; data: any }> {
+    const token = await generateTestJwtToken({ 
+      sub: user.userId, 
+      email: user.email, 
+      roles: ['admin'], 
+      scopes: [] 
+    });
+    
+    const event = await createApiGatewayEvent({ 
+      includeAuth: false, 
+      authToken: token,
+      pathParameters: { envelopeId },
+      body: request
+    });
+    
+    const result = await sendNotificationHandler(event) as any;
     const response = JSON.parse(result.body);
     
     return {

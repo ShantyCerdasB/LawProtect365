@@ -1,30 +1,81 @@
 /**
  * @fileoverview SendNotificationHandler - Handler for sending notifications to signers
- * @summary Handles notification dispatch to signers with invitation tokens
+ * @summary Handles reminder notifications and invitation resends to signers
  * @description This handler processes requests to send notifications to signers,
- * including invitation token generation and notification dispatch.
- * 
- * @deprecated This handler is temporarily commented out during refactoring to new DDD architecture.
- * It will be refactored to use the new SignatureOrchestrator and updated services.
+ * including reminders and invitation resends with proper validation and authorization.
  */
 
-/*
-// TODO: Refactor this handler to use new DDD architecture
-// - Use SignatureOrchestrator instead of individual services
-// - Update to use new ServiceFactory
-// - Fix entity and enum references
-// - Update authentication flow
+import { ControllerFactory, VALID_COGNITO_ROLES } from '@lawprotect/shared-ts';
+import { ServiceFactory } from '../../infrastructure/factories/ServiceFactory';
+import { SendNotificationPathSchema, SendNotificationRequestSchema } from '../../domain/schemas/SendNotificationSchema';
+import { EnvelopeId } from '../../domain/value-objects/EnvelopeId';
+import { NotificationType } from '@lawprotect/shared-ts';
 
-import { ControllerFactory, PermissionLevel, AccessType } from '@lawprotect/shared-ts';
-import { EnvelopeService } from '../../services/EnvelopeService';
-import { SignerService } from '../../services/SignerService';
-import { InvitationTokenService } from '../../services/InvitationTokenService';
-import { ServiceFactory } from '../../infrastructure/factories/oldServiceFactory';
+/**
+ * Handler for sending notifications to signers
+ * 
+ * Supports sending reminders and resending invitations to signers.
+ * Only the envelope owner can send notifications.
+ */
+export const sendNotificationHandler = ControllerFactory.createCommand({
+  pathSchema: SendNotificationPathSchema,
+  bodySchema: SendNotificationRequestSchema,
 
-// Handler implementation commented out during refactoring
-*/
+  appServiceClass: class {
+    private readonly signatureOrchestrator: any;
 
-export const SendNotificationHandler = {
-  // Temporarily disabled during refactoring
-  // Will be reimplemented using new DDD architecture
-};
+    constructor() {
+      this.signatureOrchestrator = ServiceFactory.createSignatureOrchestrator();
+    }
+
+    async execute(params: any) {
+      try {
+        const { envelopeId, request, userId, securityContext } = params;
+
+        // Validate notification type
+        if (request.type === NotificationType.REMINDER) {
+          return await this.signatureOrchestrator.sendReminders(
+            envelopeId,
+            request,
+            userId,
+            securityContext
+          );
+        } 
+      } catch (error) {
+        throw error;
+      }
+    }
+  },
+
+  extractParams: (path: any, body: any, _query: any, context: any) => ({
+    envelopeId: EnvelopeId.fromString(path.envelopeId),
+    request: body,
+    userId: context.auth.userId,
+    securityContext: {
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+      country: context.country
+    }
+  }),
+
+  responseType: 'ok',
+  transformResult: async (result: any) => {
+    return {
+      success: result.success,
+      message: result.message,
+      envelopeId: result.envelopeId,
+      remindersSent: result.remindersSent,
+      signersNotified: result.signersNotified.map((signer: any) => ({
+        id: signer.id,
+        email: signer.email,
+        name: signer.name,
+        reminderCount: signer.reminderCount,
+        lastReminderAt: signer.lastReminderAt.toISOString()
+      })),
+      skippedSigners: result.skippedSigners
+    };
+  },
+  requireAuth: true,
+  requiredRoles: [...VALID_COGNITO_ROLES],
+  includeSecurityContext: true,
+});

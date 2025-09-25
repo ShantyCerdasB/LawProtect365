@@ -50,6 +50,14 @@ export interface SignatureServiceConfig extends AppConfig {
     maxExpirationSeconds: number;
     minExpirationSeconds: number;
   };
+  
+  reminders: {
+    maxRemindersPerSigner: number;
+    minHoursBetweenReminders: number;
+    firstReminderHours: number;
+    secondReminderHours: number;
+    thirdReminderHours: number;
+  };
 }
 
 /**
@@ -95,6 +103,13 @@ export const loadConfig = (): SignatureServiceConfig => {
       defaultExpirationSeconds: parseInt(process.env.DOCUMENT_DOWNLOAD_DEFAULT_EXPIRATION_SECONDS || '3600'), // 1 hour
       maxExpirationSeconds: parseInt(process.env.DOCUMENT_DOWNLOAD_MAX_EXPIRATION_SECONDS || '86400'), // 24 hours
       minExpirationSeconds: parseInt(process.env.DOCUMENT_DOWNLOAD_MIN_EXPIRATION_SECONDS || '300') // 5 minutes
+    },
+    reminders: {
+      maxRemindersPerSigner: parseInt(process.env.MAX_REMINDERS_PER_SIGNER || '3'),
+      minHoursBetweenReminders: parseInt(process.env.MIN_HOURS_BETWEEN_REMINDERS || '24'),
+      firstReminderHours: parseInt(process.env.FIRST_REMINDER_HOURS || '24'),
+      secondReminderHours: parseInt(process.env.SECOND_REMINDER_HOURS || '48'),
+      thirdReminderHours: parseInt(process.env.THIRD_REMINDER_HOURS || '72')
     }
   };
 };

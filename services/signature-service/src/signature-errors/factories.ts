@@ -603,3 +603,15 @@ export const eventGenerationFailed = (details?: unknown) =>
  */
 export const signatureCreationFailed = (details?: unknown) =>
   new InternalError("Signature creation failed", SignatureErrorCodes.SIGNATURE_FAILED, details);
+
+/**
+ * Creates a NotFoundError for reminder tracking not found (404).
+ */
+export const reminderTrackingNotFound = (details?: unknown) =>
+  new NotFoundError(typeof details === 'string' ? details : "Reminder tracking not found", SignatureErrorCodes.REMINDER_TRACKING_NOT_FOUND, details);
+
+/**
+ * Creates an InternalError for reminder tracking creation failures (500).
+ */
+export const reminderTrackingCreationFailed = (details?: unknown) =>
+  new InternalError(typeof details === 'string' ? details : "Reminder tracking creation failed", SignatureErrorCodes.REMINDER_TRACKING_FAILED, details);

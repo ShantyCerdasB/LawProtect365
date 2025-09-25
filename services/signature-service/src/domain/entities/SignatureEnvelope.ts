@@ -60,7 +60,7 @@ export class SignatureEnvelope {
     // Lifecycle timestamps
     private readonly sentAt: Date | undefined,
     private completedAt: Date | undefined,
-    private readonly cancelledAt: Date | undefined,
+    private cancelledAt: Date | undefined,
     private readonly declinedAt: Date | undefined,
     private readonly declinedBySignerId: SignerId | undefined,
     private readonly declinedReason: string | undefined,
@@ -475,6 +475,7 @@ export class SignatureEnvelope {
     }
     
     this.status = EnvelopeStatus.cancelled();
+    this.cancelledAt = new Date();
     this.updatedAt = new Date();
   }
 

@@ -496,6 +496,30 @@ export class InvitationTokenService {
 
 
   /**
+   * Updates token sent information (lastSentAt and resendCount)
+   * @param tokenId - The invitation token ID
+   * @returns Updated InvitationToken entity
+   */
+  async updateTokenSent(tokenId: InvitationTokenId): Promise<InvitationToken> {
+    try {
+      const token = await this.invitationTokenRepository.findById(tokenId);
+      if (!token) {
+        throw invitationTokenInvalid(`Invitation token with ID ${tokenId.getValue()} not found`);
+      }
+
+      // Update token sent information
+      token.markAsSent();
+      
+      // Save updated token
+      return await this.invitationTokenRepository.update(tokenId, token);
+    } catch (error) {
+      throw invitationTokenInvalid(
+        `Failed to update token sent information: ${error instanceof Error ? error.message : error}`
+      );
+    }
+  }
+
+  /**
    * Generates a secure random token
    * @returns Secure random token string
    */

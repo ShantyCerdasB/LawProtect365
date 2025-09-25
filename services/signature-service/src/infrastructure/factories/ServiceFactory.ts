@@ -34,6 +34,8 @@ import { InvitationTokenRepository } from '../../repositories/InvitationTokenRep
 import { SignatureAuditEventRepository } from '../../repositories/SignatureAuditEventRepository';
 import { ConsentService } from '../../services/ConsentService';
 import { ConsentRepository } from '../../repositories/ConsentRepository';
+import { SignerReminderTrackingService } from '../../services/SignerReminderTrackingService';
+import { SignerReminderTrackingRepository } from '../../repositories/SignerReminderTrackingRepository';
 
 /**
  * ServiceFactory - Infrastructure factory for service instantiation with Prisma
@@ -167,6 +169,7 @@ export class ServiceFactory {
     const outboxRepository = this.createOutboxRepository();
     const consentService = this.createConsentService();
     const kmsService = this.createKmsService();
+    const signerReminderTrackingService = this.createSignerReminderTrackingService();
 
     return new SignatureOrchestrator(
       signatureEnvelopeService,
@@ -176,7 +179,8 @@ export class ServiceFactory {
       s3Service,
       outboxRepository,
       consentService,
-      kmsService
+      kmsService,
+      signerReminderTrackingService
     );
   }
 
@@ -261,6 +265,25 @@ export class ServiceFactory {
       outboxRepository: this.createOutboxRepository(),
       eventBridgeAdapter: this.createEventBridgeAdapter()
     });
+  }
+
+  /**
+   * Creates a SignerReminderTrackingService instance with all required dependencies
+   * 
+   * @returns Configured SignerReminderTrackingService instance
+   */
+  static createSignerReminderTrackingService(): SignerReminderTrackingService {
+    const signerReminderTrackingRepository = this.createSignerReminderTrackingRepository();
+    return new SignerReminderTrackingService(signerReminderTrackingRepository);
+  }
+
+  /**
+   * Creates a SignerReminderTrackingRepository instance
+   * 
+   * @returns Configured SignerReminderTrackingRepository instance
+   */
+  static createSignerReminderTrackingRepository(): SignerReminderTrackingRepository {
+    return new SignerReminderTrackingRepository(this.getPrismaClient());
   }
 
   /**

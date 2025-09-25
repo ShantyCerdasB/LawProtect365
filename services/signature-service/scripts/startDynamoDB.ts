@@ -53,6 +53,13 @@ export const startDynamoDBLocal = async (config: Partial<DynamoDBLocalConfig> = 
   const finalConfig = { ...defaultConfig, ...config };
   
   try {
+    // Check if DynamoDB Local is already running
+    const isRunning = await isDynamoDBLocalRunning();
+    if (isRunning) {
+      console.log('✅ DynamoDB Local is already running');
+      return;
+    }
+    
     // Use the programmatic API to start DynamoDB Local
     const port = finalConfig.port;
     dynamoDBPort = port;
@@ -66,6 +73,11 @@ export const startDynamoDBLocal = async (config: Partial<DynamoDBLocalConfig> = 
     await new Promise(resolve => setTimeout(resolve, 2000));
     
   } catch (error: any) {
+    // Check if the error is due to port already in use
+    if (error.message && error.message.includes('Address already in use')) {
+      console.log('✅ DynamoDB Local is already running on port', finalConfig.port);
+      return;
+    }
     console.error('❌ Failed to start DynamoDB Local:', error.message);
     throw error;
   }
