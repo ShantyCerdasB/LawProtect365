@@ -15,6 +15,10 @@
  * Note: Tests the complete download workflow using DownloadDocumentHandler.
  */
 
+// ✅ REFACTORED: Using centralized mock setup
+import { setupReminderMock } from '../helpers/mockSetupHelper';
+setupReminderMock();
+
 import { WorkflowTestHelper } from '../helpers/workflowHelpers';
 import { TestDataFactory } from '../helpers/testDataFactory';
 import { secureRandomString, generateTestIpAddress } from '../helpers/testHelpers';
@@ -28,73 +32,6 @@ import {
   verifyDownloadFailure,
   clearDownloadMockData
 } from '../helpers/downloadDocumentHelpers';
-
-// Mock SignatureOrchestrator.publishNotificationEvent to avoid OutboxRepository issues
-jest.mock('../../../src/services/SignatureOrchestrator', () => {
-  const actual = jest.requireActual('../../../src/services/SignatureOrchestrator');
-  return {
-    ...actual,
-    SignatureOrchestrator: jest.fn().mockImplementation((...args) => {
-      const instance = new actual.SignatureOrchestrator(...args);
-      
-      // Mock the publishNotificationEvent method
-      instance.publishNotificationEvent = jest.fn().mockImplementation(async (envelopeId: any, options: any, tokens: any[]) => {
-        
-        // Register invitation in outboxMock for verification
-        const envelopeIdStr = envelopeId?.getValue?.() || envelopeId;
-        
-        // Simulate invitation registration for each token
-        for (const token of tokens || []) {
-          const signerId = token.signerId?.getValue?.() || token.signerId;
-          if (signerId) {
-            // Access the internal Maps directly from the outboxMock module
-            const outboxMockModule = require('../mocks/aws/outboxMock');
-            
-            // Get the internal Maps (they are defined at module level)
-            const invitationHistory = outboxMockModule.invitationHistory || new Map();
-            const publishedEvents = outboxMockModule.publishedEvents || new Map();
-            
-            // Initialize tracking for this envelope if not exists
-            if (!invitationHistory.has(envelopeIdStr)) {
-              invitationHistory.set(envelopeIdStr, new Set());
-            }
-            
-            if (!publishedEvents.has(envelopeIdStr)) {
-              publishedEvents.set(envelopeIdStr, []);
-            }
-            
-            // Register invitation (allow duplicates for re-send scenarios)
-            invitationHistory.get(envelopeIdStr).add(signerId);
-            
-            // Register event
-            publishedEvents.get(envelopeIdStr).push({
-              type: 'ENVELOPE_INVITATION',
-              payload: {
-                envelopeId: envelopeIdStr,
-                signerId: signerId,
-                eventType: 'ENVELOPE_INVITATION',
-                message: options.message || 'You have been invited to sign a document'
-              },
-              detail: {
-                envelopeId: envelopeIdStr,
-                signerId: signerId,
-                eventType: 'ENVELOPE_INVITATION',
-                message: options.message || 'You have been invited to sign a document'
-              },
-              id: `mock-${Date.now()}-${secureRandomString(8)}`,
-              timestamp: new Date().toISOString()
-            });
-            
-          }
-        }
-        
-        return Promise.resolve();
-      });
-
-      return instance;
-    })
-  };
-});
 
 describe('Download Document Workflow', () => {
   let workflowHelper: WorkflowTestHelper;
@@ -127,19 +64,24 @@ describe('Download Document Workflow', () => {
       // 2. Download document
       const downloadResponse = await workflowHelper.downloadDocument(envelopeId);
 
+      expect(downloadResponse.statusCode).toBe(200);
+      expect(downloadResponse.data.success).toBe(true);
+      expect(downloadResponse.data.downloadUrl).toBeDefined();
+      expect(downloadResponse.data.expiresAt).toBeDefined();
+
       // 3. Verify download response
       verifyDownloadResponse(downloadResponse);
       
-      // 4. Verify audit event was created
-      await verifyDownloadAuditEvent(envelopeId, workflowHelper.getTestUser().userId);
+      // 4. Verify audit event was created for authenticated user
+      await verifyDownloadAuditEvent(envelopeId, envelope.createdBy);
     });
 
-    it('should download document for authenticated user in COMPLETED status', async () => {
+    it('should download document for authenticated user in READY_FOR_SIGNATURE status', async () => {
       // 1. Create envelope
       const envelope = await workflowHelper.createEnvelope(
         TestDataFactory.createEnvelopeData({
-          title: 'Completed Download Test Contract',
-          description: 'Testing download workflow with completed envelope',
+          title: 'Download Test Contract Ready',
+          description: 'Testing download workflow in READY_FOR_SIGNATURE status',
           signingOrderType: 'OWNER_FIRST',
           originType: 'USER_UPLOAD'
         })
@@ -148,14 +90,57 @@ describe('Download Document Workflow', () => {
       expect(envelope.id).toBeDefined();
       const envelopeId = envelope.id;
 
-      // 2. Add signer and complete envelope
+      // 2. Add signers
+      const signers = TestDataFactory.createMultipleSigners(2, 1);
+      const addSignersResponse = await workflowHelper.updateEnvelope(envelopeId, {
+        addSigners: signers
+      });
+
+      expect(addSignersResponse.statusCode).toBe(200);
+      expect(addSignersResponse.data.signers).toHaveLength(2);
+
+      // 3. Send envelope
+      const sendResponse = await workflowHelper.sendEnvelope(envelopeId, {
+        sendToAll: true
+      });
+      expect(sendResponse.statusCode).toBe(200);
+      expect(sendResponse.data.status).toBe('READY_FOR_SIGNATURE');
+
+      // 4. Download document
+      const downloadResponse = await workflowHelper.downloadDocument(envelopeId);
+
+      expect(downloadResponse.statusCode).toBe(200);
+      expect(downloadResponse.data.success).toBe(true);
+      expect(downloadResponse.data.downloadUrl).toBeDefined();
+
+      // 5. Verify download response
+      verifyDownloadResponse(downloadResponse);
+      
+      // 6. Verify audit event was created for authenticated user
+      await verifyDownloadAuditEvent(envelopeId, envelope.createdBy);
+    });
+
+    it('should download document for authenticated user in COMPLETED status', async () => {
+      // 1. Create envelope
+      const envelope = await workflowHelper.createEnvelope(
+        TestDataFactory.createEnvelopeData({
+          title: 'Download Test Contract Completed',
+          description: 'Testing download workflow in COMPLETED status',
+          signingOrderType: 'OWNER_FIRST',
+          originType: 'USER_UPLOAD'
+        })
+      );
+
+      expect(envelope.id).toBeDefined();
+      const envelopeId = envelope.id;
+
+      // 2. Add signer
       const signers = TestDataFactory.createMultipleSigners(1, 1);
       const addSignersResponse = await workflowHelper.updateEnvelope(envelopeId, {
         addSigners: signers
       });
 
       expect(addSignersResponse.statusCode).toBe(200);
-      const signerIds = addSignersResponse.data.signers.map((s: any) => s.id);
 
       // 3. Send envelope
       const sendResponse = await workflowHelper.sendEnvelope(envelopeId, {
@@ -163,14 +148,15 @@ describe('Download Document Workflow', () => {
       });
       expect(sendResponse.statusCode).toBe(200);
 
-      // 4. Get invitation tokens and sign
+      // 4. Get invitation tokens
       expect(sendResponse.data.tokens).toBeDefined();
       expect(sendResponse.data.tokens).toHaveLength(1);
       const invitationTokens = sendResponse.data.tokens.map((t: any) => t.token);
 
+      // 5. Sign the document to complete it
       const signResponse = await workflowHelper.signDocument(
         envelopeId,
-        signerIds[0],
+        addSignersResponse.data.signers[0].id,
         invitationTokens[0],
         {
           given: true,
@@ -181,18 +167,21 @@ describe('Download Document Workflow', () => {
           country: 'US'
         }
       );
-
       expect(signResponse.statusCode).toBe(200);
       expect(signResponse.data.envelope.status).toBe('COMPLETED');
 
-      // 5. Download document
+      // 6. Download document
       const downloadResponse = await workflowHelper.downloadDocument(envelopeId);
 
-      // 6. Verify download response
+      expect(downloadResponse.statusCode).toBe(200);
+      expect(downloadResponse.data.success).toBe(true);
+      expect(downloadResponse.data.downloadUrl).toBeDefined();
+
+      // 7. Verify download response
       verifyDownloadResponse(downloadResponse);
       
-      // 7. Verify audit event was created
-      await verifyDownloadAuditEvent(envelopeId, workflowHelper.getTestUser().userId);
+      // 8. Verify audit event was created for authenticated user
+      await verifyDownloadAuditEvent(envelopeId, envelope.createdBy);
     });
   });
 
@@ -233,6 +222,10 @@ describe('Download Document Workflow', () => {
       // 5. Download document with invitation token
       const downloadResponse = await workflowHelper.downloadDocumentWithToken(envelopeId, invitationTokens[0]);
 
+      expect(downloadResponse.statusCode).toBe(200);
+      expect(downloadResponse.data.success).toBe(true);
+      expect(downloadResponse.data.downloadUrl).toBeDefined();
+
       // 6. Verify download response
       verifyDownloadResponse(downloadResponse);
       
@@ -240,6 +233,54 @@ describe('Download Document Workflow', () => {
       const signer = addSignersResponse.data.signers[0];
       const externalUserId = `external-user:${signer.fullName || signer.email}`;
       await verifyDownloadAuditEvent(envelopeId, externalUserId, signer.email);
+    });
+
+    it('should download document with custom expiration time', async () => {
+      // 1. Create envelope
+      const envelope = await workflowHelper.createEnvelope(
+        TestDataFactory.createEnvelopeData({
+          title: 'Custom Expiration Download Test Contract',
+          description: 'Testing download workflow with custom expiration',
+          signingOrderType: 'OWNER_FIRST',
+          originType: 'USER_UPLOAD'
+        })
+      );
+
+      expect(envelope.id).toBeDefined();
+      const envelopeId = envelope.id;
+
+      // 2. Add signer
+      const signers = TestDataFactory.createMultipleSigners(1, 1);
+      const addSignersResponse = await workflowHelper.updateEnvelope(envelopeId, {
+        addSigners: signers
+      });
+
+      expect(addSignersResponse.statusCode).toBe(200);
+
+      // 3. Send envelope
+      const sendResponse = await workflowHelper.sendEnvelope(envelopeId, {
+        sendToAll: true
+      });
+      expect(sendResponse.statusCode).toBe(200);
+
+      // 4. Get invitation tokens
+      expect(sendResponse.data.tokens).toBeDefined();
+      expect(sendResponse.data.tokens).toHaveLength(1);
+      const invitationTokens = sendResponse.data.tokens.map((t: any) => t.token);
+
+      // 5. Download document with custom expiration (30 minutes = 1800 seconds)
+      const customExpiration = 1800;
+      const downloadResponse = await workflowHelper.downloadDocumentWithCustomExpiration(envelopeId, customExpiration);
+
+      expect(downloadResponse.statusCode).toBe(200);
+      expect(downloadResponse.data.success).toBe(true);
+      expect(downloadResponse.data.downloadUrl).toBeDefined();
+
+      // 6. Verify download with custom expiration
+      verifyDownloadWithCustomExpiration(downloadResponse, customExpiration);
+      
+      // 7. Verify audit event was created for authenticated user
+      await verifyDownloadAuditEvent(envelopeId, workflowHelper.getTestUser().userId);
     });
   });
 
@@ -271,7 +312,7 @@ describe('Download Document Workflow', () => {
       const envelope = await workflowHelper.createEnvelope(
         TestDataFactory.createEnvelopeData({
           title: 'Invalid Token Test Contract',
-          description: 'Testing invalid invitation token for download',
+          description: 'Testing download with invalid invitation token',
           signingOrderType: 'OWNER_FIRST',
           originType: 'USER_UPLOAD'
         })
@@ -280,37 +321,29 @@ describe('Download Document Workflow', () => {
       expect(envelope.id).toBeDefined();
       const envelopeId = envelope.id;
 
-      // 2. Try to download with invalid invitation token
-      const downloadResponse = await workflowHelper.downloadDocumentWithToken(envelopeId, 'invalid-token');
+      // 2. Add signer
+      const signers = TestDataFactory.createMultipleSigners(1, 1);
+      const addSignersResponse = await workflowHelper.updateEnvelope(envelopeId, {
+        addSigners: signers
+      });
 
+      expect(addSignersResponse.statusCode).toBe(200);
+
+      // 3. Send envelope
+      const sendResponse = await workflowHelper.sendEnvelope(envelopeId, {
+        sendToAll: true
+      });
+      expect(sendResponse.statusCode).toBe(200);
+
+      // 4. Try to download with invalid token
+      const invalidToken = 'invalid-token-12345';
+      const downloadResponse = await workflowHelper.downloadDocumentWithToken(envelopeId, invalidToken);
+
+      expect(downloadResponse.statusCode).toBe(401);
+      expect(downloadResponse.data.message).toContain('Invalid invitation token');
+
+      // 5. Verify download failure
       verifyDownloadFailure(downloadResponse, 401, 'Invalid invitation token');
-    });
-  });
-
-  describe('Configuration and Expiration', () => {
-    it('should download with custom expiration time', async () => {
-      // 1. Create envelope
-      const envelope = await workflowHelper.createEnvelope(
-        TestDataFactory.createEnvelopeData({
-          title: 'Custom Expiration Test Contract',
-          description: 'Testing custom expiration for download',
-          signingOrderType: 'OWNER_FIRST',
-          originType: 'USER_UPLOAD'
-        })
-      );
-
-      expect(envelope.id).toBeDefined();
-      const envelopeId = envelope.id;
-
-      // 2. Download document with custom expiration (30 minutes = 1800 seconds)
-      const customExpiration = 1800;
-      const downloadResponse = await workflowHelper.downloadDocumentWithCustomExpiration(envelopeId, customExpiration);
-
-      // 3. Verify download response with custom expiration
-      verifyDownloadWithCustomExpiration(downloadResponse, customExpiration);
-      
-      // 4. Verify audit event was created
-      await verifyDownloadAuditEvent(envelopeId, workflowHelper.getTestUser().userId);
     });
 
     it('should reject download with invalid expiration time (too short)', async () => {

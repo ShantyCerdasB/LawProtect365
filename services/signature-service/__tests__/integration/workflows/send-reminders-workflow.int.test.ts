@@ -1,20 +1,20 @@
 /**
- * @fileoverview send-reminders-workflow.int.test.ts - Send reminders workflow integration tests (REFACTORED)
- * @summary Complete send reminders workflow tests with shared utilities
- * @description End-to-end integration tests for send reminders workflows where users
- * can send reminder notifications to pending signers with proper validation and limits.
- * 
- * REFACTORED VERSION: Uses shared mock utilities to eliminate code duplication.
+ * @fileoverview send-reminders-workflow.int.test.ts - Send reminders workflow integration tests
+ * @summary Complete send reminders workflow tests
+ * @description End-to-end integration tests for send reminders workflows including
+ * basic functionality, limits validation, and authorization checks.
  * 
  * Test Coverage:
- * - Reminder sending to all pending signers
- * - Reminder sending to specific signers
- * - Custom message handling
- * - Reminder limits validation (max 3, min 24h between)
- * - Authorization validation (owner only)
- * - Error handling for various scenarios
- * - Event publishing verification
- * - Audit event creation
+ * - Send reminders to all pending signers
+ * - Send reminders to specific signers
+ * - Custom reminder messages
+ * - Maximum reminders limit validation
+ * - No pending signers handling
+ * - Authorization validation
+ * - Error handling
+ * 
+ * Note: Tests the complete reminder workflow using all handlers:
+ * CreateEnvelope, UpdateEnvelope, SendEnvelope, and SendNotification.
  */
 
 // ✅ REFACTORED: Single line instead of 80+ lines of duplicated mock code
@@ -24,6 +24,7 @@ setupReminderMock();
 
 import { WorkflowTestHelper } from '../helpers/workflowHelpers';
 import { TestDataFactory } from '../helpers/testDataFactory';
+import { setupEnvelopeWithSigners, setupBasicEnvelope } from '../helpers/testSetupHelpers';
 
 describe('Send Reminders Workflow Integration Tests', () => {
   let helper: WorkflowTestHelper;
@@ -41,28 +42,11 @@ describe('Send Reminders Workflow Integration Tests', () => {
 
   describe('Basic Reminder Functionality', () => {
     it('should send reminders to all pending signers', async () => {
-      // 1. Create envelope
-      const envelopeData = TestDataFactory.createEnvelopeData({
+      // ✅ REFACTORED: Single function call instead of 15+ lines of setup
+      const { envelopeId } = await setupEnvelopeWithSigners(helper, {
         title: 'Basic Reminder Test Contract',
         description: 'Document to test basic reminder functionality'
       });
-      const createResponse = await helper.createEnvelope(envelopeData);
-      expect(createResponse.id).toBeDefined();
-      const envelopeId = createResponse.id;
-
-      // 2. Add signer
-      const signers = TestDataFactory.createMultipleSigners(1, 1);
-      const addSignersResponse = await helper.updateEnvelope(envelopeId, {
-        addSigners: signers
-      });
-      expect(addSignersResponse.statusCode).toBe(200);
-
-      // 3. Send envelope
-      const sendResponse = await helper.sendEnvelope(envelopeId, {
-        message: 'Please sign this document',
-        sendToAll: true
-      });
-      expect(sendResponse.statusCode).toBe(200);
 
       // 4. Send reminder
       const reminderResponse = await helper.sendNotification(envelopeId, {
@@ -76,34 +60,16 @@ describe('Send Reminders Workflow Integration Tests', () => {
       expect(reminderResponse.data.remindersSent).toBe(1);
       expect(reminderResponse.data.signersNotified).toHaveLength(1);
       expect(reminderResponse.data.skippedSigners).toHaveLength(0);
-
       console.log('✅ Basic reminder sent successfully');
     });
 
     it('should send reminders to specific signers', async () => {
-      // 1. Create envelope
-      const envelopeData = TestDataFactory.createEnvelopeData({
+      // ✅ REFACTORED: Single function call instead of 20+ lines of setup
+      const { envelopeId, signerIds } = await setupEnvelopeWithSigners(helper, {
         title: 'Specific Signer Reminder Test Contract',
-        description: 'Document to test specific signer reminders'
+        description: 'Document to test specific signer reminders',
+        signerCount: 3
       });
-      const createResponse = await helper.createEnvelope(envelopeData);
-      expect(createResponse.id).toBeDefined();
-      const envelopeId = createResponse.id;
-
-      // 2. Add multiple signers
-      const signers = TestDataFactory.createMultipleSigners(3, 1);
-      const addSignersResponse = await helper.updateEnvelope(envelopeId, {
-        addSigners: signers
-      });
-      expect(addSignersResponse.statusCode).toBe(200);
-      const signerIds = addSignersResponse.data.signers.map((s: any) => s.id);
-
-      // 3. Send envelope
-      const sendResponse = await helper.sendEnvelope(envelopeId, {
-        message: 'Please sign this document',
-        sendToAll: true
-      });
-      expect(sendResponse.statusCode).toBe(200);
 
       // 4. Send reminder to specific signers only
       const reminderResponse = await helper.sendNotification(envelopeId, {
@@ -118,33 +84,15 @@ describe('Send Reminders Workflow Integration Tests', () => {
       expect(reminderResponse.data.remindersSent).toBe(2);
       expect(reminderResponse.data.signersNotified).toHaveLength(2);
       expect(reminderResponse.data.skippedSigners).toHaveLength(0);
-
       console.log('✅ Specific signer reminders sent successfully');
     });
 
     it('should send reminders with custom message', async () => {
-      // 1. Create envelope
-      const envelopeData = TestDataFactory.createEnvelopeData({
+      // ✅ REFACTORED: Single function call instead of 15+ lines of setup
+      const { envelopeId } = await setupEnvelopeWithSigners(helper, {
         title: 'Custom Message Reminder Test Contract',
         description: 'Document to test custom reminder messages'
       });
-      const createResponse = await helper.createEnvelope(envelopeData);
-      expect(createResponse.id).toBeDefined();
-      const envelopeId = createResponse.id;
-
-      // 2. Add signer
-      const signers = TestDataFactory.createMultipleSigners(1, 1);
-      const addSignersResponse = await helper.updateEnvelope(envelopeId, {
-        addSigners: signers
-      });
-      expect(addSignersResponse.statusCode).toBe(200);
-
-      // 3. Send envelope
-      const sendResponse = await helper.sendEnvelope(envelopeId, {
-        message: 'Please sign this document',
-        sendToAll: true
-      });
-      expect(sendResponse.statusCode).toBe(200);
 
       // 4. Send reminder with custom message
       const customMessage = 'URGENT: Please sign this document as soon as possible. This is a custom reminder message.';
@@ -158,35 +106,17 @@ describe('Send Reminders Workflow Integration Tests', () => {
       expect(reminderResponse.data.success).toBe(true);
       expect(reminderResponse.data.remindersSent).toBe(1);
       expect(reminderResponse.data.signersNotified).toHaveLength(1);
-
       console.log('✅ Custom reminder message sent successfully');
     });
   });
 
   describe('Reminder Limits and Validation', () => {
     it('should respect maximum reminders limit', async () => {
-      // 1. Create envelope
-      const envelopeData = TestDataFactory.createEnvelopeData({
+      // ✅ REFACTORED: Single function call instead of 15+ lines of setup
+      const { envelopeId } = await setupEnvelopeWithSigners(helper, {
         title: 'Max Reminders Test Contract',
         description: 'Document to test maximum reminders limit'
       });
-      const createResponse = await helper.createEnvelope(envelopeData);
-      expect(createResponse.id).toBeDefined();
-      const envelopeId = createResponse.id;
-
-      // 2. Add signer
-      const signers = TestDataFactory.createMultipleSigners(1, 1);
-      const addSignersResponse = await helper.updateEnvelope(envelopeId, {
-        addSigners: signers
-      });
-      expect(addSignersResponse.statusCode).toBe(200);
-
-      // 3. Send envelope
-      const sendResponse = await helper.sendEnvelope(envelopeId, {
-        message: 'Please sign this document',
-        sendToAll: true
-      });
-      expect(sendResponse.statusCode).toBe(200);
 
       // 4. Send multiple reminders (should respect limits)
       for (let i = 1; i <= 5; i++) {
@@ -194,7 +124,6 @@ describe('Send Reminders Workflow Integration Tests', () => {
           type: 'reminder',
           message: `Reminder ${i}`
         });
-
         if (i <= 3) {
           // First 3 reminders should succeed
           expect(reminderResponse.statusCode).toBe(200);
@@ -207,23 +136,17 @@ describe('Send Reminders Workflow Integration Tests', () => {
           expect(reminderResponse.data.skippedSigners.length).toBeGreaterThan(0);
         }
       }
-
       console.log('✅ Maximum reminders limit respected');
     });
 
     it('should handle no pending signers gracefully', async () => {
-      // 1. Create envelope
-      const envelopeData = TestDataFactory.createEnvelopeData({
+      // ✅ REFACTORED: Single function call instead of 10+ lines of setup
+      const { envelopeId } = await setupBasicEnvelope(helper, {
         title: 'No Pending Signers Test Contract',
         description: 'Document to test no pending signers scenario'
       });
-      const createResponse = await helper.createEnvelope(envelopeData);
-      expect(createResponse.id).toBeDefined();
-      const envelopeId = createResponse.id;
 
-      // 2. Don't add any signers - envelope has no pending signers
-
-      // 3. Try to send reminder
+      // 3. Try to send reminder (no signers added)
       const reminderResponse = await helper.sendNotification(envelopeId, {
         type: 'reminder',
         message: 'This should not be sent'
@@ -235,39 +158,20 @@ describe('Send Reminders Workflow Integration Tests', () => {
       expect(reminderResponse.data.remindersSent).toBe(0);
       expect(reminderResponse.data.signersNotified).toHaveLength(0);
       expect(reminderResponse.data.message).toContain('No pending signers');
-
       console.log('✅ No pending signers handled gracefully');
     });
   });
 
   describe('Authorization and Error Handling', () => {
     it('should prevent non-owner from sending reminders', async () => {
-      // 1. Create envelope with user A
-      const envelopeData = TestDataFactory.createEnvelopeData({
+      // ✅ REFACTORED: Single function call instead of 15+ lines of setup
+      const { envelopeId } = await setupEnvelopeWithSigners(helper, {
         title: 'Authorization Test Contract',
         description: 'Document to test reminder authorization'
       });
-      const createResponse = await helper.createEnvelope(envelopeData);
-      expect(createResponse.id).toBeDefined();
-      const envelopeId = createResponse.id;
-
-      // 2. Add signer
-      const signers = TestDataFactory.createMultipleSigners(1, 1);
-      const addSignersResponse = await helper.updateEnvelope(envelopeId, {
-        addSigners: signers
-      });
-      expect(addSignersResponse.statusCode).toBe(200);
-
-      // 3. Send envelope
-      const sendResponse = await helper.sendEnvelope(envelopeId, {
-        message: 'Please sign this document',
-        sendToAll: true
-      });
-      expect(sendResponse.statusCode).toBe(200);
 
       // 4. Try to send reminder as different user (user B)
       const nonAuthorizedUser = helper.getSecondTestUser();
-      const token = await helper.generateTestJwtToken(nonAuthorizedUser.userId, nonAuthorizedUser.email);
 
       const reminderResponse = await helper.sendNotificationAsUser(envelopeId, {
         type: 'reminder',
@@ -277,8 +181,7 @@ describe('Send Reminders Workflow Integration Tests', () => {
       // 5. Verify authorization failure
       expect(reminderResponse.statusCode).toBe(403);
       expect(reminderResponse.data.message).toContain('Only the envelope owner can modify');
-
-      console.log('✅ Non-owner prevented from sending reminders');
+      console.log('✅ Non-owner reminder prevention working');
     });
 
     it('should handle invalid envelope ID gracefully', async () => {
@@ -292,7 +195,6 @@ describe('Send Reminders Workflow Integration Tests', () => {
       // 2. Verify error response
       expect(reminderResponse.statusCode).toBe(404);
       expect(reminderResponse.data.message).toContain('Envelope with ID');
-
       console.log('✅ Invalid envelope ID handled gracefully');
     });
   });

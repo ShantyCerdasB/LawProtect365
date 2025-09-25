@@ -48,6 +48,22 @@ export function setupCancellationMock(): void {
 }
 
 /**
+ * Setup mock for cancel envelope tests
+ * @description Sets up mocks for publishNotificationEvent, publishDeclineNotificationEvent, and publishCancellationNotificationEvent
+ */
+export function setupCancelEnvelopeMock(): void {
+  setupSignatureOrchestratorMock(MockConfigs.CANCEL_ENVELOPE);
+}
+
+/**
+ * Setup mock for decline signer tests
+ * @description Sets up mocks for publishNotificationEvent and publishDeclineNotificationEvent
+ */
+export function setupDeclineSignerMock(): void {
+  setupSignatureOrchestratorMock(MockConfigs.DECLINE_SIGNER);
+}
+
+/**
  * Setup comprehensive mock for tests that need all mocks
  * @description Sets up all available mocks with detailed logging
  */

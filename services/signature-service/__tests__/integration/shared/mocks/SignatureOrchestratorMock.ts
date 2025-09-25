@@ -66,7 +66,7 @@ function createPublishNotificationEventMock(config: SignatureOrchestratorMockCon
       const signerId = token.signerId?.getValue?.() || token.signerId;
       if (signerId) {
         // Access the internal Maps directly from the outboxMock module
-        const outboxMockModule = require('../../../mocks/aws/outboxMock');
+        const outboxMockModule = require('../../mocks/aws/outboxMock');
         
         // Get the internal Maps (they are defined at module level)
         const invitationHistory = outboxMockModule.invitationHistory || new Map();
@@ -143,7 +143,7 @@ function createPublishReminderNotificationEventMock(config: SignatureOrchestrato
     const signerIdStr = signerId?.getValue?.() || signerId;
     
     // Access the internal Maps directly from the outboxMock module
-        const outboxMockModule = require('../../../mocks/aws/outboxMock');
+        const outboxMockModule = require('../../mocks/aws/outboxMock');
     
     // Get the internal Maps (they are defined at module level)
     const publishedEvents = outboxMockModule.publishedEvents || new Map();
@@ -205,7 +205,7 @@ function createPublishDeclineNotificationEventMock(config: SignatureOrchestrator
     const signerIdStr = signerId?.getValue?.() || signerId;
     
     // Access the internal Maps directly from the outboxMock module
-        const outboxMockModule = require('../../../mocks/aws/outboxMock');
+        const outboxMockModule = require('../../mocks/aws/outboxMock');
     
     // Get the internal Maps (they are defined at module level)
     const publishedEvents = outboxMockModule.publishedEvents || new Map();
@@ -271,7 +271,7 @@ function createPublishViewerNotificationEventMock(config: SignatureOrchestratorM
     const envelopeIdStr = envelopeId?.getValue?.() || envelopeId;
     
     // Access the internal Maps directly from the outboxMock module
-        const outboxMockModule = require('../../../mocks/aws/outboxMock');
+        const outboxMockModule = require('../../mocks/aws/outboxMock');
     
     // Get the internal Maps (they are defined at module level)
     const invitationHistory = outboxMockModule.invitationHistory || new Map();
@@ -332,7 +332,7 @@ function createPublishCancellationNotificationEventMock(config: SignatureOrchest
     userId: string,
     securityContext: any
   ) => {
-    if (config.logLevel === 'detailed') {
+    if (config.logLevel === 'detailed' || config.logLevel === 'basic') {
       console.log('🔧 Mocked publishCancellationNotificationEvent called:', {
         envelopeId: envelopeId?.getValue?.() || envelopeId,
         userId,
@@ -344,7 +344,7 @@ function createPublishCancellationNotificationEventMock(config: SignatureOrchest
     const envelopeIdStr = envelopeId?.getValue?.() || envelopeId;
     
     // Access the internal Maps directly from the outboxMock module
-        const outboxMockModule = require('../../../mocks/aws/outboxMock');
+        const outboxMockModule = require('../../mocks/aws/outboxMock');
     
     // Get the internal Maps (they are defined at module level)
     const publishedEvents = outboxMockModule.publishedEvents || new Map();
@@ -505,6 +505,37 @@ export function setupSignatureOrchestratorMock(config: SignatureOrchestratorMock
             signerId: signerId?.getValue?.() || signerId,
             reason
           });
+
+          // Register decline event in outboxMock for verification
+          const outboxMockModule = require('../../mocks/aws/outboxMock');
+          const publishedEvents = outboxMockModule.publishedEvents || new Map();
+          
+          const envelopeIdStr = envelopeId?.getValue?.() || envelopeId;
+          const signerIdStr = signerId?.getValue?.() || signerId;
+          
+          if (!publishedEvents.has(envelopeIdStr)) {
+            publishedEvents.set(envelopeIdStr, []);
+          }
+          
+          // Register decline event
+          publishedEvents.get(envelopeIdStr).push({
+            type: 'SIGNER_DECLINED',
+            payload: {
+              envelopeId: envelopeIdStr,
+              signerId: signerIdStr,
+              declineReason: reason,
+              eventType: 'SIGNER_DECLINED'
+            },
+            detail: {
+              envelopeId: envelopeIdStr,
+              signerId: signerIdStr,
+              declineReason: reason,
+              eventType: 'SIGNER_DECLINED'
+            },
+            id: `mock-decline-${Date.now()}-${Math.random().toString(36).substr(2, 8)}`,
+            timestamp: new Date().toISOString()
+          });
+
           return Promise.resolve();
         });
 
@@ -563,6 +594,21 @@ export const MockConfigs = {
   CANCELLATIONS: {
     mockPublishNotificationEvent: true,
     mockPublishCancellationNotificationEvent: true,
+    logLevel: 'basic' as const
+  },
+  
+  /** Mock for cancel envelope tests (includes decline and cancellation) */
+  CANCEL_ENVELOPE: {
+    mockPublishNotificationEvent: true,
+    mockPublishDeclineNotificationEvent: true,
+    mockPublishCancellationNotificationEvent: true,
+    logLevel: 'basic' as const
+  },
+
+  /** Mock for decline signer tests (includes notifications and decline events) */
+  DECLINE_SIGNER: {
+    mockPublishNotificationEvent: true,
+    mockPublishDeclineNotificationEvent: true,
     logLevel: 'basic' as const
   },
   

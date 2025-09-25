@@ -13,32 +13,12 @@
  * - Error handling for unauthorized access
  */
 
+// ✅ REFACTORED: Using centralized mock setup
+import { setupReminderMock } from '../helpers/mockSetupHelper';
+setupReminderMock();
+
 import { WorkflowTestHelper } from '../helpers/workflowHelpers';
 import { TestDataFactory } from '../helpers/testDataFactory';
-
-// Mock SignatureOrchestrator.publishNotificationEvent to avoid OutboxRepository issues
-jest.mock('../../../src/services/SignatureOrchestrator', () => {
-  const actual = jest.requireActual('../../../src/services/SignatureOrchestrator');
-  return {
-    ...actual,
-    SignatureOrchestrator: jest.fn().mockImplementation((...args) => {
-      const instance = new actual.SignatureOrchestrator(...args);
-      
-      // Mock the publishNotificationEvent method
-      instance.publishNotificationEvent = jest.fn().mockImplementation(async (envelopeId: any, options: any, tokens: any[]) => {
-        console.log('🔧 Mocked publishNotificationEvent called:', {
-          envelopeId: envelopeId?.getValue?.() || envelopeId,
-          options,
-          tokensCount: tokens?.length || 0
-        });
-        // Just return success without actually publishing
-        return Promise.resolve();
-      });
-      
-      return instance;
-    })
-  };
-});
 
 describe('Get Audit Trail Workflow Integration Tests', () => {
   let helper: WorkflowTestHelper;

@@ -12,83 +12,13 @@
  * - Complete envelope and signer information retrieval
  */
 
+// ✅ REFACTORED: Using centralized mock setup
+import { setupReminderMock } from '../helpers/mockSetupHelper';
+setupReminderMock();
+
 import { WorkflowTestHelper } from '../helpers/workflowHelpers';
 import { TestDataFactory } from '../helpers/testDataFactory';
 import { secureRandomString, generateTestIpAddress } from '../helpers/testHelpers';
-
-// ✅ MOCK LOCAL DEL SIGNATURE ORCHESTRATOR (MISMO PATRÓN QUE TESTS QUE PASAN)
-jest.mock('../../../src/services/SignatureOrchestrator', () => {
-  const actual = jest.requireActual('../../../src/services/SignatureOrchestrator');
-  return {
-    ...actual,
-    SignatureOrchestrator: jest.fn().mockImplementation((...args) => {
-      const instance = new actual.SignatureOrchestrator(...args);
-      
-      // Mock the publishNotificationEvent method
-      instance.publishNotificationEvent = jest.fn().mockImplementation(async (envelopeId: any, options: any, tokens: any[]) => {
-        console.log('🔧 Mocked publishNotificationEvent called:', {
-          envelopeId: envelopeId?.getValue?.() || envelopeId,
-          options,
-          tokensCount: tokens?.length || 0
-        });
-        
-        // Register invitation in outboxMock for verification
-        const envelopeIdStr = envelopeId?.getValue?.() || envelopeId;
-        
-        // Simulate invitation registration for each token
-        for (const token of tokens || []) {
-          const signerId = token.signerId?.getValue?.() || token.signerId;
-          if (signerId) {
-            // Access the internal Maps directly from the outboxMock module
-            const outboxMockModule = require('../mocks/aws/outboxMock');
-            
-            // Get the internal Maps (they are defined at module level)
-            const invitationHistory = outboxMockModule.invitationHistory || new Map();
-            const publishedEvents = outboxMockModule.publishedEvents || new Map();
-            
-            // Initialize tracking for this envelope if not exists
-            if (!invitationHistory.has(envelopeIdStr)) {
-              invitationHistory.set(envelopeIdStr, new Set());
-            }
-            
-            if (!publishedEvents.has(envelopeIdStr)) {
-              publishedEvents.set(envelopeIdStr, []);
-            }
-            
-            // Register invitation (allow duplicates for re-send scenarios)
-            invitationHistory.get(envelopeIdStr).add(signerId);
-            
-            // Register event
-            publishedEvents.get(envelopeIdStr).push({
-              type: 'ENVELOPE_INVITATION',
-              payload: {
-                envelopeId: envelopeIdStr,
-                signerId: signerId,
-                eventType: 'ENVELOPE_INVITATION',
-                message: options.message || 'You have been invited to sign a document'
-              },
-              detail: {
-                envelopeId: envelopeIdStr,
-                signerId: signerId,
-                eventType: 'ENVELOPE_INVITATION',
-                message: options.message || 'You have been invited to sign a document'
-              },
-              id: `mock-${Date.now()}-${secureRandomString(8)}`,
-              timestamp: new Date().toISOString()
-            });
-            
-            console.log('✅ Mocked invitation registered:', { envelopeId: envelopeIdStr, signerId });
-          }
-        }
-        
-        console.log('✅ Mocked publishNotificationEvent completed successfully');
-        return Promise.resolve();
-      });
-      
-      return instance;
-    })
-  };
-});
 
 describe('Get Envelope Workflow', () => {
   let workflowHelper: WorkflowTestHelper;
