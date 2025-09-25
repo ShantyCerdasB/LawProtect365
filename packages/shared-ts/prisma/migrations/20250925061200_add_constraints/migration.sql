@@ -37,6 +37,7 @@ ALTER TABLE "EnvelopeSigner"
 -- SignatureEnvelope
 -- =========================
 -- SHA-256 hex format (64 lowercase hex chars) if provided
+-- Using consistent regex pattern for SHA-256 validation
 ALTER TABLE "SignatureEnvelope"
   ADD CONSTRAINT signature_envelope_source_sha_chk
   CHECK ("sourceSha256" IS NULL OR "sourceSha256" ~ '^[0-9a-f]{64}$');
@@ -165,6 +166,7 @@ ALTER TABLE "SignatureAuditEvent"
 -- User
 -- =========================
 -- DELETED status requires deletedAt; non-DELETED requires deletedAt null
+-- Note: 'DELETED' is defined in the UserAccountStatus enum in init migration
 ALTER TABLE "User"
   ADD CONSTRAINT user_deleted_status_consistency_chk
   CHECK (

@@ -124,8 +124,10 @@ describe('Signature', () => {
       const signatureHash = TestUtils.generateSha256Hash();
       const signedAt = new Date();
       
+      // Create mock signer with reduced nesting
+      const mockSignerId = { getValue: () => signerId };
       const mockSigner = {
-        getId: () => ({ getValue: () => signerId }),
+        getId: () => mockSignerId,
         getDocumentHash: () => documentHash,
         getSignatureHash: () => signatureHash,
         getSignedS3Key: () => 'documents/signed/contract-123.pdf',
@@ -160,8 +162,10 @@ describe('Signature', () => {
       const signatureHash = TestUtils.generateSha256Hash();
       const signedAt = new Date();
       
+      // Create mock signer with reduced nesting
+      const mockSignerId = { getValue: () => signerId };
       const mockSigner = {
-        getId: () => ({ getValue: () => signerId }),
+        getId: () => mockSignerId,
         getDocumentHash: () => documentHash,
         getSignatureHash: () => signatureHash,
         getSignedS3Key: () => 'documents/signed/contract-123.pdf',
@@ -185,8 +189,10 @@ describe('Signature', () => {
     });
 
     it('should return null when EnvelopeSigner has no signature data', () => {
+      // Create mock signer with reduced nesting
+      const mockSignerId = { getValue: () => TestUtils.generateUuid() };
       const mockSigner = {
-        getId: () => ({ getValue: () => TestUtils.generateUuid() }),
+        getId: () => mockSignerId,
         getDocumentHash: () => null,
         getSignatureHash: () => null,
         getSignedS3Key: () => 'documents/signed/contract-123.pdf',
@@ -205,8 +211,10 @@ describe('Signature', () => {
     });
 
     it('should return null when EnvelopeSigner has no document hash', () => {
+      // Create mock signer with reduced nesting
+      const mockSignerId = { getValue: () => TestUtils.generateUuid() };
       const mockSigner = {
-        getId: () => ({ getValue: () => TestUtils.generateUuid() }),
+        getId: () => mockSignerId,
         getDocumentHash: () => null,
         getSignatureHash: () => TestUtils.generateSha256Hash(),
         getSignedS3Key: () => 'documents/signed/contract-123.pdf',
@@ -225,8 +233,10 @@ describe('Signature', () => {
     });
 
     it('should return null when EnvelopeSigner has no signature hash', () => {
+      // Create mock signer with reduced nesting
+      const mockSignerId = { getValue: () => TestUtils.generateUuid() };
       const mockSigner = {
-        getId: () => ({ getValue: () => TestUtils.generateUuid() }),
+        getId: () => mockSignerId,
         getDocumentHash: () => TestUtils.generateSha256Hash(),
         getSignatureHash: () => null,
         getSignedS3Key: () => 'documents/signed/contract-123.pdf',
@@ -832,7 +842,8 @@ describe('Signature', () => {
 
       const algorithms = ['RSA-SHA256', 'ECDSA-SHA256', 'DSA-SHA256', 'HMAC-SHA256'];
 
-      algorithms.forEach(algorithm => {
+      // Test each algorithm individually to avoid deep nesting
+      for (const algorithm of algorithms) {
         expect(() => new Signature(
           signerId,
           documentHash,
@@ -861,7 +872,8 @@ describe('Signature', () => {
         'arn:aws:kms:ap-southeast-1:111111111111:key/11111111-1111-1111-1111-111111111111'
       ];
 
-      complexKmsKeyIds.forEach(kmsKeyId => {
+      // Test each KMS key ID individually to avoid deep nesting
+      for (const kmsKeyId of complexKmsKeyIds) {
         expect(() => new Signature(
           signerId,
           documentHash,

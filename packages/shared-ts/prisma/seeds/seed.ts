@@ -22,7 +22,7 @@ async function main() {
 
   try {
     // Create test user for integration tests
-    const testUser = await prisma.user.upsert({
+    await prisma.user.upsert({
       where: { email: 'test@example.com' },
       update: {
         // Update existing user if found
@@ -38,9 +38,8 @@ async function main() {
       }
     });
 
-
     // Create second test user for security testing
-    const testUser2 = await prisma.user.upsert({
+    await prisma.user.upsert({
       where: { email: 'test2@example.com' },
       update: {
         // Update existing user if found

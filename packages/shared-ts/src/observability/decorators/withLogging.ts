@@ -1,6 +1,5 @@
 import type { AppContext } from "../../app/AppContext.js";
 import { deepRedact } from "../redact.js";
-// import { toErr, DEFAULT_REDACT_KEYS } from "../logger.js";
 
 /**
  * Async domain/application operation signature.

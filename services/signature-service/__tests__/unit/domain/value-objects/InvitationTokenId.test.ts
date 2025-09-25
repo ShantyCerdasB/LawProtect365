@@ -56,10 +56,10 @@ describe('InvitationTokenId', () => {
         '550e8400e29b41d4a716446655440000' // No hyphens
       ];
 
-      invalidUuids.forEach(invalidUuid => {
-        expect(() => new InvitationTokenId(invalidUuid))
-          .toThrow(envelopeNotFound('InvitationTokenId must be a valid UUID'));
-      });
+      // Test each invalid UUID individually to avoid deep nesting
+      for (const invalidUuid of invalidUuids) {
+        expect(() => new InvitationTokenId(invalidUuid)).toThrow(envelopeNotFound('InvitationTokenId must be a valid UUID'));
+      }
     });
 
     it('should accept valid UUID v4 format', () => {
@@ -71,11 +71,12 @@ describe('InvitationTokenId', () => {
         TestUtils.generateUuid()
       ];
 
-      validUuids.forEach(validUuid => {
+      // Test each valid UUID individually to avoid deep nesting
+      for (const validUuid of validUuids) {
         expect(() => new InvitationTokenId(validUuid)).not.toThrow();
         const tokenId = new InvitationTokenId(validUuid);
         expect(tokenId.getValue()).toBe(validUuid);
-      });
+      }
     });
   });
 
@@ -192,10 +193,10 @@ describe('InvitationTokenId', () => {
         '550e8400-e29b-41d4-a716-446655440000%'
       ];
 
-      specialCharStrings.forEach(invalidString => {
-        expect(() => new InvitationTokenId(invalidString))
-          .toThrow(envelopeNotFound('InvitationTokenId must be a valid UUID'));
-      });
+      // Test each invalid string individually to avoid deep nesting
+      for (const invalidString of specialCharStrings) {
+        expect(() => new InvitationTokenId(invalidString)).toThrow(envelopeNotFound('InvitationTokenId must be a valid UUID'));
+      }
     });
 
     it('should maintain immutability', () => {

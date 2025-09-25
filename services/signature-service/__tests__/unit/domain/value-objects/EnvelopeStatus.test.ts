@@ -42,11 +42,12 @@ describe('EnvelopeStatus', () => {
         PrismaEnvelopeStatus.EXPIRED
       ];
 
-      validStatuses.forEach(validStatus => {
+      // Test each valid status individually to avoid deep nesting
+      for (const validStatus of validStatuses) {
         expect(() => new EnvelopeStatus(validStatus)).not.toThrow();
         const status = new EnvelopeStatus(validStatus);
         expect(status.getValue()).toBe(validStatus);
-      });
+      }
     });
   });
 
@@ -402,10 +403,10 @@ describe('EnvelopeStatus', () => {
         'DRAFT%'
       ];
 
-      specialCharStrings.forEach(invalidString => {
-        expect(() => EnvelopeStatus.fromString(invalidString))
-          .toThrow(BadRequestError);
-      });
+      // Test each invalid string individually to avoid deep nesting
+      for (const invalidString of specialCharStrings) {
+        expect(() => EnvelopeStatus.fromString(invalidString)).toThrow(BadRequestError);
+      }
     });
 
     it('should handle numeric values in fromString', () => {

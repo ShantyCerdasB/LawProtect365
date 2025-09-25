@@ -25,7 +25,7 @@ import type { JsonValue } from '../types/common.js';
  * complex operations requiring transactions.
  */
 export class RepositoryFactory {
-  private static prisma = getPrisma();
+  private static readonly prisma = getPrisma();
 
   /**
    * Creates a repository instance with shared Prisma client

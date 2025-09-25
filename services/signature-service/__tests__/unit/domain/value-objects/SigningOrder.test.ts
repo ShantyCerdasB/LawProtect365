@@ -247,11 +247,12 @@ describe('SigningOrder', () => {
       // Test that all enum values from Prisma are supported
       const allTypes = Object.values(SigningOrderType);
       
-      allTypes.forEach(type => {
+      // Test each type individually to avoid deep nesting
+      for (const type of allTypes) {
         expect(() => new SigningOrder(type)).not.toThrow();
         const order = new SigningOrder(type);
         expect(order.getType()).toBe(type);
-      });
+      }
     });
 
     it('should handle static factory methods for all types', () => {

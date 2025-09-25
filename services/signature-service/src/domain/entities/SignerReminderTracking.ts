@@ -20,11 +20,11 @@ export class SignerReminderTracking {
     private readonly _id: ReminderTrackingId,
     private readonly _signerId: SignerId,
     private readonly _envelopeId: EnvelopeId,
-    private _lastReminderAt: Date | null,
-    private _reminderCount: number,
-    private _lastReminderMessage: string | null,
+    private readonly _lastReminderAt: Date | null,
+    private readonly _reminderCount: number,
+    private readonly _lastReminderMessage: string | null,
     private readonly _createdAt: Date,
-    private _updatedAt: Date
+    private readonly _updatedAt: Date
   ) {}
 
   /**

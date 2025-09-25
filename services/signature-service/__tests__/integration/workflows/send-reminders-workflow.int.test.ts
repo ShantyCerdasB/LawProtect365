@@ -52,7 +52,6 @@ jest.mock('../../../src/services/SignatureOrchestrator', () => {
         });
 
         // Register reminder notification in outboxMock for verification
-        const { outboxMockHelpers } = require('../mocks');
         const envelopeIdStr = envelopeId?.getValue?.() || envelopeId;
         const signerIdStr = signerId?.getValue?.() || signerId;
         

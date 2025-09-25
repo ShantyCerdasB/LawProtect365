@@ -436,23 +436,19 @@ export class S3Service {
       };
 
       // Log audit event
-      await this.signatureAuditEventService.createSignerAuditEvent(
-        request.envelopeId.getValue(),
-        request.signerId.getValue(),
-        'DOCUMENT_STORED' as any,
-        `Signed document stored for envelope "${request.envelopeId.getValue()}"`,
-        'system',
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-        {
+      await this.signatureAuditEventService.createSignerAuditEvent({
+        envelopeId: request.envelopeId.getValue(),
+        signerId: request.signerId.getValue(),
+        eventType: 'DOCUMENT_STORED' as any,
+        description: `Signed document stored for envelope "${request.envelopeId.getValue()}"`,
+        userId: 'system',
+        metadata: {
           envelopeId: request.envelopeId.getValue(),
           signerId: request.signerId.getValue(),
           s3Key: documentKey,
           documentType: 'signed'
         }
-      );
+      });
 
       return documentResult;
     } catch (error: unknown) {

@@ -45,7 +45,7 @@ export class SigningOrderValidationRule {
     }
 
     // Sort signers by order
-    const sortedSigners = allSigners.sort((a, b) => a.getOrder() - b.getOrder());
+    const sortedSigners = [...allSigners].sort((a, b) => a.getOrder() - b.getOrder());
     const signingOrderType = envelope.getSigningOrder().getType();
 
     if (signingOrderType === SigningOrderType.OWNER_FIRST) {
@@ -69,7 +69,7 @@ export class SigningOrderValidationRule {
     // Find owner (signer with userId matching envelope creator)
     const owner = sortedSigners.find(signer => signer.getUserId() === userId);
     
-    if (owner && owner.getId().equals(currentSigner.getId())) {
+    if (owner?.getId().equals(currentSigner.getId())) {
       // Owner can sign first
       return;
     }
@@ -99,7 +99,7 @@ export class SigningOrderValidationRule {
     // Find owner (signer with userId matching envelope creator)
     const owner = sortedSigners.find(signer => signer.getUserId() === userId);
     
-    if (owner && owner.getId().equals(currentSigner.getId())) {
+    if (owner?.getId().equals(currentSigner.getId())) {
       // Owner can only sign after all invitees have signed
       const invitees = sortedSigners.filter(signer => signer.getIsExternal());
       const allInviteesSigned = invitees.every(signer => signer.hasSigned());

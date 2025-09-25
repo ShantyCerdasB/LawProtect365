@@ -49,40 +49,32 @@ export class EnvelopeSignerService {
 
   /**
    * Creates audit event with common fields for signer operations
-   * @param envelopeId - The envelope ID
-   * @param signerId - The signer ID
-   * @param eventType - The audit event type
-   * @param description - The event description
-   * @param userId - The user ID
-   * @param userEmail - The user email
-   * @param ipAddress - Optional IP address
-   * @param userAgent - Optional user agent
-   * @param metadata - Optional metadata
+   * @param config - Audit event configuration
    */
-  private async createSignerAuditEvent(
-    envelopeId: string,
-    signerId: string,
-    eventType: AuditEventType,
-    description: string,
-    userId: string,
-    userEmail?: string,
-    ipAddress?: string,
-    userAgent?: string,
-    country?: string,
-    metadata?: Record<string, unknown>
-  ): Promise<void> {
-    await this.signatureAuditEventService.createSignerAuditEvent(
-      envelopeId,
-      signerId,
-      eventType,
-      description,
-      userId,
-      userEmail,
-      ipAddress,
-      userAgent,
-      country,
-      metadata
-    );
+  private async createSignerAuditEvent(config: {
+    envelopeId: string;
+    signerId: string;
+    eventType: AuditEventType;
+    description: string;
+    userId: string;
+    userEmail?: string;
+    ipAddress?: string;
+    userAgent?: string;
+    country?: string;
+    metadata?: Record<string, unknown>;
+  }): Promise<void> {
+    await this.signatureAuditEventService.createSignerAuditEvent({
+      envelopeId: config.envelopeId,
+      signerId: config.signerId,
+      eventType: config.eventType,
+      description: config.description,
+      userId: config.userId,
+      userEmail: config.userEmail,
+      ipAddress: config.ipAddress,
+      userAgent: config.userAgent,
+      country: config.country,
+      metadata: config.metadata
+    });
   }
 
   /**
@@ -130,23 +122,20 @@ export class EnvelopeSignerService {
       const createdViewer = await this.envelopeSignerRepository.create(viewer);
 
       // Create audit event
-      await this.signatureAuditEventService.createSignerAuditEvent(
-        envelopeId.getValue(),
-        createdViewer.getId().getValue(),
-        AuditEventType.SIGNATURE_CREATED,
-        `Viewer participant created: ${fullName} (${email})`,
-        userId,
-        email,
-        undefined,
-        undefined,
-        undefined,
-        {
+      await this.signatureAuditEventService.createSignerAuditEvent({
+        envelopeId: envelopeId.getValue(),
+        signerId: createdViewer.getId().getValue(),
+        eventType: AuditEventType.SIGNATURE_CREATED,
+        description: `Viewer participant created: ${fullName} (${email})`,
+        userId: userId,
+        userEmail: email,
+        metadata: {
           participantRole: 'VIEWER',
           viewerEmail: email,
           viewerName: fullName,
           envelopeId: envelopeId.getValue()
         }
-      );
+      });
 
       return createdViewer;
     } catch (error) {
@@ -200,23 +189,20 @@ export class EnvelopeSignerService {
 
       // Create audit events for all signers
       for (const signer of createdSigners) {
-        await this.createSignerAuditEvent(
-          envelopeId.getValue(),
-          signer.getId().getValue(),
-          AuditEventType.SIGNER_ADDED,
-          `Signer ${signer.getFullName() || signer.getEmail()?.getValue() || 'Unknown'} added to envelope`,
-          envelope.getCreatedBy(),
-          signer.getEmail()?.getValue(),
-          undefined,
-          undefined,
-          undefined, // country
-          {
+        await this.createSignerAuditEvent({
+          envelopeId: envelopeId.getValue(),
+          signerId: signer.getId().getValue(),
+          eventType: AuditEventType.SIGNER_ADDED,
+          description: `Signer ${signer.getFullName() || signer.getEmail()?.getValue() || 'Unknown'} added to envelope`,
+          userId: envelope.getCreatedBy(),
+          userEmail: signer.getEmail()?.getValue(),
+          metadata: {
             signerId: signer.getId().getValue(),
             isExternal: signer.getIsExternal(),
             order: signer.getOrder(),
             participantRole: signer.getParticipantRole()
           }
-        );
+        });
       }
 
       return createdSigners;
@@ -456,17 +442,17 @@ export class EnvelopeSignerService {
       const updatedSigner = await this.envelopeSignerRepository.update(signerId, signer);
 
       // Create audit event
-      await this.createSignerAuditEvent(
-        signer.getEnvelopeId().getValue(),
-        signerId.getValue(),
-        AuditEventType.SIGNER_SIGNED,
-        `Signer ${signer.getFullName() || signer.getEmail()?.getValue() || 'Unknown'} signed the document`,
-        signer.getUserId() || `external-user:${signer.getFullName() || signer.getEmail()?.getValue() || 'Unknown'}`, // Use full name for external users
-        signer.getEmail()?.getValue(),
-        signatureData.ipAddress,
-        signatureData.userAgent,
-        signatureData.location, // Pass location as country parameter
-        {
+      await this.createSignerAuditEvent({
+        envelopeId: signer.getEnvelopeId().getValue(),
+        signerId: signerId.getValue(),
+        eventType: AuditEventType.SIGNER_SIGNED,
+        description: `Signer ${signer.getFullName() || signer.getEmail()?.getValue() || 'Unknown'} signed the document`,
+        userId: signer.getUserId() || `external-user:${signer.getFullName() || signer.getEmail()?.getValue() || 'Unknown'}`,
+        userEmail: signer.getEmail()?.getValue(),
+        ipAddress: signatureData.ipAddress,
+        userAgent: signatureData.userAgent,
+        country: signatureData.location,
+        metadata: {
           signatureHash: signatureData.signatureHash,
           documentHash: signatureData.documentHash,
           signedS3Key: signatureData.signedS3Key,
@@ -475,7 +461,7 @@ export class EnvelopeSignerService {
           reason: signatureData.reason,
           location: signatureData.location
         }
-      );
+      });
 
       return updatedSigner;
     } catch (error) {
@@ -504,21 +490,21 @@ export class EnvelopeSignerService {
       const updatedSigner = await this.envelopeSignerRepository.update(declineData.signerId, signer);
 
       // Create audit event
-      await this.createSignerAuditEvent(
-        signer.getEnvelopeId().getValue(),
-        declineData.signerId.getValue(),
-        AuditEventType.SIGNER_DECLINED,
-        `Signer ${signer.getFullName() || signer.getEmail()?.getValue() || 'Unknown'} declined to sign`,
-        declineData.userId || `external-user:${signer.getFullName() || signer.getEmail()?.getValue() || 'Unknown'}`, // ✅ Consistente con otros handlers
-        signer.getEmail()?.getValue(),
-        declineData.ipAddress,    // ✅ Use security context from request
-        declineData.userAgent,    // ✅ Use security context from request
-        declineData.country,      // ✅ Use security context from request
-        {
+      await this.createSignerAuditEvent({
+        envelopeId: signer.getEnvelopeId().getValue(),
+        signerId: declineData.signerId.getValue(),
+        eventType: AuditEventType.SIGNER_DECLINED,
+        description: `Signer ${signer.getFullName() || signer.getEmail()?.getValue() || 'Unknown'} declined to sign`,
+        userId: declineData.userId || `external-user:${signer.getFullName() || signer.getEmail()?.getValue() || 'Unknown'}`,
+        userEmail: signer.getEmail()?.getValue(),
+        ipAddress: declineData.ipAddress,
+        userAgent: declineData.userAgent,
+        country: declineData.country,
+        metadata: {
           declineReason: declineData.reason,
           declinedAt: updatedSigner.getDeclinedAt()?.toISOString()
         }
-      );
+      });
 
       return updatedSigner;
     } catch (error) {
@@ -550,21 +536,18 @@ export class EnvelopeSignerService {
 
       for (const signer of signersToRemind) {
         // Create audit event for reminder
-        await this.createSignerAuditEvent(
-          envelopeId.getValue(),
-          signer.getId().getValue(),
-          AuditEventType.SIGNER_REMINDER_SENT,
-          `Reminder sent to signer ${signer.getFullName() || signer.getEmail()?.getValue() || 'Unknown'}`,
-          'system',
-          signer.getEmail()?.getValue(),
-          undefined,
-          undefined,
-          undefined, // country
-          {
+        await this.createSignerAuditEvent({
+          envelopeId: envelopeId.getValue(),
+          signerId: signer.getId().getValue(),
+          eventType: AuditEventType.SIGNER_REMINDER_SENT,
+          description: `Reminder sent to signer ${signer.getFullName() || signer.getEmail()?.getValue() || 'Unknown'}`,
+          userId: 'system',
+          userEmail: signer.getEmail()?.getValue(),
+          metadata: {
             signerEmail: signer.getEmail()?.getValue(),
             signerFullName: signer.getFullName()
           }
-        );
+        });
       }
     } catch (error) {
       throw signerUpdateFailed(

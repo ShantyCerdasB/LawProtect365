@@ -17,12 +17,6 @@
 
 import { WorkflowTestHelper } from '../helpers/workflowHelpers';
 import { TestDataFactory } from '../helpers/testDataFactory';
-// import { 
-//   verifyViewerInvitationHistory, 
-//   verifyViewerNotificationEvent,
-//   verifyViewerAuditEvent,
-//   clearShareDocumentViewMockData 
-// } from '../helpers/shareDocumentViewHelpers';
 
 // Temporary inline functions until import issue is resolved
 const { outboxMockHelpers } = require('../mocks/aws/outboxMock');
@@ -70,7 +64,6 @@ jest.mock('../../../src/services/SignatureOrchestrator', () => {
         expiresAt: Date
       ) => {
         // Register viewer invitation in outboxMock for verification
-        const { outboxMockHelpers } = require('../mocks');
         const envelopeIdStr = envelopeId?.getValue?.() || envelopeId;
         
         // Access the internal Maps directly from the outboxMock module

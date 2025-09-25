@@ -97,22 +97,22 @@ export class ConsentService {
       const signerName = signer?.getFullName() || signer?.getEmail()?.getValue() || 'Unknown';
 
       // Create audit event
-      await this.signatureAuditEventService.createSignerAuditEvent(
-        request.envelopeId.getValue(),
-        request.signerId.getValue(),
-        AuditEventType.CONSENT_GIVEN,
-        `Consent given by signer ${signerName}`,
-        userId || `external-user:${signerName}`, // Use full name for external users
-        request.userEmail || signer?.getEmail()?.getValue(), // Use signer email if not provided
-        request.ipAddress,
-        request.userAgent,
-        request.country, // Pass country as parameter
-        {
+      await this.signatureAuditEventService.createSignerAuditEvent({
+        envelopeId: request.envelopeId.getValue(),
+        signerId: request.signerId.getValue(),
+        eventType: AuditEventType.CONSENT_GIVEN,
+        description: `Consent given by signer ${signerName}`,
+        userId: userId || `external-user:${signerName}`,
+        userEmail: request.userEmail || signer?.getEmail()?.getValue(),
+        ipAddress: request.ipAddress,
+        userAgent: request.userAgent,
+        country: request.country,
+        metadata: {
           consentId: createdConsent.getId().getValue(),
           consentGiven: request.consentGiven,
           consentText: request.consentText
         }
-      );
+      });
 
       return createdConsent;
     } catch (error) {

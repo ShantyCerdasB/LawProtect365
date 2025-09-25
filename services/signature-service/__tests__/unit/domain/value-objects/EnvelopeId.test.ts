@@ -45,10 +45,10 @@ describe('EnvelopeId', () => {
         '550e8400-e29b-41d4-a716-4466554400000' // Too long
       ];
 
-      invalidUuids.forEach(invalidUuid => {
-        expect(() => new EnvelopeId(invalidUuid))
-          .toThrow(NotFoundError);
-      });
+      // Test each invalid UUID individually to avoid deep nesting
+      for (const invalidUuid of invalidUuids) {
+        expect(() => new EnvelopeId(invalidUuid)).toThrow(NotFoundError);
+      }
     });
 
     it('should accept valid UUID v4 formats', () => {
@@ -60,11 +60,12 @@ describe('EnvelopeId', () => {
         TestUtils.generateUuid()
       ];
 
-      validUuids.forEach(validUuid => {
+      // Test each valid UUID individually to avoid deep nesting
+      for (const validUuid of validUuids) {
         expect(() => new EnvelopeId(validUuid)).not.toThrow();
         const envelopeId = new EnvelopeId(validUuid);
         expect(envelopeId.getValue()).toBe(validUuid);
-      });
+      }
     });
 
     it('should handle uppercase UUIDs', () => {

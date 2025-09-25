@@ -115,24 +115,33 @@ export class InvitationTokenRepository extends RepositoryBase<InvitationToken, I
   protected whereFromSpec(spec: InvitationTokenSpec): any {
     const where: any = {};
 
-    if (spec.envelopeId) {
-      where.envelopeId = spec.envelopeId;
-    }
-    if (spec.signerId) {
-      where.signerId = spec.signerId;
-    }
-    if (spec.status) {
-      where.status = spec.status;
-    }
-    if (spec.tokenHash) {
-      where.tokenHash = spec.tokenHash;
-    }
-    if (spec.createdBy) {
-      where.createdBy = spec.createdBy;
-    }
-    if (spec.usedBy) {
-      where.usedBy = spec.usedBy;
-    }
+    this.addBasicFields(where, spec);
+    this.addDateFields(where, spec);
+    this.addBooleanFlags(where, spec);
+
+    return where;
+  }
+
+  /**
+   * Adds basic fields to where clause
+   * @param where - Where clause object
+   * @param spec - Query specification
+   */
+  private addBasicFields(where: any, spec: InvitationTokenSpec): void {
+    if (spec.envelopeId) where.envelopeId = spec.envelopeId;
+    if (spec.signerId) where.signerId = spec.signerId;
+    if (spec.status) where.status = spec.status;
+    if (spec.tokenHash) where.tokenHash = spec.tokenHash;
+    if (spec.createdBy) where.createdBy = spec.createdBy;
+    if (spec.usedBy) where.usedBy = spec.usedBy;
+  }
+
+  /**
+   * Adds date fields to where clause
+   * @param where - Where clause object
+   * @param spec - Query specification
+   */
+  private addDateFields(where: any, spec: InvitationTokenSpec): void {
     if (spec.expiresBefore) {
       where.expiresAt = { ...where.expiresAt, lt: spec.expiresBefore };
     }
@@ -151,23 +160,16 @@ export class InvitationTokenRepository extends RepositoryBase<InvitationToken, I
     if (spec.createdAfter) {
       where.createdAt = { ...where.createdAt, gte: spec.createdAfter };
     }
+  }
 
-    // Handle boolean flags
+  /**
+   * Adds boolean flags to where clause
+   * @param where - Where clause object
+   * @param spec - Query specification
+   */
+  private addBooleanFlags(where: any, spec: InvitationTokenSpec): void {
     if (spec.isExpired !== undefined) {
-      if (spec.isExpired) {
-        where.OR = [
-          { status: InvitationTokenStatus.EXPIRED },
-          { expiresAt: { lt: new Date() } }
-        ];
-      } else {
-        where.AND = [
-          { status: { not: InvitationTokenStatus.EXPIRED } },
-          { OR: [
-            { expiresAt: null },
-            { expiresAt: { gte: new Date() } }
-          ]}
-        ];
-      }
+      this.addExpiredFlag(where, spec.isExpired);
     }
     if (spec.isActive !== undefined) {
       where.status = spec.isActive ? InvitationTokenStatus.ACTIVE : { not: InvitationTokenStatus.ACTIVE };
@@ -178,8 +180,28 @@ export class InvitationTokenRepository extends RepositoryBase<InvitationToken, I
     if (spec.isRevoked !== undefined) {
       where.status = spec.isRevoked ? InvitationTokenStatus.REVOKED : { not: InvitationTokenStatus.REVOKED };
     }
+  }
 
-    return where;
+  /**
+   * Adds expired flag logic to where clause
+   * @param where - Where clause object
+   * @param isExpired - Whether to find expired tokens
+   */
+  private addExpiredFlag(where: any, isExpired: boolean): void {
+    if (isExpired) {
+      where.OR = [
+        { status: InvitationTokenStatus.EXPIRED },
+        { expiresAt: { lt: new Date() } }
+      ];
+    } else {
+      where.AND = [
+        { status: { not: InvitationTokenStatus.EXPIRED } },
+        { OR: [
+          { expiresAt: null },
+          { expiresAt: { gte: new Date() } }
+        ]}
+      ];
+    }
   }
 
   /**

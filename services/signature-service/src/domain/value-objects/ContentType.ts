@@ -98,7 +98,7 @@ export class ContentType {
    */
   private isValidMimeType(value: string): boolean {
     // MIME type format: type/subtype[;parameters]
-    const mimeRegex = /^[a-zA-Z0-9][a-zA-Z0-9!#$&\-\^_]*\/[a-zA-Z0-9][a-zA-Z0-9!#$&\-\^_]*(\s*;\s*[a-zA-Z0-9][a-zA-Z0-9!#$&\-\^_]*=[a-zA-Z0-9][a-zA-Z0-9!#$&\-\^_]*)*$/;
+    const mimeRegex = /^[a-zA-Z0-9][a-zA-Z0-9!#$&\-^_]*\/[a-zA-Z0-9][a-zA-Z0-9!#$&\-^_]*(\s*;\s*[a-zA-Z0-9][a-zA-Z0-9!#$&\-^_]*=[a-zA-Z0-9][a-zA-Z0-9!#$&\-^_]*)*$/;
     return mimeRegex.test(value);
   }
 

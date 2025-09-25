@@ -35,40 +35,31 @@ export class SignatureAuditEventService {
 
   /**
    * Creates audit event with common fields for signer operations
-   * @param envelopeId - The envelope ID
-   * @param signerId - The signer ID
-   * @param eventType - The audit event type
-   * @param description - The event description
-   * @param userId - The user ID
-   * @param userEmail - The user email
-   * @param ipAddress - Optional IP address
-   * @param userAgent - Optional user agent
-   * @param country - Optional country
-   * @param metadata - Optional metadata
+   * @param config - Audit event configuration
    */
-  async createSignerAuditEvent(
-    envelopeId: string,
-    signerId: string,
-    eventType: AuditEventType,
-    description: string,
-    userId: string,
-    userEmail?: string,
-    ipAddress?: string,
-    userAgent?: string,
-    country?: string,
-    metadata?: Record<string, unknown>
-  ): Promise<SignatureAuditEvent> {
+  async createSignerAuditEvent(config: {
+    envelopeId: string;
+    signerId: string;
+    eventType: AuditEventType;
+    description: string;
+    userId: string;
+    userEmail?: string;
+    ipAddress?: string;
+    userAgent?: string;
+    country?: string;
+    metadata?: Record<string, unknown>;
+  }): Promise<SignatureAuditEvent> {
     return this.createEvent({
-      envelopeId,
-      signerId,
-      eventType,
-      description,
-      userId,
-      userEmail,
-      ipAddress,
-      userAgent,
-      country,
-      metadata: metadata || {}
+      envelopeId: config.envelopeId,
+      signerId: config.signerId,
+      eventType: config.eventType,
+      description: config.description,
+      userId: config.userId,
+      userEmail: config.userEmail,
+      ipAddress: config.ipAddress,
+      userAgent: config.userAgent,
+      country: config.country,
+      metadata: config.metadata || {}
     });
   }
 

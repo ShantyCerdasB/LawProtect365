@@ -45,10 +45,10 @@ describe('ConsentId', () => {
         '550e8400-e29b-41d4-a716-4466554400000' // Too long
       ];
 
-      invalidUuids.forEach(invalidUuid => {
-        expect(() => new ConsentId(invalidUuid))
-          .toThrow(ForbiddenError);
-      });
+      // Test each invalid UUID individually to avoid deep nesting
+      for (const invalidUuid of invalidUuids) {
+        expect(() => new ConsentId(invalidUuid)).toThrow(ForbiddenError);
+      }
     });
 
     it('should accept valid UUID v4 formats', () => {
@@ -60,11 +60,12 @@ describe('ConsentId', () => {
         TestUtils.generateUuid()
       ];
 
-      validUuids.forEach(validUuid => {
+      // Test each valid UUID individually to avoid deep nesting
+      for (const validUuid of validUuids) {
         expect(() => new ConsentId(validUuid)).not.toThrow();
         const consentId = new ConsentId(validUuid);
         expect(consentId.getValue()).toBe(validUuid);
-      });
+      }
     });
 
     it('should handle uppercase UUIDs', () => {
@@ -213,17 +214,12 @@ describe('ConsentId', () => {
     });
 
     it('should handle non-string inputs', () => {
-      expect(() => new ConsentId(123 as any))
-        .toThrow(ForbiddenError);
-
-      expect(() => new ConsentId({} as any))
-        .toThrow(ForbiddenError);
-
-      expect(() => new ConsentId([] as any))
-        .toThrow(ForbiddenError);
-
-      expect(() => new ConsentId(true as any))
-        .toThrow(ForbiddenError);
+      const invalidInputs = [123, {}, [], true];
+      
+      // Test each invalid input individually to avoid deep nesting
+      for (const invalidInput of invalidInputs) {
+        expect(() => new ConsentId(invalidInput as any)).toThrow(ForbiddenError);
+      }
     });
 
     it('should handle very long strings', () => {

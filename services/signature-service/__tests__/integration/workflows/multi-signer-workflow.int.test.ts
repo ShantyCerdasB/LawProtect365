@@ -39,7 +39,6 @@ jest.mock('../../../src/services/SignatureOrchestrator', () => {
       // Mock the publishNotificationEvent method
       instance.publishNotificationEvent = jest.fn().mockImplementation(async (envelopeId: any, options: any, tokens: any[]) => {
         // Register invitation in outboxMock for verification
-        const { outboxMockHelpers } = require('../mocks');
         const envelopeIdStr = envelopeId?.getValue?.() || envelopeId;
         
         // Simulate invitation registration for each token
@@ -683,38 +682,4 @@ describe('Multi-Signer Document Signing Workflow', () => {
     });
   });
 
-  /*
-  // TODO: Re-implement these tests after refactoring other handlers
-  describe('SendEnvelope - Multi Signer Workflow', () => {
-    // Tests for SendEnvelopeHandler
-  });
-
-  describe('GetEnvelope - Multi Signer Workflow', () => {
-    // Tests for GetEnvelopeHandler
-  });
-
-  describe('DeclineSigner - Multi Signer Workflow', () => {
-    // Tests for DeclineSignerHandler
-  });
-
-  describe('DeleteEnvelope - Multi Signer Workflow', () => {
-    // Tests for DeleteEnvelopeHandler
-  });
-
-  describe('SendNotification - Multi Signer Workflow', () => {
-    // Tests for SendNotificationHandler
-  });
-
-  describe('ViewDocument - Multi Signer Workflow', () => {
-    // Tests for ViewDocumentHandler
-  });
-
-  describe('DownloadSignedDocument - Multi Signer Workflow', () => {
-    // Tests for DownloadSignedDocumentHandler
-  });
-
-  describe('GetDocumentHistory - Multi Signer Workflow', () => {
-    // Tests for GetDocumentHistoryHandler
-  });
-  */
 });

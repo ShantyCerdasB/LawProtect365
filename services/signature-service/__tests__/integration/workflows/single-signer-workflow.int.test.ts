@@ -47,7 +47,6 @@ jest.mock('../../../src/services/SignatureOrchestrator', () => {
       instance.publishNotificationEvent = jest.fn().mockImplementation(async (envelopeId: any, options: any, tokens: any[]) => {
         
         // Register invitation in outboxMock for verification
-        const { outboxMockHelpers } = require('../mocks');
         const envelopeIdStr = envelopeId?.getValue?.() || envelopeId;
         
         // Simulate invitation registration for each token
@@ -429,7 +428,7 @@ describe('Single-Signer Document Signing Workflow', () => {
 
       // Verify only the first invitation was sent (duplicate prevention working correctly)
       // This tests that the system prevents duplicate invitation tokens
-      const invitationEvents = await verifyInvitationHistory(envelope.id, [
+      await verifyInvitationHistory(envelope.id, [
         {
           signerId,
           message: 'First invitation',
@@ -663,18 +662,4 @@ describe('Single-Signer Document Signing Workflow', () => {
     });
   });
 
-  /*
-  // TODO: Re-implement these tests after refactoring other handlers
-  describe('GetEnvelope - Single Signer Workflow', () => {
-    // Tests for GetEnvelopeHandler
-  });
-
-  describe('DownloadSignedDocument - Single Signer Workflow', () => {
-    // Tests for DownloadSignedDocumentHandler
-  });
-
-  describe('GetDocumentHistory - Single Signer Workflow', () => {
-    // Tests for GetDocumentHistoryHandler
-  });
-  */
 });

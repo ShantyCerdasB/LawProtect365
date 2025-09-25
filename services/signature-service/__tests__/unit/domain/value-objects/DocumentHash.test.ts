@@ -119,10 +119,10 @@ describe('DocumentHash', () => {
         'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef12345\r'  // Contains carriage return
       ];
 
-      invalidHashes.forEach(invalidHash => {
-        expect(() => new DocumentHash(invalidHash))
-          .toThrow(BadRequestError);
-      });
+      // Test each invalid hash individually to avoid deep nesting
+      for (const invalidHash of invalidHashes) {
+        expect(() => new DocumentHash(invalidHash)).toThrow(BadRequestError);
+      }
     });
 
     it('should accept valid SHA-256 hashes', () => {
@@ -134,11 +134,12 @@ describe('DocumentHash', () => {
         '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef'
       ];
 
-      validHashes.forEach(validHash => {
+      // Test each valid hash individually to avoid deep nesting
+      for (const validHash of validHashes) {
         expect(() => new DocumentHash(validHash)).not.toThrow();
         const documentHash = new DocumentHash(validHash);
         expect(documentHash.getValue()).toBe(validHash.toLowerCase());
-      });
+      }
     });
 
     it('should accept valid SHA-256 hashes with uppercase letters', () => {

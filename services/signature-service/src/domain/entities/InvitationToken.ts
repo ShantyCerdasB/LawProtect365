@@ -28,7 +28,7 @@ export class InvitationToken {
     private readonly signerId: SignerId,
     private readonly tokenHash: string,
     private status: InvitationTokenStatus,
-    private expiresAt: Date | undefined,
+    private readonly expiresAt: Date | undefined,
     private sentAt: Date | undefined,
     private lastSentAt: Date | undefined,
     private resendCount: number,
@@ -40,7 +40,7 @@ export class InvitationToken {
     private signedBy: string | undefined,
     private revokedAt: Date | undefined,
     private revokedReason: string | undefined,
-    private createdBy: string | undefined,
+    private readonly createdBy: string | undefined,
     private ipAddress: string | undefined,
     private userAgent: string | undefined,
     private country: string | undefined,
@@ -334,20 +334,7 @@ export class InvitationToken {
     this.updatedAt = new Date();
   }
 
-  /**
-   * Revokes the token
-   * @param reason - Reason for revocation
-   * @param revokedBy - User who revoked the token
-   */
-  revoke(reason: string, revokedBy: string): void {
-    this.status = InvitationTokenStatus.REVOKED;
-    this.revokedAt = new Date();
-    this.revokedReason = reason;
-    // Note: revokedBy is tracked for audit purposes but not stored in this entity
-    // It should be recorded in the audit trail
-    void revokedBy; // Suppress unused parameter warning
-    this.updatedAt = new Date();
-  }
+
 
   /**
    * Checks if the token is active

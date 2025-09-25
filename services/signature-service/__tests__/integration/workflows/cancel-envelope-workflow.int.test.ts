@@ -45,7 +45,6 @@ jest.mock('../../../src/services/SignatureOrchestrator', () => {
       // Mock the publishNotificationEvent method
       instance.publishNotificationEvent = jest.fn().mockImplementation(async (envelopeId: any, options: any, tokens: any[]) => {
         // Register invitation in outboxMock for verification
-        const { outboxMockHelpers } = require('../mocks');
         const envelopeIdStr = envelopeId?.getValue?.() || envelopeId;
         
         // Simulate invitation registration for each token
@@ -257,7 +256,6 @@ describe('Cancel Envelope Workflow', () => {
 
       expect(addSignersResponse.statusCode).toBe(200);
       expect(addSignersResponse.data.signers).toHaveLength(2);
-      const signerIds = addSignersResponse.data.signers.map((s: any) => s.id);
 
       // 3. Send envelope
       const sendResponse = await workflowHelper.sendEnvelope(envelopeId, {
@@ -333,7 +331,6 @@ describe('Cancel Envelope Workflow', () => {
       });
 
       expect(addSignersResponse.statusCode).toBe(200);
-      const signerIds = addSignersResponse.data.signers.map((s: any) => s.id);
 
       // 3. Send envelope to get invitation tokens
       const sendResponse = await workflowHelper.sendEnvelope(envelopeId, {

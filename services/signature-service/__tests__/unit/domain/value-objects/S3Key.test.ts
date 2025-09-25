@@ -93,10 +93,10 @@ describe('S3Key', () => {
         'documents/contract\x1f.pdf'  // Control character
       ];
 
-      invalidKeys.forEach(invalidKey => {
-        expect(() => new S3Key(invalidKey))
-          .toThrow(BadRequestError);
-      });
+      // Test each invalid key individually to avoid deep nesting
+      for (const invalidKey of invalidKeys) {
+        expect(() => new S3Key(invalidKey)).toThrow(BadRequestError);
+      }
     });
 
     it('should accept valid S3 keys', () => {
@@ -126,11 +126,12 @@ describe('S3Key', () => {
         'documents/contract _ underscore.pdf'
       ];
 
-      validKeys.forEach(validKey => {
+      // Test each valid key individually to avoid deep nesting
+      for (const validKey of validKeys) {
         expect(() => new S3Key(validKey)).not.toThrow();
         const s3Key = new S3Key(validKey);
         expect(s3Key.getValue()).toBe(validKey);
-      });
+      }
     });
   });
 
@@ -335,11 +336,12 @@ describe('S3Key', () => {
         'documents/contract ! important.pdf'
       ];
 
-      specialKeys.forEach(specialKey => {
+      // Test each special key individually to avoid deep nesting
+      for (const specialKey of specialKeys) {
         expect(() => new S3Key(specialKey)).not.toThrow();
         const s3Key = new S3Key(specialKey);
         expect(s3Key.getValue()).toBe(specialKey);
-      });
+      }
     });
 
     it('should handle keys with unicode characters', () => {

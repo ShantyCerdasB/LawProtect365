@@ -27,7 +27,6 @@ jest.mock('../../../src/services/SignatureOrchestrator', () => {
         });
 
         // Register invitation in outboxMock for verification
-        const { outboxMockHelpers } = require('../mocks');
         const envelopeIdStr = envelopeId?.getValue?.() || envelopeId;
 
         // Simulate invitation registration for each token

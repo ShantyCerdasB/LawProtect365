@@ -57,6 +57,8 @@ const createTable = async (client: DynamoDBClient, tableDefinition: any): Promis
     await client.send(new CreateTableCommand(tableDefinition));
   } catch (error: any) {
     if (error.name === 'ResourceInUseException') {
+      // Table already exists, skip creation
+      console.log(`✅ Table '${tableDefinition.TableName}' already exists`);
     } else {
       console.error(`❌ Failed to create table '${tableDefinition.TableName}':`, error.message);
       throw error;
@@ -101,15 +103,9 @@ const main = async (): Promise<void> => {
   const client = createDynamoDBClient();
   
   try {
-    // List existing tables
-    const existingTables = await listTables(client);
-
     for (const tableDefinition of tableDefinitions) {
       await createTable(client, tableDefinition);
     }
-    
-    // List final tables
-    const finalTables = await listTables(client);
   
   } catch (error) {
     console.error('❌ Failed to create outbox table:', error);

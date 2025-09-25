@@ -138,6 +138,181 @@ jest.mock('@lawprotect/shared-ts', () => ({
 }));
 
 /**
+ * Convert various body types to Buffer
+ * @param body - Body to convert
+ * @returns Buffer representation
+ */
+function convertBodyToBuffer(body: any): Buffer {
+  if (Buffer.isBuffer(body)) {
+    return body;
+  } else if (typeof body === 'string') {
+    return Buffer.from(body, 'utf8');
+  } else if (body instanceof Uint8Array) {
+    return Buffer.from(body);
+  } else {
+    return Buffer.from(String(body));
+  }
+}
+
+/**
+ * Generate ETag for S3 object
+ * @param key - Object key
+ * @returns ETag string
+ */
+function generateETag(key: string): string {
+  return `"${Buffer.from(key + Date.now()).toString('hex')}"`;
+}
+
+/**
+ * Create AWS NotFound error
+ * @returns NotFound error
+ */
+function createNotFoundError(): any {
+  const error = new Error('NotFound') as any;
+  error.name = 'NotFound';
+  error.$metadata = { httpStatusCode: 404 };
+  return error;
+}
+
+/**
+ * Handle PutObject command
+ * @param input - Command input
+ * @returns PutObject response
+ */
+async function handlePutObject(input: any): Promise<any> {
+  const { Bucket, Key, Body } = input;
+  
+  if (!Bucket || !Key) {
+    throw new Error('Bucket and Key are required for PutObject');
+  }
+  
+  const bodyBuffer = convertBodyToBuffer(Body);
+  
+  // Store in memory for quick access
+  if (!bucketStorage.has(Bucket)) {
+    bucketStorage.set(Bucket, new Map());
+  }
+  bucketStorage.get(Bucket)!.set(Key, bodyBuffer);
+  
+  // Also store on disk for realism
+  const filePath = getObjectPath(Bucket, Key);
+  await fs.mkdir(join(tempStorageDir, Bucket), { recursive: true });
+  await fs.writeFile(filePath, bodyBuffer);
+  
+  return {
+    ETag: generateETag(Key),
+    VersionId: 'test-version-id',
+    ServerSideEncryption: 'AES256'
+  };
+}
+
+/**
+ * Handle GetObject command
+ * @param input - Command input
+ * @returns GetObject response
+ */
+async function handleGetObject(input: any): Promise<any> {
+  const { Bucket, Key } = input;
+  
+  if (!Bucket || !Key) {
+    throw new Error('Bucket and Key are required for GetObject');
+  }
+  
+  // Try memory first, then disk
+  let bodyBuffer: Buffer;
+  if (bucketStorage.has(Bucket) && bucketStorage.get(Bucket)!.has(Key)) {
+    bodyBuffer = bucketStorage.get(Bucket)!.get(Key)!;
+  } else {
+    try {
+      const filePath = getObjectPath(Bucket, Key);
+      bodyBuffer = await fs.readFile(filePath);
+    } catch (readError) {
+      const notFoundError = createNotFoundError();
+      notFoundError.name = 'NoSuchKey';
+      throw notFoundError;
+    }
+  }
+  
+  return {
+    Body: bodyBuffer,
+    ETag: generateETag(Key),
+    ContentLength: bodyBuffer.length,
+    ContentType: 'application/pdf',
+    LastModified: new Date(),
+    Metadata: {}
+  };
+}
+
+/**
+ * Handle DeleteObject command
+ * @param input - Command input
+ * @returns DeleteObject response
+ */
+async function handleDeleteObject(input: any): Promise<any> {
+  const { Bucket, Key } = input;
+  
+  if (Bucket && Key) {
+    // Remove from memory
+    if (bucketStorage.has(Bucket)) {
+      bucketStorage.get(Bucket)!.delete(Key);
+    }
+    
+    // Remove from disk
+    try {
+      const filePath = getObjectPath(Bucket, Key);
+      await fs.unlink(filePath);
+    } catch (error) {
+      // File might not exist, ignore error
+    }
+  }
+  
+  return {
+    DeleteMarker: false,
+    VersionId: 'test-version-id'
+  };
+}
+
+/**
+ * Handle HeadObject command
+ * @param input - Command input
+ * @returns HeadObject response
+ */
+async function handleHeadObject(input: any): Promise<any> {
+  const { Bucket, Key } = input;
+  
+  if (!Bucket || !Key) {
+    throw new Error('Bucket and Key are required for HeadObject');
+  }
+  
+  // Check if object exists in memory first
+  if (bucketStorage.has(Bucket) && bucketStorage.get(Bucket)!.has(Key)) {
+    const contentLength = bucketStorage.get(Bucket)!.get(Key)!.length;
+    return {
+      ContentLength: contentLength,
+      ContentType: 'application/pdf',
+      ETag: generateETag(Key),
+      LastModified: new Date(),
+      Metadata: {}
+    };
+  }
+  
+  // Check if object exists on disk
+  try {
+    const filePath = getObjectPath(Bucket, Key);
+    const stats = await fs.stat(filePath);
+    return {
+      ContentLength: stats.size,
+      ContentType: 'application/pdf',
+      ETag: generateETag(Key),
+      LastModified: new Date(),
+      Metadata: {}
+    };
+  } catch (statError) {
+    throw createNotFoundError();
+  }
+}
+
+/**
  * Mock S3 service with realistic behavior
  * 
  * @description Provides comprehensive S3 mocking that simulates real AWS S3 behavior
@@ -152,148 +327,18 @@ jest.mock('@aws-sdk/client-s3', () => ({
       const input = command?.input ?? {};
       const commandName = command?.constructor?.name;
       
-      // Handle PutObject operation
-      if (commandName === 'PutObjectCommand') {
-        const { Bucket, Key, Body } = input;
-        
-        
-        if (!Bucket || !Key) {
-          throw new Error('Bucket and Key are required for PutObject');
-        }
-        
-        // Convert Body to Buffer
-        let bodyBuffer: Buffer;
-        if (Buffer.isBuffer(Body)) {
-          bodyBuffer = Body;
-        } else if (typeof Body === 'string') {
-          bodyBuffer = Buffer.from(Body, 'utf8');
-        } else if (Body instanceof Uint8Array) {
-          bodyBuffer = Buffer.from(Body);
-        } else {
-          bodyBuffer = Buffer.from(String(Body));
-        }
-        
-        // Store in memory for quick access
-        if (!bucketStorage.has(Bucket)) {
-          bucketStorage.set(Bucket, new Map());
-        }
-        bucketStorage.get(Bucket)!.set(Key, bodyBuffer);
-        
-        // Also store on disk for realism
-        const filePath = getObjectPath(Bucket, Key);
-        await fs.mkdir(join(tempStorageDir, Bucket), { recursive: true });
-        await fs.writeFile(filePath, bodyBuffer);
-        
-        return {
-          ETag: `"${Buffer.from(Key + Date.now()).toString('hex')}"`,
-          VersionId: 'test-version-id',
-          ServerSideEncryption: 'AES256'
-        } as any;
+      switch (commandName) {
+        case 'PutObjectCommand':
+          return await handlePutObject(input);
+        case 'GetObjectCommand':
+          return await handleGetObject(input);
+        case 'DeleteObjectCommand':
+          return await handleDeleteObject(input);
+        case 'HeadObjectCommand':
+          return await handleHeadObject(input);
+        default:
+          return {} as any;
       }
-      
-      // Handle GetObject operation
-      if (commandName === 'GetObjectCommand') {
-        const { Bucket, Key } = input;
-        
-        if (!Bucket || !Key) {
-          throw new Error('Bucket and Key are required for GetObject');
-        }
-        
-        // Try memory first, then disk
-        let bodyBuffer: Buffer;
-        if (bucketStorage.has(Bucket) && bucketStorage.get(Bucket)!.has(Key)) {
-          bodyBuffer = bucketStorage.get(Bucket)!.get(Key)!;
-        } else {
-          try {
-            const filePath = getObjectPath(Bucket, Key);
-            bodyBuffer = await fs.readFile(filePath);
-          } catch (readError) {
-            // Object not found
-            const notFoundError = new Error('NoSuchKey') as any;
-            notFoundError.name = 'NoSuchKey';
-            notFoundError.$metadata = { httpStatusCode: 404 };
-            throw notFoundError;
-          }
-        }
-        
-        return {
-          Body: bodyBuffer,
-          ETag: `"${Buffer.from(Key + Date.now()).toString('hex')}"`,
-          ContentLength: bodyBuffer.length,
-          ContentType: 'application/pdf',
-          LastModified: new Date(),
-          Metadata: {}
-        } as any;
-      }
-      
-      // Handle DeleteObject operation
-      if (commandName === 'DeleteObjectCommand') {
-        const { Bucket, Key } = input;
-        
-        if (Bucket && Key) {
-          // Remove from memory
-          if (bucketStorage.has(Bucket)) {
-            bucketStorage.get(Bucket)!.delete(Key);
-          }
-          
-          // Remove from disk
-          try {
-            const filePath = getObjectPath(Bucket, Key);
-            await fs.unlink(filePath);
-          } catch (error) {
-            // File might not exist, ignore error
-          }
-        }
-        
-        return {
-          DeleteMarker: false,
-          VersionId: 'test-version-id'
-        } as any;
-      }
-      
-      // Handle HeadObject operation
-      if (commandName === 'HeadObjectCommand') {
-        const { Bucket, Key } = input;
-        
-        
-        if (!Bucket || !Key) {
-          throw new Error('Bucket and Key are required for HeadObject');
-        }
-        
-        // Check if object exists in memory first
-        if (bucketStorage.has(Bucket) && bucketStorage.get(Bucket)!.has(Key)) {
-          const contentLength = bucketStorage.get(Bucket)!.get(Key)!.length;
-          return {
-            ContentLength: contentLength,
-            ContentType: 'application/pdf',
-            ETag: `"${Buffer.from(Key + Date.now()).toString('hex')}"`,
-            LastModified: new Date(),
-            Metadata: {}
-          } as any;
-        }
-        
-        // Check if object exists on disk
-        try {
-          const filePath = getObjectPath(Bucket, Key);
-          const stats = await fs.stat(filePath);
-          return {
-            ContentLength: stats.size,
-            ContentType: 'application/pdf',
-            ETag: `"${Buffer.from(Key + Date.now()).toString('hex')}"`,
-            LastModified: new Date(),
-            Metadata: {}
-          } as any;
-        } catch (statError) {
-          // Object not found - throw proper AWS error that S3EvidenceStorage will catch
-          const notFoundError = new Error('NotFound') as any;
-          notFoundError.name = 'NotFound';
-          notFoundError.$metadata = { httpStatusCode: 404 };
-          throw notFoundError;
-        }
-      }
-      
-      // Default response for unknown operations
-      return {} as any;
     }),
   })),
   
@@ -317,112 +362,3 @@ export async function cleanupS3MockStorage(): Promise<void> {
     // Ignore cleanup errors
   }
 }
-
-
-
-// Mock the entire AWS SDK S3 module
-jest.mock('@aws-sdk/client-s3', () => {
-  // Mock command classes with specific names
-  const createMockCommand = (name: string) => {
-    return class MockCommand {
-      constructor(public input: any) {}
-      get name() { return name; }
-    };
-  };
-  
-  const HeadObjectCommand = createMockCommand('HeadObjectCommand');
-  const PutObjectCommand = createMockCommand('PutObjectCommand');
-  const GetObjectCommand = createMockCommand('GetObjectCommand');
-  const DeleteObjectCommand = createMockCommand('DeleteObjectCommand');
-  
-  return {
-    S3Client: jest.fn().mockImplementation((config: any) => {
-      return {
-        send: jest.fn().mockImplementation(async (command: any) => {
-          
-          // Handle HeadObjectCommand (used by headObject)
-          if (command.name === 'HeadObjectCommand' || command.constructor.name === 'HeadObjectCommand') {
-            const bucket = command.input.Bucket;
-            const key = command.input.Key;
-            
-            // Check if object exists in memory first
-            if (bucketStorage.has(bucket) && bucketStorage.get(bucket)!.has(key)) {
-              const contentLength = bucketStorage.get(bucket)!.get(key)!.length;
-              return {
-                ContentLength: contentLength,
-                ETag: `"${Buffer.from(key + Date.now()).toString('hex')}"`,
-                LastModified: new Date()
-              };
-            }
-            
-            // Check if object exists on disk
-            try {
-              const filePath = getObjectPath(bucket, key);
-              const stats = statSync(filePath);
-              return {
-                ContentLength: stats.size,
-                ETag: `"${Buffer.from(key + Date.now()).toString('hex')}"`,
-                LastModified: stats.mtime
-              };
-            } catch (statError) {
-              // For test purposes, simulate that certain document patterns exist
-              // BUT only if they don't contain "non-existent" in the key
-              if ((key.startsWith('test-documents/') || key.startsWith('test-meta/')) && 
-                  !key.includes('non-existent')) {
-                return {
-                  ContentLength: 1024,
-                  ETag: `"${Buffer.from(key + Date.now()).toString('hex')}"`,
-                  LastModified: new Date()
-                };
-              }
-              
-              // Object not found - throw NotFound error (S3EvidenceStorage expects "NotFound" name)
-              const error = new Error('NotFound');
-              (error as any).name = 'NotFound';
-              (error as any).$metadata = { httpStatusCode: 404 };
-              throw error;
-            }
-          }
-          
-          // Handle PutObjectCommand (used by workflow helpers)
-          if (command.name === 'PutObjectCommand' || command.constructor.name === 'PutObjectCommand') {
-            const bucket = command.input.Bucket;
-            const key = command.input.Key;
-            const body = command.input.Body;
-            
-            // Store object in memory
-            if (!bucketStorage.has(bucket)) {
-              bucketStorage.set(bucket, new Map());
-            }
-            bucketStorage.get(bucket)!.set(key, body);
-            
-            // Also store on disk
-            try {
-              const filePath = getObjectPath(bucket, key);
-              await fs.mkdir(path.dirname(filePath), { recursive: true });
-              await fs.writeFile(filePath, body);
-            } catch (writeError) {
-              // Ignore write errors
-            }
-            
-            return {
-              ETag: `"${Buffer.from(key + Date.now()).toString('hex')}"`,
-              VersionId: 'mock-version-id'
-            };
-          }
-          
-          // Handle other commands
-          return { success: true };
-        })
-      };
-    }),
-    
-    // Mock command classes
-    PutObjectCommand,
-    GetObjectCommand,
-    HeadObjectCommand,
-    DeleteObjectCommand
-  };
-});
-
-

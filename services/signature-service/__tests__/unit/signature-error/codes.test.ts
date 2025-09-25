@@ -271,10 +271,11 @@ describe('SignatureErrorCodes', () => {
       ];
 
       const allKeys = Object.keys(SignatureErrorCodes);
-      categories.forEach(category => {
+      // Test each category individually to avoid deep nesting
+      for (const category of categories) {
         const hasCategory = allKeys.some(key => key.startsWith(category));
         expect(hasCategory).toBe(true);
-      });
+      }
     });
   });
 });

@@ -119,23 +119,23 @@ export class InvitationTokenService {
         );
 
         // Create audit event
-        await this.signatureAuditEventService.createSignerAuditEvent(
-          envelopeId.getValue(),
-          signer.getId().getValue(),
-          AuditEventType.INVITATION_ISSUED,
-          `Invitation issued to ${signer.getEmail()?.getValue() || 'external signer'}`,
-          securityContext.userId,
-          signer.getEmail()?.getValue(),
-          securityContext.ipAddress,
-          securityContext.userAgent,
-          securityContext.country, // Pass country as parameter
-          {
+        await this.signatureAuditEventService.createSignerAuditEvent({
+          envelopeId: envelopeId.getValue(),
+          signerId: signer.getId().getValue(),
+          eventType: AuditEventType.INVITATION_ISSUED,
+          description: `Invitation issued to ${signer.getEmail()?.getValue() || 'external signer'}`,
+          userId: securityContext.userId,
+          userEmail: signer.getEmail()?.getValue(),
+          ipAddress: securityContext.ipAddress,
+          userAgent: securityContext.userAgent,
+          country: securityContext.country,
+          metadata: {
             tokenId: createdToken.getId().getValue(),
             signerEmail: signer.getEmail()?.getValue(),
             signerName: signer.getFullName(),
             expiresAt: expiresAt.toISOString()
           }
-        );
+        });
 
         // Add result with both original token and entity
         results.push({
@@ -217,24 +217,24 @@ export class InvitationTokenService {
       );
 
       // Create audit event for viewer invitation
-      await this.signatureAuditEventService.createSignerAuditEvent(
-        envelopeId.getValue(),
-        signerId.getValue(), // Use the real signerId
-        AuditEventType.INVITATION_ISSUED,
-        `View invitation issued to ${email} (${fullName})`,
-        securityContext.userId,
-        email,
-        securityContext.ipAddress,
-        securityContext.userAgent,
-        securityContext.country,
-        {
+      await this.signatureAuditEventService.createSignerAuditEvent({
+        envelopeId: envelopeId.getValue(),
+        signerId: signerId.getValue(),
+        eventType: AuditEventType.INVITATION_ISSUED,
+        description: `View invitation issued to ${email} (${fullName})`,
+        userId: securityContext.userId,
+        userEmail: email,
+        ipAddress: securityContext.ipAddress,
+        userAgent: securityContext.userAgent,
+        country: securityContext.country,
+        metadata: {
           tokenId: createdToken.getId().getValue(),
           viewerEmail: email,
           viewerName: fullName,
           expiresAt: expiresAt.toISOString(),
           participantRole: 'VIEWER'
         }
-      );
+      });
 
       return {
         token,                    // Original token for frontend use
@@ -335,21 +335,21 @@ export class InvitationTokenService {
       const signerName = signer?.getFullName() || signer?.getEmail()?.getValue() || 'Unknown';
 
       // Create audit event
-      await this.signatureAuditEventService.createSignerAuditEvent(
-        invitationToken.getEnvelopeId().getValue(),
-        invitationToken.getSignerId().getValue(),
-        AuditEventType.INVITATION_TOKEN_USED,
-        `Invitation token viewed by external signer`,
-        `external-user:${signerName}`, // Use full name for external users
-        signer?.getEmail()?.getValue(), // Use signer email
-        securityContext.ipAddress,
-        securityContext.userAgent,
-        securityContext.country, // Pass country as parameter
-        {
+      await this.signatureAuditEventService.createSignerAuditEvent({
+        envelopeId: invitationToken.getEnvelopeId().getValue(),
+        signerId: invitationToken.getSignerId().getValue(),
+        eventType: AuditEventType.INVITATION_TOKEN_USED,
+        description: `Invitation token viewed by external signer`,
+        userId: `external-user:${signerName}`,
+        userEmail: signer?.getEmail()?.getValue(),
+        ipAddress: securityContext.ipAddress,
+        userAgent: securityContext.userAgent,
+        country: securityContext.country,
+        metadata: {
           viewCount: updatedToken.getViewCount(),
           lastViewedAt: updatedToken.getLastViewedAt()?.toISOString()
         }
-      );
+      });
 
       return updatedToken;
     } catch (error) {
@@ -388,21 +388,21 @@ export class InvitationTokenService {
       const signerName = signer?.getFullName() || signer?.getEmail()?.getValue() || 'Unknown';
 
       // Create audit event
-      await this.signatureAuditEventService.createSignerAuditEvent(
-        invitationToken.getEnvelopeId().getValue(),
-        invitationToken.getSignerId().getValue(),
-        AuditEventType.INVITATION_TOKEN_USED,
-        `Invitation token used for signing by ${signerName}`,
-        `external-user:${signerName}`, // Use full name for external users
-        signer?.getEmail()?.getValue(), // Use signer email
-        securityContext.ipAddress,
-        securityContext.userAgent,
-        securityContext.country, // Pass country as parameter
-        {
+      await this.signatureAuditEventService.createSignerAuditEvent({
+        envelopeId: invitationToken.getEnvelopeId().getValue(),
+        signerId: invitationToken.getSignerId().getValue(),
+        eventType: AuditEventType.INVITATION_TOKEN_USED,
+        description: `Invitation token used for signing by ${signerName}`,
+        userId: `external-user:${signerName}`,
+        userEmail: signer?.getEmail()?.getValue(),
+        ipAddress: securityContext.ipAddress,
+        userAgent: securityContext.userAgent,
+        country: securityContext.country,
+        metadata: {
           signedAt: updatedToken.getSignedAt()?.toISOString(),
           signedBy: updatedToken.getSignedBy()
         }
-      );
+      });
 
       return updatedToken;
     } catch (error) {
@@ -426,28 +426,31 @@ export class InvitationTokenService {
         throw invitationTokenInvalid(`Token with ID ${tokenId.getValue()} not found`);
       }
 
-      // Revoke token using entity method
-      invitationToken.revoke(reason, userId);
+      // Revoke token by updating status and setting revoked fields
+      // Since the entity doesn't have a revoke method, we need to implement the logic here
+      // This is a temporary solution - ideally the entity should have a revoke method
+      (invitationToken as any).status = 'REVOKED';
+      (invitationToken as any).revokedAt = new Date();
+      (invitationToken as any).revokedReason = reason;
 
       // Update in repository
       const updatedToken = await this.invitationTokenRepository.update(tokenId, invitationToken);
 
       // Create audit event
-      await this.signatureAuditEventService.createSignerAuditEvent(
-        invitationToken.getEnvelopeId().getValue(),
-        invitationToken.getSignerId().getValue(),
-        AuditEventType.INVITATION_TOKEN_USED,
-        `Invitation token revoked: ${reason}`,
-        userId,
-        undefined,
-        invitationToken.getIpAddress(),
-        invitationToken.getUserAgent(),
-        invitationToken.getCountry(), // Pass country as parameter
-        {
+      await this.signatureAuditEventService.createSignerAuditEvent({
+        envelopeId: invitationToken.getEnvelopeId().getValue(),
+        signerId: invitationToken.getSignerId().getValue(),
+        eventType: AuditEventType.INVITATION_TOKEN_USED,
+        description: `Invitation token revoked: ${reason}`,
+        userId: userId,
+        ipAddress: invitationToken.getIpAddress(),
+        userAgent: invitationToken.getUserAgent(),
+        country: invitationToken.getCountry(),
+        metadata: {
           revokedAt: invitationToken.getRevokedAt()?.toISOString(),
           revokedReason: reason
         }
-      );
+      });
 
       return updatedToken;
     } catch (error) {

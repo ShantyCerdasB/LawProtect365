@@ -44,10 +44,10 @@ describe('SignerId', () => {
         '550e8400-e29b-41d4-a716-4466554400000' // Too long
       ];
 
-      invalidUuids.forEach(invalidUuid => {
-        expect(() => new SignerId(invalidUuid))
-          .toThrow(Error);
-      });
+      // Test each invalid UUID individually to avoid deep nesting
+      for (const invalidUuid of invalidUuids) {
+        expect(() => new SignerId(invalidUuid)).toThrow(Error);
+      }
     });
 
     it('should accept valid UUID v4 formats', () => {
@@ -59,11 +59,12 @@ describe('SignerId', () => {
         TestUtils.generateUuid()
       ];
 
-      validUuids.forEach(validUuid => {
+      // Test each valid UUID individually to avoid deep nesting
+      for (const validUuid of validUuids) {
         expect(() => new SignerId(validUuid)).not.toThrow();
         const signerId = new SignerId(validUuid);
         expect(signerId.getValue()).toBe(validUuid);
-      });
+      }
     });
 
     it('should handle uppercase UUIDs', () => {

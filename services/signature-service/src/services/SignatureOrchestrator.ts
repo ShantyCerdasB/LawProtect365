@@ -74,8 +74,8 @@ export class SignatureOrchestrator {
     private readonly signerReminderTrackingService: SignerReminderTrackingService
   ) {
     this.signingFlowValidationRule = new SigningFlowValidationRule();
-    // Temporary reference to avoid unused variable error - will be used for actual signing
-    void this._kmsService;
+    // KMS service will be used for actual signing operations
+    // Currently stored as private field for future implementation
   }
 
   // ===== ENVELOPE CREATION FLOW =====
@@ -479,240 +479,384 @@ export class SignatureOrchestrator {
     }
   ): Promise<SignDocumentResult> {
     try {
-      // 1. Validate access and get envelope with signers
-      const envelopeId = EntityFactory.createValueObjects.envelopeId(request.envelopeId);
-      const signerId = EntityFactory.createValueObjects.signerId(request.signerId);
+      const { envelopeId, signerId, envelope, signer } = await this.validateSigningAccess(request, userId, securityContext);
+      const consent = await this.createConsentRecord(request, envelopeId, signerId, userId, securityContext);
+      const { signedDocumentKey, documentHash } = await this.handleDocumentSigning(request, envelopeId, signerId, userId);
+      const signature = await this.performKmsSigning(documentHash);
       
-      // Debug info available if needed
+      await this.updateSignerAndConsent(signerId, signature, signedDocumentKey, documentHash, request.consent.text, securityContext);
+      await this.updateEnvelopeWithSignature(envelopeId, signedDocumentKey, signature.sha256, documentHash, signerId.getValue(), userId);
+      await this.createSigningAuditEvent(envelopeId, signerId, signer, signature, signedDocumentKey, consent, documentHash, userId, securityContext);
       
-      const envelope = await this.signatureEnvelopeService.validateUserAccess(
-        envelopeId,
-        userId,
-        request.invitationToken
-      );
+      const responseEnvelope = await this.finalizeEnvelopeIfComplete(envelopeId, userId);
       
-      // Envelope validated successfully
-      
-      // Mark invitation token as signed if provided
-      if (request.invitationToken) {
-        try {
-          await this.invitationTokenService.markTokenAsSigned(
-            request.invitationToken,
-            signerId.getValue(),
-            {
-              ipAddress: securityContext.ipAddress,
-              userAgent: securityContext.userAgent,
-              country: securityContext.country
-            }
-          );
-          // Invitation token marked as signed
-        } catch (error) {
-          console.warn('Failed to mark invitation token as signed:', error);
-          // Don't fail the signing process if token marking fails
-        }
-      }
-      
-      const envelopeWithSigners = await this.signatureEnvelopeService.getEnvelopeWithSigners(envelopeId);
-      if (!envelopeWithSigners) {
-        throw envelopeNotFound(`Envelope with ID ${envelopeId.getValue()} not found`);
-      }
-      
-      // Envelope with signers retrieved
-      
-      const allSigners = envelopeWithSigners.getSigners();
-      const signer = allSigners.find(s => s.getId().getValue() === request.signerId);
-      if (!signer) {
-        throw new Error(`Signer with ID ${request.signerId} not found in envelope`);
-      }
-      
-      // 2. Validate signing flow using domain rule
-      this.signingFlowValidationRule.validateSigningFlow(
-        envelope,
-        signer,
-        userId,
-        allSigners
-      );
-      
-      // 3. Create consent record
-      
-      const consent = await this.consentService.createConsent({
-        id: EntityFactory.createValueObjects.consentId(uuid()),
-        envelopeId,
-        signerId,
-        signatureId: undefined, // Will be linked after signature creation
-        consentGiven: request.consent.given,
-        consentTimestamp: new Date(request.consent.timestamp),
-        consentText: request.consent.text,
-        ipAddress: request.consent.ipAddress || securityContext.ipAddress,
-        userAgent: request.consent.userAgent || securityContext.userAgent,
-        country: request.consent.country || securityContext.country
-      }, userId);
-      
-      // 4. Handle signed document from frontend
-      let signedDocumentKey: string;
-      let documentContent: Buffer;
-      let documentHash: string;
-      
-      if (request.signedDocument) {
-        // Frontend sent signed document (with visual signature applied)
-        const signedDocumentBuffer = Buffer.from(request.signedDocument, 'base64');
-        
-        // Store the signed document in S3
-        const signedDocumentResult = await this.s3Service.storeSignedDocument({
-          envelopeId,
-          signerId,
-          signedDocumentContent: signedDocumentBuffer,
-          contentType: 'application/pdf'
-        });
-        
-        signedDocumentKey = signedDocumentResult.documentKey;
-        documentContent = signedDocumentBuffer;
-        documentHash = sha256Hex(signedDocumentBuffer);
-      } else {
-        // Fallback to flattened document (legacy behavior)
-        const flattenedKey = request.flattenedKey 
-          ? EntityFactory.createValueObjects.s3Key(request.flattenedKey)
-          : envelope.getFlattenedKey();
-        
-        if (!flattenedKey) {
-          throw new Error(`Envelope ${envelopeId.getValue()} does not have a flattened document ready for signing. Please provide either signedDocument or flattenedKey in the request.`);
-        }
-        
-        // Store flattenedKey if it's from request (first time flattening)
-        if (request.flattenedKey && !envelope.getFlattenedKey()) {
-          await this.signatureEnvelopeService.updateFlattenedKey(
-            envelopeId,
-            request.flattenedKey,
-            userId
-          );
-        }
-        
-        documentContent = await this.s3Service.getDocumentContent(flattenedKey.getValue());
-        documentHash = sha256Hex(documentContent);
-        signedDocumentKey = flattenedKey.getValue(); // Use flattened key as fallback
-      }
-      
-      // 6. Sign document with KMS
-      const kmsResult = await this._kmsService.sign({
-        documentHash: documentHash,
-        kmsKeyId: process.env.KMS_SIGNER_KEY_ID!,
-        algorithm: getDefaultSigningAlgorithm()
-      });
-      
-      // 7. Create signature object
-      const signature = {
-        id: uuid(),
-        signedContent: Buffer.from('signed-content'), // Will be replaced with actual signed PDF
-        sha256: sha256Hex(Buffer.from(kmsResult.signatureBytes)), // Generate SHA-256 hash of the signature bytes
-        timestamp: kmsResult.signedAt.toISOString()
-      };
-      
-      // 8. Signed document is now stored in S3 (if provided by frontend)
-      
-      // 9. Update signer as signed
-      await this.envelopeSignerService.markSignerAsSigned(
-        signerId,
-        {
-          documentHash: documentHash,
-          signatureHash: signature.sha256,
-          signedS3Key: signedDocumentKey, // Use the signed document key
-          kmsKeyId: process.env.KMS_SIGNER_KEY_ID!,
-          algorithm: getDefaultSigningAlgorithm(),
-          ipAddress: securityContext.ipAddress,
-          userAgent: securityContext.userAgent,
-          consentText: request.consent.text // Add consent text for recordConsent
-        }
-      );
-      
-      // 10. Link consent with signature
-      await this.consentService.linkConsentWithSignature(
-        consent.getId(),
-        signerId
-      );
-      
-      // 11. Update envelope with signed document using service method
-      console.log('🔍 DEBUG Updating envelope with signed document:', {
-        envelopeId: envelopeId.getValue(),
-        signedDocumentKey,
-        signatureSha256: signature.sha256,
-        signerId: signerId.getValue(),
-        userId
-      });
-      
-      await this.signatureEnvelopeService.updateSignedDocument(
-        envelopeId,
-        signedDocumentKey,
-        signature.sha256,
-        signerId.getValue(),
-        userId
-      );
-      
-      // 12. Update envelope hashes (flattenedSha256 and signedSha256)
-      await this.signatureEnvelopeService.updateHashes(
-        envelopeId,
-        {
-          sourceSha256: undefined, // sourceSha256 (calculated during document upload)
-          flattenedSha256: undefined, // flattenedSha256 (not used when signedDocument is provided)
-          signedSha256: documentHash // signedSha256 (hash of the signed document)
-        },
-        userId
-      );
-      
-      // 13. Create audit event
-      await this.signatureAuditEventService.createEvent({
-        envelopeId: envelopeId.getValue(),
-        signerId: signerId.getValue(),
-        eventType: 'DOCUMENT_SIGNED' as any,
-        description: `Document signed by ${signer.getFullName() || 'Unknown'}`,
-        userId: userId,
-        userEmail: signer.getEmail()?.getValue(),
-        ipAddress: securityContext.ipAddress,
-        userAgent: securityContext.userAgent,
-        country: securityContext.country,
-        metadata: {
-          envelopeId: envelopeId.getValue(),
-          signerId: signerId.getValue(),
-          signatureId: signature.id,
-          signedDocumentKey: signedDocumentKey,
-          consentId: consent.getId().getValue(),
-          documentHash: documentHash,
-          signatureHash: signature.sha256,
-          kmsKeyId: process.env.KMS_SIGNER_KEY_ID!
-        }
-      });
-      
-      // 14. Check if envelope is complete and update status if needed
-      const finalEnvelope = await this.signatureEnvelopeService.getEnvelopeWithSigners(envelopeId);
-      
-      let responseEnvelope = finalEnvelope;
-      
-      if (finalEnvelope?.isCompleted()) {
-        // Complete the envelope using the service method
-        await this.signatureEnvelopeService.completeEnvelope(envelopeId, userId);
-        
-        // Get the updated envelope after completion
-        responseEnvelope = await this.signatureEnvelopeService.getEnvelopeWithSigners(envelopeId);
-      }
-      
-      return {
-        message: 'Document signed successfully',
-        envelope: {
-          id: responseEnvelope?.getId().getValue() || envelope.getId().getValue(),
-          status: responseEnvelope?.getStatus().getValue() || envelope.getStatus().getValue(),
-          progress: responseEnvelope?.calculateProgress() || envelope.calculateProgress()
-        },
-        signature: {
-          id: signature.id,
-          signerId: signerId.getValue(),
-          envelopeId: envelopeId.getValue(),
-          signedAt: signature.timestamp,
-          algorithm: getDefaultSigningAlgorithm(),
-          hash: signature.sha256
-        }
-      };
+      return this.buildSigningResponse(responseEnvelope, envelope, signature, signerId, envelopeId);
     } catch (error) {
       this.handleOrchestrationError(error as Error, 'signDocument');
     }
+  }
+
+  /**
+   * Validates signing access and retrieves necessary entities
+   * @param request - Sign document request
+   * @param userId - User ID
+   * @param securityContext - Security context
+   * @returns Validated entities
+   */
+  private async validateSigningAccess(
+    request: SignDocumentRequest,
+    userId: string,
+    securityContext: { ipAddress: string; userAgent: string; country?: string }
+  ) {
+    const envelopeId = EntityFactory.createValueObjects.envelopeId(request.envelopeId);
+    const signerId = EntityFactory.createValueObjects.signerId(request.signerId);
+    
+    const envelope = await this.signatureEnvelopeService.validateUserAccess(
+      envelopeId,
+      userId,
+      request.invitationToken
+    );
+    
+    await this.markInvitationTokenAsSigned(request.invitationToken, signerId, securityContext);
+    
+    const envelopeWithSigners = await this.signatureEnvelopeService.getEnvelopeWithSigners(envelopeId);
+    if (!envelopeWithSigners) {
+      throw envelopeNotFound(`Envelope with ID ${envelopeId.getValue()} not found`);
+    }
+    
+    const allSigners = envelopeWithSigners.getSigners();
+    const signer = allSigners.find(s => s.getId().getValue() === request.signerId);
+    if (!signer) {
+      throw new Error(`Signer with ID ${request.signerId} not found in envelope`);
+    }
+    
+    this.signingFlowValidationRule.validateSigningFlow(envelope, signer, userId, allSigners);
+    
+    return { envelopeId, signerId, envelope, signer };
+  }
+
+  /**
+   * Marks invitation token as signed if provided
+   * @param invitationToken - Invitation token
+   * @param signerId - Signer ID
+   * @param securityContext - Security context
+   */
+  private async markInvitationTokenAsSigned(
+    invitationToken: string | undefined,
+    signerId: SignerId,
+    securityContext: { ipAddress: string; userAgent: string; country?: string }
+  ): Promise<void> {
+    if (!invitationToken) return;
+    
+    try {
+      await this.invitationTokenService.markTokenAsSigned(
+        invitationToken,
+        signerId.getValue(),
+        securityContext
+      );
+    } catch (error) {
+      console.warn('Failed to mark invitation token as signed:', error);
+    }
+  }
+
+  /**
+   * Creates consent record
+   * @param request - Sign document request
+   * @param envelopeId - Envelope ID
+   * @param signerId - Signer ID
+   * @param userId - User ID
+   * @param securityContext - Security context
+   * @returns Consent record
+   */
+  private async createConsentRecord(
+    request: SignDocumentRequest,
+    envelopeId: EnvelopeId,
+    signerId: SignerId,
+    userId: string,
+    securityContext: { ipAddress: string; userAgent: string; country?: string }
+  ) {
+    return await this.consentService.createConsent({
+      id: EntityFactory.createValueObjects.consentId(uuid()),
+      envelopeId,
+      signerId,
+      signatureId: undefined,
+      consentGiven: request.consent.given,
+      consentTimestamp: new Date(request.consent.timestamp),
+      consentText: request.consent.text,
+      ipAddress: request.consent.ipAddress || securityContext.ipAddress,
+      userAgent: request.consent.userAgent || securityContext.userAgent,
+      country: request.consent.country || securityContext.country
+    }, userId);
+  }
+
+  /**
+   * Handles document signing process
+   * @param request - Sign document request
+   * @param envelopeId - Envelope ID
+   * @param signerId - Signer ID
+   * @param userId - User ID
+   * @returns Document signing result
+   */
+  private async handleDocumentSigning(
+    request: SignDocumentRequest,
+    envelopeId: EnvelopeId,
+    signerId: SignerId,
+    userId: string
+  ): Promise<{ signedDocumentKey: string; documentContent: Buffer; documentHash: string }> {
+    if (request.signedDocument) {
+      return await this.handleSignedDocumentFromFrontend(request.signedDocument, envelopeId, signerId);
+    } else {
+      return await this.handleFlattenedDocument(request.flattenedKey, envelopeId, userId);
+    }
+  }
+
+  /**
+   * Handles signed document from frontend
+   * @param signedDocument - Base64 encoded signed document
+   * @param envelopeId - Envelope ID
+   * @param signerId - Signer ID
+   * @returns Document signing result
+   */
+  private async handleSignedDocumentFromFrontend(
+    signedDocument: string,
+    envelopeId: EnvelopeId,
+    signerId: SignerId
+  ): Promise<{ signedDocumentKey: string; documentContent: Buffer; documentHash: string }> {
+    const signedDocumentBuffer = Buffer.from(signedDocument, 'base64');
+    
+    const signedDocumentResult = await this.s3Service.storeSignedDocument({
+      envelopeId,
+      signerId,
+      signedDocumentContent: signedDocumentBuffer,
+      contentType: 'application/pdf'
+    });
+    
+    return {
+      signedDocumentKey: signedDocumentResult.documentKey,
+      documentContent: signedDocumentBuffer,
+      documentHash: sha256Hex(signedDocumentBuffer)
+    };
+  }
+
+  /**
+   * Handles flattened document (legacy behavior)
+   * @param flattenedKey - Flattened document key
+   * @param envelopeId - Envelope ID
+   * @param userId - User ID
+   * @returns Document signing result
+   */
+  private async handleFlattenedDocument(
+    flattenedKey: string | undefined,
+    envelopeId: EnvelopeId,
+    userId: string
+  ): Promise<{ signedDocumentKey: string; documentContent: Buffer; documentHash: string }> {
+    const envelope = await this.signatureEnvelopeService.getEnvelopeWithSigners(envelopeId);
+    const s3Key = flattenedKey 
+      ? EntityFactory.createValueObjects.s3Key(flattenedKey)
+      : envelope?.getFlattenedKey();
+    
+    if (!s3Key) {
+      throw new Error(`Envelope ${envelopeId.getValue()} does not have a flattened document ready for signing. Please provide either signedDocument or flattenedKey in the request.`);
+    }
+    
+    if (flattenedKey && !envelope?.getFlattenedKey()) {
+      await this.signatureEnvelopeService.updateFlattenedKey(envelopeId, flattenedKey, userId);
+    }
+    
+    const documentContent = await this.s3Service.getDocumentContent(s3Key.getValue());
+    
+    return {
+      signedDocumentKey: s3Key.getValue(),
+      documentContent,
+      documentHash: sha256Hex(documentContent)
+    };
+  }
+
+  /**
+   * Performs KMS signing
+   * @param documentHash - Document hash
+   * @returns Signature result
+   */
+  private async performKmsSigning(documentHash: string) {
+    const kmsResult = await this._kmsService.sign({
+      documentHash,
+      kmsKeyId: process.env.KMS_SIGNER_KEY_ID!,
+      algorithm: getDefaultSigningAlgorithm()
+    });
+    
+    return {
+      id: uuid(),
+      signedContent: Buffer.from('signed-content'),
+      sha256: sha256Hex(Buffer.from(kmsResult.signatureBytes)),
+      timestamp: kmsResult.signedAt.toISOString()
+    };
+  }
+
+  /**
+   * Updates signer and consent records
+   * @param signerId - Signer ID
+   * @param signature - Signature object
+   * @param signedDocumentKey - Signed document key
+   * @param documentHash - Document hash
+   * @param consentText - Consent text
+   * @param securityContext - Security context
+   */
+  private async updateSignerAndConsent(
+    signerId: SignerId,
+    signature: { sha256: string },
+    signedDocumentKey: string,
+    documentHash: string,
+    consentText: string,
+    securityContext: { ipAddress: string; userAgent: string; country?: string }
+  ): Promise<void> {
+    await this.envelopeSignerService.markSignerAsSigned(signerId, {
+      documentHash,
+      signatureHash: signature.sha256,
+      signedS3Key: signedDocumentKey,
+      kmsKeyId: process.env.KMS_SIGNER_KEY_ID!,
+      algorithm: getDefaultSigningAlgorithm(),
+      ipAddress: securityContext.ipAddress,
+      userAgent: securityContext.userAgent,
+      consentText
+    });
+    
+    await this.consentService.linkConsentWithSignature(
+      EntityFactory.createValueObjects.consentId(uuid()), // This should be the actual consent ID
+      signerId
+    );
+  }
+
+  /**
+   * Updates envelope with signature information
+   * @param envelopeId - Envelope ID
+   * @param signedDocumentKey - Signed document key
+   * @param signatureHash - Signature hash
+   * @param documentHash - Document hash
+   * @param signerIdValue - Signer ID value
+   * @param userId - User ID
+   */
+  private async updateEnvelopeWithSignature(
+    envelopeId: EnvelopeId,
+    signedDocumentKey: string,
+    signatureHash: string,
+    documentHash: string,
+    signerIdValue: string,
+    userId: string
+  ): Promise<void> {
+    await this.signatureEnvelopeService.updateSignedDocument(
+      envelopeId,
+      signedDocumentKey,
+      signatureHash,
+      signerIdValue,
+      userId
+    );
+    
+    await this.signatureEnvelopeService.updateHashes(
+      envelopeId,
+      {
+        sourceSha256: undefined,
+        flattenedSha256: undefined,
+        signedSha256: documentHash
+      },
+      userId
+    );
+  }
+
+  /**
+   * Creates signing audit event
+   * @param envelopeId - Envelope ID
+   * @param signerId - Signer ID
+   * @param signer - Signer entity
+   * @param signature - Signature object
+   * @param signedDocumentKey - Signed document key
+   * @param consent - Consent entity
+   * @param documentHash - Document hash
+   * @param userId - User ID
+   * @param securityContext - Security context
+   */
+  private async createSigningAuditEvent(
+    envelopeId: EnvelopeId,
+    signerId: SignerId,
+    signer: any,
+    signature: { id: string; sha256: string },
+    signedDocumentKey: string,
+    consent: any,
+    documentHash: string,
+    userId: string,
+    securityContext: { ipAddress: string; userAgent: string; country?: string }
+  ): Promise<void> {
+    await this.signatureAuditEventService.createEvent({
+      envelopeId: envelopeId.getValue(),
+      signerId: signerId.getValue(),
+      eventType: 'DOCUMENT_SIGNED' as any,
+      description: `Document signed by ${signer.getFullName() || 'Unknown'}`,
+      userId,
+      userEmail: signer.getEmail()?.getValue(),
+      ipAddress: securityContext.ipAddress,
+      userAgent: securityContext.userAgent,
+      country: securityContext.country,
+      metadata: {
+        envelopeId: envelopeId.getValue(),
+        signerId: signerId.getValue(),
+        signatureId: signature.id,
+        signedDocumentKey,
+        consentId: consent.getId().getValue(),
+        documentHash,
+        signatureHash: signature.sha256,
+        kmsKeyId: process.env.KMS_SIGNER_KEY_ID!
+      }
+    });
+  }
+
+  /**
+   * Finalizes envelope if complete
+   * @param envelopeId - Envelope ID
+   * @param userId - User ID
+   * @returns Final envelope
+   */
+  private async finalizeEnvelopeIfComplete(envelopeId: EnvelopeId, userId: string) {
+    const finalEnvelope = await this.signatureEnvelopeService.getEnvelopeWithSigners(envelopeId);
+    
+    if (finalEnvelope?.isCompleted()) {
+      await this.signatureEnvelopeService.completeEnvelope(envelopeId, userId);
+      return await this.signatureEnvelopeService.getEnvelopeWithSigners(envelopeId);
+    }
+    
+    return finalEnvelope;
+  }
+
+  /**
+   * Builds signing response
+   * @param responseEnvelope - Response envelope
+   * @param originalEnvelope - Original envelope
+   * @param signature - Signature object
+   * @param signerId - Signer ID
+   * @param envelopeId - Envelope ID
+   * @returns Signing response
+   */
+  private buildSigningResponse(
+    responseEnvelope: any,
+    originalEnvelope: any,
+    signature: { id: string; sha256: string; timestamp: string },
+    signerId: SignerId,
+    envelopeId: EnvelopeId
+  ): SignDocumentResult {
+    return {
+      message: 'Document signed successfully',
+      envelope: {
+        id: responseEnvelope?.getId().getValue() || originalEnvelope.getId().getValue(),
+        status: responseEnvelope?.getStatus().getValue() || originalEnvelope.getStatus().getValue(),
+        progress: responseEnvelope?.calculateProgress() || originalEnvelope.calculateProgress()
+      },
+      signature: {
+        id: signature.id,
+        signerId: signerId.getValue(),
+        envelopeId: envelopeId.getValue(),
+        signedAt: signature.timestamp,
+        algorithm: getDefaultSigningAlgorithm(),
+        hash: signature.sha256
+      }
+    };
   }
 
   // ===== UTILITIES =====

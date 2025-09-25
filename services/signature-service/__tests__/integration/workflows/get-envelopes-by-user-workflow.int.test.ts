@@ -32,7 +32,6 @@ jest.mock('../../../src/services/SignatureOrchestrator', () => {
         });
         
         // Register invitation in outboxMock for verification
-        const { outboxMockHelpers } = require('../mocks');
         const envelopeIdStr = envelopeId?.getValue?.() || envelopeId;
         
         // Simulate invitation registration for each token
@@ -118,21 +117,21 @@ describe('Get Envelopes By User Workflow', () => {
   describe('Basic Pagination', () => {
     it('should get envelopes with pagination limit', async () => {
       // Create multiple envelopes
-      const envelope1 = await workflowHelper.createEnvelope(
+      await workflowHelper.createEnvelope(
         TestDataFactory.createEnvelopeData({
           title: 'Pagination Test 1',
           description: 'First envelope for pagination test'
         })
       );
 
-      const envelope2 = await workflowHelper.createEnvelope(
+      await workflowHelper.createEnvelope(
         TestDataFactory.createEnvelopeData({
           title: 'Pagination Test 2',
           description: 'Second envelope for pagination test'
         })
       );
 
-      const envelope3 = await workflowHelper.createEnvelope(
+      await workflowHelper.createEnvelope(
         TestDataFactory.createEnvelopeData({
           title: 'Pagination Test 3',
           description: 'Third envelope for pagination test'
@@ -179,7 +178,7 @@ describe('Get Envelopes By User Workflow', () => {
   describe('Status Filtering', () => {
     it('should filter envelopes by DRAFT status', async () => {
       // Create DRAFT envelope
-      const draftEnvelope = await workflowHelper.createEnvelope(
+      await workflowHelper.createEnvelope(
         TestDataFactory.createEnvelopeData({
           title: 'Draft Envelope',
           description: 'Testing draft status filtering'

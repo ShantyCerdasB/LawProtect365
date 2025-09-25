@@ -192,6 +192,71 @@ export const guessContentType = (filename: string): string | undefined => {
 };
 
 /**
+ * Converts a ReadableStream to Buffer
+ * @param stream - ReadableStream to convert
+ * @returns Promise resolving to Buffer
+ */
+async function streamToBuffer(stream: ReadableStream): Promise<Buffer> {
+  const chunks: Uint8Array[] = [];
+  const reader = stream.getReader();
+  
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  
+  const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
+  const resultBuffer = new Uint8Array(totalLength);
+  let offset = 0;
+  
+  for (const chunk of chunks) {
+    resultBuffer.set(chunk, offset);
+    offset += chunk.length;
+  }
+  
+  return Buffer.from(resultBuffer);
+}
+
+/**
+ * Converts various body types to Buffer
+ * @param body - Document body (Buffer, Uint8Array, or ReadableStream)
+ * @returns Promise resolving to Buffer
+ */
+async function convertBodyToBuffer(body: unknown): Promise<Buffer> {
+  if (body instanceof Buffer) {
+    return body;
+  }
+  
+  if (body instanceof Uint8Array) {
+    return Buffer.from(body);
+  }
+  
+  if (body instanceof ReadableStream) {
+    return await streamToBuffer(body);
+  }
+  
+  throw new Error('Unsupported body type');
+}
+
+/**
+ * Handles S3 download errors with appropriate error messages
+ * @param error - Caught error
+ * @param s3Key - S3 object key for context
+ * @throws Error with appropriate message
+ */
+function handleS3DownloadError(error: unknown, s3Key: string): never {
+  if (error instanceof Error && error.message.includes('NoSuchKey')) {
+    throw new Error(`Document not found: ${s3Key}`);
+  }
+  throw new Error(`Failed to download document from S3: ${error instanceof Error ? error.message : error}`);
+}
+
+/**
  * Downloads document content from S3
  * @param s3Storage - S3EvidenceStorage instance
  * @param bucketName - S3 bucket name
@@ -214,41 +279,8 @@ export async function getDocumentContent(
       throw new Error('Document content is empty');
     }
 
-    // Convert to Buffer if needed
-    if (result.body instanceof Buffer) {
-      return result.body;
-    } else if (result.body instanceof Uint8Array) {
-      return Buffer.from(result.body);
-    } else {
-      // Handle ReadableStream case
-      const chunks: Uint8Array[] = [];
-      const reader = result.body.getReader();
-      
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          chunks.push(value);
-        }
-      } finally {
-        reader.releaseLock();
-      }
-      
-      const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
-      const resultBuffer = new Uint8Array(totalLength);
-      let offset = 0;
-      
-      for (const chunk of chunks) {
-        resultBuffer.set(chunk, offset);
-        offset += chunk.length;
-      }
-      
-      return Buffer.from(resultBuffer);
-    }
+    return await convertBodyToBuffer(result.body);
   } catch (error) {
-    if (error instanceof Error && error.message.includes('NoSuchKey')) {
-      throw new Error(`Document not found: ${s3Key}`);
-    }
-    throw new Error(`Failed to download document from S3: ${error instanceof Error ? error.message : error}`);
+    handleS3DownloadError(error, s3Key);
   }
 }

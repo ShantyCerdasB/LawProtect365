@@ -48,10 +48,10 @@ describe('Email', () => {
         'test@example com'
       ];
 
-      invalidEmails.forEach(invalidEmail => {
-        expect(() => new Email(invalidEmail))
-          .toThrow(BadRequestError);
-      });
+      // Test each invalid email individually to avoid deep nesting
+      for (const invalidEmail of invalidEmails) {
+        expect(() => new Email(invalidEmail)).toThrow(BadRequestError);
+      }
     });
 
     it('should accept valid email formats', () => {
@@ -70,11 +70,12 @@ describe('Email', () => {
         'user@example.info'
       ];
 
-      validEmails.forEach(validEmail => {
+      // Test each valid email individually to avoid deep nesting
+      for (const validEmail of validEmails) {
         expect(() => new Email(validEmail)).not.toThrow();
         const email = new Email(validEmail);
         expect(email.getValue()).toBe(validEmail);
-      });
+      }
     });
 
     it('should handle case-insensitive email addresses', () => {
