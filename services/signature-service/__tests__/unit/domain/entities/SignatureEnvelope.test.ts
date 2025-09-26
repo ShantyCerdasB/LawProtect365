@@ -48,7 +48,7 @@ function createBasicEnvelope(
 ): SignatureEnvelope {
   return new SignatureEnvelope(
     new EnvelopeId(TestUtils.generateUuid()),
-    new SignerId(TestUtils.generateUuid()),
+    TestUtils.generateUuid(),
     'Test Envelope',
     'Test Description',
     status,
@@ -103,7 +103,7 @@ function createEnvelopeWithParams(params: {
 }): SignatureEnvelope {
   return new SignatureEnvelope(
     new EnvelopeId(params.id || TestUtils.generateUuid()),
-    new SignerId(params.createdBy || TestUtils.generateUuid()),
+    params.createdBy || TestUtils.generateUuid(),
     params.title || 'Test Envelope',
     params.description || 'Test Description',
     params.status || EnvelopeStatus.draft(),
@@ -143,7 +143,7 @@ describe('SignatureEnvelope', () => {
   describe('Constructor and Getters', () => {
     it('should create envelope with all properties', () => {
       expect(envelope.getId().getValue()).toBeDefined();
-      expect(envelope.getCreatedBy().getValue()).toBeDefined();
+      expect(envelope.getCreatedBy()).toBeDefined();
       expect(envelope.getTitle()).toBe('Test Envelope');
       expect(envelope.getDescription()).toBe('Test Description');
       expect(envelope.getStatus().getValue()).toBe('DRAFT');
@@ -363,14 +363,14 @@ describe('SignatureEnvelope', () => {
 
   describe('Cancel Envelope', () => {
     it('should cancel envelope', () => {
-      envelope.cancel();
+      envelope.cancel(TestUtils.generateUuid());
       expect(envelope.getStatus().getValue()).toBe('CANCELLED');
     });
 
     it('should throw error when cancelling completed envelope', () => {
       const completedEnvelope = createBasicEnvelope(EnvelopeStatus.completed());
 
-      expect(() => completedEnvelope.cancel()).toThrow(envelopeCompleted());
+      expect(() => completedEnvelope.cancel(TestUtils.generateUuid())).toThrow(envelopeCompleted());
     });
   });
 

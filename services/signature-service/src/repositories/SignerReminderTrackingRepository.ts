@@ -34,7 +34,7 @@ export class SignerReminderTrackingRepository extends RepositoryBase<SignerRemin
    * @param model - Prisma model data
    * @returns Domain entity
    */
-  protected toDomain(model: TrackingModel | unknown): SignerReminderTracking {
+  protected toDomain(model: TrackingModel): SignerReminderTracking {
     try {
       return SignerReminderTracking.fromPersistence(model as any);
     } catch (error) {

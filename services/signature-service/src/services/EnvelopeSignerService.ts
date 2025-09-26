@@ -21,6 +21,7 @@ import {
   SignatureData 
 } from '../domain/types/signer';
 import { AuditEventType } from '../domain/enums/AuditEventType';
+import { NetworkSecurityContext } from '@lawprotect/shared-ts';
 import { 
   signerNotFound,
   signerCreationFailed,
@@ -56,11 +57,8 @@ export class EnvelopeSignerService {
     description: string;
     userId: string;
     userEmail?: string;
-    ipAddress?: string;
-    userAgent?: string;
-    country?: string;
     metadata?: Record<string, unknown>;
-  }): Promise<void> {
+  } & NetworkSecurityContext): Promise<void> {
     await this.signatureAuditEventService.createSignerAuditEvent({
       envelopeId: config.envelopeId,
       signerId: config.signerId,

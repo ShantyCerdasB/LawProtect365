@@ -36,7 +36,7 @@ export class ConsentRepository extends RepositoryBase<Consent, ConsentId, Consen
    * @param model - Prisma model data
    * @returns Domain entity
    */
-  protected toDomain(model: Prisma.ConsentUncheckedCreateInput | Prisma.ConsentGetPayload<any> | unknown): Consent {
+  protected toDomain(model: Prisma.ConsentUncheckedCreateInput | Prisma.ConsentGetPayload<any>): Consent {
     try {
       return Consent.fromPersistence(model as any);
     } catch (error) {

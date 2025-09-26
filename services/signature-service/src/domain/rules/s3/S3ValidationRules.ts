@@ -44,7 +44,10 @@ export function validateStoreDocumentRequest(request: StoreDocumentRequest): voi
   try {
     ContentType.fromString(request.contentType.getValue());
   } catch (error) {
-    throw new BadRequestError('Invalid content type', ErrorCodes.COMMON_BAD_REQUEST);
+    throw new BadRequestError(
+      `Invalid content type: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      ErrorCodes.COMMON_BAD_REQUEST
+    );
   }
 
   // Validate file size limits
@@ -87,7 +90,10 @@ export function validateRetrieveDocumentRequest(request: RetrieveDocumentRequest
   try {
     S3Key.fromString(request.documentKey.getValue());
   } catch (error) {
-    throw new BadRequestError('Invalid document key format', ErrorCodes.COMMON_BAD_REQUEST);
+    throw new BadRequestError(
+      `Invalid document key format: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      ErrorCodes.COMMON_BAD_REQUEST
+    );
   }
 
   // Validate S3 key using storage rules
@@ -132,14 +138,20 @@ export function validateGeneratePresignedUrlRequest(
   try {
     S3Key.fromString(request.documentKey.getValue());
   } catch (error) {
-    throw new BadRequestError('Invalid document key format', ErrorCodes.COMMON_BAD_REQUEST);
+    throw new BadRequestError(
+      `Invalid document key format: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      ErrorCodes.COMMON_BAD_REQUEST
+    );
   }
 
   // Validate S3 operation
   try {
     S3Operation.fromString(request.operation.getValue());
   } catch (error) {
-    throw new BadRequestError('Invalid S3 operation', ErrorCodes.COMMON_BAD_REQUEST);
+    throw new BadRequestError(
+      `Invalid S3 operation: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      ErrorCodes.COMMON_BAD_REQUEST
+    );
   }
 
   // Validate expiration time

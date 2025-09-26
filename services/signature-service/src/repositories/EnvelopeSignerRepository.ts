@@ -57,7 +57,7 @@ export class EnvelopeSignerRepository extends RepositoryBase<EnvelopeSigner, Sig
    * @param model - Prisma model data
    * @returns Domain entity
    */
-  protected toDomain(model: SignerWithIncludes | unknown): EnvelopeSigner {
+  protected toDomain(model: SignerWithIncludes): EnvelopeSigner {
     try {
       return EnvelopeSigner.fromPersistence(model as any);
     } catch (error) {

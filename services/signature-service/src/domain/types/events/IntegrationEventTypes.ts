@@ -89,10 +89,7 @@ export interface EnvelopeCancelledPayload {
     envelopeId: string;
     cancelledAt: string;
     cancelledBy: string;
-    ipAddress?: string;
-    userAgent?: string;
-    country?: string;
-  };
+  } & NetworkSecurityContext;
 }
 
 /**

@@ -36,7 +36,7 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
    * @param model - Prisma SignatureEnvelope model
    * @returns SignatureEnvelope domain entity
    */
-  protected toDomain(model: EnvelopeWithIncludes | unknown): SignatureEnvelope {
+  protected toDomain(model: EnvelopeWithIncludes): SignatureEnvelope {
     try {
       return SignatureEnvelope.fromPersistence(model as any);
     } catch (cause) {
@@ -433,7 +433,7 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
 
       const updated = await client.signatureEnvelope.update({
         where: { id: id.getValue() },
-        data: data as Prisma.SignatureEnvelopeUncheckedUpdateInput,
+        data,
         include: ENVELOPE_INCLUDE
       });
 

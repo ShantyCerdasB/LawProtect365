@@ -35,7 +35,7 @@ export class SignatureAuditEventRepository extends RepositoryBase<SignatureAudit
    * @param model - Prisma model data
    * @returns Domain entity
    */
-  protected toDomain(model: AuditRow | unknown): SignatureAuditEvent {
+  protected toDomain(model: AuditRow): SignatureAuditEvent {
     try {
       return SignatureAuditEvent.fromPersistence(model as any);
     } catch (error) {
