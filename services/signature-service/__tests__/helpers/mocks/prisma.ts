@@ -20,6 +20,7 @@ export type PrismaModelMock = {
   create: ReturnType<typeof jest.fn>;
   update: ReturnType<typeof jest.fn>;
   delete: ReturnType<typeof jest.fn>;
+  upsert: ReturnType<typeof jest.fn>;
 };
 
 /**
@@ -35,6 +36,7 @@ export function createPrismaModelMock(): PrismaModelMock {
     create: jest.fn(),
     update: jest.fn(),
     delete: jest.fn(),
+    upsert: jest.fn(),
   };
 }
 
@@ -113,4 +115,9 @@ export function createSignatureAuditEventPrismaMock() {
 export function createSignatureEnvelopePrismaMock() {
   const signatureEnvelope = createPrismaModelMock();
   return createPrismaMock({ signatureEnvelope });
+}
+
+export function createSignerReminderTrackingPrismaMock() {
+  const signerReminderTracking = createPrismaModelMock();
+  return createPrismaMock({ signerReminderTracking });
 }

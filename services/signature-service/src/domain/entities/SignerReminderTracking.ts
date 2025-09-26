@@ -172,6 +172,33 @@ export class SignerReminderTracking {
   }
 
   /**
+   * Creates entity from persistence data
+   * @param data - Persistence data
+   * @returns SignerReminderTracking entity
+   */
+  static fromPersistence(data: {
+    id: string;
+    signerId: string;
+    envelopeId: string;
+    lastReminderAt: Date | null;
+    reminderCount: number;
+    lastReminderMessage: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }): SignerReminderTracking {
+    return new SignerReminderTracking(
+      ReminderTrackingId.fromString(data.id),
+      SignerId.fromString(data.signerId),
+      EnvelopeId.fromString(data.envelopeId),
+      data.lastReminderAt,
+      data.reminderCount,
+      data.lastReminderMessage,
+      data.createdAt,
+      data.updatedAt
+    );
+  }
+
+  /**
    * Converts entity to plain object for persistence
    * @returns Plain object representation
    */

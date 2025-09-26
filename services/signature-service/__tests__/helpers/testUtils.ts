@@ -11,6 +11,7 @@ import { EnvelopeId } from '../../src/domain/value-objects/EnvelopeId';
 import { ConsentId } from '../../src/domain/value-objects/ConsentId';
 import { SignatureAuditEventId } from '../../src/domain/value-objects/SignatureAuditEventId';
 import { InvitationTokenId } from '../../src/domain/value-objects/InvitationTokenId';
+import { ReminderTrackingId } from '../../src/domain/value-objects/ReminderTrackingId';
 
 /**
  * Test constants for consistent test data
@@ -74,6 +75,14 @@ export class TestUtils {
    */
   static generateInvitationTokenId(): InvitationTokenId {
     return InvitationTokenId.generate();
+  }
+
+  /**
+   * Generates a ReminderTrackingId for testing
+   * @returns A valid ReminderTrackingId instance
+   */
+  static generateReminderTrackingId(): ReminderTrackingId {
+    return ReminderTrackingId.generate();
   }
 
   /**

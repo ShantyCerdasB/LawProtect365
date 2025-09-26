@@ -5,12 +5,16 @@
  * including creation, updates, and queries for reminder history and limits.
  */
 
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
+import { RepositoryBase, Page, decodeCursor, listPage } from '@lawprotect/shared-ts';
 import { SignerReminderTracking } from '../domain/entities/SignerReminderTracking';
 import { SignerId } from '../domain/value-objects/SignerId';
 import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
 import { ReminderTrackingId } from '../domain/value-objects/ReminderTrackingId';
-import { reminderTrackingNotFound, reminderTrackingCreationFailed } from '../signature-errors/factories';
+import { TrackingSpec } from '../domain/types/reminder-tracking';
+import { repositoryError } from '../signature-errors';
+
+type TrackingModel = Prisma.SignerReminderTrackingGetPayload<{}>;
 
 /**
  * Repository for SignerReminderTracking entities
@@ -18,18 +22,248 @@ import { reminderTrackingNotFound, reminderTrackingCreationFailed } from '../sig
  * Handles all database operations related to reminder tracking,
  * including CRUD operations and business logic queries.
  */
-export class SignerReminderTrackingRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class SignerReminderTrackingRepository extends RepositoryBase<SignerReminderTracking, ReminderTrackingId, TrackingSpec> {
+  private static readonly DEFAULT_PAGE_LIMIT = 20;
+
+  constructor(protected readonly prisma: PrismaClient) {
+    super(prisma);
+  }
+
+  /**
+   * Maps Prisma model to domain entity
+   * @param model - Prisma model data
+   * @returns Domain entity
+   */
+  protected toDomain(model: TrackingModel | unknown): SignerReminderTracking {
+    try {
+      return SignerReminderTracking.fromPersistence(model as any);
+    } catch (error) {
+      throw repositoryError({ operation: 'toDomain', trackingId: (model as any)?.id, cause: error });
+    }
+  }
+
+  /**
+   * Maps domain entity to Prisma create input
+   * @param entity - Domain entity
+   * @returns Prisma create input data
+   */
+  protected toCreateModel(entity: SignerReminderTracking): Prisma.SignerReminderTrackingUncheckedCreateInput {
+    return {
+      id: entity.getId().getValue(),
+      signerId: entity.getSignerId().getValue(),
+      envelopeId: entity.getEnvelopeId().getValue(),
+      lastReminderAt: entity.getLastReminderAt(),
+      reminderCount: entity.getReminderCount(),
+      lastReminderMessage: entity.getLastReminderMessage(),
+      createdAt: entity.getCreatedAt(),
+      updatedAt: entity.getUpdatedAt()
+    };
+  }
+
+  /**
+   * Maps domain entity to Prisma update input
+   * @param patch - Partial domain entity or record
+   * @returns Prisma update input data
+   */
+  protected toUpdateModel(patch: Partial<SignerReminderTracking> | Record<string, unknown>): Prisma.SignerReminderTrackingUncheckedUpdateInput {
+    const p: any = patch;
+    const out: any = {};
+    const has = (k: string) => Object.prototype.hasOwnProperty.call(p, k);
+    const set = (k: string, v: unknown) => { if (v !== undefined) out[k] = v; };
+
+    set('signerId', p.getSignerId?.()?.getValue?.() ?? (has('signerId') ? p.signerId : undefined));
+    set('envelopeId', p.getEnvelopeId?.()?.getValue?.() ?? (has('envelopeId') ? p.envelopeId : undefined));
+    set('lastReminderAt', p.getLastReminderAt?.() ?? (has('lastReminderAt') ? p.lastReminderAt : undefined));
+    set('reminderCount', p.getReminderCount?.() ?? (has('reminderCount') ? p.reminderCount : undefined));
+    set('lastReminderMessage', p.getLastReminderMessage?.() ?? (has('lastReminderMessage') ? p.lastReminderMessage : undefined));
+    set('updatedAt', p.getUpdatedAt?.() ?? (has('updatedAt') ? p.updatedAt : undefined));
+
+    return out;
+  }
+
+  /**
+   * Maps domain entity to Prisma model
+   * @param entity - Partial domain entity
+   * @returns Prisma model data
+   */
+  protected toModel(entity: Partial<SignerReminderTracking>): unknown {
+    if (!entity.getId) {
+      throw new Error('Entity must have getId method');
+    }
+
+    const p: any = entity;
+    return {
+      id: p.getId().getValue(),
+      signerId: p.getSignerId?.()?.getValue?.() ?? p.signerId,
+      envelopeId: p.getEnvelopeId?.()?.getValue?.() ?? p.envelopeId,
+      lastReminderAt: p.getLastReminderAt?.() ?? p.lastReminderAt,
+      reminderCount: p.getReminderCount?.() ?? p.reminderCount,
+      lastReminderMessage: p.getLastReminderMessage?.() ?? p.lastReminderMessage,
+      createdAt: p.getCreatedAt?.() ?? p.createdAt,
+      updatedAt: p.getUpdatedAt?.() ?? p.updatedAt
+    };
+  }
+
+  /**
+   * Creates where clause for ID-based queries
+   * @param id - Tracking ID
+   * @returns Where clause
+   */
+  protected whereById(id: ReminderTrackingId): Prisma.SignerReminderTrackingWhereUniqueInput {
+    return { id: id.getValue() };
+  }
+
+  /**
+   * Creates where clause from specification
+   * @param spec - Query specification
+   * @returns Where clause
+   */
+  protected whereFromSpec(spec: TrackingSpec): Prisma.SignerReminderTrackingWhereInput {
+    const AND: Prisma.SignerReminderTrackingWhereInput[] = [];
+
+    if (spec.signerId) AND.push({ signerId: spec.signerId });
+    if (spec.envelopeId) AND.push({ envelopeId: spec.envelopeId });
+    if (spec.minReminderCount !== undefined) AND.push({ reminderCount: { gte: spec.minReminderCount } });
+    if (spec.maxReminderCount !== undefined) AND.push({ reminderCount: { lte: spec.maxReminderCount } });
+    
+    if (spec.createdBefore || spec.createdAfter) {
+      AND.push({
+        createdAt: {
+          ...(spec.createdBefore ? { lt: spec.createdBefore } : {}),
+          ...(spec.createdAfter ? { gte: spec.createdAfter } : {}),
+        }
+      });
+    }
+    
+    if (spec.updatedBefore || spec.updatedAfter) {
+      AND.push({
+        updatedAt: {
+          ...(spec.updatedBefore ? { lt: spec.updatedBefore } : {}),
+          ...(spec.updatedAfter ? { gte: spec.updatedAfter } : {}),
+        }
+      });
+    }
+
+    const where: Prisma.SignerReminderTrackingWhereInput = {};
+    if (AND.length) where.AND = AND;
+    return where;
+  }
+
+  /**
+   * Finds reminder tracking by ID
+   * @param id - The tracking ID
+   * @param tx - Optional transaction client
+   * @returns SignerReminderTracking entity or null if not found
+   */
+  async findById(id: ReminderTrackingId, tx?: Prisma.TransactionClient): Promise<SignerReminderTracking | null> {
+    const client = tx ?? this.prisma;
+    try {
+      const tracking = await client.signerReminderTracking.findUnique({
+        where: this.whereById(id)
+      });
+
+      return tracking ? this.toDomain(tracking) : null;
+    } catch (error) {
+      throw repositoryError({ operation: 'findById', trackingId: id.getValue(), cause: error });
+    }
+  }
+
+  /**
+   * Creates a new reminder tracking record
+   * @param entity - The SignerReminderTracking entity to create
+   * @param tx - Optional transaction client
+   * @returns Created SignerReminderTracking entity
+   */
+  async create(entity: SignerReminderTracking, tx?: Prisma.TransactionClient): Promise<SignerReminderTracking> {
+    const client = tx ?? this.prisma;
+    try {
+      const created = await client.signerReminderTracking.create({
+        data: this.toCreateModel(entity)
+      });
+
+      return this.toDomain(created);
+    } catch (error) {
+      throw repositoryError({ operation: 'create', trackingId: entity.getId().getValue(), cause: error });
+    }
+  }
+
+  /**
+   * Updates an existing reminder tracking record
+   * @param id - The tracking ID
+   * @param patch - Partial entity data to update
+   * @param tx - Optional transaction client
+   * @returns Updated SignerReminderTracking entity
+   */
+  async update(id: ReminderTrackingId, patch: Partial<SignerReminderTracking>, tx?: Prisma.TransactionClient): Promise<SignerReminderTracking> {
+    const client = tx ?? this.prisma;
+    try {
+      const updated = await client.signerReminderTracking.update({
+        where: this.whereById(id),
+        data: this.toUpdateModel(patch)
+      });
+
+      return this.toDomain(updated);
+    } catch (error) {
+      throw repositoryError({ operation: 'update', trackingId: id.getValue(), cause: error });
+    }
+  }
+
+  /**
+   * Deletes reminder tracking record
+   * @param id - The reminder tracking ID
+   * @param tx - Optional transaction client
+   */
+  async delete(id: ReminderTrackingId, tx?: Prisma.TransactionClient): Promise<void> {
+    const client = tx ?? this.prisma;
+    try {
+      await client.signerReminderTracking.delete({
+        where: this.whereById(id)
+      });
+    } catch (error) {
+      throw repositoryError({ operation: 'delete', trackingId: id.getValue(), cause: error });
+    }
+  }
+
+  /**
+   * Lists reminder tracking records with pagination
+   * @param spec - Query specification
+   * @param limit - Maximum number of results
+   * @param cursor - Pagination cursor
+   * @param tx - Optional transaction client
+   * @returns Page of tracking entities
+   */
+  async list(spec: TrackingSpec, limit = SignerReminderTrackingRepository.DEFAULT_PAGE_LIMIT, cursor?: string, tx?: Prisma.TransactionClient): Promise<Page<SignerReminderTracking>> {
+    const client = tx ?? this.prisma;
+    try {
+      const where = this.whereFromSpec(spec);
+      type Decoded = { createdAt: string | Date; id: string };
+      const decoded: Decoded | undefined = cursor ? decodeCursor<Decoded>(cursor) : undefined;
+
+      const cfg = {
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }] as Array<Record<string, 'asc'|'desc'>>,
+        cursorFields: ['createdAt', 'id'] as string[],
+        normalizeCursor: (d?: Decoded) =>
+          d ? { id: d.id, createdAt: d.createdAt instanceof Date ? d.createdAt : new Date(d.createdAt) } : undefined,
+      };
+
+      const { rows, nextCursor } = await listPage(client.signerReminderTracking, where, limit, decoded, cfg);
+      return { items: rows.map(r => this.toDomain(r as TrackingModel)), nextCursor };
+    } catch (error) {
+      throw repositoryError({ operation: 'list', spec, cause: error });
+    }
+  }
 
   /**
    * Finds reminder tracking by signer and envelope
    * @param signerId - The signer ID
    * @param envelopeId - The envelope ID
+   * @param tx - Optional transaction client
    * @returns SignerReminderTracking entity or null if not found
    */
-  async findBySignerAndEnvelope(signerId: SignerId, envelopeId: EnvelopeId): Promise<SignerReminderTracking | null> {
+  async findBySignerAndEnvelope(signerId: SignerId, envelopeId: EnvelopeId, tx?: Prisma.TransactionClient): Promise<SignerReminderTracking | null> {
+    const client = tx ?? this.prisma;
     try {
-      const tracking = await this.prisma.signerReminderTracking.findUnique({
+      const tracking = await client.signerReminderTracking.findUnique({
         where: {
           signerId_envelopeId: {
             signerId: signerId.getValue(),
@@ -38,31 +272,22 @@ export class SignerReminderTrackingRepository {
         }
       });
 
-      if (!tracking) {
-        return null;
-      }
-
-      return this.toDomain(tracking);
+      return tracking ? this.toDomain(tracking) : null;
     } catch (error) {
-      console.error('Failed to find reminder tracking by signer and envelope', {
-        error: error instanceof Error ? error.message : error,
-        signerId: signerId.getValue(),
-        envelopeId: envelopeId.getValue()
-      });
-      throw reminderTrackingNotFound(
-        `Failed to find reminder tracking: ${error instanceof Error ? error.message : error}`
-      );
+      throw repositoryError({ operation: 'findBySignerAndEnvelope', signerId: signerId.getValue(), envelopeId: envelopeId.getValue(), cause: error });
     }
   }
 
   /**
    * Finds all reminder tracking records for an envelope
    * @param envelopeId - The envelope ID
+   * @param tx - Optional transaction client
    * @returns Array of SignerReminderTracking entities
    */
-  async findByEnvelope(envelopeId: EnvelopeId): Promise<SignerReminderTracking[]> {
+  async findByEnvelope(envelopeId: EnvelopeId, tx?: Prisma.TransactionClient): Promise<SignerReminderTracking[]> {
+    const client = tx ?? this.prisma;
     try {
-      const trackingRecords = await this.prisma.signerReminderTracking.findMany({
+      const trackingRecords = await client.signerReminderTracking.findMany({
         where: {
           envelopeId: envelopeId.getValue()
         },
@@ -73,168 +298,35 @@ export class SignerReminderTrackingRepository {
 
       return trackingRecords.map((tracking: any) => this.toDomain(tracking));
     } catch (error) {
-      console.error('Failed to find reminder tracking by envelope', {
-        error: error instanceof Error ? error.message : error,
-        envelopeId: envelopeId.getValue()
-      });
-      throw reminderTrackingNotFound(
-        `Failed to find reminder tracking by envelope: ${error instanceof Error ? error.message : error}`
-      );
-    }
-  }
-
-  /**
-   * Creates a new reminder tracking record
-   * @param tracking - The SignerReminderTracking entity to create
-   * @returns Created SignerReminderTracking entity
-   */
-  async create(tracking: SignerReminderTracking): Promise<SignerReminderTracking> {
-    try {
-      const data = tracking.toPersistence();
-      
-      const created = await this.prisma.signerReminderTracking.create({
-        data: {
-          id: data.id,
-          signerId: data.signerId,
-          envelopeId: data.envelopeId,
-          lastReminderAt: data.lastReminderAt,
-          reminderCount: data.reminderCount,
-          lastReminderMessage: data.lastReminderMessage,
-          createdAt: data.createdAt,
-          updatedAt: data.updatedAt
-        }
-      });
-
-      return this.toDomain(created);
-    } catch (error) {
-      console.error('Failed to create reminder tracking', {
-        error: error instanceof Error ? error.message : error,
-        signerId: tracking.getSignerId().getValue(),
-        envelopeId: tracking.getEnvelopeId().getValue()
-      });
-      throw reminderTrackingCreationFailed(
-        `Failed to create reminder tracking: ${error instanceof Error ? error.message : error}`
-      );
-    }
-  }
-
-  /**
-   * Updates an existing reminder tracking record
-   * @param tracking - The SignerReminderTracking entity to update
-   * @returns Updated SignerReminderTracking entity
-   */
-  async update(tracking: SignerReminderTracking): Promise<SignerReminderTracking> {
-    try {
-      const data = tracking.toPersistence();
-      
-      const updated = await this.prisma.signerReminderTracking.update({
-        where: {
-          id: data.id
-        },
-        data: {
-          lastReminderAt: data.lastReminderAt,
-          reminderCount: data.reminderCount,
-          lastReminderMessage: data.lastReminderMessage,
-          updatedAt: data.updatedAt
-        }
-      });
-
-      return this.toDomain(updated);
-    } catch (error) {
-      console.error('Failed to update reminder tracking', {
-        error: error instanceof Error ? error.message : error,
-        id: tracking.getId().getValue()
-      });
-      throw reminderTrackingCreationFailed(
-        `Failed to update reminder tracking: ${error instanceof Error ? error.message : error}`
-      );
+      throw repositoryError({ operation: 'findByEnvelope', envelopeId: envelopeId.getValue(), cause: error });
     }
   }
 
   /**
    * Creates or updates a reminder tracking record
-   * @param tracking - The SignerReminderTracking entity to upsert
+   * @param entity - The SignerReminderTracking entity to upsert
+   * @param tx - Optional transaction client
    * @returns Created or updated SignerReminderTracking entity
    */
-  async upsert(tracking: SignerReminderTracking): Promise<SignerReminderTracking> {
+  async upsert(entity: SignerReminderTracking, tx?: Prisma.TransactionClient): Promise<SignerReminderTracking> {
+    const client = tx ?? this.prisma;
     try {
-      const data = tracking.toPersistence();
+      const data = this.toCreateModel(entity);
       
-      const upserted = await this.prisma.signerReminderTracking.upsert({
+      const upserted = await client.signerReminderTracking.upsert({
         where: {
           signerId_envelopeId: {
             signerId: data.signerId,
             envelopeId: data.envelopeId
           }
         },
-        create: {
-          id: data.id,
-          signerId: data.signerId,
-          envelopeId: data.envelopeId,
-          lastReminderAt: data.lastReminderAt,
-          reminderCount: data.reminderCount,
-          lastReminderMessage: data.lastReminderMessage,
-          createdAt: data.createdAt,
-          updatedAt: data.updatedAt
-        },
-        update: {
-          lastReminderAt: data.lastReminderAt,
-          reminderCount: data.reminderCount,
-          lastReminderMessage: data.lastReminderMessage,
-          updatedAt: data.updatedAt
-        }
+        create: data,
+        update: this.toUpdateModel(entity)
       });
 
       return this.toDomain(upserted);
     } catch (error) {
-      console.error('Failed to upsert reminder tracking', {
-        error: error instanceof Error ? error.message : error,
-        signerId: tracking.getSignerId().getValue(),
-        envelopeId: tracking.getEnvelopeId().getValue()
-      });
-      throw reminderTrackingCreationFailed(
-        `Failed to upsert reminder tracking: ${error instanceof Error ? error.message : error}`
-      );
+      throw repositoryError({ operation: 'upsert', trackingId: entity.getId().getValue(), cause: error });
     }
-  }
-
-  /**
-   * Deletes reminder tracking record
-   * @param id - The reminder tracking ID
-   */
-  async delete(id: ReminderTrackingId): Promise<void> {
-    try {
-      await this.prisma.signerReminderTracking.delete({
-        where: {
-          id: id.getValue()
-        }
-      });
-    } catch (error) {
-      console.error('Failed to delete reminder tracking', {
-        error: error instanceof Error ? error.message : error,
-        id: id.getValue()
-      });
-      throw reminderTrackingNotFound(
-        `Failed to delete reminder tracking: ${error instanceof Error ? error.message : error}`
-      );
-    }
-  }
-
-  /**
-   * Converts database record to domain entity
-   * @param record - Database record
-   * @returns SignerReminderTracking domain entity
-   */
-  private toDomain(record: any): SignerReminderTracking {
-    return SignerReminderTracking.create({
-      id: record.id,
-      signerId: record.signerId,
-      envelopeId: record.envelopeId,
-      lastReminderAt: record.lastReminderAt,
-      reminderCount: record.reminderCount,
-      lastReminderMessage: record.lastReminderMessage,
-      createdAt: record.createdAt,
-      updatedAt: record.updatedAt
-    });
   }
 }

@@ -36,7 +36,7 @@ export function signatureEnvelopePersistenceRow(overrides: Partial<any> = {}) {
     description: 'Test document description',
     status: 'DRAFT',
     signingOrderType: 'OWNER_FIRST',
-    originType: 'UPLOAD',
+    originType: 'USER_UPLOAD',
     templateId: null as string | null,
     templateVersion: null as string | null,
     sourceKey: 'test/source/document.pdf',
@@ -96,12 +96,12 @@ export function signatureEnvelopeEntity(overrides: Partial<{
   const id = EnvelopeId.fromString(overrides.id || TestUtils.generateUuid());
   const createdBy = overrides.createdBy || TestUtils.generateUuid();
   const title = overrides.title || 'Test Document';
-  const description = overrides.description || 'Test document description';
+  const description = overrides.description ?? 'Test document description';
   const status = EnvelopeStatus.fromString(overrides.status || 'DRAFT');
   const signingOrder = SigningOrder.fromString(overrides.signingOrder || 'OWNER_FIRST');
-  const origin = DocumentOrigin.fromString(overrides.origin || 'UPLOAD');
-  const templateId = overrides.templateId || undefined;
-  const templateVersion = overrides.templateVersion || undefined;
+  const origin = DocumentOrigin.fromString(overrides.origin || 'USER_UPLOAD');
+  const templateId = overrides.templateId;
+  const templateVersion = overrides.templateVersion;
   const sourceKey = overrides.sourceKey ? S3Key.fromString(overrides.sourceKey) : undefined;
   const metaKey = overrides.metaKey ? S3Key.fromString(overrides.metaKey) : undefined;
   const flattenedKey = overrides.flattenedKey ? S3Key.fromString(overrides.flattenedKey) : undefined;
@@ -109,13 +109,13 @@ export function signatureEnvelopeEntity(overrides: Partial<{
   const sourceSha256 = overrides.sourceSha256 ? DocumentHash.fromString(overrides.sourceSha256) : undefined;
   const flattenedSha256 = overrides.flattenedSha256 ? DocumentHash.fromString(overrides.flattenedSha256) : undefined;
   const signedSha256 = overrides.signedSha256 ? DocumentHash.fromString(overrides.signedSha256) : undefined;
-  const sentAt = overrides.sentAt || undefined;
-  const completedAt = overrides.completedAt || undefined;
-  const cancelledAt = overrides.cancelledAt || undefined;
-  const declinedAt = overrides.declinedAt || undefined;
+  const sentAt = overrides.sentAt;
+  const completedAt = overrides.completedAt;
+  const cancelledAt = overrides.cancelledAt;
+  const declinedAt = overrides.declinedAt;
   const declinedBySignerId = overrides.declinedBySignerId ? SignerId.fromString(overrides.declinedBySignerId) : undefined;
-  const declinedReason = overrides.declinedReason || undefined;
-  const expiresAt = overrides.expiresAt || undefined;
+  const declinedReason = overrides.declinedReason;
+  const expiresAt = overrides.expiresAt;
   const signers = overrides.signers || [];
 
   return SignatureEnvelope.fromPersistence({
@@ -155,12 +155,8 @@ export function signatureEnvelopeEntity(overrides: Partial<{
  */
 export function signatureEnvelopeSpec(overrides: Partial<EnvelopeSpec> = {}): EnvelopeSpec {
   return {
-    createdBy: TestUtils.generateUuid(),
-    status: EnvelopeStatus.fromString('DRAFT'),
-    title: 'Test Document',
-    isExpired: false,
     ...overrides,
-  };
+  } as EnvelopeSpec;
 }
 
 /**
@@ -196,15 +192,15 @@ export function partialSignatureEnvelopeEntity(overrides: Partial<{
   expiresAt: Date;
 }> = {}) {
   return {
-    getId: () => EnvelopeId.fromString(overrides.id || TestUtils.generateUuid()),
-    getCreatedBy: () => overrides.createdBy || TestUtils.generateUuid(),
-    getTitle: () => overrides.title || 'Test Document',
-    getDescription: () => overrides.description || 'Test document description',
-    getStatus: () => EnvelopeStatus.fromString(overrides.status || 'DRAFT'),
-    getSigningOrder: () => SigningOrder.fromString(overrides.signingOrder || 'OWNER_FIRST'),
-    getOrigin: () => DocumentOrigin.fromString(overrides.origin || 'UPLOAD'),
-    getTemplateId: () => overrides.templateId || undefined,
-    getTemplateVersion: () => overrides.templateVersion || undefined,
+    getId: () => overrides.id ? EnvelopeId.fromString(overrides.id) : EnvelopeId.fromString(TestUtils.generateUuid()),
+    getCreatedBy: () => overrides.createdBy,
+    getTitle: () => overrides.title,
+    getDescription: () => overrides.description,
+    getStatus: () => overrides.status ? EnvelopeStatus.fromString(overrides.status) : undefined,
+    getSigningOrder: () => overrides.signingOrder ? SigningOrder.fromString(overrides.signingOrder) : undefined,
+    getOrigin: () => overrides.origin ? DocumentOrigin.fromString(overrides.origin) : undefined,
+    getTemplateId: () => overrides.templateId,
+    getTemplateVersion: () => overrides.templateVersion,
     getSourceKey: () => overrides.sourceKey ? S3Key.fromString(overrides.sourceKey) : undefined,
     getMetaKey: () => overrides.metaKey ? S3Key.fromString(overrides.metaKey) : undefined,
     getFlattenedKey: () => overrides.flattenedKey ? S3Key.fromString(overrides.flattenedKey) : undefined,
@@ -212,13 +208,13 @@ export function partialSignatureEnvelopeEntity(overrides: Partial<{
     getSourceSha256: () => overrides.sourceSha256 ? DocumentHash.fromString(overrides.sourceSha256) : undefined,
     getFlattenedSha256: () => overrides.flattenedSha256 ? DocumentHash.fromString(overrides.flattenedSha256) : undefined,
     getSignedSha256: () => overrides.signedSha256 ? DocumentHash.fromString(overrides.signedSha256) : undefined,
-    getSentAt: () => overrides.sentAt || undefined,
-    getCompletedAt: () => overrides.completedAt || undefined,
-    getCancelledAt: () => overrides.cancelledAt || undefined,
-    getDeclinedAt: () => overrides.declinedAt || undefined,
+    getSentAt: () => overrides.sentAt,
+    getCompletedAt: () => overrides.completedAt,
+    getCancelledAt: () => overrides.cancelledAt,
+    getDeclinedAt: () => overrides.declinedAt,
     getDeclinedBySignerId: () => overrides.declinedBySignerId ? SignerId.fromString(overrides.declinedBySignerId) : undefined,
-    getDeclinedReason: () => overrides.declinedReason || undefined,
-    getExpiresAt: () => overrides.expiresAt || undefined,
+    getDeclinedReason: () => overrides.declinedReason,
+    getExpiresAt: () => overrides.expiresAt,
     getCreatedAt: () => new Date('2024-01-01T00:00:00.000Z'),
     getUpdatedAt: () => new Date('2024-01-01T00:00:00.000Z'),
   };
