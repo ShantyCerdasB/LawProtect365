@@ -59,7 +59,7 @@ export class SignatureAuditEventRepository extends RepositoryBase<SignatureAudit
       ipAddress: entity.getIpAddress(),
       userAgent: entity.getUserAgent(),
       country: entity.getCountry(),
-      metadata: entity.getMetadata(),
+      metadata: entity.getMetadata() as any,
       createdAt: entity.getCreatedAt()
     };
   }

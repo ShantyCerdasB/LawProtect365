@@ -317,11 +317,6 @@ export class ConsentRepository extends RepositoryBase<Consent, ConsentId, Consen
       });
     }
   }
-
-
-
-
-
   /**
    * Counts consents by envelope identifier
    * @param envelopeId - The envelope identifier value object

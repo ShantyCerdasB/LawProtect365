@@ -18,6 +18,15 @@ export function ensureNonNegative(n: number | undefined, _field: string): number
 }
 
 /**
+ * Converts unknown value to Date
+ * @param d - Value to convert
+ * @returns Date instance
+ */
+export function toDate(d: unknown): Date {
+  return d instanceof Date ? d : new Date(String(d));
+}
+
+/**
  * Converts unknown value to Date or undefined
  * Rejects invalid dates or dates that are too old (before year 2000)
  * @param d - Value to convert
@@ -34,4 +43,13 @@ export function toDateOrUndefined(d: unknown): Date | undefined {
     return date;
   }
   return undefined;
+}
+
+/**
+ * Converts unknown value to string or undefined
+ * @param v - Value to convert
+ * @returns String or undefined
+ */
+export function toStringOrUndefined(v: unknown): string | undefined {
+  return typeof v === 'string' ? v : (v == null ? undefined : String(v));
 }

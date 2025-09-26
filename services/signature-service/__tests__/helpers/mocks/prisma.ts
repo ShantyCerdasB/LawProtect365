@@ -109,3 +109,8 @@ export function createSignatureAuditEventPrismaMock() {
   const signatureAuditEvent = createPrismaModelMock();
   return createPrismaMock({ signatureAuditEvent });
 }
+
+export function createSignatureEnvelopePrismaMock() {
+  const signatureEnvelope = createPrismaModelMock();
+  return createPrismaMock({ signatureEnvelope });
+}

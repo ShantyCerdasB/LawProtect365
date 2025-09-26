@@ -8,7 +8,6 @@
 
 import { SignatureEnvelope } from '../domain/entities/SignatureEnvelope';
 import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
-import { EnvelopeStatus } from '../domain/value-objects/EnvelopeStatus';
 import { SigningOrder } from '../domain/value-objects/SigningOrder';
 import { S3Key } from '../domain/value-objects/S3Key';
 import { SignerId } from '../domain/value-objects/SignerId';
@@ -19,17 +18,16 @@ import { InvitationTokenService } from './InvitationTokenService';
 import { S3Service } from './S3Service';
 import { EntityFactory } from '../domain/factories/EntityFactory';
 import { EnvelopeUpdateValidationRule, UpdateEnvelopeData } from '../domain/rules/EnvelopeUpdateValidationRule';
-import { EnvelopeSpec, S3Keys, Hashes, CreateEnvelopeData } from '../domain/types/envelope';
+import { EnvelopeSpec, Hashes, CreateEnvelopeData } from '../domain/types/envelope';
 import { AuditEventType } from '../domain/enums/AuditEventType';
 import { AccessType } from '../domain/enums/AccessType';
-import { Page, wrapServiceError, sha256Hex } from '@lawprotect/shared-ts';
+import { wrapServiceError, sha256Hex } from '@lawprotect/shared-ts';
 import { loadConfig } from '../config/AppConfig';
-import { SignerStatus, SigningOrderType } from '@prisma/client';
+import { SigningOrderType } from '@prisma/client';
 import { 
   envelopeNotFound,
   envelopeCreationFailed,
   envelopeUpdateFailed,
-  envelopeDeleteFailed,
   envelopeAccessDenied,
   invalidEnvelopeState,
   envelopeExpirationInvalid
@@ -114,20 +112,6 @@ export class SignatureEnvelopeService {
     }
   }
 
-  /**
-   * Gets a signature envelope by ID
-   * @param envelopeId - The envelope ID
-   * @returns The signature envelope or null if not found
-   */
-  async getEnvelope(envelopeId: EnvelopeId): Promise<SignatureEnvelope | null> {
-    try {
-      return await this.signatureEnvelopeRepository.findById(envelopeId);
-    } catch (error) {
-      throw envelopeNotFound(
-        `Failed to get envelope ${envelopeId.getValue()}: ${error instanceof Error ? error.message : error}`
-      );
-    }
-  }
 
   /**
    * Gets a signature envelope with all signers
@@ -189,20 +173,6 @@ export class SignatureEnvelopeService {
     }
   }
 
-  /**
-   * Gets a signature envelope with all relations
-   * @param envelopeId - The envelope ID
-   * @returns The signature envelope with all relations or null if not found
-   */
-  async getEnvelopeWithAllRelations(envelopeId: EnvelopeId): Promise<SignatureEnvelope | null> {
-    try {
-      return await this.signatureEnvelopeRepository.getEnvelopeWithAllRelations(envelopeId);
-    } catch (error) {
-      throw envelopeNotFound(
-        `Failed to get envelope with all relations ${envelopeId.getValue()}: ${error instanceof Error ? error.message : error}`
-      );
-    }
-  }
 
   /**
    * Updates a signature envelope with comprehensive validation
@@ -371,143 +341,11 @@ export class SignatureEnvelopeService {
     }
   }
 
-  /**
-   * Deletes a signature envelope
-   * @param envelopeId - The envelope ID
-   * @param userId - The user deleting the envelope
-   */
-  async deleteEnvelope(envelopeId: EnvelopeId, userId: string): Promise<void> {
-    try {
-      // Get existing envelope
-      const existingEnvelope = await this.signatureEnvelopeRepository.findById(envelopeId);
-      if (!existingEnvelope) {
-        throw envelopeNotFound(`Envelope with ID ${envelopeId.getValue()} not found`);
-      }
 
-      // Validate envelope can be deleted using entity method
-      if (!existingEnvelope.canBeModified()) {
-        throw invalidEnvelopeState(`Envelope ${envelopeId.getValue()} cannot be deleted in current state: ${existingEnvelope.getStatus().getValue()}`);
-      }
 
-      // Delete envelope
-      await this.signatureEnvelopeRepository.delete(envelopeId);
 
-      // Create audit event
-      await this.signatureAuditEventService.createSignerAuditEvent({
-        envelopeId: envelopeId.getValue(),
-        signerId: existingEnvelope.getCreatedBy(),
-        eventType: AuditEventType.ENVELOPE_DELETED,
-        description: `Envelope "${existingEnvelope.getTitle()}" deleted`,
-        userId: userId,
-        metadata: {
-          envelopeId: envelopeId.getValue(),
-          title: existingEnvelope.getTitle()
-        }
-      });
-    } catch (error) {
-      throw envelopeDeleteFailed(
-        `Failed to delete envelope ${envelopeId.getValue()}: ${error instanceof Error ? error.message : error}`
-      );
-    }
-  }
 
-  /**
-   * Lists envelopes by user
-   * @param userId - The user ID
-   * @param limit - Maximum number of results
-   * @param cursor - Pagination cursor
-   * @returns Page of signature envelopes
-   */
-  async listEnvelopesByUser(userId: string, limit: number, cursor?: string): Promise<Page<SignatureEnvelope>> {
-    try {
-      return await this.signatureEnvelopeRepository.findByCreatedBy(userId, limit, cursor);
-    } catch (error) {
-      throw envelopeNotFound(
-        `Failed to list envelopes for user ${userId}: ${error instanceof Error ? error.message : error}`
-      );
-    }
-  }
 
-  /**
-   * Lists envelopes by status
-   * @param status - The envelope status
-   * @param limit - Maximum number of results
-   * @param cursor - Pagination cursor
-   * @returns Page of signature envelopes
-   */
-  async listEnvelopesByStatus(status: EnvelopeStatus, limit: number, cursor?: string): Promise<Page<SignatureEnvelope>> {
-    try {
-      return await this.signatureEnvelopeRepository.findByStatus(status, limit, cursor);
-    } catch (error) {
-      throw envelopeNotFound(
-        `Failed to list envelopes with status ${status.getValue()}: ${error instanceof Error ? error.message : error}`
-      );
-    }
-  }
-
-  /**
-   * Finds envelope by title and creator
-   * @param title - The envelope title
-   * @param userId - The user ID
-   * @returns The signature envelope or null if not found
-   */
-  async findEnvelopeByTitleAndCreator(title: string, userId: string): Promise<SignatureEnvelope | null> {
-    try {
-      return await this.signatureEnvelopeRepository.findByTitleAndCreator(title, userId);
-    } catch (error) {
-      throw envelopeNotFound(
-        `Failed to find envelope with title "${title}" for user ${userId}: ${error instanceof Error ? error.message : error}`
-      );
-    }
-  }
-
-  /**
-   * Gets expired envelopes
-   * @param limit - Maximum number of results
-   * @param cursor - Pagination cursor
-   * @returns Page of expired signature envelopes
-   */
-  async getExpiredEnvelopes(limit: number, cursor?: string): Promise<Page<SignatureEnvelope>> {
-    try {
-      return await this.signatureEnvelopeRepository.findExpiredEnvelopes(limit, cursor);
-    } catch (error) {
-      throw envelopeNotFound(
-        `Failed to get expired envelopes: ${error instanceof Error ? error.message : error}`
-      );
-    }
-  }
-
-  /**
-   * Updates S3 keys for an envelope
-   * @param envelopeId - The envelope ID
-   * @param s3Keys - The S3 keys to update
-   * @param userId - The user making the update
-   * @returns The updated signature envelope
-   */
-  async updateS3Keys(envelopeId: EnvelopeId, s3Keys: S3Keys, userId: string): Promise<SignatureEnvelope> {
-    try {
-      const updatedEnvelope = await this.signatureEnvelopeRepository.updateS3Keys(envelopeId, s3Keys);
-
-      // Create audit event
-      await this.signatureAuditEventService.createSignerAuditEvent({
-        envelopeId: envelopeId.getValue(),
-        signerId: updatedEnvelope.getCreatedBy(),
-        eventType: AuditEventType.ENVELOPE_UPDATED,
-        description: `S3 keys updated for envelope "${updatedEnvelope.getTitle()}"`,
-        userId: userId,
-        metadata: {
-          envelopeId: envelopeId.getValue(),
-          s3Keys: s3Keys
-        }
-      });
-
-      return updatedEnvelope;
-    } catch (error) {
-      throw envelopeUpdateFailed(
-        `Failed to update S3 keys for envelope ${envelopeId.getValue()}: ${error instanceof Error ? error.message : error}`
-      );
-    }
-  }
 
   /**
    * Updates hashes for an envelope
@@ -582,51 +420,8 @@ export class SignatureEnvelopeService {
     }
   }
 
-  /**
-   * Counts envelopes by user
-   * @param userId - The user ID
-   * @returns Number of envelopes
-   */
-  async countEnvelopesByUser(userId: string): Promise<number> {
-    try {
-      return await this.signatureEnvelopeRepository.countByCreatedBy(userId);
-    } catch (error) {
-      throw envelopeNotFound(
-        `Failed to count envelopes for user ${userId}: ${error instanceof Error ? error.message : error}`
-      );
-    }
-  }
 
-  /**
-   * Checks if envelope exists by title and creator
-   * @param title - The envelope title
-   * @param userId - The user ID
-   * @returns True if envelope exists
-   */
-  async envelopeExistsByTitleAndCreator(title: string, userId: string): Promise<boolean> {
-    try {
-      return await this.signatureEnvelopeRepository.existsByTitleAndCreator(title, userId);
-    } catch (error) {
-      throw envelopeNotFound(
-        `Failed to check if envelope exists with title "${title}" for user ${userId}: ${error instanceof Error ? error.message : error}`
-      );
-    }
-  }
 
-  /**
-   * Checks if envelope exists by ID
-   * @param envelopeId - The envelope ID
-   * @returns True if envelope exists
-   */
-  async envelopeExists(envelopeId: EnvelopeId): Promise<boolean> {
-    try {
-      return await this.signatureEnvelopeRepository.existsById(envelopeId);
-    } catch (error) {
-      throw envelopeNotFound(
-        `Failed to check if envelope exists ${envelopeId.getValue()}: ${error instanceof Error ? error.message : error}`
-      );
-    }
-  }
 
   /**
    * Validates user access to envelope (for authenticated users only)
@@ -745,112 +540,9 @@ export class SignatureEnvelopeService {
     }
   }
 
-  /**
-   * Gets envelope with signers of specific status
-   * @param envelopeId - The envelope ID
-   * @param status - The signer status to filter by
-   * @returns The signature envelope with filtered signers or null if not found
-   */
-  async getEnvelopeWithSignersByStatus(envelopeId: EnvelopeId, status: SignerStatus): Promise<SignatureEnvelope | null> {
-    try {
-      return await this.signatureEnvelopeRepository.getWithSignersAndStatus(envelopeId, status);
-    } catch (error) {
-      throw envelopeNotFound(
-        `Failed to get envelope with signers by status ${envelopeId.getValue()}: ${error instanceof Error ? error.message : error}`
-      );
-    }
-  }
 
-  /**
-   * Gets envelope with audit events
-   * @param envelopeId - The envelope ID
-   * @param limit - Maximum number of audit events
-   * @param cursor - Pagination cursor
-   * @returns The signature envelope with audit events or null if not found
-   */
-  async getEnvelopeWithAuditEvents(envelopeId: EnvelopeId, limit: number, cursor?: string): Promise<SignatureEnvelope | null> {
-    try {
-      return await this.signatureEnvelopeRepository.getEnvelopeWithAuditEvents(envelopeId, limit, cursor);
-    } catch (error) {
-      throw envelopeNotFound(
-        `Failed to get envelope with audit events ${envelopeId.getValue()}: ${error instanceof Error ? error.message : error}`
-      );
-    }
-  }
 
-  /**
-   * Gets envelope with consents
-   * @param envelopeId - The envelope ID
-   * @returns The signature envelope with consents or null if not found
-   */
-  async getEnvelopeWithConsents(envelopeId: EnvelopeId): Promise<SignatureEnvelope | null> {
-    try {
-      return await this.signatureEnvelopeRepository.getEnvelopeWithConsents(envelopeId);
-    } catch (error) {
-      throw envelopeNotFound(
-        `Failed to get envelope with consents ${envelopeId.getValue()}: ${error instanceof Error ? error.message : error}`
-      );
-    }
-  }
 
-  /**
-   * Updates the signing order of an envelope with automatic reordering
-   * @param envelopeId - The envelope ID
-   * @param newSigningOrderType - The new signing order type
-   * @param userId - The user making the request
-   * @returns Updated envelope
-   */
-  async updateSigningOrder(
-    envelopeId: EnvelopeId,
-    newSigningOrderType: string,
-    userId: string
-  ): Promise<SignatureEnvelope> {
-    try {
-      // 1. Get current envelope with signers
-      const envelope = await this.signatureEnvelopeRepository.getWithSigners(envelopeId);
-      if (!envelope) {
-        throw envelopeNotFound(`Envelope with ID ${envelopeId.getValue()} not found`);
-      }
-      
-      // 2. Validate access
-      if (envelope.getCreatedBy() !== userId) {
-        throw envelopeAccessDenied(`Only the envelope owner can modify envelope ${envelopeId.getValue()}`);
-      }
-      
-      // 3. Get current signers
-      const existingSigners = envelope.getSigners();
-      
-      // 4. Validate change is possible
-      envelope.validateSigningOrderChange(newSigningOrderType, existingSigners);
-      
-      // 5. Update signing order in envelope
-      envelope.updateSigningOrder(SigningOrder.fromString(newSigningOrderType));
-      
-      // 6. Save updated envelope
-      const updatedEnvelope = await this.signatureEnvelopeRepository.update(envelopeId, envelope);
-      
-      // 7. Create audit event
-      await this.signatureAuditEventService.createEvent({
-        envelopeId: envelopeId.getValue(),
-        signerId: undefined,
-        eventType: AuditEventType.ENVELOPE_UPDATED,
-        description: `Signing order changed to ${newSigningOrderType}`,
-        userId: userId,
-        userEmail: undefined,
-        ipAddress: undefined,
-        userAgent: undefined,
-        country: undefined,
-        metadata: {
-          newSigningOrderType,
-          envelopeId: envelopeId.getValue()
-        }
-      });
-      
-      return updatedEnvelope;
-    } catch (error) {
-      wrapServiceError(error as Error, 'update signing order');
-    }
-  }
 
   /**
    * Sends an envelope by validating state and changing to READY_FOR_SIGNATURE

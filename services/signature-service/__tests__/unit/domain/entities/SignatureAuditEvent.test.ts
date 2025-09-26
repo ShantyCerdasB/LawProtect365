@@ -378,8 +378,8 @@ describe('SignatureAuditEvent', () => {
       });
 
       expect(event.getMetadata()).toEqual(complexMetadata);
-      expect(event.getMetadata()?.documentInfo?.name).toBe('Contract.pdf');
-      expect(event.getMetadata()?.userInfo?.role).toBe('signer');
+      expect((event.getMetadata() as any)?.documentInfo?.name).toBe('Contract.pdf');
+      expect((event.getMetadata() as any)?.userInfo?.role).toBe('signer');
     });
 
     it('should handle events with special characters in text fields', () => {
@@ -450,6 +450,202 @@ describe('SignatureAuditEvent', () => {
       });
 
       expect(event.getMetadata()).toEqual(metadataWithNulls);
+    });
+  });
+
+  describe('JSON Serialization', () => {
+    it('should serialize to JSON with all fields', () => {
+      const event = createAuditEventWithParams({
+        description: 'Test event',
+        userId: 'user-123',
+        userEmail: 'user@example.com',
+        ipAddress: '192.168.1.100',
+        userAgent: 'Mozilla/5.0',
+        country: 'US',
+        metadata: { key: 'value' }
+      });
+
+      const json = event.toJSON();
+
+      expect(json.id).toBe(event.getId().getValue());
+      expect(json.envelopeId).toBe(event.getEnvelopeId().getValue());
+      expect(json.signerId).toBe(event.getSignerId()?.getValue());
+      expect(json.eventType).toBe(event.getEventType());
+      expect(json.description).toBe('Test event');
+      expect(json.userId).toBe('user-123');
+      expect(json.userEmail).toBe('user@example.com');
+      expect(json.ipAddress).toBe('192.168.1.100');
+      expect(json.userAgent).toBe('Mozilla/5.0');
+      expect(json.country).toBe('US');
+      expect(json.metadata).toEqual({ key: 'value' });
+      expect(json.createdAt).toBe(event.getCreatedAt().toISOString());
+    });
+
+    it('should serialize to JSON with minimal fields', () => {
+      const event = createAuditEventWithParams({
+        description: 'Minimal event'
+      });
+
+      const json = event.toJSON();
+
+      expect(json.id).toBe(event.getId().getValue());
+      expect(json.envelopeId).toBe(event.getEnvelopeId().getValue());
+      expect(json.signerId).toBeUndefined();
+      expect(json.eventType).toBe(event.getEventType());
+      expect(json.description).toBe('Minimal event');
+      expect(json.userId).toBeUndefined();
+      expect(json.userEmail).toBeUndefined();
+      expect(json.ipAddress).toBeUndefined();
+      expect(json.userAgent).toBeUndefined();
+      expect(json.country).toBeUndefined();
+      expect(json.metadata).toBeUndefined();
+      expect(json.createdAt).toBe(event.getCreatedAt().toISOString());
+    });
+  });
+
+  describe('Static Methods', () => {
+    describe('create', () => {
+      it('should create event with trimmed description', () => {
+        const event = SignatureAuditEvent.create({
+          envelopeId: new EnvelopeId(TestUtils.generateUuid()),
+          eventType: AuditEventType.ENVELOPE_CREATED,
+          description: '  Test description  ',
+          userId: 'user-123'
+        });
+
+        expect(event.getDescription()).toBe('Test description');
+        expect(event.getUserId()).toBe('user-123');
+        expect(event.getCreatedAt()).toBeInstanceOf(Date);
+      });
+
+      it('should create event with empty description after trimming', () => {
+        const event = SignatureAuditEvent.create({
+          envelopeId: new EnvelopeId(TestUtils.generateUuid()),
+          eventType: AuditEventType.ENVELOPE_CREATED,
+          description: '   ',
+          userId: 'user-123'
+        });
+
+        expect(event.getDescription()).toBe('');
+        expect(event.getUserId()).toBe('user-123');
+      });
+
+      it('should create event with undefined description', () => {
+        const event = SignatureAuditEvent.create({
+          envelopeId: new EnvelopeId(TestUtils.generateUuid()),
+          eventType: AuditEventType.ENVELOPE_CREATED,
+          description: undefined as any,
+          userId: 'user-123'
+        });
+
+        expect(event.getDescription()).toBe('');
+        expect(event.getUserId()).toBe('user-123');
+      });
+    });
+
+    describe('fromPersistence', () => {
+      it('should create event from persistence data with all fields', () => {
+        const data = {
+          id: TestUtils.generateUuid(),
+          envelopeId: TestUtils.generateUuid(),
+          signerId: TestUtils.generateUuid(),
+          eventType: 'ENVELOPE_CREATED',
+          description: 'Test event',
+          userId: 'user-123',
+          userEmail: 'user@example.com',
+          ipAddress: '192.168.1.100',
+          userAgent: 'Mozilla/5.0',
+          country: 'US',
+          metadata: { key: 'value' },
+          createdAt: new Date('2024-01-01T12:00:00.000Z')
+        };
+
+        const event = SignatureAuditEvent.fromPersistence(data);
+
+        expect(event.getId().getValue()).toBe(data.id);
+        expect(event.getEnvelopeId().getValue()).toBe(data.envelopeId);
+        expect(event.getSignerId()?.getValue()).toBe(data.signerId);
+        expect(event.getEventType()).toBe(data.eventType);
+        expect(event.getDescription()).toBe(data.description);
+        expect(event.getUserId()).toBe(data.userId);
+        expect(event.getUserEmail()).toBe(data.userEmail);
+        expect(event.getIpAddress()).toBe(data.ipAddress);
+        expect(event.getUserAgent()).toBe(data.userAgent);
+        expect(event.getCountry()).toBe(data.country);
+        expect(event.getMetadata()).toEqual(data.metadata);
+        expect(event.getCreatedAt()).toEqual(data.createdAt);
+      });
+
+      it('should handle null values in persistence data', () => {
+        const data = {
+          id: TestUtils.generateUuid(),
+          envelopeId: TestUtils.generateUuid(),
+          signerId: null,
+          eventType: 'ENVELOPE_CREATED',
+          description: 'Test event',
+          userId: null,
+          userEmail: null,
+          ipAddress: null,
+          userAgent: null,
+          country: null,
+          metadata: null,
+          createdAt: '2024-01-01T12:00:00.000Z'
+        };
+
+        const event = SignatureAuditEvent.fromPersistence(data);
+
+        expect(event.getSignerId()).toBeUndefined();
+        expect(event.getUserId()).toBeUndefined();
+        expect(event.getUserEmail()).toBeUndefined();
+        expect(event.getIpAddress()).toBeUndefined();
+        expect(event.getUserAgent()).toBeUndefined();
+        expect(event.getCountry()).toBeUndefined();
+        expect(event.getMetadata()).toBeUndefined();
+        expect(event.getCreatedAt()).toEqual(new Date('2024-01-01T12:00:00.000Z'));
+      });
+
+      it('should handle string dates in persistence data', () => {
+        const data = {
+          id: TestUtils.generateUuid(),
+          envelopeId: TestUtils.generateUuid(),
+          signerId: undefined,
+          eventType: 'ENVELOPE_CREATED',
+          description: 'Test event',
+          userId: undefined,
+          userEmail: undefined,
+          ipAddress: undefined,
+          userAgent: undefined,
+          country: undefined,
+          metadata: undefined,
+          createdAt: '2024-01-01T12:00:00.000Z'
+        };
+
+        const event = SignatureAuditEvent.fromPersistence(data);
+
+        expect(event.getCreatedAt()).toEqual(new Date('2024-01-01T12:00:00.000Z'));
+      });
+
+      it('should handle undefined description in persistence data', () => {
+        const data = {
+          id: TestUtils.generateUuid(),
+          envelopeId: TestUtils.generateUuid(),
+          signerId: undefined,
+          eventType: 'ENVELOPE_CREATED',
+          description: undefined as any,
+          userId: undefined,
+          userEmail: undefined,
+          ipAddress: undefined,
+          userAgent: undefined,
+          country: undefined,
+          metadata: undefined,
+          createdAt: '2024-01-01T12:00:00.000Z'
+        };
+
+        const event = SignatureAuditEvent.fromPersistence(data);
+
+        expect(event.getDescription()).toBe('');
+        expect(event.getCreatedAt()).toEqual(new Date('2024-01-01T12:00:00.000Z'));
+      });
     });
   });
 });

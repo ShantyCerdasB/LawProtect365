@@ -9,6 +9,12 @@ import { EnvelopeId } from '../value-objects/EnvelopeId';
 import { SignerId } from '../value-objects/SignerId';
 import { SignatureAuditEventId } from '../value-objects/SignatureAuditEventId';
 import { AuditEventType } from '../enums/AuditEventType';
+import { toDate, toStringOrUndefined } from '@lawprotect/shared-ts';
+
+/**
+ * Type for audit event metadata
+ */
+export type AuditMetadata = Record<string, unknown>;
 
 /**
  * SignatureAuditEvent entity representing an audit event for signature operations
@@ -28,7 +34,7 @@ export class SignatureAuditEvent {
     private readonly ipAddress: string | undefined,
     private readonly userAgent: string | undefined,
     private readonly country: string | undefined,
-    private readonly metadata: Record<string, any> | undefined,
+    private readonly metadata: AuditMetadata | undefined,
     private readonly createdAt: Date
   ) {}
 
@@ -105,7 +111,7 @@ export class SignatureAuditEvent {
   /**
    * Gets the event metadata
    */
-  getMetadata(): Record<string, any> | undefined {
+  getMetadata(): AuditMetadata | undefined {
     return this.metadata;
   }
 
@@ -147,7 +153,20 @@ export class SignatureAuditEvent {
   /**
    * Gets a summary of the audit event for reporting
    */
-  getSummary() {
+  getSummary(): {
+    id: string;
+    envelopeId: string;
+    signerId?: string;
+    eventType: AuditEventType;
+    description: string;
+    userId?: string;
+    userEmail?: string;
+    ipAddress?: string;
+    userAgent?: string;
+    country?: string;
+    createdAt: Date;
+    metadata?: AuditMetadata;
+  } {
     return {
       id: this.id.getValue(),
       envelopeId: this.envelopeId.getValue(),
@@ -160,7 +179,28 @@ export class SignatureAuditEvent {
       userAgent: this.userAgent,
       country: this.country,
       createdAt: this.createdAt,
-      metadata: this.metadata
+      metadata: this.metadata,
+    };
+  }
+
+  /**
+   * Converts the audit event to JSON format for API contracts
+   * @returns Plain object with primitives for serialization
+   */
+  toJSON(): Record<string, unknown> {
+    return {
+      id: this.id.getValue(),
+      envelopeId: this.envelopeId.getValue(),
+      signerId: this.signerId?.getValue(),
+      eventType: this.eventType,
+      description: this.description,
+      userId: this.userId,
+      userEmail: this.userEmail,
+      ipAddress: this.ipAddress,
+      userAgent: this.userAgent,
+      country: this.country,
+      metadata: this.metadata,
+      createdAt: this.createdAt.toISOString()
     };
   }
 
@@ -188,15 +228,16 @@ export class SignatureAuditEvent {
     ipAddress?: string;
     userAgent?: string;
     country?: string;
-    metadata?: Record<string, any>;
+    metadata?: AuditMetadata;
   }): SignatureAuditEvent {
     const now = new Date();
+    const description = (params.description ?? '').trim();
     return new SignatureAuditEvent(
       SignatureAuditEventId.generate(),
       params.envelopeId,
       params.signerId,
       params.eventType,
-      params.description,
+      description,
       params.userId,
       params.userEmail,
       params.ipAddress,
@@ -212,20 +253,33 @@ export class SignatureAuditEvent {
    * @param data - Prisma SignatureAuditEvent data
    * @returns SignatureAuditEvent instance
    */
-  static fromPersistence(data: any): SignatureAuditEvent {
+  static fromPersistence(data: {
+    id: string;
+    envelopeId: string;
+    signerId?: string | null;
+    eventType: string;
+    description: string;
+    userId?: string | null;
+    userEmail?: string | null;
+    ipAddress?: string | null;
+    userAgent?: string | null;
+    country?: string | null;
+    metadata?: AuditMetadata | null;
+    createdAt: Date | string;
+  }): SignatureAuditEvent {
     return new SignatureAuditEvent(
-      SignatureAuditEventId.fromString(data.id),
-      EnvelopeId.fromString(data.envelopeId),
-      data.signerId ? SignerId.fromString(data.signerId) : undefined,
+      SignatureAuditEventId.fromString(String(data.id)),
+      EnvelopeId.fromString(String(data.envelopeId)),
+      data.signerId ? SignerId.fromString(String(data.signerId)) : undefined,
       data.eventType as AuditEventType,
-      data.description,
-      data.userId,
-      data.userEmail,
-      data.ipAddress,
-      data.userAgent,
-      data.country,
-      data.metadata,
-      data.createdAt
+      (data.description ?? '').toString(),
+      toStringOrUndefined(data.userId),
+      toStringOrUndefined(data.userEmail),
+      toStringOrUndefined(data.ipAddress),
+      toStringOrUndefined(data.userAgent),
+      toStringOrUndefined(data.country),
+      (data.metadata ?? undefined) as AuditMetadata | undefined,
+      toDate(data.createdAt)
     );
   }
 }
