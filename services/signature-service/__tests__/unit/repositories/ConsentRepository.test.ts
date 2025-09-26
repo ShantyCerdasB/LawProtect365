@@ -33,10 +33,9 @@ describe('ConsentRepository - Internal Methods', () => {
   let repository: ConsentRepository;
   let prismaMock: { consent: PrismaModelMock };
   let consentOps: PrismaModelMock;
-  let shared: any;
 
   beforeEach(async () => {
-    shared = await import('@lawprotect/shared-ts');
+    await import('@lawprotect/shared-ts');
     const { prisma, consent } = createConsentPrismaMock();
     prismaMock = prisma as unknown as { consent: PrismaModelMock };
     consentOps = consent;
@@ -499,7 +498,6 @@ describe('ConsentRepository - Internal Methods', () => {
     });
 
     it('updateWithEntity handles null return from updateFn (lines 385-386)', async () => {
-      const current = consentEntity();
       consentOps.findUnique.mockResolvedValueOnce(consentPersistenceRow());
       consentOps.update.mockResolvedValueOnce(consentPersistenceRow());
       

@@ -9,6 +9,7 @@
 
 import { TestUser, EnvelopeData } from './testTypes';
 import { TestEnvironmentManager } from './testEnvironmentManager';
+import { NetworkSecurityContext } from '@lawprotect/shared-ts';
 import { EnvelopeOperations } from './envelopeOperations';
 import { DatabaseHelper } from './databaseHelper';
 import { AuditHelper } from './auditHelper';
@@ -350,10 +351,7 @@ export class WorkflowTestHelper {
       given: boolean;
       timestamp: string;
       text: string;
-      ipAddress?: string;
-      userAgent?: string;
-      country?: string;
-    }
+    } & NetworkSecurityContext
   ): Promise<{ statusCode: number; data: any }> {
     if (!this.envelopeOperations) {
       throw new Error('WorkflowTestHelper not initialized. Call initialize() first.');
@@ -375,10 +373,7 @@ export class WorkflowTestHelper {
       given: boolean;
       timestamp: string;
       text: string;
-      ipAddress?: string;
-      userAgent?: string;
-      country?: string;
-    }
+    } & NetworkSecurityContext
   ): Promise<{ statusCode: number; data: any }> {
     if (!this.envelopeOperations) {
       throw new Error('WorkflowTestHelper not initialized. Call initialize() first.');

@@ -4,9 +4,7 @@ import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 import { setupCursorPaginationMocks } from '../../helpers/mocks/cursorPagination';
 const { mockListPage, mockDecodeCursor } = setupCursorPaginationMocks();
 
-import { createOperationMock } from '../../helpers/mocks/signatureEnvelope';
 
-import { Prisma } from '@prisma/client';
 import { SignatureEnvelopeRepository } from '../../../src/repositories/SignatureEnvelopeRepository';
 import { SignatureEnvelope } from '../../../src/domain/entities/SignatureEnvelope';
 import { EnvelopeId } from '../../../src/domain/value-objects/EnvelopeId';
@@ -25,17 +23,14 @@ import {
   createTestSigner,
 } from '../../helpers/builders/signatureEnvelope';
 import {
-  createMockPage,
 } from '../../helpers/mocks/repository';
 
 describe('SignatureEnvelopeRepository - Internal Methods', () => {
   let repository: SignatureEnvelopeRepository;
   let prismaMock: { signatureEnvelope: PrismaModelMock };
   let envelopeOps: PrismaModelMock;
-  let shared: any;
-
   beforeEach(async () => {
-    shared = await import('@lawprotect/shared-ts');
+    await import('@lawprotect/shared-ts');
     const { prisma, signatureEnvelope } = createSignatureEnvelopePrismaMock();
     prismaMock = prisma as unknown as { signatureEnvelope: PrismaModelMock };
     envelopeOps = signatureEnvelope;

@@ -6,6 +6,7 @@
  */
 
 import { SignatureAuditEvent } from '../../../../src/domain/entities/SignatureAuditEvent';
+import { NetworkSecurityContext } from '@lawprotect/shared-ts';
 import { EnvelopeId } from '../../../../src/domain/value-objects/EnvelopeId';
 import { SignerId } from '../../../../src/domain/value-objects/SignerId';
 import { SignatureAuditEventId } from '../../../../src/domain/value-objects/SignatureAuditEventId';
@@ -22,11 +23,9 @@ function createAuditEventWithParams(params: {
   description?: string;
   userId?: string;
   userEmail?: string;
-  ipAddress?: string;
-  userAgent?: string;
-  country?: string;
   metadata?: Record<string, any>;
   createdAt?: Date;
+} & NetworkSecurityContext;
 }): SignatureAuditEvent {
   return new SignatureAuditEvent(
     params.id ? new SignatureAuditEventId(params.id) : TestUtils.generateSignatureAuditEventId(),

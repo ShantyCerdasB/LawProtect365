@@ -6,6 +6,7 @@
  */
 
 import { EventNames } from '../../enums/EventNames';
+import { NetworkSecurityContext } from '@lawprotect/shared-ts';
 
 /**
  * Integration event names supported by the signature service
@@ -73,10 +74,7 @@ export interface SignerDeclinedPayload {
     envelopeId: string;
     declinedAt: string;
     declinedBy: string;
-    ipAddress?: string;
-    userAgent?: string;
-    country?: string;
-  };
+  } & NetworkSecurityContext;
 }
 
 /**

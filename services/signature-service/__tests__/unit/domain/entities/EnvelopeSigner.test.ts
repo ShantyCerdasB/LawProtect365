@@ -6,6 +6,7 @@
  */
 
 import { EnvelopeSigner } from '../../../../src/domain/entities/EnvelopeSigner';
+import { NetworkSecurityContext } from '@lawprotect/shared-ts';
 import { SignerId } from '../../../../src/domain/value-objects/SignerId';
 import { EnvelopeId } from '../../../../src/domain/value-objects/EnvelopeId';
 import { Email } from '../../../../src/domain/value-objects/Email';
@@ -43,12 +44,11 @@ describe('EnvelopeSigner', () => {
     signedS3Key?: string;
     kmsKeyId?: string;
     algorithm?: string;
-    ipAddress?: string;
-    userAgent?: string;
     reason?: string;
     location?: string;
     createdAt?: Date;
     updatedAt?: Date;
+  } & NetworkSecurityContext;
   }): EnvelopeSigner {
     return new EnvelopeSigner(
       new SignerId(params.id || TestUtils.generateUuid()),

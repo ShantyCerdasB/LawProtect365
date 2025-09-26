@@ -6,6 +6,7 @@
  */
 
 import { Consent } from '../../../../src/domain/entities/Consent';
+import { NetworkSecurityContext } from '@lawprotect/shared-ts';
 import { ConsentId } from '../../../../src/domain/value-objects/ConsentId';
 import { EnvelopeId } from '../../../../src/domain/value-objects/EnvelopeId';
 import { SignerId } from '../../../../src/domain/value-objects/SignerId';
@@ -30,11 +31,9 @@ function createConsentWithParams(params: {
   consentGiven?: boolean;
   consentTimestamp?: Date;
   consentText?: string;
-  ipAddress?: string;
-  userAgent?: string;
-  country?: string | null;
   createdAt?: Date;
   updatedAt?: Date;
+} & NetworkSecurityContext;
 }): Consent {
   return new Consent(
     new ConsentId(params.id || TestUtils.generateUuid()),

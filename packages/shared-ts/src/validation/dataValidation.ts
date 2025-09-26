@@ -51,7 +51,13 @@ export function toDateOrUndefined(d: unknown): Date | undefined {
  * @returns String or undefined
  */
 export function toStringOrUndefined(v: unknown): string | undefined {
-  return typeof v === 'string' ? v : (v == null ? undefined : String(v));
+  if (typeof v === 'string') {
+    return v;
+  }
+  if (v == null) {
+    return undefined;
+  }
+  return String(v);
 }
 
 /**

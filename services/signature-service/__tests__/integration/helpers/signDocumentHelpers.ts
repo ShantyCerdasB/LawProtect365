@@ -6,17 +6,15 @@
  */
 
 import { generateTestIpAddress } from './testHelpers';
+import { NetworkSecurityContext } from '@lawprotect/shared-ts';
 
 /**
  * Interface for consent data
  */
-export interface ConsentData {
+export interface ConsentData extends NetworkSecurityContext {
   given: boolean;
   timestamp: string;
   text: string;
-  ipAddress?: string;
-  userAgent?: string;
-  country?: string;
 }
 
 /**

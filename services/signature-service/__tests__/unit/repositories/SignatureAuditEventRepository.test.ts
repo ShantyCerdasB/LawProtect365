@@ -3,39 +3,30 @@ import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 import { setupCursorPaginationMocks } from '../../helpers/mocks/cursorPagination';
 const { mockListPage, mockDecodeCursor } = setupCursorPaginationMocks();
 
-import { Prisma } from '@prisma/client';
 import { SignatureAuditEventRepository } from '../../../src/repositories/SignatureAuditEventRepository';
 import { SignatureAuditEvent } from '../../../src/domain/entities/SignatureAuditEvent';
-import { SignatureAuditEventId } from '../../../src/domain/value-objects/SignatureAuditEventId';
 import { AuditEventType } from '../../../src/domain/enums/AuditEventType';
 import { TestUtils } from '../../helpers/testUtils';
 import {
   createSignatureAuditEventPrismaMock,
-  createSingleModelTransactionMock,
   PrismaModelMock,
 } from '../../helpers/mocks/prisma';
 import {
   auditEventPersistenceRow,
   auditEventEntity,
   auditEventSpec,
-  auditEventDto,
   partialAuditEventEntity,
-  auditEventVO,
 } from '../../helpers/builders/signatureAuditEvent';
 import {
-  mockRepositoryMethod,
-  mockRepositoryMethodError,
-  createMockPage,
 } from '../../helpers/mocks/repository';
 
 describe('SignatureAuditEventRepository - Internal Methods', () => {
   let repository: SignatureAuditEventRepository;
   let prismaMock: { signatureAuditEvent: PrismaModelMock };
   let auditEventOps: PrismaModelMock;
-  let shared: any;
 
   beforeEach(async () => {
-    shared = await import('@lawprotect/shared-ts');
+    await import('@lawprotect/shared-ts');
     const { prisma, signatureAuditEvent } = createSignatureAuditEventPrismaMock();
     prismaMock = prisma as unknown as { signatureAuditEvent: PrismaModelMock };
     auditEventOps = signatureAuditEvent;

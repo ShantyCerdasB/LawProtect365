@@ -87,16 +87,7 @@ export function trackingSpec(overrides: any = {}) {
  * @returns Tracking DTO
  */
 export function trackingDto(overrides: any = {}) {
-  return {
-    id: overrides.id || TestUtils.generateUuid(),
-    signerId: overrides.signerId || TestUtils.generateUuid(),
-    envelopeId: overrides.envelopeId || TestUtils.generateUuid(),
-    lastReminderAt: overrides.lastReminderAt || new Date('2024-01-01T10:00:00Z'),
-    reminderCount: overrides.reminderCount || 0,
-    lastReminderMessage: overrides.lastReminderMessage || null,
-    createdAt: overrides.createdAt || new Date('2024-01-01T00:00:00Z'),
-    updatedAt: overrides.updatedAt || new Date('2024-01-01T00:00:00Z'),
-  };
+  return trackingPersistenceRow(overrides);
 }
 
 /**

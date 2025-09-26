@@ -7,6 +7,7 @@
 
 import { randomUUID } from 'crypto';
 import { createApiGatewayEvent, generateTestJwtToken, generateTestIpAddress } from './testHelpers';
+import { NetworkSecurityContext } from '@lawprotect/shared-ts';
 import { createEnvelopeHandler } from '../../../src/handlers/envelopes/CreateEnvelopeHandler';
 import { updateEnvelopeHandler } from '../../../src/handlers/envelopes/UpdateEnvelopeHandler';
 import { sendEnvelopeHandler } from '../../../src/handlers/envelopes/SendEnvelopeHandler';
@@ -290,10 +291,7 @@ export class EnvelopeOperations {
       given: boolean;
       timestamp: string;
       text: string;
-      ipAddress?: string;
-      userAgent?: string;
-      country?: string;
-    }
+    } & NetworkSecurityContext
   ): Promise<{ statusCode: number; data: any }> {
     // Generate mock signed document (PDF with visual signature)
     const mockSignedPdf = this.generateMockSignedPdf();
@@ -339,10 +337,7 @@ export class EnvelopeOperations {
       given: boolean;
       timestamp: string;
       text: string;
-      ipAddress?: string;
-      userAgent?: string;
-      country?: string;
-    }
+    } & NetworkSecurityContext
   ): Promise<{ statusCode: number; data: any }> {
     const authToken = await generateTestJwtToken({
       sub: this.testUser.userId,

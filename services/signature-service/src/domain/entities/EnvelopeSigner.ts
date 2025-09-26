@@ -23,7 +23,9 @@ import {
 const asDate = (v: unknown): Date | undefined => {
   if (v == null) return undefined;
   if (v instanceof Date) return v;
-  return fromIso(String(v));
+  if (typeof v === 'string') return fromIso(v);
+  if (typeof v === 'number') return fromIso(v.toString());
+  return fromIso(JSON.stringify(v));
 };
 
 const allowedTransitions: Record<SignerStatus, SignerStatus[]> = {

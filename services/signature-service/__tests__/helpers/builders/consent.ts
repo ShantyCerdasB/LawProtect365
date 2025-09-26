@@ -61,12 +61,12 @@ export function consentEntity(overrides: Partial<{
   const id = ConsentId.fromString(overrides.id ?? TestUtils.generateUuid());
   const envelopeId = EnvelopeId.fromString(overrides.envelopeId ?? TestUtils.generateUuid());
   const signerId = SignerId.fromString(overrides.signerId ?? TestUtils.generateUuid());
-  const signatureId =
-    overrides.signatureId === undefined
-      ? undefined
-      : overrides.signatureId === null
-        ? undefined
-        : SignerId.fromString(overrides.signatureId);
+  let signatureId: SignerId | undefined;
+  if (overrides.signatureId === undefined || overrides.signatureId === null) {
+    signatureId = undefined;
+  } else {
+    signatureId = SignerId.fromString(overrides.signatureId);
+  }
 
   return Consent.create({
     id,

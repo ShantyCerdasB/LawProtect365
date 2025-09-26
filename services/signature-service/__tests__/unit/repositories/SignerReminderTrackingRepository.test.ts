@@ -3,12 +3,8 @@ import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 import { setupCursorPaginationMocks } from '../../helpers/mocks/cursorPagination';
 const { mockListPage, mockDecodeCursor } = setupCursorPaginationMocks();
 
-import { Prisma } from '@prisma/client';
 import { SignerReminderTrackingRepository } from '../../../src/repositories/SignerReminderTrackingRepository';
 import { SignerReminderTracking } from '../../../src/domain/entities/SignerReminderTracking';
-import { ReminderTrackingId } from '../../../src/domain/value-objects/ReminderTrackingId';
-import { EnvelopeId } from '../../../src/domain/value-objects/EnvelopeId';
-import { SignerId } from '../../../src/domain/value-objects/SignerId';
 import { TestUtils } from '../../helpers/testUtils';
 import {
   createSignerReminderTrackingPrismaMock,
@@ -24,9 +20,6 @@ import {
   trackingVO,
 } from '../../helpers/builders/signerReminderTracking';
 import {
-  mockRepositoryMethod,
-  mockRepositoryMethodError,
-  createMockPage,
 } from '../../helpers/mocks/repository';
 
 describe('SignerReminderTrackingRepository - Internal Methods', () => {

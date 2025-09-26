@@ -14,8 +14,8 @@ type AnyWhere = Record<string, unknown>;
  * equality, ranges, boolean flags, OR/AND logic, and common patterns like "not expired".
  */
 export class WhereBuilder<W extends AnyWhere> {
-  private AND: W[] = [];
-  private OR: W[] = [];
+  private readonly AND: W[] = [];
+  private readonly OR: W[] = [];
   
   constructor(private readonly now: () => Date = () => new Date()) {}
 

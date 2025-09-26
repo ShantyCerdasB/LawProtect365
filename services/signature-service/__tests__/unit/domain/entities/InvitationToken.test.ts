@@ -6,6 +6,7 @@
  */
 
 import { InvitationToken } from '../../../../src/domain/entities/InvitationToken';
+import { NetworkSecurityContext } from '@lawprotect/shared-ts';
 import { InvitationTokenId } from '../../../../src/domain/value-objects/InvitationTokenId';
 import { EnvelopeId } from '../../../../src/domain/value-objects/EnvelopeId';
 import { SignerId } from '../../../../src/domain/value-objects/SignerId';
@@ -40,11 +41,9 @@ describe('InvitationToken', () => {
     revokedAt?: Date;
     revokedReason?: string;
     createdBy?: string;
-    ipAddress?: string;
-    userAgent?: string;
-    country?: string;
     createdAt?: Date;
     updatedAt?: Date;
+  } & NetworkSecurityContext;
   }): InvitationToken {
     return new InvitationToken(
       new InvitationTokenId(params.id || TestUtils.generateUuid()),

@@ -25,7 +25,7 @@ export function auditEventPersistenceRow(overrides: any = {}) {
     ipAddress: overrides.ipAddress || generateTestIpAddress(),
     userAgent: overrides.userAgent || 'TestAgent/1.0',
     country: overrides.country || 'US',
-    metadata: overrides.metadata || { test: 'data' },
+    metadata: overrides.metadata || { sampleData: 'metadata' },
     createdAt: overrides.createdAt || new Date('2024-01-01T00:00:00Z'),
   };
 }
@@ -97,7 +97,7 @@ export function auditEventDto(overrides: any = {}) {
     ipAddress: overrides.ipAddress || generateTestIpAddress(),
     userAgent: overrides.userAgent || 'TestAgent/1.0',
     country: overrides.country || 'US',
-    metadata: overrides.metadata || { test: 'data' },
+    metadata: overrides.metadata || { sampleData: 'metadata' },
     createdAt: overrides.createdAt || new Date('2024-01-01T00:00:00Z').toISOString(),
     ...overrides,
   };
@@ -115,7 +115,7 @@ export function auditEventVO(overrides: any = {}) {
     ipAddress: () => '127.0.0.1',
     userAgent: () => 'TestAgent/1.0',
     country: () => 'US',
-    metadata: () => { test: 'data' },
+    metadata: () => ({ sampleData: 'metadata' }),
     createdAt: () => new Date('2024-01-01T00:00:00Z'),
     ...overrides,
   };

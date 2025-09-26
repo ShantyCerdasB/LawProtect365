@@ -534,7 +534,6 @@ describe('EnvelopeSignerRepository - Internal Methods', () => {
 
     it('updateWithEntity applies pure updater and persists', async () => {
       const id = signerVO().id();
-      const current = signerEntity();
       signerOps.findUnique.mockResolvedValueOnce(signerPersistenceRow());
       signerOps.update.mockResolvedValueOnce(signerPersistenceRow());
       const spy = jest.spyOn(EnvelopeSigner, 'fromPersistence').mockReturnValue({} as any);
