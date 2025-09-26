@@ -48,8 +48,7 @@ describe('EnvelopeSigner', () => {
     location?: string;
     createdAt?: Date;
     updatedAt?: Date;
-  } & NetworkSecurityContext;
-  }): EnvelopeSigner {
+  } & NetworkSecurityContext): EnvelopeSigner {
     return new EnvelopeSigner(
       new SignerId(params.id || TestUtils.generateUuid()),
       new EnvelopeId(params.envelopeId || TestUtils.generateUuid()),
@@ -850,6 +849,76 @@ describe('EnvelopeSigner', () => {
       
       expect(signer.getOrder()).toBe(7);
       expect(signer.getOriginalOrder()).toBe(7); // After update, original becomes current
+    });
+  });
+
+  describe('Date Format Coverage', () => {
+    it('should handle number date formats', () => {
+      const persistenceData = {
+        id: TestUtils.generateUuid(),
+        envelopeId: TestUtils.generateUuid(),
+        userId: null,
+        isExternal: true,
+        email: null,
+        fullName: null,
+        invitedByUserId: null,
+        participantRole: 'SIGNER',
+        order: 0,
+        status: SignerStatus.PENDING,
+        signedAt: 1640995200000 as any, // Unix timestamp
+        declinedAt: null,
+        declineReason: null,
+        consentGiven: false,
+        consentTimestamp: null,
+        documentHash: null,
+        signatureHash: null,
+        signedS3Key: null,
+        kmsKeyId: null,
+        algorithm: null,
+        reason: null,
+        location: null,
+        ipAddress: null,
+        userAgent: null,
+        country: null,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      expect(() => EnvelopeSigner.fromPersistence(persistenceData)).not.toThrow();
+    });
+
+    it('should handle object date formats', () => {
+      const persistenceData = {
+        id: TestUtils.generateUuid(),
+        envelopeId: TestUtils.generateUuid(),
+        userId: null,
+        isExternal: true,
+        email: null,
+        fullName: null,
+        invitedByUserId: null,
+        participantRole: 'SIGNER',
+        order: 0,
+        status: SignerStatus.PENDING,
+        signedAt: { timestamp: 1640995200000 } as any,
+        declinedAt: null,
+        declineReason: null,
+        consentGiven: false,
+        consentTimestamp: null,
+        documentHash: null,
+        signatureHash: null,
+        signedS3Key: null,
+        kmsKeyId: null,
+        algorithm: null,
+        reason: null,
+        location: null,
+        ipAddress: null,
+        userAgent: null,
+        country: null,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      expect(() => EnvelopeSigner.fromPersistence(persistenceData)).not.toThrow();
     });
   });
 });

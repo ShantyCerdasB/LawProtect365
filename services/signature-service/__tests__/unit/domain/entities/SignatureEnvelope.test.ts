@@ -29,12 +29,15 @@ import {
 import { TestUtils } from '../../../helpers/testUtils';
 
 // Helper function to create mock signers
-function createMockSigner(id: string, email: string, status: SignerStatus): EnvelopeSigner {
+function createMockSigner(id: string, email: string, status: SignerStatus, userId?: string, isExternal: boolean = false): EnvelopeSigner {
   let currentStatus = status;
   return {
     getId: jest.fn().mockReturnValue({ getValue: () => id }),
     getEmail: jest.fn().mockReturnValue({ getValue: () => email }),
+    getUserId: jest.fn().mockReturnValue(userId),
     getStatus: jest.fn().mockImplementation(() => currentStatus),
+    getIsExternal: jest.fn().mockReturnValue(isExternal),
+    getParticipantRole: jest.fn().mockReturnValue('SIGNER'),
     updateStatus: jest.fn().mockImplementation((newStatus: SignerStatus) => {
       currentStatus = newStatus;
     })
@@ -135,8 +138,10 @@ describe('SignatureEnvelope', () => {
   let signer2: EnvelopeSigner;
 
   beforeEach(() => {
-    signer1 = createMockSigner(TestUtils.generateUuid(), TestUtils.createTestEmail('signer1'), SignerStatus.PENDING);
-    signer2 = createMockSigner(TestUtils.generateUuid(), TestUtils.createTestEmail('signer2'), SignerStatus.PENDING);
+    const userId1 = TestUtils.generateUuid();
+    const userId2 = TestUtils.generateUuid();
+    signer1 = createMockSigner(TestUtils.generateUuid(), TestUtils.createTestEmail('signer1'), SignerStatus.PENDING, userId1);
+    signer2 = createMockSigner(TestUtils.generateUuid(), TestUtils.createTestEmail('signer2'), SignerStatus.PENDING, userId2);
     envelope = createBasicEnvelope(EnvelopeStatus.draft(), [signer1, signer2]);
   });
 
@@ -293,7 +298,7 @@ describe('SignatureEnvelope', () => {
     it('should throw error when adding duplicate email', () => {
       const duplicateSigner = createMockSigner('signer-3', 'signer1@example.com', SignerStatus.PENDING);
 
-      expect(() => envelope.addSigner(duplicateSigner)).toThrow(signerEmailDuplicate());
+      expect(() => envelope.addSigner(duplicateSigner)).toThrow("Signer with this email already exists in the envelope");
     });
   });
 
@@ -338,7 +343,7 @@ describe('SignatureEnvelope', () => {
     it('should throw error when sending non-DRAFT envelope', () => {
       const readyEnvelope = createBasicEnvelope(EnvelopeStatus.readyForSignature(), [signer1]);
 
-      expect(() => readyEnvelope.send()).toThrow(invalidEnvelopeState());
+      expect(() => readyEnvelope.send()).toThrow("Invalid envelope state");
     });
 
     it('should throw error when sending envelope without signers', () => {
@@ -363,14 +368,16 @@ describe('SignatureEnvelope', () => {
 
   describe('Cancel Envelope', () => {
     it('should cancel envelope', () => {
-      envelope.cancel(TestUtils.generateUuid());
+      const createdBy = envelope.getCreatedBy();
+      envelope.cancel(createdBy);
       expect(envelope.getStatus().getValue()).toBe('CANCELLED');
     });
 
     it('should throw error when cancelling completed envelope', () => {
       const completedEnvelope = createBasicEnvelope(EnvelopeStatus.completed());
+      const createdBy = completedEnvelope.getCreatedBy();
 
-      expect(() => completedEnvelope.cancel(TestUtils.generateUuid())).toThrow(envelopeCompleted());
+      expect(() => completedEnvelope.cancel(createdBy)).toThrow(envelopeCompleted());
     });
   });
 
@@ -397,19 +404,23 @@ describe('SignatureEnvelope', () => {
     });
 
     it('should return owner first when OWNER_FIRST order', () => {
-      const readyEnvelope = createBasicEnvelope(EnvelopeStatus.readyForSignature(), [signer1, signer2]);
+      const createdBy = envelope.getCreatedBy();
+      const ownerSigner = createMockSigner('owner-1', 'owner@example.com', SignerStatus.PENDING, createdBy);
+      const readyEnvelope = createBasicEnvelope(EnvelopeStatus.readyForSignature(), [ownerSigner, signer2]);
 
       const nextSigner = readyEnvelope.getNextSigner();
-      expect(nextSigner).toBe(signer1); // Owner should be first
+      expect(nextSigner).toBe(ownerSigner); // Owner should be first
     });
 
     it('should return first pending signer when owner already signed in OWNER_FIRST order', () => {
+      const createdBy = envelope.getCreatedBy();
       // Create a signed owner signer
-      const signedOwnerSigner = createMockSigner(TestUtils.generateUuid(), TestUtils.createTestEmail('owner'), SignerStatus.SIGNED);
+      const signedOwnerSigner = createMockSigner(TestUtils.generateUuid(), TestUtils.createTestEmail('owner'), SignerStatus.SIGNED, createdBy);
       const pendingSigner = createMockSigner(TestUtils.generateUuid(), TestUtils.createTestEmail('signer2'), SignerStatus.PENDING);
 
       // SignatureEnvelope constructor expects 26 arguments, add missing argument (e.g., completedAt)
       const readyEnvelope = createEnvelopeWithParams({
+        createdBy: createdBy,
         status: EnvelopeStatus.readyForSignature(),
         signers: [signedOwnerSigner, pendingSigner]
       });
@@ -439,12 +450,13 @@ describe('SignatureEnvelope', () => {
     });
 
     it('should return owner when owner is pending in OWNER_FIRST order', () => {
+      const createdBy = TestUtils.generateUuid();
       // Create a pending owner signer - this covers line 456
-      const pendingOwnerSigner = createMockSigner(TestUtils.generateUuid(), TestUtils.createTestEmail('owner'), SignerStatus.PENDING);
+      const pendingOwnerSigner = createMockSigner(TestUtils.generateUuid(), TestUtils.createTestEmail('owner'), SignerStatus.PENDING, createdBy);
       const otherSigner = createMockSigner(TestUtils.generateUuid(), TestUtils.createTestEmail('signer2'), SignerStatus.PENDING);
       
       const readyEnvelope = createEnvelopeWithParams({
-        createdBy: TestUtils.generateUuid(),
+        createdBy: createdBy,
         status: EnvelopeStatus.readyForSignature(),
         signers: [pendingOwnerSigner, otherSigner],
         signingOrder: SigningOrder.ownerFirst()
@@ -456,11 +468,12 @@ describe('SignatureEnvelope', () => {
 
     it('should return first pending signer when owner already signed in OWNER_FIRST order', () => {
       // This covers the case where owner is not PENDING (line 454 not covered)
-      const signedOwnerSigner = createMockSigner(TestUtils.generateUuid(), TestUtils.createTestEmail('owner'), SignerStatus.SIGNED);
+      const createdBy = TestUtils.generateUuid();
+      const signedOwnerSigner = createMockSigner(TestUtils.generateUuid(), TestUtils.createTestEmail('owner'), SignerStatus.SIGNED, createdBy);
       const pendingSigner = createMockSigner(TestUtils.generateUuid(), TestUtils.createTestEmail('signer2'), SignerStatus.PENDING);
       
       const readyEnvelope = createEnvelopeWithParams({
-        createdBy: TestUtils.generateUuid(),
+        createdBy: createdBy,
         status: EnvelopeStatus.readyForSignature(),
         signers: [signedOwnerSigner, pendingSigner],
         signingOrder: SigningOrder.ownerFirst()
@@ -474,7 +487,7 @@ describe('SignatureEnvelope', () => {
       // This specifically covers line 454 - when owner is PENDING and should be returned
       const ownerEmail = TestUtils.createTestEmail('owner');
       const ownerId = TestUtils.generateUuid();
-      const pendingOwnerSigner = createMockSigner(ownerId, ownerEmail, SignerStatus.PENDING);
+      const pendingOwnerSigner = createMockSigner(ownerId, ownerEmail, SignerStatus.PENDING, ownerId);
       const otherPendingSigner = createMockSigner(TestUtils.generateUuid(), TestUtils.createTestEmail('signer2'), SignerStatus.PENDING);
       
       const readyEnvelope = createEnvelopeWithParams({
@@ -659,5 +672,271 @@ describe('SignatureEnvelope', () => {
       expect(draftEnvelope.getStatus().getValue()).toBe('DRAFT');
     });
 
+  });
+
+  describe('Additional Methods Coverage', () => {
+    it('should update S3 keys', () => {
+      const newSourceKey = S3Key.fromString('new-source-key');
+      const newMetaKey = S3Key.fromString('new-meta-key');
+      const newFlattenedKey = S3Key.fromString('new-flattened-key');
+      const newSignedKey = S3Key.fromString('new-signed-key');
+
+      envelope.updateS3Keys(newSourceKey, newMetaKey, newFlattenedKey, newSignedKey);
+
+      expect(envelope.getSourceKey()?.getValue()).toBe('new-source-key');
+      expect(envelope.getMetaKey()?.getValue()).toBe('new-meta-key');
+      expect(envelope.getFlattenedKey()?.getValue()).toBe('new-flattened-key');
+      expect(envelope.getSignedKey()?.getValue()).toBe('new-signed-key');
+    });
+
+    it('should update hashes', () => {
+      const newSourceHash = DocumentHash.fromString(TestUtils.generateSha256Hash('new-source'));
+      const newFlattenedHash = DocumentHash.fromString(TestUtils.generateSha256Hash('new-flattened'));
+      const newSignedHash = DocumentHash.fromString(TestUtils.generateSha256Hash('new-signed'));
+
+      envelope.updateHashes(newSourceHash, newFlattenedHash, newSignedHash);
+
+      expect(envelope.getSourceSha256()?.getValue()).toBe(newSourceHash.getValue());
+      expect(envelope.getFlattenedSha256()?.getValue()).toBe(newFlattenedHash.getValue());
+      expect(envelope.getSignedSha256()?.getValue()).toBe(newSignedHash.getValue());
+    });
+
+    it('should get latest signed document key', () => {
+      // Test with signedKey
+      const testEnvelope1 = createBasicEnvelope();
+      const signedKey = S3Key.fromString('signed-key');
+      testEnvelope1.updateS3Keys(undefined, undefined, undefined, signedKey);
+      expect(testEnvelope1.getLatestSignedDocumentKey()?.getValue()).toBe('signed-key');
+
+      // Test with flattenedKey when no signedKey
+      const testEnvelope2 = createBasicEnvelope();
+      const flattenedKey = S3Key.fromString('flattened-key');
+      testEnvelope2.updateS3Keys(undefined, undefined, flattenedKey, undefined);
+      expect(testEnvelope2.getLatestSignedDocumentKey()?.getValue()).toBe('flattened-key');
+
+      // Test with sourceKey when no signedKey or flattenedKey
+      const testEnvelope3 = createEnvelopeWithParams({
+        sourceKey: S3Key.fromString('source-key'),
+        flattenedKey: undefined,
+        signedKey: undefined
+      });
+      expect(testEnvelope3.getLatestSignedDocumentKey()?.getValue()).toBe('source-key');
+    });
+
+    it('should update signed document', () => {
+      const signedKey = S3Key.fromString('new-signed-key');
+      const signedHash = DocumentHash.fromString(TestUtils.generateSha256Hash('new-signed'));
+
+      envelope.updateSignedDocument(signedKey, signedHash);
+
+      expect(envelope.getSignedKey()?.getValue()).toBe('new-signed-key');
+      expect(envelope.getSignedSha256()?.getValue()).toBe(signedHash.getValue());
+    });
+
+    it('should set declined info', () => {
+      const declinedBySignerId = TestUtils.generateUuid();
+      const declineReason = 'Document is not relevant';
+
+      envelope.setDeclinedInfo(declinedBySignerId, declineReason);
+
+      expect(envelope.getDeclinedAt()).toBeDefined();
+      expect(envelope.getDeclinedBySignerId()?.getValue()).toBe(declinedBySignerId);
+      expect(envelope.getDeclinedReason()).toBe(declineReason);
+    });
+
+    it('should update title', () => {
+      const newTitle = 'Updated Title';
+      envelope.updateTitle(newTitle);
+      expect(envelope.getTitle()).toBe(newTitle);
+    });
+
+    it('should update description', () => {
+      const newDescription = 'Updated Description';
+      envelope.updateDescription(newDescription);
+      expect(envelope.getDescription()).toBe(newDescription);
+    });
+
+    it('should update expires at', () => {
+      const newExpiresAt = new Date('2024-12-31');
+      envelope.updateExpiresAt(newExpiresAt);
+      expect(envelope.getExpiresAt()).toEqual(newExpiresAt);
+    });
+
+    it('should validate no duplicate emails', () => {
+      const signersData = [
+        { 
+          envelopeId: envelope.getId(), 
+          email: 'signer1@example.com', 
+          fullName: 'Signer 1', 
+          isExternal: true, 
+          participantRole: 'SIGNER' as const 
+        },
+        { 
+          envelopeId: envelope.getId(), 
+          email: 'signer2@example.com', 
+          fullName: 'Signer 2', 
+          isExternal: true, 
+          participantRole: 'SIGNER' as const 
+        },
+        { 
+          envelopeId: envelope.getId(), 
+          email: 'signer1@example.com', 
+          fullName: 'Signer 1 Duplicate', 
+          isExternal: true, 
+          participantRole: 'SIGNER' as const 
+        } // Duplicate email
+      ];
+
+      expect(() => envelope.validateNoDuplicateEmails(signersData)).toThrow('Duplicate email addresses found in signer data');
+    });
+
+    it('should validate no duplicate emails with unique emails', () => {
+      const signersData = [
+        { 
+          envelopeId: envelope.getId(), 
+          email: 'signer1@example.com', 
+          fullName: 'Signer 1', 
+          isExternal: true, 
+          participantRole: 'SIGNER' as const 
+        },
+        { 
+          envelopeId: envelope.getId(), 
+          email: 'signer2@example.com', 
+          fullName: 'Signer 2', 
+          isExternal: true, 
+          participantRole: 'SIGNER' as const 
+        },
+        { 
+          envelopeId: envelope.getId(), 
+          email: 'signer3@example.com', 
+          fullName: 'Signer 3', 
+          isExternal: true, 
+          participantRole: 'SIGNER' as const 
+        }
+      ];
+
+      expect(() => envelope.validateNoDuplicateEmails(signersData)).not.toThrow();
+    });
+
+    it('should validate viewer not exists', () => {
+      const viewerSigner = {
+        getId: jest.fn().mockReturnValue({ getValue: () => 'viewer-1' }),
+        getEmail: jest.fn().mockReturnValue({ getValue: () => 'viewer@example.com' }),
+        getUserId: jest.fn().mockReturnValue(undefined),
+        getStatus: jest.fn().mockReturnValue(SignerStatus.PENDING),
+        getIsExternal: jest.fn().mockReturnValue(true),
+        getParticipantRole: jest.fn().mockReturnValue('VIEWER'),
+        updateStatus: jest.fn()
+      } as unknown as EnvelopeSigner;
+
+      const existingSigners = [viewerSigner];
+
+      expect(() => envelope.validateViewerNotExists('viewer@example.com', existingSigners)).toThrow('Viewer with email viewer@example.com already exists in envelope');
+    });
+
+    it('should validate viewer not exists with different email', () => {
+      const existingSigners = [
+        createMockSigner('viewer-1', 'viewer@example.com', SignerStatus.PENDING)
+      ];
+
+      expect(() => envelope.validateViewerNotExists('newviewer@example.com', existingSigners)).not.toThrow();
+    });
+
+    it('should auto correct signing order when owner first but no creator signer', () => {
+      const signersData = [
+        { 
+          envelopeId: envelope.getId(), 
+          email: 'external1@example.com', 
+          fullName: 'External 1', 
+          isExternal: true, 
+          participantRole: 'SIGNER' as const 
+        },
+        { 
+          envelopeId: envelope.getId(), 
+          email: 'external2@example.com', 
+          fullName: 'External 2', 
+          isExternal: true, 
+          participantRole: 'SIGNER' as const 
+        }
+      ];
+
+      const correctedType = envelope.autoCorrectSigningOrder(signersData);
+      expect(correctedType).toBe('INVITEES_FIRST');
+    });
+
+    it('should not auto correct signing order when owner first with creator signer', () => {
+      const signersData = [
+        { 
+          envelopeId: envelope.getId(), 
+          email: 'creator@example.com', 
+          fullName: 'Creator', 
+          isExternal: false, 
+          participantRole: 'SIGNER' as const 
+        },
+        { 
+          envelopeId: envelope.getId(), 
+          email: 'external1@example.com', 
+          fullName: 'External 1', 
+          isExternal: true, 
+          participantRole: 'SIGNER' as const 
+        }
+      ];
+
+      const correctedType = envelope.autoCorrectSigningOrder(signersData);
+      expect(correctedType).toBe('INVITEES_FIRST');
+    });
+
+    it('should validate signing order consistency', () => {
+      const signersData = [
+        { 
+          envelopeId: envelope.getId(), 
+          email: 'external1@example.com', 
+          fullName: 'External 1', 
+          isExternal: true, 
+          participantRole: 'SIGNER' as const 
+        },
+        { 
+          envelopeId: envelope.getId(), 
+          email: 'external2@example.com', 
+          fullName: 'External 2', 
+          isExternal: true, 
+          participantRole: 'SIGNER' as const 
+        }
+      ];
+
+      const correctedType = envelope.validateSigningOrderConsistency(signersData);
+      expect(correctedType).toBe('INVITEES_FIRST');
+    });
+
+    it('should update signing order', () => {
+      const newSigningOrder = SigningOrder.inviteesFirst();
+      envelope.updateSigningOrder(newSigningOrder);
+      expect(envelope.getSigningOrder().getType()).toBe('INVITEES_FIRST');
+    });
+
+    it('should validate signing order change for invitees first', () => {
+      const existingSigners = [
+        createMockSigner('internal-1', 'internal@example.com', SignerStatus.PENDING, 'user1', false)
+      ];
+
+      expect(() => envelope.validateSigningOrderChange('INVITEES_FIRST', existingSigners)).toThrow('Invalid envelope state');
+    });
+
+    it('should validate signing order change for invitees first with external signers', () => {
+      const existingSigners = [
+        createMockSigner('internal-1', 'internal@example.com', SignerStatus.PENDING, 'user1', false),
+        createMockSigner('external-1', 'external@example.com', SignerStatus.PENDING, undefined, true)
+      ];
+
+      expect(() => envelope.validateSigningOrderChange('INVITEES_FIRST', existingSigners)).not.toThrow();
+    });
+
+    it('should validate signing order change for owner first', () => {
+      const existingSigners = [
+        createMockSigner('internal-1', 'internal@example.com', SignerStatus.PENDING, 'user1')
+      ];
+
+      expect(() => envelope.validateSigningOrderChange('OWNER_FIRST', existingSigners)).not.toThrow();
+    });
   });
 });

@@ -33,8 +33,7 @@ function createConsentWithParams(params: {
   consentText?: string;
   createdAt?: Date;
   updatedAt?: Date;
-} & NetworkSecurityContext;
-}): Consent {
+} & NetworkSecurityContext): Consent {
   return new Consent(
     new ConsentId(params.id || TestUtils.generateUuid()),
     new EnvelopeId(params.envelopeId || TestUtils.generateUuid()),
@@ -709,12 +708,12 @@ describe('Consent', () => {
 
     it('should create consent from persistence data with null country', () => {
       const persistenceData = consentPersistenceRow({
-        country: null
+        country: undefined
       });
 
       const consent = Consent.fromPersistence(persistenceData);
 
-      expect(consent.getCountry()).toBe(null);
+      expect(consent.getCountry()).toBe(undefined);
     });
 
     it('should handle boolean conversion for consentGiven', () => {
@@ -751,7 +750,7 @@ describe('Consent', () => {
 
     it('should serialize consent with country as null', () => {
       const consent = createConsentWithParams({
-        country: null
+        country: undefined
       });
 
       const json = consent.toJSON();

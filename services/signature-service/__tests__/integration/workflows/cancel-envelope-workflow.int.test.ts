@@ -17,8 +17,8 @@
  * CreateEnvelope, UpdateEnvelope, SendEnvelope, and CancelEnvelope.
  */
 
-// ✅ REFACTORED: Using centralized mock setup
-import { setupCancelEnvelopeMock } from '../helpers/mockSetupHelper';
+// ✅ REFACTORED: Using new OutboxRepository mock setup
+import { setupCancelEnvelopeMock, OutboxRepositoryTestHelpers } from '../helpers/mockSetupHelper';
 setupCancelEnvelopeMock();
 
 import { WorkflowTestHelper } from '../helpers/workflowHelpers';
@@ -46,6 +46,8 @@ describe('Cancel Envelope Workflow', () => {
     // Clear mock data after each test
     clearSendEnvelopeMockData();
     clearCancellationMockData();
+    // Clear OutboxRepository mock events
+    OutboxRepositoryTestHelpers.clearEvents();
   });
 
   describe('Basic Cancel Envelope Workflow', () => {
@@ -76,10 +78,20 @@ describe('Cancel Envelope Workflow', () => {
       // 3. Verify envelope is cancelled in database
       await verifyEnvelopeCancelled(envelopeId);
 
-      // 4. Verify cancellation audit event (notification event verification skipped due to mock complexity)
+      // 4. Verify cancellation audit event
       await verifyCancellationAuditEvent(envelopeId, envelope.createdBy);
+      
+      // 5. Verify cancellation event was published to outbox
+      const events = OutboxRepositoryTestHelpers.getEventsForEnvelope(envelopeId);
+      expect(events.length).toBeGreaterThan(0);
+      
+      // Verify ENVELOPE_CANCELLED event was published
+      const cancellationEvent = events.find(event => event.eventType === 'ENVELOPE_CANCELLED');
+      expect(cancellationEvent).toBeDefined();
+      expect(cancellationEvent.event.payload.envelopeId).toBe(envelopeId);
+      expect(cancellationEvent.event.payload.cancelledByUserId).toBe(envelope.createdBy);
 
-      // 5. Get comprehensive verification summary
+      // 6. Get comprehensive verification summary
       const summary = await getCancellationVerificationSummary(envelopeId, envelope.createdBy);
       expect(summary.envelope.status).toBe('CANCELLED');
       expect(summary.auditEvent.eventType).toBe('ENVELOPE_CANCELLED');
@@ -126,8 +138,18 @@ describe('Cancel Envelope Workflow', () => {
       // 5. Verify envelope is cancelled in database
       await verifyEnvelopeCancelled(envelopeId);
 
-      // 6. Verify cancellation audit event (notification event verification skipped due to mock complexity)
+      // 6. Verify cancellation audit event
       await verifyCancellationAuditEvent(envelopeId, envelope.createdBy);
+      
+      // 7. Verify cancellation event was published to outbox
+      const events = OutboxRepositoryTestHelpers.getEventsForEnvelope(envelopeId);
+      expect(events.length).toBeGreaterThan(0);
+      
+      // Verify ENVELOPE_CANCELLED event was published
+      const cancellationEvent = events.find(event => event.eventType === 'ENVELOPE_CANCELLED');
+      expect(cancellationEvent).toBeDefined();
+      expect(cancellationEvent.event.payload.envelopeId).toBe(envelopeId);
+      expect(cancellationEvent.event.payload.cancelledByUserId).toBe(envelope.createdBy);
     });
   });
 

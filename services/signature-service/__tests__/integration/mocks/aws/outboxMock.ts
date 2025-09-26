@@ -30,6 +30,8 @@ export const publishedEvents = new Map<string, any[]>();
 // ✅ MOCK DEL OUTBOX REPOSITORY (PATRÓN SIMPLIFICADO)
 // Nota: Este mock se aplicará solo cuando se use localmente en los tests
 
+// No global mock - we'll mock only the save method in specific tests
+
 /**
  * Helper functions for test verification
  */

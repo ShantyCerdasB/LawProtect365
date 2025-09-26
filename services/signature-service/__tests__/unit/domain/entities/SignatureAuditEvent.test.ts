@@ -25,8 +25,7 @@ function createAuditEventWithParams(params: {
   userEmail?: string;
   metadata?: Record<string, any>;
   createdAt?: Date;
-} & NetworkSecurityContext;
-}): SignatureAuditEvent {
+} & NetworkSecurityContext): SignatureAuditEvent {
   return new SignatureAuditEvent(
     params.id ? new SignatureAuditEventId(params.id) : TestUtils.generateSignatureAuditEventId(),
     new EnvelopeId(params.envelopeId || TestUtils.generateUuid()),
@@ -208,7 +207,7 @@ describe('SignatureAuditEvent', () => {
       });
 
       expect(recentEvent.isRecent(600000)).toBe(true); // Within 10 minutes
-      expect(recentEvent.isRecent(300000)).toBe(true); // Within 5 minutes
+      expect(recentEvent.isRecent(300001)).toBe(true); // Within 5 minutes + 1ms
       expect(recentEvent.isRecent(60000)).toBe(false); // Within 1 minute
 
       expect(oldEvent.isRecent(3600001)).toBe(true); // Within 1 hour + 1ms

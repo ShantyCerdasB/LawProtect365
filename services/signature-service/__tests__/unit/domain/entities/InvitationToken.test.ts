@@ -40,11 +40,10 @@ describe('InvitationToken', () => {
     signedBy?: string;
     revokedAt?: Date;
     revokedReason?: string;
-    createdBy?: string;
-    createdAt?: Date;
-    updatedAt?: Date;
-  } & NetworkSecurityContext;
-  }): InvitationToken {
+  createdBy?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+} & NetworkSecurityContext): InvitationToken {
     return new InvitationToken(
       new InvitationTokenId(params.id || TestUtils.generateUuid()),
       new EnvelopeId(params.envelopeId || TestUtils.generateUuid()),
@@ -837,7 +836,7 @@ describe('InvitationToken', () => {
         expect(token.getUpdatedAt()).toEqual(data.updatedAt);
       });
 
-      it('should handle negative counts by defaulting to 0', () => {
+      it('should throw error when handling negative counts', () => {
         const data = {
           id: TestUtils.generateUuid(),
           envelopeId: TestUtils.generateUuid(),
@@ -864,10 +863,7 @@ describe('InvitationToken', () => {
           updatedAt: new Date()
         };
 
-        const token = InvitationToken.fromPersistence(data);
-
-        expect(token.getResendCount()).toBe(0);
-        expect(token.getViewCount()).toBe(0);
+        expect(() => InvitationToken.fromPersistence(data)).toThrow('Invalid value for viewCount: expected non-negative number, got -2');
       });
 
       it('should handle invalid date formats', () => {

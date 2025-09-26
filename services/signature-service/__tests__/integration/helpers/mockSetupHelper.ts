@@ -1,74 +1,74 @@
 /**
  * @fileoverview mockSetupHelper - Helper for setting up mocks in integration tests
  * @summary Centralized mock setup utilities
- * @description Provides utilities for setting up SignatureOrchestrator mocks
- * in integration tests, eliminating the massive code duplication.
+ * @description Provides utilities for setting up mocks in integration tests,
+ * using the new OutboxRepository mock instead of SignatureOrchestrator mocks.
  */
 
-import { setupSignatureOrchestratorMock, MockConfigs } from '../shared/mocks/SignatureOrchestratorMock';
+import { setupOutboxRepositoryMock, OutboxRepositoryTestHelpers } from '../shared/mocks/OutboxRepositoryMock';
 
 /**
  * Setup mock for basic envelope tests (most common)
- * @description Sets up mock for publishNotificationEvent only
+ * @description Sets up OutboxRepository mock for basic event publishing
  */
 export function setupBasicMock(): void {
-  setupSignatureOrchestratorMock(MockConfigs.BASIC);
+  setupOutboxRepositoryMock({ logEvents: true, trackEvents: true });
 }
 
 /**
  * Setup mock for reminder tests
- * @description Sets up mocks for publishNotificationEvent and publishReminderNotificationEvent
+ * @description Sets up OutboxRepository mock for reminder event publishing
  */
 export function setupReminderMock(): void {
-  setupSignatureOrchestratorMock(MockConfigs.REMINDERS);
+  setupOutboxRepositoryMock({ logEvents: true, trackEvents: true });
 }
 
 /**
  * Setup mock for decline tests
- * @description Sets up mocks for publishNotificationEvent and publishDeclineNotificationEvent
+ * @description Sets up OutboxRepository mock for decline event publishing
  */
 export function setupDeclineMock(): void {
-  setupSignatureOrchestratorMock(MockConfigs.DECLINES);
+  setupOutboxRepositoryMock({ logEvents: true, trackEvents: true });
 }
 
 /**
  * Setup mock for viewer tests
- * @description Sets up mocks for publishNotificationEvent and publishViewerNotificationEvent
+ * @description Sets up OutboxRepository mock for viewer event publishing
  */
 export function setupViewerMock(): void {
-  setupSignatureOrchestratorMock(MockConfigs.VIEWERS);
+  setupOutboxRepositoryMock({ logEvents: true, trackEvents: true });
 }
 
 /**
  * Setup mock for cancellation tests
- * @description Sets up mocks for publishNotificationEvent and publishCancellationNotificationEvent
+ * @description Sets up OutboxRepository mock for cancellation event publishing
  */
 export function setupCancellationMock(): void {
-  setupSignatureOrchestratorMock(MockConfigs.CANCELLATIONS);
+  setupOutboxRepositoryMock({ logEvents: true, trackEvents: true });
 }
 
 /**
  * Setup mock for cancel envelope tests
- * @description Sets up mocks for publishNotificationEvent, publishDeclineNotificationEvent, and publishCancellationNotificationEvent
+ * @description Sets up OutboxRepository mock for cancel envelope event publishing
  */
 export function setupCancelEnvelopeMock(): void {
-  setupSignatureOrchestratorMock(MockConfigs.CANCEL_ENVELOPE);
+  setupOutboxRepositoryMock({ logEvents: true, trackEvents: true });
 }
 
 /**
  * Setup mock for decline signer tests
- * @description Sets up mocks for publishNotificationEvent and publishDeclineNotificationEvent
+ * @description Sets up OutboxRepository mock for decline signer event publishing
  */
 export function setupDeclineSignerMock(): void {
-  setupSignatureOrchestratorMock(MockConfigs.DECLINE_SIGNER);
+  setupOutboxRepositoryMock({ logEvents: true, trackEvents: true });
 }
 
 /**
  * Setup comprehensive mock for tests that need all mocks
- * @description Sets up all available mocks with detailed logging
+ * @description Sets up OutboxRepository mock with detailed logging
  */
 export function setupComprehensiveMock(): void {
-  setupSignatureOrchestratorMock(MockConfigs.COMPREHENSIVE);
+  setupOutboxRepositoryMock({ logEvents: true, trackEvents: true });
 }
 
 /**
@@ -76,12 +76,13 @@ export function setupComprehensiveMock(): void {
  * @param config - Custom mock configuration
  */
 export function setupCustomMock(config: {
-  mockPublishNotificationEvent?: boolean;
-  mockPublishReminderNotificationEvent?: boolean;
-  mockPublishDeclineNotificationEvent?: boolean;
-  mockPublishViewerNotificationEvent?: boolean;
-  mockPublishCancellationNotificationEvent?: boolean;
-  logLevel?: 'none' | 'basic' | 'detailed';
+  logEvents?: boolean;
+  trackEvents?: boolean;
 }): void {
-  setupSignatureOrchestratorMock(config);
+  setupOutboxRepositoryMock(config);
 }
+
+/**
+ * Export test helpers for verification
+ */
+export { OutboxRepositoryTestHelpers };
