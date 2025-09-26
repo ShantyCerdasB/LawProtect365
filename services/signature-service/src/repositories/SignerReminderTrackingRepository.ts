@@ -6,7 +6,7 @@
  */
 
 import { PrismaClient, Prisma } from '@prisma/client';
-import { RepositoryBase, Page, decodeCursor, listPage } from '@lawprotect/shared-ts';
+import { RepositoryBase, Page, decodeCursor, listPage, EntityMapper, WhereBuilder } from '@lawprotect/shared-ts';
 import { SignerReminderTracking } from '../domain/entities/SignerReminderTracking';
 import { SignerId } from '../domain/value-objects/SignerId';
 import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
@@ -66,19 +66,14 @@ export class SignerReminderTrackingRepository extends RepositoryBase<SignerRemin
    * @returns Prisma update input data
    */
   protected toUpdateModel(patch: Partial<SignerReminderTracking> | Record<string, unknown>): Prisma.SignerReminderTrackingUncheckedUpdateInput {
-    const p: any = patch;
-    const out: any = {};
-    const has = (k: string) => Object.prototype.hasOwnProperty.call(p, k);
-    const set = (k: string, v: unknown) => { if (v !== undefined) out[k] = v; };
-
-    set('signerId', p.getSignerId?.()?.getValue?.() ?? (has('signerId') ? p.signerId : undefined));
-    set('envelopeId', p.getEnvelopeId?.()?.getValue?.() ?? (has('envelopeId') ? p.envelopeId : undefined));
-    set('lastReminderAt', p.getLastReminderAt?.() ?? (has('lastReminderAt') ? p.lastReminderAt : undefined));
-    set('reminderCount', p.getReminderCount?.() ?? (has('reminderCount') ? p.reminderCount : undefined));
-    set('lastReminderMessage', p.getLastReminderMessage?.() ?? (has('lastReminderMessage') ? p.lastReminderMessage : undefined));
-    set('updatedAt', p.getUpdatedAt?.() ?? (has('updatedAt') ? p.updatedAt : undefined));
-
-    return out;
+    return EntityMapper.toUpdateModel(patch, [
+      { field: 'signerId', getter: 'getSignerId', valueExtractor: (v: unknown) => (v as any)?.getValue?.() },
+      { field: 'envelopeId', getter: 'getEnvelopeId', valueExtractor: (v: unknown) => (v as any)?.getValue?.() },
+      { field: 'lastReminderAt', getter: 'getLastReminderAt' },
+      { field: 'reminderCount', getter: 'getReminderCount' },
+      { field: 'lastReminderMessage', getter: 'getLastReminderMessage' },
+      { field: 'updatedAt', getter: 'getUpdatedAt' }
+    ]);
   }
 
   /**
@@ -119,34 +114,32 @@ export class SignerReminderTrackingRepository extends RepositoryBase<SignerRemin
    * @returns Where clause
    */
   protected whereFromSpec(spec: TrackingSpec): Prisma.SignerReminderTrackingWhereInput {
-    const AND: Prisma.SignerReminderTrackingWhereInput[] = [];
+    const b = new WhereBuilder<Prisma.SignerReminderTrackingWhereInput>(() => this.now());
 
-    if (spec.signerId) AND.push({ signerId: spec.signerId });
-    if (spec.envelopeId) AND.push({ envelopeId: spec.envelopeId });
-    if (spec.minReminderCount !== undefined) AND.push({ reminderCount: { gte: spec.minReminderCount } });
-    if (spec.maxReminderCount !== undefined) AND.push({ reminderCount: { lte: spec.maxReminderCount } });
-    
-    if (spec.createdBefore || spec.createdAfter) {
-      AND.push({
-        createdAt: {
-          ...(spec.createdBefore ? { lt: spec.createdBefore } : {}),
-          ...(spec.createdAfter ? { gte: spec.createdAfter } : {}),
-        }
-      });
+    // Basic fields
+    b.eq('signerId', spec.signerId)
+     .eq('envelopeId', spec.envelopeId);
+
+    // Reminder count ranges
+    if (spec.minReminderCount !== undefined) {
+      b.and({ reminderCount: { gte: spec.minReminderCount } });
     }
-    
-    if (spec.updatedBefore || spec.updatedAfter) {
-      AND.push({
-        updatedAt: {
-          ...(spec.updatedBefore ? { lt: spec.updatedBefore } : {}),
-          ...(spec.updatedAfter ? { gte: spec.updatedAfter } : {}),
-        }
-      });
+    if (spec.maxReminderCount !== undefined) {
+      b.and({ reminderCount: { lte: spec.maxReminderCount } });
     }
 
-    const where: Prisma.SignerReminderTrackingWhereInput = {};
-    if (AND.length) where.AND = AND;
-    return where;
+    // Date ranges
+    b.range('createdAt', {
+      lt: spec.createdBefore,
+      gte: spec.createdAfter
+    });
+
+    b.range('updatedAt', {
+      lt: spec.updatedBefore,
+      gte: spec.updatedAfter
+    });
+
+    return b.build();
   }
 
   /**

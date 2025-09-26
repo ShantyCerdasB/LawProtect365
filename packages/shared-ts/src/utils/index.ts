@@ -42,3 +42,5 @@ export * from "./audit.js";
 export * from "./idempotency.js";
 export * from "./eventbridge.js";
 export * from "./clock.js";
+export * from "./entityMapper.js";
+export * from "./whereBuilder.js";

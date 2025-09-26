@@ -7,7 +7,7 @@
  */
 
 import { PrismaClient, Prisma } from '@prisma/client';
-import { RepositoryBase, Page, decodeCursor, listPage, textContainsInsensitive, rangeFilter } from '@lawprotect/shared-ts';
+import { RepositoryBase, Page, decodeCursor, listPage, textContainsInsensitive, rangeFilter, EntityMapper, WhereBuilder } from '@lawprotect/shared-ts';
 import { SignatureAuditEvent } from '../domain/entities/SignatureAuditEvent';
 import { SignatureAuditEventId } from '../domain/value-objects/SignatureAuditEventId';
 import { AuditSpec } from '../domain/types/audit';
@@ -65,30 +65,18 @@ export class SignatureAuditEventRepository extends RepositoryBase<SignatureAudit
   }
 
   protected toUpdateModel(patch: Partial<SignatureAuditEvent> | Record<string, unknown>): Prisma.SignatureAuditEventUncheckedUpdateInput {
-    const p: any = patch;
-    const out: any = {};
-    const has = (k: string) => Object.prototype.hasOwnProperty.call(p, k);
-    const set = (k: string, v: unknown) => { if (v !== undefined) out[k] = v; };
-
-    set('envelopeId', p.getEnvelopeId?.()?.getValue?.() ?? (has('envelopeId') ? p.envelopeId : undefined));
-    const signerIdGetter = p.getSignerId?.();
-    const signerIdValue = signerIdGetter?.getValue?.();
-    if (signerIdGetter !== undefined) {
-      out.signerId = signerIdValue ?? null;
-    } else if (has('signerId')) {
-      out.signerId = p.signerId;
-    }
-    set('eventType', p.getEventType?.() ?? (has('eventType') ? p.eventType : undefined));
-    set('description', p.getDescription?.() ?? (has('description') ? p.description : undefined));
-    set('userId', p.getUserId?.() ?? (has('userId') ? p.userId : undefined));
-    set('userEmail', p.getUserEmail?.() ?? (has('userEmail') ? p.userEmail : undefined));
-    set('ipAddress', p.getIpAddress?.() ?? (has('ipAddress') ? p.ipAddress : undefined));
-    set('userAgent', p.getUserAgent?.() ?? (has('userAgent') ? p.userAgent : undefined));
-    set('country', p.getCountry?.() ?? (has('country') ? p.country : undefined));
-    set('metadata', p.getMetadata?.() ?? (has('metadata') ? p.metadata : undefined));
-
-
-    return out;
+    return EntityMapper.toUpdateModel(patch, [
+      { field: 'envelopeId', getter: 'getEnvelopeId', valueExtractor: (v: unknown) => (v as any)?.getValue?.() },
+      { field: 'signerId', getter: 'getSignerId', valueExtractor: (v: unknown) => (v as any)?.getValue?.() },
+      { field: 'eventType', getter: 'getEventType' },
+      { field: 'description', getter: 'getDescription' },
+      { field: 'userId', getter: 'getUserId' },
+      { field: 'userEmail', getter: 'getUserEmail' },
+      { field: 'ipAddress', getter: 'getIpAddress' },
+      { field: 'userAgent', getter: 'getUserAgent' },
+      { field: 'country', getter: 'getCountry' },
+      { field: 'metadata', getter: 'getMetadata' }
+    ]);
   }
 
 
@@ -107,24 +95,30 @@ export class SignatureAuditEventRepository extends RepositoryBase<SignatureAudit
    * @returns Where clause
    */
   protected whereFromSpec(spec: AuditSpec): Prisma.SignatureAuditEventWhereInput {
-    const AND: Prisma.SignatureAuditEventWhereInput[] = [];
-    const push = (c: Prisma.SignatureAuditEventWhereInput) => AND.push(c);
+    const b = new WhereBuilder<Prisma.SignatureAuditEventWhereInput>(() => this.now());
 
-    if (spec.envelopeId) push({ envelopeId: spec.envelopeId });
-    if (spec.signerId) push({ signerId: spec.signerId });
-    if (spec.eventType) push({ eventType: spec.eventType });
-    if (spec.userId) push({ userId: spec.userId });
-    if (spec.userEmail) push({ userEmail: spec.userEmail });
-    if (spec.ipAddress) push({ ipAddress: spec.ipAddress });
-    if (spec.country) push({ country: spec.country });
+    // Basic fields
+    b.eq('envelopeId', spec.envelopeId)
+     .eq('signerId', spec.signerId)
+     .eq('eventType', spec.eventType)
+     .eq('userId', spec.userId)
+     .eq('userEmail', spec.userEmail)
+     .eq('ipAddress', spec.ipAddress)
+     .eq('country', spec.country);
 
-    if (spec.userAgent) push({ userAgent: textContainsInsensitive(spec.userAgent) });
-    if (spec.description) push({ description: textContainsInsensitive(spec.description) });
+    // Text search
+    if (spec.userAgent) {
+      b.and({ userAgent: textContainsInsensitive(spec.userAgent) });
+    }
+    if (spec.description) {
+      b.and({ description: textContainsInsensitive(spec.description) });
+    }
 
+    // Date ranges
     const createdRange = rangeFilter(spec.createdBefore, spec.createdAfter);
-    if (createdRange) push({ createdAt: createdRange });
+    if (createdRange) b.and({ createdAt: createdRange });
 
-    return AND.length ? { AND } : {};
+    return b.build();
   }
 
   /**

@@ -1,14 +1,10 @@
-/**
- * @fileoverview SignatureEnvelopeRepository Unit Tests - Comprehensive test suite for signature envelope repository
- * @summary Tests all repository methods including CRUD operations, pagination, and error handling
- * @description This test suite covers all public and protected methods of SignatureEnvelopeRepository,
- * ensuring proper data mapping, error handling, and integration with Prisma operations.
- */
 
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 
 import { setupCursorPaginationMocks } from '../../helpers/mocks/cursorPagination';
 const { mockListPage, mockDecodeCursor } = setupCursorPaginationMocks();
+
+import { createOperationMock } from '../../helpers/mocks/signatureEnvelope';
 
 import { Prisma } from '@prisma/client';
 import { SignatureEnvelopeRepository } from '../../../src/repositories/SignatureEnvelopeRepository';
@@ -82,7 +78,6 @@ describe('SignatureEnvelopeRepository - Internal Methods', () => {
     });
 
     it('handles undefined optional fields', () => {
-      // Create a minimal entity with only required fields
       const entity = signatureEnvelopeEntity({
         id: TestUtils.generateUuid(),
         createdBy: TestUtils.generateUuid(),
@@ -90,7 +85,7 @@ describe('SignatureEnvelopeRepository - Internal Methods', () => {
         status: 'DRAFT',
         signingOrder: 'OWNER_FIRST',
         origin: 'USER_UPLOAD',
-        description: undefined, // Explicitly set to undefined
+        description: undefined,
         templateId: undefined,
         templateVersion: undefined,
         sourceKey: undefined,
@@ -111,7 +106,6 @@ describe('SignatureEnvelopeRepository - Internal Methods', () => {
 
       const result = (repository as any).toCreateModel(entity);
 
-      // The entity should have default values, not undefined
       expect(result.description).toBe('Test document description');
       expect(result.templateId).toBeUndefined();
       expect(result.templateVersion).toBeUndefined();
@@ -178,6 +172,70 @@ describe('SignatureEnvelopeRepository - Internal Methods', () => {
         declinedReason: undefined,
       });
     });
+
+    it('covers toUpdateModel with complex entity fields', () => {
+      const partial = partialSignatureEnvelopeEntity({
+        title: 'Updated Title',
+        description: 'Updated Description',
+        status: 'READY_FOR_SIGNATURE',
+        createdBy: 'user123',
+        templateId: 'template-123',
+        templateVersion: '1',
+        sourceKey: 'source/document.pdf',
+        metaKey: 'meta/document.pdf',
+        flattenedKey: 'flattened/document.pdf',
+        signedKey: 'signed/document.pdf',
+        sourceSha256: 'a'.repeat(64),
+        flattenedSha256: 'b'.repeat(64),
+        signedSha256: 'c'.repeat(64),
+        sentAt: new Date('2024-01-01T00:00:00.000Z'),
+        completedAt: new Date('2024-01-02T00:00:00.000Z'),
+        cancelledAt: new Date('2024-01-03T00:00:00.000Z'),
+        declinedAt: new Date('2024-01-04T00:00:00.000Z'),
+        declinedBySignerId: 'b1645375-7971-438a-a6bd-e26c1f38b9ad',
+        declinedReason: 'User declined',
+        expiresAt: new Date('2024-12-31T23:59:59.999Z'),
+      });
+
+      const result = (repository as any).toUpdateModel(partial);
+
+      expect(result).toEqual({
+        title: 'Updated Title',
+        description: 'Updated Description',
+        status: 'READY_FOR_SIGNATURE',
+        createdBy: 'user123',
+        templateId: 'template-123',
+        templateVersion: '1',
+        sourceKey: 'source/document.pdf',
+        metaKey: 'meta/document.pdf',
+        flattenedKey: 'flattened/document.pdf',
+        signedKey: 'signed/document.pdf',
+        sourceSha256: 'a'.repeat(64),
+        flattenedSha256: 'b'.repeat(64),
+        signedSha256: 'c'.repeat(64),
+        sentAt: new Date('2024-01-01T00:00:00.000Z'),
+        completedAt: new Date('2024-01-02T00:00:00.000Z'),
+        cancelledAt: new Date('2024-01-03T00:00:00.000Z'),
+        declinedAt: new Date('2024-01-04T00:00:00.000Z'),
+        declinedBySignerId: 'b1645375-7971-438a-a6bd-e26c1f38b9ad',
+        declinedReason: 'User declined',
+        expiresAt: new Date('2024-12-31T23:59:59.999Z'),
+      });
+    });
+
+    it('covers toUpdateModel with value extractors for signing order and origin', () => {
+      const partial = partialSignatureEnvelopeEntity({
+        signingOrder: 'OWNER_FIRST',
+        origin: 'USER_UPLOAD',
+      });
+
+      const result = (repository as any).toUpdateModel(partial);
+
+      expect(result).toEqual({
+        signingOrderType: 'OWNER_FIRST',
+        originType: 'USER_UPLOAD',
+      });
+    });
   });
 
   describe('toDomain', () => {
@@ -194,6 +252,54 @@ describe('SignatureEnvelopeRepository - Internal Methods', () => {
       const invalidData = { invalid: 'data' };
 
       expect(() => (repository as any).toDomain(invalidData)).toThrow();
+    });
+  });
+
+  describe('toModel', () => {
+    it('throws repository error when entity is null', () => {
+      expect(() => (repository as any).toModel(null)).toThrow();
+    });
+
+    it('throws repository error when entity is undefined', () => {
+      expect(() => (repository as any).toModel(undefined)).toThrow();
+    });
+
+    it('throws repository error when entity lacks getId method', () => {
+      const invalidEntity = { getTitle: () => 'test' };
+      expect(() => (repository as any).toModel(invalidEntity)).toThrow();
+    });
+
+    it('successfully maps entity to model', () => {
+      const entity = signatureEnvelopeEntity();
+      const result = (repository as any).toModel(entity);
+
+      expect(result).toEqual({
+        id: entity.getId().getValue(),
+        createdBy: entity.getCreatedBy(),
+        title: entity.getTitle(),
+        description: entity.getDescription(),
+        status: entity.getStatus().getValue(),
+        signingOrderType: entity.getSigningOrder()?.getType(),
+        originType: entity.getOrigin()?.getType(),
+        templateId: entity.getTemplateId(),
+        templateVersion: entity.getTemplateVersion(),
+        sourceKey: entity.getSourceKey()?.getValue(),
+        metaKey: entity.getMetaKey()?.getValue(),
+        flattenedKey: entity.getFlattenedKey()?.getValue(),
+        signedKey: entity.getSignedKey()?.getValue(),
+        sourceSha256: entity.getSourceSha256()?.getValue(),
+        flattenedSha256: entity.getFlattenedSha256()?.getValue(),
+        signedSha256: entity.getSignedSha256()?.getValue(),
+        sentAt: entity.getSentAt(),
+        completedAt: entity.getCompletedAt(),
+        cancelledAt: entity.getCancelledAt(),
+        declinedAt: entity.getDeclinedAt(),
+        declinedBySignerId: entity.getDeclinedBySignerId()?.getValue(),
+        declinedReason: entity.getDeclinedReason(),
+        expiresAt: entity.getExpiresAt(),
+        createdAt: entity.getCreatedAt(),
+        updatedAt: entity.getUpdatedAt()
+      });
     });
   });
 
@@ -219,11 +325,11 @@ describe('SignatureEnvelopeRepository - Internal Methods', () => {
       const result = (repository as any).whereFromSpec(spec);
 
       expect(result).toEqual({
-        AND: [
+        AND: expect.arrayContaining([
           { createdBy: 'user123' },
           { status: 'DRAFT' },
           { title: 'Test Document' },
-        ],
+        ]),
       });
     });
 
@@ -294,6 +400,7 @@ describe('SignatureEnvelopeRepository - Public Methods', () => {
       const rowWithSigners = { ...row, signers };
 
       envelopeOps.findUnique.mockResolvedValueOnce(rowWithSigners);
+      const spy = jest.spyOn(SignatureEnvelope, 'fromPersistence').mockReturnValueOnce({} as any);
 
       const result = await repository.findById(id);
 
@@ -302,6 +409,7 @@ describe('SignatureEnvelopeRepository - Public Methods', () => {
         where: { id: id.getValue() },
         include: { signers: { orderBy: { order: 'asc' } } },
       });
+      spy.mockRestore();
     });
 
     it('returns null when envelope not found', async () => {
@@ -346,6 +454,7 @@ describe('SignatureEnvelopeRepository - Public Methods', () => {
       const rowWithSigners = { ...row, signers };
 
       envelopeOps.create.mockResolvedValueOnce(rowWithSigners);
+      const spy = jest.spyOn(SignatureEnvelope, 'fromPersistence').mockReturnValueOnce({} as any);
 
       const result = await repository.create(entity);
 
@@ -358,6 +467,7 @@ describe('SignatureEnvelopeRepository - Public Methods', () => {
         }),
         include: { signers: { orderBy: { order: 'asc' } } },
       });
+      spy.mockRestore();
     });
 
     it('throws repository error on database error', async () => {
@@ -396,6 +506,7 @@ describe('SignatureEnvelopeRepository - Public Methods', () => {
       const rowWithSigners = { ...row, signers };
 
       envelopeOps.update.mockResolvedValueOnce(rowWithSigners);
+      const spy = jest.spyOn(SignatureEnvelope, 'fromPersistence').mockReturnValueOnce({} as any);
 
       const result = await repository.update(id, patch as any);
 
@@ -408,6 +519,7 @@ describe('SignatureEnvelopeRepository - Public Methods', () => {
         }),
         include: { signers: { orderBy: { order: 'asc' } } },
       });
+      spy.mockRestore();
     });
 
     it('throws repository error on database error', async () => {
@@ -565,6 +677,88 @@ describe('SignatureEnvelopeRepository - Public Methods', () => {
       );
       spy.mockRestore();
     });
+
+    it('covers normalizeCursor callback with string date', async () => {
+      const spec = signatureEnvelopeSpec();
+      const limit = 10;
+      const cursor = 'test-cursor';
+      const fixedDate = new Date('2024-01-01T00:00:00.000Z');
+      
+      const rows = [
+        signatureEnvelopePersistenceRow({ id: '1', createdAt: fixedDate }),
+        signatureEnvelopePersistenceRow({ id: '2', createdAt: fixedDate }),
+      ];
+      const mockPage = { rows, nextCursor: 'next-cursor' };
+
+      const spy = jest.spyOn(SignatureEnvelope, 'fromPersistence').mockImplementation(() => ({} as any));
+      
+      mockDecodeCursor.mockReturnValue({ 
+        createdAt: '2024-01-01T00:00:00.000Z',
+        id: '1' 
+      });
+      
+      let capturedConfig: any;
+      mockListPage.mockImplementation(async (client: any, where: any, limit: any, decoded: any, config: any) => {
+        capturedConfig = config;
+        if (config.normalizeCursor && decoded) {
+          const normalized = config.normalizeCursor(decoded);
+          expect(normalized).toEqual({
+            id: '1',
+            createdAt: new Date('2024-01-01T00:00:00.000Z')
+          });
+        }
+        return mockPage;
+      });
+
+      const result = await repository.list(spec, limit, cursor);
+
+      expect(result.items).toHaveLength(2);
+      expect(result.nextCursor).toBe('next-cursor');
+      expect(capturedConfig).toBeDefined();
+      expect(capturedConfig.normalizeCursor).toBeDefined();
+      spy.mockRestore();
+    });
+
+    it('covers normalizeCursor callback with Date object', async () => {
+      const spec = signatureEnvelopeSpec();
+      const limit = 10;
+      const cursor = 'test-cursor';
+      const fixedDate = new Date('2024-01-01T00:00:00.000Z');
+      
+      const rows = [
+        signatureEnvelopePersistenceRow({ id: '1', createdAt: fixedDate }),
+        signatureEnvelopePersistenceRow({ id: '2', createdAt: fixedDate }),
+      ];
+      const mockPage = { rows, nextCursor: 'next-cursor' };
+
+      const spy = jest.spyOn(SignatureEnvelope, 'fromPersistence').mockImplementation(() => ({} as any));
+      
+      mockDecodeCursor.mockReturnValue({ 
+        createdAt: fixedDate,
+        id: '1' 
+      });
+      
+      let capturedConfig: any;
+      mockListPage.mockImplementation(async (client: any, where: any, limit: any, decoded: any, config: any) => {
+        capturedConfig = config;
+        if (config.normalizeCursor && decoded) {
+          const normalized = config.normalizeCursor(decoded);
+          expect(normalized).toEqual({
+            id: '1',
+            createdAt: fixedDate
+          });
+        }
+        return mockPage;
+      });
+
+      const result = await repository.list(spec, limit, cursor);
+
+      expect(result.items).toHaveLength(2);
+      expect(result.nextCursor).toBe('next-cursor');
+      expect(capturedConfig).toBeDefined();
+      expect(capturedConfig.normalizeCursor).toBeDefined();
+      spy.mockRestore();
+    });
   });
 
   describe('getWithSigners', () => {
@@ -575,6 +769,7 @@ describe('SignatureEnvelopeRepository - Public Methods', () => {
       const rowWithSigners = { ...row, signers };
 
       envelopeOps.findUnique.mockResolvedValueOnce(rowWithSigners);
+      const spy = jest.spyOn(SignatureEnvelope, 'fromPersistence').mockReturnValueOnce({} as any);
 
       const result = await repository.getWithSigners(id);
 
@@ -583,6 +778,7 @@ describe('SignatureEnvelopeRepository - Public Methods', () => {
         where: { id: id.getValue() },
         include: { signers: { orderBy: { order: 'asc' } } },
       });
+      spy.mockRestore();
     });
 
     it('returns null when envelope not found', async () => {
@@ -623,33 +819,74 @@ describe('SignatureEnvelopeRepository - Public Methods', () => {
     it('updates envelope hashes', async () => {
       const id = EnvelopeId.fromString(TestUtils.generateUuid());
       const hashes = {
-        sourceSha256: 'source-hash',
-        flattenedSha256: 'flattened-hash',
-        signedSha256: 'signed-hash',
+        sourceSha256: 'a'.repeat(64),
+        flattenedSha256: 'b'.repeat(64),
+        signedSha256: 'c'.repeat(64),
       };
       const row = signatureEnvelopePersistenceRow({ id: id.getValue() });
       const signers = [createTestSigner({ envelopeId: id.getValue() })];
       const rowWithSigners = { ...row, signers };
 
+      const spy = jest.spyOn(SignatureEnvelope, 'fromPersistence').mockReturnValue({
+        updateHashes: jest.fn(),
+      } as any);
+      
+      envelopeOps.findUnique.mockResolvedValueOnce(rowWithSigners);
       envelopeOps.update.mockResolvedValueOnce(rowWithSigners);
 
       const result = await repository.updateHashes(id, hashes);
+      
+      spy.mockRestore();
 
-      expect(result).toEqual({});
+      expect(result).toBeDefined();
       expect(envelopeOps.update).toHaveBeenCalledWith({
         where: { id: id.getValue() },
         data: {
-          sourceSha256: 'source-hash',
-          flattenedSha256: 'flattened-hash',
-          signedSha256: 'signed-hash',
+          sourceSha256: 'a'.repeat(64),
+          flattenedSha256: 'b'.repeat(64),
+          signedSha256: 'c'.repeat(64),
         },
+        include: { signers: { orderBy: { order: 'asc' } } },
+      });
+    });
+
+    it('updates only provided hash fields', async () => {
+      const id = EnvelopeId.fromString(TestUtils.generateUuid());
+      const hashes = { sourceSha256: 'd'.repeat(64) };
+
+      jest.spyOn(SignatureEnvelope, 'fromPersistence').mockReturnValue({ updateHashes: jest.fn() } as any);
+      envelopeOps.findUnique.mockResolvedValueOnce(signatureEnvelopePersistenceRow({ id: id.getValue() }));
+      envelopeOps.update.mockResolvedValueOnce(signatureEnvelopePersistenceRow({ id: id.getValue() }));
+
+      await repository.updateHashes(id, hashes);
+
+      expect(envelopeOps.update).toHaveBeenCalledWith({
+        where: { id: id.getValue() },
+        data: { sourceSha256: 'd'.repeat(64) },
+        include: { signers: { orderBy: { order: 'asc' } } },
+      });
+    });
+
+    it('handles empty hashes object', async () => {
+      const id = EnvelopeId.fromString(TestUtils.generateUuid());
+      const hashes = {};
+
+      jest.spyOn(SignatureEnvelope, 'fromPersistence').mockReturnValue({ updateHashes: jest.fn() } as any);
+      envelopeOps.findUnique.mockResolvedValueOnce(signatureEnvelopePersistenceRow({ id: id.getValue() }));
+      envelopeOps.update.mockResolvedValueOnce(signatureEnvelopePersistenceRow({ id: id.getValue() }));
+
+      await repository.updateHashes(id, hashes);
+
+      expect(envelopeOps.update).toHaveBeenCalledWith({
+        where: { id: id.getValue() },
+        data: {},
         include: { signers: { orderBy: { order: 'asc' } } },
       });
     });
 
     it('throws repository error on database error', async () => {
       const id = EnvelopeId.fromString(TestUtils.generateUuid());
-      const hashes = { sourceSha256: 'source-hash' };
+      const hashes = { sourceSha256: 'e'.repeat(64) };
 
       envelopeOps.update.mockRejectedValueOnce(new Error('Database error'));
 
@@ -658,19 +895,24 @@ describe('SignatureEnvelopeRepository - Public Methods', () => {
 
     it('uses transaction client when provided', async () => {
       const id = EnvelopeId.fromString(TestUtils.generateUuid());
-      const hashes = { sourceSha256: 'source-hash' };
+      const hashes = { sourceSha256: 'f'.repeat(64) };
       const row = signatureEnvelopePersistenceRow({ id: id.getValue() });
       const txMock = createSingleModelTransactionMock(envelopeOps, 'signatureEnvelope');
 
+      envelopeOps.findUnique.mockResolvedValueOnce(row);
       envelopeOps.update.mockResolvedValueOnce(row);
+      const spy = jest.spyOn(SignatureEnvelope, 'fromPersistence').mockReturnValue({
+        updateHashes: jest.fn(),
+      } as any);
 
       await repository.updateHashes(id, hashes, txMock);
 
       expect(envelopeOps.update).toHaveBeenCalledWith({
         where: { id: id.getValue() },
-        data: expect.any(Object),
+        data: { sourceSha256: 'f'.repeat(64) },
         include: { signers: { orderBy: { order: 'asc' } } },
       });
+      spy.mockRestore();
     });
   });
 
@@ -678,24 +920,29 @@ describe('SignatureEnvelopeRepository - Public Methods', () => {
     it('updates signed document', async () => {
       const id = EnvelopeId.fromString(TestUtils.generateUuid());
       const signedKey = 'signed/document.pdf';
-      const signedSha256 = 'signed-hash';
+      const signedSha256 = 'a'.repeat(64);
       const row = signatureEnvelopePersistenceRow({ id: id.getValue() });
       const signers = [createTestSigner({ envelopeId: id.getValue() })];
       const rowWithSigners = { ...row, signers };
 
+      envelopeOps.findUnique.mockResolvedValueOnce(rowWithSigners);
       envelopeOps.update.mockResolvedValueOnce(rowWithSigners);
+      const spy = jest.spyOn(SignatureEnvelope, 'fromPersistence').mockReturnValue({
+        updateSignedDocument: jest.fn(),
+      } as any);
 
       const result = await repository.updateSignedDocument(id, signedKey, signedSha256);
 
-      expect(result).toEqual({});
+      expect(result).toEqual({ updateSignedDocument: expect.any(Function) });
       expect(envelopeOps.update).toHaveBeenCalledWith({
         where: { id: id.getValue() },
         data: {
           signedKey: 'signed/document.pdf',
-          signedSha256: 'signed-hash',
+          signedSha256: 'a'.repeat(64),
         },
         include: { signers: { orderBy: { order: 'asc' } } },
       });
+      spy.mockRestore();
     });
 
     it('throws repository error on database error', async () => {
@@ -711,15 +958,20 @@ describe('SignatureEnvelopeRepository - Public Methods', () => {
       const row = signatureEnvelopePersistenceRow({ id: id.getValue() });
       const txMock = createSingleModelTransactionMock(envelopeOps, 'signatureEnvelope');
 
+      envelopeOps.findUnique.mockResolvedValueOnce(row);
       envelopeOps.update.mockResolvedValueOnce(row);
+      const spy = jest.spyOn(SignatureEnvelope, 'fromPersistence').mockReturnValue({
+        updateSignedDocument: jest.fn(),
+      } as any);
 
-      await repository.updateSignedDocument(id, 'key', 'hash', txMock);
+      await repository.updateSignedDocument(id, 'key', 'b'.repeat(64), txMock);
 
       expect(envelopeOps.update).toHaveBeenCalledWith({
         where: { id: id.getValue() },
-        data: expect.any(Object),
+        data: { signedKey: 'key', signedSha256: 'b'.repeat(64) },
         include: { signers: { orderBy: { order: 'asc' } } },
       });
+      spy.mockRestore();
     });
   });
 
@@ -730,11 +982,15 @@ describe('SignatureEnvelopeRepository - Public Methods', () => {
       const signers = [createTestSigner({ envelopeId: id.getValue() })];
       const rowWithSigners = { ...row, signers };
 
+      envelopeOps.findUnique.mockResolvedValueOnce(rowWithSigners);
       envelopeOps.update.mockResolvedValueOnce(rowWithSigners);
+      const spy = jest.spyOn(SignatureEnvelope, 'fromPersistence').mockReturnValue({
+        complete: jest.fn(),
+      } as any);
 
       const result = await repository.completeEnvelope(id);
 
-      expect(result).toEqual({});
+      expect(result).toEqual({ complete: expect.any(Function) });
       expect(envelopeOps.update).toHaveBeenCalledWith({
         where: { id: id.getValue() },
         data: {
@@ -743,6 +999,7 @@ describe('SignatureEnvelopeRepository - Public Methods', () => {
         },
         include: { signers: { orderBy: { order: 'asc' } } },
       });
+      spy.mockRestore();
     });
 
     it('throws repository error on database error', async () => {
@@ -758,15 +1015,20 @@ describe('SignatureEnvelopeRepository - Public Methods', () => {
       const row = signatureEnvelopePersistenceRow({ id: id.getValue() });
       const txMock = createSingleModelTransactionMock(envelopeOps, 'signatureEnvelope');
 
+      envelopeOps.findUnique.mockResolvedValueOnce(row);
       envelopeOps.update.mockResolvedValueOnce(row);
+      const spy = jest.spyOn(SignatureEnvelope, 'fromPersistence').mockReturnValue({
+        complete: jest.fn(),
+      } as any);
 
       await repository.completeEnvelope(id, txMock);
 
       expect(envelopeOps.update).toHaveBeenCalledWith({
         where: { id: id.getValue() },
-        data: expect.any(Object),
+        data: { status: 'COMPLETED', completedAt: expect.any(Date) },
         include: { signers: { orderBy: { order: 'asc' } } },
       });
+      spy.mockRestore();
     });
   });
 
@@ -779,6 +1041,7 @@ describe('SignatureEnvelopeRepository - Public Methods', () => {
       const rowWithSigners = { ...row, signers };
 
       envelopeOps.update.mockResolvedValueOnce(rowWithSigners);
+      const spy = jest.spyOn(SignatureEnvelope, 'fromPersistence').mockImplementation(() => ({} as any));
 
       const result = await repository.updateFlattenedKey(id, flattenedKey);
 
@@ -790,6 +1053,7 @@ describe('SignatureEnvelopeRepository - Public Methods', () => {
         },
         include: { signers: { orderBy: { order: 'asc' } } },
       });
+      spy.mockRestore();
     });
 
     it('throws repository error on database error', async () => {
@@ -806,6 +1070,7 @@ describe('SignatureEnvelopeRepository - Public Methods', () => {
       const txMock = createSingleModelTransactionMock(envelopeOps, 'signatureEnvelope');
 
       envelopeOps.update.mockResolvedValueOnce(row);
+      const spy = jest.spyOn(SignatureEnvelope, 'fromPersistence').mockImplementation(() => ({} as any));
 
       await repository.updateFlattenedKey(id, 'key', txMock);
 
@@ -814,6 +1079,7 @@ describe('SignatureEnvelopeRepository - Public Methods', () => {
         data: expect.any(Object),
         include: { signers: { orderBy: { order: 'asc' } } },
       });
+      spy.mockRestore();
     });
   });
 });

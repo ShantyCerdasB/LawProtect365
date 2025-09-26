@@ -7,7 +7,7 @@
  */
 
 import { PrismaClient, Prisma, SignerStatus, ParticipantRole } from '@prisma/client';
-import { RepositoryBase, Page, textContainsInsensitive, rangeFilter } from '@lawprotect/shared-ts';
+import { RepositoryBase, Page, textContainsInsensitive, rangeFilter, EntityMapper, WhereBuilder } from '@lawprotect/shared-ts';
 import { EnvelopeSigner } from '../domain/entities/EnvelopeSigner';
 import { SignerId } from '../domain/value-objects/SignerId';
 import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
@@ -94,38 +94,30 @@ export class EnvelopeSignerRepository extends RepositoryBase<EnvelopeSigner, Sig
   }
 
   protected toUpdateModel(patch: Partial<EnvelopeSigner> | Record<string, unknown>): Prisma.EnvelopeSignerUncheckedUpdateInput {
-    const p: any = patch;
-    const out: any = {};
-    const has = (k: string) => Object.prototype.hasOwnProperty.call(p, k);
-    const set = (k: string, v: unknown) => { if (v !== undefined) out[k] = v; };
-
-    set('envelopeId', p.getEnvelopeId?.()?.getValue?.() ?? (has('envelopeId') ? p.envelopeId : undefined));
-    set('userId', p.getUserId?.() ?? (has('userId') ? p.userId : undefined));
-    set('isExternal', p.getIsExternal?.() ?? (has('isExternal') ? p.isExternal : undefined));
-    
-    // Email normalization is handled by Email value object (already lowercase)
-    set('email', p.getEmail?.()?.getValue?.() ?? (has('email') ? p.email : undefined));
-
-    set('fullName', p.getFullName?.() ?? (has('fullName') ? p.fullName : undefined));
-    set('invitedByUserId', p.getInvitedByUserId?.() ?? (has('invitedByUserId') ? p.invitedByUserId : undefined));
-    set('participantRole', p.getParticipantRole ? mapParticipantRole(p.getParticipantRole()) : (has('participantRole') ? mapParticipantRole(p.participantRole) : undefined));
-    set('order', p.getOrder?.() ?? (has('order') ? p.order : undefined));
-    set('status', p.getStatus?.() ?? (has('status') ? p.status : undefined));
-    set('signedAt', p.getSignedAt?.() ?? (has('signedAt') ? p.signedAt : undefined));
-    set('declinedAt', p.getDeclinedAt?.() ?? (has('declinedAt') ? p.declinedAt : undefined));
-    set('declineReason', p.getDeclineReason?.() ?? (has('declineReason') ? p.declineReason : undefined));
-    set('consentGiven', p.getConsentGiven?.() ?? (has('consentGiven') ? p.consentGiven : undefined));
-    set('consentTimestamp', p.getConsentTimestamp?.() ?? (has('consentTimestamp') ? p.consentTimestamp : undefined));
-    set('documentHash', p.getDocumentHash?.() ?? (has('documentHash') ? p.documentHash : undefined));
-    set('signatureHash', p.getSignatureHash?.() ?? (has('signatureHash') ? p.signatureHash : undefined));
-    set('signedS3Key', p.getSignedS3Key?.() ?? (has('signedS3Key') ? p.signedS3Key : undefined));
-    set('kmsKeyId', p.getKmsKeyId?.() ?? (has('kmsKeyId') ? p.kmsKeyId : undefined));
-    set('algorithm', p.getAlgorithm?.() ?? (has('algorithm') ? p.algorithm : undefined));
-    set('ipAddress', p.getIpAddress?.() ?? (has('ipAddress') ? p.ipAddress : undefined));
-    set('userAgent', p.getUserAgent?.() ?? (has('userAgent') ? p.userAgent : undefined));
-    set('location', p.getLocation?.() ?? (has('location') ? p.location : undefined));
-
-    return out;
+    return EntityMapper.toUpdateModel(patch, [
+      { field: 'envelopeId', getter: 'getEnvelopeId', valueExtractor: (v: unknown) => (v as any)?.getValue?.() },
+      { field: 'userId', getter: 'getUserId' },
+      { field: 'isExternal', getter: 'getIsExternal' },
+      { field: 'email', getter: 'getEmail', valueExtractor: (v: unknown) => (v as any)?.getValue?.() },
+      { field: 'fullName', getter: 'getFullName' },
+      { field: 'invitedByUserId', getter: 'getInvitedByUserId' },
+      { field: 'participantRole', getter: 'getParticipantRole', valueExtractor: (v: unknown) => mapParticipantRole(v as string) },
+      { field: 'order', getter: 'getOrder' },
+      { field: 'status', getter: 'getStatus' },
+      { field: 'signedAt', getter: 'getSignedAt' },
+      { field: 'declinedAt', getter: 'getDeclinedAt' },
+      { field: 'declineReason', getter: 'getDeclineReason' },
+      { field: 'consentGiven', getter: 'getConsentGiven' },
+      { field: 'consentTimestamp', getter: 'getConsentTimestamp' },
+      { field: 'documentHash', getter: 'getDocumentHash' },
+      { field: 'signatureHash', getter: 'getSignatureHash' },
+      { field: 'signedS3Key', getter: 'getSignedS3Key' },
+      { field: 'kmsKeyId', getter: 'getKmsKeyId' },
+      { field: 'algorithm', getter: 'getAlgorithm' },
+      { field: 'ipAddress', getter: 'getIpAddress' },
+      { field: 'userAgent', getter: 'getUserAgent' },
+      { field: 'location', getter: 'getLocation' }
+    ]);
   }
 
   /**
@@ -143,39 +135,58 @@ export class EnvelopeSignerRepository extends RepositoryBase<EnvelopeSigner, Sig
    * @returns Where clause
    */
   protected whereFromSpec(spec: SignerSpec): any {
-    const AND: any[] = [];
-    const push = (c: any) => AND.push(c);
+    const b = new WhereBuilder<any>(() => this.now());
 
     // Protect against impossible combinations
     if (spec.hasSigned === true && spec.hasDeclined === true) {
       return { AND: [{ status: SignerStatus.SIGNED }, { status: SignerStatus.DECLINED }] };
     }
 
-    if (spec.envelopeId) push({ envelopeId: spec.envelopeId });
-    if (spec.userId) push({ userId: spec.userId });
-    if (spec.email) push({ email: spec.email.toLowerCase?.() ?? spec.email });
-    if (spec.participantRole) push({ participantRole: spec.participantRole });
-    if (spec.isExternal !== undefined) push({ isExternal: spec.isExternal });
-    if (spec.status) push({ status: spec.status });
-    if (spec.hasSigned !== undefined) {
-      push(spec.hasSigned ? { status: SignerStatus.SIGNED } : { status: { not: SignerStatus.SIGNED } });
-    }
-    if (spec.hasDeclined !== undefined) {
-      push(spec.hasDeclined ? { status: SignerStatus.DECLINED } : { status: { not: SignerStatus.DECLINED } });
-    }
-    if (spec.consentGiven !== undefined) push({ consentGiven: spec.consentGiven });
+    // Basic fields
+    b.eq('envelopeId', spec.envelopeId)
+     .eq('userId', spec.userId)
+     .eq('participantRole', spec.participantRole)
+     .eq('isExternal', spec.isExternal)
+     .eq('status', spec.status)
+     .eq('consentGiven', spec.consentGiven);
 
-    if ((spec as any).emailContains) push({ email: textContainsInsensitive((spec as any).emailContains) });
-    if ((spec as any).fullNameContains) push({ fullName: textContainsInsensitive((spec as any).fullNameContains) });
+    // Email with normalization
+    if (spec.email) {
+      b.and({ email: spec.email.toLowerCase?.() ?? spec.email });
+    }
 
+    // Boolean flags
+    b.flag(
+      spec.hasSigned,
+      { status: SignerStatus.SIGNED },
+      { status: { not: SignerStatus.SIGNED } }
+    );
+
+    b.flag(
+      spec.hasDeclined,
+      { status: SignerStatus.DECLINED },
+      { status: { not: SignerStatus.DECLINED } }
+    );
+
+    // Text search
+    if ((spec as any).emailContains) {
+      b.and({ email: textContainsInsensitive((spec as any).emailContains) });
+    }
+    if ((spec as any).fullNameContains) {
+      b.and({ fullName: textContainsInsensitive((spec as any).fullNameContains) });
+    }
+
+    // Date ranges
     const signedRange = rangeFilter((spec as any).signedBefore, (spec as any).signedAfter);
-    if (signedRange) push({ signedAt: signedRange });
-    const declinedRange = rangeFilter((spec as any).declinedBefore, (spec as any).declinedAfter);
-    if (declinedRange) push({ declinedAt: declinedRange });
-    const createdRange = rangeFilter((spec as any).createdBefore, (spec as any).createdAfter);
-    if (createdRange) push({ createdAt: createdRange });
+    if (signedRange) b.and({ signedAt: signedRange });
 
-    return AND.length ? { AND } : {};
+    const declinedRange = rangeFilter((spec as any).declinedBefore, (spec as any).declinedAfter);
+    if (declinedRange) b.and({ declinedAt: declinedRange });
+
+    const createdRange = rangeFilter((spec as any).createdBefore, (spec as any).createdAfter);
+    if (createdRange) b.and({ createdAt: createdRange });
+
+    return b.build();
   }
 
   /**

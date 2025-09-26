@@ -7,12 +7,13 @@
  */
 
 import { PrismaClient, Prisma } from '@prisma/client';
-import { RepositoryBase, Page, decodeCursor, listPage } from '@lawprotect/shared-ts';
+import { RepositoryBase, Page, decodeCursor, listPage, EntityMapper, WhereBuilder  } from '@lawprotect/shared-ts';
 import { SignatureEnvelope } from '../domain/entities/SignatureEnvelope';
 import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
 import { S3Key } from '../domain/value-objects/S3Key';
 import { DocumentHash } from '../domain/value-objects/DocumentHash';
 import { EnvelopeSpec, Hashes } from '../domain/types/envelope';
+import { EnvelopeStatus } from '../domain/value-objects/EnvelopeStatus';
 import { repositoryError } from '../signature-errors';
 
 const ENVELOPE_INCLUDE = { signers: { orderBy: { order: 'asc' } } } as const;
@@ -76,35 +77,30 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
   }
 
   protected toUpdateModel(patch: Partial<SignatureEnvelope> | Record<string, unknown>): Prisma.SignatureEnvelopeUncheckedUpdateInput {
-    const p: any = patch;
-    const out: Prisma.SignatureEnvelopeUncheckedUpdateInput = {};
-    const has = (k: string) => Object.prototype.hasOwnProperty.call(p, k);
-    const set = (k: string, v: unknown) => { if (v !== undefined) (out as any)[k] = v; };
-
-    set('createdBy', p.getCreatedBy?.() ?? (has('createdBy') ? p.createdBy : undefined));
-    set('title', p.getTitle?.() ?? (has('title') ? p.title : undefined));
-    set('description', p.getDescription?.() ?? (has('description') ? p.description : undefined));
-    set('status', p.getStatus?.()?.getValue?.() ?? (has('status') ? p.status : undefined));
-    set('signingOrderType', p.getSigningOrder?.()?.getType?.() ?? (has('signingOrderType') ? p.signingOrderType : undefined));
-    set('originType', p.getOrigin?.()?.getType?.() ?? (has('originType') ? p.originType : undefined));
-    set('templateId', p.getTemplateId?.() ?? (has('templateId') ? p.templateId : undefined));
-    set('templateVersion', p.getTemplateVersion?.() ?? (has('templateVersion') ? p.templateVersion : undefined));
-    set('sourceKey', p.getSourceKey?.()?.getValue?.() ?? (has('sourceKey') ? p.sourceKey : undefined));
-    set('metaKey', p.getMetaKey?.()?.getValue?.() ?? (has('metaKey') ? p.metaKey : undefined));
-    set('flattenedKey', p.getFlattenedKey?.()?.getValue?.() ?? (has('flattenedKey') ? p.flattenedKey : undefined));
-    set('signedKey', p.getSignedKey?.()?.getValue?.() ?? (has('signedKey') ? p.signedKey : undefined));
-    set('sourceSha256', p.getSourceSha256?.()?.getValue?.() ?? (has('sourceSha256') ? p.sourceSha256 : undefined));
-    set('flattenedSha256', p.getFlattenedSha256?.()?.getValue?.() ?? (has('flattenedSha256') ? p.flattenedSha256 : undefined));
-    set('signedSha256', p.getSignedSha256?.()?.getValue?.() ?? (has('signedSha256') ? p.signedSha256 : undefined));
-    set('sentAt', p.getSentAt?.() ?? (has('sentAt') ? p.sentAt : undefined));
-    set('completedAt', p.getCompletedAt?.() ?? (has('completedAt') ? p.completedAt : undefined));
-    set('cancelledAt', p.getCancelledAt?.() ?? (has('cancelledAt') ? p.cancelledAt : undefined));
-    set('declinedAt', p.getDeclinedAt?.() ?? (has('declinedAt') ? p.declinedAt : undefined));
-    set('declinedBySignerId', p.getDeclinedBySignerId?.()?.getValue?.() ?? (has('declinedBySignerId') ? p.declinedBySignerId : undefined));
-    set('declinedReason', p.getDeclinedReason?.() ?? (has('declinedReason') ? p.declinedReason : undefined));
-    set('expiresAt', p.getExpiresAt?.() ?? (has('expiresAt') ? p.expiresAt : undefined));
-
-    return out;
+    return EntityMapper.toUpdateModel(patch, [
+      { field: 'createdBy', getter: 'getCreatedBy' },
+      { field: 'title', getter: 'getTitle' },
+      { field: 'description', getter: 'getDescription' },
+      { field: 'status', getter: 'getStatus', valueExtractor: (v: unknown) => (v as any)?.getValue?.() },
+      { field: 'signingOrderType', getter: 'getSigningOrder', valueExtractor: (v: unknown) => (v as any)?.getType?.() },
+      { field: 'originType', getter: 'getOrigin', valueExtractor: (v: unknown) => (v as any)?.getType?.() },
+      { field: 'templateId', getter: 'getTemplateId' },
+      { field: 'templateVersion', getter: 'getTemplateVersion' },
+      { field: 'sourceKey', getter: 'getSourceKey', valueExtractor: (v: unknown) => (v as any)?.getValue?.() },
+      { field: 'metaKey', getter: 'getMetaKey', valueExtractor: (v: unknown) => (v as any)?.getValue?.() },
+      { field: 'flattenedKey', getter: 'getFlattenedKey', valueExtractor: (v: unknown) => (v as any)?.getValue?.() },
+      { field: 'signedKey', getter: 'getSignedKey', valueExtractor: (v: unknown) => (v as any)?.getValue?.() },
+      { field: 'sourceSha256', getter: 'getSourceSha256', valueExtractor: (v: unknown) => (v as any)?.getValue?.() },
+      { field: 'flattenedSha256', getter: 'getFlattenedSha256', valueExtractor: (v: unknown) => (v as any)?.getValue?.() },
+      { field: 'signedSha256', getter: 'getSignedSha256', valueExtractor: (v: unknown) => (v as any)?.getValue?.() },
+      { field: 'sentAt', getter: 'getSentAt' },
+      { field: 'completedAt', getter: 'getCompletedAt' },
+      { field: 'cancelledAt', getter: 'getCancelledAt' },
+      { field: 'declinedAt', getter: 'getDeclinedAt' },
+      { field: 'declinedBySignerId', getter: 'getDeclinedBySignerId', valueExtractor: (v: unknown) => (v as any)?.getValue?.() },
+      { field: 'declinedReason', getter: 'getDeclinedReason' },
+      { field: 'expiresAt', getter: 'getExpiresAt' }
+    ]);
   }
 
   /**
@@ -164,25 +160,32 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
    * @returns Prisma where clause
    */
   protected whereFromSpec(spec: EnvelopeSpec): Prisma.SignatureEnvelopeWhereInput {
-    const AND: Prisma.SignatureEnvelopeWhereInput[] = [];
-    const OR: Prisma.SignatureEnvelopeWhereInput[] = [];
+    const b = new WhereBuilder<Prisma.SignatureEnvelopeWhereInput>(() => this.now());
 
-    if (spec.createdBy) AND.push({ createdBy: spec.createdBy });
-    if (spec.status) AND.push({ status: spec.status.getValue() });
-    if (spec.title) AND.push({ title: spec.title });
+    // Basic fields
+    b.eq('createdBy', spec.createdBy)
+     .eq('title', spec.title);
 
+    // Status with getValue
+    if (spec.status) {
+      b.and({ status: spec.status.getValue() });
+    }
+
+    // Expired flag
     if (spec.isExpired !== undefined) {
       if (spec.isExpired) {
-        OR.push({ expiresAt: { lt: new Date() } });
+        b.or({ expiresAt: { lt: this.now() } });
       } else {
-        AND.push({ OR: [{ expiresAt: null }, { expiresAt: { gte: new Date() } }] });
+        b.and({ 
+          OR: [
+            { expiresAt: null }, 
+            { expiresAt: { gte: this.now() } }
+          ] 
+        });
       }
     }
 
-    const where: Prisma.SignatureEnvelopeWhereInput = {};
-    if (AND.length) where.AND = AND;
-    if (OR.length) where.OR = OR;
-    return where;
+    return b.build();
   }
 
   /**
@@ -355,30 +358,35 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
    */
   async updateHashes(id: EnvelopeId, hashes: Hashes, tx?: Prisma.TransactionClient): Promise<SignatureEnvelope> {
     const client = tx ?? this.prisma;
-    
+
     try {
       const currentEnvelope = await this.findById(id, tx);
       if (!currentEnvelope) {
         throw repositoryError({
           operation: 'updateHashes',
           envelopeId: id.getValue(),
-          cause: new Error('Envelope not found')
+          cause: new Error('Envelope not found'),
         });
       }
 
+      // Domain-level validation/invariants:
       currentEnvelope.updateHashes(
         hashes.sourceSha256 ? DocumentHash.fromString(hashes.sourceSha256) : undefined,
         hashes.flattenedSha256 ? DocumentHash.fromString(hashes.flattenedSha256) : undefined,
         hashes.signedSha256 ? DocumentHash.fromString(hashes.signedSha256) : undefined
       );
 
-      const raw = this.toModel(currentEnvelope) as Prisma.SignatureEnvelopeUncheckedUpdateInput;
-      const { id: _omitId, createdAt: _c4, updatedAt: _u4, ...data } = raw as Record<string, unknown>;
+      // Explicit partial update payload (no toUpdateModel here)
+      const data: Prisma.SignatureEnvelopeUncheckedUpdateInput = {
+        ...(hashes.sourceSha256 && { sourceSha256: hashes.sourceSha256 }),
+        ...(hashes.flattenedSha256 && { flattenedSha256: hashes.flattenedSha256 }),
+        ...(hashes.signedSha256 && { signedSha256: hashes.signedSha256 }),
+      };
 
       const updated = await client.signatureEnvelope.update({
         where: { id: id.getValue() },
-        data: data as Prisma.SignatureEnvelopeUncheckedUpdateInput,
-        include: ENVELOPE_INCLUDE
+        data,
+        include: ENVELOPE_INCLUDE,
       });
 
       return this.toDomain(updated);
@@ -386,7 +394,7 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
       throw repositoryError({
         operation: 'updateHashes',
         envelopeId: id.getValue(),
-        cause
+        cause,
       });
     }
   }
@@ -417,8 +425,11 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
         DocumentHash.fromString(signedSha256)
       );
 
-      const raw = this.toModel(currentEnvelope) as Prisma.SignatureEnvelopeUncheckedUpdateInput;
-      const { id: _omitId, createdAt: _c5, updatedAt: _u5, ...data } = raw as Record<string, unknown>;
+
+      const data: Prisma.SignatureEnvelopeUncheckedUpdateInput = {
+        signedKey,
+        signedSha256
+      };
 
       const updated = await client.signatureEnvelope.update({
         where: { id: id.getValue() },
@@ -457,12 +468,14 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
 
       currentEnvelope.complete();
 
-      const raw = this.toModel(currentEnvelope) as Prisma.SignatureEnvelopeUncheckedUpdateInput;
-      const { id: _omitId, createdAt: _c6, updatedAt: _u6, ...data } = raw as Record<string, unknown>;
+      const data: Prisma.SignatureEnvelopeUncheckedUpdateInput = {
+        status: EnvelopeStatus.completed().getValue(),
+        completedAt: new Date()
+      };
 
       const updated = await client.signatureEnvelope.update({
         where: { id: id.getValue() },
-        data: data as Prisma.SignatureEnvelopeUncheckedUpdateInput,
+        data,
         include: ENVELOPE_INCLUDE
       });
 

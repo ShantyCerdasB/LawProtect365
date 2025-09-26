@@ -7,7 +7,7 @@
  */
 
 import { PrismaClient, Prisma, InvitationTokenStatus } from '@prisma/client';
-import { RepositoryBase, Page, decodeCursor, listPage, sha256Hex } from '@lawprotect/shared-ts';
+import { RepositoryBase, Page, decodeCursor, listPage, sha256Hex, EntityMapper, WhereBuilder } from '@lawprotect/shared-ts';
 import { InvitationToken } from '../domain/entities/InvitationToken';
 import { InvitationTokenId } from '../domain/value-objects/InvitationTokenId';
 import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
@@ -72,33 +72,28 @@ export class InvitationTokenRepository extends RepositoryBase<InvitationToken, I
   }
 
   protected toUpdateModel(patch: Partial<InvitationToken> | Record<string, unknown>): Prisma.InvitationTokenUncheckedUpdateInput {
-    const p: any = patch;
-    const out: any = {};
-    const has = (k: string) => Object.prototype.hasOwnProperty.call(p, k);
-    const set = (k: string, v: unknown) => { if (v !== undefined) out[k] = v; };
-
-    set('envelopeId', p.getEnvelopeId?.()?.getValue?.() ?? (has('envelopeId') ? p.envelopeId : undefined));
-    set('signerId', p.getSignerId?.()?.getValue?.() ?? (has('signerId') ? p.signerId : undefined));
-    set('tokenHash', p.getTokenHash?.() ?? (has('tokenHash') ? p.tokenHash : undefined));
-    set('status', p.getStatus?.() ?? (has('status') ? p.status : undefined));
-    set('expiresAt', p.getExpiresAt?.() ?? (has('expiresAt') ? p.expiresAt : undefined));
-    set('sentAt', p.getSentAt?.() ?? (has('sentAt') ? p.sentAt : undefined));
-    set('lastSentAt', p.getLastSentAt?.() ?? (has('lastSentAt') ? p.lastSentAt : undefined));
-    set('resendCount', p.getResendCount?.() ?? (has('resendCount') ? p.resendCount : undefined));
-    set('usedAt', p.getUsedAt?.() ?? (has('usedAt') ? p.usedAt : undefined));
-    set('usedBy', p.getUsedBy?.() ?? (has('usedBy') ? p.usedBy : undefined));
-    set('viewCount', p.getViewCount?.() ?? (has('viewCount') ? p.viewCount : undefined));
-    set('lastViewedAt', p.getLastViewedAt?.() ?? (has('lastViewedAt') ? p.lastViewedAt : undefined));
-    set('signedAt', p.getSignedAt?.() ?? (has('signedAt') ? p.signedAt : undefined));
-    set('signedBy', p.getSignedBy?.() ?? (has('signedBy') ? p.signedBy : undefined));
-    set('revokedAt', p.getRevokedAt?.() ?? (has('revokedAt') ? p.revokedAt : undefined));
-    set('revokedReason', p.getRevokedReason?.() ?? (has('revokedReason') ? p.revokedReason : undefined));
-    set('createdBy', p.getCreatedBy?.() ?? (has('createdBy') ? p.createdBy : undefined));
-    set('ipAddress', p.getIpAddress?.() ?? (has('ipAddress') ? p.ipAddress : undefined));
-    set('userAgent', p.getUserAgent?.() ?? (has('userAgent') ? p.userAgent : undefined));
-    set('country', p.getCountry?.() ?? (has('country') ? p.country : undefined));
-
-    return out;
+    return EntityMapper.toUpdateModel(patch, [
+      { field: 'envelopeId', getter: 'getEnvelopeId', valueExtractor: (v: unknown) => (v as any)?.getValue?.() },
+      { field: 'signerId', getter: 'getSignerId', valueExtractor: (v: unknown) => (v as any)?.getValue?.() },
+      { field: 'tokenHash', getter: 'getTokenHash' },
+      { field: 'status', getter: 'getStatus' },
+      { field: 'expiresAt', getter: 'getExpiresAt' },
+      { field: 'sentAt', getter: 'getSentAt' },
+      { field: 'lastSentAt', getter: 'getLastSentAt' },
+      { field: 'resendCount', getter: 'getResendCount' },
+      { field: 'usedAt', getter: 'getUsedAt' },
+      { field: 'usedBy', getter: 'getUsedBy' },
+      { field: 'viewCount', getter: 'getViewCount' },
+      { field: 'lastViewedAt', getter: 'getLastViewedAt' },
+      { field: 'signedAt', getter: 'getSignedAt' },
+      { field: 'signedBy', getter: 'getSignedBy' },
+      { field: 'revokedAt', getter: 'getRevokedAt' },
+      { field: 'revokedReason', getter: 'getRevokedReason' },
+      { field: 'createdBy', getter: 'getCreatedBy' },
+      { field: 'ipAddress', getter: 'getIpAddress' },
+      { field: 'userAgent', getter: 'getUserAgent' },
+      { field: 'country', getter: 'getCountry' }
+    ]);
   }
 
 
@@ -118,68 +113,67 @@ export class InvitationTokenRepository extends RepositoryBase<InvitationToken, I
    * @returns Where clause
    */
   protected whereFromSpec(spec: InvitationTokenSpec): Prisma.InvitationTokenWhereInput {
-    const AND: Prisma.InvitationTokenWhereInput[] = [];
-    const OR: Prisma.InvitationTokenWhereInput[] = [];
+    const b = new WhereBuilder<Prisma.InvitationTokenWhereInput>(() => this.now());
 
     // Basic fields
-    if (spec.envelopeId) AND.push({ envelopeId: spec.envelopeId });
-    if (spec.signerId) AND.push({ signerId: spec.signerId });
-    if (spec.tokenHash) AND.push({ tokenHash: spec.tokenHash });
-    if (spec.createdBy) AND.push({ createdBy: spec.createdBy });
-    if (spec.usedBy) AND.push({ usedBy: spec.usedBy });
+    b.eq('envelopeId', spec.envelopeId)
+     .eq('signerId', spec.signerId)
+     .eq('tokenHash', spec.tokenHash)
+     .eq('createdBy', spec.createdBy)
+     .eq('usedBy', spec.usedBy);
 
     // Date ranges
-    if (spec.expiresBefore || spec.expiresAfter) {
-      AND.push({ expiresAt: {
-        ...(spec.expiresBefore ? { lt: spec.expiresBefore } : {}),
-        ...(spec.expiresAfter ? { gte: spec.expiresAfter } : {}),
-      }});
-    }
-
-    if (spec.usedBefore || spec.usedAfter) {
-      AND.push({ usedAt: {
-        ...(spec.usedBefore ? { lt: spec.usedBefore } : {}),
-        ...(spec.usedAfter ? { gte: spec.usedAfter } : {}),
-      }});
-    }
-
-    if (spec.createdBefore || spec.createdAfter) {
-      AND.push({ createdAt: {
-        ...(spec.createdBefore ? { lt: spec.createdBefore } : {}),
-        ...(spec.createdAfter ? { gte: spec.createdAfter } : {}),
-      }});
-    }
+    b.range('expiresAt', {
+      lt: spec.expiresBefore,
+      gte: spec.expiresAfter
+    });
+    b.range('usedAt', {
+      lt: spec.usedBefore,
+      gte: spec.usedAfter
+    });
+    b.range('createdAt', {
+      lt: spec.createdBefore,
+      gte: spec.createdAfter
+    });
 
     // Status: if there are flags, ignore direct 'status' to avoid conflicts
     const hasAnyFlag = spec.isActive !== undefined || spec.isUsed !== undefined || spec.isRevoked !== undefined || spec.isExpired !== undefined;
 
     if (!hasAnyFlag && spec.status) {
-      AND.push({ status: spec.status });
+      b.eq('status', spec.status);
     }
 
     // Boolean flags (prioritized over direct status)
     if (spec.isExpired !== undefined) {
       if (spec.isExpired) {
-        OR.push({ status: InvitationTokenStatus.EXPIRED }, { expiresAt: { lt: this.now() } });
+        b.or(
+          { status: InvitationTokenStatus.EXPIRED },
+          { expiresAt: { lt: this.now() } }
+        );
       } else {
-        AND.push({ status: { not: InvitationTokenStatus.EXPIRED } });
-        AND.push({ OR: [{ expiresAt: null }, { expiresAt: { gte: this.now() } }] });
+        b.notExpired('status', 'expiresAt', InvitationTokenStatus.EXPIRED);
       }
     }
-    if (spec.isActive !== undefined) {
-      AND.push(spec.isActive ? { status: InvitationTokenStatus.ACTIVE } : { status: { not: InvitationTokenStatus.ACTIVE } });
-    }
-    if (spec.isUsed !== undefined) {
-      AND.push(spec.isUsed ? { status: InvitationTokenStatus.SIGNED } : { status: { not: InvitationTokenStatus.SIGNED } });
-    }
-    if (spec.isRevoked !== undefined) {
-      AND.push(spec.isRevoked ? { status: InvitationTokenStatus.REVOKED } : { status: { not: InvitationTokenStatus.REVOKED } });
-    }
 
-    const root: Prisma.InvitationTokenWhereInput = {};
-    if (AND.length) root.AND = AND;
-    if (OR.length) root.OR = OR;
-    return root;
+    b.flag(
+      spec.isActive,
+      { status: InvitationTokenStatus.ACTIVE },
+      { status: { not: InvitationTokenStatus.ACTIVE } as any }
+    );
+
+    b.flag(
+      spec.isUsed,
+      { status: InvitationTokenStatus.SIGNED },
+      { status: { not: InvitationTokenStatus.SIGNED } as any }
+    );
+
+    b.flag(
+      spec.isRevoked,
+      { status: InvitationTokenStatus.REVOKED },
+      { status: { not: InvitationTokenStatus.REVOKED } as any }
+    );
+
+    return b.build();
   }
 
 

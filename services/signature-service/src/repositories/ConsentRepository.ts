@@ -7,7 +7,7 @@
  */
 
 import { PrismaClient, Prisma } from '@prisma/client';
-import { RepositoryBase, Page, textContainsInsensitive, rangeFilter } from '@lawprotect/shared-ts';
+import { RepositoryBase, Page, textContainsInsensitive, rangeFilter, EntityMapper } from '@lawprotect/shared-ts';
 import { Consent } from '../domain/entities/Consent';
 import { ConsentId } from '../domain/value-objects/ConsentId';
 import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
@@ -70,26 +70,17 @@ export class ConsentRepository extends RepositoryBase<Consent, ConsentId, Consen
 
 
   protected toUpdateModel(patch: Partial<Consent> | Record<string, unknown>): Prisma.ConsentUncheckedUpdateInput {
-    const p: any = patch;
-    const out: any = {};
-    const has = (k: string) => Object.prototype.hasOwnProperty.call(p, k);
-    const set = (k: string, v: unknown) => { if (v !== undefined) out[k] = v; };
-
-    set('envelopeId', p.getEnvelopeId?.()?.getValue?.() ?? (has('envelopeId') ? p.envelopeId : undefined));
-    set('signerId',   p.getSignerId?.()?.getValue?.()   ?? (has('signerId')   ? p.signerId   : undefined));
-
-    const sigGetterVal = p.getSignatureId?.()?.getValue?.();
-    const sigDtoVal    = has('signatureId') ? p.signatureId : undefined; // allow string or null
-    if (sigGetterVal !== undefined || sigDtoVal !== undefined) out.signatureId = sigGetterVal ?? sigDtoVal;
-
-    set('consentGiven',     p.getConsentGiven?.()     ?? (has('consentGiven')     ? p.consentGiven     : undefined));
-    set('consentTimestamp', p.getConsentTimestamp?.() ?? (has('consentTimestamp') ? p.consentTimestamp : undefined));
-    set('consentText',      p.getConsentText?.()      ?? (has('consentText')      ? p.consentText      : undefined));
-    set('ipAddress',        p.getIpAddress?.()        ?? (has('ipAddress')        ? p.ipAddress        : undefined));
-    set('userAgent',        p.getUserAgent?.()        ?? (has('userAgent')        ? p.userAgent        : undefined));
-    set('country',          p.getCountry?.()          ?? (has('country')          ? p.country          : undefined));
-
-    return out;
+    return EntityMapper.toUpdateModel(patch, [
+      { field: 'envelopeId', getter: 'getEnvelopeId', valueExtractor: (v: unknown) => (v as any)?.getValue?.() },
+      { field: 'signerId', getter: 'getSignerId', valueExtractor: (v: unknown) => (v as any)?.getValue?.() },
+      { field: 'signatureId', getter: 'getSignatureId', valueExtractor: (v: unknown) => (v as any)?.getValue?.() },
+      { field: 'consentGiven', getter: 'getConsentGiven' },
+      { field: 'consentTimestamp', getter: 'getConsentTimestamp' },
+      { field: 'consentText', getter: 'getConsentText' },
+      { field: 'ipAddress', getter: 'getIpAddress' },
+      { field: 'userAgent', getter: 'getUserAgent' },
+      { field: 'country', getter: 'getCountry' }
+    ]);
   }
 
   /**
