@@ -16,6 +16,7 @@ import { EnvelopeSignerRepository } from '../repositories/EnvelopeSignerReposito
 import { SignatureAuditEventService } from './SignatureAuditEventService';
 import { InvitationTokenValidationRule } from '../domain/rules/InvitationTokenValidationRule';
 import { AuditEventType } from '../domain/enums/AuditEventType';
+import { NetworkSecurityContext } from '@lawprotect/shared-ts';
 import { 
   invitationTokenInvalid
 } from '../signature-errors';
@@ -289,11 +290,7 @@ export class InvitationTokenService {
    * @param securityContext - Security context with IP, user agent, country
    * @returns The updated invitation token
    */
-  async markTokenAsViewed(token: string, securityContext: {
-    ipAddress?: string;
-    userAgent?: string;
-    country?: string;
-  }): Promise<InvitationToken> {
+  async markTokenAsViewed(token: string, securityContext: NetworkSecurityContext): Promise<InvitationToken> {
     try {
       const invitationToken = await this.validateInvitationToken(token);
       
@@ -342,11 +339,7 @@ export class InvitationTokenService {
    * @param securityContext - Security context with IP, user agent, country
    * @returns The updated invitation token
    */
-  async markTokenAsSigned(token: string, signerId: string, securityContext: {
-    ipAddress?: string;
-    userAgent?: string;
-    country?: string;
-  }): Promise<InvitationToken> {
+  async markTokenAsSigned(token: string, signerId: string, securityContext: NetworkSecurityContext): Promise<InvitationToken> {
     try {
       const invitationToken = await this.validateInvitationToken(token);
       

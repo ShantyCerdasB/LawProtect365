@@ -6,14 +6,11 @@
  */
 
 import { SignerId } from '../../value-objects/SignerId';
+import { NetworkSecurityContext } from '@lawprotect/shared-ts';
 
-export interface DeclineSignerData {
+export interface DeclineSignerData extends NetworkSecurityContext {
   signerId: SignerId;
   reason: string;
   userId?: string; // Optional for external users
   invitationToken?: string;
-  // Security context for audit tracking
-  ipAddress?: string;
-  userAgent?: string;
-  country?: string;
 }

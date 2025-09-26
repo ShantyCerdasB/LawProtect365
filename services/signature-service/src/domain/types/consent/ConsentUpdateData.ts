@@ -5,9 +5,9 @@
  * including signature linking and metadata updates.
  */
 
-export interface ConsentUpdateData {
+import { NetworkSecurityContext } from '@lawprotect/shared-ts';
+
+export interface ConsentUpdateData extends NetworkSecurityContext {
   signatureId?: string;
   consentText?: string;
-  ipAddress?: string;
-  userAgent?: string;
 }

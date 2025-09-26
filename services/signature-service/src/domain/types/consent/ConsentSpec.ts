@@ -5,14 +5,14 @@
  * consents by various criteria including envelope, signer, compliance data, and usage.
  */
 
-export interface ConsentSpec {
+import { NetworkSecurityContext } from '@lawprotect/shared-ts';
+
+export interface ConsentSpec extends NetworkSecurityContext {
   envelopeId?: string;
   signerId?: string;
   signatureId?: string;
   consentGiven?: boolean;
   consentText?: string;
-  ipAddress?: string;
-  userAgent?: string;
   createdBy?: string;
   consentBefore?: Date;
   consentAfter?: Date;

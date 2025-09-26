@@ -14,7 +14,7 @@ import { EnvelopeSignerService } from './EnvelopeSignerService';
 import { InvitationTokenService } from './InvitationTokenService';
 import { SignatureAuditEventService } from './SignatureAuditEventService';
 import { S3Service } from './S3Service';
-import { OutboxRepository, makeEvent, paginationLimitRequired, sha256Hex, NotificationType } from '@lawprotect/shared-ts';
+import { paginationLimitRequired, sha256Hex, NotificationType, NetworkSecurityContext } from '@lawprotect/shared-ts';
 import { CreateEnvelopeData } from '../domain/types/envelope/CreateEnvelopeData';
 import { UpdateEnvelopeData } from '../domain/rules/EnvelopeUpdateValidationRule';
 import { 
@@ -40,6 +40,7 @@ import { SignerId } from '../domain/value-objects/SignerId';
 import { v4 as uuid } from 'uuid';
 import { SignerReminderTrackingService } from './SignerReminderTrackingService';
 import { loadConfig } from '../config/AppConfig';
+import { EnvelopeNotificationService } from './events/EnvelopeNotificationService';
 
 /**
  * SignatureOrchestrator - Orchestrates signature service workflows
@@ -65,10 +66,10 @@ export class SignatureOrchestrator {
     private readonly invitationTokenService: InvitationTokenService,
     private readonly signatureAuditEventService: SignatureAuditEventService,
     private readonly s3Service: S3Service,
-    private readonly outboxRepository: OutboxRepository,
     private readonly consentService: ConsentService,
     private readonly _kmsService: KmsService, // Will be used for actual document signing in future implementation
-    private readonly signerReminderTrackingService: SignerReminderTrackingService
+    private readonly signerReminderTrackingService: SignerReminderTrackingService,
+    private readonly envelopeNotificationService: EnvelopeNotificationService
   ) {
     this.signingFlowValidationRule = new SigningFlowValidationRule();
     // KMS service will be used for actual signing operations
@@ -124,14 +125,29 @@ export class SignatureOrchestrator {
   async cancelEnvelope(
     envelopeId: EnvelopeId,
     userId: string,
-    securityContext: { ipAddress?: string; userAgent?: string; country?: string }
+    securityContext: NetworkSecurityContext
   ): Promise<{ envelope: SignatureEnvelope }> {
     try {
       // 1. Cancel envelope using service (includes validation and authorization)
       const cancelledEnvelope = await this.signatureEnvelopeService.cancelEnvelope(envelopeId, userId);
 
       // 2. Publish cancellation notification event
-      await this.publishCancellationNotificationEvent(envelopeId, userId, securityContext);
+      try {
+        const env = await this.signatureEnvelopeService.getEnvelopeWithSigners(envelopeId);
+        if (env) {
+          await this.envelopeNotificationService.publishEnvelopeCancelled(
+            env,
+            userId,
+            securityContext
+          );
+        }
+      } catch (e) {
+        console.error('Failed to publish cancellation notification event', { 
+          envelopeId: envelopeId.getValue(), 
+          userId, 
+          error: e 
+        });
+      }
 
       return { envelope: cancelledEnvelope };
     } catch (error) {
@@ -305,7 +321,17 @@ export class SignatureOrchestrator {
       );
       
       // 5. Publish notification events for notification service
-      await this.publishNotificationEvent(envelopeId, options, tokenResults);
+      {
+        const tokensMap = new Map<string, string | undefined>(
+          tokenResults.map(t => [t.signerId, t.token])
+        );
+        await this.envelopeNotificationService.sendSignerInvitations(
+          envelope,
+          targetSigners,
+          tokensMap,
+          options.message
+        );
+      }
       
       // 6. Create audit event for envelope sent
       await this.signatureAuditEventService.createEvent({
@@ -412,13 +438,13 @@ export class SignatureOrchestrator {
       );
 
       // 5. Publish notification event for viewer invitation
-      await this.publishViewerNotificationEvent(
-        envelopeId,
+      await this.envelopeNotificationService.sendViewerInvitation(
+        envelope,
         email,
         fullName,
-        message || "You have been granted view access to a document",
         tokenResult.token,
-        tokenResult.expiresAt
+        tokenResult.expiresAt,
+        message
       );
 
       // 6. Create audit event for document view sharing
@@ -859,108 +885,6 @@ export class SignatureOrchestrator {
     };
   }
 
-  // ===== UTILITIES =====
-  
-  /**
-   * Publishes notification events for each signer
-   * @param envelopeId - The envelope ID
-   * @param options - Send options including message and signer selection
-   * @param tokenResults - Generated invitation token results
-   * @returns Promise that resolves when all events are published
-   */
-  private async publishNotificationEvent(
-    envelopeId: EnvelopeId,
-    options: {
-      message?: string;
-      sendToAll?: boolean;
-      signers?: Array<{
-        signerId: string;
-        message?: string;
-      }>;
-    },
-    tokenResults: Array<{
-      token: string;
-      entity: any;
-      signerId: string;
-      email?: string;
-      expiresAt: Date;
-    }>
-  ): Promise<void> {
-    const envelope = await this.signatureEnvelopeService.getEnvelopeWithSigners(envelopeId);
-    const externalSigners = envelope!.getExternalSigners();
-    
-    // Determine target signers
-    const selected = options.signers ?? [];
-    const targetSigners = options.sendToAll
-      ? externalSigners
-      : externalSigners.filter(signer =>
-          selected.some(s => s.signerId === signer.getId().getValue())
-        );
-    
-    // Publish one event per signer using outbox pattern
-    for (const signer of targetSigners) {
-      const signerOption = options.signers?.find(s => s.signerId === signer.getId().getValue());
-      const message = signerOption?.message || options.message || "You have been invited to sign a document";
-      
-      const event = makeEvent('ENVELOPE_INVITATION', {
-        envelopeId: envelopeId.getValue(),
-        signerId: signer.getId().getValue(),
-        signerEmail: signer.getEmail()!,
-        signerName: signer.getFullName()!,
-        message: message,
-        invitationToken: tokenResults.find(t => t.signerId === signer.getId().getValue())?.token,
-        metadata: {
-          envelopeTitle: envelope!.getTitle(),
-          envelopeId: envelopeId.getValue(),
-          sentBy: envelope!.getCreatedBy(),
-          sentAt: new Date().toISOString()
-        }
-      });
-      
-      // Save event to outbox for reliable delivery
-      await this.outboxRepository.save(event, uuid());
-    }
-  }
-
-  /**
-   * Publishes notification event for viewer invitation
-   * @param envelopeId - The envelope ID
-   * @param email - Email address of the viewer
-   * @param fullName - Full name of the viewer
-   * @param message - Custom message for the viewer
-   * @param token - Invitation token for the viewer
-   * @param expiresAt - Token expiration date
-   * @returns Promise that resolves when event is published
-   */
-  private async publishViewerNotificationEvent(
-    envelopeId: EnvelopeId,
-    email: string,
-    fullName: string,
-    message: string,
-    token: string,
-    expiresAt: Date
-  ): Promise<void> {
-    const envelope = await this.signatureEnvelopeService.getEnvelopeWithSigners(envelopeId);
-    
-    const event = makeEvent('DOCUMENT_VIEW_INVITATION', {
-      envelopeId: envelopeId.getValue(),
-      viewerEmail: email,
-      viewerName: fullName,
-      message: message,
-      invitationToken: token,
-      expiresAt: expiresAt.toISOString(),
-      metadata: {
-        envelopeTitle: envelope!.getTitle(),
-        envelopeId: envelopeId.getValue(),
-        sentBy: envelope!.getCreatedBy(),
-        sentAt: new Date().toISOString(),
-        participantRole: 'VIEWER'
-      }
-    });
-    
-    // Save event to outbox for reliable delivery
-    await this.outboxRepository.save(event, uuid());
-  }
   
   /**
    * Gets a single envelope by ID with access validation and audit tracking
@@ -1152,7 +1076,12 @@ export class SignatureOrchestrator {
       );
 
       // 4. Publish decline notification event
-      await this.publishDeclineNotificationEvent(envelopeId, signerId, request.reason, signer, securityContext);
+      await this.envelopeNotificationService.publishSignerDeclined(
+        envelope,
+        signer,
+        request.reason,
+        securityContext
+      );
 
       // 5. Get updated envelope for response
       const updatedEnvelope = await this.signatureEnvelopeService.getEnvelopeWithSigners(envelopeId);
@@ -1179,94 +1108,6 @@ export class SignatureOrchestrator {
     }
   }
 
-  /**
-   * Publishes decline notification event using the same pattern as sendEnvelope
-   * @param envelopeId - The envelope ID
-   * @param signerId - The signer ID
-   * @param reason - The decline reason
-   * @param signer - The signer entity
-   * @param securityContext - Security context for audit tracking
-   */
-  private async publishDeclineNotificationEvent(
-    envelopeId: EnvelopeId,
-    signerId: SignerId,
-    reason: string,
-    signer: EnvelopeSigner,
-    securityContext: {
-      ipAddress: string;
-      userAgent: string;
-      country: string;
-    }
-  ): Promise<void> {
-    const envelope = await this.signatureEnvelopeService.getEnvelopeWithSigners(envelopeId);
-    if (!envelope) {
-      throw envelopeNotFound(`Envelope with ID ${envelopeId.getValue()} not found`);
-    }
-    
-    const event = makeEvent('SIGNER_DECLINED', {
-      envelopeId: envelopeId.getValue(),
-      signerId: signerId.getValue(),
-      signerEmail: signer.getEmail()?.getValue(),
-      signerName: signer.getFullName(),
-      declineReason: reason,
-      metadata: {
-        envelopeTitle: envelope.getTitle(),
-        envelopeId: envelopeId.getValue(),
-        declinedAt: new Date().toISOString(),
-        declinedBy: signer.getFullName() || signer.getEmail()?.getValue() || 'Unknown',
-        ipAddress: securityContext.ipAddress,
-        userAgent: securityContext.userAgent,
-        country: securityContext.country
-      }
-    });
-    
-    // Save event to outbox for reliable delivery (same pattern as sendEnvelope)
-    await this.outboxRepository.save(event, uuid());
-  }
-
-  /**
-   * Publishes a cancellation notification event to the outbox
-   * @param envelopeId - The envelope ID
-   * @param userId - The user ID who cancelled the envelope
-   * @param securityContext - Security context for audit tracking
-   */
-  private async publishCancellationNotificationEvent(
-    envelopeId: EnvelopeId,
-    userId: string,
-    securityContext: { ipAddress?: string; userAgent?: string; country?: string }
-  ): Promise<void> {
-    try {
-      const envelope = await this.signatureEnvelopeService.getEnvelopeWithSigners(envelopeId);
-      if (!envelope) {
-        throw envelopeNotFound(`Envelope with ID ${envelopeId.getValue()} not found`);
-      }
-
-      const event = makeEvent('ENVELOPE_CANCELLED', {
-        envelopeId: envelopeId.getValue(),
-        cancelledByUserId: userId,
-        envelopeTitle: envelope.getTitle(),
-        envelopeStatus: envelope.getStatus().getValue(),
-        metadata: {
-          envelopeId: envelopeId.getValue(),
-          cancelledAt: new Date().toISOString(),
-          cancelledBy: userId,
-          ipAddress: securityContext.ipAddress,
-          userAgent: securityContext.userAgent,
-          country: securityContext.country
-        }
-      });
-
-      // Save event to outbox for reliable delivery (same pattern as sendEnvelope)
-      await this.outboxRepository.save(event, uuid());
-    } catch (error) {
-      console.error('Failed to publish cancellation notification event', {
-        error: error instanceof Error ? error.message : error,
-        envelopeId: envelopeId.getValue(),
-        userId
-      });
-      // Don't throw - this is a side effect, not critical for the main flow
-    }
-  }
 
   /**
    * Downloads the latest signed document for an envelope
@@ -1281,11 +1122,7 @@ export class SignatureOrchestrator {
     userId?: string,
     invitationToken?: string,
     expiresIn?: number,
-    securityContext?: {
-      ipAddress?: string;
-      userAgent?: string;
-      country?: string;
-    }
+    securityContext?: NetworkSecurityContext
   ): Promise<{ downloadUrl: string; expiresIn: number }> {
     try {
       return await this.signatureEnvelopeService.downloadDocument(
@@ -1372,7 +1209,7 @@ export class SignatureOrchestrator {
       message?: string;
     },
     userId: string,
-    securityContext: { ipAddress?: string; userAgent?: string; country?: string }
+    securityContext: NetworkSecurityContext
   ): Promise<{
     success: boolean;
     message: string;
@@ -1499,10 +1336,10 @@ export class SignatureOrchestrator {
         await this.invitationTokenService.updateTokenSent(activeToken.getId());
 
         // Publish reminder notification event
-        await this.publishReminderNotificationEvent(
+        await this.envelopeNotificationService.publishReminder(
           envelopeId,
           signerId,
-          request.message || 'Please sign the document',
+          request.message,
           updatedTracking.getReminderCount()
         );
 
@@ -1545,42 +1382,6 @@ export class SignatureOrchestrator {
     }
   }
 
-  /**
-   * Publishes reminder notification event
-   * @param envelopeId - The envelope ID
-   * @param signerId - The signer ID
-   * @param message - The reminder message
-   * @param reminderCount - The current reminder count
-   * @param securityContext - Security context for audit tracking
-   * @returns Promise that resolves when event is published
-   */
-  private async publishReminderNotificationEvent(
-    envelopeId: EnvelopeId,
-    signerId: SignerId,
-    message: string,
-    reminderCount: number
-  ): Promise<void> {
-    try {
-      const event = makeEvent('REMINDER_NOTIFICATION', {
-        envelopeId: envelopeId.getValue(),
-        signerId: signerId.getValue(),
-        message,
-        reminderCount,
-        timestamp: new Date().toISOString(),
-        source: 'signature-service',
-        version: '1.0'
-      });
-
-      await this.outboxRepository.save(event);
-    } catch (error) {
-      console.error('Failed to publish reminder notification event', {
-        error: error instanceof Error ? error.message : error,
-        envelopeId: envelopeId.getValue(),
-        signerId: signerId.getValue()
-      });
-      throw error;
-    }
-  }
 
   /**
    * Handles orchestration errors

@@ -6,8 +6,9 @@
  */
 
 import { InvitationTokenStatus } from '@prisma/client';
+import { NetworkSecurityContext } from '@lawprotect/shared-ts';
 
-export interface InvitationTokenUpdateData {
+export interface InvitationTokenUpdateData extends NetworkSecurityContext {
   status?: InvitationTokenStatus;
   expiresAt?: Date;
   sentAt?: Date;
@@ -17,7 +18,4 @@ export interface InvitationTokenUpdateData {
   usedBy?: string;
   revokedAt?: Date;
   revokedReason?: string;
-  ipAddress?: string;
-  userAgent?: string;
-  country?: string;
 }

@@ -20,22 +20,25 @@ import {
 import { KMSClient } from '@aws-sdk/client-kms';
 import { EventBridgeClient } from '@aws-sdk/client-eventbridge';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { loadConfig } from '../../config/AppConfig';
-import { SignatureEnvelopeService } from '../../services/SignatureEnvelopeService';
-import { EnvelopeSignerService } from '../../services/EnvelopeSignerService';
-import { InvitationTokenService } from '../../services/InvitationTokenService';
-import { SignatureAuditEventService } from '../../services/SignatureAuditEventService';
-import { SignatureOrchestrator } from '../../services/SignatureOrchestrator';
-import { KmsService } from '../../services/KmsService';
-import { S3Service } from '../../services/S3Service';
-import { SignatureEnvelopeRepository } from '../../repositories/SignatureEnvelopeRepository';
-import { EnvelopeSignerRepository } from '../../repositories/EnvelopeSignerRepository';
-import { InvitationTokenRepository } from '../../repositories/InvitationTokenRepository';
-import { SignatureAuditEventRepository } from '../../repositories/SignatureAuditEventRepository';
-import { ConsentService } from '../../services/ConsentService';
-import { ConsentRepository } from '../../repositories/ConsentRepository';
-import { SignerReminderTrackingService } from '../../services/SignerReminderTrackingService';
-import { SignerReminderTrackingRepository } from '../../repositories/SignerReminderTrackingRepository';
+import { loadConfig } from '../../../config/AppConfig';
+import { SignatureEnvelopeService } from '../../../services/SignatureEnvelopeService';
+import { EnvelopeSignerService } from '../../../services/EnvelopeSignerService';
+import { InvitationTokenService } from '../../../services/InvitationTokenService';
+import { SignatureAuditEventService } from '../../../services/SignatureAuditEventService';
+import { SignatureOrchestrator } from '../../../services/SignatureOrchestrator';
+import { IntegrationEventFactory } from '../events/IntegrationEventFactory';
+import { OutboxEventPublisher } from '@lawprotect/shared-ts';
+import { EnvelopeNotificationService } from '../../../services/events/EnvelopeNotificationService';
+import { KmsService } from '../../../services/KmsService';
+import { S3Service } from '../../../services/S3Service';
+import { SignatureEnvelopeRepository } from '../../../repositories/SignatureEnvelopeRepository';
+import { EnvelopeSignerRepository } from '../../../repositories/EnvelopeSignerRepository';
+import { InvitationTokenRepository } from '../../../repositories/InvitationTokenRepository';
+import { SignatureAuditEventRepository } from '../../../repositories/SignatureAuditEventRepository';
+import { ConsentService } from '../../../services/ConsentService';
+import { ConsentRepository } from '../../../repositories/ConsentRepository';
+import { SignerReminderTrackingService } from '../../../services/SignerReminderTrackingService';
+import { SignerReminderTrackingRepository } from '../../../repositories/SignerReminderTrackingRepository';
 
 /**
  * ServiceFactory - Infrastructure factory for service instantiation with Prisma
@@ -170,16 +173,20 @@ export class ServiceFactory {
     const kmsService = this.createKmsService();
     const signerReminderTrackingService = this.createSignerReminderTrackingService();
 
+    const eventFactory = new IntegrationEventFactory();
+    const eventPublisher = new OutboxEventPublisher(outboxRepository);
+    const envelopeNotificationService = new EnvelopeNotificationService(eventFactory, eventPublisher);
+
     return new SignatureOrchestrator(
       signatureEnvelopeService,
       envelopeSignerService,
       invitationTokenService,
       signatureAuditEventService,
       s3Service,
-      outboxRepository,
       consentService,
       kmsService,
-      signerReminderTrackingService
+      signerReminderTrackingService,
+      envelopeNotificationService
     );
   }
 

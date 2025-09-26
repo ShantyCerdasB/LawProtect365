@@ -75,3 +75,13 @@ export interface PolicyDecision {
   reason?: string;
   constraints?: Record<string, string | number | boolean>;
 }
+
+/**
+ * Network security context for event metadata and audit trails.
+ * Contains network-level information without user authentication details.
+ */
+export interface NetworkSecurityContext {
+  ipAddress?: string;
+  userAgent?: string;
+  country?: string;
+}

@@ -9,6 +9,7 @@ import { SignatureAuditEvent } from '../domain/entities/SignatureAuditEvent';
 import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
 import { SignerId } from '../domain/value-objects/SignerId';
 import { AuditEventType } from '../domain/enums/AuditEventType';
+import { NetworkSecurityContext } from '@lawprotect/shared-ts';
 import { SignatureAuditEventRepository } from '../repositories/SignatureAuditEventRepository';
 import { CreateAuditEventRequest } from '../domain/types/audit/CreateAuditEventRequest';
 import { AuditEventValidationRule } from '../domain/rules/AuditEventValidationRule';
@@ -39,11 +40,8 @@ export class SignatureAuditEventService {
     description: string;
     userId: string;
     userEmail?: string;
-    ipAddress?: string;
-    userAgent?: string;
-    country?: string;
     metadata?: Record<string, unknown>;
-  }): Promise<SignatureAuditEvent> {
+  } & NetworkSecurityContext): Promise<SignatureAuditEvent> {
     return this.createEvent({
       envelopeId: config.envelopeId,
       signerId: config.signerId,

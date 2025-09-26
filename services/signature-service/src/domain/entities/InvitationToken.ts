@@ -8,6 +8,7 @@
 import { InvitationTokenId } from '../value-objects/InvitationTokenId';
 import { EnvelopeId } from '../value-objects/EnvelopeId';
 import { SignerId } from '../value-objects/SignerId';
+import { NetworkSecurityContext } from '@lawprotect/shared-ts';
 import { InvitationTokenStatus } from '@prisma/client';
 import { Clock, systemClock, ensureNonNegative, toDateOrUndefined } from '@lawprotect/shared-ts';
 import { 
@@ -59,7 +60,7 @@ export class InvitationToken {
    * Applies security context to the token
    * @param ctx - Security context with optional fields
    */
-  private applySecurityContext(ctx?: { ipAddress?: string; userAgent?: string; country?: string }): void {
+  private applySecurityContext(ctx?: NetworkSecurityContext): void {
     if (!ctx) return;
     if (ctx.ipAddress) this.ipAddress = ctx.ipAddress;
     if (ctx.userAgent) this.userAgent = ctx.userAgent;
@@ -223,11 +224,7 @@ export class InvitationToken {
   /**
    * Gets metadata object with all relevant fields
    */
-  getMetadata(): {
-    ipAddress?: string;
-    userAgent?: string;
-    country?: string;
-  } {
+  getMetadata(): NetworkSecurityContext {
     return {
       ipAddress: this.ipAddress,
       userAgent: this.userAgent,
@@ -270,11 +267,7 @@ export class InvitationToken {
    * @throws invitationTokenExpired when token has expired
    * @throws invitationTokenRevoked when token has been revoked
    */
-  markAsViewed(securityContext: {
-    ipAddress?: string;
-    userAgent?: string;
-    country?: string;
-  }): void {
+  markAsViewed(securityContext: NetworkSecurityContext): void {
     if (this.isExpired()) {
       throw invitationTokenExpired('Invitation token has expired');
     }
@@ -305,11 +298,7 @@ export class InvitationToken {
    * @throws invitationTokenAlreadyUsed when token has already been signed
    * @throws invitationTokenRevoked when token has been revoked
    */
-  markAsSigned(signerId: string | SignerId, securityContext: {
-    ipAddress?: string;
-    userAgent?: string;
-    country?: string;
-  }): void {
+  markAsSigned(signerId: string | SignerId, securityContext: NetworkSecurityContext): void {
     if (this.isExpired()) {
       throw invitationTokenExpired('Invitation token has expired');
     }
@@ -409,10 +398,7 @@ export class InvitationToken {
     tokenHash: string;
     expiresAt: Date;
     createdBy: string;
-    ipAddress?: string;
-    userAgent?: string;
-    country?: string;
-  }): InvitationToken {
+  } & NetworkSecurityContext): InvitationToken {
     const now = systemClock.now();
     return new InvitationToken(
       InvitationTokenId.generate(),

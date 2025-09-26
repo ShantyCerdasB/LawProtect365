@@ -6,7 +6,7 @@
  */
 
 import { ControllerFactory, UuidV4 } from '@lawprotect/shared-ts';
-import { ServiceFactory } from '../../infrastructure/factories/ServiceFactory';
+import { ServiceFactory } from '../../infrastructure/factories/services/ServiceFactory';
 import { DeclineSignerRequestSchema, DeclineSignerResponse } from '../../domain/schemas/SigningHandlersSchema';
 import { z } from 'zod';
 import { EnvelopeId } from '../../domain/value-objects/EnvelopeId';

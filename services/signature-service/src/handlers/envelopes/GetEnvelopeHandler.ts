@@ -7,7 +7,7 @@
  */
 
 import { ControllerFactory } from '@lawprotect/shared-ts';
-import { ServiceFactory } from '../../infrastructure/factories/ServiceFactory';
+import { ServiceFactory } from '../../infrastructure/factories/services/ServiceFactory';
 import { GetEnvelopeQuerySchema, EnvelopeIdSchema } from '../../domain/schemas/EnvelopeSchema';
 import { EnvelopeId } from '../../domain/value-objects/EnvelopeId';
 

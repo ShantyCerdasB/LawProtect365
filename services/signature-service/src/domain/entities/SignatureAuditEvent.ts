@@ -9,7 +9,7 @@ import { EnvelopeId } from '../value-objects/EnvelopeId';
 import { SignerId } from '../value-objects/SignerId';
 import { SignatureAuditEventId } from '../value-objects/SignatureAuditEventId';
 import { AuditEventType } from '../enums/AuditEventType';
-import { toDate, toStringOrUndefined } from '@lawprotect/shared-ts';
+import { toDate, toStringOrUndefined, NetworkSecurityContext } from '@lawprotect/shared-ts';
 
 /**
  * Type for audit event metadata
@@ -161,12 +161,9 @@ export class SignatureAuditEvent {
     description: string;
     userId?: string;
     userEmail?: string;
-    ipAddress?: string;
-    userAgent?: string;
-    country?: string;
     createdAt: Date;
     metadata?: AuditMetadata;
-  } {
+  } & NetworkSecurityContext {
     return {
       id: this.id.getValue(),
       envelopeId: this.envelopeId.getValue(),
@@ -225,11 +222,8 @@ export class SignatureAuditEvent {
     description: string;
     userId?: string;
     userEmail?: string;
-    ipAddress?: string;
-    userAgent?: string;
-    country?: string;
     metadata?: AuditMetadata;
-  }): SignatureAuditEvent {
+  } & NetworkSecurityContext): SignatureAuditEvent {
     const now = new Date();
     const description = (params.description ?? '').trim();
     return new SignatureAuditEvent(

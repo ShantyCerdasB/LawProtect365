@@ -19,3 +19,4 @@ export * from './signer';
 
 // Invitation token types
 export * from './invitation-token';
+export * from './events';

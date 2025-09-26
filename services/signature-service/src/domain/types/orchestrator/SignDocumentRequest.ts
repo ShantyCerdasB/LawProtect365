@@ -5,6 +5,20 @@
  * including authentication data, document information, signature parameters, and consent data.
  */
 
+import { NetworkSecurityContext } from '@lawprotect/shared-ts';
+
+/**
+ * Consent information with network security context
+ */
+export interface ConsentInfo extends NetworkSecurityContext {
+  /** Whether consent was given */
+  given: boolean;
+  /** Timestamp when consent was given */
+  timestamp: string;
+  /** Text of the consent that was shown */
+  text: string;
+}
+
 export interface SignDocumentRequest {
   /** Envelope ID for authenticated users */
   envelopeId: string;
@@ -31,18 +45,5 @@ export interface SignDocumentRequest {
   /** Optional location where signing occurred */
   location?: string;
   /** Consent information */
-  consent: {
-    /** Whether consent was given */
-    given: boolean;
-    /** Timestamp when consent was given */
-    timestamp: string;
-    /** Text of the consent that was shown */
-    text: string;
-    /** IP address of the signer */
-    ipAddress?: string;
-    /** User agent of the signer */
-    userAgent?: string;
-    /** Country of the signer */
-    country?: string;
-  };
+  consent: ConsentInfo;
 }

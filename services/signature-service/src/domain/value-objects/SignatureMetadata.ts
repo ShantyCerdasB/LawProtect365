@@ -5,6 +5,8 @@
  * and provides type safety for signature metadata throughout the system.
  */
 
+import { NetworkSecurityContext } from '@lawprotect/shared-ts';
+
 /**
  * Signature metadata value object
  * 
@@ -75,9 +77,7 @@ export class SignatureMetadata {
   static fromObject(obj: {
     reason?: string;
     location?: string;
-    ipAddress?: string;
-    userAgent?: string;
-  }): SignatureMetadata {
+  } & NetworkSecurityContext): SignatureMetadata {
     return new SignatureMetadata(
       obj.reason,
       obj.location,

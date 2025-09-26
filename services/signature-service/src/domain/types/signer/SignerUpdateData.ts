@@ -6,8 +6,9 @@
  */
 
 import { SignerStatus } from '@prisma/client';
+import { NetworkSecurityContext } from '@lawprotect/shared-ts';
 
-export interface SignerUpdateData {
+export interface SignerUpdateData extends NetworkSecurityContext {
   status?: SignerStatus;
   signedAt?: Date;
   declinedAt?: Date;
@@ -19,8 +20,6 @@ export interface SignerUpdateData {
   signedS3Key?: string;
   kmsKeyId?: string;
   algorithm?: string;
-  ipAddress?: string;
-  userAgent?: string;
   reason?: string;
   location?: string;
 }

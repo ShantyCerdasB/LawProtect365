@@ -6,7 +6,7 @@
  */
 
 import { ControllerFactory, VALID_COGNITO_ROLES } from '@lawprotect/shared-ts';
-import { ServiceFactory } from '../../infrastructure/factories/ServiceFactory';
+import { ServiceFactory } from '../../infrastructure/factories/services/ServiceFactory';
 import { GetEnvelopesByUserQuerySchema } from '../../domain/schemas/EnvelopeSchema';
 
 /**

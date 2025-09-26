@@ -11,6 +11,7 @@ import { SignerId } from '../domain/value-objects/SignerId';
 import { S3Key } from '../domain/value-objects/S3Key';
 import { SignatureAuditEventService } from './SignatureAuditEventService';
 import { AuditEventType } from '../domain/enums/AuditEventType';
+import { NetworkSecurityContext } from '@lawprotect/shared-ts';
 import { StoreDocumentRequest, RetrieveDocumentRequest, GeneratePresignedUrlRequest, DocumentResult } from '../domain/types/s3';
 import {S3Presigner, S3EvidenceStorage,  NotFoundError, BadRequestError, ErrorCodes, getDocumentContent } from '@lawprotect/shared-ts';
 import { validateStoreDocumentRequest, validateRetrieveDocumentRequest, validateGeneratePresignedUrlRequest } from '../domain/rules/s3/S3ValidationRules';
@@ -364,10 +365,7 @@ export class S3Service {
     userId?: string;
     userEmail?: string;
     s3Key: string;
-    ipAddress?: string;
-    userAgent?: string;
-    country?: string;
-  }): Promise<void> {
+  } & NetworkSecurityContext): Promise<void> {
     try {
       // Validate S3 key format
       const s3Key = S3Key.fromString(request.s3Key);

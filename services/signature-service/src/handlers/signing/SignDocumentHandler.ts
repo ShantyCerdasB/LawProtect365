@@ -7,7 +7,7 @@
  */
 
 import { ControllerFactory } from '@lawprotect/shared-ts';
-import { ServiceFactory } from '../../infrastructure/factories/ServiceFactory';
+import { ServiceFactory } from '../../infrastructure/factories/services/ServiceFactory';
 import { SignDocumentRequestSchema } from '../../domain/schemas/SigningHandlersSchema';
 import { EnvelopeIdSchema } from '../../domain/schemas/EnvelopeSchema';
 

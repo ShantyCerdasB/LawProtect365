@@ -5,14 +5,14 @@
  * associated with a signature, including hashes, S3 keys, and audit information.
  */
 
-export interface SignatureData {
+import { NetworkSecurityContext } from '@lawprotect/shared-ts';
+
+export interface SignatureData extends NetworkSecurityContext {
   documentHash: string;
   signatureHash: string;
   signedS3Key: string;
   kmsKeyId: string;
   algorithm: string;
-  ipAddress?: string;
-  userAgent?: string;
   reason?: string;
   location?: string;
   consentText?: string;

@@ -6,8 +6,9 @@
  */
 
 import { AuditEventType } from '../../enums/AuditEventType';
+import { NetworkSecurityContext } from '@lawprotect/shared-ts';
 
-export interface AuditEvent {
+export interface AuditEvent extends NetworkSecurityContext {
   id: string;
   envelopeId: string;
   signerId?: string;
@@ -15,9 +16,6 @@ export interface AuditEvent {
   description: string;
   userId?: string;
   userEmail?: string;
-  ipAddress?: string;
-  userAgent?: string;
-  country?: string;
   metadata?: Record<string, any>;
   createdAt: Date;
 }

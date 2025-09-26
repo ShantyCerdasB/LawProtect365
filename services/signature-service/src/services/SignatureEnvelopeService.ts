@@ -20,6 +20,7 @@ import { EntityFactory } from '../domain/factories/EntityFactory';
 import { EnvelopeUpdateValidationRule, UpdateEnvelopeData } from '../domain/rules/EnvelopeUpdateValidationRule';
 import { EnvelopeSpec, Hashes, CreateEnvelopeData } from '../domain/types/envelope';
 import { AuditEventType } from '../domain/enums/AuditEventType';
+import { NetworkSecurityContext } from '@lawprotect/shared-ts';
 import { AccessType } from '../domain/enums/AccessType';
 import { wrapServiceError, sha256Hex } from '@lawprotect/shared-ts';
 import { loadConfig } from '../config/AppConfig';
@@ -741,11 +742,7 @@ export class SignatureEnvelopeService {
     userId?: string,
     invitationToken?: string,
     expiresIn?: number,
-    securityContext?: {
-      ipAddress?: string;
-      userAgent?: string;
-      country?: string;
-    }
+    securityContext?: NetworkSecurityContext
   ): Promise<{ downloadUrl: string; expiresIn: number }> {
     try {
       const envelope = await this.validateUserAccess(envelopeId, userId, invitationToken);
@@ -854,7 +851,7 @@ export class SignatureEnvelopeService {
     userId?: string,
     invitationToken?: string,
     documentKey?: S3Key,
-    securityContext?: { ipAddress?: string; userAgent?: string; country?: string }
+    securityContext?: NetworkSecurityContext
   ): Promise<void> {
     const { auditUserId, auditUserEmail } = this.getAuditUserInfo(envelope, userId, invitationToken);
     

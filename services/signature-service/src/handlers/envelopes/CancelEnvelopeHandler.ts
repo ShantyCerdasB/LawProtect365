@@ -7,7 +7,7 @@
  */
 
 import { ControllerFactory, UuidV4 } from '@lawprotect/shared-ts';
-import { ServiceFactory } from '../../infrastructure/factories/ServiceFactory';
+import { ServiceFactory } from '../../infrastructure/factories/services/ServiceFactory';
 import { CancelEnvelopeRequestSchema, CancelEnvelopeResponse } from '../../domain/schemas/CancelEnvelopeSchema';
 import { EnvelopeId } from '../../domain/value-objects/EnvelopeId';
 import { z } from 'zod';

@@ -5,10 +5,9 @@
  * including IP address, user agent, country, and other contextual information.
  */
 
-export interface InvitationTokenMetadata {
-  ipAddress?: string;
-  userAgent?: string;
-  country?: string;
+import { NetworkSecurityContext } from '@lawprotect/shared-ts';
+
+export interface InvitationTokenMetadata extends NetworkSecurityContext {
   email?: string;
   fullName?: string;
 }
