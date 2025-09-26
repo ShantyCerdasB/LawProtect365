@@ -6,17 +6,16 @@
  * the repository pattern and extends RepositoryBase for consistent data access patterns.
  */
 
-import { PrismaClient, InvitationTokenStatus } from '@prisma/client';
-import { RepositoryBase, Page, RepositoryFactory } from '@lawprotect/shared-ts';
+import { PrismaClient, Prisma, InvitationTokenStatus } from '@prisma/client';
+import { RepositoryBase, Page, decodeCursor, listPage, sha256Hex } from '@lawprotect/shared-ts';
 import { InvitationToken } from '../domain/entities/InvitationToken';
 import { InvitationTokenId } from '../domain/value-objects/InvitationTokenId';
 import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
 import { SignerId } from '../domain/value-objects/SignerId';
 import { InvitationTokenSpec } from '../domain/types/invitation-token';
-import { 
-  documentS3Error,
-  invalidEntity
-} from '../signature-errors';
+import { repositoryError } from '../signature-errors';
+
+type TokenRow = Prisma.InvitationTokenGetPayload<{}>;
 
 /**
  * Repository for managing InvitationToken entities
@@ -27,10 +26,6 @@ import {
  * token expiration and usage tracking.
  */
 export class InvitationTokenRepository extends RepositoryBase<InvitationToken, InvitationTokenId, InvitationTokenSpec> {
-  private static readonly PAGINATION_OFFSET = 1;
-  private static readonly SLICE_START_INDEX = 0;
-  private static readonly SLICE_LAST_INDEX = -1;
-  private static readonly MIN_COUNT_THRESHOLD = 0;
   private static readonly DEFAULT_PAGE_LIMIT = 20;
   
   constructor(protected readonly prisma: PrismaClient) {
@@ -42,23 +37,15 @@ export class InvitationTokenRepository extends RepositoryBase<InvitationToken, I
    * @param model - Prisma model data
    * @returns Domain entity
    */
-  protected toDomain(model: unknown): InvitationToken {
+  protected toDomain(model: TokenRow | unknown): InvitationToken {
     try {
       return InvitationToken.fromPersistence(model as any);
     } catch (error) {
-      console.error('Failed to map invitation token from persistence', {
-        error: error instanceof Error ? error.message : error,
-        tokenId: (model as any)?.id
-      });
-      throw documentS3Error({
-        operation: 'toDomain',
-        tokenId: (model as any)?.id,
-        originalError: error instanceof Error ? error.message : error
-      });
+      throw repositoryError({ operation: 'toDomain', tokenId: (model as any)?.id, cause: error });
     }
   }
 
-  protected toCreateModel(entity: InvitationToken): any {
+  protected toCreateModel(entity: InvitationToken): Prisma.InvitationTokenUncheckedCreateInput {
     return {
       id: entity.getId().getValue(),
       envelopeId: entity.getEnvelopeId().getValue(),
@@ -84,7 +71,7 @@ export class InvitationTokenRepository extends RepositoryBase<InvitationToken, I
     };
   }
 
-  protected toUpdateModel(patch: Partial<InvitationToken> | Record<string, unknown>): any {
+  protected toUpdateModel(patch: Partial<InvitationToken> | Record<string, unknown>): Prisma.InvitationTokenUncheckedUpdateInput {
     const p: any = patch;
     const out: any = {};
     const has = (k: string) => Object.prototype.hasOwnProperty.call(p, k);
@@ -114,45 +101,6 @@ export class InvitationTokenRepository extends RepositoryBase<InvitationToken, I
     return out;
   }
 
-  /**
-   * Maps domain entity to Prisma model
-   * @param entity - Domain entity
-   * @returns Prisma model data
-   */
-  protected toModel(entity: Partial<InvitationToken>): unknown {
-    if (!entity || typeof entity.getId !== 'function') {
-      throw invalidEntity({
-        operation: 'toModel',
-        reason: 'Entity missing getId method or is null/undefined'
-      });
-    }
-
-    return {
-      id: entity.getId?.()?.getValue(),
-      envelopeId: entity.getEnvelopeId?.()?.getValue(),
-      signerId: entity.getSignerId?.()?.getValue(),
-      tokenHash: entity.getTokenHash?.(),
-      status: entity.getStatus?.(),
-      expiresAt: entity.getExpiresAt?.(),
-      sentAt: entity.getSentAt?.(),
-      lastSentAt: entity.getLastSentAt?.(),
-      resendCount: entity.getResendCount?.(),
-      usedAt: entity.getUsedAt?.(),
-      usedBy: entity.getUsedBy?.(),
-      viewCount: entity.getViewCount?.(),
-      lastViewedAt: entity.getLastViewedAt?.(),
-      signedAt: entity.getSignedAt?.(),
-      signedBy: entity.getSignedBy?.(),
-      revokedAt: entity.getRevokedAt?.(),
-      revokedReason: entity.getRevokedReason?.(),
-      createdBy: entity.getCreatedBy?.(),
-      ipAddress: entity.getIpAddress?.(),
-      userAgent: entity.getUserAgent?.(),
-      country: entity.getCountry?.(),
-      createdAt: entity.getCreatedAt?.(),
-      updatedAt: entity.getUpdatedAt?.()
-    };
-  }
 
   /**
    * Creates where clause for ID-based queries
@@ -163,109 +111,77 @@ export class InvitationTokenRepository extends RepositoryBase<InvitationToken, I
     return { id: id.getValue() };
   }
 
+
   /**
    * Creates where clause from specification
    * @param spec - Query specification
    * @returns Where clause
    */
-  protected whereFromSpec(spec: InvitationTokenSpec): any {
-    const where: any = {};
+  protected whereFromSpec(spec: InvitationTokenSpec): Prisma.InvitationTokenWhereInput {
+    const AND: Prisma.InvitationTokenWhereInput[] = [];
+    const OR: Prisma.InvitationTokenWhereInput[] = [];
 
-    this.addBasicFields(where, spec);
-    this.addDateFields(where, spec);
-    this.addBooleanFlags(where, spec);
+    // Basic fields
+    if (spec.envelopeId) AND.push({ envelopeId: spec.envelopeId });
+    if (spec.signerId) AND.push({ signerId: spec.signerId });
+    if (spec.tokenHash) AND.push({ tokenHash: spec.tokenHash });
+    if (spec.createdBy) AND.push({ createdBy: spec.createdBy });
+    if (spec.usedBy) AND.push({ usedBy: spec.usedBy });
 
-    return where;
-  }
+    // Date ranges
+    if (spec.expiresBefore || spec.expiresAfter) {
+      AND.push({ expiresAt: {
+        ...(spec.expiresBefore ? { lt: spec.expiresBefore } : {}),
+        ...(spec.expiresAfter ? { gte: spec.expiresAfter } : {}),
+      }});
+    }
 
-  /**
-   * Adds basic fields to where clause
-   * @param where - Where clause object
-   * @param spec - Query specification
-   */
-  private addBasicFields(where: any, spec: InvitationTokenSpec): void {
-    if (spec.envelopeId) where.envelopeId = spec.envelopeId;
-    if (spec.signerId) where.signerId = spec.signerId;
-    if (spec.status) where.status = spec.status;
-    if (spec.tokenHash) where.tokenHash = spec.tokenHash;
-    if (spec.createdBy) where.createdBy = spec.createdBy;
-    if (spec.usedBy) where.usedBy = spec.usedBy;
-  }
+    if (spec.usedBefore || spec.usedAfter) {
+      AND.push({ usedAt: {
+        ...(spec.usedBefore ? { lt: spec.usedBefore } : {}),
+        ...(spec.usedAfter ? { gte: spec.usedAfter } : {}),
+      }});
+    }
 
-  /**
-   * Adds date fields to where clause
-   * @param where - Where clause object
-   * @param spec - Query specification
-   */
-  private addDateFields(where: any, spec: InvitationTokenSpec): void {
-    if (spec.expiresBefore) {
-      where.expiresAt = { ...where.expiresAt, lt: spec.expiresBefore };
+    if (spec.createdBefore || spec.createdAfter) {
+      AND.push({ createdAt: {
+        ...(spec.createdBefore ? { lt: spec.createdBefore } : {}),
+        ...(spec.createdAfter ? { gte: spec.createdAfter } : {}),
+      }});
     }
-    if (spec.expiresAfter) {
-      where.expiresAt = { ...where.expiresAt, gte: spec.expiresAfter };
-    }
-    if (spec.usedBefore) {
-      where.usedAt = { ...where.usedAt, lt: spec.usedBefore };
-    }
-    if (spec.usedAfter) {
-      where.usedAt = { ...where.usedAt, gte: spec.usedAfter };
-    }
-    if (spec.createdBefore) {
-      where.createdAt = { ...where.createdAt, lt: spec.createdBefore };
-    }
-    if (spec.createdAfter) {
-      where.createdAt = { ...where.createdAt, gte: spec.createdAfter };
-    }
-  }
 
-  /**
-   * Adds boolean flags to where clause
-   * @param where - Where clause object
-   * @param spec - Query specification
-   */
-  private addBooleanFlags(where: any, spec: InvitationTokenSpec): void {
+    // Status: if there are flags, ignore direct 'status' to avoid conflicts
+    const hasAnyFlag = spec.isActive !== undefined || spec.isUsed !== undefined || spec.isRevoked !== undefined || spec.isExpired !== undefined;
+
+    if (!hasAnyFlag && spec.status) {
+      AND.push({ status: spec.status });
+    }
+
+    // Boolean flags (prioritized over direct status)
     if (spec.isExpired !== undefined) {
       if (spec.isExpired) {
-        this.addExpiredTokenFilter(where);
+        OR.push({ status: InvitationTokenStatus.EXPIRED }, { expiresAt: { lt: this.now() } });
       } else {
-        this.addNonExpiredTokenFilter(where);
+        AND.push({ status: { not: InvitationTokenStatus.EXPIRED } });
+        AND.push({ OR: [{ expiresAt: null }, { expiresAt: { gte: this.now() } }] });
       }
     }
     if (spec.isActive !== undefined) {
-      where.status = spec.isActive ? InvitationTokenStatus.ACTIVE : { not: InvitationTokenStatus.ACTIVE };
+      AND.push(spec.isActive ? { status: InvitationTokenStatus.ACTIVE } : { status: { not: InvitationTokenStatus.ACTIVE } });
     }
     if (spec.isUsed !== undefined) {
-      where.status = spec.isUsed ? InvitationTokenStatus.SIGNED : { not: InvitationTokenStatus.SIGNED };
+      AND.push(spec.isUsed ? { status: InvitationTokenStatus.SIGNED } : { status: { not: InvitationTokenStatus.SIGNED } });
     }
     if (spec.isRevoked !== undefined) {
-      where.status = spec.isRevoked ? InvitationTokenStatus.REVOKED : { not: InvitationTokenStatus.REVOKED };
+      AND.push(spec.isRevoked ? { status: InvitationTokenStatus.REVOKED } : { status: { not: InvitationTokenStatus.REVOKED } });
     }
+
+    const root: Prisma.InvitationTokenWhereInput = {};
+    if (AND.length) root.AND = AND;
+    if (OR.length) root.OR = OR;
+    return root;
   }
 
-  /**
-   * Adds expired token filter to where clause
-   * @param where - Where clause object
-   */
-  private addExpiredTokenFilter(where: any): void {
-    where.OR = [
-      { status: InvitationTokenStatus.EXPIRED },
-      { expiresAt: { lt: new Date() } }
-    ];
-  }
-
-  /**
-   * Adds non-expired token filter to where clause
-   * @param where - Where clause object
-   */
-  private addNonExpiredTokenFilter(where: any): void {
-    where.AND = [
-      { status: { not: InvitationTokenStatus.EXPIRED } },
-      { OR: [
-        { expiresAt: null },
-        { expiresAt: { gte: new Date() } }
-      ]}
-    ];
-  }
 
   /**
    * Finds a token by ID
@@ -280,15 +196,7 @@ export class InvitationTokenRepository extends RepositoryBase<InvitationToken, I
 
       return token ? this.toDomain(token) : null;
     } catch (error) {
-      console.error('Failed to find invitation token by ID', {
-        error: error instanceof Error ? error.message : error,
-        tokenId: id.getValue()
-      });
-      throw documentS3Error({
-        operation: 'findById',
-        tokenId: id.getValue(),
-        originalError: error instanceof Error ? error.message : error
-      });
+      throw repositoryError({ operation: 'findById', tokenId: id.getValue(), cause: error });
     }
   }
 
@@ -300,20 +208,12 @@ export class InvitationTokenRepository extends RepositoryBase<InvitationToken, I
   async create(entity: InvitationToken): Promise<InvitationToken> {
     try {
       const created = await this.prisma.invitationToken.create({
-        data: this.toModel(entity) as any
+        data: this.toCreateModel(entity)
       });
 
       return this.toDomain(created);
     } catch (error) {
-      console.error('Failed to create invitation token', {
-        error: error instanceof Error ? error.message : error,
-        tokenId: entity.getId().getValue()
-      });
-      throw documentS3Error({
-        operation: 'create',
-        tokenId: entity.getId().getValue(),
-        originalError: error instanceof Error ? error.message : error
-      });
+      throw repositoryError({ operation: 'create', tokenId: entity.getId().getValue(), cause: error });
     }
   }
 
@@ -327,20 +227,12 @@ export class InvitationTokenRepository extends RepositoryBase<InvitationToken, I
     try {
       const updated = await this.prisma.invitationToken.update({
         where: this.whereById(id),
-        data: this.toModel(entity) as any
+        data: this.toUpdateModel(entity)
       });
 
       return this.toDomain(updated);
     } catch (error) {
-      console.error('Failed to update invitation token', {
-        error: error instanceof Error ? error.message : error,
-        tokenId: id.getValue()
-      });
-      throw documentS3Error({
-        operation: 'update',
-        tokenId: id.getValue(),
-        originalError: error instanceof Error ? error.message : error
-      });
+      throw repositoryError({ operation: 'update', tokenId: id.getValue(), cause: error });
     }
   }
 
@@ -354,15 +246,7 @@ export class InvitationTokenRepository extends RepositoryBase<InvitationToken, I
         where: this.whereById(id)
       });
     } catch (error) {
-      console.error('Failed to delete invitation token', {
-        error: error instanceof Error ? error.message : error,
-        tokenId: id.getValue()
-      });
-      throw documentS3Error({
-        operation: 'delete',
-        tokenId: id.getValue(),
-        originalError: error instanceof Error ? error.message : error
-      });
+      throw repositoryError({ operation: 'delete', tokenId: id.getValue(), cause: error });
     }
   }
 
@@ -373,35 +257,23 @@ export class InvitationTokenRepository extends RepositoryBase<InvitationToken, I
    * @param cursor - Pagination cursor
    * @returns Page of token entities
    */
-  async list(spec: InvitationTokenSpec, limit: number = InvitationTokenRepository.DEFAULT_PAGE_LIMIT, cursor?: string): Promise<Page<InvitationToken>> {
+  async list(spec: InvitationTokenSpec, limit = InvitationTokenRepository.DEFAULT_PAGE_LIMIT, cursor?: string): Promise<Page<InvitationToken>> {
     try {
       const where = this.whereFromSpec(spec);
-      
-      const tokens = await this.prisma.invitationToken.findMany({
-        where,
-        take: limit + InvitationTokenRepository.PAGINATION_OFFSET,
-        cursor: cursor ? RepositoryFactory.decodeCursor(cursor) as any : undefined,
-        orderBy: { createdAt: 'desc' }
-      });
+      type Decoded = { createdAt: string | Date; id: string };
+      const decoded: Decoded | undefined = cursor ? decodeCursor<Decoded>(cursor) : undefined;
 
-      const hasNextPage = tokens.length > limit;
-      const results = hasNextPage ? tokens.slice(InvitationTokenRepository.SLICE_START_INDEX, limit) : tokens;
-      const nextCursor = hasNextPage ? RepositoryFactory.createCursor(results[results.length + InvitationTokenRepository.SLICE_LAST_INDEX], ['id']) : undefined;
-
-      return {
-        items: results.map((token: any) => this.toDomain(token)),
-        nextCursor
+      const cfg = {
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }] as Array<Record<string, 'asc'|'desc'>>,
+        cursorFields: ['createdAt', 'id'] as string[],
+        normalizeCursor: (d?: Decoded) =>
+          d ? { id: d.id, createdAt: d.createdAt instanceof Date ? d.createdAt : new Date(d.createdAt) } : undefined,
       };
+
+      const { rows, nextCursor } = await listPage(this.prisma.invitationToken, where, limit, decoded, cfg);
+      return { items: rows.map(r => this.toDomain(r)), nextCursor };
     } catch (error) {
-      console.error('Failed to list invitation tokens', {
-        error: error instanceof Error ? error.message : error,
-        spec
-      });
-      throw documentS3Error({
-        operation: 'list',
-        spec,
-        originalError: error instanceof Error ? error.message : error
-      });
+      throw repositoryError({ operation: 'list', spec, cause: error });
     }
   }
 
@@ -419,15 +291,7 @@ export class InvitationTokenRepository extends RepositoryBase<InvitationToken, I
 
       return tokens.map((token: any) => this.toDomain(token));
     } catch (error) {
-      console.error('Failed to find invitation tokens by envelope ID', {
-        error: error instanceof Error ? error.message : error,
-        envelopeId: envelopeId.getValue()
-      });
-      throw documentS3Error({
-        operation: 'findByEnvelopeId',
-        envelopeId: envelopeId.getValue(),
-        originalError: error instanceof Error ? error.message : error
-      });
+      throw repositoryError({ operation: 'findByEnvelopeId', envelopeId: envelopeId.getValue(), cause: error });
     }
   }
 
@@ -445,15 +309,7 @@ export class InvitationTokenRepository extends RepositoryBase<InvitationToken, I
 
       return tokens.map((token: any) => this.toDomain(token));
     } catch (error) {
-      console.error('Failed to find invitation tokens by signer ID', {
-        error: error instanceof Error ? error.message : error,
-        signerId: signerId.getValue()
-      });
-      throw documentS3Error({
-        operation: 'findBySignerId',
-        signerId: signerId.getValue(),
-        originalError: error instanceof Error ? error.message : error
-      });
+      throw repositoryError({ operation: 'findBySignerId', signerId: signerId.getValue(), cause: error });
     }
   }
 
@@ -464,22 +320,10 @@ export class InvitationTokenRepository extends RepositoryBase<InvitationToken, I
    */
   async getByToken(token: string): Promise<InvitationToken | null> {
     try {
-      // Hash the token to search in database
       const tokenHash = this.hashToken(token);
-      
-      // ✅ AGREGAR LOGGING PARA DEBUG
-      
       return await this.findByTokenHash(tokenHash);
     } catch (error) {
-      console.error('Failed to get invitation token by token', {
-        error: error instanceof Error ? error.message : error,
-        token: token.substring(0, 8) + '...' // Log only first 8 chars for security
-      });
-      throw documentS3Error({
-        operation: 'getByToken',
-        token: token.substring(0, 8) + '...',
-        originalError: error instanceof Error ? error.message : error
-      });
+      throw repositoryError({ operation: 'getByToken', cause: error });
     }
   }
 
@@ -496,15 +340,7 @@ export class InvitationTokenRepository extends RepositoryBase<InvitationToken, I
 
       return token ? this.toDomain(token) : null;
     } catch (error) {
-      console.error('Failed to find invitation token by hash', {
-        error: error instanceof Error ? error.message : error,
-        tokenHash
-      });
-      throw documentS3Error({
-        operation: 'findByTokenHash',
-        tokenHash,
-        originalError: error instanceof Error ? error.message : error
-      });
+      throw repositoryError({ operation: 'findByTokenHash', cause: error, tokenHash });
     }
   }
 
@@ -516,27 +352,15 @@ export class InvitationTokenRepository extends RepositoryBase<InvitationToken, I
   async findActiveByTokenHash(tokenHash: string): Promise<InvitationToken | null> {
     try {
       const token = await this.prisma.invitationToken.findFirst({
-        where: { 
+        where: {
           tokenHash,
           status: InvitationTokenStatus.ACTIVE,
-          OR: [
-            { expiresAt: null },
-            { expiresAt: { gte: new Date() } }
-          ]
-        }
+          OR: [{ expiresAt: null }, { expiresAt: { gte: this.now() } }],
+        },
       });
-
       return token ? this.toDomain(token) : null;
     } catch (error) {
-      console.error('Failed to find active invitation token by hash', {
-        error: error instanceof Error ? error.message : error,
-        tokenHash
-      });
-      throw documentS3Error({
-        operation: 'findActiveByTokenHash',
-        tokenHash,
-        originalError: error instanceof Error ? error.message : error
-      });
+      throw repositoryError({ operation: 'findActiveByTokenHash', cause: error, tokenHash });
     }
   }
 
@@ -548,46 +372,24 @@ export class InvitationTokenRepository extends RepositoryBase<InvitationToken, I
    */
   async findExpiredTokens(limit: number, cursor?: string): Promise<Page<InvitationToken>> {
     try {
-      const whereClause: any = {
-        OR: [
-          { status: InvitationTokenStatus.EXPIRED },
-          { expiresAt: { lt: new Date() } }
-        ]
+      const where: Prisma.InvitationTokenWhereInput = {
+        OR: [{ status: InvitationTokenStatus.EXPIRED }, { expiresAt: { lt: this.now() } }],
       };
-      
-      if (cursor) {
-        const cursorData = RepositoryFactory.decodeCursor<{ id: string }>(cursor);
-        if (cursorData?.id) {
-          whereClause.id = { lt: cursorData.id };
-        }
-      }
 
-      const tokens = await this.prisma.invitationToken.findMany({
-        where: whereClause,
-        orderBy: { expiresAt: 'asc' },
-        take: limit + InvitationTokenRepository.PAGINATION_OFFSET
-      });
+      type Decoded = { expiresAt: string | Date; id: string };
+      const decoded = cursor ? decodeCursor<Decoded>(cursor) : undefined;
 
-      const hasNextPage = tokens.length > limit;
-      const results = hasNextPage ? tokens.slice(InvitationTokenRepository.SLICE_START_INDEX, limit) : tokens;
-      const nextCursor = hasNextPage ? RepositoryFactory.createCursor(results[results.length + InvitationTokenRepository.SLICE_LAST_INDEX], ['id']) : undefined;
-
-      return {
-        items: results.map((token: any) => this.toDomain(token)),
-        nextCursor
+      const cfg = {
+        orderBy: [{ expiresAt: 'asc' }, { id: 'asc' }] as Array<Record<string, 'asc'|'desc'>>,
+        cursorFields: ['expiresAt', 'id'] as string[],
+        normalizeCursor: (d?: Decoded) =>
+          d ? { id: d.id, expiresAt: d.expiresAt instanceof Date ? d.expiresAt : new Date(d.expiresAt) } : undefined,
       };
+
+      const { rows, nextCursor } = await listPage(this.prisma.invitationToken, where, limit, decoded, cfg);
+      return { items: rows.map(r => this.toDomain(r)), nextCursor };
     } catch (error) {
-      console.error('Failed to find expired invitation tokens', {
-        error: error instanceof Error ? error.message : error,
-        limit,
-        cursor
-      });
-      throw documentS3Error({
-        operation: 'findExpiredTokens',
-        limit,
-        cursor,
-        originalError: error instanceof Error ? error.message : error
-      });
+      throw repositoryError({ operation: 'findExpiredTokens', cause: error });
     }
   }
 
@@ -600,50 +402,26 @@ export class InvitationTokenRepository extends RepositoryBase<InvitationToken, I
    */
   async findTokensForResend(maxResends: number, limit: number, cursor?: string): Promise<Page<InvitationToken>> {
     try {
-      const whereClause: any = {
+      const where: Prisma.InvitationTokenWhereInput = {
         status: InvitationTokenStatus.ACTIVE,
         resendCount: { lt: maxResends },
-        OR: [
-          { expiresAt: null },
-          { expiresAt: { gte: new Date() } }
-        ]
+        OR: [{ expiresAt: null }, { expiresAt: { gte: this.now() } }],
       };
-      
-      if (cursor) {
-        const cursorData = RepositoryFactory.decodeCursor<{ id: string }>(cursor);
-        if (cursorData?.id) {
-          whereClause.id = { lt: cursorData.id };
-        }
-      }
 
-      const tokens = await this.prisma.invitationToken.findMany({
-        where: whereClause,
-        orderBy: { lastSentAt: 'asc' },
-        take: limit + InvitationTokenRepository.PAGINATION_OFFSET
-      });
+      type Decoded = { lastSentAt: string | Date; id: string };
+      const decoded = cursor ? decodeCursor<Decoded>(cursor) : undefined;
 
-      const hasNextPage = tokens.length > limit;
-      const results = hasNextPage ? tokens.slice(InvitationTokenRepository.SLICE_START_INDEX, limit) : tokens;
-      const nextCursor = hasNextPage ? RepositoryFactory.createCursor(results[results.length + InvitationTokenRepository.SLICE_LAST_INDEX], ['id']) : undefined;
-
-      return {
-        items: results.map((token: any) => this.toDomain(token)),
-        nextCursor
+      const cfg = {
+        orderBy: [{ lastSentAt: 'asc' }, { id: 'asc' }] as Array<Record<string, 'asc'|'desc'>>,
+        cursorFields: ['lastSentAt', 'id'] as string[],
+        normalizeCursor: (d?: Decoded) =>
+          d ? { id: d.id, lastSentAt: d.lastSentAt instanceof Date ? d.lastSentAt : new Date(d.lastSentAt) } : undefined,
       };
+
+      const { rows, nextCursor } = await listPage(this.prisma.invitationToken, where, limit, decoded, cfg);
+      return { items: rows.map(r => this.toDomain(r)), nextCursor };
     } catch (error) {
-      console.error('Failed to find tokens for resend', {
-        error: error instanceof Error ? error.message : error,
-        maxResends,
-        limit,
-        cursor
-      });
-      throw documentS3Error({
-        operation: 'findTokensForResend',
-        maxResends,
-        limit,
-        cursor,
-        originalError: error instanceof Error ? error.message : error
-      });
+      throw repositoryError({ operation: 'findTokensForResend', cause: error, maxResends, limit });
     }
   }
 
@@ -658,15 +436,7 @@ export class InvitationTokenRepository extends RepositoryBase<InvitationToken, I
         where: { envelopeId: envelopeId.getValue() }
       });
     } catch (error) {
-      console.error('Failed to count invitation tokens by envelope ID', {
-        error: error instanceof Error ? error.message : error,
-        envelopeId: envelopeId.getValue()
-      });
-      throw documentS3Error({
-        operation: 'countByEnvelopeId',
-        envelopeId: envelopeId.getValue(),
-        originalError: error instanceof Error ? error.message : error
-      });
+      throw repositoryError({ operation: 'countByEnvelopeId', envelopeId: envelopeId.getValue(), cause: error });
     }
   }
 
@@ -677,21 +447,13 @@ export class InvitationTokenRepository extends RepositoryBase<InvitationToken, I
    */
   async existsByTokenHash(tokenHash: string): Promise<boolean> {
     try {
-      const count = await this.prisma.invitationToken.count({
-        where: { tokenHash }
+      const found = await this.prisma.invitationToken.findFirst({
+        where: { tokenHash },
+        select: { id: true },
       });
-
-      return count > InvitationTokenRepository.MIN_COUNT_THRESHOLD;
+      return !!found;
     } catch (error) {
-      console.error('Failed to check if invitation token exists by hash', {
-        error: error instanceof Error ? error.message : error,
-        tokenHash
-      });
-      throw documentS3Error({
-        operation: 'existsByTokenHash',
-        tokenHash,
-        originalError: error instanceof Error ? error.message : error
-      });
+      throw repositoryError({ operation: 'existsByTokenHash', cause: error, tokenHash });
     }
   }
 
@@ -703,36 +465,21 @@ export class InvitationTokenRepository extends RepositoryBase<InvitationToken, I
    */
   async updateWithEntity(id: InvitationTokenId, updateFn: (token: InvitationToken) => void): Promise<InvitationToken> {
     try {
-      // Get current token
-      const currentToken = await this.findById(id);
-      if (!currentToken) {
-        throw documentS3Error({
-          operation: 'updateWithEntity',
-          tokenId: id.getValue(),
-          originalError: 'Token not found'
-        });
+      const current = await this.findById(id);
+      if (!current) {
+        throw repositoryError({ operation: 'updateWithEntity', tokenId: id.getValue(), cause: new Error('NotFound') });
       }
 
-      // Apply entity method
-      updateFn(currentToken);
+      updateFn(current);
 
-      // Persist changes
       const updated = await this.prisma.invitationToken.update({
         where: this.whereById(id),
-        data: this.toModel(currentToken) as any
+        data: this.toUpdateModel(current),
       });
 
       return this.toDomain(updated);
     } catch (error) {
-      console.error('Failed to update invitation token with entity method', {
-        error: error instanceof Error ? error.message : error,
-        tokenId: id.getValue()
-      });
-      throw documentS3Error({
-        operation: 'updateWithEntity',
-        tokenId: id.getValue(),
-        originalError: error instanceof Error ? error.message : error
-      });
+      throw repositoryError({ operation: 'updateWithEntity', tokenId: id.getValue(), cause: error });
     }
   }
 
@@ -742,8 +489,6 @@ export class InvitationTokenRepository extends RepositoryBase<InvitationToken, I
    * @returns Hashed token string
    */
   private hashToken(token: string): string {
-    // Use crypto to hash the token (same as in the service)
-    const crypto = require('crypto');
-    return crypto.createHash('sha256').update(token).digest('hex');
+    return sha256Hex(token);
   }
 }

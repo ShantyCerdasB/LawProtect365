@@ -10,6 +10,7 @@ import { SignerId } from '../../src/domain/value-objects/SignerId';
 import { EnvelopeId } from '../../src/domain/value-objects/EnvelopeId';
 import { ConsentId } from '../../src/domain/value-objects/ConsentId';
 import { SignatureAuditEventId } from '../../src/domain/value-objects/SignatureAuditEventId';
+import { InvitationTokenId } from '../../src/domain/value-objects/InvitationTokenId';
 
 /**
  * Test constants for consistent test data
@@ -65,6 +66,14 @@ export class TestUtils {
    */
   static generateSignatureAuditEventId(): SignatureAuditEventId {
     return SignatureAuditEventId.generate();
+  }
+
+  /**
+   * Generates an InvitationTokenId for testing
+   * @returns A valid InvitationTokenId instance
+   */
+  static generateInvitationTokenId(): InvitationTokenId {
+    return InvitationTokenId.generate();
   }
 
   /**

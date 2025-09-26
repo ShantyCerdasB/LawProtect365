@@ -17,10 +17,11 @@ import {
 } from '../../signature-errors';
 
 /**
- * Consent entity representing consent given by a signer for electronic signing
- * 
- * A consent record captures all the necessary information for legal compliance
- * including when consent was given, from where, and links to the resulting signature.
+ * Consent entity representing consent given by a signer for electronic signing.
+ *
+ * Captures information needed for legal compliance, including when consent was given,
+ * network/user-agent context, and optional linkage to a signature. The consent text
+ * is required and must be non-empty.
  */
 export class Consent {
   constructor(
@@ -135,14 +136,24 @@ export class Consent {
   }
 
   /**
-   * Creates a new consent instance with validation
-   * @param params - Consent creation parameters with required fields
-   * @returns New consent instance with validated data
-   * @throws consentNotGiven when consentGiven is false
-   * @throws consentTimestampRequired when timestamp is missing
-   * @throws consentTextRequired when consent text is empty
-   * @throws consentIpRequired when IP address is missing
-   * @throws consentUserAgentRequired when user agent is missing
+   * Creates a new consent instance with validation.
+   * @param params Object containing required consent fields.
+   * @param params.id ConsentId.
+   * @param params.envelopeId EnvelopeId.
+   * @param params.signerId SignerId.
+   * @param params.signatureId Optional SignerId for the signature.
+   * @param params.consentGiven Whether the user gave consent.
+   * @param params.consentTimestamp When the consent was captured.
+   * @param params.consentText Text shown to the user (must be non-empty).
+   * @param params.ipAddress IP address at the time of consent.
+   * @param params.userAgent User agent at the time of consent.
+   * @param params.country Optional ISO country code.
+   * @returns A new Consent instance.
+   * @throws consentNotGiven If consentGiven is false.
+   * @throws consentTimestampRequired If consentTimestamp is missing.
+   * @throws consentTextRequired If consentText is empty.
+   * @throws consentIpRequired If ipAddress is missing.
+   * @throws consentUserAgentRequired If userAgent is missing.
    */
   static create(params: {
     id: ConsentId;
@@ -195,9 +206,9 @@ export class Consent {
   }
 
   /**
-   * Links this consent with a signature ID (idempotent operation)
-   * @param signatureId - The signature ID to link
-   * @returns This instance if already linked, or new instance with updated signature link
+   * Links this consent with a signature ID. Idempotent if already linked to the same ID.
+   * @param signatureId SignatureId to link.
+   * @returns The current instance if the same signature is already linked, otherwise a new instance with updated linkage.
    */
   linkWithSignature(signatureId: SignerId): Consent {
     // Idempotent: return this if already linked to same signature
@@ -222,12 +233,12 @@ export class Consent {
   }
 
   /**
-   * Validates that the consent is valid for legal compliance
-   * @throws consentNotGiven when consent is not given
-   * @throws consentTimestampRequired when timestamp is missing
-   * @throws consentTextRequired when consent text is empty
-   * @throws consentIpRequired when IP address is missing
-   * @throws consentUserAgentRequired when user agent is missing
+   * Validates that the consent instance is consistent for compliance purposes.
+   * @throws consentNotGiven If consent is not given.
+   * @throws consentTimestampRequired If timestamp is missing.
+   * @throws consentTextRequired If consent text is empty.
+   * @throws consentIpRequired If IP address is missing.
+   * @throws consentUserAgentRequired If user agent is missing.
    */
   validateForCompliance(): void {
     if (!this.consentGiven) {
@@ -252,8 +263,8 @@ export class Consent {
   }
 
   /**
-   * Converts consent to plain object for serialization
-   * @returns Plain object representation of the consent
+   * Converts the consent instance into a plain serializable object.
+   * @returns JSON-friendly representation of the consent.
    */
   toJSON(): Record<string, unknown> {
     return {
@@ -273,9 +284,9 @@ export class Consent {
   }
 
   /**
-   * Creates a Consent from persistence data with proper type conversion
-   * @param data - Raw persistence data from database
-   * @returns Consent instance with properly typed fields
+   * Creates a Consent instance from persistence data.
+   * @param data Raw database row.
+   * @returns Consent instance with mapped and typed fields.
    */
   static fromPersistence(data: any): Consent {
     return new Consent(

@@ -41,3 +41,4 @@ export * from "./security.js";
 export * from "./audit.js";
 export * from "./idempotency.js";
 export * from "./eventbridge.js";
+export * from "./clock.js";

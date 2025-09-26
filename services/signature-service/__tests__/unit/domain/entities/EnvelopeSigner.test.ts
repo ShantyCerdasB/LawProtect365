@@ -53,7 +53,7 @@ describe('EnvelopeSigner', () => {
     return new EnvelopeSigner(
       new SignerId(params.id || TestUtils.generateUuid()),
       new EnvelopeId(params.envelopeId || TestUtils.generateUuid()),
-      params.userId,
+      params.userId ?? null,
       params.isExternal ?? false,
       params.email ? new Email(params.email) : undefined,
       params.fullName,
@@ -153,7 +153,7 @@ describe('EnvelopeSigner', () => {
       expect(signer.getIsExternal()).toBe(true);
       expect(signer.getEmail()?.getValue()).toBe('external@example.com');
       expect(signer.getFullName()).toBe('External User');
-      expect(signer.getUserId()).toBeUndefined();
+      expect(signer.getUserId()).toBeNull();
       expect(signer.getStatus()).toBe(SignerStatus.PENDING);
       expect(signer.getSignedAt()).toBeUndefined();
       expect(signer.getDeclinedAt()).toBeUndefined();
@@ -181,7 +181,7 @@ describe('EnvelopeSigner', () => {
         location: undefined
       });
 
-      expect(signer.getUserId()).toBeUndefined();
+      expect(signer.getUserId()).toBeNull();
       expect(signer.getEmail()).toBeUndefined();
       expect(signer.getFullName()).toBeUndefined();
       expect(signer.getInvitedByUserId()).toBeUndefined();
@@ -261,6 +261,9 @@ describe('EnvelopeSigner', () => {
         userAgent: 'Mozilla/5.0'
       });
 
+      // Record consent before signing
+      signer.recordConsent('I consent to electronic signing', ipAddress, 'Mozilla/5.0');
+      
       signer.sign(documentHash, signatureHash, signedS3Key, kmsKeyId, algorithm, metadata);
 
       expect(signer.getStatus()).toBe(SignerStatus.SIGNED);
@@ -541,7 +544,7 @@ describe('EnvelopeSigner', () => {
 
       expect(signer.getIsExternal()).toBe(true);
       expect(signer.getEmail()?.getValue()).toBe('external@example.com');
-      expect(signer.getUserId()).toBeUndefined();
+      expect(signer.getUserId()).toBeNull();
     });
 
     it('should handle internal signer with userId but no email', () => {
@@ -554,6 +557,299 @@ describe('EnvelopeSigner', () => {
       expect(signer.getIsExternal()).toBe(false);
       expect(signer.getUserId()).toBe('user-123');
       expect(signer.getEmail()).toBeUndefined();
+    });
+  });
+
+  describe('fromPersistence', () => {
+    it('should create signer from persistence data with all fields', () => {
+      const persistenceData = {
+        id: TestUtils.generateUuid(),
+        envelopeId: TestUtils.generateUuid(),
+        userId: 'user-123',
+        isExternal: false,
+        email: 'test@example.com',
+        fullName: 'Test User',
+        invitedByUserId: 'inviter-123',
+        participantRole: 'SIGNER',
+        order: 1,
+        status: SignerStatus.PENDING,
+        signedAt: '2024-01-01T10:00:00.000Z',
+        declinedAt: null,
+        declineReason: null,
+        consentGiven: true,
+        consentTimestamp: '2024-01-01T09:00:00.000Z',
+        documentHash: null,
+        signatureHash: null,
+        signedS3Key: null,
+        kmsKeyId: null,
+        algorithm: null,
+        ipAddress: '127.0.0.1',
+        userAgent: 'Mozilla/5.0',
+        reason: null,
+        location: null,
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z'
+      };
+
+      const signer = EnvelopeSigner.fromPersistence(persistenceData);
+
+      expect(signer.getId().getValue()).toBe(persistenceData.id);
+      expect(signer.getEnvelopeId().getValue()).toBe(persistenceData.envelopeId);
+      expect(signer.getUserId()).toBe('user-123');
+      expect(signer.getIsExternal()).toBe(false);
+      expect(signer.getEmail()?.getValue()).toBe('test@example.com');
+      expect(signer.getFullName()).toBe('Test User');
+      expect(signer.getInvitedByUserId()).toBe('inviter-123');
+      expect(signer.getParticipantRole()).toBe('SIGNER');
+      expect(signer.getOrder()).toBe(1);
+      expect(signer.getStatus()).toBe(SignerStatus.PENDING);
+      expect(signer.getSignedAt()).toEqual(new Date('2024-01-01T10:00:00.000Z'));
+      expect(signer.getDeclinedAt()).toBeUndefined();
+      expect(signer.getDeclineReason()).toBeNull();
+      expect(signer.getConsentGiven()).toBe(true);
+      expect(signer.getConsentTimestamp()).toEqual(new Date('2024-01-01T09:00:00.000Z'));
+      expect(signer.getCreatedAt()).toEqual(new Date('2024-01-01T00:00:00.000Z'));
+      expect(signer.getUpdatedAt()).toEqual(new Date('2024-01-01T00:00:00.000Z'));
+    });
+
+    it('should create signer from persistence data with null userId', () => {
+      const persistenceData = {
+        id: TestUtils.generateUuid(),
+        envelopeId: TestUtils.generateUuid(),
+        userId: null,
+        isExternal: true,
+        email: 'external@example.com',
+        fullName: 'External User',
+        invitedByUserId: 'inviter-123',
+        participantRole: 'SIGNER',
+        order: 1,
+        status: SignerStatus.PENDING,
+        signedAt: null,
+        declinedAt: null,
+        declineReason: null,
+        consentGiven: false,
+        consentTimestamp: null,
+        documentHash: null,
+        signatureHash: null,
+        signedS3Key: null,
+        kmsKeyId: null,
+        algorithm: null,
+        ipAddress: null,
+        userAgent: null,
+        reason: null,
+        location: null,
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z'
+      };
+
+      const signer = EnvelopeSigner.fromPersistence(persistenceData);
+
+      expect(signer.getUserId()).toBeNull();
+      expect(signer.getIsExternal()).toBe(true);
+      expect(signer.getEmail()?.getValue()).toBe('external@example.com');
+      expect(signer.getSignedAt()).toBeUndefined();
+      expect(signer.getDeclinedAt()).toBeUndefined();
+      expect(signer.getConsentGiven()).toBe(false);
+      expect(signer.getConsentTimestamp()).toBeUndefined();
+    });
+
+    it('should handle date conversion from various formats', () => {
+      const persistenceData = {
+        id: TestUtils.generateUuid(),
+        envelopeId: TestUtils.generateUuid(),
+        userId: null,
+        isExternal: true,
+        email: null,
+        fullName: null,
+        invitedByUserId: null,
+        participantRole: 'SIGNER',
+        order: 0,
+        status: SignerStatus.PENDING,
+        signedAt: new Date('2024-01-01T10:00:00.000Z'), // Date instance
+        declinedAt: '2024-01-01T11:00:00.000Z', // ISO string
+        declineReason: null,
+        consentGiven: true,
+        consentTimestamp: '2024-01-01T12:00:00.000Z', // ISO string
+        documentHash: null,
+        signatureHash: null,
+        signedS3Key: null,
+        kmsKeyId: null,
+        algorithm: null,
+        ipAddress: null,
+        userAgent: null,
+        reason: null,
+        location: null,
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z'
+      };
+
+      const signer = EnvelopeSigner.fromPersistence(persistenceData);
+
+      expect(signer.getSignedAt()).toEqual(new Date('2024-01-01T10:00:00.000Z'));
+      expect(signer.getDeclinedAt()).toEqual(new Date('2024-01-01T11:00:00.000Z'));
+      expect(signer.getConsentTimestamp()).toEqual(new Date('2024-01-01T12:00:00.000Z'));
+    });
+
+    it('should handle invalid date formats with fallback to new Date()', () => {
+      const persistenceData = {
+        id: TestUtils.generateUuid(),
+        envelopeId: TestUtils.generateUuid(),
+        userId: null,
+        isExternal: true,
+        email: null,
+        fullName: null,
+        invitedByUserId: null,
+        participantRole: 'SIGNER',
+        order: 0,
+        status: SignerStatus.PENDING,
+        signedAt: null,
+        declinedAt: null,
+        declineReason: null,
+        consentGiven: false,
+        consentTimestamp: null,
+        documentHash: null,
+        signatureHash: null,
+        signedS3Key: null,
+        kmsKeyId: null,
+        algorithm: null,
+        ipAddress: null,
+        userAgent: null,
+        reason: null,
+        location: null,
+        createdAt: 'invalid-date', // This will cause asDate to return undefined
+        updatedAt: 'invalid-date'  // This will cause asDate to return undefined
+      };
+
+      const signer = EnvelopeSigner.fromPersistence(persistenceData);
+
+      // Should fallback to new Date() when asDate returns undefined
+      expect(signer.getCreatedAt()).toBeInstanceOf(Date);
+      expect(signer.getUpdatedAt()).toBeInstanceOf(Date);
+    });
+  });
+
+  describe('Signature Field Validation', () => {
+    let signer: EnvelopeSigner;
+    let metadata: SignatureMetadata;
+
+    beforeEach(() => {
+      signer = createEnvelopeSignerWithParams({});
+      signer.recordConsent('I consent to electronic signing', '127.0.0.1', 'Mozilla/5.0');
+      
+      metadata = SignatureMetadata.fromObject({
+        reason: 'Legal compliance',
+        location: 'New York, NY',
+        ipAddress: '127.0.0.1',
+        userAgent: 'Mozilla/5.0'
+      });
+    });
+
+    it('should throw error when documentHash is empty', () => {
+      expect(() => signer.sign('', 'hash', 'key', 'kms', 'algo', metadata))
+        .toThrow(invalidSignerState('Missing required signature field: documentHash'));
+    });
+
+    it('should throw error when documentHash is only whitespace', () => {
+      expect(() => signer.sign('   ', 'hash', 'key', 'kms', 'algo', metadata))
+        .toThrow(invalidSignerState('Missing required signature field: documentHash'));
+    });
+
+    it('should throw error when signatureHash is empty', () => {
+      expect(() => signer.sign('docHash', '', 'key', 'kms', 'algo', metadata))
+        .toThrow(invalidSignerState('Missing required signature field: signatureHash'));
+    });
+
+    it('should throw error when signatureHash is only whitespace', () => {
+      expect(() => signer.sign('docHash', '   ', 'key', 'kms', 'algo', metadata))
+        .toThrow(invalidSignerState('Missing required signature field: signatureHash'));
+    });
+
+    it('should throw error when signedS3Key is empty', () => {
+      expect(() => signer.sign('docHash', 'hash', '', 'kms', 'algo', metadata))
+        .toThrow(invalidSignerState('Missing required signature field: signedS3Key'));
+    });
+
+    it('should throw error when signedS3Key is only whitespace', () => {
+      expect(() => signer.sign('docHash', 'hash', '   ', 'kms', 'algo', metadata))
+        .toThrow(invalidSignerState('Missing required signature field: signedS3Key'));
+    });
+
+    it('should throw error when kmsKeyId is empty', () => {
+      expect(() => signer.sign('docHash', 'hash', 'key', '', 'algo', metadata))
+        .toThrow(invalidSignerState('Missing required signature field: kmsKeyId'));
+    });
+
+    it('should throw error when kmsKeyId is only whitespace', () => {
+      expect(() => signer.sign('docHash', 'hash', 'key', '   ', 'algo', metadata))
+        .toThrow(invalidSignerState('Missing required signature field: kmsKeyId'));
+    });
+
+    it('should throw error when algorithm is empty', () => {
+      expect(() => signer.sign('docHash', 'hash', 'key', 'kms', '', metadata))
+        .toThrow(invalidSignerState('Missing required signature field: algorithm'));
+    });
+
+    it('should throw error when algorithm is only whitespace', () => {
+      expect(() => signer.sign('docHash', 'hash', 'key', 'kms', '   ', metadata))
+        .toThrow(invalidSignerState('Missing required signature field: algorithm'));
+    });
+  });
+
+  describe('Consent Validation', () => {
+    it('should throw error when trying to sign without consent', () => {
+      const signer = createEnvelopeSignerWithParams({});
+      const metadata = SignatureMetadata.fromObject({
+        reason: 'Legal compliance',
+        location: 'New York, NY',
+        ipAddress: '127.0.0.1',
+        userAgent: 'Mozilla/5.0'
+      });
+
+      expect(() => signer.sign('docHash', 'hash', 'key', 'kms', 'algo', metadata))
+        .toThrow(invalidSignerState('Signer must give consent before signing'));
+    });
+  });
+
+  describe('Order Management', () => {
+    it('should update order successfully with valid integer', () => {
+      const signer = createEnvelopeSignerWithParams({ order: 1 });
+      
+      signer.updateOrder(5);
+      
+      expect(signer.getOrder()).toBe(5);
+      expect(signer.getUpdatedAt()).toBeDefined();
+    });
+
+    it('should throw error when order is negative', () => {
+      const signer = createEnvelopeSignerWithParams({});
+      
+      expect(() => signer.updateOrder(-1))
+        .toThrow(invalidSignerState('Order must be a non-negative integer'));
+    });
+
+    it('should throw error when order is not an integer', () => {
+      const signer = createEnvelopeSignerWithParams({});
+      
+      expect(() => signer.updateOrder(1.5))
+        .toThrow(invalidSignerState('Order must be a non-negative integer'));
+    });
+
+    it('should throw error when order is NaN', () => {
+      const signer = createEnvelopeSignerWithParams({});
+      
+      expect(() => signer.updateOrder(NaN))
+        .toThrow(invalidSignerState('Order must be a non-negative integer'));
+    });
+
+    it('should get original order', () => {
+      const signer = createEnvelopeSignerWithParams({ order: 3 });
+      
+      expect(signer.getOriginalOrder()).toBe(3);
+      
+      signer.updateOrder(7);
+      
+      expect(signer.getOrder()).toBe(7);
+      expect(signer.getOriginalOrder()).toBe(7); // After update, original becomes current
     });
   });
 });

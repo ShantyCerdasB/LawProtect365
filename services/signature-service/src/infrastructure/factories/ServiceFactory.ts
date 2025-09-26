@@ -151,8 +151,7 @@ export class ServiceFactory {
     const consentRepository = new ConsentRepository(this.prismaClient);
     const envelopeSignerRepository = new EnvelopeSignerRepository(this.prismaClient);
     const signatureAuditEventService = this.createSignatureAuditEventService();
-    const invitationTokenService = this.createInvitationTokenService();
-    return new ConsentService(consentRepository, envelopeSignerRepository, signatureAuditEventService, invitationTokenService);
+    return new ConsentService(consentRepository, envelopeSignerRepository, signatureAuditEventService);
   }
 
   /**

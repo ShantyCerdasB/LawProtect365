@@ -1,3 +1,7 @@
+import { decodeCursor } from './cursor.js';
+import { listPage } from './prismaPage.js';
+import { repositoryError } from '../errors/errors.js';
+
 /**
  * Minimal Prisma-like client for repositories.
  */
@@ -68,6 +72,15 @@ export abstract class RepositoryBase<TDomain, TId = string, TSpec = unknown> {
   protected abstract whereFromSpec(spec: TSpec): unknown;
 
   /**
+   * Gets current timestamp for date comparisons.
+   * This method can be overridden in tests to provide fixed timestamps.
+   * @returns Current date
+   */
+  protected now(): Date {
+    return new Date();
+  }
+
+  /**
    * Finds an entity by its identifier.
    * @param id - Entity identifier.
    * @param tx - Optional transactional context.
@@ -117,4 +130,42 @@ export abstract class RepositoryBase<TDomain, TId = string, TSpec = unknown> {
     cursor?: string,
     tx?: PrismaTxLike
   ): Promise<{ items: TDomain[]; nextCursor?: string }>;
+
+  /**
+   * Common implementation for cursor-based pagination using listPage.
+   * This method can be used by repositories to avoid duplicating pagination logic.
+   * @param model - Prisma model to query
+   * @param spec - Query/filter specification
+   * @param limit - Page size
+   * @param cursor - Opaque pagination cursor
+   * @param include - Optional include clause for relations
+   * @returns Page with items and nextCursor
+   */
+  public async listWithCursorPagination(
+    model: { findMany: Function },
+    spec: TSpec,
+    limit: number,
+    cursor?: string,
+    include?: any
+  ): Promise<{ items: TDomain[]; nextCursor?: string }> {
+    try {
+      const where = this.whereFromSpec(spec);
+
+      type Decoded = { createdAt: string | Date; id: string };
+      const decoded: Decoded | undefined = cursor ? decodeCursor<Decoded>(cursor) : undefined;
+
+      const cfg = {
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }] as Array<Record<string, 'asc'|'desc'>>,
+        cursorFields: ['createdAt', 'id'],
+        normalizeCursor: (d?: { createdAt: string|Date; id: string }) =>
+          d ? { id: d.id, createdAt: d.createdAt instanceof Date ? d.createdAt : new Date(d.createdAt) } : undefined,
+        ...(include && { include })
+      };
+
+      const { rows, nextCursor } = await listPage(model, where as Record<string, any>, limit, decoded, cfg);
+      return { items: rows.map((r: any) => this.toDomain(r)), nextCursor };
+    } catch (error) {
+      throw repositoryError({ operation: 'list', spec, cause: error });
+    }
+  }
 }

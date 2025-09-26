@@ -187,11 +187,11 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
     
     if (spec.isExpired !== undefined) {
       if (spec.isExpired) {
-        where.expiresAt = { lt: new Date() };
+        where.expiresAt = { lt: this.now() };
       } else {
         where.OR = [
           { expiresAt: null },
-          { expiresAt: { gte: new Date() } }
+          { expiresAt: { gte: this.now() } }
         ];
       }
     }
@@ -590,7 +590,7 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
     const client = tx || this.prisma;
     
     const whereClause: any = {
-      expiresAt: { lt: new Date() },
+      expiresAt: { lt: this.now() },
       status: { not: PrismaEnvelopeStatus.COMPLETED }
     };
     

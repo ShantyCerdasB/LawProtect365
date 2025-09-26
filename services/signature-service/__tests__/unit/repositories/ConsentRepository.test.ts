@@ -1,11 +1,9 @@
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 
-// Setup cursor pagination mocks BEFORE importing the repository
 import { setupCursorPaginationMocks } from '../../helpers/mocks/cursorPagination';
 const { mockListPage, mockDecodeCursor } = setupCursorPaginationMocks();
 
-// Import AFTER the mock is set up
-import type { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { ConsentRepository } from '../../../src/repositories/ConsentRepository';
 import { Consent } from '../../../src/domain/entities/Consent';
 import { ConsentId } from '../../../src/domain/value-objects/ConsentId';
@@ -15,7 +13,7 @@ import { TestUtils } from '../../helpers/testUtils';
 import {
   createConsentPrismaMock,
   createSingleModelTransactionMock,
-  type PrismaModelMock,
+  PrismaModelMock,
 } from '../../helpers/mocks/prisma';
 import {
   consentPersistenceRow,
@@ -107,6 +105,30 @@ describe('ConsentRepository - Internal Methods', () => {
       expect((repository as any).toUpdateModel({ signatureId: null }).signatureId).toBeNull();
       expect((repository as any).toUpdateModel({ signatureId: 'x' }).signatureId).toBe('x');
     });
+
+    it('handles getters that return undefined (lines 78-79)', () => {
+      const partial = {
+        getEnvelopeId: () => undefined,
+        getSignerId: () => undefined,
+        envelopeId: 'env-123',
+        signerId: 'signer-123'
+      };
+      const result = repository['toUpdateModel'](partial);
+      expect(result.envelopeId).toBe('env-123');
+      expect(result.signerId).toBe('signer-123');
+    });
+
+    it('handles getters that return undefined for consent fields (line 86)', () => {
+      const partial = {
+        getConsentGiven: () => undefined,
+        getConsentTimestamp: () => undefined,
+        consentGiven: true,
+        consentTimestamp: new Date('2024-01-01')
+      };
+      const result = repository['toUpdateModel'](partial);
+      expect(result.consentGiven).toBe(true);
+      expect(result.consentTimestamp).toEqual(new Date('2024-01-01'));
+    });
   });
 
   describe('whereById', () => {
@@ -140,6 +162,18 @@ describe('ConsentRepository - Internal Methods', () => {
       expect(where.envelopeId).toBeUndefined();
       expect(where.signatureId).toBeUndefined();
       expect(where.consentGiven).toBe(false);
+    });
+
+    it('handles values without getValue method (line 111)', () => {
+      const spec = {
+        envelopeId: 'direct-string-value', // No getValue method
+        signerId: { getValue: () => 'signer-123' }, // Has getValue method
+        signatureId: null // No getValue method
+      };
+      const where = (repository as any).whereFromSpec(spec);
+      expect(where.envelopeId).toBe('direct-string-value');
+      expect(where.signerId).toBe('signer-123');
+      expect(where.signatureId).toBeUndefined(); // null values are not set in where clause
     });
   });
 
@@ -251,6 +285,51 @@ describe('ConsentRepository - Internal Methods', () => {
       expect(page.nextCursor).toBeUndefined();
       
       spy.mockRestore();
+    });
+
+    it('list with cursor containing string date (covers normalizeCursor branch)', async () => {
+      mockDecodeCursor.mockReturnValueOnce({
+        createdAt: '2024-01-02T00:00:00Z', // String instead of Date
+        id: 'x'
+      });
+      
+      mockListPage.mockResolvedValueOnce({ 
+        rows: [consentPersistenceRow()], 
+        nextCursor: undefined 
+      });
+      
+      const page = await repository.list(consentSpec(), 1, 'cursor123');
+      
+      expect(mockDecodeCursor).toHaveBeenCalledWith('cursor123');
+      expect(mockListPage).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.anything(),
+        1,
+        { createdAt: '2024-01-02T00:00:00Z', id: 'x' },
+        expect.objectContaining({
+          normalizeCursor: expect.any(Function)
+        })
+      );
+      expect(page.items.length).toBe(1);
+    });
+
+    it('list with undefined cursor (covers cursor branch)', async () => {
+      mockListPage.mockResolvedValueOnce({ 
+        rows: [consentPersistenceRow()], 
+        nextCursor: undefined 
+      });
+      
+      const page = await repository.list(consentSpec(), 1); // No cursor parameter
+      
+      expect(mockDecodeCursor).not.toHaveBeenCalled();
+      expect(mockListPage).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.anything(),
+        1,
+        undefined, // No decoded cursor
+        expect.anything()
+      );
+      expect(page.items.length).toBe(1);
     });
 
     it('findByEnvelopeId', async () => {
@@ -417,6 +496,18 @@ describe('ConsentRepository - Internal Methods', () => {
       await expect(
         repository.updateWithEntity(consentVO.id(), (c) => c)
       ).rejects.toThrow();
+    });
+
+    it('updateWithEntity handles null return from updateFn (lines 385-386)', async () => {
+      const current = consentEntity();
+      consentOps.findUnique.mockResolvedValueOnce(consentPersistenceRow());
+      consentOps.update.mockResolvedValueOnce(consentPersistenceRow());
+      
+      // updateFn returns null, should fallback to current entity
+      const result = await repository.updateWithEntity(consentVO.id(), () => null as any);
+      
+      expect(consentOps.update).toHaveBeenCalled();
+      expect(result).toBeDefined();
     });
   });
 });

@@ -4,3 +4,6 @@
  */
 
 export * from './consent';
+export * from './envelopeSigner';
+export * from './invitationToken';
+export * from './signatureAuditEvent';

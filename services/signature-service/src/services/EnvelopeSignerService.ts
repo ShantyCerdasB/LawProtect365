@@ -25,7 +25,6 @@ import {
   signerNotFound,
   signerCreationFailed,
   signerUpdateFailed,
-  signerSigningOrderViolation,
   signerAlreadySigned,
   signerEmailDuplicate,
   envelopeNotFound
@@ -237,50 +236,6 @@ export class EnvelopeSignerService {
     }
   }
 
-  /**
-   * Gets a signer by ID
-   * @param signerId - The signer ID
-   * @returns The signer or null if not found
-   */
-  async getSigner(signerId: SignerId): Promise<EnvelopeSigner | null> {
-    try {
-      return await this.envelopeSignerRepository.findById(signerId);
-    } catch (error) {
-      throw signerNotFound(
-        `Failed to get signer ${signerId.getValue()}: ${error instanceof Error ? error.message : error}`
-      );
-    }
-  }
-
-  /**
-   * Gets all signers for an envelope
-   * @param envelopeId - The envelope ID
-   * @returns Array of signers
-   */
-  async getSignersByEnvelope(envelopeId: EnvelopeId): Promise<EnvelopeSigner[]> {
-    try {
-      return await this.envelopeSignerRepository.findByEnvelopeId(envelopeId);
-    } catch (error) {
-      throw signerNotFound(
-        `Failed to get signers for envelope ${envelopeId.getValue()}: ${error instanceof Error ? error.message : error}`
-      );
-    }
-  }
-
-  /**
-   * Gets signers by user ID
-   * @param userId - The user ID
-   * @returns Array of signers
-   */
-  async getSignersByUserId(userId: string): Promise<EnvelopeSigner[]> {
-    try {
-      return await this.envelopeSignerRepository.findByUserId(userId);
-    } catch (error) {
-      throw signerNotFound(
-        `Failed to get signers for user ${userId}: ${error instanceof Error ? error.message : error}`
-      );
-    }
-  }
 
   /**
    * Finds existing external signer by email and fullName across all envelopes
@@ -309,42 +264,6 @@ export class EnvelopeSignerService {
     }
   }
 
-  /**
-   * Gets signers by status
-   * @param status - The signer status
-   * @param envelopeId - Optional envelope ID to filter by
-   * @returns Array of signers
-   */
-  async getSignersByStatus(status: SignerStatus, envelopeId?: EnvelopeId): Promise<EnvelopeSigner[]> {
-    try {
-      return await this.envelopeSignerRepository.findByStatus(status, envelopeId);
-    } catch (error) {
-      throw signerNotFound(
-        `Failed to get signers with status ${status}: ${error instanceof Error ? error.message : error}`
-      );
-    }
-  }
-
-  /**
-   * Updates a signer
-   * @param signerId - The signer ID
-   * @param updates - The updates to apply
-   * @returns Updated signer
-   */
-  async updateSigner(signerId: SignerId, updates: Partial<EnvelopeSigner>): Promise<EnvelopeSigner> {
-    try {
-      const existingSigner = await this.envelopeSignerRepository.findById(signerId);
-      if (!existingSigner) {
-        throw signerNotFound(`Signer with ID ${signerId.getValue()} not found`);
-      }
-
-      return await this.envelopeSignerRepository.update(signerId, updates);
-    } catch (error) {
-      throw signerUpdateFailed(
-        `Failed to update signer ${signerId.getValue()}: ${error instanceof Error ? error.message : error}`
-      );
-    }
-  }
 
   /**
    * Deletes a signer
@@ -368,31 +287,6 @@ export class EnvelopeSignerService {
     }
   }
 
-  /**
-   * Validates signing order for a signer
-   * @param envelopeId - The envelope ID
-   * @param signerId - The signer ID
-   * @param userId - The user ID
-   */
-  async validateSigningOrder(envelopeId: EnvelopeId, signerId: SignerId, userId: string): Promise<void> {
-    try {
-      // Get envelope with signers
-      const envelope = await this.signatureEnvelopeRepository.getWithSigners(envelopeId);
-      if (!envelope) {
-        throw envelopeNotFound(`Envelope with ID ${envelopeId.getValue()} not found`);
-      }
-
-      // Get all signers for this envelope
-      const allSigners = await this.envelopeSignerRepository.findByEnvelopeId(envelopeId);
-      
-      // Use entity method to validate signing order
-      envelope.validateSigningOrder(signerId, userId, allSigners);
-    } catch (error) {
-      throw signerSigningOrderViolation(
-        `Signing order validation failed: ${error instanceof Error ? error.message : error}`
-      );
-    }
-  }
 
 
 
@@ -520,40 +414,6 @@ export class EnvelopeSignerService {
   }
 
 
-  /**
-   * Sends reminders to pending signers
-   * @param envelopeId - The envelope ID
-   * @param signerIds - Optional specific signer IDs to remind
-   */
-  async sendReminders(envelopeId: EnvelopeId, signerIds?: SignerId[]): Promise<void> {
-    try {
-      const pendingSigners = await this.getPendingSigners(envelopeId);
-      
-      const signersToRemind = signerIds 
-        ? pendingSigners.filter(signer => signerIds.some(id => id.equals(signer.getId())))
-        : pendingSigners;
-
-      for (const signer of signersToRemind) {
-        // Create audit event for reminder
-        await this.createSignerAuditEvent({
-          envelopeId: envelopeId.getValue(),
-          signerId: signer.getId().getValue(),
-          eventType: AuditEventType.SIGNER_REMINDER_SENT,
-          description: `Reminder sent to signer ${signer.getFullName() || signer.getEmail()?.getValue() || 'Unknown'}`,
-          userId: 'system',
-          userEmail: signer.getEmail()?.getValue(),
-          metadata: {
-            signerEmail: signer.getEmail()?.getValue(),
-            signerFullName: signer.getFullName()
-          }
-        });
-      }
-    } catch (error) {
-      throw signerUpdateFailed(
-        `Failed to send reminders: ${error instanceof Error ? error.message : error}`
-      );
-    }
-  }
 
   /**
    * Gets pending signers for an envelope
@@ -593,27 +453,5 @@ export class EnvelopeSignerService {
     }
   }
 
-  /**
-   * Updates the signing order of a specific signer
-   * @param signerId - The signer ID to update
-   * @param newOrder - The new order number
-   * @returns Updated signer
-   */
-  async updateSignerOrder(signerId: SignerId, newOrder: number): Promise<EnvelopeSigner> {
-    try {
-      const existingSigner = await this.envelopeSignerRepository.findById(signerId);
-      if (!existingSigner) {
-        throw signerNotFound(`Signer with ID ${signerId.getValue()} not found`);
-      }
-
-      // Update order
-      existingSigner.updateOrder(newOrder);
-
-      // Save to repository
-      return await this.envelopeSignerRepository.update(signerId, existingSigner);
-    } catch (error) {
-      wrapServiceError(error as Error, `update signer order for ${signerId.getValue()}`);
-    }
-  }
 
 }

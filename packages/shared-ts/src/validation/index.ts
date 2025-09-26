@@ -12,3 +12,4 @@ export * from "./metadataValidation.js";
 export * from "./signature-validation.js";
 export * from "./signing-algorithm.js";
 export * from "./s3-validation.js";
+export * from "./dataValidation.js";

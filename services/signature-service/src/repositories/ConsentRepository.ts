@@ -7,7 +7,7 @@
  */
 
 import { PrismaClient, Prisma } from '@prisma/client';
-import { RepositoryBase, Page, decodeCursor, listPage, textContainsInsensitive, rangeFilter } from '@lawprotect/shared-ts';
+import { RepositoryBase, Page, textContainsInsensitive, rangeFilter } from '@lawprotect/shared-ts';
 import { Consent } from '../domain/entities/Consent';
 import { ConsentId } from '../domain/value-objects/ConsentId';
 import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
@@ -220,23 +220,12 @@ export class ConsentRepository extends RepositoryBase<Consent, ConsentId, Consen
    * @returns {Promise<Page<Consent>>} Page with items and nextCursor.
    */
   async list(spec: ConsentSpec, limit: number = 20, cursor?: string): Promise<Page<Consent>> {
-    try {
-      const where = this.whereFromSpec(spec);
-
-      type Decoded = { createdAt: string | Date; id: string };
-      const decoded = cursor ? decodeCursor<Decoded>(cursor) : undefined;
-      const cfg = {
-        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }] as Array<Record<string, 'asc' | 'desc'>>,
-        cursorFields: ['createdAt', 'id'],
-        normalizeCursor: (d?: { createdAt: string | Date; id: string }) =>
-          d ? { id: d.id, createdAt: d.createdAt instanceof Date ? d.createdAt : new Date(d.createdAt) } : undefined
-      };
-
-      const { rows, nextCursor } = await listPage<Prisma.ConsentGetPayload<any>>(this.prisma.consent, where, limit, decoded, cfg);
-      return { items: rows.map(r => this.toDomain(r)), nextCursor };
-    } catch (error) {
-      throw repositoryError({ operation: 'list', spec, cause: error });
-    }
+    return this.listWithCursorPagination(
+      this.prisma.consent,
+      spec,
+      limit,
+      cursor
+    );
   }
 
   /**

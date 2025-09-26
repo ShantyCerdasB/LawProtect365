@@ -16,10 +16,8 @@ import { EnvelopeSignerRepository } from '../repositories/EnvelopeSignerReposito
 import { SignatureAuditEventService } from './SignatureAuditEventService';
 import { InvitationTokenValidationRule } from '../domain/rules/InvitationTokenValidationRule';
 import { AuditEventType } from '../domain/enums/AuditEventType';
-import { InvitationTokenStatus } from '@prisma/client';
 import { 
-  invitationTokenInvalid,
-  signerNotFound
+  invitationTokenInvalid
 } from '../signature-errors';
 import { randomToken, sha256Hex } from '@lawprotect/shared-ts';
 
@@ -284,28 +282,6 @@ export class InvitationTokenService {
     }
   }
 
-  /**
-   * Validates that a signer has access to use an invitation token
-   * @param signerId - The signer ID
-   * @param invitationToken - The invitation token
-   * @returns void if valid, throws error if invalid
-   */
-  async validateSignerAccess(signerId: SignerId, invitationToken: InvitationToken): Promise<void> {
-    try {
-      // Get signer from repository
-      const signer = await this.envelopeSignerRepository.findById(signerId);
-      if (!signer) {
-        throw signerNotFound(`Signer with ID ${signerId.getValue()} not found`);
-      }
-
-      // Validate signer access using domain rule
-      InvitationTokenValidationRule.validateSignerAccess(invitationToken, signer);
-    } catch (error) {
-      throw signerNotFound(
-        `Signer access validation failed: ${error instanceof Error ? error.message : error}`
-      );
-    }
-  }
 
   /**
    * Marks an invitation token as viewed (for GET /envelopes)
@@ -412,62 +388,7 @@ export class InvitationTokenService {
     }
   }
 
-  /**
-   * Revokes an invitation token
-   * @param tokenId - The token ID to revoke
-   * @param reason - Reason for revocation
-   * @param userId - The user revoking the token
-   * @returns The updated invitation token
-   */
-  async revokeToken(tokenId: InvitationTokenId, reason: string, userId: string): Promise<InvitationToken> {
-    try {
-      const invitationToken = await this.invitationTokenRepository.findById(tokenId);
-      if (!invitationToken) {
-        throw invitationTokenInvalid(`Token with ID ${tokenId.getValue()} not found`);
-      }
 
-      // Revoke token by updating status and setting revoked fields
-      // Since the entity doesn't have a revoke method, we need to implement the logic here
-      // This is a temporary solution - ideally the entity should have a revoke method
-      (invitationToken as any).status = 'REVOKED';
-      (invitationToken as any).revokedAt = new Date();
-      (invitationToken as any).revokedReason = reason;
-
-      // Update in repository
-      const updatedToken = await this.invitationTokenRepository.update(tokenId, invitationToken);
-
-      // Create audit event
-      await this.signatureAuditEventService.createSignerAuditEvent({
-        envelopeId: invitationToken.getEnvelopeId().getValue(),
-        signerId: invitationToken.getSignerId().getValue(),
-        eventType: AuditEventType.INVITATION_TOKEN_USED,
-        description: `Invitation token revoked: ${reason}`,
-        userId: userId,
-        ipAddress: invitationToken.getIpAddress(),
-        userAgent: invitationToken.getUserAgent(),
-        country: invitationToken.getCountry(),
-        metadata: {
-          revokedAt: invitationToken.getRevokedAt()?.toISOString(),
-          revokedReason: reason
-        }
-      });
-
-      return updatedToken;
-    } catch (error) {
-      throw invitationTokenInvalid(
-        `Failed to revoke token: ${error instanceof Error ? error.message : error}`
-      );
-    }
-  }
-
-  /**
-   * Gets invitation tokens by envelope
-   * @param envelopeId - The envelope ID
-   * @returns Array of invitation tokens
-   */
-  async getTokensByEnvelope(envelopeId: EnvelopeId): Promise<InvitationToken[]> {
-    return this.invitationTokenRepository.findByEnvelopeId(envelopeId);
-  }
 
   /**
    * Gets invitation tokens by signer
@@ -477,26 +398,6 @@ export class InvitationTokenService {
   async getTokensBySigner(signerId: SignerId): Promise<InvitationToken[]> {
     return this.invitationTokenRepository.findBySignerId(signerId);
   }
-
-  /**
-   * Gets active invitation tokens by envelope
-   * @param envelopeId - The envelope ID
-   * @returns Array of active invitation tokens
-   */
-  async getActiveTokensByEnvelope(envelopeId: EnvelopeId): Promise<InvitationToken[]> {
-    const allTokens = await this.invitationTokenRepository.findByEnvelopeId(envelopeId);
-    return allTokens.filter(token => token.getStatus() === InvitationTokenStatus.ACTIVE);
-  }
-
-  /**
-   * Counts invitation tokens by envelope
-   * @param envelopeId - The envelope ID
-   * @returns Number of invitation tokens
-   */
-  async countTokensByEnvelope(envelopeId: EnvelopeId): Promise<number> {
-    return this.invitationTokenRepository.countByEnvelopeId(envelopeId);
-  }
-
 
   /**
    * Updates token sent information (lastSentAt and resendCount)

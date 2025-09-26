@@ -9,6 +9,7 @@ import { InvitationTokenId } from '../value-objects/InvitationTokenId';
 import { EnvelopeId } from '../value-objects/EnvelopeId';
 import { SignerId } from '../value-objects/SignerId';
 import { InvitationTokenStatus } from '@prisma/client';
+import { Clock, systemClock, ensureNonNegative, toDateOrUndefined } from '@lawprotect/shared-ts';
 import { 
   invitationTokenExpired,
   invitationTokenAlreadyUsed,
@@ -45,8 +46,25 @@ export class InvitationToken {
     private userAgent: string | undefined,
     private country: string | undefined,
     private readonly createdAt: Date,
-    private updatedAt: Date
-  ) {}
+    private updatedAt: Date,
+    private readonly clock: Clock = systemClock
+  ) {
+    // Ensure non-negative counts
+    this.resendCount = ensureNonNegative(this.resendCount, 'resendCount');
+    this.viewCount = ensureNonNegative(this.viewCount, 'viewCount');
+  }
+
+
+  /**
+   * Applies security context to the token
+   * @param ctx - Security context with optional fields
+   */
+  private applySecurityContext(ctx?: { ipAddress?: string; userAgent?: string; country?: string }): void {
+    if (!ctx) return;
+    if (ctx.ipAddress) this.ipAddress = ctx.ipAddress;
+    if (ctx.userAgent) this.userAgent = ctx.userAgent;
+    if (ctx.country) this.country = ctx.country;
+  }
 
   /**
    * Gets the token unique identifier
@@ -238,13 +256,12 @@ export class InvitationToken {
    * @param country - Country of the sender
    */
   markAsSent(ipAddress?: string, userAgent?: string, country?: string): void {
-    this.sentAt = new Date();
-    this.lastSentAt = new Date();
-    this.resendCount += 1;
-    this.ipAddress = ipAddress;
-    this.userAgent = userAgent;
-    this.country = country;
-    this.updatedAt = new Date();
+    const now = this.clock.now();
+    if (!this.sentAt) this.sentAt = now;
+    this.lastSentAt = now;
+    this.resendCount = this.resendCount + 1;
+    this.applySecurityContext({ ipAddress, userAgent, country });
+    this.updatedAt = now;
   }
 
   /**
@@ -265,40 +282,30 @@ export class InvitationToken {
       throw invitationTokenRevoked('Invitation token has been revoked');
     }
 
-    // Update status to VIEWED if it's ACTIVE
+    const now = this.clock.now();
     if (this.status === InvitationTokenStatus.ACTIVE) {
       this.status = InvitationTokenStatus.VIEWED;
     }
 
-    // Update view tracking
-    this.viewCount++;
-    this.lastViewedAt = new Date();
-    this.usedAt = new Date();
+    this.viewCount = this.viewCount + 1;
+    this.lastViewedAt = now;
+    // Keep current semantics: first access = used
+    this.usedAt = now;
     this.usedBy = this.signerId.getValue();
 
-    // Update security context
-    if (securityContext.ipAddress) {
-      this.ipAddress = securityContext.ipAddress;
-    }
-    if (securityContext.userAgent) {
-      this.userAgent = securityContext.userAgent;
-    }
-    if (securityContext.country) {
-      this.country = securityContext.country;
-    }
-
-    this.updatedAt = new Date();
+    this.applySecurityContext(securityContext);
+    this.updatedAt = now;
   }
 
   /**
    * Marks the token as signed (for POST /envelopes/sign)
-   * @param signerId - ID of the signer who signed
+   * @param signerId - ID of the signer who signed (string or SignerId)
    * @param securityContext - Security context with IP, user agent, country
    * @throws invitationTokenExpired when token has expired
    * @throws invitationTokenAlreadyUsed when token has already been signed
    * @throws invitationTokenRevoked when token has been revoked
    */
-  markAsSigned(signerId: string, securityContext: {
+  markAsSigned(signerId: string | SignerId, securityContext: {
     ipAddress?: string;
     userAgent?: string;
     country?: string;
@@ -313,25 +320,17 @@ export class InvitationToken {
       throw invitationTokenRevoked('Invitation token has been revoked');
     }
 
-    // Update status to SIGNED
+    const now = this.clock.now();
+    const signer = typeof signerId === 'string' ? signerId : signerId.getValue();
+
     this.status = InvitationTokenStatus.SIGNED;
-    this.signedAt = new Date();
-    this.signedBy = signerId;
-    this.usedAt = new Date();
-    this.usedBy = signerId;
+    this.signedAt = now;
+    this.signedBy = signer;
+    this.usedAt = now;
+    this.usedBy = signer;
 
-    // Update security context
-    if (securityContext.ipAddress) {
-      this.ipAddress = securityContext.ipAddress;
-    }
-    if (securityContext.userAgent) {
-      this.userAgent = securityContext.userAgent;
-    }
-    if (securityContext.country) {
-      this.country = securityContext.country;
-    }
-
-    this.updatedAt = new Date();
+    this.applySecurityContext(securityContext);
+    this.updatedAt = now;
   }
 
 
@@ -362,16 +361,9 @@ export class InvitationToken {
    * Returns true if either the status is EXPIRED or the expiration date has passed
    */
   isExpired(): boolean {
-    // Check if status is explicitly EXPIRED
-    if (this.status === InvitationTokenStatus.EXPIRED) {
-      return true;
-    }
-    
-    // Check if expiration date has passed
-    if (!this.expiresAt) {
-      return false;
-    }
-    return new Date() > this.expiresAt;
+    if (this.status === InvitationTokenStatus.EXPIRED) return true;
+    if (!this.expiresAt) return false;
+    return Date.now() > this.expiresAt.getTime();
   }
 
   /**
@@ -421,7 +413,7 @@ export class InvitationToken {
     userAgent?: string;
     country?: string;
   }): InvitationToken {
-    const now = new Date();
+    const now = systemClock.now();
     return new InvitationToken(
       InvitationTokenId.generate(),
       params.envelopeId,
@@ -455,30 +447,34 @@ export class InvitationToken {
    * @returns InvitationToken instance
    */
   static fromPersistence(data: any): InvitationToken {
+    const viewCount = ensureNonNegative(data.viewCount, 'viewCount');
+    const resendCount = ensureNonNegative(data.resendCount, 'resendCount');
+
     return new InvitationToken(
       InvitationTokenId.fromString(data.id),
       EnvelopeId.fromString(data.envelopeId),
       SignerId.fromString(data.signerId),
-      data.tokenHash,
+      String(data.tokenHash),
       data.status,
-      data.expiresAt,
-      data.sentAt,
-      data.lastSentAt,
-      data.resendCount,
-      data.usedAt,
-      data.usedBy,
-      data.viewCount || 0,
-      data.lastViewedAt,
-      data.signedAt,
-      data.signedBy,
-      data.revokedAt,
-      data.revokedReason,
-      data.createdBy,
-      data.ipAddress,
-      data.userAgent,
-      data.country,
-      data.createdAt,
-      data.updatedAt
+      toDateOrUndefined(data.expiresAt),
+      toDateOrUndefined(data.sentAt),
+      toDateOrUndefined(data.lastSentAt),
+      resendCount,
+      toDateOrUndefined(data.usedAt),
+      data.usedBy ?? undefined,
+      viewCount,
+      toDateOrUndefined(data.lastViewedAt),
+      toDateOrUndefined(data.signedAt),
+      data.signedBy ?? undefined,
+      toDateOrUndefined(data.revokedAt),
+      data.revokedReason ?? undefined,
+      data.createdBy ?? undefined,
+      data.ipAddress ?? undefined,
+      data.userAgent ?? undefined,
+      data.country ?? undefined,
+      new Date(data.createdAt),
+      new Date(data.updatedAt),
+      systemClock
     );
   }
 }

@@ -66,6 +66,15 @@ export function setupCursorPaginationMocks(config: CursorPaginationMockConfig = 
         listPage: mockListPage,
       };
     });
+
+    // Also mock the direct imports used by RepositoryBase
+    jest.doMock('@lawprotect/shared-ts/db/cursor', () => ({
+      decodeCursor: mockDecodeCursor,
+    }));
+
+    jest.doMock('@lawprotect/shared-ts/db/prismaPage', () => ({
+      listPage: mockListPage,
+    }));
   }
 
   return {

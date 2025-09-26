@@ -9,11 +9,10 @@
 import { Consent } from '../domain/entities/Consent';
 import { ConsentId } from '../domain/value-objects/ConsentId';
 import { SignerId } from '../domain/value-objects/SignerId';
-import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
+
 import { ConsentRepository } from '../repositories/ConsentRepository';
 import { EnvelopeSignerRepository } from '../repositories/EnvelopeSignerRepository';
 import { SignatureAuditEventService } from './SignatureAuditEventService';
-import { InvitationTokenService } from './InvitationTokenService';
 import { CreateConsentRequest } from '../domain/types/consent/CreateConsentRequest';
 import { AuditEventType } from '../domain/enums/AuditEventType';
 import { 
@@ -33,22 +32,9 @@ export class ConsentService {
   constructor(
     private readonly consentRepository: ConsentRepository,
     private readonly envelopeSignerRepository: EnvelopeSignerRepository,
-    private readonly signatureAuditEventService: SignatureAuditEventService,
-    private readonly invitationTokenService: InvitationTokenService
+    private readonly signatureAuditEventService: SignatureAuditEventService
   ) {}
 
-  /**
-   * Validates signer access using invitation token
-   * @param signerId - The signer ID
-   * @param invitationToken - The invitation token
-   */
-  private async validateSignerAccessWithToken(
-    signerId: SignerId, 
-    invitationToken: string
-  ): Promise<void> {
-    const token = await this.invitationTokenService.validateInvitationToken(invitationToken);
-    await this.invitationTokenService.validateSignerAccess(signerId, token);
-  }
 
   /**
    * Creates a new consent
@@ -65,8 +51,16 @@ export class ConsentService {
       console.log('  - request.country:', request.country);
       console.log('  - userId:', userId);
 
-      // Validate business rules
-      await this.validateConsentCreation(request);
+      // Validate business rules - check if consent already exists
+      const existingConsent = await this.consentRepository.findBySignerAndEnvelope(
+        request.signerId,
+        request.envelopeId
+      );
+      if (existingConsent) {
+        throw consentAlreadyExists(
+          `Consent already exists for signer ${request.signerId.getValue()} and envelope ${request.envelopeId.getValue()}`
+        );
+      }
 
       // Create consent entity
       const consent = Consent.create({
@@ -122,28 +116,6 @@ export class ConsentService {
     }
   }
 
-  /**
-   * Gets consent by signer and envelope
-   * @param signerId - The signer ID
-   * @param envelopeId - The envelope ID
-   * @param invitationToken - Optional invitation token for external users
-   * @returns The consent or null if not found
-   */
-  async getConsentBySignerAndEnvelope(signerId: SignerId, envelopeId: EnvelopeId, invitationToken?: string): Promise<Consent | null> {
-    try {
-      // Validate user has access to signer using InvitationTokenService
-      if (invitationToken) {
-        await this.validateSignerAccessWithToken(signerId, invitationToken);
-      }
-
-      // Get consent from repository
-      return await this.consentRepository.findBySignerAndEnvelope(signerId, envelopeId);
-    } catch (error) {
-      throw consentNotFound(
-        `Failed to get consent for signer ${signerId.getValue()}: ${error instanceof Error ? error.message : error}`
-      );
-    }
-  }
 
   /**
    * Links consent with signature
@@ -170,85 +142,4 @@ export class ConsentService {
       );
     }
   }
-
-  /**
-   * Validates consent for signing
-   * @param consentId - The consent ID to validate
-   * @returns void if valid, throws error if invalid
-   */
-  async validateConsentForSigning(consentId: ConsentId): Promise<void> {
-    try {
-      const consent = await this.consentRepository.findById(consentId);
-      if (!consent) {
-        throw consentNotFound(`Consent with ID ${consentId.getValue()} not found`);
-      }
-
-      // Use entity validation method
-      consent.validateForCompliance();
-    } catch (error) {
-      throw consentNotFound(
-        `Consent validation failed: ${error instanceof Error ? error.message : error}`
-      );
-    }
-  }
-
-  /**
-   * Gets consents by envelope
-   * @param envelopeId - The envelope ID
-   * @returns Array of consents
-   */
-  async getConsentsByEnvelope(envelopeId: EnvelopeId): Promise<Consent[]> {
-    return this.consentRepository.findByEnvelopeId(envelopeId);
-  }
-
-  /**
-   * Gets consents by signer
-   * @param signerId - The signer ID
-   * @returns Array of consents
-   */
-  async getConsentsBySigner(signerId: SignerId): Promise<Consent[]> {
-    return this.consentRepository.findBySignerId(signerId);
-  }
-
-  /**
-   * Counts consents by envelope
-   * @param envelopeId - The envelope ID
-   * @returns Number of consents
-   */
-  async countConsentsByEnvelope(envelopeId: EnvelopeId): Promise<number> {
-    return this.consentRepository.countByEnvelopeId(envelopeId);
-  }
-
-  /**
-   * Checks if consent exists for signer and envelope
-   * @param signerId - The signer ID
-   * @param envelopeId - The envelope ID
-   * @returns True if consent exists
-   */
-  async consentExists(signerId: SignerId, envelopeId: EnvelopeId): Promise<boolean> {
-    return this.consentRepository.existsBySignerAndEnvelope(signerId, envelopeId);
-  }
-
-  /**
-   * Validates consent creation request
-   * @param request - The create request
-   */
-  private async validateConsentCreation(request: CreateConsentRequest): Promise<void> {
-    // Validate signer exists and user has access using InvitationTokenService
-    if (request.invitationToken) {
-      await this.validateSignerAccessWithToken(request.signerId, request.invitationToken);
-    }
-
-    // Check if consent already exists
-    const existingConsent = await this.consentRepository.findBySignerAndEnvelope(
-      request.signerId,
-      request.envelopeId
-    );
-    if (existingConsent) {
-      throw consentAlreadyExists(
-        `Consent already exists for signer ${request.signerId.getValue()} and envelope ${request.envelopeId.getValue()}`
-      );
-    }
-  }
-
 }

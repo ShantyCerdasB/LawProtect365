@@ -18,6 +18,8 @@ import {
 } from '../../../../src/signature-errors';
 import { TestUtils, TEST_CONSTANTS } from '../../../helpers/testUtils';
 import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
+import { consentEntity, consentPersistenceRow } from '../../../helpers/builders/consent';
+import { fixedNow, resetTime } from '../../../helpers/time';
 
 // Helper function to create Consent with custom parameters
 function createConsentWithParams(params: {
@@ -30,7 +32,7 @@ function createConsentWithParams(params: {
   consentText?: string;
   ipAddress?: string;
   userAgent?: string;
-  country?: string;
+  country?: string | null;
   createdAt?: Date;
   updatedAt?: Date;
 }): Consent {
@@ -44,7 +46,7 @@ function createConsentWithParams(params: {
     params.consentText || 'I consent to electronic signing',
     params.ipAddress || generateTestIpAddress(),
     params.userAgent || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-    params.country,
+    params.country || undefined,
     params.createdAt || new Date('2024-01-01T00:00:00Z'),
     params.updatedAt || new Date('2024-01-01T00:00:00Z')
   );
@@ -159,15 +161,166 @@ describe('Consent', () => {
         envelopeId,
         signerId,
         signatureId: undefined,
-        consentGiven: false,
+        consentGiven: true,
         consentTimestamp,
-        consentText: 'I do not consent',
+        consentText: 'I consent to electronic signing',
         ipAddress: generateTestIpAddress(),
         userAgent: 'Safari/14.1'
       });
 
       expect(consent.getSignatureId()).toBeUndefined();
-      expect(consent.getConsentGiven()).toBe(false);
+      expect(consent.getConsentGiven()).toBe(true);
+    });
+
+    it('should throw error when consentGiven is false in create method', () => {
+      const id = new ConsentId(TestUtils.generateUuid());
+      const envelopeId = new EnvelopeId(TestUtils.generateUuid());
+      const signerId = new SignerId(TestUtils.generateUuid());
+      const consentTimestamp = new Date('2024-01-01T10:00:00Z');
+
+      expect(() => Consent.create({
+        id,
+        envelopeId,
+        signerId,
+        signatureId: undefined,
+        consentGiven: false,
+        consentTimestamp,
+        consentText: 'I do not consent',
+        ipAddress: generateTestIpAddress(),
+        userAgent: 'Safari/14.1'
+      })).toThrow(consentNotGiven('Consent must be given for legal compliance'));
+    });
+
+    it('should throw error when consentTimestamp is missing in create method', () => {
+      const id = new ConsentId(TestUtils.generateUuid());
+      const envelopeId = new EnvelopeId(TestUtils.generateUuid());
+      const signerId = new SignerId(TestUtils.generateUuid());
+
+      expect(() => Consent.create({
+        id,
+        envelopeId,
+        signerId,
+        signatureId: undefined,
+        consentGiven: true,
+        consentTimestamp: null as any,
+        consentText: 'I consent to electronic signing',
+        ipAddress: generateTestIpAddress(),
+        userAgent: 'Safari/14.1'
+      })).toThrow(consentTimestampRequired('Consent timestamp is required for legal compliance'));
+    });
+
+    it('should throw error when consentText is empty in create method', () => {
+      const id = new ConsentId(TestUtils.generateUuid());
+      const envelopeId = new EnvelopeId(TestUtils.generateUuid());
+      const signerId = new SignerId(TestUtils.generateUuid());
+      const consentTimestamp = new Date('2024-01-01T10:00:00Z');
+
+      expect(() => Consent.create({
+        id,
+        envelopeId,
+        signerId,
+        signatureId: undefined,
+        consentGiven: true,
+        consentTimestamp,
+        consentText: '',
+        ipAddress: generateTestIpAddress(),
+        userAgent: 'Safari/14.1'
+      })).toThrow(consentTextRequired('Consent text is required for legal compliance'));
+    });
+
+    it('should throw error when consentText is only whitespace in create method', () => {
+      const id = new ConsentId(TestUtils.generateUuid());
+      const envelopeId = new EnvelopeId(TestUtils.generateUuid());
+      const signerId = new SignerId(TestUtils.generateUuid());
+      const consentTimestamp = new Date('2024-01-01T10:00:00Z');
+
+      expect(() => Consent.create({
+        id,
+        envelopeId,
+        signerId,
+        signatureId: undefined,
+        consentGiven: true,
+        consentTimestamp,
+        consentText: '   ',
+        ipAddress: generateTestIpAddress(),
+        userAgent: 'Safari/14.1'
+      })).toThrow(consentTextRequired('Consent text is required for legal compliance'));
+    });
+
+    it('should throw error when ipAddress is empty in create method', () => {
+      const id = new ConsentId(TestUtils.generateUuid());
+      const envelopeId = new EnvelopeId(TestUtils.generateUuid());
+      const signerId = new SignerId(TestUtils.generateUuid());
+      const consentTimestamp = new Date('2024-01-01T10:00:00Z');
+
+      expect(() => Consent.create({
+        id,
+        envelopeId,
+        signerId,
+        signatureId: undefined,
+        consentGiven: true,
+        consentTimestamp,
+        consentText: 'I consent to electronic signing',
+        ipAddress: '',
+        userAgent: 'Safari/14.1'
+      })).toThrow(consentIpRequired('IP address is required for legal compliance'));
+    });
+
+    it('should throw error when ipAddress is only whitespace in create method', () => {
+      const id = new ConsentId(TestUtils.generateUuid());
+      const envelopeId = new EnvelopeId(TestUtils.generateUuid());
+      const signerId = new SignerId(TestUtils.generateUuid());
+      const consentTimestamp = new Date('2024-01-01T10:00:00Z');
+
+      expect(() => Consent.create({
+        id,
+        envelopeId,
+        signerId,
+        signatureId: undefined,
+        consentGiven: true,
+        consentTimestamp,
+        consentText: 'I consent to electronic signing',
+        ipAddress: '   ',
+        userAgent: 'Safari/14.1'
+      })).toThrow(consentIpRequired('IP address is required for legal compliance'));
+    });
+
+    it('should throw error when userAgent is empty in create method', () => {
+      const id = new ConsentId(TestUtils.generateUuid());
+      const envelopeId = new EnvelopeId(TestUtils.generateUuid());
+      const signerId = new SignerId(TestUtils.generateUuid());
+      const consentTimestamp = new Date('2024-01-01T10:00:00Z');
+
+      expect(() => Consent.create({
+        id,
+        envelopeId,
+        signerId,
+        signatureId: undefined,
+        consentGiven: true,
+        consentTimestamp,
+        consentText: 'I consent to electronic signing',
+        ipAddress: generateTestIpAddress(),
+        userAgent: ''
+      })).toThrow(consentUserAgentRequired('User agent is required for legal compliance'));
+    });
+
+    it('should throw error when userAgent is only whitespace in create method', () => {
+      const id = new ConsentId(TestUtils.generateUuid());
+      const envelopeId = new EnvelopeId(TestUtils.generateUuid());
+      const signerId = new SignerId(TestUtils.generateUuid());
+      const consentTimestamp = new Date('2024-01-01T10:00:00Z');
+
+      expect(() => Consent.create({
+        id,
+        envelopeId,
+        signerId,
+        signatureId: undefined,
+        consentGiven: true,
+        consentTimestamp,
+        consentText: 'I consent to electronic signing',
+        ipAddress: generateTestIpAddress(),
+        userAgent: '   '
+      })).toThrow(consentUserAgentRequired('User agent is required for legal compliance'));
     });
   });
 
@@ -507,6 +660,117 @@ describe('Consent', () => {
 
       expect(consent.getConsentTimestamp()).toEqual(pastTimestamp);
       expect(() => consent.validateForCompliance()).not.toThrow();
+    });
+  });
+
+  describe('fromPersistence', () => {
+    it('should create consent from persistence data with all fields', () => {
+      const persistenceData = consentPersistenceRow({
+        id: TestUtils.generateUuid(),
+        envelopeId: TestUtils.generateUuid(),
+        signerId: TestUtils.generateUuid(),
+        signatureId: TestUtils.generateUuid(),
+        consentGiven: true,
+        consentTimestamp: '2024-01-01T10:00:00.000Z',
+        consentText: 'I consent to electronic signing',
+        ipAddress: generateTestIpAddress(),
+        userAgent: 'Mozilla/5.0',
+        country: 'US',
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z'
+      });
+
+      const consent = Consent.fromPersistence(persistenceData);
+
+      expect(consent.getId().getValue()).toBe(persistenceData.id);
+      expect(consent.getEnvelopeId().getValue()).toBe(persistenceData.envelopeId);
+      expect(consent.getSignerId().getValue()).toBe(persistenceData.signerId);
+      expect(consent.getSignatureId()?.getValue()).toBe(persistenceData.signatureId);
+      expect(consent.getConsentGiven()).toBe(true);
+      expect(consent.getConsentTimestamp()).toEqual(new Date(persistenceData.consentTimestamp));
+      expect(consent.getConsentText()).toBe(persistenceData.consentText);
+      expect(consent.getIpAddress()).toBe(persistenceData.ipAddress);
+      expect(consent.getUserAgent()).toBe(persistenceData.userAgent);
+      expect(consent.getCountry()).toBe(persistenceData.country);
+      expect(consent.getCreatedAt()).toEqual(new Date(persistenceData.createdAt));
+      expect(consent.getUpdatedAt()).toEqual(new Date(persistenceData.updatedAt));
+    });
+
+    it('should create consent from persistence data without signature ID', () => {
+      const persistenceData = consentPersistenceRow({
+        signatureId: null,
+        consentGiven: false
+      });
+
+      const consent = Consent.fromPersistence(persistenceData);
+
+      expect(consent.getSignatureId()).toBeUndefined();
+      expect(consent.getConsentGiven()).toBe(false);
+    });
+
+    it('should create consent from persistence data with null country', () => {
+      const persistenceData = consentPersistenceRow({
+        country: null
+      });
+
+      const consent = Consent.fromPersistence(persistenceData);
+
+      expect(consent.getCountry()).toBe(null);
+    });
+
+    it('should handle boolean conversion for consentGiven', () => {
+      const persistenceData = consentPersistenceRow({
+        consentGiven: 'true' as any
+      });
+
+      const consent = Consent.fromPersistence(persistenceData);
+
+      expect(consent.getConsentGiven()).toBe(true);
+    });
+
+    it('should handle boolean conversion for consentGiven false', () => {
+      const persistenceData = consentPersistenceRow({
+        consentGiven: 0 as any
+      });
+
+      const consent = Consent.fromPersistence(persistenceData);
+
+      expect(consent.getConsentGiven()).toBe(false);
+    });
+  });
+
+  describe('toJSON', () => {
+    it('should serialize consent with country as undefined', () => {
+      const consent = createConsentWithParams({
+        country: undefined
+      });
+
+      const json = consent.toJSON();
+
+      expect(json.country).toBeUndefined();
+    });
+
+    it('should serialize consent with country as null', () => {
+      const consent = createConsentWithParams({
+        country: null
+      });
+
+      const json = consent.toJSON();
+
+      expect(json.country).toBeUndefined();
+    });
+  });
+
+  describe('Idempotent Operations', () => {
+    it('should return same instance when linking with same signature ID', () => {
+      const signatureId = new SignerId(TestUtils.generateUuid());
+      const consent = consentEntity({
+        signatureId: signatureId.getValue()
+      });
+
+      const linkedConsent = consent.linkWithSignature(signatureId);
+
+      expect(linkedConsent).toBe(consent);
     });
   });
 });

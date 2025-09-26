@@ -90,3 +90,22 @@ export function createConsentPrismaMock() {
   const consent = createPrismaModelMock();
   return createPrismaMock({ consent });
 }
+
+/**
+ * Convenience function for creating EnvelopeSigner-specific Prisma mocks
+ * @returns Object with prisma client and envelopeSigner model mock
+ */
+export function createEnvelopeSignerPrismaMock() {
+  const envelopeSigner = createPrismaModelMock();
+  return createPrismaMock({ envelopeSigner });
+}
+
+export function createInvitationTokenPrismaMock() {
+  const invitationToken = createPrismaModelMock();
+  return createPrismaMock({ invitationToken });
+}
+
+export function createSignatureAuditEventPrismaMock() {
+  const signatureAuditEvent = createPrismaModelMock();
+  return createPrismaMock({ signatureAuditEvent });
+}

@@ -345,3 +345,11 @@ export class PaginationLimitRequiredError extends HttpError<string> {
     super(400, code, message, details);
   }
 }
+
+/**
+ * Creates an InternalError for repository/persistence failures (500).
+ * @param details - Error details including operation, entity info, and cause
+ * @returns InternalError instance
+ */
+export const repositoryError = (details?: unknown) =>
+  new InternalError("Repository operation failed", undefined, details);

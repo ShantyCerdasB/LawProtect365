@@ -12,12 +12,25 @@ import { Email } from '../value-objects/Email';
 import { Signature } from '../value-objects/Signature';
 import { SignatureMetadata } from '../value-objects/SignatureMetadata';
 import { SignerStatus } from '@prisma/client';
+import { fromIso, Clock, systemClock } from '@lawprotect/shared-ts';
 import { 
   invalidSignerState, 
   signerAlreadySigned,
   signerAlreadyDeclined,
   consentTextRequired
 } from '../../signature-errors';
+
+const asDate = (v: unknown): Date | undefined => {
+  if (v == null) return undefined;
+  if (v instanceof Date) return v;
+  return fromIso(String(v));
+};
+
+const allowedTransitions: Record<SignerStatus, SignerStatus[]> = {
+  [SignerStatus.PENDING]: [SignerStatus.SIGNED, SignerStatus.DECLINED],
+  [SignerStatus.SIGNED]: [],
+  [SignerStatus.DECLINED]: [],
+};
 
 /**
  * EnvelopeSigner entity representing an individual participant in the signing process
@@ -36,7 +49,7 @@ export class EnvelopeSigner {
     private readonly fullName: string | undefined,
     private readonly invitedByUserId: string | undefined,
     private readonly participantRole: string,
-    private readonly order: number,
+    private order: number,
     private status: SignerStatus,
     private signedAt: Date | undefined,
     private declinedAt: Date | undefined,
@@ -54,7 +67,8 @@ export class EnvelopeSigner {
     private reason: string | undefined,
     private location: string | undefined,
     private readonly createdAt: Date,
-    private updatedAt: Date
+    private updatedAt: Date,
+    private readonly clock: Clock = systemClock
   ) {}
 
   /**
@@ -66,19 +80,19 @@ export class EnvelopeSigner {
     return new EnvelopeSigner(
       SignerId.fromString(data.id),
       EnvelopeId.fromString(data.envelopeId),
-      data.userId || null, // ✅ Convertir undefined a null para external users
-      data.isExternal,
+      data.userId ?? null,
+      Boolean(data.isExternal),
       Email.fromStringOrUndefined(data.email),
       data.fullName,
       data.invitedByUserId,
-      data.participantRole,
-      data.order,
+      String(data.participantRole),
+      Number(data.order),
       data.status,
-      data.signedAt,
-      data.declinedAt,
+      asDate(data.signedAt),
+      asDate(data.declinedAt),
       data.declineReason,
-      data.consentGiven,
-      data.consentTimestamp,
+      Boolean(data.consentGiven),
+      asDate(data.consentTimestamp),
       data.documentHash,
       data.signatureHash,
       data.signedS3Key,
@@ -88,8 +102,8 @@ export class EnvelopeSigner {
       data.userAgent,
       data.reason,
       data.location,
-      data.createdAt,
-      data.updatedAt
+      asDate(data.createdAt) || new Date(),
+      asDate(data.updatedAt) || new Date()
     );
   }
 
@@ -276,21 +290,25 @@ export class EnvelopeSigner {
   }
 
   /**
+   * Asserts that a status transition is valid
+   * @param to - Target status
+   * @throws invalidSignerState when transition is not allowed
+   */
+  private assertTransition(to: SignerStatus): void {
+    if (!allowedTransitions[this.status]?.includes(to)) {
+      throw invalidSignerState(`Invalid status transition: ${this.status} -> ${to}`);
+    }
+  }
+
+  /**
    * Updates the signer status
    * @param newStatus - The new status to set
    * @throws invalidSignerState when trying to make invalid status transitions
    */
   updateStatus(newStatus: SignerStatus): void {
-    // Validate status transition
-    if (this.status === SignerStatus.SIGNED && newStatus === SignerStatus.DECLINED) {
-      throw invalidSignerState('Cannot decline after signing');
-    }
-    if (this.status === SignerStatus.DECLINED && newStatus === SignerStatus.SIGNED) {
-      throw invalidSignerState('Cannot sign after declining');
-    }
-
+    this.assertTransition(newStatus);
     this.status = newStatus;
-    this.updatedAt = new Date();
+    this.updatedAt = this.clock.now();
   }
 
   /**
@@ -336,6 +354,7 @@ export class EnvelopeSigner {
    * @param metadata - Additional signature metadata
    * @throws signerAlreadySigned when signer has already signed
    * @throws signerAlreadyDeclined when signer has already declined
+   * @throws invalidSignerState when signer has not given consent or missing signature fields
    */
   sign(
     documentHash: string,
@@ -347,8 +366,26 @@ export class EnvelopeSigner {
   ): void {
     this.validateCanPerformAction();
 
+    // Validate all required signature evidence fields
+    if (!documentHash || documentHash.trim().length === 0) {
+      throw invalidSignerState('Missing required signature field: documentHash');
+    }
+    if (!signatureHash || signatureHash.trim().length === 0) {
+      throw invalidSignerState('Missing required signature field: signatureHash');
+    }
+    if (!signedS3Key || signedS3Key.trim().length === 0) {
+      throw invalidSignerState('Missing required signature field: signedS3Key');
+    }
+    if (!kmsKeyId || kmsKeyId.trim().length === 0) {
+      throw invalidSignerState('Missing required signature field: kmsKeyId');
+    }
+    if (!algorithm || algorithm.trim().length === 0) {
+      throw invalidSignerState('Missing required signature field: algorithm');
+    }
+
+    this.assertTransition(SignerStatus.SIGNED);
     this.status = SignerStatus.SIGNED;
-    this.signedAt = new Date();
+    this.signedAt = this.clock.now();
     this.documentHash = documentHash;
     this.signatureHash = signatureHash;
     this.signedS3Key = signedS3Key;
@@ -358,7 +395,7 @@ export class EnvelopeSigner {
     this.userAgent = metadata.getUserAgent();
     this.reason = metadata.getReason();
     this.location = metadata.getLocation();
-    this.updatedAt = new Date();
+    this.updatedAt = this.clock.now();
   }
 
   /**
@@ -366,20 +403,21 @@ export class EnvelopeSigner {
    * @param reason - Reason for declining
    * @param ipAddress - IP address of the signer
    * @param userAgent - User agent of the signer
-   * @param country - Country of the signer
+   * @param location - Location of the signer
    * @throws signerAlreadySigned when signer has already signed
    * @throws signerAlreadyDeclined when signer has already declined
    */
-  decline(reason: string, ipAddress?: string, userAgent?: string, country?: string): void {
+  decline(reason: string, ipAddress?: string, userAgent?: string, location?: string): void {
     this.validateCanDecline();
 
+    this.assertTransition(SignerStatus.DECLINED);
     this.status = SignerStatus.DECLINED;
     this.declinedAt = new Date();
     this.declineReason = reason;
     this.ipAddress = ipAddress;
     this.userAgent = userAgent;
-    this.location = country;
-    this.updatedAt = new Date();
+    this.location = location;
+    this.updatedAt = this.clock.now();
   }
 
   /**
@@ -400,7 +438,7 @@ export class EnvelopeSigner {
     this.consentTimestamp = new Date();
     this.ipAddress = ipAddress;
     this.userAgent = userAgent;
-    this.updatedAt = new Date();
+    this.updatedAt = this.clock.now();
   }
 
   /**
@@ -451,10 +489,14 @@ export class EnvelopeSigner {
   /**
    * Updates the signing order of this signer
    * @param newOrder - The new order number
+   * @throws invalidSignerState when order is not a valid non-negative integer
    */
   updateOrder(newOrder: number): void {
-    (this as any).order = newOrder;
-    this.updatedAt = new Date();
+    if (!Number.isInteger(newOrder) || newOrder < 0) {
+      throw invalidSignerState('Order must be a non-negative integer');
+    }
+    this.order = newOrder;
+    this.updatedAt = this.clock.now();
   }
 
   /**
