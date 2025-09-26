@@ -6,15 +6,15 @@
  */
 
 /**
- * Ensures a number is non-negative, defaulting to 0 if invalid
+ * Ensures a number is non-negative, throwing error if invalid
  * @param n - Number to validate
- * @param _field - Field name for error context (unused but kept for consistency)
+ * @param field - Field name for error context
  * @returns Valid non-negative number
+ * @throws {Error} If n is not a number or is negative
  */
-export function ensureNonNegative(n: number | undefined, _field: string): number {
+export function ensureNonNegative(n: number | undefined, field: string): number {
   if (typeof n === 'number' && n >= 0) return n;
-  // Invalid value for field, defaulting to 0
-  return 0;
+  throw new Error(`Invalid value for ${field}: expected non-negative number, got ${n}`);
 }
 
 /**
@@ -52,4 +52,19 @@ export function toDateOrUndefined(d: unknown): Date | undefined {
  */
 export function toStringOrUndefined(v: unknown): string | undefined {
   return typeof v === 'string' ? v : (v == null ? undefined : String(v));
+}
+
+/**
+ * Normalizes and truncates a string message to a maximum length
+ * @param message - The message to normalize and truncate
+ * @param maxLength - Maximum allowed length (default: 1024)
+ * @returns Normalized string or null if empty/undefined
+ */
+export function normalizeMessage(message: string | undefined, maxLength: number = 1024): string | null {
+  if (message === undefined) return null;
+  
+  const trimmed = message.trim();
+  if (trimmed.length === 0) return null;
+  
+  return trimmed.length > maxLength ? trimmed.substring(0, maxLength) : trimmed;
 }

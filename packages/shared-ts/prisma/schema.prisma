@@ -350,4 +350,5 @@ model SignerReminderTracking {
   @@unique([signerId, envelopeId])
   @@index([envelopeId])
   @@index([signerId])
+  @@index([lastReminderAt])
 }

@@ -52,6 +52,18 @@ export function trackingEntity(overrides: any = {}) {
 }
 
 /**
+ * Creates a SignerReminderTracking domain entity using createNew
+ * @param overrides - Optional overrides for the entity
+ * @returns SignerReminderTracking domain entity
+ */
+export function trackingEntityNew(overrides: any = {}) {
+  const envelopeId = overrides.envelopeId || TestUtils.generateEnvelopeId();
+  const signerId = overrides.signerId || TestUtils.generateSignerId();
+
+  return SignerReminderTracking.createNew(signerId, envelopeId, overrides.clock);
+}
+
+/**
  * Creates a TrackingSpec for queries
  * @param overrides - Optional overrides for the spec
  * @returns TrackingSpec
