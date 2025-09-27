@@ -22,7 +22,10 @@ export function createSignatureEnvelopeServiceMock() {
     getEnvelopeWithSigners: jest.fn() as jest.MockedFunction<any>,
     createEnvelope: jest.fn() as jest.MockedFunction<any>,
     validateUserAccess: jest.fn() as jest.MockedFunction<any>,
-    updateEnvelopeStatusAfterDecline: jest.fn() as jest.MockedFunction<any>
+    updateEnvelopeStatusAfterDecline: jest.fn() as jest.MockedFunction<any>,
+    downloadDocument: jest.fn() as jest.MockedFunction<any>,
+    listEnvelopes: jest.fn() as jest.MockedFunction<any>,
+    sendEnvelope: jest.fn() as jest.MockedFunction<any>
   };
 }
 

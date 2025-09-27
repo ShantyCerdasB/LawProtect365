@@ -4,3 +4,8 @@
  */
 
 export * from './DeclineSignerUseCase';
+export * from './DownloadDocumentUseCase';
+export * from './GetAuditTrailUseCase';
+export * from './GetEnvelopeUseCase';
+export * from './ListEnvelopesByUserUseCase';
+export * from './SendEnvelopeUseCase';

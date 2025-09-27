@@ -15,7 +15,8 @@ import { jest } from '@jest/globals';
 export function createEnvelopeNotificationServiceMock() {
   return {
     publishEnvelopeCancelled: jest.fn() as jest.MockedFunction<any>,
-    publishSignerDeclined: jest.fn() as jest.MockedFunction<any>
+    publishSignerDeclined: jest.fn() as jest.MockedFunction<any>,
+    sendSignerInvitations: jest.fn() as jest.MockedFunction<any>
   };
 }
 

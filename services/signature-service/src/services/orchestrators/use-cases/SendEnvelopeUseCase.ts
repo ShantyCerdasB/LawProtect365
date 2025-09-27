@@ -1,45 +1,20 @@
 /**
- * @fileoverview Use case for sending an envelope to external signers.
- * @description Transitions the envelope to "sent", resolves target signers,
- * generates invitation tokens, dispatches notifications, and writes an audit event.
+ * @fileoverview SendEnvelopeUseCase - Use case for sending envelopes to external signers
+ * @summary Handles envelope sending with token generation and notifications
+ * @description This use case manages the sending of signature envelopes to external signers,
+ * including envelope status transition, signer selection, invitation token generation,
+ * notification dispatch, and audit event creation. It ensures proper workflow orchestration
+ * and maintains comprehensive tracking for envelope distribution operations.
  */
 
-import { EnvelopeId } from '@/domain/value-objects/EnvelopeId';
-import { EnvelopeSigner } from '@/domain/entities/EnvelopeSigner';
 import { SignatureEnvelopeService } from '@/services/SignatureEnvelopeService';
 import { InvitationTokenService } from '@/services/InvitationTokenService';
 import { AuditEventService } from '@/services/audit/AuditEventService';
 import { EnvelopeNotificationService } from '@/services/events/EnvelopeNotificationService';
-import { createNetworkSecurityContext, NetworkSecurityContext, rethrow } from '@lawprotect/shared-ts';
+import { createNetworkSecurityContext, rethrow } from '@lawprotect/shared-ts';
 import { selectTargetSigners } from '@/services/orchestrators/utils/signerSelection';
-
-export type SendEnvelopeInput = {
-  envelopeId: EnvelopeId;
-  userId: string;
-  securityContext: NetworkSecurityContext;
-  options?: {
-    message?: string;
-    sendToAll?: boolean;
-    signers?: Array<{ signerId: string; message?: string }>;
-  };
-};
-
-export type SendEnvelopeTokenResult = {
-  signerId: string;
-  email?: string;
-  token: string;
-  expiresAt: Date;
-};
-
-export type SendEnvelopeResult = {
-  success: boolean;
-  message: string;
-  envelopeId: string;
-  status: string;
-  tokensGenerated: number;
-  signersNotified: number;
-  tokens: SendEnvelopeTokenResult[];
-};
+import { SendEnvelopeInput, SendEnvelopeResult } from '@/domain/types/usecase/orchestrator/SendEnvelopeUseCase';
+import { EnvelopeSigner } from '@/domain';
 
 export class SendEnvelopeUseCase {
   constructor(
@@ -49,6 +24,21 @@ export class SendEnvelopeUseCase {
     private readonly envelopeNotificationService: EnvelopeNotificationService
   ) {}
 
+  /**
+   * Sends an envelope to external signers with token generation and notifications
+   * @param input - The send request containing envelope ID, user info, and options
+   * @returns Promise that resolves to the send operation result with token information
+   * @throws NotFoundError when envelope is not found
+   * @throws BadRequestError when envelope cannot be sent
+   * @throws AccessDeniedError when user lacks permission to send the envelope
+   * @example
+   * const result = await useCase.execute({
+   *   envelopeId: EnvelopeId.fromString('envelope-123'),
+   *   userId: 'user-456',
+   *   securityContext: { ipAddress: '192.168.1.1', userAgent: 'Mozilla/5.0', country: 'US' },
+   *   options: { message: 'Please sign this document', sendToAll: true }
+   * });
+   */
   async execute(input: SendEnvelopeInput): Promise<SendEnvelopeResult> {
     const { envelopeId, userId, securityContext, options } = input;
 

@@ -1,29 +1,17 @@
 /**
- * @fileoverview Use case for retrieving a single envelope with access validation and audit tracking.
- * @description Validates access (owner or external via invitation token), marks the invitation token
- * as viewed (best-effort), fetches the envelope with full signer data, and returns the access type.
+ * @fileoverview GetEnvelopeUseCase - Use case for retrieving single envelopes with access validation
+ * @summary Handles envelope retrieval with access validation and audit tracking
+ * @description This use case manages the retrieval of individual signature envelopes,
+ * including access validation (supports both owner and external access via invitation token),
+ * invitation token tracking, signer data fetching, and access type determination. It ensures
+ * proper authorization and maintains audit trails for envelope access operations.
  */
 
-import { SignatureEnvelope } from '@/domain/entities/SignatureEnvelope';
-import { EnvelopeSigner } from '@/domain/entities/EnvelopeSigner';
-import { AccessType } from '@/domain/enums/AccessType';
-import { EnvelopeId } from '@/domain/value-objects/EnvelopeId';
 import { SignatureEnvelopeService } from '@/services/SignatureEnvelopeService';
 import { InvitationTokenService } from '@/services/InvitationTokenService';
-import { NetworkSecurityContext, rethrow } from '@lawprotect/shared-ts';
-
-export type GetEnvelopeInput = {
-  envelopeId: EnvelopeId;
-  userId?: string;
-  invitationToken?: string;
-  securityContext?: NetworkSecurityContext;
-};
-
-export type GetEnvelopeResult = {
-  envelope: SignatureEnvelope;
-  signers: EnvelopeSigner[];
-  accessType: AccessType;
-};
+import { AccessType } from '@/domain/enums/AccessType';
+import { rethrow } from '@lawprotect/shared-ts';
+import { GetEnvelopeInput, GetEnvelopeResult } from '@/domain/types/usecase/orchestrator/GetEnvelopeUseCase';
 
 export class GetEnvelopeUseCase {
   constructor(
@@ -31,6 +19,21 @@ export class GetEnvelopeUseCase {
     private readonly invitationTokenService: InvitationTokenService
   ) {}
 
+  /**
+   * Retrieves an envelope with access validation and audit tracking
+   * @param input - The envelope request containing envelope ID, user info, and security context
+   * @returns Promise that resolves to the envelope with signers and access type
+   * @throws NotFoundError when envelope is not found
+   * @throws AccessDeniedError when user lacks permission to access the envelope
+   * @throws BadRequestError when invitation token is invalid
+   * @example
+   * const result = await useCase.execute({
+   *   envelopeId: EnvelopeId.fromString('envelope-123'),
+   *   userId: 'user-456',
+   *   invitationToken: 'token-789',
+   *   securityContext: { ipAddress: '192.168.1.1', userAgent: 'Mozilla/5.0', country: 'US' }
+   * });
+   */
   async execute(input: GetEnvelopeInput): Promise<GetEnvelopeResult> {
     const { envelopeId, userId, invitationToken, securityContext } = input;
 
@@ -50,7 +53,7 @@ export class GetEnvelopeUseCase {
             userAgent: securityContext.userAgent,
             country: securityContext.country
           })
-          .catch(() => undefined); // best-effort: ignore failures
+          .catch(() => undefined); 
       }
 
       // 3) Access type

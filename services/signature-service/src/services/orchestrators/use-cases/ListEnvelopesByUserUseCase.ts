@@ -1,35 +1,33 @@
 /**
- * @fileoverview Use case for listing envelopes for an authenticated user with pagination and signers.
- * @description Validates pagination input, queries envelopes by spec, and fetches full signer data
- * for each envelope. Mirrors existing contracts and errors.
+ * @fileoverview ListEnvelopesByUserUseCase - Use case for listing user envelopes with pagination
+ * @summary Handles envelope listing with pagination and signer data fetching
+ * @description This use case manages the listing of signature envelopes for authenticated users,
+ * including pagination validation, envelope filtering by status, signer data fetching,
+ * and cursor-based pagination. It ensures proper data retrieval and maintains
+ * consistent pagination patterns for envelope management operations.
  */
 
-import { SignatureEnvelope } from '@/domain/entities/SignatureEnvelope';
-import { EnvelopeSigner } from '@/domain/entities/EnvelopeSigner';
-import { EnvelopeStatus } from '@/domain/value-objects/EnvelopeStatus';
 import { EnvelopeSpec } from '@/domain/types/envelope';
 import { SignatureEnvelopeService } from '@/services/SignatureEnvelopeService';
 import { paginationLimitRequired } from '@lawprotect/shared-ts';
-
-export type ListEnvelopesByUserInput = {
-  userId: string;
-  filters?: {
-    status?: EnvelopeStatus;
-    limit?: number;
-    cursor?: string;
-  };
-};
-
-export type ListEnvelopesByUserResult = {
-  envelopes: SignatureEnvelope[];
-  signers: EnvelopeSigner[][];
-  nextCursor?: string;
-  totalCount?: number; // preserved for future use if your service starts returning it
-};
+import { ListEnvelopesByUserInput, ListEnvelopesByUserResult } from '@/domain/types/usecase/orchestrator/ListEnvelopesByUserUseCase';
 
 export class ListEnvelopesByUserUseCase {
   constructor(private readonly signatureEnvelopeService: SignatureEnvelopeService) {}
 
+  /**
+   * Lists envelopes for a user with pagination and signer data
+   * @param input - The listing request containing user ID and optional filters
+   * @returns Promise that resolves to the paginated envelope list with signers
+   * @throws BadRequestError when pagination limit is not provided
+   * @throws NotFoundError when user has no envelopes
+   * @throws BadRequestError when envelope retrieval fails
+   * @example
+   * const result = await useCase.execute({
+   *   userId: 'user-123',
+   *   filters: { status: EnvelopeStatus.DRAFT, limit: 10, cursor: 'cursor-456' }
+   * });
+   */
   async execute(input: ListEnvelopesByUserInput): Promise<ListEnvelopesByUserResult> {
     const { userId, filters = {} } = input;
     const { status, limit, cursor } = filters;
@@ -60,7 +58,6 @@ export class ListEnvelopesByUserUseCase {
       envelopes: result.items,
       signers,
       nextCursor: result.nextCursor
-      // totalCount passthrough if your service returns it later
     };
   }
 }

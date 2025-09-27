@@ -8,10 +8,9 @@ import { EnvelopeSigner } from '../../../../../src/domain/entities/EnvelopeSigne
 import { EnvelopeStatus } from '../../../../../src/domain/value-objects/EnvelopeStatus';
 import { TestUtils } from '../../../../helpers/testUtils';
 import { signatureEnvelopeEntity } from '../../../../helpers/builders/signatureEnvelope';
-// import { envelopeSignerEntity } from '../../../../helpers/builders/envelopeSigner';
-import { createSignatureEnvelopeServiceMock } from '../../../../helpers/mocks/services/SignatureEnvelopeService';
-import { createEnvelopeSignerServiceMock } from '../../../../helpers/mocks/services/EnvelopeSignerService';
-import { createEnvelopeNotificationServiceMock } from '../../../../helpers/mocks/services/EnvelopeNotificationService';
+import { createSignatureEnvelopeServiceMock } from '../../../../helpers/mocks/services/SignatureEnvelopeService.mock';
+import { createEnvelopeSignerServiceMock } from '../../../../helpers/mocks/services/EnvelopeSignerService.mock';
+import { createEnvelopeNotificationServiceMock } from '../../../../helpers/mocks/services/EnvelopeNotificationService.mock';
 
 describe('DeclineSignerUseCase', () => {
   let useCase: DeclineSignerUseCase;

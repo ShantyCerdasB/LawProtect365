@@ -282,7 +282,7 @@ export class InvitationToken {
 
     this.viewCount = this.viewCount + 1;
     this.lastViewedAt = now;
-    // Keep current semantics: first access = used
+    //  first access = used
     this.usedAt = now;
     this.usedBy = this.signerId.getValue();
 
