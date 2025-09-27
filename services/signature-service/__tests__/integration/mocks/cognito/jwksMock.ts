@@ -75,12 +75,7 @@ const initializeJwks = async (): Promise<void> => {
     }]
   };
   
-  console.log('🔑 JWKS initialized with key:', {
-    keyId: keyMetadata.keyId,
-    algorithm: keyMetadata.algorithm,
-    keyType: keyMetadata.keyType,
-    keySize: keyMetadata.keySize
-  });
+  // JWKS initialized successfully
 };
 
 /**
@@ -238,4 +233,4 @@ export function getKeyMetadata(): typeof keyMetadata {
   return keyMetadata;
 }
 
-console.log('🔧 Cognito JWKS mock loaded - realistic JWT token generation and validation');
+// Cognito JWKS mock loaded - realistic JWT token generation and validation
