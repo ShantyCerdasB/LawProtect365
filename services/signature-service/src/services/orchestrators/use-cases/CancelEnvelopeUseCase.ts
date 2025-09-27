@@ -1,0 +1,51 @@
+/**
+ * @fileoverview CancelEnvelopeUseCase - Use case for cancelling signature envelopes
+ * @summary Handles envelope cancellation and notification dispatch
+ * @description This use case manages the cancellation of signature envelopes, including
+ * business logic validation, envelope status updates, and asynchronous notification
+ * dispatch to interested parties. It ensures proper error handling and maintains
+ * audit trails for cancellation events.
+ */
+
+import { SignatureEnvelope } from '@/domain/entities/SignatureEnvelope';
+import { EnvelopeId } from '@/domain/value-objects/EnvelopeId';
+import { NetworkSecurityContext } from '@lawprotect/shared-ts';
+import { SignatureEnvelopeService } from '@/services/SignatureEnvelopeService';
+import { EnvelopeNotificationService } from '@/services/events/EnvelopeNotificationService';
+import { fireAndForget, rethrow } from '@lawprotect/shared-ts';
+export class CancelEnvelopeUseCase {
+  constructor(
+    private readonly signatureEnvelopeService: SignatureEnvelopeService,
+    private readonly envelopeNotificationService: EnvelopeNotificationService
+  ) {}
+
+  /**
+   * Cancels an envelope. Notification is dispatched as fire-and-forget.
+   * @param input.envelopeId Envelope identifier.
+   * @param input.userId Initiating user identifier.
+   * @param input.securityContext Network context for auditing/notifications.
+   * @returns The cancelled envelope.
+   */
+  async execute(input: {
+    envelopeId: EnvelopeId;
+    userId: string;
+    securityContext: NetworkSecurityContext;
+  }): Promise<{ envelope: SignatureEnvelope }> {
+    const { envelopeId, userId, securityContext } = input;
+
+    try {
+      const envelope = await this.signatureEnvelopeService.cancelEnvelope(envelopeId, userId);
+
+      fireAndForget((async () => {
+        const env = await this.signatureEnvelopeService.getEnvelopeWithSigners(envelopeId);
+        if (env) {
+          await this.envelopeNotificationService.publishEnvelopeCancelled(env, userId, securityContext);
+        }
+      })());
+
+      return { envelope };
+    } catch (error) {
+      rethrow(error);
+    }
+  }
+}

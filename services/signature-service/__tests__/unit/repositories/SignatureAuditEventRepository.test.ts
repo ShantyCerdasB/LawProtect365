@@ -517,4 +517,14 @@ describe('SignatureAuditEventRepository - Public Methods', () => {
       expect(where.AND).toBeDefined();
     });
   });
+
+  describe('toUpdateModel', () => {
+    it('should map partial entity to update model', () => {
+      const patch = partialAuditEventEntity();
+      const result = repository['toUpdateModel'](patch);
+      
+      expect(result).toBeDefined();
+    });
+  });
+
 });

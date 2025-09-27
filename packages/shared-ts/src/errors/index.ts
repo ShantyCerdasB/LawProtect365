@@ -6,3 +6,4 @@ export * from "./factories.js";
 export * from "./mapError.js";
 export * from "./awsErrorsMap.js";
 export * from "./wrapServiceError.js";
+export * from "./error.js";

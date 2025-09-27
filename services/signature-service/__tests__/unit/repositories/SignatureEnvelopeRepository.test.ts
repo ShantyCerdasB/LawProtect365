@@ -1088,4 +1088,5 @@ describe('SignatureEnvelopeRepository - Public Methods', () => {
       await expect(repository.updateFlattenedKey(id, 'key', {} as any)).rejects.toThrow();
     });
   });
+
 });
