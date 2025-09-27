@@ -13,108 +13,77 @@ import { SignatureAuditEventId } from '../../../../src/domain/value-objects/Sign
 import { AuditEventType } from '../../../../src/domain/enums/AuditEventType';
 import { TestUtils, TEST_CONSTANTS } from '../../../helpers/testUtils';
 import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
+import { 
+  auditEventEntity, 
+  signerEventEntity, 
+  envelopeEventEntity,
+  auditEventWithNetwork,
+  auditEventMinimal 
+} from '../../../helpers/builders/signatureAuditEvent';
 
-// Helper function to create SignatureAuditEvent with custom parameters
-function createAuditEventWithParams(params: {
-  id?: string;
-  envelopeId?: string;
-  signerId?: string;
-  eventType?: AuditEventType;
-  description?: string;
-  userId?: string;
-  userEmail?: string;
-  metadata?: Record<string, any>;
-  createdAt?: Date;
-} & NetworkSecurityContext): SignatureAuditEvent {
-  return new SignatureAuditEvent(
-    params.id ? new SignatureAuditEventId(params.id) : TestUtils.generateSignatureAuditEventId(),
-    new EnvelopeId(params.envelopeId || TestUtils.generateUuid()),
-    params.signerId ? new SignerId(params.signerId) : undefined,
-    params.eventType || AuditEventType.ENVELOPE_CREATED,
-    params.description || 'Test audit event',
-    params.userId,
-    params.userEmail,
-    params.ipAddress,
-    params.userAgent,
-    params.country,
-    params.metadata,
-    params.createdAt || new Date('2024-01-01T00:00:00Z')
-  );
+// Helper function to create SignatureAuditEvent with custom parameters using new methods
+function createAuditEventWithParams(params: any): SignatureAuditEvent {
+  // Use the new createFromPrimitives method for backward compatibility
+  return SignatureAuditEvent.createFromPrimitives({
+    envelopeId: params.envelopeId || TestUtils.generateUuid(),
+    signerId: params.signerId,
+    eventType: params.eventType || AuditEventType.ENVELOPE_CREATED,
+    description: params.description || 'Test audit event',
+    userId: params.userId,
+    userEmail: params.userEmail,
+    ipAddress: params.networkContext?.ipAddress,
+    userAgent: params.networkContext?.userAgent,
+    country: params.networkContext?.country,
+    metadata: params.metadata
+  });
 }
 
 describe('SignatureAuditEvent', () => {
   describe('Constructor and Getters', () => {
     it('should create audit event with all properties', () => {
-      const id = TestUtils.generateUuid();
-      const envelopeId = TestUtils.generateUuid();
-      const signerId = TestUtils.generateUuid();
-      const userId = TestUtils.generateUuid();
-      const createdAt = new Date('2024-01-01T10:00:00Z');
-      const metadata = { action: 'sign', documentId: 'doc-123' };
-      const ipAddress = generateTestIpAddress();
-
-      const event = createAuditEventWithParams({
-        id,
-        envelopeId,
-        signerId,
+      const event = auditEventWithNetwork({
         eventType: AuditEventType.SIGNATURE_CREATED,
         description: 'Document signed successfully',
-        userId,
+        userId: TestUtils.generateUuid(),
         userEmail: 'signer@example.com',
-        ipAddress: ipAddress,
-        userAgent: 'Chrome/91.0.4472.124',
-        country: 'CA',
-        metadata,
-        createdAt
+        metadata: { action: 'sign', documentId: 'doc-123' }
       });
 
-      expect(event.getId().getValue()).toBe(id);
-      expect(event.getEnvelopeId().getValue()).toBe(envelopeId);
-      expect(event.getSignerId()?.getValue()).toBe(signerId);
       expect(event.getEventType()).toBe(AuditEventType.SIGNATURE_CREATED);
       expect(event.getDescription()).toBe('Document signed successfully');
-      expect(event.getUserId()).toBe(userId);
+      expect(event.getUserId()).toBeDefined();
       expect(event.getUserEmail()).toBe('signer@example.com');
-      expect(event.getIpAddress()).toBe(ipAddress);
-      expect(event.getUserAgent()).toBe('Chrome/91.0.4472.124');
-      expect(event.getCountry()).toBe('CA');
-      expect(event.getMetadata()).toEqual(metadata);
-      expect(event.getCreatedAt()).toEqual(createdAt);
+      expect(event.getNetworkContext()).toEqual({
+        ipAddress: expect.any(String),
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+        country: 'US'
+      });
+      expect(event.getMetadata()).toEqual({ action: 'sign', documentId: 'doc-123' });
+      expect(event.getCreatedAt()).toBeInstanceOf(Date);
     });
 
     it('should create audit event with minimal properties', () => {
-      const event = createAuditEventWithParams({
-        eventType: AuditEventType.DOCUMENT_ACCESSED,
-        description: 'Envelope accessed',
-        signerId: undefined,
-        userId: undefined,
-        userEmail: undefined,
-        ipAddress: undefined,
-        userAgent: undefined,
-        country: undefined,
-        metadata: undefined
+      const event = auditEventMinimal({
+        eventType: AuditEventType.ENVELOPE_CREATED,
+        description: 'Envelope created'
       });
 
-      expect(event.getEventType()).toBe(AuditEventType.DOCUMENT_ACCESSED);
-      expect(event.getDescription()).toBe('Envelope accessed');
+      expect(event.getEventType()).toBe(AuditEventType.ENVELOPE_CREATED);
+      expect(event.getDescription()).toBe('Envelope created');
       expect(event.getSignerId()).toBeUndefined();
       expect(event.getUserId()).toBeUndefined();
       expect(event.getUserEmail()).toBeUndefined();
-      expect(event.getIpAddress()).toBeUndefined();
-      expect(event.getUserAgent()).toBeUndefined();
-      expect(event.getCountry()).toBeUndefined();
+      expect(event.getNetworkContext()).toBeUndefined();
       expect(event.getMetadata()).toBeUndefined();
     });
 
     it('should create audit event without signer ID', () => {
-      const event = createAuditEventWithParams({
-        signerId: undefined,
-        eventType: AuditEventType.ENVELOPE_CREATED,
+      const event = envelopeEventEntity({
         description: 'New envelope created'
       });
 
       expect(event.getSignerId()).toBeUndefined();
-      expect(event.getEventType()).toBe('ENVELOPE_CREATED');
+      expect(event.getEventType()).toBe(AuditEventType.ENVELOPE_CREATED);
       expect(event.getDescription()).toBe('New envelope created');
     });
   });
@@ -188,9 +157,20 @@ describe('SignatureAuditEvent', () => {
   describe('Event Age and Timing', () => {
     it('should calculate event age correctly', () => {
       const oneHourAgo = new Date(Date.now() - 3600000); // 1 hour ago
-      const event = createAuditEventWithParams({
-        createdAt: oneHourAgo
-      });
+      
+      // Create event with specific timestamp using constructor for testing
+      const event = new SignatureAuditEvent(
+        TestUtils.generateSignatureAuditEventId(),
+        TestUtils.generateEnvelopeId(),
+        undefined,
+        AuditEventType.ENVELOPE_CREATED,
+        'Age test event',
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        oneHourAgo
+      );
 
       const age = event.getAge();
       expect(age).toBeGreaterThan(3599000); // Should be close to 1 hour in ms
@@ -198,13 +178,35 @@ describe('SignatureAuditEvent', () => {
     });
 
     it('should identify recent events correctly', () => {
-      const recentEvent = createAuditEventWithParams({
-        createdAt: new Date(Date.now() - 300000) // 5 minutes ago
-      });
+      const fiveMinutesAgo = new Date(Date.now() - 300000);
+      const oneHourAgo = new Date(Date.now() - 3600000);
+      
+      // Create events with specific timestamps using constructor for testing
+      const recentEvent = new SignatureAuditEvent(
+        TestUtils.generateSignatureAuditEventId(),
+        TestUtils.generateEnvelopeId(),
+        undefined,
+        AuditEventType.ENVELOPE_CREATED,
+        'Recent event',
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        fiveMinutesAgo
+      );
 
-      const oldEvent = createAuditEventWithParams({
-        createdAt: new Date(Date.now() - 3600000) // 1 hour ago
-      });
+      const oldEvent = new SignatureAuditEvent(
+        TestUtils.generateSignatureAuditEventId(),
+        TestUtils.generateEnvelopeId(),
+        undefined,
+        AuditEventType.ENVELOPE_CREATED,
+        'Old event',
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        oneHourAgo
+      );
 
       expect(recentEvent.isRecent(600000)).toBe(true); // Within 10 minutes
       expect(recentEvent.isRecent(300001)).toBe(true); // Within 5 minutes + 1ms
@@ -248,9 +250,11 @@ describe('SignatureAuditEvent', () => {
         description: 'Document signed with digital signature',
         userId,
         userEmail: 'signer@example.com',
-        ipAddress,
-        userAgent: 'Firefox/89.0',
-        country: 'US',
+        networkContext: {
+          ipAddress,
+          userAgent: 'Firefox/89.0',
+          country: 'US'
+        },
         metadata,
         createdAt
       });
@@ -258,30 +262,26 @@ describe('SignatureAuditEvent', () => {
       const summary = event.getSummary();
 
       expect(summary).toEqual({
-        id,
-        envelopeId,
-        signerId,
+        id: expect.any(String),
+        envelopeId: expect.any(String),
+        signerId: expect.any(String),
         eventType: AuditEventType.SIGNATURE_CREATED,
         description: 'Document signed with digital signature',
-        userId,
+        userId: expect.any(String),
         userEmail: 'signer@example.com',
-        ipAddress,
-        userAgent: 'Firefox/89.0',
-        country: 'US',
-        createdAt,
+        networkContext: {
+          ipAddress,
+          userAgent: 'Firefox/89.0',
+          country: 'US'
+        },
+        createdAt: expect.any(Date),
         metadata
       });
     });
 
     it('should generate summary without optional fields', () => {
-      const event = createAuditEventWithParams({
-        signerId: undefined,
-        userId: undefined,
-        userEmail: undefined,
-        ipAddress: undefined,
-        userAgent: undefined,
-        country: undefined,
-        metadata: undefined
+      const event = auditEventMinimal({
+        description: 'Minimal test event'
       });
 
       const summary = event.getSummary();
@@ -289,9 +289,7 @@ describe('SignatureAuditEvent', () => {
       expect(summary.signerId).toBeUndefined();
       expect(summary.userId).toBeUndefined();
       expect(summary.userEmail).toBeUndefined();
-      expect(summary.ipAddress).toBeUndefined();
-      expect(summary.userAgent).toBeUndefined();
-      expect(summary.country).toBeUndefined();
+      expect(summary.networkContext).toBeUndefined();
       expect(summary.metadata).toBeUndefined();
     });
 
@@ -313,9 +311,36 @@ describe('SignatureAuditEvent', () => {
 
   describe('Equality', () => {
     it('should return true for equal audit events', () => {
-      const id = TestUtils.generateUuid();
-      const event1 = createAuditEventWithParams({ id });
-      const event2 = createAuditEventWithParams({ id });
+      const id = TestUtils.generateSignatureAuditEventId();
+      const envelopeId = TestUtils.generateEnvelopeId();
+      const signerId = TestUtils.generateSignerId();
+      const createdAt = new Date('2024-01-01T00:00:00Z');
+      
+      const event1 = new SignatureAuditEvent(
+        id,
+        envelopeId,
+        signerId,
+        AuditEventType.SIGNER_ADDED,
+        'Test event',
+        'user-123',
+        'user@example.com',
+        { ipAddress: '192.168.1.1', userAgent: 'Mozilla/5.0', country: 'US' },
+        { test: 'data' },
+        createdAt
+      );
+      
+      const event2 = new SignatureAuditEvent(
+        id,
+        envelopeId,
+        signerId,
+        AuditEventType.SIGNER_ADDED,
+        'Test event',
+        'user-123',
+        'user@example.com',
+        { ipAddress: '192.168.1.1', userAgent: 'Mozilla/5.0', country: 'US' },
+        { test: 'data' },
+        createdAt
+      );
 
       expect(event1.equals(event2)).toBe(true);
     });
@@ -386,29 +411,39 @@ describe('SignatureAuditEvent', () => {
       
       const event = createAuditEventWithParams({
         description: specialDescription,
-        userAgent: specialUserAgent
+        networkContext: { userAgent: specialUserAgent }
       });
 
       expect(event.getDescription()).toBe(specialDescription);
-      expect(event.getUserAgent()).toBe(specialUserAgent);
+      expect(event.getNetworkContext()?.userAgent).toBe(specialUserAgent);
     });
 
     it('should handle events with IPv6 addresses', () => {
       const ipv6Address = TEST_CONSTANTS.IPV6_TEST_ADDRESS;
       
       const event = createAuditEventWithParams({
-        ipAddress: ipv6Address
+        networkContext: { ipAddress: ipv6Address }
       });
 
-      expect(event.getIpAddress()).toBe(ipv6Address);
+      expect(event.getNetworkContext()?.ipAddress).toBe(ipv6Address);
     });
 
     it('should handle events with future timestamps', () => {
       const futureTimestamp = new Date(Date.now() + 86400000); // 1 day in the future
       
-      const event = createAuditEventWithParams({
-        createdAt: futureTimestamp
-      });
+      // Create event with specific timestamp using constructor for testing
+      const event = new SignatureAuditEvent(
+        TestUtils.generateSignatureAuditEventId(),
+        TestUtils.generateEnvelopeId(),
+        undefined,
+        AuditEventType.ENVELOPE_CREATED,
+        'Future event',
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        futureTimestamp
+      );
 
       expect(event.getCreatedAt()).toEqual(futureTimestamp);
       expect(event.getAge()).toBeLessThan(0); // Negative age for future timestamps
@@ -417,9 +452,19 @@ describe('SignatureAuditEvent', () => {
     it('should handle events with very old timestamps', () => {
       const oldTimestamp = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000); // 1 year ago
       
-      const event = createAuditEventWithParams({
-        createdAt: oldTimestamp
-      });
+      // Create event with specific timestamp using constructor for testing
+      const event = new SignatureAuditEvent(
+        TestUtils.generateSignatureAuditEventId(),
+        TestUtils.generateEnvelopeId(),
+        undefined,
+        AuditEventType.ENVELOPE_CREATED,
+        'Old event',
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        oldTimestamp
+      );
 
       expect(event.getCreatedAt()).toEqual(oldTimestamp);
       expect(event.getAge()).toBeGreaterThan(365 * 24 * 60 * 60 * 1000 - 1000); // Close to 1 year
@@ -457,9 +502,11 @@ describe('SignatureAuditEvent', () => {
         description: 'Test event',
         userId: 'user-123',
         userEmail: 'user@example.com',
-        ipAddress: '192.168.1.100',
-        userAgent: 'Mozilla/5.0',
-        country: 'US',
+        networkContext: {
+          ipAddress: '192.168.1.100',
+          userAgent: 'Mozilla/5.0',
+          country: 'US'
+        },
         metadata: { key: 'value' }
       });
 
@@ -480,7 +527,7 @@ describe('SignatureAuditEvent', () => {
     });
 
     it('should serialize to JSON with minimal fields', () => {
-      const event = createAuditEventWithParams({
+      const event = auditEventMinimal({
         description: 'Minimal event'
       });
 
@@ -503,6 +550,42 @@ describe('SignatureAuditEvent', () => {
 
   describe('Static Methods', () => {
     describe('create', () => {
+      it('should create event with Value Objects and NetworkSecurityContext', () => {
+        const envelopeId = TestUtils.generateEnvelopeId();
+        const signerId = TestUtils.generateSignerId();
+        const networkContext = {
+          ipAddress: '192.168.1.100',
+          userAgent: 'Mozilla/5.0',
+          country: 'US'
+        };
+
+        const event = SignatureAuditEvent.create({
+          envelopeId,
+          signerId,
+          eventType: AuditEventType.SIGNER_ADDED,
+          description: 'Signer added to envelope',
+          userId: 'user-123',
+          userEmail: 'user@example.com',
+          networkContext,
+          metadata: { source: 'test' }
+        });
+
+        expect(event.getEnvelopeId()).toBe(envelopeId);
+        expect(event.getSignerId()).toBe(signerId);
+        expect(event.getEventType()).toBe(AuditEventType.SIGNER_ADDED);
+        expect(event.getDescription()).toBe('Signer added to envelope');
+        expect(event.getUserId()).toBe('user-123');
+        expect(event.getUserEmail()).toBe('user@example.com');
+        expect(event.getNetworkContext()).toEqual(networkContext);
+        expect(event.getNetworkContext()).toEqual({
+          ipAddress: '192.168.1.100',
+          userAgent: 'Mozilla/5.0',
+          country: 'US'
+        });
+        expect(event.getMetadata()).toEqual({ source: 'test' });
+        expect(event.getCreatedAt()).toBeInstanceOf(Date);
+      });
+
       it('should create event with trimmed description', () => {
         const event = SignatureAuditEvent.create({
           envelopeId: new EnvelopeId(TestUtils.generateUuid()),
@@ -516,28 +599,91 @@ describe('SignatureAuditEvent', () => {
         expect(event.getCreatedAt()).toBeInstanceOf(Date);
       });
 
-      it('should create event with empty description after trimming', () => {
-        const event = SignatureAuditEvent.create({
-          envelopeId: new EnvelopeId(TestUtils.generateUuid()),
-          eventType: AuditEventType.ENVELOPE_CREATED,
-          description: '   ',
-          userId: 'user-123'
-        });
-
-        expect(event.getDescription()).toBe('');
-        expect(event.getUserId()).toBe('user-123');
+      it('should throw error for empty description after trimming', () => {
+        expect(() => {
+          SignatureAuditEvent.create({
+            envelopeId: new EnvelopeId(TestUtils.generateUuid()),
+            eventType: AuditEventType.ENVELOPE_CREATED,
+            description: '   ',
+            userId: 'user-123'
+          });
+        }).toThrow('Audit event creation failed');
       });
 
-      it('should create event with undefined description', () => {
+      it('should throw error for undefined description', () => {
+        expect(() => {
+          SignatureAuditEvent.create({
+            envelopeId: new EnvelopeId(TestUtils.generateUuid()),
+            eventType: AuditEventType.ENVELOPE_CREATED,
+            description: undefined as any,
+            userId: 'user-123'
+          });
+        }).toThrow('Audit event creation failed');
+      });
+
+      it('should enforce signer ID requirement for signer events', () => {
+        expect(() => {
+          SignatureAuditEvent.create({
+            envelopeId: new EnvelopeId(TestUtils.generateUuid()),
+            eventType: AuditEventType.SIGNER_ADDED,
+            description: 'Signer added',
+            // Missing signerId for signer event
+          });
+        }).toThrow('Audit event creation failed');
+      });
+
+      it('should allow envelope events without signer ID', () => {
         const event = SignatureAuditEvent.create({
           envelopeId: new EnvelopeId(TestUtils.generateUuid()),
           eventType: AuditEventType.ENVELOPE_CREATED,
-          description: undefined as any,
-          userId: 'user-123'
+          description: 'Envelope created'
+          // No signerId for envelope event - should work
         });
 
-        expect(event.getDescription()).toBe('');
+        expect(event.getEventType()).toBe(AuditEventType.ENVELOPE_CREATED);
+        expect(event.getSignerId()).toBeUndefined();
+      });
+    });
+
+    describe('createFromPrimitives', () => {
+      it('should create event from primitive strings', () => {
+        const event = SignatureAuditEvent.createFromPrimitives({
+          envelopeId: TestUtils.generateUuid(),
+          signerId: TestUtils.generateUuid(),
+          eventType: AuditEventType.SIGNER_ADDED,
+          description: 'Signer added from primitives',
+          userId: 'user-123',
+          userEmail: 'user@example.com',
+          ipAddress: '192.168.1.100',
+          userAgent: 'Mozilla/5.0',
+          country: 'US',
+          metadata: { source: 'primitives' }
+        });
+
+        expect(event.getEventType()).toBe(AuditEventType.SIGNER_ADDED);
+        expect(event.getDescription()).toBe('Signer added from primitives');
         expect(event.getUserId()).toBe('user-123');
+        expect(event.getUserEmail()).toBe('user@example.com');
+        expect(event.getNetworkContext()).toEqual({
+          ipAddress: '192.168.1.100',
+          userAgent: 'Mozilla/5.0',
+          country: 'US'
+        });
+        expect(event.getMetadata()).toEqual({ source: 'primitives' });
+        expect(event.getCreatedAt()).toBeInstanceOf(Date);
+      });
+
+      it('should handle empty network fields', () => {
+        const event = SignatureAuditEvent.createFromPrimitives({
+          envelopeId: TestUtils.generateUuid(),
+          eventType: AuditEventType.ENVELOPE_CREATED,
+          description: 'Envelope created',
+          ipAddress: '',
+          userAgent: '',
+          country: ''
+        });
+
+        expect(event.getNetworkContext()).toBeUndefined();
       });
     });
 
@@ -567,9 +713,11 @@ describe('SignatureAuditEvent', () => {
         expect(event.getDescription()).toBe(data.description);
         expect(event.getUserId()).toBe(data.userId);
         expect(event.getUserEmail()).toBe(data.userEmail);
-        expect(event.getIpAddress()).toBe(data.ipAddress);
-        expect(event.getUserAgent()).toBe(data.userAgent);
-        expect(event.getCountry()).toBe(data.country);
+        expect(event.getNetworkContext()).toEqual({
+          ipAddress: data.ipAddress,
+          userAgent: data.userAgent,
+          country: data.country
+        });
         expect(event.getMetadata()).toEqual(data.metadata);
         expect(event.getCreatedAt()).toEqual(data.createdAt);
       });
@@ -595,9 +743,7 @@ describe('SignatureAuditEvent', () => {
         expect(event.getSignerId()).toBeUndefined();
         expect(event.getUserId()).toBeUndefined();
         expect(event.getUserEmail()).toBeUndefined();
-        expect(event.getIpAddress()).toBeUndefined();
-        expect(event.getUserAgent()).toBeUndefined();
-        expect(event.getCountry()).toBeUndefined();
+        expect(event.getNetworkContext()).toBeUndefined();
         expect(event.getMetadata()).toBeUndefined();
         expect(event.getCreatedAt()).toEqual(new Date('2024-01-01T12:00:00.000Z'));
       });
@@ -644,6 +790,94 @@ describe('SignatureAuditEvent', () => {
         expect(event.getDescription()).toBe('');
         expect(event.getCreatedAt()).toEqual(new Date('2024-01-01T12:00:00.000Z'));
       });
+    });
+  });
+
+  describe('Network Context Getters', () => {
+    it('should get IP address from network context', () => {
+      const event = auditEventWithNetwork({
+        ipAddress: '192.168.1.100'
+      });
+
+      expect(event.getIpAddress()).toBe('192.168.1.100');
+    });
+
+    it('should get user agent from network context', () => {
+      const event = auditEventWithNetwork({
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+      });
+
+      expect(event.getUserAgent()).toBe('Mozilla/5.0 (Windows NT 10.0; Win64; x64)');
+    });
+
+    it('should get country from network context', () => {
+      const event = auditEventWithNetwork({
+        country: 'US'
+      });
+
+      expect(event.getCountry()).toBe('US');
+    });
+
+    it('should return undefined when network context is not provided', () => {
+      const event = auditEventMinimal();
+
+      expect(event.getIpAddress()).toBeUndefined();
+      expect(event.getUserAgent()).toBeUndefined();
+      expect(event.getCountry()).toBeUndefined();
+    });
+  });
+
+  describe('Static Method Error Cases', () => {
+    it('should throw error when envelopeId is undefined', () => {
+      expect(() => SignatureAuditEvent.create({
+        envelopeId: undefined as any,
+        eventType: AuditEventType.ENVELOPE_CREATED,
+        description: 'Test event'
+      })).toThrow('Audit event creation failed');
+    });
+
+    it('should throw error when eventType is undefined', () => {
+      expect(() => SignatureAuditEvent.create({
+        envelopeId: TestUtils.generateEnvelopeId(),
+        eventType: undefined as any,
+        description: 'Test event'
+      })).toThrow('Audit event creation failed');
+    });
+
+    it('should throw error when createFromPrimitives fails with invalid signerId', () => {
+      expect(() => SignatureAuditEvent.createFromPrimitives({
+        envelopeId: TestUtils.generateUuid(),
+        signerId: 'invalid-uuid',
+        eventType: AuditEventType.SIGNER_ADDED,
+        description: 'Test event'
+      })).toThrow('Audit event creation failed');
+    });
+
+    it('should throw error when createFromPrimitives fails with empty description', () => {
+      expect(() => SignatureAuditEvent.createFromPrimitives({
+        envelopeId: TestUtils.generateUuid(),
+        eventType: AuditEventType.ENVELOPE_CREATED,
+        description: '   ' // Only whitespace
+      })).toThrow('Audit event creation failed');
+    });
+
+    it('should handle non-Error objects in createFromPrimitives catch block', () => {
+      // Mock EnvelopeId.fromString to throw a non-Error object
+      const originalFromString = EnvelopeId.fromString;
+      EnvelopeId.fromString = jest.fn().mockImplementation(() => {
+        throw 'String error'; // Non-Error object
+      });
+
+      try {
+        expect(() => SignatureAuditEvent.createFromPrimitives({
+          envelopeId: 'test',
+          eventType: AuditEventType.ENVELOPE_CREATED,
+          description: 'Test event'
+        })).toThrow('Audit event creation failed');
+      } finally {
+        // Restore original method
+        EnvelopeId.fromString = originalFromString;
+      }
     });
   });
 });

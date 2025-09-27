@@ -7,40 +7,40 @@
  * and business logic enforcement.
  */
 
-import { SignatureEnvelope } from '../domain/entities/SignatureEnvelope';
-import { EnvelopeSigner } from '../domain/entities/EnvelopeSigner';
-import { SignatureEnvelopeService } from './SignatureEnvelopeService';
-import { EnvelopeSignerService } from './EnvelopeSignerService';
-import { InvitationTokenService } from './InvitationTokenService';
-import { SignatureAuditEventService } from './SignatureAuditEventService';
-import { S3Service } from './S3Service';
-import { paginationLimitRequired, sha256Hex, NotificationType, NetworkSecurityContext } from '@lawprotect/shared-ts';
-import { CreateEnvelopeData } from '../domain/types/envelope/CreateEnvelopeData';
-import { UpdateEnvelopeData } from '../domain/rules/EnvelopeUpdateValidationRule';
+import { SignatureEnvelope } from '@/domain/entities/SignatureEnvelope';
+import { EnvelopeSigner } from '@/domain/entities/EnvelopeSigner';
+import { SignatureEnvelopeService } from '@/services/SignatureEnvelopeService';
+import { EnvelopeSignerService } from '@/services/EnvelopeSignerService';
+import { InvitationTokenService } from '@/services/InvitationTokenService';
+import { AuditEventService } from '@/services/audit/AuditEventService';
+import { S3Service } from '@/services/S3Service';
+import { paginationLimitRequired, sha256Hex, NotificationType, NetworkSecurityContext, createNetworkSecurityContext } from '@lawprotect/shared-ts';
+import { CreateEnvelopeData } from '@/domain/types/envelope/CreateEnvelopeData';
+import { UpdateEnvelopeData } from '@/domain/rules/EnvelopeUpdateValidationRule';
 import { 
   CreateEnvelopeRequest, 
   CreateEnvelopeResult,
   SignDocumentRequest,
   SignDocumentResult
-} from '../domain/types/orchestrator';
-import { EntityFactory } from '../domain/factories/EntityFactory';
-import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
-import { EnvelopeStatus } from '../domain/value-objects/EnvelopeStatus';
-import { ConsentId } from '../domain/value-objects/ConsentId';
-import { AccessType } from '../domain/enums/AccessType';
-import { EnvelopeSpec } from '../domain/types/envelope';
-import { documentS3NotFound, envelopeNotFound, signerNotFound } from '../signature-errors';
-import { SigningFlowValidationRule } from '../domain/rules/SigningFlowValidationRule';
-import { EnvelopeAccessValidationRule } from '../domain/rules/EnvelopeAccessValidationRule';
-import { ConsentService } from './ConsentService';
-import { KmsService } from './KmsService';
-import { getDefaultSigningAlgorithm } from '../domain/enums/SigningAlgorithmEnum';
-import { DeclineSignerRequest } from '../domain/schemas/SigningHandlersSchema';
-import { SignerId } from '../domain/value-objects/SignerId';
+} from '@/domain/types/orchestrator';
+import { EntityFactory } from '@/domain/factories/EntityFactory';
+import { EnvelopeId } from '@/domain/value-objects/EnvelopeId';
+import { EnvelopeStatus } from '@/domain/value-objects/EnvelopeStatus';
+import { ConsentId } from '@/domain/value-objects/ConsentId';
+import { AccessType } from '@/domain/enums/AccessType';
+import { EnvelopeSpec } from '@/domain/types/envelope';
+import { envelopeNotFound, signerNotFound } from '@/signature-errors';
+import { SigningFlowValidationRule } from '@/domain/rules/SigningFlowValidationRule';
+import { EnvelopeAccessValidationRule } from '@/domain/rules/EnvelopeAccessValidationRule';
+import { ConsentService } from '@/services/ConsentService';
+import { KmsService } from '@/services/KmsService';
+import { getDefaultSigningAlgorithm } from '@/domain/enums/SigningAlgorithmEnum';
+import { DeclineSignerRequest } from '@/domain/schemas/SigningHandlersSchema';
+import { SignerId } from '@/domain/value-objects/SignerId';
 import { v4 as uuid } from 'uuid';
-import { SignerReminderTrackingService } from './SignerReminderTrackingService';
-import { loadConfig } from '../config/AppConfig';
-import { EnvelopeNotificationService } from './events/EnvelopeNotificationService';
+import { SignerReminderTrackingService } from '@/services/SignerReminderTrackingService';
+import { loadConfig } from '@/config/AppConfig';
+import { EnvelopeNotificationService } from '@/services/events/EnvelopeNotificationService';
 
 /**
  * SignatureOrchestrator - Orchestrates signature service workflows
@@ -64,7 +64,7 @@ export class SignatureOrchestrator {
     private readonly signatureEnvelopeService: SignatureEnvelopeService,
     private readonly envelopeSignerService: EnvelopeSignerService,
     private readonly invitationTokenService: InvitationTokenService,
-    private readonly signatureAuditEventService: SignatureAuditEventService,
+    private readonly signatureAuditEventService: AuditEventService,
     private readonly s3Service: S3Service,
     private readonly consentService: ConsentService,
     private readonly _kmsService: KmsService, // Will be used for actual document signing in future implementation
@@ -171,7 +171,10 @@ export class SignatureOrchestrator {
 
       // 1. Validate S3 keys exist if provided
       if (updateData.sourceKey || updateData.metaKey) {
-        await this.validateS3KeysExist(updateData.sourceKey, updateData.metaKey);
+        await this.s3Service.assertExists({
+          sourceKey: updateData.sourceKey,
+          metaKey: updateData.metaKey
+        });
       }
       
       // 2. Update envelope metadata
@@ -229,26 +232,6 @@ export class SignatureOrchestrator {
 
   // ===== VALIDATIONS =====
   
-  /**
-   * Validates that S3 keys exist in S3 storage
-   * @param sourceKey - Source document S3 key
-   * @param metaKey - Metadata S3 key
-   */
-  private async validateS3KeysExist(sourceKey?: string, metaKey?: string): Promise<void> {
-    if (sourceKey) {
-      const sourceExists = await this.s3Service.documentExists(sourceKey);
-      if (!sourceExists) {
-        throw documentS3NotFound(`Source document with key '${sourceKey}' does not exist in S3`);
-      }
-    }
-    
-    if (metaKey) {
-      const metaExists = await this.s3Service.documentExists(metaKey);
-      if (!metaExists) {
-        throw documentS3NotFound(`Metadata document with key '${metaKey}' does not exist in S3`);
-      }
-    }
-  }
   
   // Note: Signing order validation is not needed for CreateEnvelope
   // It will be validated when signers are added via UpdateEnvelope
@@ -334,16 +317,18 @@ export class SignatureOrchestrator {
       }
       
       // 6. Create audit event for envelope sent
-      await this.signatureAuditEventService.createEvent({
+      await this.signatureAuditEventService.create({
         envelopeId: envelopeId.getValue(),
         signerId: undefined,
         eventType: 'ENVELOPE_SENT' as any,
         description: `Envelope sent to ${targetSigners.length} external signers`,
         userId: userId,
         userEmail: undefined,
-        ipAddress: securityContext.ipAddress,
-        userAgent: securityContext.userAgent,
-        country: securityContext.country,
+        networkContext: createNetworkSecurityContext(
+          securityContext.ipAddress,
+          securityContext.userAgent,
+          securityContext.country
+        ),
         metadata: {
           envelopeId: envelopeId.getValue(),
           externalSignersCount: targetSigners.length,
@@ -448,16 +433,18 @@ export class SignatureOrchestrator {
       );
 
       // 6. Create audit event for document view sharing
-      await this.signatureAuditEventService.createEvent({
+      await this.signatureAuditEventService.create({
         envelopeId: envelopeId.getValue(),
         signerId: viewer.getId().getValue(),
         eventType: 'DOCUMENT_VIEW_SHARED' as any,
         description: `Document view access shared with ${fullName} (${email})`,
         userId: userId,
         userEmail: undefined,
-        ipAddress: securityContext.ipAddress,
-        userAgent: securityContext.userAgent,
-        country: securityContext.country,
+        networkContext: createNetworkSecurityContext(
+          securityContext.ipAddress,
+          securityContext.userAgent,
+          securityContext.country
+        ),
         metadata: {
           envelopeId: envelopeId.getValue(),
           viewerEmail: email,
@@ -811,16 +798,18 @@ export class SignatureOrchestrator {
     userId: string;
     securityContext: { ipAddress: string; userAgent: string; country?: string };
   }): Promise<void> {
-    await this.signatureAuditEventService.createEvent({
+    await this.signatureAuditEventService.create({
       envelopeId: config.envelopeId.getValue(),
       signerId: config.signerId.getValue(),
       eventType: 'DOCUMENT_SIGNED' as any,
       description: `Document signed by ${config.signer.getFullName() || 'Unknown'}`,
       userId: config.userId,
       userEmail: config.signer.getEmail()?.getValue(),
-      ipAddress: config.securityContext.ipAddress,
-      userAgent: config.securityContext.userAgent,
-      country: config.securityContext.country,
+      networkContext: createNetworkSecurityContext(
+        config.securityContext.ipAddress,
+        config.securityContext.userAgent,
+        config.securityContext.country
+      ),
       metadata: {
         envelopeId: config.envelopeId.getValue(),
         signerId: config.signerId.getValue(),
@@ -1169,7 +1158,7 @@ export class SignatureOrchestrator {
       EnvelopeAccessValidationRule.validateEnvelopeModificationAccess(envelope, userId);
 
       // 3. Get all audit events for the envelope
-      const auditEvents = await this.signatureAuditEventService.getAllByEnvelope(envelopeId.getValue());
+      const auditEvents = await this.signatureAuditEventService.getByEnvelope(envelopeId.getValue());
 
       // 4. Transform events to frontend-friendly format
       const transformedEvents = auditEvents.map((event: any) => ({
@@ -1344,15 +1333,17 @@ export class SignatureOrchestrator {
         );
 
         // Create audit event for reminder sent
-        await this.signatureAuditEventService.createEvent({
+        await this.signatureAuditEventService.create({
           envelopeId: envelopeId.getValue(),
           signerId: signerId.getValue(),
           eventType: 'SIGNER_REMINDER_SENT' as any,
           description: `Reminder sent to signer ${name} (${email})`,
           userId,
-          ipAddress: securityContext.ipAddress,
-          userAgent: securityContext.userAgent,
-          country: securityContext.country,
+          networkContext: createNetworkSecurityContext(
+            securityContext.ipAddress,
+            securityContext.userAgent,
+            securityContext.country
+          ),
           metadata: {
             reminderCount: updatedTracking.getReminderCount(),
             message: request.message,

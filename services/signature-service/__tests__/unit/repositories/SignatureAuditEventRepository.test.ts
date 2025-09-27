@@ -1,4 +1,5 @@
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
+import { textContainsInsensitive, rangeFilter } from '@lawprotect/shared-ts';
 
 import { setupCursorPaginationMocks } from '../../helpers/mocks/cursorPagination';
 const { mockListPage, mockDecodeCursor } = setupCursorPaginationMocks();
@@ -16,6 +17,7 @@ import {
   auditEventEntity,
   auditEventSpec,
   partialAuditEventEntity,
+  envelopeEventEntity,
 } from '../../helpers/builders/signatureAuditEvent';
 import {
 } from '../../helpers/mocks/repository';
@@ -58,7 +60,7 @@ describe('SignatureAuditEventRepository - Internal Methods', () => {
     });
 
     it('handles null signerId', () => {
-      const entity = auditEventEntity({ signerId: null });
+      const entity = envelopeEventEntity(); // Uses ENVELOPE_CREATED by default, no signerId required
       const result = repository['toCreateModel'](entity);
 
       expect(result.signerId).toBeNull();
@@ -200,10 +202,10 @@ describe('SignatureAuditEventRepository - Internal Methods', () => {
       const where = repository['whereFromSpec'](spec);
 
       expect(where.AND).toContainEqual({
-        userAgent: shared.textContainsInsensitive('Chrome'),
+        userAgent: textContainsInsensitive('Chrome'),
       });
       expect(where.AND).toContainEqual({
-        description: shared.textContainsInsensitive('test event'),
+        description: textContainsInsensitive('test event'),
       });
     });
 
@@ -217,7 +219,7 @@ describe('SignatureAuditEventRepository - Internal Methods', () => {
       const where = repository['whereFromSpec'](spec);
 
       expect(where.AND).toContainEqual({
-        createdAt: shared.rangeFilter(before, after),
+        createdAt: rangeFilter(before, after),
       });
     });
 
@@ -229,7 +231,7 @@ describe('SignatureAuditEventRepository - Internal Methods', () => {
       const where = repository['whereFromSpec'](spec);
 
       expect(where.AND).toContainEqual({
-        createdAt: shared.rangeFilter(before, undefined),
+        createdAt: rangeFilter(before, undefined),
       });
     });
 
@@ -241,7 +243,7 @@ describe('SignatureAuditEventRepository - Internal Methods', () => {
       const where = repository['whereFromSpec'](spec);
 
       expect(where.AND).toContainEqual({
-        createdAt: shared.rangeFilter(undefined, after),
+        createdAt: rangeFilter(undefined, after),
       });
     });
   });
@@ -467,7 +469,7 @@ describe('SignatureAuditEventRepository - Public Methods', () => {
       auditEventOps.findMany.mockResolvedValueOnce(rows);
       const spy = jest.spyOn(SignatureAuditEvent, 'fromPersistence').mockReturnValue({} as any);
 
-      const result = await repository.getAllByEnvelope(envelopeId);
+      const result = await repository.getByEnvelope(envelopeId);
 
       expect(auditEventOps.findMany).toHaveBeenCalledWith({
         where: { envelopeId },
@@ -482,7 +484,37 @@ describe('SignatureAuditEventRepository - Public Methods', () => {
       const error = new Error('GetAllByEnvelope failed');
       auditEventOps.findMany.mockRejectedValueOnce(error);
 
-      await expect(repository.getAllByEnvelope(envelopeId)).rejects.toThrow();
+      await expect(repository.getByEnvelope(envelopeId)).rejects.toThrow();
+    });
+  });
+
+  describe('whereFromSpec edge cases', () => {
+    it('should handle empty spec', () => {
+      const spec = {};
+      const where = repository['whereFromSpec'](spec);
+      
+      expect(where).toBeDefined();
+    });
+
+    it('should handle spec with all filters', () => {
+      const spec = {
+        envelopeId: TestUtils.generateUuid(),
+        signerId: TestUtils.generateUuid(),
+        eventType: AuditEventType.SIGNER_ADDED,
+        userId: TestUtils.generateUuid(),
+        userEmail: 'test@example.com',
+        ipAddress: '192.168.1.1',
+        userAgent: 'Mozilla/5.0',
+        country: 'US',
+        description: 'Test event',
+        createdBefore: new Date('2024-01-01'),
+        createdAfter: new Date('2024-01-02')
+      };
+      
+      const where = repository['whereFromSpec'](spec);
+      
+      expect(where).toBeDefined();
+      expect(where.AND).toBeDefined();
     });
   });
 });

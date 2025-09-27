@@ -237,7 +237,7 @@ export class SignatureAuditEventRepository extends RepositoryBase<SignatureAudit
    * @param envelopeId - Envelope ID
    * @returns Array of all audit event entities
    */
-  async getAllByEnvelope(envelopeId: string): Promise<SignatureAuditEvent[]> {
+  async getByEnvelope(envelopeId: string): Promise<SignatureAuditEvent[]> {
     try {
       const auditEvents = await this.prisma.signatureAuditEvent.findMany({
         where: { envelopeId },
@@ -247,7 +247,7 @@ export class SignatureAuditEventRepository extends RepositoryBase<SignatureAudit
       return auditEvents.map((auditEvent: any) => this.toDomain(auditEvent));
     } catch (error) {
       throw repositoryError({
-        operation: 'getAllByEnvelope',
+        operation: 'getByEnvelope',
         envelopeId,
         cause: error
       });

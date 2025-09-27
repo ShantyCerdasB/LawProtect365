@@ -1077,4 +1077,15 @@ describe('SignatureEnvelopeRepository - Public Methods', () => {
       spy.mockRestore();
     });
   });
+
+  describe('error handling edge cases', () => {
+    it('should handle updateFlattenedKey error', async () => {
+      const id = TestUtils.generateEnvelopeId();
+      const txMock = jest.fn();
+      
+      envelopeOps.update.mockRejectedValueOnce(new Error('Update failed'));
+      
+      await expect(repository.updateFlattenedKey(id, 'key', {} as any)).rejects.toThrow();
+    });
+  });
 });

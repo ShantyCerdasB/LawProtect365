@@ -9,14 +9,14 @@
 import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
 import { SignerId } from '../domain/value-objects/SignerId';
 import { S3Key } from '../domain/value-objects/S3Key';
-import { SignatureAuditEventService } from './SignatureAuditEventService';
+import { AuditEventService } from './audit/AuditEventService';
 import { AuditEventType } from '../domain/enums/AuditEventType';
-import { NetworkSecurityContext } from '@lawprotect/shared-ts';
+import { NetworkSecurityContext, createNetworkSecurityContext } from '@lawprotect/shared-ts';
 import { StoreDocumentRequest, RetrieveDocumentRequest, GeneratePresignedUrlRequest, DocumentResult } from '../domain/types/s3';
 import {S3Presigner, S3EvidenceStorage,  NotFoundError, BadRequestError, ErrorCodes, getDocumentContent } from '@lawprotect/shared-ts';
 import { validateStoreDocumentRequest, validateRetrieveDocumentRequest, validateGeneratePresignedUrlRequest } from '../domain/rules/s3/S3ValidationRules';
 import { validateS3StorageForDocument } from '../domain/rules/s3/S3StorageRules';
-import { documentS3Error } from '../signature-errors';
+import { documentS3Error, documentS3NotFound } from '../signature-errors';
 
 
 /**
@@ -30,7 +30,7 @@ export class S3Service {
     private readonly s3Presigner: S3Presigner,
     private readonly s3EvidenceStorage: S3EvidenceStorage,
     private readonly bucketName: string,
-    private readonly signatureAuditEventService: SignatureAuditEventService
+    private readonly signatureAuditEventService: AuditEventService
   ) {}
 
   /**
@@ -76,11 +76,12 @@ export class S3Service {
       };
 
       // Log audit event
-      await this.signatureAuditEventService.createEvent({
+      await this.signatureAuditEventService.create({
         envelopeId: request.envelopeId.getValue(),
         description: `Document stored in S3 for signer ${request.signerId.getValue()}`,
         eventType: AuditEventType.DOCUMENT_ACCESSED,
         userId: request.signerId.getValue(),
+        networkContext: createNetworkSecurityContext(),
         metadata: {
           documentKey,
           contentType: request.contentType.getValue(),
@@ -133,11 +134,12 @@ export class S3Service {
       };
 
       // Log audit event
-      await this.signatureAuditEventService.createEvent({
+      await this.signatureAuditEventService.create({
         envelopeId: request.envelopeId.getValue(),
         description: `Document retrieved from S3 for signer ${request.signerId.getValue()}`,
         eventType: AuditEventType.DOCUMENT_ACCESSED,
         userId: request.signerId.getValue(),
+        networkContext: createNetworkSecurityContext(),
         metadata: {
           documentKey: request.documentKey.getValue(),
           contentType: headResult.metadata?.contentType || 'application/octet-stream',
@@ -199,11 +201,12 @@ export class S3Service {
       }
 
       // Log audit event
-      await this.signatureAuditEventService.createEvent({
+      await this.signatureAuditEventService.create({
         envelopeId: request.envelopeId.getValue(),
         description: `Presigned URL generated for ${request.operation.getValue()} operation on document ${request.documentKey.getValue()}`,
         eventType: AuditEventType.DOCUMENT_ACCESSED,
         userId: request.signerId.getValue(),
+        networkContext: createNetworkSecurityContext(),
         metadata: {
           documentKey: request.documentKey.getValue(),
           operation: request.operation.getValue(),
@@ -252,6 +255,29 @@ export class S3Service {
         documentKey,
         originalError: error instanceof Error ? error.message : error
       });
+    }
+  }
+
+  /**
+   * Asserts that provided S3 keys exist; throws documentS3NotFound on missing keys.
+   * Accepts optional keys; only validates when a key is provided.
+   * @param opts - Object containing optional sourceKey and metaKey
+   * @returns Promise that resolves when validation is complete
+   * @throws documentS3NotFound when any provided key does not exist
+   */
+  async assertExists(opts: { sourceKey?: string; metaKey?: string }): Promise<void> {
+    const { sourceKey, metaKey } = opts;
+    if (sourceKey) {
+      const exists = await this.documentExists(sourceKey);
+      if (!exists) {
+        throw documentS3NotFound(`Source document with key '${sourceKey}' does not exist in S3`);
+      }
+    }
+    if (metaKey) {
+      const exists = await this.documentExists(metaKey);
+      if (!exists) {
+        throw documentS3NotFound(`Metadata document with key '${metaKey}' does not exist in S3`);
+      }
     }
   }
 
@@ -371,15 +397,17 @@ export class S3Service {
       const s3Key = S3Key.fromString(request.s3Key);
       const info = await this.getDocumentInfo(s3Key.getValue());
       
-      await this.signatureAuditEventService.createEvent({
+      await this.signatureAuditEventService.create({
         envelopeId: request.envelopeId,
         description: 'Signed document downloaded',
         eventType: AuditEventType.DOCUMENT_DOWNLOADED,
         userId: request.userId,
         userEmail: request.userEmail,
-        ipAddress: request.ipAddress,
-        userAgent: request.userAgent,
-        country: request.country,
+        networkContext: createNetworkSecurityContext(
+          request.ipAddress,
+          request.userAgent,
+          request.country
+        ),
         metadata: {
           s3Key: s3Key.getValue(),
           filename: info.filename,
@@ -434,7 +462,7 @@ export class S3Service {
       };
 
       // Log audit event
-      await this.signatureAuditEventService.createSignerAuditEvent({
+      await this.signatureAuditEventService.createSignerEvent({
         envelopeId: request.envelopeId.getValue(),
         signerId: request.signerId.getValue(),
         eventType: 'DOCUMENT_STORED' as any,

@@ -14,7 +14,7 @@ import { EntityFactory } from '../domain/factories/EntityFactory';
 import { SignerStatus } from '@prisma/client';
 import { EnvelopeSignerRepository } from '../repositories/EnvelopeSignerRepository';
 import { SignatureEnvelopeRepository } from '../repositories/SignatureEnvelopeRepository';
-import { SignatureAuditEventService } from './SignatureAuditEventService';
+import { AuditEventService } from './audit/AuditEventService';
 import { 
   CreateSignerData, 
   DeclineSignerData, 
@@ -43,14 +43,14 @@ export class EnvelopeSignerService {
   constructor(
     private readonly envelopeSignerRepository: EnvelopeSignerRepository,
     private readonly signatureEnvelopeRepository: SignatureEnvelopeRepository,
-    private readonly signatureAuditEventService: SignatureAuditEventService
+    private readonly signatureAuditEventService: AuditEventService
   ) {}
 
   /**
    * Creates audit event with common fields for signer operations
    * @param config - Audit event configuration
    */
-  private async createSignerAuditEvent(config: {
+  private async createSignerEvent(config: {
     envelopeId: string;
     signerId: string;
     eventType: AuditEventType;
@@ -59,7 +59,7 @@ export class EnvelopeSignerService {
     userEmail?: string;
     metadata?: Record<string, unknown>;
   } & NetworkSecurityContext): Promise<void> {
-    await this.signatureAuditEventService.createSignerAuditEvent({
+    await this.signatureAuditEventService.createSignerEvent({
       envelopeId: config.envelopeId,
       signerId: config.signerId,
       eventType: config.eventType,
@@ -118,7 +118,7 @@ export class EnvelopeSignerService {
       const createdViewer = await this.envelopeSignerRepository.create(viewer);
 
       // Create audit event
-      await this.signatureAuditEventService.createSignerAuditEvent({
+      await this.signatureAuditEventService.createSignerEvent({
         envelopeId: envelopeId.getValue(),
         signerId: createdViewer.getId().getValue(),
         eventType: AuditEventType.SIGNATURE_CREATED,
@@ -185,7 +185,7 @@ export class EnvelopeSignerService {
 
       // Create audit events for all signers
       for (const signer of createdSigners) {
-        await this.createSignerAuditEvent({
+        await this.createSignerEvent({
           envelopeId: envelopeId.getValue(),
           signerId: signer.getId().getValue(),
           eventType: AuditEventType.SIGNER_ADDED,
@@ -333,7 +333,7 @@ export class EnvelopeSignerService {
       const updatedSigner = await this.envelopeSignerRepository.update(signerId, signer);
 
       // Create audit event
-      await this.createSignerAuditEvent({
+      await this.createSignerEvent({
         envelopeId: signer.getEnvelopeId().getValue(),
         signerId: signerId.getValue(),
         eventType: AuditEventType.SIGNER_SIGNED,
@@ -381,7 +381,7 @@ export class EnvelopeSignerService {
       const updatedSigner = await this.envelopeSignerRepository.update(declineData.signerId, signer);
 
       // Create audit event
-      await this.createSignerAuditEvent({
+      await this.createSignerEvent({
         envelopeId: signer.getEnvelopeId().getValue(),
         signerId: declineData.signerId.getValue(),
         eventType: AuditEventType.SIGNER_DECLINED,

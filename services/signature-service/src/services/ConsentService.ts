@@ -12,7 +12,7 @@ import { SignerId } from '../domain/value-objects/SignerId';
 
 import { ConsentRepository } from '../repositories/ConsentRepository';
 import { EnvelopeSignerRepository } from '../repositories/EnvelopeSignerRepository';
-import { SignatureAuditEventService } from './SignatureAuditEventService';
+import { AuditEventService } from '@/services/audit/AuditEventService';
 import { CreateConsentRequest } from '../domain/types/consent/CreateConsentRequest';
 import { AuditEventType } from '../domain/enums/AuditEventType';
 import { 
@@ -32,7 +32,7 @@ export class ConsentService {
   constructor(
     private readonly consentRepository: ConsentRepository,
     private readonly envelopeSignerRepository: EnvelopeSignerRepository,
-    private readonly signatureAuditEventService: SignatureAuditEventService
+    private readonly AuditEventService: AuditEventService
   ) {}
 
 
@@ -91,7 +91,7 @@ export class ConsentService {
       const signerName = signer?.getFullName() || signer?.getEmail()?.getValue() || 'Unknown';
 
       // Create audit event
-      await this.signatureAuditEventService.createSignerAuditEvent({
+      await this.AuditEventService.createSignerEvent({
         envelopeId: request.envelopeId.getValue(),
         signerId: request.signerId.getValue(),
         eventType: AuditEventType.CONSENT_GIVEN,

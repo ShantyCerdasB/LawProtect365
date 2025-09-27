@@ -8,3 +8,4 @@
 // Business logic services
 
 export { ConsentService } from './ConsentService';
+export { SignatureOrchestrator } from './orchestrators/index';

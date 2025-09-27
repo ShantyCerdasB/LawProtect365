@@ -177,7 +177,16 @@ describe('SignerReminderTrackingRepository - Internal Methods', () => {
     });
 
     it('throws repository error on invalid data', () => {
-      const invalidData = { id: 'invalid' };
+      const invalidData = { 
+        id: 'invalid',
+        signerId: 'signer-123',
+        envelopeId: 'envelope-123',
+        lastReminderAt: null,
+        reminderCount: 0,
+        lastReminderMessage: null,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
       
       expect(() => repository['toDomain'](invalidData)).toThrow();
     });
@@ -705,6 +714,16 @@ describe('SignerReminderTrackingRepository - Business Methods', () => {
         create: repository['toCreateModel'](entity),
         update: repository['toUpdateModel'](entity)
       });
+    });
+  });
+
+  describe('error handling edge cases', () => {
+    it('should handle upsert error', async () => {
+      const entity = trackingEntity();
+      
+      trackingOps.upsert.mockRejectedValueOnce(new Error('Upsert failed'));
+      
+      await expect(repository.upsert(entity)).rejects.toThrow();
     });
   });
 });

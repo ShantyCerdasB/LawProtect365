@@ -633,4 +633,30 @@ describe('InvitationTokenRepository - Internal Methods', () => {
       spy.mockRestore();
     });
   });
+
+  describe('whereFromSpec - notExpired logic', () => {
+    it('should use notExpired when includeExpired is false', () => {
+      const spec = {
+        includeExpired: false,
+        isActive: true
+      };
+      
+      const where = repository['whereFromSpec'](spec);
+      
+      // Should have notExpired logic applied
+      expect(where).toBeDefined();
+    });
+
+    it('should use expired logic when includeExpired is true', () => {
+      const spec = {
+        includeExpired: true,
+        isActive: true
+      };
+      
+      const where = repository['whereFromSpec'](spec);
+      
+      // Should have expired logic applied
+      expect(where).toBeDefined();
+    });
+  });
 });

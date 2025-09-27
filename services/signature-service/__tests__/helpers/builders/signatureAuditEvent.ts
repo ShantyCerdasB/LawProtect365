@@ -12,6 +12,7 @@ import { SignerId } from '../../../src/domain/value-objects/SignerId';
 import { AuditEventType } from '../../../src/domain/enums/AuditEventType';
 import { TestUtils } from '../testUtils';
 import { generateTestIpAddress } from '../../integration/helpers/testHelpers';
+import { networkSecurityContext } from './common';
 
 export function auditEventPersistenceRow(overrides: any = {}) {
   return {
@@ -31,24 +32,39 @@ export function auditEventPersistenceRow(overrides: any = {}) {
 }
 
 export function auditEventEntity(overrides: any = {}) {
-  const id = overrides.id || TestUtils.generateSignatureAuditEventId();
-  const envelopeId = overrides.envelopeId || TestUtils.generateEnvelopeId();
-  const signerId = overrides.signerId !== undefined ? overrides.signerId : TestUtils.generateSignerId();
+  // Use the new entity create method with NetworkSecurityContext
+  return SignatureAuditEvent.create({
+    envelopeId: overrides.envelopeId || TestUtils.generateEnvelopeId(),
+    signerId: overrides.signerId !== undefined ? overrides.signerId : TestUtils.generateSignerId(),
+    eventType: overrides.eventType || AuditEventType.SIGNER_ADDED,
+    description: overrides.description || 'Test audit event',
+    userId: overrides.userId || TestUtils.generateUuid(),
+    userEmail: overrides.userEmail || 'test@example.com',
+    networkContext: networkSecurityContext({
+      ipAddress: overrides.ipAddress,
+      userAgent: overrides.userAgent,
+      country: overrides.country
+    }),
+    metadata: overrides.metadata || { test: 'data' }
+  });
+}
 
-  return new SignatureAuditEvent(
-    id,
-    envelopeId,
-    signerId,
-    overrides.eventType || AuditEventType.SIGNER_ADDED,
-    overrides.description || 'Test audit event',
-    overrides.userId || TestUtils.generateUuid(),
-    overrides.userEmail || 'test@example.com',
-    overrides.ipAddress || '127.0.0.1',
-    overrides.userAgent || 'TestAgent/1.0',
-    overrides.country || 'US',
-    overrides.metadata || { test: 'data' },
-    overrides.createdAt || new Date('2024-01-01T00:00:00Z')
-  );
+export function envelopeEventEntity(overrides: any = {}) {
+  // Use the new entity create method with NetworkSecurityContext for envelope events
+  return SignatureAuditEvent.create({
+    envelopeId: overrides.envelopeId || TestUtils.generateEnvelopeId(),
+    signerId: overrides.signerId !== undefined ? overrides.signerId : undefined,
+    eventType: overrides.eventType || AuditEventType.ENVELOPE_CREATED,
+    description: overrides.description || 'Test envelope event',
+    userId: overrides.userId || TestUtils.generateUuid(),
+    userEmail: overrides.userEmail || 'test@example.com',
+    networkContext: networkSecurityContext({
+      ipAddress: overrides.ipAddress,
+      userAgent: overrides.userAgent,
+      country: overrides.country
+    }),
+    metadata: overrides.metadata || { test: 'data' }
+  });
 }
 
 export function auditEventSpec(overrides: any = {}) {
@@ -112,11 +128,63 @@ export function auditEventVO(overrides: any = {}) {
     description: () => 'Test audit event',
     userId: () => TestUtils.generateUuid(),
     userEmail: () => 'test@example.com',
-    ipAddress: () => '127.0.0.1',
+    ipAddress: () => generateTestIpAddress(),
     userAgent: () => 'TestAgent/1.0',
     country: () => 'US',
     metadata: () => ({ sampleData: 'metadata' }),
     createdAt: () => new Date('2024-01-01T00:00:00Z'),
     ...overrides,
   };
+}
+
+/**
+ * Creates a signer-specific audit event entity
+ * @param overrides - Optional overrides for the event
+ * @returns SignatureAuditEvent for signer operations
+ */
+export function signerEventEntity(overrides: any = {}) {
+  return auditEventEntity({
+    eventType: AuditEventType.SIGNER_ADDED,
+    signerId: TestUtils.generateSignerId(),
+    description: 'Signer added to envelope',
+    ...overrides
+  });
+}
+
+
+/**
+ * Creates an audit event with network context
+ * @param overrides - Optional overrides for the event
+ * @returns SignatureAuditEvent with network security context
+ */
+export function auditEventWithNetwork(overrides: any = {}) {
+  return auditEventEntity({
+    ipAddress: generateTestIpAddress(),
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+    country: 'US',
+    ...overrides
+  });
+}
+
+/**
+ * Creates a minimal audit event with only required fields
+ * @param overrides - Optional overrides for the event
+ * @returns SignatureAuditEvent with minimal data
+ */
+export function auditEventMinimal(overrides: any = {}) {
+  const params: any = {
+    envelopeId: overrides.envelopeId || TestUtils.generateEnvelopeId(),
+    eventType: overrides.eventType || AuditEventType.ENVELOPE_CREATED,
+    description: overrides.description || 'Minimal test event'
+  };
+
+  // Only add overrides that are explicitly provided
+  if (overrides.userId !== undefined) params.userId = overrides.userId;
+  if (overrides.userEmail !== undefined) params.userEmail = overrides.userEmail;
+  if (overrides.networkContext !== undefined) params.networkContext = overrides.networkContext;
+  if (overrides.signerId !== undefined) params.signerId = overrides.signerId;
+  if (overrides.metadata !== undefined) params.metadata = overrides.metadata;
+  // Don't add metadata if not provided - let it be undefined
+
+  return SignatureAuditEvent.create(params);
 }

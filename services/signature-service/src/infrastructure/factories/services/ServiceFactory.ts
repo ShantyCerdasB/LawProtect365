@@ -24,8 +24,8 @@ import { loadConfig } from '../../../config/AppConfig';
 import { SignatureEnvelopeService } from '../../../services/SignatureEnvelopeService';
 import { EnvelopeSignerService } from '../../../services/EnvelopeSignerService';
 import { InvitationTokenService } from '../../../services/InvitationTokenService';
-import { SignatureAuditEventService } from '../../../services/SignatureAuditEventService';
-import { SignatureOrchestrator } from '../../../services/SignatureOrchestrator';
+import { AuditEventService } from '@/services/audit/AuditEventService';
+import { SignatureOrchestrator } from '../../../services/orchestrators/SignatureOrchestrator';
 import { IntegrationEventFactory } from '../events/IntegrationEventFactory';
 import { OutboxEventPublisher } from '@lawprotect/shared-ts';
 import { EnvelopeNotificationService } from '../../../services/events/EnvelopeNotificationService';
@@ -89,7 +89,7 @@ export class ServiceFactory {
    */
   static createSignatureEnvelopeService(): SignatureEnvelopeService {
     const signatureEnvelopeRepository = new SignatureEnvelopeRepository(this.prismaClient);
-    const signatureAuditEventService = this.createSignatureAuditEventService();
+    const signatureAuditEventService = this.createAuditEventService();
     const invitationTokenService = this.createInvitationTokenService();
     const s3Service = this.createS3Service();
 
@@ -109,7 +109,7 @@ export class ServiceFactory {
   static createEnvelopeSignerService(): EnvelopeSignerService {
     const envelopeSignerRepository = new EnvelopeSignerRepository(this.prismaClient);
     const signatureEnvelopeRepository = new SignatureEnvelopeRepository(this.prismaClient);
-    const signatureAuditEventService = this.createSignatureAuditEventService();
+    const signatureAuditEventService = this.createAuditEventService();
 
     return new EnvelopeSignerService(
       envelopeSignerRepository,
@@ -126,7 +126,7 @@ export class ServiceFactory {
   static createInvitationTokenService(): InvitationTokenService {
     const invitationTokenRepository = new InvitationTokenRepository(this.prismaClient);
     const envelopeSignerRepository = new EnvelopeSignerRepository(this.prismaClient);
-    const signatureAuditEventService = this.createSignatureAuditEventService();
+    const signatureAuditEventService = this.createAuditEventService();
 
     return new InvitationTokenService(
       invitationTokenRepository,
@@ -136,13 +136,13 @@ export class ServiceFactory {
   }
 
   /**
-   * Creates a SignatureAuditEventService instance with all required dependencies
+   * Creates an AuditEventService instance with all required dependencies
    * 
-   * @returns Configured SignatureAuditEventService instance
+   * @returns Configured AuditEventService instance
    */
-  static createSignatureAuditEventService(): SignatureAuditEventService {
+  static createAuditEventService(): AuditEventService {
     const signatureAuditEventRepository = new SignatureAuditEventRepository(this.prismaClient);
-    return new SignatureAuditEventService(signatureAuditEventRepository);
+    return new AuditEventService(signatureAuditEventRepository);
   }
 
   /**
@@ -153,7 +153,7 @@ export class ServiceFactory {
   static createConsentService(): ConsentService {
     const consentRepository = new ConsentRepository(this.prismaClient);
     const envelopeSignerRepository = new EnvelopeSignerRepository(this.prismaClient);
-    const signatureAuditEventService = this.createSignatureAuditEventService();
+    const signatureAuditEventService = this.createAuditEventService();
     return new ConsentService(consentRepository, envelopeSignerRepository, signatureAuditEventService);
   }
 
@@ -166,7 +166,7 @@ export class ServiceFactory {
     const signatureEnvelopeService = this.createSignatureEnvelopeService();
     const envelopeSignerService = this.createEnvelopeSignerService();
     const invitationTokenService = this.createInvitationTokenService();
-    const signatureAuditEventService = this.createSignatureAuditEventService();
+    const signatureAuditEventService = this.createAuditEventService();
     const s3Service = this.createS3Service();
     const outboxRepository = this.createOutboxRepository();
     const consentService = this.createConsentService();
@@ -205,7 +205,7 @@ export class ServiceFactory {
    * @returns Configured S3Service instance
    */
   static createS3Service(): S3Service {
-    const signatureAuditEventService = this.createSignatureAuditEventService();
+    const signatureAuditEventService = this.createAuditEventService();
     return new S3Service(
       this.s3Presigner,
       this.s3EvidenceStorage,

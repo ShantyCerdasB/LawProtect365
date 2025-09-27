@@ -508,4 +508,61 @@ describe('ConsentRepository - Internal Methods', () => {
       expect(result).toBeDefined();
     });
   });
+
+  describe('findBySignerAndEnvelope', () => {
+    it('should find consent by signer and envelope', async () => {
+      const signerId = TestUtils.generateSignerId();
+      const envelopeId = TestUtils.generateEnvelopeId();
+      const row = consentPersistenceRow();
+      
+      consentOps.findUnique.mockResolvedValueOnce(row);
+      const spy = jest.spyOn(Consent, 'fromPersistence').mockReturnValue({} as any);
+
+      const result = await repository.findBySignerAndEnvelope(signerId, envelopeId);
+
+      expect(consentOps.findUnique).toHaveBeenCalledWith({
+        where: {
+          envelopeId_signerId: {
+            envelopeId: envelopeId.getValue(),
+            signerId: signerId.getValue()
+          }
+        }
+      });
+      expect(result).toBeDefined();
+      spy.mockRestore();
+    });
+
+    it('should return null when consent not found', async () => {
+      const signerId = TestUtils.generateSignerId();
+      const envelopeId = TestUtils.generateEnvelopeId();
+      
+      consentOps.findUnique.mockResolvedValueOnce(null);
+
+      const result = await repository.findBySignerAndEnvelope(signerId, envelopeId);
+
+      expect(result).toBeNull();
+    });
+
+    it('should throw error when database fails', async () => {
+      const signerId = TestUtils.generateSignerId();
+      const envelopeId = TestUtils.generateEnvelopeId();
+      
+      consentOps.findUnique.mockRejectedValueOnce(new Error('DB Error'));
+
+      await expect(repository.findBySignerAndEnvelope(signerId, envelopeId)).rejects.toThrow();
+    });
+  });
+
+  describe('updateWithEntity error handling', () => {
+    it('should throw repository error on updateWithEntity failure', async () => {
+      const id = TestUtils.generateConsentId();
+      const row = consentPersistenceRow();
+      consentOps.findUnique.mockResolvedValueOnce(row);
+      consentOps.update.mockRejectedValueOnce(new Error('DB Error'));
+      const spy = jest.spyOn(Consent, 'fromPersistence').mockReturnValue({} as any);
+      
+      await expect(repository.updateWithEntity(id, (consent: Consent) => consent)).rejects.toThrow();
+      spy.mockRestore();
+    });
+  });
 });

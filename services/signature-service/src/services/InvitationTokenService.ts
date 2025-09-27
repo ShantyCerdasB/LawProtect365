@@ -13,7 +13,7 @@ import { SignerId } from '../domain/value-objects/SignerId';
 import { EnvelopeSigner } from '../domain/entities/EnvelopeSigner';
 import { InvitationTokenRepository } from '../repositories/InvitationTokenRepository';
 import { EnvelopeSignerRepository } from '../repositories/EnvelopeSignerRepository';
-import { SignatureAuditEventService } from './SignatureAuditEventService';
+import { AuditEventService } from './audit/AuditEventService';
 import { InvitationTokenValidationRule } from '../domain/rules/InvitationTokenValidationRule';
 import { AuditEventType } from '../domain/enums/AuditEventType';
 import { NetworkSecurityContext } from '@lawprotect/shared-ts';
@@ -46,7 +46,7 @@ export class InvitationTokenService {
   constructor(
     private readonly invitationTokenRepository: InvitationTokenRepository,
     private readonly envelopeSignerRepository: EnvelopeSignerRepository,
-    private readonly signatureAuditEventService: SignatureAuditEventService
+    private readonly signatureAuditEventService: AuditEventService
   ) {}
 
   /**
@@ -118,7 +118,7 @@ export class InvitationTokenService {
         );
 
         // Create audit event
-        await this.signatureAuditEventService.createSignerAuditEvent({
+        await this.signatureAuditEventService.createSignerEvent({
           envelopeId: envelopeId.getValue(),
           signerId: signer.getId().getValue(),
           eventType: AuditEventType.INVITATION_ISSUED,
@@ -216,7 +216,7 @@ export class InvitationTokenService {
       );
 
       // Create audit event for viewer invitation
-      await this.signatureAuditEventService.createSignerAuditEvent({
+      await this.signatureAuditEventService.createSignerEvent({
         envelopeId: envelopeId.getValue(),
         signerId: signerId.getValue(),
         eventType: AuditEventType.INVITATION_ISSUED,
@@ -308,7 +308,7 @@ export class InvitationTokenService {
       const signerName = signer?.getFullName() || signer?.getEmail()?.getValue() || 'Unknown';
 
       // Create audit event
-      await this.signatureAuditEventService.createSignerAuditEvent({
+      await this.signatureAuditEventService.createSignerEvent({
         envelopeId: invitationToken.getEnvelopeId().getValue(),
         signerId: invitationToken.getSignerId().getValue(),
         eventType: AuditEventType.INVITATION_TOKEN_USED,
@@ -357,7 +357,7 @@ export class InvitationTokenService {
       const signerName = signer?.getFullName() || signer?.getEmail()?.getValue() || 'Unknown';
 
       // Create audit event
-      await this.signatureAuditEventService.createSignerAuditEvent({
+      await this.signatureAuditEventService.createSignerEvent({
         envelopeId: invitationToken.getEnvelopeId().getValue(),
         signerId: invitationToken.getSignerId().getValue(),
         eventType: AuditEventType.INVITATION_TOKEN_USED,

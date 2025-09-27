@@ -13,14 +13,14 @@ import { S3Key } from '../domain/value-objects/S3Key';
 import { SignerId } from '../domain/value-objects/SignerId';
 import { S3Operation } from '../domain/value-objects/S3Operation';
 import { SignatureEnvelopeRepository } from '../repositories/SignatureEnvelopeRepository';
-import { SignatureAuditEventService } from './SignatureAuditEventService';
+import { AuditEventService } from './audit/AuditEventService';
 import { InvitationTokenService } from './InvitationTokenService';
 import { S3Service } from './S3Service';
 import { EntityFactory } from '../domain/factories/EntityFactory';
 import { EnvelopeUpdateValidationRule, UpdateEnvelopeData } from '../domain/rules/EnvelopeUpdateValidationRule';
 import { EnvelopeSpec, Hashes, CreateEnvelopeData } from '../domain/types/envelope';
 import { AuditEventType } from '../domain/enums/AuditEventType';
-import { NetworkSecurityContext } from '@lawprotect/shared-ts';
+import { NetworkSecurityContext, createNetworkSecurityContext } from '@lawprotect/shared-ts';
 import { AccessType } from '../domain/enums/AccessType';
 import { wrapServiceError, sha256Hex } from '@lawprotect/shared-ts';
 import { loadConfig } from '../config/AppConfig';
@@ -48,7 +48,7 @@ import {
 export class SignatureEnvelopeService {
   constructor(
     private readonly signatureEnvelopeRepository: SignatureEnvelopeRepository,
-    private readonly signatureAuditEventService: SignatureAuditEventService,
+    private readonly signatureAuditEventService: AuditEventService,
     private readonly invitationTokenService: InvitationTokenService,
     private readonly s3Service: S3Service
   ) {}
@@ -86,16 +86,14 @@ export class SignatureEnvelopeService {
       }
 
       // Create audit event (envelope-level event, no signerId required)
-      await this.signatureAuditEventService.createEvent({
+      await this.signatureAuditEventService.create({
         envelopeId: data.id.getValue(),
         signerId: undefined, // No signerId for envelope creation events
         eventType: AuditEventType.ENVELOPE_CREATED,
         description: `Envelope "${data.title}" created`,
         userId: userId,
         userEmail: undefined,
-        ipAddress: undefined,
-        userAgent: undefined,
-        country: undefined,
+        networkContext: createNetworkSecurityContext(),
         metadata: {
           envelopeId: data.id.getValue(),
           title: data.title,
@@ -143,16 +141,18 @@ export class SignatureEnvelopeService {
           );
           
           // ✅ NO usar try-catch - si audit falla, la operación debe fallar
-          await this.signatureAuditEventService.createEvent({
+          await this.signatureAuditEventService.create({
             envelopeId: envelopeId.getValue(),
             signerId: token.getSignerId().getValue(),
             eventType: AuditEventType.DOCUMENT_ACCESSED,
             description: 'External user accessed envelope document via invitation token',
             userId: signer?.getEmail()?.getValue() || 'external-user', // ✅ Use email as identifier for external users
             userEmail: signer?.getEmail()?.getValue(), // ✅ Use email real del signer
-            ipAddress: securityContext.ipAddress,
-            userAgent: securityContext.userAgent,
-            country: securityContext.country,
+            networkContext: createNetworkSecurityContext(
+              securityContext.ipAddress,
+              securityContext.userAgent,
+              securityContext.country
+            ),
             metadata: {
               accessType: AccessType.EXTERNAL,
               invitationTokenId: token.getId().getValue(),
@@ -262,16 +262,14 @@ export class SignatureEnvelopeService {
       const updatedEnvelope = await this.signatureEnvelopeRepository.update(envelopeId, envelope);
       
       // 5. Create audit event
-      await this.signatureAuditEventService.createEvent({
+      await this.signatureAuditEventService.create({
         envelopeId: envelopeId.getValue(),
         signerId: undefined,
         eventType: AuditEventType.ENVELOPE_UPDATED,
         description: `Envelope "${envelope.getTitle()}" updated`,
         userId: userId,
         userEmail: undefined,
-        ipAddress: undefined,
-        userAgent: undefined,
-        country: undefined,
+        networkContext: createNetworkSecurityContext(),
         metadata: {
           updatedFields: Object.keys(updateData),
           envelopeId: envelopeId.getValue()
@@ -303,16 +301,14 @@ export class SignatureEnvelopeService {
       const cancelledEnvelope = await this.signatureEnvelopeRepository.update(envelopeId, existingEnvelope);
 
       // Create audit event
-      await this.signatureAuditEventService.createEvent({
+      await this.signatureAuditEventService.create({
         envelopeId: envelopeId.getValue(),
         signerId: undefined,
         eventType: AuditEventType.ENVELOPE_CANCELLED,
         description: `Envelope "${existingEnvelope.getTitle()}" cancelled`,
         userId: userId,
         userEmail: undefined,
-        ipAddress: undefined,
-        userAgent: undefined,
-        country: undefined,
+        networkContext: createNetworkSecurityContext(),
         metadata: {
           envelopeId: envelopeId.getValue(),
           title: existingEnvelope.getTitle(),
@@ -361,16 +357,14 @@ export class SignatureEnvelopeService {
 
       // Create audit event if userId provided
       if (userId) {
-        await this.signatureAuditEventService.createEvent({
+        await this.signatureAuditEventService.create({
           envelopeId: envelopeId.getValue(),
           signerId: undefined, // No signerId for envelope-level events
           eventType: AuditEventType.ENVELOPE_UPDATED,
           description: `Document hashes updated for envelope "${updatedEnvelope.getTitle()}"`,
           userId: userId,
           userEmail: undefined,
-          ipAddress: undefined,
-          userAgent: undefined,
-          country: undefined,
+          networkContext: createNetworkSecurityContext(),
           metadata: {
             envelopeId: envelopeId.getValue(),
             hashes: hashes
@@ -400,7 +394,7 @@ export class SignatureEnvelopeService {
       const updatedEnvelope = await this.signatureEnvelopeRepository.updateSignedDocument(envelopeId, signedKey, signedSha256);
 
       // Create audit event
-      await this.signatureAuditEventService.createSignerAuditEvent({
+      await this.signatureAuditEventService.createSignerEvent({
         envelopeId: envelopeId.getValue(),
         signerId: signerId,
         eventType: AuditEventType.ENVELOPE_UPDATED,
@@ -603,16 +597,14 @@ export class SignatureEnvelopeService {
       const updatedEnvelope = await this.signatureEnvelopeRepository.completeEnvelope(envelopeId);
 
       // Create audit event
-      await this.signatureAuditEventService.createEvent({
+      await this.signatureAuditEventService.create({
         envelopeId: envelopeId.getValue(),
         signerId: undefined,
         eventType: AuditEventType.ENVELOPE_COMPLETED,
         description: `Envelope "${updatedEnvelope.getTitle()}" completed - all signers have signed`,
         userId: userId,
         userEmail: undefined,
-        ipAddress: undefined,
-        userAgent: undefined,
-        country: undefined,
+        networkContext: createNetworkSecurityContext(),
         metadata: {
           envelopeId: envelopeId.getValue(),
           completedAt: updatedEnvelope.getCompletedAt()?.toISOString()
@@ -648,16 +640,14 @@ export class SignatureEnvelopeService {
 
       // Create audit event if userId provided
       if (userId) {
-        await this.signatureAuditEventService.createEvent({
+        await this.signatureAuditEventService.create({
           envelopeId: envelopeId.getValue(),
           signerId: undefined,
           eventType: AuditEventType.ENVELOPE_UPDATED,
           description: `Flattened key updated for envelope "${updatedEnvelope.getTitle()}"`,
           userId: userId,
           userEmail: undefined,
-          ipAddress: undefined,
-          userAgent: undefined,
-          country: undefined,
+          networkContext: createNetworkSecurityContext(),
           metadata: {
             envelopeId: envelopeId.getValue(),
             flattenedKey: flattenedKey
@@ -702,16 +692,14 @@ export class SignatureEnvelopeService {
 
       // Create audit event if userId provided
       if (userId) {
-        await this.signatureAuditEventService.createEvent({
+        await this.signatureAuditEventService.create({
           envelopeId: envelopeId.getValue(),
           signerId: declinedBySignerId.getValue(),
           eventType: AuditEventType.ENVELOPE_DECLINED,
           description: `Envelope declined by signer ${declinedBySignerId.getValue()}`,
           userId: userId,
           userEmail: undefined,
-          ipAddress: undefined,
-          userAgent: undefined,
-          country: undefined,
+          networkContext: createNetworkSecurityContext(),
           metadata: {
             envelopeId: envelopeId.getValue(),
             declinedBySignerId: declinedBySignerId.getValue(),

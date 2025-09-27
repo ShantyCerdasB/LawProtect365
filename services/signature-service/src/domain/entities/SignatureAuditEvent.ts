@@ -10,11 +10,35 @@ import { SignerId } from '../value-objects/SignerId';
 import { SignatureAuditEventId } from '../value-objects/SignatureAuditEventId';
 import { AuditEventType } from '../enums/AuditEventType';
 import { toDate, toStringOrUndefined, NetworkSecurityContext } from '@lawprotect/shared-ts';
+import { auditEventCreationFailed } from '../../signature-errors';
 
 /**
  * Type for audit event metadata
  */
 export type AuditMetadata = Record<string, unknown>;
+
+/**
+ * Helper function to determine if an event type requires a signer ID
+ * @param eventType - The audit event type to check
+ * @returns true if the event type is signer-specific
+ */
+function isSignerEventType(eventType: AuditEventType): boolean {
+  const SIGNER_EVENTS = new Set<AuditEventType>([
+    AuditEventType.SIGNER_ADDED,
+    AuditEventType.SIGNER_REMOVED,
+    AuditEventType.SIGNER_INVITED,
+    AuditEventType.SIGNER_REMINDER_SENT,
+    AuditEventType.SIGNER_DECLINED,
+    AuditEventType.SIGNER_SIGNED,
+    AuditEventType.DOCUMENT_ACCESSED,
+    AuditEventType.DOCUMENT_DOWNLOADED,
+    AuditEventType.SIGNATURE_CREATED,
+    AuditEventType.CONSENT_GIVEN,
+    AuditEventType.INVITATION_ISSUED,
+    AuditEventType.INVITATION_TOKEN_USED
+  ]);
+  return SIGNER_EVENTS.has(eventType);
+}
 
 /**
  * SignatureAuditEvent entity representing an audit event for signature operations
@@ -31,9 +55,7 @@ export class SignatureAuditEvent {
     private readonly description: string,
     private readonly userId: string | undefined,
     private readonly userEmail: string | undefined,
-    private readonly ipAddress: string | undefined,
-    private readonly userAgent: string | undefined,
-    private readonly country: string | undefined,
+    private readonly networkContext: NetworkSecurityContext | undefined,
     private readonly metadata: AuditMetadata | undefined,
     private readonly createdAt: Date
   ) {}
@@ -88,24 +110,31 @@ export class SignatureAuditEvent {
   }
 
   /**
+   * Gets the network security context of the actor
+   */
+  getNetworkContext(): NetworkSecurityContext | undefined {
+    return this.networkContext;
+  }
+
+  /**
    * Gets the IP address of the actor
    */
   getIpAddress(): string | undefined {
-    return this.ipAddress;
+    return this.networkContext?.ipAddress;
   }
 
   /**
    * Gets the user agent of the actor
    */
   getUserAgent(): string | undefined {
-    return this.userAgent;
+    return this.networkContext?.userAgent;
   }
 
   /**
    * Gets the country of the actor
    */
   getCountry(): string | undefined {
-    return this.country;
+    return this.networkContext?.country;
   }
 
   /**
@@ -163,7 +192,8 @@ export class SignatureAuditEvent {
     userEmail?: string;
     createdAt: Date;
     metadata?: AuditMetadata;
-  } & NetworkSecurityContext {
+    networkContext?: NetworkSecurityContext;
+  } {
     return {
       id: this.id.getValue(),
       envelopeId: this.envelopeId.getValue(),
@@ -172,11 +202,9 @@ export class SignatureAuditEvent {
       description: this.description,
       userId: this.userId,
       userEmail: this.userEmail,
-      ipAddress: this.ipAddress,
-      userAgent: this.userAgent,
-      country: this.country,
       createdAt: this.createdAt,
       metadata: this.metadata,
+      networkContext: this.networkContext,
     };
   }
 
@@ -193,9 +221,9 @@ export class SignatureAuditEvent {
       description: this.description,
       userId: this.userId,
       userEmail: this.userEmail,
-      ipAddress: this.ipAddress,
-      userAgent: this.userAgent,
-      country: this.country,
+      ipAddress: this.networkContext?.ipAddress,
+      userAgent: this.networkContext?.userAgent,
+      country: this.networkContext?.country,
       metadata: this.metadata,
       createdAt: this.createdAt.toISOString()
     };
@@ -211,9 +239,10 @@ export class SignatureAuditEvent {
   }
 
   /**
-   * Creates a new signature audit event instance
-   * @param params - Audit event creation parameters
+   * Creates a new signature audit event instance with domain invariants enforcement
+   * @param params - Audit event creation parameters with Value Objects
    * @returns New signature audit event instance
+   * @throws Error when domain invariants are violated
    */
   static create(params: {
     envelopeId: EnvelopeId;
@@ -222,10 +251,40 @@ export class SignatureAuditEvent {
     description: string;
     userId?: string;
     userEmail?: string;
+    networkContext?: NetworkSecurityContext;
     metadata?: AuditMetadata;
-  } & NetworkSecurityContext): SignatureAuditEvent {
-    const now = new Date();
+  }): SignatureAuditEvent {
+    // Enforce domain invariants
+    if (!params.envelopeId) {
+      throw auditEventCreationFailed('EnvelopeId is required');
+    }
+
+    if (!params.eventType) {
+      throw auditEventCreationFailed('EventType is required');
+    }
+
+    // Validate and normalize description
     const description = (params.description ?? '').trim();
+    if (!description) {
+      throw auditEventCreationFailed('Description cannot be empty');
+    }
+
+    // Enforce signer ID requirement for signer-specific events
+    if (isSignerEventType(params.eventType) && !params.signerId) {
+      throw auditEventCreationFailed(`SignerId is required for event type: ${params.eventType}`);
+    }
+
+    // Normalize network context - convert empty strings to undefined
+    const networkContext = params.networkContext ? {
+      ipAddress: params.networkContext.ipAddress?.trim() || undefined,
+      userAgent: params.networkContext.userAgent?.trim() || undefined,
+      country: params.networkContext.country?.trim() || undefined
+    } : undefined;
+
+    // Normalize and freeze metadata
+    const metadata = params.metadata ? Object.freeze({ ...params.metadata }) : undefined;
+
+    const now = new Date();
     return new SignatureAuditEvent(
       SignatureAuditEventId.generate(),
       params.envelopeId,
@@ -234,12 +293,59 @@ export class SignatureAuditEvent {
       description,
       params.userId,
       params.userEmail,
-      params.ipAddress,
-      params.userAgent,
-      params.country,
-      params.metadata,
+      networkContext,
+      metadata,
       now
     );
+  }
+
+  /**
+   * Creates a new signature audit event instance from primitive values
+   * @param params - Audit event creation parameters with primitive strings
+   * @returns New signature audit event instance
+   * @throws Error when domain invariants are violated or conversion fails
+   */
+  static createFromPrimitives(params: {
+    envelopeId: string;
+    signerId?: string;
+    eventType: AuditEventType;
+    description: string;
+    userId?: string;
+    userEmail?: string;
+    ipAddress?: string;
+    userAgent?: string;
+    country?: string;
+    metadata?: AuditMetadata;
+  }): SignatureAuditEvent {
+    try {
+      // Convert primitive strings to Value Objects
+      const envelopeId = EnvelopeId.fromString(params.envelopeId);
+      const signerId = params.signerId ? SignerId.fromString(params.signerId) : undefined;
+
+      // Create network context from individual fields
+      const networkContext: NetworkSecurityContext | undefined = 
+        (params.ipAddress || params.userAgent || params.country) ? {
+          ipAddress: params.ipAddress,
+          userAgent: params.userAgent,
+          country: params.country
+        } : undefined;
+
+      // Delegate to the main create method with VOs
+      return this.create({
+        envelopeId,
+        signerId,
+        eventType: params.eventType,
+        description: params.description,
+        userId: params.userId,
+        userEmail: params.userEmail,
+        networkContext,
+        metadata: params.metadata
+      });
+    } catch (error) {
+      throw auditEventCreationFailed(
+        `Failed to create audit event from primitives: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
   }
 
   /**
@@ -261,6 +367,14 @@ export class SignatureAuditEvent {
     metadata?: AuditMetadata | null;
     createdAt: Date | string;
   }): SignatureAuditEvent {
+    // Create network context from individual fields
+    const networkContext: NetworkSecurityContext | undefined = 
+      (data.ipAddress || data.userAgent || data.country) ? {
+        ipAddress: toStringOrUndefined(data.ipAddress),
+        userAgent: toStringOrUndefined(data.userAgent),
+        country: toStringOrUndefined(data.country)
+      } : undefined;
+
     return new SignatureAuditEvent(
       SignatureAuditEventId.fromString(String(data.id)),
       EnvelopeId.fromString(String(data.envelopeId)),
@@ -269,9 +383,7 @@ export class SignatureAuditEvent {
       (data.description ?? '').toString(),
       toStringOrUndefined(data.userId),
       toStringOrUndefined(data.userEmail),
-      toStringOrUndefined(data.ipAddress),
-      toStringOrUndefined(data.userAgent),
-      toStringOrUndefined(data.country),
+      networkContext,
       (data.metadata ?? undefined) as AuditMetadata | undefined,
       toDate(data.createdAt)
     );

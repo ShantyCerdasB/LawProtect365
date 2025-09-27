@@ -10,6 +10,7 @@
 
 import { randomInt } from "./math.js";
 import { createHash, timingSafeEqual } from "./crypto.js";
+import { NetworkSecurityContext } from "../types/security.js";
 
 /**
  * Generates a cryptographically secure numeric OTP with fixed length.
@@ -105,4 +106,40 @@ export function verifyOtp(otp: string, expectedBase64UrlSha256: string): boolean
   // timingSafeEqual expects strings per our crypto facade; it does constant-time
   // comparison by converting to Buffers internally.
   return timingSafeEqual(actual, expectedBase64UrlSha256);
+}
+
+/**
+ * Creates a NetworkSecurityContext from individual network parameters.
+ * 
+ * @description
+ * Helper function to construct a NetworkSecurityContext object from individual
+ * network security parameters. This is useful when converting legacy audit calls
+ * that pass ipAddress, userAgent, and country as separate parameters into the
+ * structured NetworkSecurityContext format required by the audit system.
+ * 
+ * @param ipAddress - IP address of the request origin
+ * @param userAgent - User agent string from the request
+ * @param country - Country code of the request origin
+ * @returns NetworkSecurityContext object with the provided parameters
+ * 
+ * @example
+ * ```ts
+ * const context = createNetworkSecurityContext(
+ *   "192.168.1.1",
+ *   "Mozilla/5.0...",
+ *   "US"
+ * );
+ * // Returns { ipAddress: "192.168.1.1", userAgent: "Mozilla/5.0...", country: "US" }
+ * ```
+ */
+export function createNetworkSecurityContext(
+  ipAddress?: string,
+  userAgent?: string,
+  country?: string
+): NetworkSecurityContext {
+  return {
+    ipAddress,
+    userAgent,
+    country
+  };
 }
