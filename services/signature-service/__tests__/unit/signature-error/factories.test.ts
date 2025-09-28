@@ -17,6 +17,12 @@ import {
   envelopeTitleDuplicate,
   envelopeExpirationInvalid,
   envelopeDocumentNotFound,
+  envelopeCreationFailed,
+  envelopeTemplateValidationFailed,
+  envelopeRequestValidationFailed,
+  envelopeUpdateFailed,
+  envelopeDeleteFailed,
+  envelopeAccessDenied,
   
   // Signer Errors
   signerNotFound,
@@ -26,12 +32,19 @@ import {
   signerEmailRequired,
   signerEmailDuplicate,
   signerCannotBeRemoved,
+  signerCreationFailed,
+  signerUpdateFailed,
+  signerDeleteFailed,
+  signerAccessDenied,
+  signerSigningOrderViolation,
   
   // Signature Errors
   signatureNotFound,
   signatureFailed,
   signatureHashMismatch,
   signatureAlreadyExists,
+  repositoryError,
+  signatureCreationFailed,
   
   // KMS/Crypto Errors
   kmsKeyNotFound,
@@ -44,22 +57,32 @@ import {
   consentNotGiven,
   consentNotFound,
   consentInvalid,
+  consentAlreadyExists,
+  consentCreationFailed,
   consentTimestampRequired,
   consentTextRequired,
   consentIpRequired,
   consentUserAgentRequired,
   invitationTokenInvalid,
   invitationTokenExpired,
+  invitationTokenAlreadyUsed,
+  invitationTokenRevoked,
   
   // Document Service Integration Errors
   documentNotFound,
   documentNotReady,
   documentInvalidHash,
   documentS3Error,
+  documentS3NotFound,
+  invalidEntity,
   
   // Audit & Compliance Errors
   auditEventFailed,
+  auditEventNotFound,
+  auditEventCreationFailed,
   auditTrailNotFound,
+  reminderTrackingNotFound,
+  reminderTrackingCreationFailed,
   
   // Rate Limiting Errors
   rateLimitEnvelopeSend,
@@ -180,6 +203,55 @@ describe('Signature Error Factories', () => {
       expect(error.code).toBe(SignatureErrorCodes.ENVELOPE_DOCUMENT_NOT_FOUND);
       expect(error.details).toBe(testDetails);
     });
+
+    it('should create InternalError for envelope creation failed', () => {
+      const error = envelopeCreationFailed(testDetails);
+      expect(error.statusCode).toBe(500);
+      expect(error.message).toBe('Envelope creation failed');
+      expect(error.code).toBe(SignatureErrorCodes.ENVELOPE_CREATION_FAILED);
+      expect(error.details).toBe(testDetails);
+    });
+
+    it('should create UnprocessableEntityError for envelope template validation failed', () => {
+      const error = envelopeTemplateValidationFailed(testDetails);
+      expect(error.statusCode).toBe(422);
+      expect(error.message).toBe('templateId and templateVersion are required when originType is TEMPLATE');
+      expect(error.code).toBe(SignatureErrorCodes.ENVELOPE_TEMPLATE_VALIDATION_FAILED);
+      expect(error.details).toBe(testDetails);
+    });
+
+    it('should create UnprocessableEntityError for envelope request validation failed', () => {
+      const customMessage = 'Custom validation message';
+      const error = envelopeRequestValidationFailed(customMessage, testDetails);
+      expect(error.statusCode).toBe(422);
+      expect(error.message).toBe(customMessage);
+      expect(error.code).toBe(SignatureErrorCodes.ENVELOPE_REQUEST_VALIDATION_FAILED);
+      expect(error.details).toBe(testDetails);
+    });
+
+    it('should create InternalError for envelope update failed', () => {
+      const error = envelopeUpdateFailed(testDetails);
+      expect(error.statusCode).toBe(500);
+      expect(error.message).toBe('Envelope update failed');
+      expect(error.code).toBe(SignatureErrorCodes.ENVELOPE_UPDATE_FAILED);
+      expect(error.details).toBe(testDetails);
+    });
+
+    it('should create InternalError for envelope delete failed', () => {
+      const error = envelopeDeleteFailed(testDetails);
+      expect(error.statusCode).toBe(500);
+      expect(error.message).toBe('Envelope deletion failed');
+      expect(error.code).toBe(SignatureErrorCodes.ENVELOPE_DELETE_FAILED);
+      expect(error.details).toBe(testDetails);
+    });
+
+    it('should create ForbiddenError for envelope access denied', () => {
+      const error = envelopeAccessDenied(testDetails);
+      expect(error.statusCode).toBe(403);
+      expect(error.message).toBe('Access denied to envelope');
+      expect(error.code).toBe(SignatureErrorCodes.ENVELOPE_ACCESS_DENIED);
+      expect(error.details).toBe(testDetails);
+    });
   });
 
   describe('Signer Error Factories', () => {
@@ -238,6 +310,46 @@ describe('Signature Error Factories', () => {
       expect(error.code).toBe(SignatureErrorCodes.SIGNER_CANNOT_BE_REMOVED);
       expect(error.details).toBe(testDetails);
     });
+
+    it('should create InternalError for signer creation failed', () => {
+      const error = signerCreationFailed(testDetails);
+      expect(error.statusCode).toBe(500);
+      expect(error.message).toBe('Failed to create signer');
+      expect(error.code).toBe(SignatureErrorCodes.SIGNER_CREATION_FAILED);
+      expect(error.details).toBe(testDetails);
+    });
+
+    it('should create InternalError for signer update failed', () => {
+      const error = signerUpdateFailed(testDetails);
+      expect(error.statusCode).toBe(500);
+      expect(error.message).toBe('Failed to update signer');
+      expect(error.code).toBe(SignatureErrorCodes.SIGNER_UPDATE_FAILED);
+      expect(error.details).toBe(testDetails);
+    });
+
+    it('should create InternalError for signer delete failed', () => {
+      const error = signerDeleteFailed(testDetails);
+      expect(error.statusCode).toBe(500);
+      expect(error.message).toBe('Failed to delete signer');
+      expect(error.code).toBe(SignatureErrorCodes.SIGNER_DELETE_FAILED);
+      expect(error.details).toBe(testDetails);
+    });
+
+    it('should create ForbiddenError for signer access denied', () => {
+      const error = signerAccessDenied(testDetails);
+      expect(error.statusCode).toBe(403);
+      expect(error.message).toBe('Access denied to signer');
+      expect(error.code).toBe(SignatureErrorCodes.SIGNER_ACCESS_DENIED);
+      expect(error.details).toBe(testDetails);
+    });
+
+    it('should create ConflictError for signer signing order violation', () => {
+      const error = signerSigningOrderViolation(testDetails);
+      expect(error.statusCode).toBe(409);
+      expect(error.message).toBe('Signing order violation');
+      expect(error.code).toBe(SignatureErrorCodes.SIGNER_SIGNING_ORDER_VIOLATION);
+      expect(error.details).toBe(testDetails);
+    });
   });
 
   describe('Signature Error Factories', () => {
@@ -270,6 +382,22 @@ describe('Signature Error Factories', () => {
       expect(error.statusCode).toBe(409);
       expect(error.message).toBe('Signature already exists');
       expect(error.code).toBe(SignatureErrorCodes.SIGNATURE_ALREADY_EXISTS);
+      expect(error.details).toBe(testDetails);
+    });
+
+    it('should create InternalError for repository error', () => {
+      const error = repositoryError(testDetails);
+      expect(error.statusCode).toBe(500);
+      expect(error.message).toBe('Repository operation failed');
+      expect(error.code).toBe(SignatureErrorCodes.REPOSITORY_ERROR);
+      expect(error.details).toBe(testDetails);
+    });
+
+    it('should create InternalError for signature creation failed', () => {
+      const error = signatureCreationFailed(testDetails);
+      expect(error.statusCode).toBe(500);
+      expect(error.message).toBe('Signature creation failed');
+      expect(error.code).toBe(SignatureErrorCodes.SIGNATURE_FAILED);
       expect(error.details).toBe(testDetails);
     });
   });
@@ -388,6 +516,38 @@ describe('Signature Error Factories', () => {
       expect(error.code).toBe(SignatureErrorCodes.INVITATION_TOKEN_EXPIRED);
       expect(error.details).toBe(testDetails);
     });
+
+    it('should create ConflictError for consent already exists', () => {
+      const error = consentAlreadyExists(testDetails);
+      expect(error.statusCode).toBe(409);
+      expect(error.message).toBe('Consent already exists');
+      expect(error.code).toBe(SignatureErrorCodes.CONSENT_ALREADY_EXISTS);
+      expect(error.details).toBe(testDetails);
+    });
+
+    it('should create InternalError for consent creation failed', () => {
+      const error = consentCreationFailed(testDetails);
+      expect(error.statusCode).toBe(500);
+      expect(error.message).toBe('Consent creation failed');
+      expect(error.code).toBe(SignatureErrorCodes.CONSENT_CREATION_FAILED);
+      expect(error.details).toBe(testDetails);
+    });
+
+    it('should create ConflictError for invitation token already used', () => {
+      const error = invitationTokenAlreadyUsed(testDetails);
+      expect(error.statusCode).toBe(409);
+      expect(error.message).toBe('Invitation token has already been used');
+      expect(error.code).toBe(SignatureErrorCodes.INVITATION_TOKEN_ALREADY_USED);
+      expect(error.details).toBe(testDetails);
+    });
+
+    it('should create ForbiddenError for invitation token revoked', () => {
+      const error = invitationTokenRevoked(testDetails);
+      expect(error.statusCode).toBe(403);
+      expect(error.message).toBe('Invitation token has been revoked');
+      expect(error.code).toBe(SignatureErrorCodes.INVITATION_TOKEN_REVOKED);
+      expect(error.details).toBe(testDetails);
+    });
   });
 
   describe('Document Service Integration Error Factories', () => {
@@ -422,6 +582,22 @@ describe('Signature Error Factories', () => {
       expect(error.code).toBe(SignatureErrorCodes.DOCUMENT_S3_ERROR);
       expect(error.details).toBe(testDetails);
     });
+
+    it('should create BadRequestError for document S3 not found', () => {
+      const error = documentS3NotFound(testDetails);
+      expect(error.statusCode).toBe(400);
+      expect(error.message).toBe('Document not found in S3');
+      expect(error.code).toBe(SignatureErrorCodes.DOCUMENT_S3_ERROR);
+      expect(error.details).toBe(testDetails);
+    });
+
+    it('should create BadRequestError for invalid entity', () => {
+      const error = invalidEntity(testDetails);
+      expect(error.statusCode).toBe(400);
+      expect(error.message).toBe('Invalid entity');
+      expect(error.code).toBe(SignatureErrorCodes.INVALID_ENTITY);
+      expect(error.details).toBe(testDetails);
+    });
   });
 
   describe('Audit & Compliance Error Factories', () => {
@@ -438,6 +614,38 @@ describe('Signature Error Factories', () => {
       expect(error.statusCode).toBe(404);
       expect(error.message).toBe('Audit trail not found');
       expect(error.code).toBe(SignatureErrorCodes.AUDIT_TRAIL_NOT_FOUND);
+      expect(error.details).toBe(testDetails);
+    });
+
+    it('should create NotFoundError for audit event not found', () => {
+      const error = auditEventNotFound(testDetails);
+      expect(error.statusCode).toBe(404);
+      expect(error.message).toBe('Audit event not found');
+      expect(error.code).toBe(SignatureErrorCodes.AUDIT_EVENT_NOT_FOUND);
+      expect(error.details).toBe(testDetails);
+    });
+
+    it('should create InternalError for audit event creation failed', () => {
+      const error = auditEventCreationFailed(testDetails);
+      expect(error.statusCode).toBe(500);
+      expect(error.message).toBe('Audit event creation failed');
+      expect(error.code).toBe(SignatureErrorCodes.AUDIT_EVENT_CREATION_FAILED);
+      expect(error.details).toBe(testDetails);
+    });
+
+    it('should create NotFoundError for reminder tracking not found', () => {
+      const error = reminderTrackingNotFound(testDetails);
+      expect(error.statusCode).toBe(404);
+      expect(error.message).toBe('Reminder tracking not found');
+      expect(error.code).toBe(SignatureErrorCodes.REMINDER_TRACKING_NOT_FOUND);
+      expect(error.details).toBe(testDetails);
+    });
+
+    it('should create InternalError for reminder tracking creation failed', () => {
+      const error = reminderTrackingCreationFailed(testDetails);
+      expect(error.statusCode).toBe(500);
+      expect(error.message).toBe('Reminder tracking creation failed');
+      expect(error.code).toBe(SignatureErrorCodes.REMINDER_TRACKING_FAILED);
       expect(error.details).toBe(testDetails);
     });
   });

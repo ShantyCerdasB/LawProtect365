@@ -5,7 +5,7 @@
  * and provides type safety for KMS key handling throughout the system.
  */
 
-import { BadRequestError, ErrorCodes } from '@lawprotect/shared-ts';
+import { BadRequestError, ErrorCodes } from '../../errors/index.js';
 
 /**
  * KMSKeyId value object
@@ -101,11 +101,6 @@ export class KMSKeyId {
    * @returns true if valid
    */
   private isValidKMSKeyFormat(keyId: string): boolean {
-    // AWS KMS key formats:
-    // 1. Key ID: 12345678-1234-1234-1234-123456789012 (UUID format)
-    // 2. Alias: alias/MyAlias
-    // 3. ARN: arn:aws:kms:region:account:key/12345678-1234-1234-1234-123456789012
-    
     // Check for alias format
     if (keyId.startsWith('alias/')) {
       const aliasName = keyId.substring(6);
@@ -155,3 +150,4 @@ export class KMSKeyId {
     return this.keyId;
   }
 }
+

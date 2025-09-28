@@ -7,7 +7,7 @@
 
 import { EnvelopeId } from '../../value-objects/EnvelopeId';
 import { SignerId } from '../../value-objects/SignerId';
-import { S3Key } from '../../value-objects/S3Key';
+import { S3Key } from '@lawprotect/shared-ts';
 
 export interface RetrieveDocumentRequest {
   documentKey: S3Key;

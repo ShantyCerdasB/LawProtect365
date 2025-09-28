@@ -26,7 +26,7 @@ describe('SignatureErrorCodes', () => {
       const envelopeCodes = Object.keys(SignatureErrorCodes).filter(key => 
         key.startsWith('ENVELOPE_')
       );
-      expect(envelopeCodes).toHaveLength(10);
+      expect(envelopeCodes).toHaveLength(16);
       envelopeCodes.forEach(code => {
         expect(code).toMatch(/^ENVELOPE_[A-Z_]+$/);
       });
@@ -48,7 +48,7 @@ describe('SignatureErrorCodes', () => {
       const signerCodes = Object.keys(SignatureErrorCodes).filter(key => 
         key.startsWith('SIGNER_')
       );
-      expect(signerCodes).toHaveLength(7);
+      expect(signerCodes).toHaveLength(12);
       signerCodes.forEach(code => {
         expect(code).toMatch(/^SIGNER_[A-Z_]+$/);
       });
@@ -114,7 +114,7 @@ describe('SignatureErrorCodes', () => {
       const consentCodes = Object.keys(SignatureErrorCodes).filter(key => 
         key.startsWith('CONSENT_')
       );
-      expect(consentCodes).toHaveLength(8);
+      expect(consentCodes).toHaveLength(10);
       consentCodes.forEach(code => {
         expect(code).toMatch(/^CONSENT_[A-Z_]+$/);
       });
@@ -150,7 +150,7 @@ describe('SignatureErrorCodes', () => {
       const auditCodes = Object.keys(SignatureErrorCodes).filter(key => 
         key.startsWith('AUDIT_')
       );
-      expect(auditCodes).toHaveLength(3);
+      expect(auditCodes).toHaveLength(5);
       auditCodes.forEach(code => {
         expect(code).toMatch(/^AUDIT_[A-Z_]+$/);
       });
@@ -243,7 +243,7 @@ describe('SignatureErrorCodes', () => {
   describe('Total Count and Categories', () => {
     it('should have the expected total number of error codes', () => {
       const totalCodes = Object.keys(SignatureErrorCodes).length;
-      expect(totalCodes).toBe(63);
+      expect(totalCodes).toBe(84);
     });
 
     it('should have all expected categories', () => {

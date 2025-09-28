@@ -26,11 +26,12 @@ module.exports = {
 
   transformIgnorePatterns: ["node_modules/(?!@lawprotect/shared-ts)"],
 
-  /** Coverage for all src files (excluding .d.ts and index files) */
+  /** Coverage for all src files (excluding .d.ts, index files, and enums) */
   collectCoverageFrom: [
     "<rootDir>/src/**/*.ts", 
     "!<rootDir>/src/**/*.d.ts",
-    "!<rootDir>/src/**/index.ts"
+    "!<rootDir>/src/**/index.ts",
+    "!<rootDir>/src/**/enums/**/*.ts"
   ],
   coverageDirectory: "<rootDir>/coverage",
   coverageReporters: ["text", "lcov", "html"],

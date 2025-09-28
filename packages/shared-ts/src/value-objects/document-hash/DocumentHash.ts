@@ -5,7 +5,7 @@
  * and provides utilities for hash validation and comparison.
  */
 
-import { BadRequestError } from '@lawprotect/shared-ts';
+import { BadRequestError } from '../../errors/index.js';
 
 /**
  * DocumentHash value object
@@ -143,3 +143,4 @@ export class DocumentHash {
     return this.hash;
   }
 }
+

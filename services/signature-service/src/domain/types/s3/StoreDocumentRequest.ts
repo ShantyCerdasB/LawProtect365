@@ -7,7 +7,7 @@
 
 import { EnvelopeId } from '../../value-objects/EnvelopeId';
 import { SignerId } from '../../value-objects/SignerId';
-import { ContentType } from '../../value-objects/ContentType';
+import { ContentType } from '@lawprotect/shared-ts';
 
 export interface StoreDocumentRequest {
   envelopeId: EnvelopeId;

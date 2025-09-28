@@ -7,7 +7,7 @@
  */
 
 import { ControllerFactory, VALID_COGNITO_ROLES } from '@lawprotect/shared-ts';
-import { ServiceFactory } from '../../infrastructure/factories/services/ServiceFactory';
+import { CompositionRoot } from '../../infrastructure/factories';
 import { ShareDocumentViewPathSchema, ShareDocumentViewBodySchema } from '../../domain/schemas/ShareDocumentViewSchema';
 import { EnvelopeId } from '../../domain/value-objects/EnvelopeId';
 
@@ -55,7 +55,7 @@ export const shareDocumentViewHandler = ControllerFactory.createCommand({
     private readonly signatureOrchestrator: any;
 
     constructor() {
-      this.signatureOrchestrator = ServiceFactory.createSignatureOrchestrator();
+      this.signatureOrchestrator = CompositionRoot.createSignatureOrchestrator();
     }
 
     /**
@@ -65,31 +65,18 @@ export const shareDocumentViewHandler = ControllerFactory.createCommand({
      * @returns Promise resolving to share document view result
      */
     async execute(params: any) {
-      try {
-        const result = await this.signatureOrchestrator.shareDocumentView(
-          params.envelopeId,
-          params.email,
-          params.fullName,
-          params.message,
-          params.expiresIn,
-          params.userId,
-          params.securityContext
-        );
-        return result;
-      } catch (error) {
-        console.error('❌ ShareDocumentViewHandler.execute ERROR:', {
-          error: error instanceof Error ? error.message : error,
-          stack: error instanceof Error ? error.stack : undefined,
-          envelopeId: params.envelopeId?.getValue(),
-          userId: params.userId,
-          email: params.email
-        });
-        throw error;
-      }
+      return await this.signatureOrchestrator.shareDocumentView(
+        params.envelopeId,
+        params.email,
+        params.fullName,
+        params.message,
+        params.expiresIn,
+        params.userId,
+        params.securityContext
+      );
     }
   },
   
-  // Parameter extraction - transforms HTTP request to domain parameters
   extractParams: (path: any, body: any, _query: any, context: any) => ({
     envelopeId: EnvelopeId.fromString(path.envelopeId),
     email: body.email,

@@ -9,12 +9,12 @@ import {
   createSignatureEnvelopeServiceMockWithSuccess,
   createSignatureEnvelopeServiceMockWithFailure,
   createSignatureEnvelopeServiceMockWithPartialFailure
-} from '../../../../helpers/mocks/services/SignatureEnvelopeService';
+} from '../../../../helpers/mocks/services';
 import {
   createEnvelopeNotificationServiceMock,
   createEnvelopeNotificationServiceMockWithSuccess,
   createEnvelopeNotificationServiceMockWithFailure
-} from '../../../../helpers/mocks/services/EnvelopeNotificationService';
+} from '../../../../helpers/mocks/services';
 
 describe('CancelEnvelopeUseCase', () => {
   let useCase: CancelEnvelopeUseCase;

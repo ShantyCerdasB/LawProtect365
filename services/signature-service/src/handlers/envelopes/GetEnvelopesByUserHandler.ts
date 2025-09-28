@@ -6,7 +6,7 @@
  */
 
 import { ControllerFactory, VALID_COGNITO_ROLES } from '@lawprotect/shared-ts';
-import { ServiceFactory } from '../../infrastructure/factories/services/ServiceFactory';
+import { CompositionRoot } from '../../infrastructure/factories';
 import { GetEnvelopesByUserQuerySchema } from '../../domain/schemas/EnvelopeSchema';
 
 /**
@@ -52,40 +52,26 @@ export const getEnvelopesByUserHandler = ControllerFactory.createQuery({
     private readonly signatureOrchestrator: any;
     
     constructor() {
-      this.signatureOrchestrator = ServiceFactory.createSignatureOrchestrator();
+      this.signatureOrchestrator = CompositionRoot.createSignatureOrchestrator();
     }
     
     /**
      * Executes the envelope listing orchestration
-     * 
      * @param params - Extracted parameters from request
      * @returns Promise resolving to paginated envelopes with complete signer information
      */
     async execute(params: any) {
-      try {
-        return await this.signatureOrchestrator.listEnvelopesByUser(
-          params.userId,
-          {
-            status: params.status,
-            limit: params.limit,
-            cursor: params.cursor
-          }
-        );
-      } catch (error) {
-        console.error('❌ GetEnvelopesByUserHandler.execute ERROR:', {
-          error: error instanceof Error ? error.message : error,
-          stack: error instanceof Error ? error.stack : undefined,
-          userId: params.userId,
+      return await this.signatureOrchestrator.listEnvelopesByUser(
+        params.userId,
+        {
           status: params.status,
           limit: params.limit,
           cursor: params.cursor
-        });
-        throw error;
-      }
+        }
+      );
     }
   },
   
-  // Parameter extraction - transforms HTTP request to domain parameters
   extractParams: (_path: any, _body: any, query: any, context: any) => ({
     userId: context.auth.userId,
     status: query.status,
@@ -93,12 +79,9 @@ export const getEnvelopesByUserHandler = ControllerFactory.createQuery({
     cursor: query.cursor
   }),
   
-  // Response configuration
   responseType: 'ok',
   transformResult: async (result: any) => {
-    try {
-      // Transform domain entities to API response format with complete signer information
-      const response = {
+    return {
         envelopes: result.envelopes.map((envelope: any) => ({
           id: envelope.getId().getValue(),
           title: envelope.getTitle(),
@@ -110,13 +93,11 @@ export const getEnvelopesByUserHandler = ControllerFactory.createQuery({
           expiresAt: envelope.getExpiresAt(),
           createdAt: envelope.getCreatedAt(),
           updatedAt: envelope.getUpdatedAt(),
-          // Template-specific fields (only present for TEMPLATE origin)
           ...(envelope.getOrigin().getType() === 'TEMPLATE' && {
             templateId: envelope.getOrigin().getTemplateId(),
             templateVersion: envelope.getOrigin().getTemplateVersion()
           })
         })),
-        // ✅ SIEMPRE incluir signers con información completa para cada envelope
         signers: result.signers.map((envelopeSigners: any[]) => 
           envelopeSigners.map((signer: any) => ({
             id: signer.getId().getValue(),
@@ -125,7 +106,7 @@ export const getEnvelopesByUserHandler = ControllerFactory.createQuery({
             isExternal: signer.getIsExternal(),
             order: signer.getOrder(),
             status: signer.getStatus(),
-            userId: signer.getUserId(), // Para tracking de external users
+            userId: signer.getUserId(),
             signedAt: signer.getSignedAt(),
             declinedAt: signer.getDeclinedAt(),
             declineReason: signer.getDeclineReason(),
@@ -135,24 +116,9 @@ export const getEnvelopesByUserHandler = ControllerFactory.createQuery({
         ),
         nextCursor: result.nextCursor
       };
-      
-      return response;
-    } catch (error) {
-      console.error('❌ GetEnvelopesByUserHandler.transformResult ERROR:', {
-        error: error instanceof Error ? error.message : error,
-        stack: error instanceof Error ? error.stack : undefined,
-        result: {
-          envelopesCount: result.envelopes?.length || 0,
-          signersCount: result.signers?.length || 0,
-          hasNextCursor: !!result.nextCursor
-        }
-      });
-      throw error;
-    }
   },
   
-  // Security configuration
-  requireAuth: true, // Solo para usuarios autenticados
+  requireAuth: true,
   requiredRoles: [...VALID_COGNITO_ROLES],
   includeSecurityContext: true
 });

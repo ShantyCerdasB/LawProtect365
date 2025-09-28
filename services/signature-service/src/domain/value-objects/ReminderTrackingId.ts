@@ -58,6 +58,9 @@ export class ReminderTrackingId {
    * @returns True if equal
    */
   equals(other: ReminderTrackingId): boolean {
+    if (!other) {
+      return false;
+    }
     return this._value === other._value;
   }
 

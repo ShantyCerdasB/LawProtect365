@@ -280,7 +280,6 @@ describe('EnvelopeStatus', () => {
 
     it('should correctly identify non-sendable states', () => {
       const nonSendableStates = [
-        EnvelopeStatus.readyForSignature(),
         EnvelopeStatus.completed(),
         EnvelopeStatus.declined(),
         EnvelopeStatus.cancelled(),

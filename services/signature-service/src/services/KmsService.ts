@@ -8,9 +8,8 @@
 
 import { mapAwsError, BadRequestError, KmsSigner, hexToUint8Array, uint8ArrayToHex, pickMessageType } from '@lawprotect/shared-ts';
 import { KMSClient, SignCommand, VerifyCommand, type SigningAlgorithmSpec } from '@aws-sdk/client-kms';
-import { KMSKeyId } from '../domain/value-objects/KMSKeyId';
+import { KMSKeyId, DocumentHash } from '@lawprotect/shared-ts';
 import { SigningAlgorithm } from '../domain/value-objects/SigningAlgorithm';
-import { DocumentHash } from '../domain/value-objects/DocumentHash';
 import { KmsKeyValidationRule } from '../domain/rules/KmsKeyValidationRule';
 import { 
   KmsSignRequest, 

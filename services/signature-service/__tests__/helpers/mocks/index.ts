@@ -8,3 +8,4 @@ export * from './cursorPagination';
 export * from './repository';
 export * from './services';
 export * from './uuid';
+export * from './handlers/HandlerMocks';

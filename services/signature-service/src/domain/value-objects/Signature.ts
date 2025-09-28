@@ -26,7 +26,33 @@ export class Signature {
     private readonly algorithm: string,
     private readonly signedAt: Date,
     private readonly metadata: SignatureMetadata
-  ) {}
+  ) {
+    // Validate required fields
+    if (!signerId || typeof signerId !== 'string' || signerId.trim() === '') {
+      throw new Error('Signer ID is required and must be a non-empty string');
+    }
+    if (!documentHash || typeof documentHash !== 'string' || documentHash.trim() === '') {
+      throw new Error('Document hash is required and must be a non-empty string');
+    }
+    if (!signatureHash || typeof signatureHash !== 'string' || signatureHash.trim() === '') {
+      throw new Error('Signature hash is required and must be a non-empty string');
+    }
+    if (!signedS3Key || typeof signedS3Key !== 'string' || signedS3Key.trim() === '') {
+      throw new Error('Signed S3 key is required and must be a non-empty string');
+    }
+    if (!kmsKeyId || typeof kmsKeyId !== 'string' || kmsKeyId.trim() === '') {
+      throw new Error('KMS key ID is required and must be a non-empty string');
+    }
+    if (!algorithm || typeof algorithm !== 'string' || algorithm.trim() === '') {
+      throw new Error('Algorithm is required and must be a non-empty string');
+    }
+    if (!signedAt || !(signedAt instanceof Date)) {
+      throw new Error('Signed date is required and must be a valid Date');
+    }
+    if (!metadata || !(metadata instanceof SignatureMetadata)) {
+      throw new Error('Metadata is required and must be a SignatureMetadata instance');
+    }
+  }
 
   /**
    * Gets the signer ID who created this signature
@@ -145,9 +171,16 @@ export class Signature {
    * @returns true if signatures are equal
    */
   equals(other: Signature): boolean {
+    if (!other) {
+      return false;
+    }
     return this.signerId === other.signerId &&
            this.documentHash === other.documentHash &&
-           this.signatureHash === other.signatureHash;
+           this.signatureHash === other.signatureHash &&
+           this.signedS3Key === other.signedS3Key &&
+           this.kmsKeyId === other.kmsKeyId &&
+           this.algorithm === other.algorithm &&
+           this.signedAt.getTime() === other.signedAt.getTime();
   }
 
   /**
@@ -203,10 +236,25 @@ export class Signature {
       algorithm: this.algorithm,
       kmsKeyId: this.kmsKeyId,
       signedS3Key: this.signedS3Key,
+      metadata: this.metadata,
       reason: this.metadata.getReason(),
       location: this.metadata.getLocation(),
       ipAddress: this.metadata.getIpAddress(),
       userAgent: this.metadata.getUserAgent()
     };
+  }
+
+  /**
+   * Returns the JSON representation of the signature
+   */
+  toJSON() {
+    return this.getAuditSummary();
+  }
+
+  /**
+   * Returns the string representation of the signature
+   */
+  toString(): string {
+    return `Signature(signerId=${this.signerId}, documentHash=${this.documentHash}, signatureHash=${this.signatureHash})`;
   }
 }

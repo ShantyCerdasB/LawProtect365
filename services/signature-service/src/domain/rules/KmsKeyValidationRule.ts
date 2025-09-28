@@ -7,7 +7,7 @@
  */
 
 import { KmsSigner } from '@lawprotect/shared-ts';
-import { KMSKeyId } from '../value-objects/KMSKeyId';
+import { KMSKeyId } from '@lawprotect/shared-ts';
 import { 
   kmsKeyNotFound,
   kmsPermissionDenied,

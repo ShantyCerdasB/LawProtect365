@@ -20,8 +20,15 @@ export class DocumentOrigin {
     private readonly templateId?: string,
     private readonly templateVersion?: string
   ) {
-    // Template validation is handled by the schema layer (EnvelopeSchema.ts)
-    // No need for duplicate validation here
+    // Validate template origin requires both templateId and templateVersion
+    if (type === DocumentOriginType.TEMPLATE) {
+      if (!templateId || templateId.trim() === '') {
+        throw new BadRequestError('Template origin requires a valid template ID', 'INVALID_DOCUMENT_ORIGIN');
+      }
+      if (!templateVersion || templateVersion.trim() === '') {
+        throw new BadRequestError('Template origin requires a valid template version', 'INVALID_DOCUMENT_ORIGIN');
+      }
+    }
   }
 
   /**

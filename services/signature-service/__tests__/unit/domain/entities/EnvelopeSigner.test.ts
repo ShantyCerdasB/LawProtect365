@@ -9,7 +9,7 @@ import { EnvelopeSigner } from '../../../../src/domain/entities/EnvelopeSigner';
 import { NetworkSecurityContext } from '@lawprotect/shared-ts';
 import { SignerId } from '../../../../src/domain/value-objects/SignerId';
 import { EnvelopeId } from '../../../../src/domain/value-objects/EnvelopeId';
-import { Email } from '../../../../src/domain/value-objects/Email';
+import { Email } from '@lawprotect/shared-ts';
 import { SignatureMetadata } from '../../../../src/domain/value-objects/SignatureMetadata';
 import { SignerStatus } from '@prisma/client';
 import { TestUtils } from '../../../helpers/testUtils';

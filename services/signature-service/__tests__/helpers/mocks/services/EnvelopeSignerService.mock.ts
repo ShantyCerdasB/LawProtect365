@@ -14,31 +14,39 @@ import { jest } from '@jest/globals';
  */
 export function createEnvelopeSignerServiceMock() {
   return {
-    declineSigner: jest.fn() as jest.MockedFunction<any>
+    getPendingSigners: jest.fn() as jest.MockedFunction<any>,
+    declineSigner: jest.fn() as jest.MockedFunction<any>,
+    createViewerParticipant: jest.fn() as jest.MockedFunction<any>,
+    markSignerAsSigned: jest.fn() as jest.MockedFunction<any>,
+    createSignersForEnvelope: jest.fn() as jest.MockedFunction<any>,
+    deleteSigner: jest.fn() as jest.MockedFunction<any>
   };
 }
 
 /**
- * Creates a mock EnvelopeSignerService with successful declineSigner
- * @returns Mock EnvelopeSignerService with successful declineSigner
+ * Creates a mock EnvelopeSignerService with successful getPendingSigners
+ * @param signers - Optional signers to return (defaults to empty array)
+ * @returns Mock EnvelopeSignerService with successful getPendingSigners
  */
-export function createEnvelopeSignerServiceMockWithSuccess() {
+export function createEnvelopeSignerServiceMockWithSuccess(signers: any[] = []) {
   const mockService = createEnvelopeSignerServiceMock();
-  
+
+  mockService.getPendingSigners.mockResolvedValue(signers);
   mockService.declineSigner.mockResolvedValue(undefined);
-  
+
   return mockService;
 }
 
 /**
- * Creates a mock EnvelopeSignerService with failing declineSigner
+ * Creates a mock EnvelopeSignerService with failing getPendingSigners
  * @param error - Error to throw (defaults to generic error)
- * @returns Mock EnvelopeSignerService with failing declineSigner
+ * @returns Mock EnvelopeSignerService with failing getPendingSigners
  */
-export function createEnvelopeSignerServiceMockWithFailure(error: Error = new Error('Decline signer failed')) {
+export function createEnvelopeSignerServiceMockWithFailure(error: Error = new Error('Get pending signers failed')) {
   const mockService = createEnvelopeSignerServiceMock();
-  
+
+  mockService.getPendingSigners.mockRejectedValue(error);
   mockService.declineSigner.mockRejectedValue(error);
-  
+
   return mockService;
 }

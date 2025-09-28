@@ -5,7 +5,8 @@
  * and provides type safety for S3 operations throughout the system.
  */
 
-import { BadRequestError, ErrorCodes, S3OperationType } from '@lawprotect/shared-ts';
+import { BadRequestError, ErrorCodes } from '../../errors/index.js';
+import { S3OperationType } from '../../enums/index.js';
 
 /**
  * S3Operation value object

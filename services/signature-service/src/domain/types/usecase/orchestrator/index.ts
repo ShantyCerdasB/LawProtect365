@@ -9,3 +9,7 @@ export * from './GetAuditTrailUseCase';
 export * from './GetEnvelopeUseCase';
 export * from './ListEnvelopesByUserUseCase';
 export * from './SendEnvelopeUseCase';
+export * from './SendRemindersUseCase';
+export * from './ShareDocumentViewUseCase';
+export * from './SignDocumentUseCase';
+export * from './UpdateEnvelopeUseCase';

@@ -7,8 +7,7 @@
 
 import { EnvelopeId } from '../../value-objects/EnvelopeId';
 import { SignerId } from '../../value-objects/SignerId';
-import { S3Key } from '../../value-objects/S3Key';
-import { S3Operation } from '../../value-objects/S3Operation';
+import { S3Key, S3Operation } from '@lawprotect/shared-ts';
 
 export interface GeneratePresignedUrlRequest {
   documentKey: S3Key;

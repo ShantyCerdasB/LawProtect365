@@ -1,11 +1,12 @@
-// services/orchestrators/ShareDocumentViewUseCase.ts
 /**
- * @fileoverview Use case for sharing read-only document view with an external viewer.
- * @description Validates access, creates a viewer participant, generates a viewer token,
- * dispatches notification, writes an audit event, and returns a transport-friendly DTO.
+ * @fileoverview ShareDocumentViewUseCase - Use case for sharing read-only document view with external viewers
+ * @summary Handles document view sharing with viewer participant creation and token generation
+ * @description This use case manages the sharing of read-only document views with external viewers,
+ * including access validation, viewer participant creation, invitation token generation,
+ * notification dispatch, and comprehensive audit tracking. It ensures proper workflow
+ * orchestration and maintains security for document view sharing operations.
  */
 
-import { EnvelopeId } from '@/domain/value-objects/EnvelopeId';
 import { SignatureEnvelope } from '@/domain/entities/SignatureEnvelope';
 import { SignatureEnvelopeService } from '@/services/SignatureEnvelopeService';
 import { EnvelopeSignerService } from '@/services/EnvelopeSignerService';
@@ -14,29 +15,8 @@ import { AuditEventService } from '@/services/audit/AuditEventService';
 import { EnvelopeNotificationService } from '@/services/events/EnvelopeNotificationService';
 import { EnvelopeAccessValidationRule } from '@/domain/rules/EnvelopeAccessValidationRule';
 import { envelopeNotFound } from '@/signature-errors';
-import { createNetworkSecurityContext, NetworkSecurityContext, rethrow } from '@lawprotect/shared-ts';
-import { Email } from '@/domain';
-
-type ShareDocumentViewInput = {
-  envelopeId: EnvelopeId;
-  email: Email;
-  fullName: string;
-  message?: string;
-  expiresInDays?: number;
-  userId: string;
-  securityContext: NetworkSecurityContext;
-};
-
-export type ShareDocumentViewResult = {
-  success: boolean;
-  message: string;
-  envelopeId: string;
-  viewerEmail: string;
-  viewerName: string;
-  token: string;
-  expiresAt: Date;
-  expiresInDays: number;
-};
+import { createNetworkSecurityContext, rethrow } from '@lawprotect/shared-ts';
+import { ShareDocumentViewInput, ShareDocumentViewResult } from '@/domain/types/usecase/orchestrator/ShareDocumentViewUseCase';
 
 export class ShareDocumentViewUseCase {
   constructor(
@@ -47,6 +27,15 @@ export class ShareDocumentViewUseCase {
     private readonly envelopeNotificationService: EnvelopeNotificationService
   ) {}
 
+  /**
+   * Shares read-only document view with external viewer with token generation and notifications
+   * @param input - The share request containing envelope ID, viewer info, and security context
+   * @returns Promise that resolves to the share operation result with token information
+   * @throws NotFoundError when envelope is not found
+   * @throws AccessDeniedError when user lacks permission to share the document
+   * @throws BadRequestError when viewer participant creation fails
+
+   */
   async execute(input: ShareDocumentViewInput): Promise<ShareDocumentViewResult> {
     const {
       envelopeId,
@@ -100,7 +89,7 @@ export class ShareDocumentViewUseCase {
       await this.signatureAuditEventService.create({
         envelopeId: envelopeId.getValue(),
         signerId: viewer.getId().getValue(),
-        eventType: 'DOCUMENT_VIEW_SHARED' as any,
+        eventType: 'LINK_SHARED' as any,
         description: `Document view access shared with ${fullName} (${email})`,
         userId,
         userEmail: undefined,

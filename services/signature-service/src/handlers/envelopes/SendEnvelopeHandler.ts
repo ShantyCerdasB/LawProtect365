@@ -7,7 +7,7 @@
  */
 
 import { ControllerFactory, VALID_COGNITO_ROLES } from '@lawprotect/shared-ts';
-import { ServiceFactory } from '../../infrastructure/factories/services/ServiceFactory';
+import { CompositionRoot } from '../../infrastructure/factories';
 import { SendEnvelopePathSchema, SendEnvelopeBodySchema } from '../../domain/schemas/SendEnvelopeSchema';
 import { EnvelopeId } from '../../domain/value-objects/EnvelopeId';
 
@@ -61,38 +61,25 @@ export const sendEnvelopeHandler = ControllerFactory.createCommand({
     private readonly signatureOrchestrator: any;
 
     constructor() {
-      this.signatureOrchestrator = ServiceFactory.createSignatureOrchestrator();
+      this.signatureOrchestrator = CompositionRoot.createSignatureOrchestrator();
     }
 
     /**
      * Executes the envelope sending orchestration
-     * 
      * @param params - Extracted parameters from request
      * @returns Promise resolving to send envelope result
      */
     async execute(params: any) {
-
-      try {
-        const result = await this.signatureOrchestrator.sendEnvelope(
-          params.envelopeId,
-          params.userId,
-          params.securityContext,
-          {
-            message: params.message,
-            sendToAll: params.sendToAll,
-            signers: params.signers
-          }
-        );
-        return result;
-      } catch (error) {
-        console.error('❌ SendEnvelopeHandler.execute ERROR:', {
-          error: error instanceof Error ? error.message : error,
-          stack: error instanceof Error ? error.stack : undefined,
-          envelopeId: params.envelopeId?.getValue(),
-          userId: params.userId
-        });
-        throw error;
-      }
+      return await this.signatureOrchestrator.sendEnvelope(
+        params.envelopeId,
+        params.userId,
+        params.securityContext,
+        {
+          message: params.message,
+          sendToAll: params.sendToAll,
+          signers: params.signers
+        }
+      );
     }
   },
   
@@ -118,7 +105,7 @@ export const sendEnvelopeHandler = ControllerFactory.createCommand({
       status: result.status,
       tokensGenerated: result.tokensGenerated,
       signersNotified: result.signersNotified,
-      tokens: result.tokens // ✅ Incluir tokens para tests
+      tokens: result.tokens
     };
   },
   

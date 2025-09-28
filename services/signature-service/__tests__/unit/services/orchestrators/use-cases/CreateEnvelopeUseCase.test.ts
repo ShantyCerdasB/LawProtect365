@@ -7,7 +7,7 @@ import { DocumentOrigin } from '../../../../../src/domain/value-objects/Document
 import { SigningOrder } from '../../../../../src/domain/value-objects/SigningOrder';
 import { TestUtils } from '../../../../helpers/testUtils';
 import { signatureEnvelopeEntity } from '../../../../helpers/builders/signatureEnvelope';
-import { createSignatureEnvelopeServiceMock } from '../../../../helpers/mocks/services/SignatureEnvelopeService';
+import { createSignatureEnvelopeServiceMock } from '../../../../helpers/mocks/services';
 import { createUuidMock } from '../../../../helpers/mocks/uuid';
 
 // Mock the uuid module

@@ -1,5 +1,5 @@
 import { BadRequestError, ErrorCodes } from '@lawprotect/shared-ts';
-import { S3Key } from '../../value-objects/S3Key';
+import { S3Key } from '@lawprotect/shared-ts';
 export function validateS3StorageForSignature(
   s3Key: S3Key,
   config: {

@@ -6,7 +6,7 @@
  */
 
 import { ControllerFactory, VALID_COGNITO_ROLES, NotificationType } from '@lawprotect/shared-ts';
-import { ServiceFactory } from '../../infrastructure/factories/services/ServiceFactory';
+import { CompositionRoot } from '../../infrastructure/factories';
 import { SendNotificationPathSchema, SendNotificationRequestSchema } from '../../domain/schemas/SendNotificationSchema';
 import { EnvelopeId } from '../../domain/value-objects/EnvelopeId';
 
@@ -24,25 +24,19 @@ export const sendNotificationHandler = ControllerFactory.createCommand({
     private readonly signatureOrchestrator: any;
 
     constructor() {
-      this.signatureOrchestrator = ServiceFactory.createSignatureOrchestrator();
+      this.signatureOrchestrator = CompositionRoot.createSignatureOrchestrator();
     }
 
     async execute(params: any) {
-      try {
-        const { envelopeId, request, userId, securityContext } = params;
+      const { envelopeId, request, userId, securityContext } = params;
 
-        // Validate notification type
-        if (request.type === NotificationType.REMINDER) {
-          return await this.signatureOrchestrator.sendReminders(
-            envelopeId,
-            request,
-            userId,
-            securityContext
-          );
-        } 
-      } catch (error) {
-        // Re-throw the error to be handled by the error middleware
-        throw error;
+      if (request.type === NotificationType.REMINDER) {
+        return await this.signatureOrchestrator.sendReminders(
+          envelopeId,
+          request,
+          userId,
+          securityContext
+        );
       }
     }
   },

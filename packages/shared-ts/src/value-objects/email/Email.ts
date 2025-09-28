@@ -5,8 +5,8 @@
  * domain extraction for business logic.
  */
 
-import { StringValueObject, isEmail } from '@lawprotect/shared-ts';
-import { signerEmailRequired } from '../../signature-errors';
+import { StringValueObject } from '../../types/valueObject.js';
+import { isEmail } from '../../utils/index.js';
 
 /**
  * Email value object
@@ -20,13 +20,13 @@ export class Email extends StringValueObject {
 
   constructor(value: string) {
     if (!value || typeof value !== 'string') {
-      throw signerEmailRequired('Email must be a non-empty string');
+      throw new Error('Email must be a non-empty string');
     }
 
     const trimmedValue = value.trim().toLowerCase();
     
     if (!isEmail(trimmedValue)) {
-      throw signerEmailRequired('Email must be a valid email address');
+      throw new Error('Email must be a valid email address');
     }
 
     super(trimmedValue);
@@ -56,7 +56,6 @@ export class Email extends StringValueObject {
     return this.domain;
   }
 
-
   /**
    * Extracts domain from email address
    */
@@ -64,5 +63,4 @@ export class Email extends StringValueObject {
     const parts = email.split('@');
     return parts.length === 2 ? parts[1] : '';
   }
-
 }

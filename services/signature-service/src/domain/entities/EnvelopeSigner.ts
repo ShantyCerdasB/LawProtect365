@@ -8,7 +8,7 @@
 
 import { SignerId } from '../value-objects/SignerId';
 import { EnvelopeId } from '../value-objects/EnvelopeId';
-import { Email } from '../value-objects/Email';
+import { Email } from '@lawprotect/shared-ts';
 import { Signature } from '../value-objects/Signature';
 import { SignatureMetadata } from '../value-objects/SignatureMetadata';
 import { SignerStatus } from '@prisma/client';

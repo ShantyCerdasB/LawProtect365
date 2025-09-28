@@ -8,7 +8,7 @@
 
 import { ControllerFactory, VALID_COGNITO_ROLES } from '@lawprotect/shared-ts';
 import { CreateEnvelopeSchema } from '../../domain/schemas/EnvelopeSchema';
-import { ServiceFactory } from '../../infrastructure/factories/services/ServiceFactory';
+import { CompositionRoot } from '../../infrastructure/factories';
 import { DocumentOrigin } from '../../domain/value-objects/DocumentOrigin';
 import { SigningOrder } from '../../domain/value-objects/SigningOrder';
 
@@ -62,17 +62,15 @@ export const createEnvelopeHandler = ControllerFactory.createCommand({
 
     constructor() {
       // Create SignatureOrchestrator using NewServiceFactory
-      this.signatureOrchestrator = ServiceFactory.createSignatureOrchestrator();
+      this.signatureOrchestrator = CompositionRoot.createSignatureOrchestrator();
     }
 
     /**
      * Executes the envelope creation orchestration
-     * 
      * @param params - Extracted parameters from request
-     * @returns Promise resolving to created envelope and signers
+     * @returns Promise resolving to created envelope
      */
     async execute(params: any) {
-      // Use SignatureOrchestrator to create envelope (without signers)
       const result = await this.signatureOrchestrator.createEnvelope({
         envelopeData: params.envelopeData,
         userId: params.userId,
@@ -82,7 +80,6 @@ export const createEnvelopeHandler = ControllerFactory.createCommand({
 
       return {
         envelope: result.envelope
-        // Note: signers are not created in CreateEnvelope flow
       };
     }
   },
@@ -99,17 +96,14 @@ export const createEnvelopeHandler = ControllerFactory.createCommand({
       sourceKey: body.sourceKey,
       metaKey: body.metaKey
     },
-    userId: context.auth.userId, // Authenticated user ID
+    userId: context.auth.userId,
     securityContext: context.auth,
     actorEmail: context.auth.email
-    // Note: signers are not created in CreateEnvelope flow
-    // They are added separately via UpdateEnvelope flow
   }),
   
   // Response configuration
   responseType: 'created',
   transformResult: async (result: any) => {
-    // Transform domain entities to API response format
     return {
       id: result.envelope.getId().getValue(),
       title: result.envelope.getTitle(),
@@ -122,7 +116,6 @@ export const createEnvelopeHandler = ControllerFactory.createCommand({
       metaKey: result.envelope.getMetaKey()?.getValue(),
       expiresAt: result.envelope.getExpiresAt(),
       createdAt: result.envelope.getCreatedAt(),
-      // Template-specific fields (only present for TEMPLATE origin)
       ...(result.envelope.getOrigin().getType() === 'TEMPLATE' && {
         templateId: result.envelope.getOrigin().getTemplateId(),
         templateVersion: result.envelope.getOrigin().getTemplateVersion()
@@ -130,8 +123,7 @@ export const createEnvelopeHandler = ControllerFactory.createCommand({
     };
   },
   
-  // Security configuration
-  requireAuth: true, // Requires JWT authentication
-  requiredRoles: [...VALID_COGNITO_ROLES], // Allowed user roles
-  includeSecurityContext: true // Include security context in request
+  requireAuth: true,
+  requiredRoles: [...VALID_COGNITO_ROLES],
+  includeSecurityContext: true
 });

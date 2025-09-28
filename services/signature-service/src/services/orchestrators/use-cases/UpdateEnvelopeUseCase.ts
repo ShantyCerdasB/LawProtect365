@@ -1,22 +1,25 @@
-import { SignatureEnvelope } from '@/domain/entities/SignatureEnvelope';
+/**
+ * @fileoverview UpdateEnvelopeUseCase - Use case for updating envelope metadata and signer roster
+ * @summary Handles envelope updates including metadata changes and signer management
+ * @description This use case manages the complete envelope update workflow, including
+ * S3 file validation, envelope metadata updates, signer additions/removals, and
+ * returning the updated envelope state with optional signer information.
+ * It ensures proper validation and maintains data consistency during updates.
+ */
+
 import { SignatureEnvelopeService } from '@/services/SignatureEnvelopeService';
 import { EnvelopeSignerService } from '@/services/EnvelopeSignerService';
 import { S3Service } from '@/services/S3Service';
-import { EnvelopeId } from '@/domain/value-objects/EnvelopeId';
-import { UpdateEnvelopeData } from '@/domain/rules/EnvelopeUpdateValidationRule';
 import { envelopeNotFound } from '@/signature-errors';
 import { rethrow } from '@lawprotect/shared-ts';
 import { EntityFactory } from '@/domain/factories/EntityFactory';
 import { mapAddSigners } from '@/services/orchestrators/utils/mapAddSigners';
-import { EnvelopeSigner } from '@/domain';
-
-type UpdateEnvelopeResult = {
-  envelope: SignatureEnvelope;
-  signers?: EnvelopeSigner[];
-};
+import { UpdateEnvelopeUseCaseInput, UpdateEnvelopeUseCaseResult } from '@/domain/types/usecase/orchestrator/UpdateEnvelopeUseCase';
 
 /**
- * Use case: update envelope metadata and signer roster.
+ * Use case for updating envelope metadata and managing signer roster
+ * @description Handles envelope updates including metadata changes, signer additions/removals,
+ * and S3 file validation. Returns updated envelope state with optional signer information.
  */
 export class UpdateEnvelopeUseCase {
   constructor(
@@ -26,14 +29,22 @@ export class UpdateEnvelopeUseCase {
   ) {}
 
   /**
-   * Updates envelope fields, adds/removes signers, and returns updated state.
-   * Signers are returned only when there were additions or removals.
+   * Updates envelope metadata and manages signer roster with complete validation
+   * @param input - The update request containing envelope ID, update data, and user context
+   * @param input.envelopeId - The unique identifier of the envelope to update
+   * @param input.updateData - The update data containing metadata changes and signer modifications
+   * @param input.userId - The ID of the user performing the update
+   * @returns Promise that resolves to the update result with envelope and optional signers
+   * @throws NotFoundError when envelope is not found after update
+   * @throws ValidationError when S3 files don't exist or update data is invalid
+   * @example
+   * const result = await useCase.execute({
+   *   envelopeId: EnvelopeId.fromString('env-123'),
+   *   updateData: { title: 'Updated Title', addSigners: [...] },
+   *   userId: 'user-456'
+   * });
    */
-  async execute(input: {
-    envelopeId: EnvelopeId;
-    updateData: UpdateEnvelopeData;
-    userId: string;
-  }): Promise<UpdateEnvelopeResult> {
+  async execute(input: UpdateEnvelopeUseCaseInput): Promise<UpdateEnvelopeUseCaseResult> {
     const { envelopeId, updateData, userId } = input;
 
     try {

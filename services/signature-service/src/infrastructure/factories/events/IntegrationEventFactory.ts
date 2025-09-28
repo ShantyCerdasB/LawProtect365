@@ -16,6 +16,7 @@ import {
   EnvelopeCancelledPayload,
   ReminderNotificationPayload
 } from '../../../domain/types/events/IntegrationEventTypes';
+import { ParticipantRole } from '@prisma/client';
 
 /**
  * Factory for building integration events emitted by the signature service
@@ -81,7 +82,7 @@ export class IntegrationEventFactory {
         envelopeId: args.envelope.getId().getValue(),
         sentBy: args.envelope.getCreatedBy(),
         sentAt: args.sentAtISO,
-        participantRole: 'VIEWER' as const
+        participantRole: ParticipantRole.VIEWER
       }
     });
     

@@ -7,7 +7,7 @@
  */
 
 import { ControllerFactory, UuidV4 } from '@lawprotect/shared-ts';
-import { ServiceFactory } from '../../infrastructure/factories/services/ServiceFactory';
+import { CompositionRoot } from '../../infrastructure/factories';
 import { CancelEnvelopeRequestSchema, CancelEnvelopeResponse } from '../../domain/schemas/CancelEnvelopeSchema';
 import { EnvelopeId } from '../../domain/value-objects/EnvelopeId';
 import { z } from 'zod';
@@ -45,12 +45,11 @@ export const cancelEnvelopeHandler = ControllerFactory.createCommand({
     private readonly signatureOrchestrator: any;
 
     constructor() {
-      this.signatureOrchestrator = ServiceFactory.createSignatureOrchestrator();
+      this.signatureOrchestrator = CompositionRoot.createSignatureOrchestrator();
     }
 
     /**
      * Executes the envelope cancellation orchestration
-     * 
      * @param params - Extracted parameters from request
      * @returns Promise resolving to cancellation result
      */
@@ -59,23 +58,17 @@ export const cancelEnvelopeHandler = ControllerFactory.createCommand({
       userId: string;
       securityContext: any;
     }) {
-      try {
-        return await this.signatureOrchestrator.cancelEnvelope(
-          params.envelopeId,
-          params.userId,
-          params.securityContext
-        );
-      } catch (error) {
-        // Re-throw the error to be handled by the error middleware
-        throw error;
-      }
+      return await this.signatureOrchestrator.cancelEnvelope(
+        params.envelopeId,
+        params.userId,
+        params.securityContext
+      );
     }
   },
   
-  // Parameter extraction - transforms HTTP request to domain parameters
   extractParams: (path: any, _body: any, _query: any, context: any) => ({
     envelopeId: EnvelopeId.fromString(path.id),
-    userId: context.auth.userId, // Only authenticated app users
+    userId: context.auth.userId,
     securityContext: {
       ipAddress: context.auth.ipAddress,
       userAgent: context.auth.userAgent,
@@ -83,7 +76,6 @@ export const cancelEnvelopeHandler = ControllerFactory.createCommand({
     }
   }),
   
-  // Response configuration
   responseType: 'ok',
   transformResult: async (result: any): Promise<CancelEnvelopeResponse> => {
     return {

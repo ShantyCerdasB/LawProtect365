@@ -7,6 +7,7 @@
 
 import { EventNames } from '../../enums/EventNames';
 import { NetworkSecurityContext } from '@lawprotect/shared-ts';
+import { ParticipantRole } from '@prisma/client';
 
 /**
  * Integration event names supported by the signature service
@@ -56,7 +57,7 @@ export interface ViewerInvitationPayload {
     envelopeId: string;
     sentBy: string;
     sentAt: string;
-    participantRole: 'VIEWER';
+    participantRole: ParticipantRole;
   };
 }
 

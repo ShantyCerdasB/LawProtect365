@@ -7,7 +7,7 @@
  */
 
 import { ControllerFactory } from '@lawprotect/shared-ts';
-import { ServiceFactory } from '../../infrastructure/factories/services/ServiceFactory';
+import { CompositionRoot } from '../../infrastructure/factories';
 import { GetEnvelopeQuerySchema, EnvelopeIdSchema } from '../../domain/schemas/EnvelopeSchema';
 import { EnvelopeId } from '../../domain/value-objects/EnvelopeId';
 
@@ -53,44 +53,34 @@ export const getEnvelopeHandler = ControllerFactory.createQuery({
     private readonly signatureOrchestrator: any;
     
     constructor() {
-      this.signatureOrchestrator = ServiceFactory.createSignatureOrchestrator();
+      this.signatureOrchestrator = CompositionRoot.createSignatureOrchestrator();
     }
     
     /**
      * Executes the envelope retrieval orchestration
-     * 
      * @param params - Extracted parameters from request
      * @returns Promise resolving to envelope with complete signer information
      */
     async execute(params: any) {
-      try {
-        return await this.signatureOrchestrator.getEnvelope(
-          params.envelopeId,
-          params.userId,
-          params.invitationToken,
-          params.securityContext
-        );
-      } catch (error) {
-        // Re-throw the error to be handled by the error middleware
-        throw error;
-      }
+      return await this.signatureOrchestrator.getEnvelope(
+        params.envelopeId,
+        params.userId,
+        params.invitationToken,
+        params.securityContext
+      );
     }
   },
   
-  // Parameter extraction - transforms HTTP request to domain parameters
   extractParams: (path: any, _body: any, query: any, context: any) => ({
     envelopeId: EnvelopeId.fromString(path.id),
-    userId: context.auth?.userId === 'external-user' ? undefined : context.auth?.userId, // ✅ Distinguir entre usuarios reales y external users
-    invitationToken: query.invitationToken, // Para external users
-    securityContext: context.securityContext // ✅ Usar securityContext del middleware
+    userId: context.auth?.userId === 'external-user' ? undefined : context.auth?.userId,
+    invitationToken: query.invitationToken,
+    securityContext: context.securityContext
   }),
   
-  // Response configuration
   responseType: 'ok',
   transformResult: async (result: any) => {
-    try {
-      // Transform domain entities to API response format with complete signer information
-      const response = {
+    return {
         id: result.envelope.getId().getValue(),
         title: result.envelope.getTitle(),
         description: result.envelope.getDescription(),
@@ -104,12 +94,10 @@ export const getEnvelopeHandler = ControllerFactory.createQuery({
         createdAt: result.envelope.getCreatedAt(),
         updatedAt: result.envelope.getUpdatedAt(),
         accessType: result.accessType,
-        // Template-specific fields (only present for TEMPLATE origin)
         ...(result.envelope.getOrigin().getType() === 'TEMPLATE' && {
           templateId: result.envelope.getOrigin().getTemplateId(),
           templateVersion: result.envelope.getOrigin().getTemplateVersion()
         }),
-        // ✅ SIEMPRE incluir signers con información completa
         signers: result.signers.map((signer: any) => ({
           id: signer.getId().getValue(),
           email: signer.getEmail()?.getValue(),
@@ -117,7 +105,7 @@ export const getEnvelopeHandler = ControllerFactory.createQuery({
           isExternal: signer.getIsExternal(),
           order: signer.getOrder(),
           status: signer.getStatus(),
-          userId: signer.getUserId(), // Para tracking de external users
+          userId: signer.getUserId(),
           signedAt: signer.getSignedAt(),
           declinedAt: signer.getDeclinedAt(),
           declineReason: signer.getDeclineReason(),
@@ -125,25 +113,9 @@ export const getEnvelopeHandler = ControllerFactory.createQuery({
           consentTimestamp: signer.getConsentTimestamp()
         }))
       };
-      
-      return response;
-    } catch (error) {
-      console.error('❌ GetEnvelopeHandler.transformResult ERROR:', {
-        error: error instanceof Error ? error.message : error,
-        stack: error instanceof Error ? error.stack : undefined,
-        result: {
-          hasEnvelope: !!result.envelope,
-          hasSigners: !!result.signers,
-          signersCount: result.signers?.length || 0,
-          accessType: result.accessType
-        }
-      });
-      throw error;
-    }
   },
   
-  // Security configuration
-  requireAuth: true, // ✅ Permite tanto usuarios autenticados como external users con invitation tokens
-  requiredRoles: undefined, // No requiere roles específicos
+  requireAuth: true,
+  requiredRoles: undefined,
   includeSecurityContext: true
 });

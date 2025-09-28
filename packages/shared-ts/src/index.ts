@@ -5,6 +5,7 @@ export * from "./types/index.js";
 export * from "./constants/index.js";
 export * from "./enums/index.js";
 export * from "./validation/index.js";
+export * from "./value-objects/index.js";
 export * from "./cache/ports.js";
 export * from "./auth/index.js";
 export * from "./config/index.js";

@@ -5,6 +5,7 @@
  * including envelope data, signers data, user information, and security context.
  */
 
+import { NetworkSecurityContext } from '@lawprotect/shared-ts';
 import { CreateEnvelopeData } from '../envelope/CreateEnvelopeData';
 
 export interface CreateEnvelopeRequest {
@@ -13,9 +14,7 @@ export interface CreateEnvelopeRequest {
   /** User ID creating the envelope */
   userId: string;
   /** Security context for authorization */
-  securityContext: any;
+  securityContext: NetworkSecurityContext;
   /** Optional actor email for audit purposes */
   actorEmail?: string;
-  // Note: signers are not created in CreateEnvelope flow
-  // They are added separately via UpdateEnvelope flow
 }

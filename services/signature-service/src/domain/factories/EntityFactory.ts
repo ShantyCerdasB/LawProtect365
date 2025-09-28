@@ -13,9 +13,7 @@ import { ConsentId } from '../value-objects/ConsentId';
 import { DocumentOrigin } from '../value-objects/DocumentOrigin';
 import { SigningOrder } from '../value-objects/SigningOrder';
 import { EnvelopeStatus } from '../value-objects/EnvelopeStatus';
-import { Email } from '../value-objects/Email';
-import { S3Key } from '../value-objects/S3Key';
-import { DocumentHash } from '../value-objects/DocumentHash';
+import { Email, S3Key, DocumentHash } from '@lawprotect/shared-ts';
 
 import { SignatureEnvelope } from '../entities/SignatureEnvelope';
 import { EnvelopeSigner } from '../entities/EnvelopeSigner';

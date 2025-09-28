@@ -5,7 +5,7 @@
  * and provides utilities for S3 key manipulation and validation.
  */
 
-import { BadRequestError } from '@lawprotect/shared-ts';
+import { BadRequestError } from '../../errors/index.js';
 
 /**
  * S3Key value object
@@ -164,3 +164,4 @@ export class S3Key {
     return this.key;
   }
 }
+

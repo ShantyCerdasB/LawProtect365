@@ -9,8 +9,7 @@
 import { SignatureEnvelope } from '../../../src/domain/entities/SignatureEnvelope';
 import { EnvelopeId } from '../../../src/domain/value-objects/EnvelopeId';
 import { EnvelopeStatus } from '../../../src/domain/value-objects/EnvelopeStatus';
-import { S3Key } from '../../../src/domain/value-objects/S3Key';
-import { DocumentHash } from '../../../src/domain/value-objects/DocumentHash';
+import { S3Key, DocumentHash } from '@lawprotect/shared-ts';
 import { SigningOrder } from '../../../src/domain/value-objects/SigningOrder';
 import { DocumentOrigin } from '../../../src/domain/value-objects/DocumentOrigin';
 import { EnvelopeSpec } from '../../../src/domain/types/envelope';
@@ -18,7 +17,7 @@ import { TestUtils } from '../testUtils';
 import { generateTestIpAddress } from '../../integration/helpers/testHelpers';
 import { EnvelopeSigner } from '../../../src/domain/entities/EnvelopeSigner';
 import { SignerId } from '../../../src/domain/value-objects/SignerId';
-import { Email } from '../../../src/domain/value-objects/Email';
+import { Email } from '@lawprotect/shared-ts';
 import { SignerStatus, ParticipantRole } from '@prisma/client';
 
 /**

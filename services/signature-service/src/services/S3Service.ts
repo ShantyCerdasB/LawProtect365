@@ -8,7 +8,7 @@
 
 import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
 import { SignerId } from '../domain/value-objects/SignerId';
-import { S3Key } from '../domain/value-objects/S3Key';
+import { S3Key } from '@lawprotect/shared-ts';
 import { AuditEventService } from './audit/AuditEventService';
 import { AuditEventType } from '../domain/enums/AuditEventType';
 import { NetworkSecurityContext, createNetworkSecurityContext } from '@lawprotect/shared-ts';

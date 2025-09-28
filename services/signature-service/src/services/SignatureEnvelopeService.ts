@@ -9,9 +9,8 @@
 import { SignatureEnvelope } from '../domain/entities/SignatureEnvelope';
 import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
 import { SigningOrder } from '../domain/value-objects/SigningOrder';
-import { S3Key } from '../domain/value-objects/S3Key';
+import { S3Key, S3Operation } from '@lawprotect/shared-ts';
 import { SignerId } from '../domain/value-objects/SignerId';
-import { S3Operation } from '../domain/value-objects/S3Operation';
 import { SignatureEnvelopeRepository } from '../repositories/SignatureEnvelopeRepository';
 import { AuditEventService } from './audit/AuditEventService';
 import { InvitationTokenService } from './InvitationTokenService';

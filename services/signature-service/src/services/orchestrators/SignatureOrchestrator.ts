@@ -27,7 +27,7 @@ import type {
 import type { EnvelopeId } from '@/domain/value-objects/EnvelopeId';
 import type { EnvelopeStatus } from '@/domain/value-objects/EnvelopeStatus';
 import type { SignerId } from '@/domain/value-objects/SignerId';
-import type { Email } from '@/domain';
+import type { Email } from '@lawprotect/shared-ts';
 
 /**
  * Application-layer orchestrator that wires use cases and services via dependency injection.

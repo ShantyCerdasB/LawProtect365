@@ -7,7 +7,7 @@
  */
 
 import { ControllerFactory } from '@lawprotect/shared-ts';
-import { ServiceFactory } from '../../infrastructure/factories/services/ServiceFactory';
+import { CompositionRoot } from '../../infrastructure/factories';
 import { SignDocumentRequestSchema } from '../../domain/schemas/SigningHandlersSchema';
 import { EnvelopeIdSchema } from '../../domain/schemas/EnvelopeSchema';
 
@@ -52,37 +52,30 @@ export const signDocumentHandler = ControllerFactory.createCommand({
     private readonly signatureOrchestrator: any;
     
     constructor() {
-      this.signatureOrchestrator = ServiceFactory.createSignatureOrchestrator();
+      this.signatureOrchestrator = CompositionRoot.createSignatureOrchestrator();
     }
     
     /**
      * Executes the document signing orchestration
-     * 
      * @param params - Extracted parameters from request
      * @returns Promise resolving to signing result
      */
     async execute(params: any) {
-      try {
-        return await this.signatureOrchestrator.signDocument(
-          params.request,
-          params.userId,
-          params.securityContext
-        );
-      } catch (error) {
-        // Re-throw the error to be handled by the error middleware
-        throw error;
-      }
+      return await this.signatureOrchestrator.signDocument(
+        params.request,
+        params.userId,
+        params.securityContext
+      );
     }
   },
   
-  // Parameter extraction - transforms HTTP request to domain parameters
   extractParams: (path: any, body: any, _query: any, context: any) => ({
     request: {
       ...body,
-      envelopeId: path.id, // ✅ Extract envelopeId from pathParameters
-      signerId: body.signerId // ✅ Extract signerId from body
+      envelopeId: path.id,
+      signerId: body.signerId
     },
-    userId: context.auth?.userId === 'external-user' ? undefined : context.auth?.userId, // ✅ Distinguir entre usuarios reales y external users
+    userId: context.auth?.userId === 'external-user' ? undefined : context.auth?.userId,
     securityContext: {
       ipAddress: context.auth?.ipAddress || context.securityContext?.ipAddress,
       userAgent: context.auth?.userAgent || context.securityContext?.userAgent,

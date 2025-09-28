@@ -16,7 +16,9 @@ export function createEnvelopeNotificationServiceMock() {
   return {
     publishEnvelopeCancelled: jest.fn() as jest.MockedFunction<any>,
     publishSignerDeclined: jest.fn() as jest.MockedFunction<any>,
-    sendSignerInvitations: jest.fn() as jest.MockedFunction<any>
+    sendSignerInvitations: jest.fn() as jest.MockedFunction<any>,
+    publishReminder: jest.fn() as jest.MockedFunction<any>,
+    sendViewerInvitation: jest.fn() as jest.MockedFunction<any>
   };
 }
 

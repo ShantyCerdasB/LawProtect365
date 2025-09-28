@@ -1,11 +1,12 @@
 /**
- * @fileoverview Use case for sending reminder notifications to pending signers.
- * @description Validates access, resolves pending signers (optionally filtered),
- * enforces reminder rate limits, updates token resend metadata, publishes
- * reminder notifications, and writes audit events.
+ * @fileoverview SendRemindersUseCase - Use case for sending reminder notifications to pending signers
+ * @summary Handles reminder notifications with rate limiting and audit tracking
+ * @description This use case manages the sending of reminder notifications to pending signers,
+ * including access validation, signer filtering, reminder rate limiting, token management,
+ * notification dispatch, and comprehensive audit tracking. It ensures proper workflow
+ * orchestration and maintains compliance with reminder policies for envelope management.
  */
 
-import { EnvelopeId } from '@/domain/value-objects/EnvelopeId';
 import { EnvelopeSigner } from '@/domain/entities/EnvelopeSigner';
 import { SignatureEnvelopeService } from '@/services/SignatureEnvelopeService';
 import { EnvelopeSignerService } from '@/services/EnvelopeSignerService';
@@ -14,40 +15,11 @@ import { SignerReminderTrackingService } from '@/services/SignerReminderTracking
 import { AuditEventService } from '@/services/audit/AuditEventService';
 import { EnvelopeNotificationService } from '@/services/events/EnvelopeNotificationService';
 import { EnvelopeAccessValidationRule } from '@/domain/rules/EnvelopeAccessValidationRule';
-import { NetworkSecurityContext, NotificationType, createNetworkSecurityContext, rethrow } from '@lawprotect/shared-ts';
+import { createNetworkSecurityContext, rethrow } from '@lawprotect/shared-ts';
 import { loadConfig } from '@/config/AppConfig';
 import { envelopeNotFound } from '@/signature-errors';
 import { filterSignersByIds } from '@/services/orchestrators/utils/signerSelection';
-
-export type SendRemindersInput = {
-  envelopeId: EnvelopeId;
-  request: {
-    signerIds?: string[];
-    message?: string;
-    type: NotificationType.REMINDER;
-  };
-  userId: string;
-  securityContext: NetworkSecurityContext;
-};
-
-export type SendRemindersResult = {
-  success: boolean;
-  message: string;
-  envelopeId: string;
-  remindersSent: number;
-  signersNotified: Array<{
-    id: string;
-    email: string;
-    name: string;
-    reminderCount: number;
-    lastReminderAt: Date;
-  }>;
-  skippedSigners: Array<{
-    id: string;
-    email: string;
-    reason: string;
-  }>;
-};
+import { SendRemindersInput, SendRemindersResult } from '@/domain/types/usecase/orchestrator/SendRemindersUseCase';
 
 /**
  * Sends reminder notifications to pending signers while enforcing limits and auditing.
@@ -62,6 +34,21 @@ export class SendRemindersUseCase {
     private readonly envelopeNotificationService: EnvelopeNotificationService
   ) {}
 
+  /**
+   * Sends reminder notifications to pending signers with rate limiting and audit tracking
+   * @param input - The reminder request containing envelope ID, signer filters, and security context
+   * @returns Promise that resolves to the reminder operation result with tracking information
+   * @throws NotFoundError when envelope is not found
+   * @throws AccessDeniedError when user lacks permission to send reminders
+   * @throws BadRequestError when reminder policies are violated
+   * @example
+   * const result = await useCase.execute({
+   *   envelopeId: EnvelopeId.fromString('envelope-123'),
+   *   request: { signerIds: ['signer-1'], message: 'Please sign', type: NotificationType.REMINDER },
+   *   userId: 'user-456',
+   *   securityContext: { ipAddress: '192.168.1.1', userAgent: 'Mozilla/5.0', country: 'US' }
+   * });
+   */
   async execute(input: SendRemindersInput): Promise<SendRemindersResult> {
     const { envelopeId, request, userId, securityContext } = input;
 

@@ -1,3 +1,11 @@
+/**
+ * @fileoverview Container - Dependency injection container types
+ * @summary Type definitions for service and use case dependency injection
+ * @description This module defines the container types for dependency injection,
+ * providing type-safe interfaces for services and use cases used throughout
+ * the signature service application.
+ */
+
 import {
   SignatureEnvelopeService,
   EnvelopeSignerService,
@@ -25,6 +33,10 @@ import {
   SignDocumentUseCase,
 } from '@/services/orchestrators';
 
+/**
+ * Container type for all service dependencies
+ * @description Defines the service layer dependencies required for dependency injection
+ */
 export type Services = {
   signatureEnvelopeService: SignatureEnvelopeService;
   envelopeSignerService: EnvelopeSignerService;
@@ -37,6 +49,10 @@ export type Services = {
   envelopeNotificationService: EnvelopeNotificationService;
 };
 
+/**
+ * Container type for all use case dependencies
+ * @description Defines the use case layer dependencies required for dependency injection
+ */
 export type UseCases = {
   createEnvelopeUseCase: CreateEnvelopeUseCase;
   cancelEnvelopeUseCase: CancelEnvelopeUseCase;

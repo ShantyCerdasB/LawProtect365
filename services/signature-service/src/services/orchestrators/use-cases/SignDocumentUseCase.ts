@@ -1,11 +1,13 @@
 /**
- * @fileoverview Use case for signing a document within an envelope.
- * @description Validates access and flow, records consent, prepares the document
- * (frontend-signed or flattened), performs KMS signing, updates signer/envelope,
- * emits audit, finalizes envelope if completed, and returns the public DTO.
+ * @fileoverview SignDocumentUseCase - Use case for signing documents within envelopes
+ * @summary Handles document signing workflow with consent recording and KMS integration
+ * @description This use case manages the complete document signing workflow, including
+ * access validation, consent recording, document preparation (frontend-signed or flattened),
+ * KMS signing, signer/envelope updates, audit tracking, and envelope finalization.
+ * It ensures proper workflow orchestration and maintains compliance with signing policies.
  */
 
-import { NetworkSecurityContext, createNetworkSecurityContext, rethrow } from '@lawprotect/shared-ts';
+import {  createNetworkSecurityContext, rethrow } from '@lawprotect/shared-ts';
 import { SignatureEnvelopeService } from '@/services/SignatureEnvelopeService';
 import { EnvelopeSignerService } from '@/services/EnvelopeSignerService';
 import { InvitationTokenService } from '@/services/InvitationTokenService';
@@ -22,19 +24,13 @@ import { SigningFlowValidationRule } from '@/domain/rules/SigningFlowValidationR
 import { getDefaultSigningAlgorithm } from '@/domain/enums/SigningAlgorithmEnum';
 import { envelopeNotFound } from '@/signature-errors';
 
-import { SignDocumentRequest, SignDocumentResult } from '@/domain/types/orchestrator';
 import { buildSigningResponse } from '@/services/orchestrators';
 import {
   handleSignedDocumentFromFrontend,
   handleFlattenedDocument,
 } from '@/services/orchestrators';
 import { v4 as uuid } from 'uuid';
-
-export type SignDocumentUseCaseInput = {
-  request: SignDocumentRequest;            // boundary DTO (strings)
-  userId: string;                          // authenticated user id
-  securityContext: NetworkSecurityContext; // network context
-};
+import { SignDocumentUseCaseInput, SignDocumentUseCaseResult } from '@/domain/types/usecase/orchestrator/SignDocumentUseCase';
 
 export class SignDocumentUseCase {
   private readonly signingFlowValidationRule = new SigningFlowValidationRule();
@@ -49,7 +45,21 @@ export class SignDocumentUseCase {
     private readonly auditEventService: AuditEventService
   ) {}
 
-  async execute(input: SignDocumentUseCaseInput): Promise<SignDocumentResult> {
+  /**
+   * Signs a document within an envelope with complete workflow orchestration
+   * @param input - The signing request containing document data, consent, and security context
+   * @returns Promise that resolves to the signing operation result with signature details
+   * @throws NotFoundError when envelope or signer is not found
+   * @throws AccessDeniedError when user lacks permission to sign the document
+   * @throws BadRequestError when signing flow validation fails
+   * @example
+   * const result = await useCase.execute({
+   *   request: { envelopeId: 'env-123', signerId: 'signer-456', consent: {...} },
+   *   userId: 'user-789',
+   *   securityContext: { ipAddress: '192.168.1.1', userAgent: 'Mozilla/5.0', country: 'US' }
+   * });
+   */
+  async execute(input: SignDocumentUseCaseInput): Promise<SignDocumentUseCaseResult> {
     const { request, userId, securityContext } = input;
 
     try {
@@ -153,7 +163,7 @@ export class SignDocumentUseCase {
       await this.auditEventService.create({
         envelopeId: envelopeId.getValue(),
         signerId: signerId.getValue(),
-        eventType: 'DOCUMENT_SIGNED' as any,
+        eventType: 'SIGNER_SIGNED' as any,
         description: `Document signed by ${signer.getFullName() || 'Unknown'}`,
         userId,
         userEmail: signer.getEmail()?.getValue(),

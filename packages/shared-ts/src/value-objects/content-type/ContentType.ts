@@ -5,7 +5,7 @@
  * and provides type safety for content type handling throughout the system.
  */
 
-import { BadRequestError } from '@lawprotect/shared-ts';
+import { BadRequestError } from '../../errors/index.js';
 
 /**
  * ContentType value object
@@ -97,7 +97,6 @@ export class ContentType {
    * @returns true if valid
    */
   private isValidMimeType(value: string): boolean {
-    // MIME type format: type/subtype[;parameters]
     const mimeRegex = /^[a-zA-Z0-9][a-zA-Z0-9!#$&\-^_]*\/[a-zA-Z0-9][a-zA-Z0-9!#$&\-^_]*(\s*;\s*[a-zA-Z0-9][a-zA-Z0-9!#$&\-^_]*=[a-zA-Z0-9][a-zA-Z0-9!#$&\-^_]*)*$/;
     return mimeRegex.test(value);
   }

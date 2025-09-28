@@ -6,7 +6,7 @@
  */
 
 import { ControllerFactory, UuidV4 } from '@lawprotect/shared-ts';
-import { ServiceFactory } from '../../infrastructure/factories/services/ServiceFactory';
+import { CompositionRoot } from '../../infrastructure/factories';
 import { DeclineSignerRequestSchema, DeclineSignerResponse } from '../../domain/schemas/SigningHandlersSchema';
 import { z } from 'zod';
 import { EnvelopeId } from '../../domain/value-objects/EnvelopeId';
@@ -45,12 +45,11 @@ export const declineSignerHandler = ControllerFactory.createCommand({
     private readonly signatureOrchestrator: any;
     
     constructor() {
-      this.signatureOrchestrator = ServiceFactory.createSignatureOrchestrator();
+      this.signatureOrchestrator = CompositionRoot.createSignatureOrchestrator();
     }
     
     /**
      * Executes the signer decline orchestration
-     * 
      * @param params - Extracted parameters from request
      * @returns Promise resolving to decline result
      */
@@ -60,21 +59,15 @@ export const declineSignerHandler = ControllerFactory.createCommand({
       request: any;
       securityContext: any;
     }) {
-      try {
-        return await this.signatureOrchestrator.declineSigner(
-          params.envelopeId,
-          params.signerId,
-          params.request,
-          params.securityContext
-        );
-      } catch (error) {
-        // Re-throw the error to be handled by the error middleware
-        throw error;
-      }
+      return await this.signatureOrchestrator.declineSigner(
+        params.envelopeId,
+        params.signerId,
+        params.request,
+        params.securityContext
+      );
     }
   },
   
-  // Parameter extraction
   extractParams: (path: any, body: any, _query: any, context: any) => ({
     envelopeId: EnvelopeId.fromString(path.id),
     signerId: SignerId.fromString(path.signerId),

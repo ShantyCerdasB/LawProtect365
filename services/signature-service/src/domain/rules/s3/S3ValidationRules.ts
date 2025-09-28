@@ -10,9 +10,7 @@ import { StoreDocumentRequest } from '../../types/s3/StoreDocumentRequest';
 import { RetrieveDocumentRequest } from '../../types/s3/RetrieveDocumentRequest';
 import { GeneratePresignedUrlRequest } from '../../types/s3/GeneratePresignedUrlRequest';
 import { validateS3StorageForDocument, validateS3StorageGeneral } from './S3StorageRules';
-import { S3Key } from '../../value-objects/S3Key';
-import { ContentType } from '../../value-objects/ContentType';
-import { S3Operation } from '../../value-objects/S3Operation';
+import { S3Key, ContentType, S3Operation } from '@lawprotect/shared-ts';
 
 /**
  * Validates a store document request

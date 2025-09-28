@@ -16,8 +16,7 @@ import { EnvelopeStatus } from '../../../../src/domain/value-objects/EnvelopeSta
 import { DocumentOrigin } from '../../../../src/domain/value-objects/DocumentOrigin';
 import { SigningOrder } from '../../../../src/domain/value-objects/SigningOrder';
 import { SignerId } from '../../../../src/domain/value-objects/SignerId';
-import { S3Key } from '../../../../src/domain/value-objects/S3Key';
-import { DocumentHash } from '../../../../src/domain/value-objects/DocumentHash';
+import { S3Key, DocumentHash } from '@lawprotect/shared-ts';
 import { 
   invalidEnvelopeState, 
   signerEmailDuplicate, 

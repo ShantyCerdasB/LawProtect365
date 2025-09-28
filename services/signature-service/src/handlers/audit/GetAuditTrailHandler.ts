@@ -5,8 +5,8 @@
  * for an envelope, including all events in chronological order for frontend display.
  */
 
-import { ControllerFactory, VALID_COGNITO_ROLES } from '@lawprotect/shared-ts';
-import { ServiceFactory } from '../../infrastructure/factories/services/ServiceFactory';
+import { ControllerFactory, VALID_COGNITO_ROLES, ResponseType } from '@lawprotect/shared-ts';
+import { CompositionRoot } from '../../infrastructure/factories';
 import { GetAuditTrailQuerySchema, EnvelopeIdSchema } from '../../domain/schemas/EnvelopeSchema';
 import { EnvelopeId } from '../../domain/value-objects/EnvelopeId';
 
@@ -51,7 +51,7 @@ export const getAuditTrailHandler = ControllerFactory.createQuery({
     private readonly signatureOrchestrator: any;
     
     constructor() {
-      this.signatureOrchestrator = ServiceFactory.createSignatureOrchestrator();
+      this.signatureOrchestrator = CompositionRoot.createSignatureOrchestrator();
     }
     
     /**
@@ -59,31 +59,34 @@ export const getAuditTrailHandler = ControllerFactory.createQuery({
      * @param params - Extracted parameters from request
      * @returns Promise resolving to audit trail data
      */
-    async execute(params: any) {
-      try {
-        return await this.signatureOrchestrator.getAuditTrail(
-          params.envelopeId,
-          params.userId
-        );
-      } catch (error) {
-        // Re-throw the error to be handled by the error middleware
-        throw error;
-      }
+    async execute(params: { envelopeId: EnvelopeId; userId: string }) {
+      return await this.signatureOrchestrator.getAuditTrail(
+        params.envelopeId,
+        params.userId
+      );
     }
   },
   
   // Parameter extraction
-  extractParams: (path: any, _body: any, _query: any, context: any) => ({
+  extractParams: (path: { id: string }, _body: any, _query: any, context: { auth: { userId: string } }) => ({
     envelopeId: EnvelopeId.fromString(path.id),
     userId: context.auth.userId
   }),
   
   // Response configuration
-  responseType: 'ok',
-  transformResult: async (result: any) => {
+  responseType: ResponseType.OK,
+  transformResult: async (result: { envelopeId: string; events: Array<{
+    id: string;
+    eventType: string;
+    description: string;
+    userEmail?: string;
+    userName?: string;
+    createdAt: Date;
+    metadata?: any;
+  }> }) => {
     return {
       envelopeId: result.envelopeId,
-      events: result.events.map((event: any) => ({
+      events: result.events.map((event) => ({
         id: event.id,
         eventType: event.eventType,
         description: event.description,

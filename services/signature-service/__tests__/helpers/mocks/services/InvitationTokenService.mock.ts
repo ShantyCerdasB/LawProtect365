@@ -14,7 +14,12 @@ import { jest } from '@jest/globals';
  */
 export function createInvitationTokenServiceMock() {
   return {
-    generateInvitationTokensForSigners: jest.fn() as jest.MockedFunction<any>
+    markTokenAsViewed: jest.fn() as jest.MockedFunction<any>,
+    generateInvitationTokensForSigners: jest.fn() as jest.MockedFunction<any>,
+    getTokensBySigner: jest.fn() as jest.MockedFunction<any>,
+    updateTokenSent: jest.fn() as jest.MockedFunction<any>,
+    generateViewerInvitationToken: jest.fn() as jest.MockedFunction<any>,
+    markTokenAsSigned: jest.fn() as jest.MockedFunction<any>
   };
 }
 

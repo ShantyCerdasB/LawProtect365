@@ -20,3 +20,4 @@ export * from './EnvelopeSortBy.js';
 export * from './SignerSortBy.js';
 export * from './S3OperationType.js';
 export * from './NotificationType.js';
+export * from './ResponseType.js';

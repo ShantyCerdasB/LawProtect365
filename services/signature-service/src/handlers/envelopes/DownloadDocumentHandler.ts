@@ -7,7 +7,7 @@
  */
 
 import { ControllerFactory } from '@lawprotect/shared-ts';
-import { ServiceFactory } from '../../infrastructure/factories/services/ServiceFactory';
+import { CompositionRoot } from '../../infrastructure/factories';
 import { DownloadDocumentPathSchema, DownloadDocumentQuerySchema, DownloadDocumentResponse } from '../../domain/schemas/DownloadSignedDocumentSchema';
 import { EnvelopeId } from '../../domain/value-objects/EnvelopeId';
 
@@ -23,7 +23,7 @@ export const downloadDocumentHandler = ControllerFactory.createQuery({
     private readonly signatureOrchestrator: any;
 
     constructor() {
-      this.signatureOrchestrator = ServiceFactory.createSignatureOrchestrator();
+      this.signatureOrchestrator = CompositionRoot.createSignatureOrchestrator();
     }
 
     async execute(params: {
@@ -33,26 +33,21 @@ export const downloadDocumentHandler = ControllerFactory.createQuery({
       expiresIn?: number;
       securityContext: any;
     }) {
-      try {
-        return await this.signatureOrchestrator.downloadDocument(
-          params.envelopeId,
-          params.userId,
-          params.invitationToken,
-          params.expiresIn,
-          params.securityContext
-        );
-      } catch (error) {
-        // Re-throw the error to be handled by the error middleware
-        throw error;
-      }
+      return await this.signatureOrchestrator.downloadDocument(
+        params.envelopeId,
+        params.userId,
+        params.invitationToken,
+        params.expiresIn,
+        params.securityContext
+      );
     }
   },
   
   extractParams: (path: any, _body: any, query: any, context: any) => ({
     envelopeId: EnvelopeId.fromString(path.envelopeId),
-    userId: context.auth?.userId === 'external-user' ? undefined : context.auth?.userId, // ✅ Distinguir entre usuarios reales y external users
-    invitationToken: query.invitationToken, // For external users
-    expiresIn: query.expiresIn, // Optional custom expiration
+    userId: context.auth?.userId === 'external-user' ? undefined : context.auth?.userId,
+    invitationToken: query.invitationToken,
+    expiresIn: query.expiresIn,
     securityContext: {
       ipAddress: context.auth?.ipAddress || context.securityContext?.ipAddress,
       userAgent: context.auth?.userAgent || context.securityContext?.userAgent,

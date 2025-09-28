@@ -58,20 +58,14 @@ describe('DocumentOrigin', () => {
         .toThrow(BadRequestError);
     });
 
-    it('should accept whitespace-only template ID (current behavior)', () => {
-      const origin = new DocumentOrigin(DocumentOriginType.TEMPLATE, '   ', 'v1.0.0');
-      
-      expect(origin.getTemplateId()).toBe('   ');
-      expect(origin.getTemplateVersion()).toBe('v1.0.0');
-      expect(origin.isTemplate()).toBe(true);
+    it('should reject whitespace-only template ID', () => {
+      expect(() => new DocumentOrigin(DocumentOriginType.TEMPLATE, '   ', 'v1.0.0'))
+        .toThrow('Template origin requires a valid template ID');
     });
 
-    it('should accept whitespace-only template version (current behavior)', () => {
-      const origin = new DocumentOrigin(DocumentOriginType.TEMPLATE, 'template-123', '   ');
-      
-      expect(origin.getTemplateId()).toBe('template-123');
-      expect(origin.getTemplateVersion()).toBe('   ');
-      expect(origin.isTemplate()).toBe(true);
+    it('should reject whitespace-only template version', () => {
+      expect(() => new DocumentOrigin(DocumentOriginType.TEMPLATE, 'template-123', '   '))
+        .toThrow('Template origin requires a valid template version');
     });
   });
 
