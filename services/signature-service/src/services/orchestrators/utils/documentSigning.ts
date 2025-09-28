@@ -9,6 +9,7 @@
 import { sha256Hex } from '@lawprotect/shared-ts';
 import { S3Service } from '@/services/S3Service';
 import { SignatureEnvelopeService } from '@/services/SignatureEnvelopeService';
+import { EnvelopeHashService } from '@/services/hash/EnvelopeHashService';
 import { EnvelopeId } from '@/domain/value-objects/EnvelopeId';
 import { SignerId } from '@/domain/value-objects/SignerId';
 import { EntityFactory } from '@/domain/factories/EntityFactory';
@@ -69,6 +70,7 @@ export async function handleSignedDocumentFromFrontend(
  */
 export async function handleFlattenedDocument(
   signatureEnvelopeService: SignatureEnvelopeService,
+  envelopeHashService: EnvelopeHashService,
   s3Service: S3Service,
   input: FlattenedInput
 ): Promise<{ signedDocumentKey: string; documentContent: Buffer; documentHash: string }> {
@@ -86,7 +88,7 @@ export async function handleFlattenedDocument(
   }
 
   if (input.flattenedKey && !envelope.getFlattenedKey()) {
-    await signatureEnvelopeService.updateFlattenedKey(input.envelopeId, input.flattenedKey, input.userId);
+    await envelopeHashService.updateFlattenedKey(input.envelopeId, input.flattenedKey, input.userId);
   }
 
   const content = await s3Service.getDocumentContent(s3KeyVO.getValue());

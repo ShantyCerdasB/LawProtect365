@@ -12,7 +12,7 @@ import { InvitationTokenService } from '../../../services/InvitationTokenService
 import { ConsentService } from '../../../services/ConsentService';
 import { SignerReminderTrackingService } from '../../../services/SignerReminderTrackingService';
 import { EnvelopeNotificationService } from '../../../services/events/EnvelopeNotificationService';
-
+import { EnvelopeHashService } from '../../../services/hash/EnvelopeHashService';
 import { RepositoryFactory } from '../repositories';
 import { InfrastructureFactory } from '../infrastructure';
 import { IntegrationEventFactory } from '../events/IntegrationEventFactory';
@@ -120,6 +120,22 @@ export class ServiceFactory {
   }
 
   /**
+   * Creates EnvelopeHashService with required dependencies
+   * @param repositories - Object containing all repository instances
+   * @param infrastructure - Object containing all infrastructure services
+   * @returns Configured EnvelopeHashService instance
+   */
+  static createEnvelopeHashService(
+    repositories: ReturnType<typeof RepositoryFactory.createAll>,
+    infrastructure: ReturnType<typeof InfrastructureFactory.createAll>
+  ): EnvelopeHashService {
+    return new EnvelopeHashService(
+      repositories.signatureEnvelopeRepository,
+      infrastructure.auditEventService
+    );
+  }
+
+  /**
    * Creates all domain services in a single operation
    * @param repositories - Object containing all repository instances
    * @param infrastructure - Object containing all infrastructure services
@@ -136,6 +152,7 @@ export class ServiceFactory {
       consentService: this.createConsentService(repositories, infrastructure),
       signerReminderTrackingService: this.createSignerReminderTrackingService(repositories),
       envelopeNotificationService: this.createEnvelopeNotificationService(infrastructure),
+      envelopeHashService: this.createEnvelopeHashService(repositories, infrastructure),
     };
   }
 }

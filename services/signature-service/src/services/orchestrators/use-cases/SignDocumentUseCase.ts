@@ -15,6 +15,7 @@ import { ConsentService } from '@/services/ConsentService';
 import { S3Service } from '@/services/S3Service';
 import { KmsService } from '@/services/KmsService';
 import { AuditEventService } from '@/services/audit/AuditEventService';
+import { EnvelopeHashService } from '@/services/hash/EnvelopeHashService';
 
 import { EntityFactory } from '@/domain/factories/EntityFactory';
 import { EnvelopeId } from '@/domain/value-objects/EnvelopeId';
@@ -42,7 +43,8 @@ export class SignDocumentUseCase {
     private readonly consentService: ConsentService,
     private readonly s3Service: S3Service,
     private readonly kmsService: KmsService,
-    private readonly auditEventService: AuditEventService
+    private readonly auditEventService: AuditEventService,
+    private readonly envelopeHashService: EnvelopeHashService
   ) {}
 
   /**
@@ -116,7 +118,7 @@ export class SignDocumentUseCase {
             signerId,
             signedDocumentBase64: request.signedDocument,
           })
-        : await handleFlattenedDocument(this.signatureEnvelopeService, this.s3Service, {
+        : await handleFlattenedDocument(this.signatureEnvelopeService, this.envelopeHashService, this.s3Service, {
             envelopeId,
             flattenedKey: request.flattenedKey,
             userId,
@@ -146,14 +148,14 @@ export class SignDocumentUseCase {
       await this.consentService.linkConsentWithSignature(consent.getId(), signerId);
 
       // 8) Update envelope references and hashes
-      await this.signatureEnvelopeService.updateSignedDocument(
+      await this.envelopeHashService.updateSignedDocument(
         envelopeId,
         signedDocumentKey,
         kmsResult.signatureHash,
         signerId.getValue(),
         userId
       );
-      await this.signatureEnvelopeService.updateHashes(
+      await this.envelopeHashService.updateHashes(
         envelopeId,
         { sourceSha256: undefined, flattenedSha256: undefined, signedSha256: documentHash },
         userId

@@ -16,6 +16,7 @@ import {
   S3Service,
   ConsentService,
   SignerReminderTrackingService,
+  EnvelopeHashService,
 } from '@/services/index';
 
 import {
@@ -47,6 +48,7 @@ export type Services = {
   kmsService: KmsService;
   signerReminderTrackingService: SignerReminderTrackingService;
   envelopeNotificationService: EnvelopeNotificationService;
+  envelopeHashService: EnvelopeHashService;
 };
 
 /**

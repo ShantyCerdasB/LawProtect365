@@ -12,9 +12,16 @@ import { SignatureEnvelope } from '@/domain/entities/SignatureEnvelope';
 import { CreateEnvelopeData } from '@/domain/types/envelope/CreateEnvelopeData';
 import { CreateEnvelopeRequest, CreateEnvelopeResult } from '@/domain/types/orchestrator';
 import { SignatureEnvelopeService } from '@/services/SignatureEnvelopeService';
+import { EnvelopeHashService } from '@/services/hash/EnvelopeHashService';
+import { S3Service } from '@/services/S3Service';
 import { EntityFactory } from '@/domain/factories/EntityFactory';
+import { sha256Hex } from '@lawprotect/shared-ts';
 export class CreateEnvelopeUseCase {
-  constructor(private readonly envelopeService: SignatureEnvelopeService) {}
+  constructor(
+    private readonly envelopeService: SignatureEnvelopeService,
+    private readonly envelopeHashService: EnvelopeHashService,
+    private readonly s3Service: S3Service
+  ) {}
 
   /**
    * Creates a new signature envelope with generated ID and delegates to service
@@ -38,6 +45,17 @@ export class CreateEnvelopeUseCase {
       envelopeDataWithId,
       input.userId
     );
+
+    if (input.envelopeData.sourceKey) {
+      const sourceDocumentContent = await this.s3Service.getDocumentContent(input.envelopeData.sourceKey);
+      const sourceHash = sha256Hex(sourceDocumentContent);
+      
+      await this.envelopeHashService.updateHashes(
+        envelope.getId(),
+        { sourceSha256: sourceHash },
+        input.userId
+      );
+    }
 
     return { envelope, signers: [] };
   }

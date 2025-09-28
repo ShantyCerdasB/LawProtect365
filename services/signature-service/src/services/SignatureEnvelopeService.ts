@@ -17,11 +17,11 @@ import { InvitationTokenService } from './InvitationTokenService';
 import { S3Service } from './S3Service';
 import { EntityFactory } from '../domain/factories/EntityFactory';
 import { EnvelopeUpdateValidationRule, UpdateEnvelopeData } from '../domain/rules/EnvelopeUpdateValidationRule';
-import { EnvelopeSpec, Hashes, CreateEnvelopeData } from '../domain/types/envelope';
+import { EnvelopeSpec, CreateEnvelopeData } from '../domain/types/envelope';
 import { AuditEventType } from '../domain/enums/AuditEventType';
 import { NetworkSecurityContext, createNetworkSecurityContext } from '@lawprotect/shared-ts';
 import { AccessType } from '../domain/enums/AccessType';
-import { wrapServiceError, sha256Hex } from '@lawprotect/shared-ts';
+import { wrapServiceError } from '@lawprotect/shared-ts';
 import { loadConfig } from '../config/AppConfig';
 import { SigningOrderType } from '@prisma/client';
 import { 
@@ -66,23 +66,6 @@ export class SignatureEnvelopeService {
       // Save to repository
       const createdEnvelope = await this.signatureEnvelopeRepository.create(envelope);
 
-      // Calculate sourceSha256 if sourceKey is provided
-      if (data.sourceKey) {
-        try {
-          const sourceDocumentContent = await this.s3Service.getDocumentContent(data.sourceKey);
-          const sourceHash = sha256Hex(sourceDocumentContent);
-          
-          // Update envelope with source hash
-          await this.updateHashes(
-            data.id,
-            { sourceSha256: sourceHash },
-            userId
-          );
-        } catch (error) {
-          // Log error but don't fail envelope creation if source hash calculation fails
-          console.warn(`Failed to calculate sourceSha256 for envelope ${data.id.getValue()}:`, error);
-        }
-      }
 
       // Create audit event (envelope-level event, no signerId required)
       await this.signatureAuditEventService.create({
@@ -350,34 +333,6 @@ export class SignatureEnvelopeService {
    * @param userId - The user making the update
    * @returns The updated signature envelope
    */
-  async updateHashes(envelopeId: EnvelopeId, hashes: Hashes, userId?: string): Promise<SignatureEnvelope> {
-    try {
-      const updatedEnvelope = await this.signatureEnvelopeRepository.updateHashes(envelopeId, hashes);
-
-      // Create audit event if userId provided
-      if (userId) {
-        await this.signatureAuditEventService.create({
-          envelopeId: envelopeId.getValue(),
-          signerId: undefined, // No signerId for envelope-level events
-          eventType: AuditEventType.ENVELOPE_UPDATED,
-          description: `Document hashes updated for envelope "${updatedEnvelope.getTitle()}"`,
-          userId: userId,
-          userEmail: undefined,
-          networkContext: createNetworkSecurityContext(),
-          metadata: {
-            envelopeId: envelopeId.getValue(),
-            hashes: hashes
-          }
-        });
-      }
-
-      return updatedEnvelope;
-    } catch (error) {
-      throw envelopeUpdateFailed(
-        `Failed to update hashes for envelope ${envelopeId.getValue()}: ${error instanceof Error ? error.message : error}`
-      );
-    }
-  }
 
   /**
    * Updates signed document for an envelope
@@ -388,31 +343,6 @@ export class SignatureEnvelopeService {
    * @param userId - The user making the update
    * @returns The updated signature envelope
    */
-  async updateSignedDocument(envelopeId: EnvelopeId, signedKey: string, signedSha256: string, signerId: string, userId: string): Promise<SignatureEnvelope> {
-    try {
-      const updatedEnvelope = await this.signatureEnvelopeRepository.updateSignedDocument(envelopeId, signedKey, signedSha256);
-
-      // Create audit event
-      await this.signatureAuditEventService.createSignerEvent({
-        envelopeId: envelopeId.getValue(),
-        signerId: signerId,
-        eventType: AuditEventType.ENVELOPE_UPDATED,
-        description: `Signed document updated for envelope "${updatedEnvelope.getTitle()}"`,
-        userId: userId,
-        metadata: {
-          envelopeId: envelopeId.getValue(),
-          signedKey: signedKey,
-          signedSha256: signedSha256
-        }
-      });
-
-      return updatedEnvelope;
-    } catch (error) {
-      throw envelopeUpdateFailed(
-        `Failed to update signed document for envelope ${envelopeId.getValue()}: ${error instanceof Error ? error.message : error}`
-      );
-    }
-  }
 
 
 
@@ -626,41 +556,6 @@ export class SignatureEnvelopeService {
    * @param userId - The user making the update
    * @returns The updated signature envelope
    */
-  async updateFlattenedKey(
-    envelopeId: EnvelopeId,
-    flattenedKey: string,
-    userId?: string
-  ): Promise<SignatureEnvelope> {
-    try {
-      const updatedEnvelope = await this.signatureEnvelopeRepository.updateFlattenedKey(
-        envelopeId,
-        flattenedKey
-      );
-
-      // Create audit event if userId provided
-      if (userId) {
-        await this.signatureAuditEventService.create({
-          envelopeId: envelopeId.getValue(),
-          signerId: undefined,
-          eventType: AuditEventType.ENVELOPE_UPDATED,
-          description: `Flattened key updated for envelope "${updatedEnvelope.getTitle()}"`,
-          userId: userId,
-          userEmail: undefined,
-          networkContext: createNetworkSecurityContext(),
-          metadata: {
-            envelopeId: envelopeId.getValue(),
-            flattenedKey: flattenedKey
-          }
-        });
-      }
-
-      return updatedEnvelope;
-    } catch (error) {
-      throw envelopeUpdateFailed(
-        `Failed to update flattened key for envelope ${envelopeId.getValue()}: ${error instanceof Error ? error.message : error}`
-      );
-    }
-  }
 
   /**
    * Updates envelope status to DECLINED after a signer declines

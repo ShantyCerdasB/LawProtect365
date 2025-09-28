@@ -16,3 +16,4 @@ export { KmsService } from './KmsService';
 export { S3Service } from './S3Service';
 export { SignerReminderTrackingService } from './SignerReminderTrackingService';
 export { EnvelopeNotificationService } from './events';
+export { EnvelopeHashService } from './hash/EnvelopeHashService';

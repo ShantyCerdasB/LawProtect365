@@ -35,7 +35,11 @@ export class UseCaseFactory {
    * @returns Configured CreateEnvelopeUseCase instance
    */
   static createCreateEnvelopeUseCase(services: Services): CreateEnvelopeUseCase {
-    return new CreateEnvelopeUseCase(services.signatureEnvelopeService);
+    return new CreateEnvelopeUseCase(
+      services.signatureEnvelopeService,
+      services.envelopeHashService,
+      services.s3Service
+    );
   }
 
   /**
@@ -176,7 +180,8 @@ export class UseCaseFactory {
       services.consentService,
       services.s3Service,
       services.kmsService,
-      services.auditEventService
+      services.auditEventService,
+      services.envelopeHashService
     );
   }
 
