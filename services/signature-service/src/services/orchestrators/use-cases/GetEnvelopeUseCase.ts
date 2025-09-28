@@ -7,8 +7,8 @@
  * proper authorization and maintains audit trails for envelope access operations.
  */
 
-import { SignatureEnvelopeService } from '@/services/SignatureEnvelopeService';
-import { EnvelopeAccessService } from '@/services/access/EnvelopeAccessService';
+import { EnvelopeCrudService } from '@/services/envelopeCrud/EnvelopeCrudService';
+import { EnvelopeAccessService } from '@/services/envelopeAccess/EnvelopeAccessService';
 import { InvitationTokenService } from '@/services/InvitationTokenService';
 import { AccessType } from '@/domain/enums/AccessType';
 import { rethrow } from '@lawprotect/shared-ts';
@@ -16,7 +16,7 @@ import { GetEnvelopeInput, GetEnvelopeResult } from '@/domain/types/usecase/orch
 
 export class GetEnvelopeUseCase {
   constructor(
-    private readonly signatureEnvelopeService: SignatureEnvelopeService,
+    private readonly envelopeCrudService: EnvelopeCrudService,
     private readonly invitationTokenService: InvitationTokenService,
     private readonly envelopeAccessService: EnvelopeAccessService
   ) {}
@@ -62,7 +62,7 @@ export class GetEnvelopeUseCase {
       const accessType = invitationToken ? AccessType.EXTERNAL : AccessType.OWNER;
 
       // 4) Always fetch full signer roster
-      const envelopeWithSigners = await this.signatureEnvelopeService.getEnvelopeWithSigners(
+      const envelopeWithSigners = await this.envelopeCrudService.getEnvelopeWithSigners(
         envelopeId,
         securityContext
           ? {

@@ -8,15 +8,16 @@
  */
 
 import {  createNetworkSecurityContext, rethrow } from '@lawprotect/shared-ts';
-import { SignatureEnvelopeService } from '@/services/SignatureEnvelopeService';
+import { EnvelopeCrudService } from '@/services/envelopeCrud/EnvelopeCrudService';
 import { EnvelopeSignerService } from '@/services/EnvelopeSignerService';
 import { InvitationTokenService } from '@/services/InvitationTokenService';
 import { ConsentService } from '@/services/ConsentService';
 import { S3Service } from '@/services/S3Service';
 import { KmsService } from '@/services/KmsService';
 import { AuditEventService } from '@/services/audit/AuditEventService';
-import { EnvelopeHashService } from '@/services/hash/EnvelopeHashService';
-import { EnvelopeAccessService } from '@/services/access/EnvelopeAccessService';
+import { EnvelopeHashService } from '@/services/envelopeHashService/EnvelopeHashService';
+import { EnvelopeAccessService } from '@/services/envelopeAccess/EnvelopeAccessService';
+import { EnvelopeStateService } from '@/services/envelopeStates/EnvelopeStateService';
 
 import { EntityFactory } from '@/domain/factories/EntityFactory';
 import { EnvelopeId } from '@/domain/value-objects/EnvelopeId';
@@ -38,7 +39,7 @@ export class SignDocumentUseCase {
   private readonly signingFlowValidationRule = new SigningFlowValidationRule();
 
   constructor(
-    private readonly signatureEnvelopeService: SignatureEnvelopeService,
+    private readonly envelopeCrudService: EnvelopeCrudService,
     private readonly envelopeSignerService: EnvelopeSignerService,
     private readonly invitationTokenService: InvitationTokenService,
     private readonly consentService: ConsentService,
@@ -46,7 +47,8 @@ export class SignDocumentUseCase {
     private readonly kmsService: KmsService,
     private readonly auditEventService: AuditEventService,
     private readonly envelopeHashService: EnvelopeHashService,
-    private readonly envelopeAccessService: EnvelopeAccessService
+    private readonly envelopeAccessService: EnvelopeAccessService,
+    private readonly envelopeStateService: EnvelopeStateService
   ) {}
 
   /**
@@ -86,7 +88,7 @@ export class SignDocumentUseCase {
       }
 
       // 3) Resolve signer and validate signing flow
-      const envelopeWithSigners = await this.signatureEnvelopeService.getEnvelopeWithSigners(envelopeId);
+      const envelopeWithSigners = await this.envelopeCrudService.getEnvelopeWithSigners(envelopeId);
       if (!envelopeWithSigners) throw envelopeNotFound(`Envelope with ID ${envelopeId.getValue()} not found`);
 
       const allSigners = envelopeWithSigners.getSigners();
@@ -120,7 +122,7 @@ export class SignDocumentUseCase {
             signerId,
             signedDocumentBase64: request.signedDocument,
           })
-        : await handleFlattenedDocument(this.signatureEnvelopeService, this.envelopeHashService, this.s3Service, {
+        : await handleFlattenedDocument(this.envelopeCrudService, this.envelopeHashService, this.s3Service, {
             envelopeId,
             flattenedKey: request.flattenedKey,
             userId,
@@ -189,12 +191,12 @@ export class SignDocumentUseCase {
       });
 
       // 10) Finalize envelope if completed
-      const after = await this.signatureEnvelopeService.getEnvelopeWithSigners(envelopeId);
+      const after = await this.envelopeCrudService.getEnvelopeWithSigners(envelopeId);
       const responseEnvelope =
         after?.isCompleted()
           ? await (async () => {
-              await this.signatureEnvelopeService.completeEnvelope(envelopeId, userId);
-              return this.signatureEnvelopeService.getEnvelopeWithSigners(envelopeId);
+              await this.envelopeStateService.completeEnvelope(envelopeId, userId);
+              return this.envelopeCrudService.getEnvelopeWithSigners(envelopeId);
             })()
           : after;
 

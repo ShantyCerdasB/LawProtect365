@@ -11,9 +11,11 @@ import { EnvelopeSignerService } from '../../../services/EnvelopeSignerService';
 import { InvitationTokenService } from '../../../services/InvitationTokenService';
 import { ConsentService } from '../../../services/ConsentService';
 import { SignerReminderTrackingService } from '../../../services/SignerReminderTrackingService';
-import { EnvelopeNotificationService } from '../../../services/events/EnvelopeNotificationService';
-import { EnvelopeHashService } from '../../../services/hash/EnvelopeHashService';
-import { EnvelopeAccessService } from '../../../services/access/EnvelopeAccessService';
+import { EnvelopeNotificationService } from '../../../services/notification/EnvelopeNotificationService';
+import { EnvelopeHashService } from '../../../services/envelopeHashService/EnvelopeHashService';
+import { EnvelopeAccessService } from '../../../services/envelopeAccess/EnvelopeAccessService';
+import { EnvelopeStateService } from '../../../services/envelopeStates/EnvelopeStateService';
+import { EnvelopeCrudService } from '../../../services/envelopeCrud/EnvelopeCrudService';
 import { RepositoryFactory } from '../repositories';
 import { InfrastructureFactory } from '../infrastructure';
 import { IntegrationEventFactory } from '../events/IntegrationEventFactory';
@@ -36,8 +38,6 @@ export class ServiceFactory {
   ): SignatureEnvelopeService {
     return new SignatureEnvelopeService(
       repositories.signatureEnvelopeRepository,
-      infrastructure.auditEventService,
-      this.createInvitationTokenService(repositories, infrastructure.auditEventService),
       infrastructure.s3Service
     );
   }
@@ -152,6 +152,26 @@ export class ServiceFactory {
     );
   }
 
+  static createEnvelopeStateService(
+    repositories: ReturnType<typeof RepositoryFactory.createAll>,
+    infrastructure: ReturnType<typeof InfrastructureFactory.createAll>
+  ): EnvelopeStateService {
+    return new EnvelopeStateService(
+      repositories.signatureEnvelopeRepository,
+      infrastructure.auditEventService
+    );
+  }
+
+  static createEnvelopeCrudService(
+    repositories: ReturnType<typeof RepositoryFactory.createAll>,
+    infrastructure: ReturnType<typeof InfrastructureFactory.createAll>
+  ): EnvelopeCrudService {
+    return new EnvelopeCrudService(
+      repositories.signatureEnvelopeRepository,
+      this.createInvitationTokenService(repositories, infrastructure.auditEventService)
+    );
+  }
+
   /**
    * Creates all domain services in a single operation
    * @param repositories - Object containing all repository instances
@@ -171,6 +191,8 @@ export class ServiceFactory {
       envelopeNotificationService: this.createEnvelopeNotificationService(infrastructure),
       envelopeHashService: this.createEnvelopeHashService(repositories, infrastructure),
       envelopeAccessService: this.createEnvelopeAccessService(repositories, infrastructure),
+      envelopeStateService: this.createEnvelopeStateService(repositories, infrastructure),
+      envelopeCrudService: this.createEnvelopeCrudService(repositories, infrastructure),
     };
   }
 }

@@ -8,8 +8,8 @@
 
 import { sha256Hex } from '@lawprotect/shared-ts';
 import { S3Service } from '@/services/S3Service';
-import { SignatureEnvelopeService } from '@/services/SignatureEnvelopeService';
-import { EnvelopeHashService } from '@/services/hash/EnvelopeHashService';
+import { EnvelopeCrudService } from '@/services/envelopeCrud/EnvelopeCrudService';
+import { EnvelopeHashService } from '@/services/envelopeHashService/EnvelopeHashService';
 import { EnvelopeId } from '@/domain/value-objects/EnvelopeId';
 import { SignerId } from '@/domain/value-objects/SignerId';
 import { EntityFactory } from '@/domain/factories/EntityFactory';
@@ -62,19 +62,19 @@ export async function handleSignedDocumentFromFrontend(
 
 /**
  * Handles flattened document by loading from S3 and generating hash
- * @param signatureEnvelopeService - Service for envelope operations
+ * @param envelopeCrudService - Service for envelope operations
  * @param s3Service - S3 service for document retrieval
  * @param input - Flattened document input with envelope and optional flattened key
  * @returns Promise resolving to document signing result with key, content, and hash
  * @throws Error when envelope is not found or flattened document is not available
  */
 export async function handleFlattenedDocument(
-  signatureEnvelopeService: SignatureEnvelopeService,
+  envelopeCrudService: EnvelopeCrudService,
   envelopeHashService: EnvelopeHashService,
   s3Service: S3Service,
   input: FlattenedInput
 ): Promise<{ signedDocumentKey: string; documentContent: Buffer; documentHash: string }> {
-  const envelope = await signatureEnvelopeService.getEnvelopeWithSigners(input.envelopeId);
+  const envelope = await envelopeCrudService.getEnvelopeWithSigners(input.envelopeId);
   if (!envelope) throw envelopeNotFound(`Envelope with ID ${input.envelopeId.getValue()} not found`);
 
   const s3KeyVO = input.flattenedKey

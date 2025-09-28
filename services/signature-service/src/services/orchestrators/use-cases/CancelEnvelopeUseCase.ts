@@ -10,12 +10,12 @@
 import { SignatureEnvelope } from '@/domain/entities/SignatureEnvelope';
 import { EnvelopeId } from '@/domain/value-objects/EnvelopeId';
 import { NetworkSecurityContext } from '@lawprotect/shared-ts';
-import { SignatureEnvelopeService } from '@/services/SignatureEnvelopeService';
-import { EnvelopeNotificationService } from '@/services/events/EnvelopeNotificationService';
+import { EnvelopeCrudService } from '@/services/envelopeCrud/EnvelopeCrudService';
+import { EnvelopeNotificationService } from '@/services/notification/EnvelopeNotificationService';
 import { fireAndForget, rethrow } from '@lawprotect/shared-ts';
 export class CancelEnvelopeUseCase {
   constructor(
-    private readonly signatureEnvelopeService: SignatureEnvelopeService,
+    private readonly envelopeCrudService: EnvelopeCrudService,
     private readonly envelopeNotificationService: EnvelopeNotificationService
   ) {}
 
@@ -34,10 +34,10 @@ export class CancelEnvelopeUseCase {
     const { envelopeId, userId, securityContext } = input;
 
     try {
-      const envelope = await this.signatureEnvelopeService.cancelEnvelope(envelopeId, userId);
+      const envelope = await this.envelopeCrudService.cancelEnvelope(envelopeId, userId);
 
       fireAndForget((async () => {
-        const env = await this.signatureEnvelopeService.getEnvelopeWithSigners(envelopeId);
+        const env = await this.envelopeCrudService.getEnvelopeWithSigners(envelopeId);
         if (env) {
           await this.envelopeNotificationService.publishEnvelopeCancelled(env, userId, securityContext);
         }

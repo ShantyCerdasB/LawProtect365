@@ -36,9 +36,10 @@ export class UseCaseFactory {
    */
   static createCreateEnvelopeUseCase(services: Services): CreateEnvelopeUseCase {
     return new CreateEnvelopeUseCase(
-      services.signatureEnvelopeService,
+      services.envelopeCrudService,
       services.envelopeHashService,
-      services.s3Service
+      services.s3Service,
+      services.auditEventService
     );
   }
 
@@ -49,7 +50,7 @@ export class UseCaseFactory {
    */
   static createCancelEnvelopeUseCase(services: Services): CancelEnvelopeUseCase {
     return new CancelEnvelopeUseCase(
-      services.signatureEnvelopeService,
+      services.envelopeCrudService,
       services.envelopeNotificationService
     );
   }
@@ -61,7 +62,7 @@ export class UseCaseFactory {
    */
   static createUpdateEnvelopeUseCase(services: Services): UpdateEnvelopeUseCase {
     return new UpdateEnvelopeUseCase(
-      services.signatureEnvelopeService,
+      services.envelopeCrudService,
       services.envelopeSignerService,
       services.s3Service
     );
@@ -74,7 +75,7 @@ export class UseCaseFactory {
    */
   static createSendEnvelopeUseCase(services: Services): SendEnvelopeUseCase {
     return new SendEnvelopeUseCase(
-      services.signatureEnvelopeService,
+      services.envelopeStateService,
       services.invitationTokenService,
       services.auditEventService,
       services.envelopeNotificationService
@@ -88,7 +89,7 @@ export class UseCaseFactory {
    */
   static createShareDocumentViewUseCase(services: Services): ShareDocumentViewUseCase {
     return new ShareDocumentViewUseCase(
-      services.signatureEnvelopeService,
+      services.envelopeCrudService,
       services.envelopeSignerService,
       services.invitationTokenService,
       services.auditEventService,
@@ -103,7 +104,7 @@ export class UseCaseFactory {
    */
   static createSendRemindersUseCase(services: Services): SendRemindersUseCase {
     return new SendRemindersUseCase(
-      services.signatureEnvelopeService,
+      services.envelopeCrudService,
       services.envelopeSignerService,
       services.invitationTokenService,
       services.signerReminderTrackingService,
@@ -119,10 +120,11 @@ export class UseCaseFactory {
    */
   static createDeclineSignerUseCase(services: Services): DeclineSignerUseCase {
     return new DeclineSignerUseCase(
-      services.signatureEnvelopeService,
+      services.envelopeCrudService,
       services.envelopeSignerService,
       services.envelopeNotificationService,
-      services.envelopeAccessService
+      services.envelopeAccessService,
+      services.envelopeStateService
     );
   }
 
@@ -132,7 +134,7 @@ export class UseCaseFactory {
    * @returns Configured DownloadDocumentUseCase instance
    */
   static createDownloadDocumentUseCase(services: Services): DownloadDocumentUseCase {
-    return new DownloadDocumentUseCase(services.signatureEnvelopeService);
+    return new DownloadDocumentUseCase(services.envelopeCrudService);
   }
 
   /**
@@ -142,7 +144,7 @@ export class UseCaseFactory {
    */
   static createGetAuditTrailUseCase(services: Services): GetAuditTrailUseCase {
     return new GetAuditTrailUseCase(
-      services.signatureEnvelopeService,
+      services.envelopeCrudService,
       services.auditEventService
     );
   }
@@ -154,7 +156,7 @@ export class UseCaseFactory {
    */
   static createGetEnvelopeUseCase(services: Services): GetEnvelopeUseCase {
     return new GetEnvelopeUseCase(
-      services.signatureEnvelopeService,
+      services.envelopeCrudService,
       services.invitationTokenService,
       services.envelopeAccessService
     );
@@ -166,7 +168,7 @@ export class UseCaseFactory {
    * @returns Configured ListEnvelopesByUserUseCase instance
    */
   static createListEnvelopesByUserUseCase(services: Services): ListEnvelopesByUserUseCase {
-    return new ListEnvelopesByUserUseCase(services.signatureEnvelopeService);
+    return new ListEnvelopesByUserUseCase(services.envelopeCrudService);
   }
 
   /**
@@ -176,7 +178,7 @@ export class UseCaseFactory {
    */
   static createSignDocumentUseCase(services: Services): SignDocumentUseCase {
     return new SignDocumentUseCase(
-      services.signatureEnvelopeService,
+      services.envelopeCrudService,
       services.envelopeSignerService,
       services.invitationTokenService,
       services.consentService,
@@ -184,7 +186,8 @@ export class UseCaseFactory {
       services.kmsService,
       services.auditEventService,
       services.envelopeHashService,
-      services.envelopeAccessService
+      services.envelopeAccessService,
+      services.envelopeStateService
     );
   }
 

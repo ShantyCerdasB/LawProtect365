@@ -18,6 +18,8 @@ import {
   SignerReminderTrackingService,
   EnvelopeHashService,
   EnvelopeAccessService,
+  EnvelopeStateService,
+  EnvelopeCrudService,
 } from '@/services/index';
 
 import {
@@ -51,6 +53,8 @@ export type Services = {
   envelopeNotificationService: EnvelopeNotificationService;
   envelopeHashService: EnvelopeHashService;
   envelopeAccessService: EnvelopeAccessService;
+  envelopeStateService: EnvelopeStateService;
+  envelopeCrudService: EnvelopeCrudService;
 };
 
 /**

@@ -11,16 +11,19 @@ import { v4 as uuid } from 'uuid';
 import { SignatureEnvelope } from '@/domain/entities/SignatureEnvelope';
 import { CreateEnvelopeData } from '@/domain/types/envelope/CreateEnvelopeData';
 import { CreateEnvelopeRequest, CreateEnvelopeResult } from '@/domain/types/orchestrator';
-import { SignatureEnvelopeService } from '@/services/SignatureEnvelopeService';
-import { EnvelopeHashService } from '@/services/hash/EnvelopeHashService';
+import { EnvelopeCrudService } from '@/services/envelopeCrud/EnvelopeCrudService';
+import { EnvelopeHashService } from '@/services/envelopeHashService/EnvelopeHashService';
 import { S3Service } from '@/services/S3Service';
+import { AuditEventService } from '@/services/audit/AuditEventService';
 import { EntityFactory } from '@/domain/factories/EntityFactory';
 import { sha256Hex } from '@lawprotect/shared-ts';
+import { createEnvelopeCreatedAudit } from '../utils/audit/envelopeAuditHelpers';
 export class CreateEnvelopeUseCase {
   constructor(
-    private readonly envelopeService: SignatureEnvelopeService,
+    private readonly envelopeCrudService: EnvelopeCrudService,
     private readonly envelopeHashService: EnvelopeHashService,
-    private readonly s3Service: S3Service
+    private readonly s3Service: S3Service,
+    private readonly auditEventService: AuditEventService
   ) {}
 
   /**
@@ -41,10 +44,11 @@ export class CreateEnvelopeUseCase {
       id: envelopeId
     };
 
-    const envelope: SignatureEnvelope = await this.envelopeService.createEnvelope(
-      envelopeDataWithId,
-      input.userId
+    const envelope: SignatureEnvelope = await this.envelopeCrudService.createEnvelope(
+      envelopeDataWithId
     );
+
+    await this.auditEventService.create(createEnvelopeCreatedAudit(envelope, input.userId));
 
     if (input.envelopeData.sourceKey) {
       const sourceDocumentContent = await this.s3Service.getDocumentContent(input.envelopeData.sourceKey);

@@ -8,12 +8,12 @@
  */
 
 import { EnvelopeSpec } from '@/domain/types/envelope';
-import { SignatureEnvelopeService } from '@/services/SignatureEnvelopeService';
+import { EnvelopeCrudService } from '@/services/envelopeCrud/EnvelopeCrudService';
 import { paginationLimitRequired } from '@lawprotect/shared-ts';
 import { ListEnvelopesByUserInput, ListEnvelopesByUserResult } from '@/domain/types/usecase/orchestrator/ListEnvelopesByUserUseCase';
 
 export class ListEnvelopesByUserUseCase {
-  constructor(private readonly signatureEnvelopeService: SignatureEnvelopeService) {}
+  constructor(private readonly envelopeCrudService: EnvelopeCrudService) {}
 
   /**
    * Lists envelopes for a user with pagination and signer data
@@ -43,12 +43,12 @@ export class ListEnvelopesByUserUseCase {
     };
 
     // Page envelopes
-    const result = await this.signatureEnvelopeService.listEnvelopes(spec, limit, cursor);
+    const result = await this.envelopeCrudService.listEnvelopes(spec, limit, cursor);
 
     // Always fetch signers for each envelope
     const signers = await Promise.all(
       result.items.map(env =>
-        this.signatureEnvelopeService
+        this.envelopeCrudService
           .getEnvelopeWithSigners(env.getId())
           .then(e => e?.getSigners() ?? [])
       )

@@ -7,7 +7,7 @@
  * It ensures proper validation and maintains data consistency during updates.
  */
 
-import { SignatureEnvelopeService } from '@/services/SignatureEnvelopeService';
+import { EnvelopeCrudService } from '@/services/envelopeCrud/EnvelopeCrudService';
 import { EnvelopeSignerService } from '@/services/EnvelopeSignerService';
 import { S3Service } from '@/services/S3Service';
 import { envelopeNotFound } from '@/signature-errors';
@@ -23,7 +23,7 @@ import { UpdateEnvelopeUseCaseInput, UpdateEnvelopeUseCaseResult } from '@/domai
  */
 export class UpdateEnvelopeUseCase {
   constructor(
-    private readonly signatureEnvelopeService: SignatureEnvelopeService,
+    private readonly envelopeCrudService: EnvelopeCrudService,
     private readonly envelopeSignerService: EnvelopeSignerService,
     private readonly s3Service: S3Service
   ) {}
@@ -55,7 +55,7 @@ export class UpdateEnvelopeUseCase {
         });
       }
 
-      const updatedEnvelope = await this.signatureEnvelopeService.updateEnvelope(
+      const updatedEnvelope = await this.envelopeCrudService.updateEnvelope(
         envelopeId,
         updateData,
         userId
@@ -82,7 +82,7 @@ export class UpdateEnvelopeUseCase {
         return { envelope: updatedEnvelope };
       }
 
-      const envelopeWithSigners = await this.signatureEnvelopeService.getEnvelopeWithSigners(envelopeId);
+      const envelopeWithSigners = await this.envelopeCrudService.getEnvelopeWithSigners(envelopeId);
       if (!envelopeWithSigners) {
         throw envelopeNotFound(`Envelope with ID ${envelopeId.getValue()} not found`);
       }

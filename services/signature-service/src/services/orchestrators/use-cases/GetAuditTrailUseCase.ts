@@ -7,7 +7,7 @@
  * comprehensive audit information for compliance and tracking purposes.
  */
 
-import { SignatureEnvelopeService } from '@/services/SignatureEnvelopeService';
+import { EnvelopeCrudService } from '@/services/envelopeCrud/EnvelopeCrudService';
 import { AuditEventService } from '@/services/audit/AuditEventService';
 import { EnvelopeAccessValidationRule } from '@/domain/rules/EnvelopeAccessValidationRule';
 import { envelopeNotFound } from '@/signature-errors';
@@ -16,7 +16,7 @@ import { GetAuditTrailInput, GetAuditTrailResult } from '@/domain/types/usecase/
 
 export class GetAuditTrailUseCase {
   constructor(
-    private readonly signatureEnvelopeService: SignatureEnvelopeService,
+    private readonly envelopeCrudService: EnvelopeCrudService,
     private readonly signatureAuditEventService: AuditEventService
   ) {}
 
@@ -38,7 +38,7 @@ export class GetAuditTrailUseCase {
 
     try {
       // 1) Existence + ownership
-      const envelope = await this.signatureEnvelopeService.getEnvelopeWithSigners(envelopeId);
+      const envelope = await this.envelopeCrudService.getEnvelopeWithSigners(envelopeId);
       if (!envelope) {
         throw envelopeNotFound(`Envelope with ID ${envelopeId.getValue()} not found`);
       }

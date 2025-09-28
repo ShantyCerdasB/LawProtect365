@@ -8,11 +8,11 @@
  */
 
 import { SignatureEnvelope } from '@/domain/entities/SignatureEnvelope';
-import { SignatureEnvelopeService } from '@/services/SignatureEnvelopeService';
+import { EnvelopeCrudService } from '@/services/envelopeCrud/EnvelopeCrudService';
 import { EnvelopeSignerService } from '@/services/EnvelopeSignerService';
 import { InvitationTokenService } from '@/services/InvitationTokenService';
 import { AuditEventService } from '@/services/audit/AuditEventService';
-import { EnvelopeNotificationService } from '@/services/events/EnvelopeNotificationService';
+import { EnvelopeNotificationService } from '@/services/notification/EnvelopeNotificationService';
 import { EnvelopeAccessValidationRule } from '@/domain/rules/EnvelopeAccessValidationRule';
 import { envelopeNotFound } from '@/signature-errors';
 import { createNetworkSecurityContext, rethrow } from '@lawprotect/shared-ts';
@@ -20,7 +20,7 @@ import { ShareDocumentViewInput, ShareDocumentViewResult } from '@/domain/types/
 
 export class ShareDocumentViewUseCase {
   constructor(
-    private readonly signatureEnvelopeService: SignatureEnvelopeService,
+    private readonly envelopeCrudService: EnvelopeCrudService,
     private readonly envelopeSignerService: EnvelopeSignerService,
     private readonly invitationTokenService: InvitationTokenService,
     private readonly signatureAuditEventService: AuditEventService,
@@ -49,7 +49,7 @@ export class ShareDocumentViewUseCase {
 
     try {
       const envelope: SignatureEnvelope | null =
-        await this.signatureEnvelopeService.getEnvelopeWithSigners(envelopeId);
+        await this.envelopeCrudService.getEnvelopeWithSigners(envelopeId);
       if (!envelope) {
         throw envelopeNotFound(`Envelope with ID ${envelopeId.getValue()} not found`);
       }

@@ -7,10 +7,10 @@
  * and maintains comprehensive tracking for envelope distribution operations.
  */
 
-import { SignatureEnvelopeService } from '@/services/SignatureEnvelopeService';
+import { EnvelopeStateService } from '@/services/envelopeStates/EnvelopeStateService';
 import { InvitationTokenService } from '@/services/InvitationTokenService';
 import { AuditEventService } from '@/services/audit/AuditEventService';
-import { EnvelopeNotificationService } from '@/services/events/EnvelopeNotificationService';
+import { EnvelopeNotificationService } from '@/services/notification/EnvelopeNotificationService';
 import { createNetworkSecurityContext, rethrow } from '@lawprotect/shared-ts';
 import { selectTargetSigners } from '@/services/orchestrators/utils/signerSelection';
 import { SendEnvelopeInput, SendEnvelopeResult } from '@/domain/types/usecase/orchestrator/SendEnvelopeUseCase';
@@ -18,7 +18,7 @@ import { EnvelopeSigner } from '@/domain';
 
 export class SendEnvelopeUseCase {
   constructor(
-    private readonly signatureEnvelopeService: SignatureEnvelopeService,
+    private readonly envelopeStateService: EnvelopeStateService,
     private readonly invitationTokenService: InvitationTokenService,
     private readonly signatureAuditEventService: AuditEventService,
     private readonly envelopeNotificationService: EnvelopeNotificationService
@@ -43,7 +43,7 @@ export class SendEnvelopeUseCase {
     const { envelopeId, userId, securityContext, options } = input;
 
     try {
-      const envelope = await this.signatureEnvelopeService.sendEnvelope(envelopeId, userId);
+      const envelope = await this.envelopeStateService.sendEnvelope(envelopeId, userId);
 
       const externalSigners = envelope.getExternalSigners();
       const targetSigners: EnvelopeSigner[] = selectTargetSigners(externalSigners, options);

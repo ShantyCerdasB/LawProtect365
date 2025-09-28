@@ -7,13 +7,13 @@
  * proper authorization and maintains clear application boundaries for document access.
  */
 
-import { SignatureEnvelopeService } from '@/services/SignatureEnvelopeService';
+import { EnvelopeCrudService } from '@/services/envelopeCrud/EnvelopeCrudService';
 import { rethrow } from '@lawprotect/shared-ts';
 import { DownloadDocumentInput, DownloadDocumentResult } from '@/domain/types/usecase/orchestrator/DownloadDocumentUseCase';
 
 export class DownloadDocumentUseCase {
   constructor(
-    private readonly signatureEnvelopeService: SignatureEnvelopeService
+    private readonly envelopeCrudService: EnvelopeCrudService
   ) {}
 
   /**
@@ -35,7 +35,7 @@ export class DownloadDocumentUseCase {
     const { envelopeId, userId, invitationToken, expiresIn, securityContext } = input;
 
     try {
-      return await this.signatureEnvelopeService.downloadDocument(
+      return await this.envelopeCrudService.downloadDocument(
         envelopeId,
         userId,
         invitationToken,

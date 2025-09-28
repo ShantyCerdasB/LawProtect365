@@ -9,20 +9,22 @@
  */
 
 import { SignatureEnvelope } from '@/domain/entities/SignatureEnvelope';
-import { SignatureEnvelopeService } from '@/services/SignatureEnvelopeService';
-import { EnvelopeAccessService } from '@/services/access/EnvelopeAccessService';
+import { EnvelopeCrudService } from '@/services/envelopeCrud/EnvelopeCrudService';
+import { EnvelopeAccessService } from '@/services/envelopeAccess/EnvelopeAccessService';
+import { EnvelopeStateService } from '@/services/envelopeStates/EnvelopeStateService';
 import { EnvelopeSignerService } from '@/services/EnvelopeSignerService';
-import { EnvelopeNotificationService } from '@/services/events/EnvelopeNotificationService';
+import { EnvelopeNotificationService } from '@/services/notification/EnvelopeNotificationService';
 import { signerNotFound, envelopeNotFound } from '@/signature-errors';
 import { rethrow } from '@lawprotect/shared-ts';
 import { DeclineSignerInput, DeclineSignerResult } from '@/domain/types/usecase/orchestrator/DeclineSignerUseCase';
 
 export class DeclineSignerUseCase {
   constructor(
-    private readonly signatureEnvelopeService: SignatureEnvelopeService,
+    private readonly envelopeCrudService: EnvelopeCrudService,
     private readonly envelopeSignerService: EnvelopeSignerService,
     private readonly envelopeNotificationService: EnvelopeNotificationService,
-    private readonly envelopeAccessService: EnvelopeAccessService
+    private readonly envelopeAccessService: EnvelopeAccessService,
+    private readonly envelopeStateService: EnvelopeStateService
   ) {}
 
   /**
@@ -69,10 +71,12 @@ export class DeclineSignerUseCase {
       });
 
       // Update envelope status after decline
-      await this.signatureEnvelopeService.updateEnvelopeStatusAfterDecline(
+      const externalUserId = `external-user:${signer.getFullName() || signer.getEmail()?.getValue() || 'Unknown'}`;
+      await this.envelopeStateService.updateEnvelopeStatusAfterDecline(
         envelopeId,
         signerId,
-        request.reason
+        request.reason,
+        externalUserId
       );
 
       // 4) Publish decline notification
@@ -84,7 +88,7 @@ export class DeclineSignerUseCase {
       );
 
       // 5) Load updated envelope for response
-      const updated = await this.signatureEnvelopeService.getEnvelopeWithSigners(envelopeId);
+      const updated = await this.envelopeCrudService.getEnvelopeWithSigners(envelopeId);
       if (!updated) {
         throw envelopeNotFound(`Envelope with ID ${envelopeId.getValue()} not found after decline`);
       }

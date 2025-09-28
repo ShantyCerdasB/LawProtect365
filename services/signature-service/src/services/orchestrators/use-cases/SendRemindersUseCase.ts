@@ -8,12 +8,12 @@
  */
 
 import { EnvelopeSigner } from '@/domain/entities/EnvelopeSigner';
-import { SignatureEnvelopeService } from '@/services/SignatureEnvelopeService';
+import { EnvelopeCrudService } from '@/services/envelopeCrud/EnvelopeCrudService';
 import { EnvelopeSignerService } from '@/services/EnvelopeSignerService';
 import { InvitationTokenService } from '@/services/InvitationTokenService';
 import { SignerReminderTrackingService } from '@/services/SignerReminderTrackingService';
 import { AuditEventService } from '@/services/audit/AuditEventService';
-import { EnvelopeNotificationService } from '@/services/events/EnvelopeNotificationService';
+import { EnvelopeNotificationService } from '@/services/notification/EnvelopeNotificationService';
 import { EnvelopeAccessValidationRule } from '@/domain/rules/EnvelopeAccessValidationRule';
 import { createNetworkSecurityContext, rethrow } from '@lawprotect/shared-ts';
 import { loadConfig } from '@/config/AppConfig';
@@ -26,7 +26,7 @@ import { SendRemindersInput, SendRemindersResult } from '@/domain/types/usecase/
  */
 export class SendRemindersUseCase {
   constructor(
-    private readonly signatureEnvelopeService: SignatureEnvelopeService,
+    private readonly envelopeCrudService: EnvelopeCrudService,
     private readonly envelopeSignerService: EnvelopeSignerService,
     private readonly invitationTokenService: InvitationTokenService,
     private readonly signerReminderTrackingService: SignerReminderTrackingService,
@@ -54,7 +54,7 @@ export class SendRemindersUseCase {
 
     try {
       // 1) Envelope existence and access
-      const envelope = await this.signatureEnvelopeService.getEnvelopeWithSigners(envelopeId);
+      const envelope = await this.envelopeCrudService.getEnvelopeWithSigners(envelopeId);
       if (!envelope) {
         throw envelopeNotFound(`Envelope with ID ${envelopeId.getValue()} not found`);
       }
