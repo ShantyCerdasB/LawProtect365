@@ -121,7 +121,8 @@ export class UseCaseFactory {
     return new DeclineSignerUseCase(
       services.signatureEnvelopeService,
       services.envelopeSignerService,
-      services.envelopeNotificationService
+      services.envelopeNotificationService,
+      services.envelopeAccessService
     );
   }
 
@@ -154,7 +155,8 @@ export class UseCaseFactory {
   static createGetEnvelopeUseCase(services: Services): GetEnvelopeUseCase {
     return new GetEnvelopeUseCase(
       services.signatureEnvelopeService,
-      services.invitationTokenService
+      services.invitationTokenService,
+      services.envelopeAccessService
     );
   }
 
@@ -181,7 +183,8 @@ export class UseCaseFactory {
       services.s3Service,
       services.kmsService,
       services.auditEventService,
-      services.envelopeHashService
+      services.envelopeHashService,
+      services.envelopeAccessService
     );
   }
 

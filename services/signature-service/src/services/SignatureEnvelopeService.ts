@@ -347,105 +347,8 @@ export class SignatureEnvelopeService {
 
 
 
-  /**
-   * Validates user access to envelope (for authenticated users only)
-   * @param envelopeId - The envelope ID
-   * @param userId - The user ID
-   * @returns The envelope if access is valid
-   * @throws EnvelopeAccessDenied if user doesn't have access
-   */
-  async validateEnvelopeAccess(envelopeId: EnvelopeId, userId: string): Promise<SignatureEnvelope> {
-    try {
-      const envelope = await this.signatureEnvelopeRepository.findById(envelopeId);
-      if (!envelope) {
-        throw envelopeNotFound(`Envelope with ID ${envelopeId.getValue()} not found`);
-      }
 
-      // Check if user is the creator
-      if (envelope.getCreatedBy() !== userId) {
-        throw envelopeAccessDenied(`User ${userId} does not have access to envelope ${envelopeId.getValue()}`);
-      }
 
-      return envelope;
-    } catch (error) {
-      // Preserve specific error types (404, 403, etc.)
-      if (error instanceof Error && (
-        error.message.includes('access') || 
-        error.message.includes('not found') ||
-        error.message.includes('Envelope with ID')
-      )) {
-        throw error;
-      }
-      throw envelopeAccessDenied(
-        `Failed to validate access to envelope ${envelopeId.getValue()}: ${error instanceof Error ? error.message : error}`
-      );
-    }
-  }
-
-  /**
-   * Validates external user access to envelope using invitation token
-   * @param envelopeId - The envelope ID
-   * @param invitationToken - The invitation token
-   * @returns The envelope if access is valid
-   * @throws EnvelopeAccessDenied if user doesn't have access
-   */
-  async validateExternalUserAccess(envelopeId: EnvelopeId, invitationToken: string): Promise<SignatureEnvelope> {
-    try {
-      
-      // Validate invitation token
-      const token = await this.invitationTokenService.validateInvitationToken(invitationToken);
-      
-      
-      // Verify token is for this envelope
-      if (token.getEnvelopeId().getValue() !== envelopeId.getValue()) {
-        throw envelopeAccessDenied(`Invitation token is not valid for envelope ${envelopeId.getValue()}`);
-      }
-
-      // Get envelope
-      const envelope = await this.signatureEnvelopeRepository.findById(envelopeId);
-      if (!envelope) {
-        throw envelopeNotFound(`Envelope with ID ${envelopeId.getValue()} not found`);
-      }
-
-      return envelope;
-    } catch (error) {
-      // Preserve original token validation errors (401 Unauthorized)
-      if (error && typeof error === 'object' && 'code' in error) {
-        const errorCode = (error as any).code;
-        if (errorCode === 'INVITATION_TOKEN_INVALID' || 
-            errorCode === 'INVITATION_TOKEN_EXPIRED' ||
-            errorCode === 'INVITATION_TOKEN_ALREADY_USED' ||
-            errorCode === 'INVITATION_TOKEN_REVOKED') {
-          throw error; // Preserve original 401/409 errors
-        }
-      }
-      
-      // Only wrap non-token errors in envelopeAccessDenied (403)
-      throw envelopeAccessDenied(
-        `Failed to validate external user access to envelope ${envelopeId.getValue()}: ${error instanceof Error ? error.message : error}`
-      );
-    }
-  }
-
-  /**
-   * Validates user access to envelope (supports both authenticated and external users)
-   * @param envelopeId - The envelope ID
-   * @param userId - The user ID (for authenticated users)
-   * @param invitationToken - The invitation token (for external users)
-   * @returns The envelope if access is valid
-   * @throws EnvelopeAccessDenied if user doesn't have access
-   */
-  async validateUserAccess(envelopeId: EnvelopeId, userId?: string, invitationToken?: string): Promise<SignatureEnvelope> {
-    if (invitationToken) {
-      // External user with invitation token
-      return this.validateExternalUserAccess(envelopeId, invitationToken);
-    } else if (userId) {
-      // Authenticated user
-      return this.validateEnvelopeAccess(envelopeId, userId);
-    } else {
-      throw envelopeAccessDenied('Either userId or invitationToken must be provided for access validation');
-    }
-  }
 
   /**
    * Lists envelopes by specification
@@ -627,7 +530,13 @@ export class SignatureEnvelopeService {
     securityContext?: NetworkSecurityContext
   ): Promise<{ downloadUrl: string; expiresIn: number }> {
     try {
-      const envelope = await this.validateUserAccess(envelopeId, userId, invitationToken);
+      // TODO: Move access validation to Use Case
+      // const envelope = await this.validateUserAccess(envelopeId, userId, invitationToken);
+      // TEMPORARY: Get envelope directly until Use Case is updated
+      const envelope = await this.signatureEnvelopeRepository.findById(envelopeId);
+      if (!envelope) {
+        throw envelopeNotFound(`Envelope with ID ${envelopeId.getValue()} not found`);
+      }
       const documentKey = this.getDocumentKeyForDownload(envelope, envelopeId);
       const finalExpiresIn = this.validateAndGetExpirationTime(expiresIn);
       const signerIdForS3 = this.getSignerIdForS3(envelope, userId, envelopeId);

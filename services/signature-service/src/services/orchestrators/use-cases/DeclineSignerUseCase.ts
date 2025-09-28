@@ -10,6 +10,7 @@
 
 import { SignatureEnvelope } from '@/domain/entities/SignatureEnvelope';
 import { SignatureEnvelopeService } from '@/services/SignatureEnvelopeService';
+import { EnvelopeAccessService } from '@/services/access/EnvelopeAccessService';
 import { EnvelopeSignerService } from '@/services/EnvelopeSignerService';
 import { EnvelopeNotificationService } from '@/services/events/EnvelopeNotificationService';
 import { signerNotFound, envelopeNotFound } from '@/signature-errors';
@@ -20,7 +21,8 @@ export class DeclineSignerUseCase {
   constructor(
     private readonly signatureEnvelopeService: SignatureEnvelopeService,
     private readonly envelopeSignerService: EnvelopeSignerService,
-    private readonly envelopeNotificationService: EnvelopeNotificationService
+    private readonly envelopeNotificationService: EnvelopeNotificationService,
+    private readonly envelopeAccessService: EnvelopeAccessService
   ) {}
 
   /**
@@ -43,7 +45,7 @@ export class DeclineSignerUseCase {
 
     try {
       // 1) Validate user access (owner or external via invitation token)
-      const envelope: SignatureEnvelope = await this.signatureEnvelopeService.validateUserAccess(
+      const envelope: SignatureEnvelope = await this.envelopeAccessService.validateUserAccess(
         envelopeId,
         undefined,
         request.invitationToken

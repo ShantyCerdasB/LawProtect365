@@ -8,6 +8,7 @@
  */
 
 import { SignatureEnvelopeService } from '@/services/SignatureEnvelopeService';
+import { EnvelopeAccessService } from '@/services/access/EnvelopeAccessService';
 import { InvitationTokenService } from '@/services/InvitationTokenService';
 import { AccessType } from '@/domain/enums/AccessType';
 import { rethrow } from '@lawprotect/shared-ts';
@@ -16,7 +17,8 @@ import { GetEnvelopeInput, GetEnvelopeResult } from '@/domain/types/usecase/orch
 export class GetEnvelopeUseCase {
   constructor(
     private readonly signatureEnvelopeService: SignatureEnvelopeService,
-    private readonly invitationTokenService: InvitationTokenService
+    private readonly invitationTokenService: InvitationTokenService,
+    private readonly envelopeAccessService: EnvelopeAccessService
   ) {}
 
   /**
@@ -39,7 +41,7 @@ export class GetEnvelopeUseCase {
 
     try {
       // 1) Validate access (owner or external)
-      const envelope = await this.signatureEnvelopeService.validateUserAccess(
+      const envelope = await this.envelopeAccessService.validateUserAccess(
         envelopeId,
         userId,
         invitationToken

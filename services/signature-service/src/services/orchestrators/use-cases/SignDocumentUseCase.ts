@@ -16,6 +16,7 @@ import { S3Service } from '@/services/S3Service';
 import { KmsService } from '@/services/KmsService';
 import { AuditEventService } from '@/services/audit/AuditEventService';
 import { EnvelopeHashService } from '@/services/hash/EnvelopeHashService';
+import { EnvelopeAccessService } from '@/services/access/EnvelopeAccessService';
 
 import { EntityFactory } from '@/domain/factories/EntityFactory';
 import { EnvelopeId } from '@/domain/value-objects/EnvelopeId';
@@ -44,7 +45,8 @@ export class SignDocumentUseCase {
     private readonly s3Service: S3Service,
     private readonly kmsService: KmsService,
     private readonly auditEventService: AuditEventService,
-    private readonly envelopeHashService: EnvelopeHashService
+    private readonly envelopeHashService: EnvelopeHashService,
+    private readonly envelopeAccessService: EnvelopeAccessService
   ) {}
 
   /**
@@ -70,7 +72,7 @@ export class SignDocumentUseCase {
       const signerId: SignerId = EntityFactory.createValueObjects.signerId(request.signerId);
 
       // 2) Access validation (owner/external by token)
-      const envelope = await this.signatureEnvelopeService.validateUserAccess(
+      const envelope = await this.envelopeAccessService.validateUserAccess(
         envelopeId,
         userId,
         request.invitationToken
