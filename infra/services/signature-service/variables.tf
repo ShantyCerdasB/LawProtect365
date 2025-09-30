@@ -222,3 +222,8 @@ variable "existing_sns_topic_arn" {
   type        = string
   default     = null
 }
+
+variable "outbox_table_name" {
+  description = "Name of the outbox DynamoDB table for event publishing"
+  type        = string
+}

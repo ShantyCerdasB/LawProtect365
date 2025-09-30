@@ -383,6 +383,7 @@ module "sign_service" {
   waf_web_acl_arn    = var.waf_web_acl_arn
   budgets_alerts_topic_arn = aws_sns_topic.budgets_alerts.arn
   event_bus_arn = module.events.eventbridge_bus_arn
+  outbox_table_name = module.outbox_table.table_name
 
   # JWT authorizer (Cognito)
   enable_jwt_authorizer = true
@@ -440,6 +441,38 @@ module "db_secret" {
   env          = var.env
 }
 
+/**
+ * @module outbox_table
+ * @description 
+ * Creates DynamoDB table for outbox pattern implementation.
+ * Used by signature-service for reliable event publishing.
+ * 
+ * @remarks
+ * - Single-table design with GSI for status-based queries
+ * - Supports outbox pattern for reliable messaging
+ * - Used by signature-service for event publishing
+ */
+module "outbox_table" {
+  source = "./modules/dynamodb"
+  
+  table_name = "${var.project_name}-outbox-${var.env}"
+  hash_key = "pk"
+  hash_key_type = "S"
+  range_key = "sk"
+  range_key_type = "S"
+  billing_mode = "PAY_PER_REQUEST"
+  
+  global_secondary_indexes = [{
+    name = "GSI1"
+    hash_key = "gsi1pk"
+    hash_key_type = "S"
+    range_key = "gsi1sk"
+    range_key_type = "S"
+    projection_type = "ALL"
+  }]
+  
+  tags = local.common_tags
+}
 
 /** 
  * @module xray

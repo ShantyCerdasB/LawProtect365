@@ -44,36 +44,46 @@
   lambda_env_common = merge(
     local.shared_lambda_env,
     {
-      DOCUMENTS_BUCKET  = var.documents_bucket_name
-      EVIDENCE_BUCKET   = module.evidence_bucket.bucket_id
-      KMS_SIGN_KEY_ARN  = var.kms_sign_key_arn
-
-      ENVELOPES_TABLE   = module.ddb_envelopes.table_name
-      TOKENS_TABLE      = module.ddb_signing_tokens.table_name
-
-      SSM_PARAM_PREFIX  = "/${var.project_name}/${var.env}"
-      EVENT_BUS_ARN     = coalesce(var.event_bus_arn, "")
-
+      # Database configuration
+      DATABASE_URL = var.shared_lambda_env.DB_SECRET_ARN
+      
+      # S3 buckets
+      S3_BUCKET_NAME = var.documents_bucket_name
+      EVIDENCE_BUCKET = module.evidence_bucket.bucket_id
+      
+      # KMS configuration
+      KMS_SIGNER_KEY_ID = var.kms_sign_key_arn
+      
+      # Outbox table for event publishing
+      OUTBOX_TABLE_NAME = var.outbox_table_name
+      
+      # EventBridge configuration
+      EVENTBRIDGE_BUS_NAME = var.event_bus_arn
+      
+      # SSM Parameter Store
+      SSM_PARAM_PREFIX = "/${var.project_name}/${var.env}"
+      
+      # CloudWatch metrics
       METRICS_NAMESPACE = "SignService"
     }
   )
 
-  # ---------- CODEBUILD/PIPELINE ENVS (LISTA) ----------
+  # ---------- CODEBUILD/PIPELINE ENVS ----------
   codebuild_env_vars = concat(
     var.environment_variables,
     [
-      { name = "DOCUMENTS_BUCKET",  value = var.documents_bucket_name,            type = "PLAINTEXT" },
+      { name = "DATABASE_URL",      value = var.shared_lambda_env.DB_SECRET_ARN,   type = "SECRETS_MANAGER" },
+      { name = "S3_BUCKET_NAME",    value = var.documents_bucket_name,            type = "PLAINTEXT" },
       { name = "EVIDENCE_BUCKET",   value = module.evidence_bucket.bucket_id,     type = "PLAINTEXT" },
-      { name = "KMS_SIGN_KEY_ARN",  value = var.kms_sign_key_arn,                 type = "PLAINTEXT" },
-      { name = "ENVELOPES_TABLE",   value = module.ddb_envelopes.table_name,      type = "PLAINTEXT" },
-      { name = "TOKENS_TABLE",      value = module.ddb_signing_tokens.table_name, type = "PLAINTEXT" },
+      { name = "KMS_SIGNER_KEY_ID", value = var.kms_sign_key_arn,                 type = "PLAINTEXT" },
+      { name = "OUTBOX_TABLE_NAME", value = var.outbox_table_name,                type = "PLAINTEXT" },
+      { name = "EVENTBRIDGE_BUS_NAME", value = var.event_bus_arn,                 type = "PLAINTEXT" },
       { name = "SIGN_API_ID",       value = module.sign_api.api_id,               type = "PLAINTEXT" },
       { name = "SIGN_API_ENDPOINT", value = module.sign_api.api_endpoint,         type = "PLAINTEXT" },
       { name = "SERVICE_NAME",      value = "sign",                                type = "PLAINTEXT" },
       { name = "ENV",               value = var.env,                               type = "PLAINTEXT" },
       { name = "PROJECT_NAME",      value = var.project_name,                      type = "PLAINTEXT" },
-      { name = "SSM_PARAM_PREFIX",  value = "/${var.project_name}/${var.env}",     type = "PLAINTEXT" },
-      { name = "EVENT_BUS_ARN",     value = try(var.event_bus_arn, ""),            type = "PLAINTEXT" }
+      { name = "SSM_PARAM_PREFIX",  value = "/${var.project_name}/${var.env}",     type = "PLAINTEXT" }
     ]
   )
 }
@@ -128,44 +138,14 @@ module "sign_lambda_role" {
 # - Inherits shared_lambda_env
 # - EVIDENCE_BUCKET: Evidence S3 bucket ID
 ############################################################
-module "lambda_consent" {
+module "lambda_create_envelope" {
   source       = "../../modules/lambda"
   project_name = var.project_name
   env          = var.env
 
-  function_name = "${var.project_name}-${local.service_name}-consent"
+  function_name = "${var.project_name}-${local.service_name}-create-envelope"
   s3_bucket     = var.code_bucket
-  s3_key        = "sign-consent.zip"
-  handler       = "index.handler"
-  runtime       = "nodejs20.x"
-  memory_size   = 512
-  timeout       = 10
-  role_arn      = module.sign_lambda_role.role_arn
-
-  environment_variables = local.lambda_env_common
-
-  xray_tracing = true
-}
-
-############################################################
-# Lambda: POST /signatures
-#
-# Purpose:
-# - Submits signatures for a document
-#
-# Key environment variables:
-# - DOCUMENTS_BUCKET: Name of the documents S3 bucket
-# - EVIDENCE_BUCKET: Evidence S3 bucket ID
-# - KMS_SIGN_KEY_ARN: ARN of the KMS asymmetric signing key
-############################################################
-module "lambda_sign" {
-  source       = "../../modules/lambda"
-  project_name = var.project_name
-  env          = var.env
-
-  function_name = "${var.project_name}-${local.service_name}-sign"
-  s3_bucket     = var.code_bucket
-  s3_key        = "sign-submit.zip"
+  s3_key        = "sign-create-envelope.zip"
   handler       = "index.handler"
   runtime       = "nodejs20.x"
   memory_size   = 1024
@@ -178,46 +158,82 @@ module "lambda_sign" {
 }
 
 ############################################################
-# Lambda: GET /documents/{id}/certificate
+# Lambda: GET /envelopes/{id}
 #
 # Purpose:
-# - Returns the signing certificate for a document
+# - Retrieves envelope details and status
 #
 # Key environment variables:
+# - DATABASE_URL: PostgreSQL connection string
 # - EVIDENCE_BUCKET: Evidence S3 bucket ID
 ############################################################
-module "lambda_certificate" {
+module "lambda_get_envelope" {
   source       = "../../modules/lambda"
   project_name = var.project_name
   env          = var.env
 
-  function_name = "${var.project_name}-${local.service_name}-certificate"
+  function_name = "${var.project_name}-${local.service_name}-get-envelope"
   s3_bucket     = var.code_bucket
-  s3_key        = "sign-certificate.zip"
+  s3_key        = "sign-get-envelope.zip"
   handler       = "index.handler"
   runtime       = "nodejs20.x"
   memory_size   = 512
   timeout       = 10
   role_arn      = module.sign_lambda_role.role_arn
 
-  environment_variables = merge(
-    local.shared_lambda_env,
-    {
-      EVIDENCE_BUCKET = module.evidence_bucket.bucket_id
-    }
-  )
+  environment_variables = local.lambda_env_common
+
+  xray_tracing = true
+}
+
+############################################################
+# Lambda: POST /envelopes/{id}/send
+#
+# Purpose:
+# - Sends envelope to signers with invitation tokens
+#
+# Key environment variables:
+# - DATABASE_URL: PostgreSQL connection string
+# - EVENTBRIDGE_BUS_NAME: EventBridge bus for notifications
+############################################################
+module "lambda_send_envelope" {
+  source       = "../../modules/lambda"
+  project_name = var.project_name
+  env          = var.env
+
+  function_name = "${var.project_name}-${local.service_name}-send-envelope"
+  s3_bucket     = var.code_bucket
+  s3_key        = "sign-send-envelope.zip"
+  handler       = "index.handler"
+  runtime       = "nodejs20.x"
+  memory_size   = 1024
+  timeout       = 15
+  role_arn      = module.sign_lambda_role.role_arn
+
+  environment_variables = local.lambda_env_common
 
   xray_tracing = true
 }
 
 
-module "lambda_envelopes" {
+############################################################
+# Lambda: POST /documents/{id}/sign
+#
+# Purpose:
+# - Signs a document with cryptographic signature
+#
+# Key environment variables:
+# - DATABASE_URL: PostgreSQL connection string
+# - KMS_SIGNER_KEY_ID: KMS key for signing
+# - EVIDENCE_BUCKET: Evidence S3 bucket ID
+############################################################
+module "lambda_sign_document" {
   source         = "../../modules/lambda"
   project_name   = var.project_name
   env            = var.env
-  function_name  = "${var.project_name}-${local.service_name}-envelopes"
+  function_name  = "${var.project_name}-${local.service_name}-sign-document"
   s3_bucket      = var.code_bucket
-  s3_key         = "sign-envelopes.zip"
+  s3_key         = "sign-sign-document.zip"
   handler        = "index.handler"
   runtime        = "nodejs20.x"
   memory_size    = 1024
@@ -227,85 +243,211 @@ module "lambda_envelopes" {
   xray_tracing   = true
 }
 
-module "lambda_documents" {
+############################################################
+# Lambda: POST /signers/{id}/decline
+#
+# Purpose:
+# - Declines a signer from an envelope
+#
+# Key environment variables:
+# - DATABASE_URL: PostgreSQL connection string
+# - EVENTBRIDGE_BUS_NAME: EventBridge bus for notifications
+############################################################
+module "lambda_decline_signer" {
   source         = "../../modules/lambda"
   project_name   = var.project_name
   env            = var.env
-  function_name  = "${var.project_name}-${local.service_name}-documents"
+  function_name  = "${var.project_name}-${local.service_name}-decline-signer"
   s3_bucket      = var.code_bucket
-  s3_key         = "sign-documents.zip"
+  s3_key         = "sign-decline-signer.zip"
   handler        = "index.handler"
   runtime        = "nodejs20.x"
-  memory_size    = 1024
-  timeout        = 20
+  memory_size    = 512
+  timeout        = 10
   role_arn       = module.sign_lambda_role.role_arn
   environment_variables = local.lambda_env_common
   xray_tracing   = true
 }
 
-module "lambda_inputs" {
+############################################################
+# Lambda: GET /documents/{id}/share
+#
+# Purpose:
+# - Shares document view with external users
+#
+# Key environment variables:
+# - DATABASE_URL: PostgreSQL connection string
+# - EVIDENCE_BUCKET: Evidence S3 bucket ID
+############################################################
+module "lambda_share_document" {
   source         = "../../modules/lambda"
   project_name   = var.project_name
   env            = var.env
-  function_name  = "${var.project_name}-${local.service_name}-inputs"
+  function_name  = "${var.project_name}-${local.service_name}-share-document"
   s3_bucket      = var.code_bucket
-  s3_key         = "sign-inputs.zip"
+  s3_key         = "sign-share-document.zip"
   handler        = "index.handler"
   runtime        = "nodejs20.x"
-  memory_size    = 1024
-  timeout        = 15
+  memory_size    = 512
+  timeout        = 10
   role_arn       = module.sign_lambda_role.role_arn
   environment_variables = local.lambda_env_common
   xray_tracing   = true
 }
 
-module "lambda_parties" {
+############################################################
+# Lambda: POST /notifications/send
+#
+# Purpose:
+# - Sends notifications to signers
+#
+# Key environment variables:
+# - DATABASE_URL: PostgreSQL connection string
+# - EVENTBRIDGE_BUS_NAME: EventBridge bus for notifications
+############################################################
+module "lambda_send_notification" {
   source         = "../../modules/lambda"
   project_name   = var.project_name
   env            = var.env
-  function_name  = "${var.project_name}-${local.service_name}-parties"
+  function_name  = "${var.project_name}-${local.service_name}-send-notification"
   s3_bucket      = var.code_bucket
-  s3_key         = "sign-parties.zip"
+  s3_key         = "sign-send-notification.zip"
   handler        = "index.handler"
   runtime        = "nodejs20.x"
-  memory_size    = 1024
-  timeout        = 15
+  memory_size    = 512
+  timeout        = 10
   role_arn       = module.sign_lambda_role.role_arn
   environment_variables = local.lambda_env_common
   xray_tracing   = true
 }
 
-module "lambda_requests" {
+############################################################
+# Lambda: GET /audit/trail
+#
+# Purpose:
+# - Retrieves audit trail for envelopes and documents
+#
+# Key environment variables:
+# - DATABASE_URL: PostgreSQL connection string
+############################################################
+module "lambda_get_audit_trail" {
   source         = "../../modules/lambda"
   project_name   = var.project_name
   env            = var.env
-  function_name  = "${var.project_name}-${local.service_name}-requests"
-  s3_bucket      = var.code_bucket
-  s3_key         = "sign-requests.zip"
+  function_name  = "${var.project_name}-${local.service_name}-get-audit-trail"
+  s3_bucket     = var.code_bucket
+  s3_key         = "sign-get-audit-trail.zip"
   handler        = "index.handler"
   runtime        = "nodejs20.x"
-  memory_size    = 1024
-  timeout        = 20
-  role_arn       = module.sign_lambda_role.role_arn
-   environment_variables = local.lambda_env_common
-  xray_tracing   = true
-}
-
-module "lambda_uploads" {
-  source         = "../../modules/lambda"
-  project_name   = var.project_name
-  env            = var.env
-  function_name  = "${var.project_name}-${local.service_name}-uploads"
-  s3_bucket      = var.code_bucket
-  s3_key         = "sign-uploads.zip"
-  handler        = "index.handler"
-  runtime        = "nodejs20.x"
-  memory_size    = 1024
-  timeout        = 20
+  memory_size    = 512
+  timeout        = 10
   role_arn       = module.sign_lambda_role.role_arn
   environment_variables = local.lambda_env_common
   xray_tracing   = true
 }
+
+############################################################
+# Lambda: GET /envelopes (by user)
+#
+# Purpose:
+# - Retrieves envelopes for a specific user
+#
+# Key environment variables:
+# - DATABASE_URL: PostgreSQL connection string
+############################################################
+module "lambda_get_envelopes_by_user" {
+  source         = "../../modules/lambda"
+  project_name   = var.project_name
+  env            = var.env
+  function_name  = "${var.project_name}-${local.service_name}-get-envelopes-by-user"
+  s3_bucket     = var.code_bucket
+  s3_key         = "sign-get-envelopes-by-user.zip"
+  handler        = "index.handler"
+  runtime        = "nodejs20.x"
+  memory_size    = 512
+  timeout        = 10
+  role_arn       = module.sign_lambda_role.role_arn
+  environment_variables = local.lambda_env_common
+  xray_tracing   = true
+}
+
+############################################################
+# Lambda: PATCH /envelopes/{id}
+#
+# Purpose:
+# - Updates envelope metadata and status
+#
+# Key environment variables:
+# - DATABASE_URL: PostgreSQL connection string
+############################################################
+module "lambda_update_envelope" {
+  source         = "../../modules/lambda"
+  project_name   = var.project_name
+  env            = var.env
+  function_name  = "${var.project_name}-${local.service_name}-update-envelope"
+  s3_bucket     = var.code_bucket
+  s3_key         = "sign-update-envelope.zip"
+  handler        = "index.handler"
+  runtime        = "nodejs20.x"
+  memory_size    = 512
+  timeout        = 10
+  role_arn       = module.sign_lambda_role.role_arn
+  environment_variables = local.lambda_env_common
+  xray_tracing   = true
+}
+
+############################################################
+# Lambda: DELETE /envelopes/{id}
+#
+# Purpose:
+# - Cancels an envelope and notifies signers
+#
+# Key environment variables:
+# - DATABASE_URL: PostgreSQL connection string
+# - EVENTBRIDGE_BUS_NAME: EventBridge bus for notifications
+############################################################
+module "lambda_cancel_envelope" {
+  source         = "../../modules/lambda"
+  project_name   = var.project_name
+  env            = var.env
+  function_name  = "${var.project_name}-${local.service_name}-cancel-envelope"
+  s3_bucket     = var.code_bucket
+  s3_key         = "sign-cancel-envelope.zip"
+  handler        = "index.handler"
+  runtime        = "nodejs20.x"
+  memory_size    = 512
+  timeout        = 10
+  role_arn       = module.sign_lambda_role.role_arn
+  environment_variables = local.lambda_env_common
+  xray_tracing   = true
+}
+
+############################################################
+# Lambda: GET /documents/{id}/download
+#
+# Purpose:
+# - Downloads document for viewing or signing
+#
+# Key environment variables:
+# - DATABASE_URL: PostgreSQL connection string
+# - S3_BUCKET_NAME: S3 bucket for documents
+############################################################
+module "lambda_download_document" {
+  source         = "../../modules/lambda"
+  project_name   = var.project_name
+  env            = var.env
+  function_name  = "${var.project_name}-${local.service_name}-download-document"
+  s3_bucket     = var.code_bucket
+  s3_key         = "sign-download-document.zip"
+  handler        = "index.handler"
+  runtime        = "nodejs20.x"
+  memory_size    = 512
+  timeout        = 10
+  role_arn       = module.sign_lambda_role.role_arn
+  environment_variables = local.lambda_env_common
+  xray_tracing   = true
+}
+
 
 ############################################################
 # HTTP API Gateway (API Gateway v2)
@@ -352,104 +494,36 @@ module "sign_api" {
 
   routes = [
     # ----------------------------
-    # CONSENTS
+    # ENVELOPES
     # ----------------------------
-    {
-      route_key          = "POST /consents"
-      integration_uri    = module.lambda_consent.lambda_function_arn
-      integration_type   = "AWS_PROXY"
-      authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE"
-    },
-
-    # ----------------------------
-    # ENVELOPES (binders)
-    # ----------------------------
-    { route_key = "GET /envelopes",                             integration_uri = module.lambda_envelopes.lambda_function_arn, integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
-    { route_key = "POST /envelopes",                            integration_uri = module.lambda_envelopes.lambda_function_arn, integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
-
-    { route_key = "GET /envelopes/{envelopeId}",                integration_uri = module.lambda_envelopes.lambda_function_arn, integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
-    { route_key = "PATCH /envelopes/{envelopeId}",              integration_uri = module.lambda_envelopes.lambda_function_arn, integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
-    { route_key = "DELETE /envelopes/{envelopeId}",             integration_uri = module.lambda_envelopes.lambda_function_arn, integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
-
-    { route_key = "GET /envelopes/{envelopeId}/status",         integration_uri = module.lambda_envelopes.lambda_function_arn, integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
-
-    { route_key = "GET /envelopes/{envelopeId}/parties",        integration_uri = module.lambda_parties.lambda_function_arn,    integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
-    { route_key = "POST /envelopes/{envelopeId}/parties",       integration_uri = module.lambda_parties.lambda_function_arn,    integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
-
-    # List documents in an envelope
-    { route_key = "GET /envelopes/{envelopeId}/documents",      integration_uri = module.lambda_documents.lambda_function_arn,   integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
+    { route_key = "GET /envelopes", integration_uri = module.lambda_get_envelopes_by_user.lambda_function_arn, integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
+    { route_key = "POST /envelopes", integration_uri = module.lambda_create_envelope.lambda_function_arn, integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
+    { route_key = "GET /envelopes/{id}", integration_uri = module.lambda_get_envelope.lambda_function_arn, integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
+    { route_key = "PATCH /envelopes/{id}", integration_uri = module.lambda_update_envelope.lambda_function_arn, integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
+    { route_key = "DELETE /envelopes/{id}", integration_uri = module.lambda_cancel_envelope.lambda_function_arn, integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
+    { route_key = "POST /envelopes/{id}/send", integration_uri = module.lambda_send_envelope.lambda_function_arn, integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
 
     # ----------------------------
     # DOCUMENTS
     # ----------------------------
-    # Create document within envelope
-    { route_key = "POST /envelopes/{envelopeId}/documents",     integration_uri = module.lambda_documents.lambda_function_arn,   integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
-
-    # CRUD document
-    { route_key = "GET /documents/{documentId}",                integration_uri = module.lambda_documents.lambda_function_arn,   integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
-    { route_key = "PUT /documents/{documentId}",                integration_uri = module.lambda_documents.lambda_function_arn,   integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
-    { route_key = "PATCH /documents/{documentId}",              integration_uri = module.lambda_documents.lambda_function_arn,   integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
-    { route_key = "DELETE /documents/{documentId}",             integration_uri = module.lambda_documents.lambda_function_arn,   integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
-
-    # Pages & locks
-    { route_key = "GET /documents/{documentId}/pages/{pageId}", integration_uri = module.lambda_documents.lambda_function_arn,   integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
-
-    { route_key = "POST /documents/{documentId}/locks",         integration_uri = module.lambda_documents.lambda_function_arn,   integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
-    { route_key = "GET /documents/{documentId}/locks",          integration_uri = module.lambda_documents.lambda_function_arn,   integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
-    { route_key = "DELETE /locks/{lockId}",                      integration_uri = module.lambda_documents.lambda_function_arn,   integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
-
-    # Document certificate (evidence package)
-    { route_key = "GET /documents/{id}/certificate",            integration_uri = module.lambda_certificate.lambda_function_arn, integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
+    { route_key = "GET /documents/{id}/download", integration_uri = module.lambda_download_document.lambda_function_arn, integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
+    { route_key = "POST /documents/{id}/sign", integration_uri = module.lambda_sign_document.lambda_function_arn, integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
+    { route_key = "GET /documents/{id}/share", integration_uri = module.lambda_share_document.lambda_function_arn, integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
 
     # ----------------------------
-    # INPUTS
+    # SIGNERS
     # ----------------------------
-    { route_key = "POST /documents/{documentId}/inputs",        integration_uri = module.lambda_inputs.lambda_function_arn,      integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
-    { route_key = "GET /documents/{documentId}/inputs",         integration_uri = module.lambda_inputs.lambda_function_arn,      integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
-
-    { route_key = "GET /inputs/{inputId}",                       integration_uri = module.lambda_inputs.lambda_function_arn,      integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
-    { route_key = "PATCH /inputs/{inputId}",                     integration_uri = module.lambda_inputs.lambda_function_arn,      integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
-    { route_key = "DELETE /inputs/{inputId}",                    integration_uri = module.lambda_inputs.lambda_function_arn,      integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
-
-    # Update input positions
-    { route_key = "PATCH /inputs/{inputId}/positions",           integration_uri = module.lambda_inputs.lambda_function_arn,      integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
+    { route_key = "POST /signers/{id}/decline", integration_uri = module.lambda_decline_signer.lambda_function_arn, integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
 
     # ----------------------------
-    # PARTIES (direct)
+    # NOTIFICATIONS
     # ----------------------------
-    { route_key = "PATCH /parties/{partyId}",                    integration_uri = module.lambda_parties.lambda_function_arn,     integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
-    { route_key = "DELETE /parties/{partyId}",                   integration_uri = module.lambda_parties.lambda_function_arn,     integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
+    { route_key = "POST /notifications/send", integration_uri = module.lambda_send_notification.lambda_function_arn, integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
 
     # ----------------------------
-    # REQUESTS under envelope (invites, reminders, etc.)
+    # AUDIT
     # ----------------------------
-    { route_key = "POST /envelopes/{envelopeId}/requests/invitations",   integration_uri = module.lambda_requests.lambda_function_arn, integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
-    { route_key = "POST /envelopes/{envelopeId}/requests/reminders",     integration_uri = module.lambda_requests.lambda_function_arn, integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
-    { route_key = "POST /envelopes/{envelopeId}/requests/cancellations", integration_uri = module.lambda_requests.lambda_function_arn, integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
-    { route_key = "POST /envelopes/{envelopeId}/requests/declines",      integration_uri = module.lambda_requests.lambda_function_arn, integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
-    { route_key = "POST /envelopes/{envelopeId}/requests/finalisations", integration_uri = module.lambda_requests.lambda_function_arn, integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
-    { route_key = "POST /envelopes/{envelopeId}/requests/signatures",    integration_uri = module.lambda_requests.lambda_function_arn, integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
-    { route_key = "POST /envelopes/{envelopeId}/requests/viewers",       integration_uri = module.lambda_requests.lambda_function_arn, integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
-
-    # ----------------------------
-    # UPLOADS (evidence & user-signed PDFs)
-    # ----------------------------
-    # Presign/initiate evidence upload (SSE enforced via IAM conditions)
-    { route_key = "POST /uploads/evidence",                      integration_uri = module.lambda_uploads.lambda_function_arn,     integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
-    # Complete multipart upload
-    { route_key = "POST /uploads/evidence/complete",             integration_uri = module.lambda_uploads.lambda_function_arn,     integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
-    # Ingest a user-signed PDF (validate + attach to envelope/document)
-    { route_key = "POST /documents/{documentId}/signed-upload",  integration_uri = module.lambda_uploads.lambda_function_arn,     integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
-
-    # ----------------------------
-    # LOW-LEVEL SIGN (KMS hash signature)
-    # ----------------------------
-    {
-      route_key          = "POST /signatures"
-      integration_uri    = module.lambda_sign.lambda_function_arn
-      integration_type   = "AWS_PROXY"
-      authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE"
-    }
+    { route_key = "GET /audit/trail", integration_uri = module.lambda_get_audit_trail.lambda_function_arn, integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" }
   ]
 
   tags = merge(local.tags, { Component = "api" })
@@ -503,15 +577,18 @@ module "cloudwatch_sign" {
 
   # Monitor all Lambda functions used by sign-service
   lambda_function_names_map = {
-    consent     = module.lambda_consent.lambda_function_name
-    sign        = module.lambda_sign.lambda_function_name
-    certificate = module.lambda_certificate.lambda_function_name
-    envelopes   = module.lambda_envelopes.lambda_function_name
-    documents   = module.lambda_documents.lambda_function_name
-    parties     = module.lambda_parties.lambda_function_name
-    inputs      = module.lambda_inputs.lambda_function_name
-    requests    = module.lambda_requests.lambda_function_name
-    uploads     = module.lambda_uploads.lambda_function_name
+    create_envelope = module.lambda_create_envelope.lambda_function_name
+    get_envelope = module.lambda_get_envelope.lambda_function_name
+    get_envelopes_by_user = module.lambda_get_envelopes_by_user.lambda_function_name
+    send_envelope = module.lambda_send_envelope.lambda_function_name
+    update_envelope = module.lambda_update_envelope.lambda_function_name
+    cancel_envelope = module.lambda_cancel_envelope.lambda_function_name
+    download_document = module.lambda_download_document.lambda_function_name
+    sign_document = module.lambda_sign_document.lambda_function_name
+    share_document = module.lambda_share_document.lambda_function_name
+    decline_signer = module.lambda_decline_signer.lambda_function_name
+    send_notification = module.lambda_send_notification.lambda_function_name
+    get_audit_trail = module.lambda_get_audit_trail.lambda_function_name
   }
 
   # API Gateway logs and metrics
@@ -606,35 +683,3 @@ module "sign_deployment" {
 }
 
 
-module "ddb_signing_tokens" {
-  source      = "../../modules/dynamodb"
-  table_name  = "${var.project_name}-signing-tokens-${var.env}"
-  hash_key    = "token"
-  hash_key_type = "S"
-  billing_mode  = "PAY_PER_REQUEST"
-  stream_enabled = false
-
-  ttl_enabled        = true
-  ttl_attribute_name = "ttl"
-
-  tags = local.tags
-}
-
-module "ddb_envelopes" {
-  source          = "../../modules/dynamodb"
-  table_name      = "${var.project_name}-sign-envelopes-${var.env}"
-  hash_key        = "pk"
-  hash_key_type   = "S"
-  range_key       = "sk"
-  range_key_type  = "S"
-
-  billing_mode    = "PAY_PER_REQUEST"
-
-  stream_enabled   = true
-  stream_view_type = "NEW_AND_OLD_IMAGES"
-
-  ttl_enabled        = true
-  ttl_attribute_name = "ttl"
-
-  tags = local.tags
-}

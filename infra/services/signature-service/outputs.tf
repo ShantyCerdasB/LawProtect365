@@ -24,28 +24,38 @@ output "sign_api_stage" {
 # Lambda functions
 # ----------------------------
 output "lambda_function_names" {
-  description = "Names of the Lambda functions (consent, sign, certificate)"
+  description = "Names of the Lambda functions for sign-service"
   value = [
-    module.lambda_consent.lambda_function_name,
-    module.lambda_sign.lambda_function_name,
-    module.lambda_certificate.lambda_function_name,
-    module.lambda_envelopes.lambda_function_name,
-    module.lambda_documents.lambda_function_name,
-    module.lambda_inputs.lambda_function_name,
-    module.lambda_parties.lambda_function_name
+    module.lambda_create_envelope.lambda_function_name,
+    module.lambda_get_envelope.lambda_function_name,
+    module.lambda_get_envelopes_by_user.lambda_function_name,
+    module.lambda_send_envelope.lambda_function_name,
+    module.lambda_update_envelope.lambda_function_name,
+    module.lambda_cancel_envelope.lambda_function_name,
+    module.lambda_download_document.lambda_function_name,
+    module.lambda_sign_document.lambda_function_name,
+    module.lambda_share_document.lambda_function_name,
+    module.lambda_decline_signer.lambda_function_name,
+    module.lambda_send_notification.lambda_function_name,
+    module.lambda_get_audit_trail.lambda_function_name
   ]
 }
 
 output "lambda_function_arns" {
-  description = "ARNs of the Lambda functions (consent, sign, certificate)"
+  description = "ARNs of the Lambda functions for sign-service"
   value = [
-    module.lambda_consent.lambda_function_arn,
-    module.lambda_sign.lambda_function_arn,
-    module.lambda_certificate.lambda_function_arn,
-    module.lambda_envelopes.lambda_function_arn,
-    module.lambda_documents.lambda_function_arn,
-    module.lambda_inputs.lambda_function_arn,
-    module.lambda_parties.lambda_function_arn
+    module.lambda_create_envelope.lambda_function_arn,
+    module.lambda_get_envelope.lambda_function_arn,
+    module.lambda_get_envelopes_by_user.lambda_function_arn,
+    module.lambda_send_envelope.lambda_function_arn,
+    module.lambda_update_envelope.lambda_function_arn,
+    module.lambda_cancel_envelope.lambda_function_arn,
+    module.lambda_download_document.lambda_function_arn,
+    module.lambda_sign_document.lambda_function_arn,
+    module.lambda_share_document.lambda_function_arn,
+    module.lambda_decline_signer.lambda_function_arn,
+    module.lambda_send_notification.lambda_function_arn,
+    module.lambda_get_audit_trail.lambda_function_arn
   ]
 }
 
@@ -210,12 +220,7 @@ output "sign_pipeline_role_name" {
   value       = try(module.sign_deployment.pipeline_role_name, null)
 }
 
-output "ddb_envelopes_table_name" {
-  description = "Name of the DynamoDB table used by sign-service"
-  value       = module.ddb_envelopes.table_name
-}
-
-output "ddb_signing_tokens_table_name" {
-  description = "Name of the DynamoDB table for signing tokens"
-  value       = module.ddb_signing_tokens.table_name
+output "outbox_table_name" {
+  description = "Name of the outbox DynamoDB table for event publishing"
+  value       = var.outbox_table_name
 }
