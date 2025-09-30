@@ -7,7 +7,6 @@
  */
 
 import {
-  SignatureEnvelopeService,
   EnvelopeSignerService,
   InvitationTokenService,
   AuditEventService,
@@ -20,6 +19,7 @@ import {
   EnvelopeAccessService,
   EnvelopeStateService,
   EnvelopeCrudService,
+  EnvelopeDownloadService,
 } from '@/services/index';
 
 import {
@@ -42,7 +42,6 @@ import {
  * @description Defines the service layer dependencies required for dependency injection
  */
 export type Services = {
-  signatureEnvelopeService: SignatureEnvelopeService;
   envelopeSignerService: EnvelopeSignerService;
   invitationTokenService: InvitationTokenService;
   auditEventService: AuditEventService;
@@ -55,6 +54,7 @@ export type Services = {
   envelopeAccessService: EnvelopeAccessService;
   envelopeStateService: EnvelopeStateService;
   envelopeCrudService: EnvelopeCrudService;
+  envelopeDownloadService: EnvelopeDownloadService;
 };
 
 /**

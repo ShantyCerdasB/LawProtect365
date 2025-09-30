@@ -6,7 +6,6 @@
  * service creation and dependency wiring.
  */
 
-import { SignatureEnvelopeService } from '../../../services/SignatureEnvelopeService';
 import { EnvelopeSignerService } from '../../../services/EnvelopeSignerService';
 import { InvitationTokenService } from '../../../services/InvitationTokenService';
 import { ConsentService } from '../../../services/ConsentService';
@@ -16,6 +15,7 @@ import { EnvelopeHashService } from '../../../services/envelopeHashService/Envel
 import { EnvelopeAccessService } from '../../../services/envelopeAccess/EnvelopeAccessService';
 import { EnvelopeStateService } from '../../../services/envelopeStates/EnvelopeStateService';
 import { EnvelopeCrudService } from '../../../services/envelopeCrud/EnvelopeCrudService';
+import { EnvelopeDownloadService } from '../../../services/envelopeDownload/EnvelopeDownloadService';
 import { RepositoryFactory } from '../repositories';
 import { InfrastructureFactory } from '../infrastructure';
 import { IntegrationEventFactory } from '../events/IntegrationEventFactory';
@@ -32,15 +32,6 @@ export class ServiceFactory {
    * @param infrastructure - Object containing all infrastructure services
    * @returns Configured SignatureEnvelopeService instance
    */
-  static createSignatureEnvelopeService(
-    repositories: ReturnType<typeof RepositoryFactory.createAll>,
-    infrastructure: ReturnType<typeof InfrastructureFactory.createAll>
-  ): SignatureEnvelopeService {
-    return new SignatureEnvelopeService(
-      repositories.signatureEnvelopeRepository,
-      infrastructure.s3Service
-    );
-  }
 
   /**
    * Creates EnvelopeSignerService with required dependencies
@@ -172,6 +163,16 @@ export class ServiceFactory {
     );
   }
 
+  static createEnvelopeDownloadService(
+    repositories: ReturnType<typeof RepositoryFactory.createAll>,
+    infrastructure: ReturnType<typeof InfrastructureFactory.createAll>
+  ): EnvelopeDownloadService {
+    return new EnvelopeDownloadService(
+      repositories.signatureEnvelopeRepository,
+      infrastructure.s3Service
+    );
+  }
+
   /**
    * Creates all domain services in a single operation
    * @param repositories - Object containing all repository instances
@@ -183,7 +184,6 @@ export class ServiceFactory {
     infrastructure: ReturnType<typeof InfrastructureFactory.createAll>
   ) {
     return {
-      signatureEnvelopeService: this.createSignatureEnvelopeService(repositories, infrastructure),
       envelopeSignerService: this.createEnvelopeSignerService(repositories, infrastructure),
       invitationTokenService: this.createInvitationTokenService(repositories, infrastructure.auditEventService),
       consentService: this.createConsentService(repositories, infrastructure),
@@ -193,6 +193,7 @@ export class ServiceFactory {
       envelopeAccessService: this.createEnvelopeAccessService(repositories, infrastructure),
       envelopeStateService: this.createEnvelopeStateService(repositories, infrastructure),
       envelopeCrudService: this.createEnvelopeCrudService(repositories, infrastructure),
+      envelopeDownloadService: this.createEnvelopeDownloadService(repositories, infrastructure),
     };
   }
 }

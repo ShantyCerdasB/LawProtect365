@@ -10,5 +10,6 @@ export {
   createEnvelopeCreatedAudit,
   createEnvelopeUpdatedAudit,
   createEnvelopeCancelledAudit,
-  createDocumentAccessedAudit
+  createDocumentAccessedAudit,
+  createDocumentDownloadedAudit
 } from './envelopeAuditHelpers';

@@ -8,7 +8,7 @@
 import { SignatureEnvelope } from '@/domain/entities/SignatureEnvelope';
 import { AuditEventType } from '@/domain/enums/AuditEventType';
 import { createAuditEvent, AuditEventData } from './auditHelpers';
-import { Email } from '@lawprotect/shared-ts';
+import { Email, NetworkSecurityContext } from '@lawprotect/shared-ts';
 
 /**
  * Creates audit event for envelope creation
@@ -100,11 +100,7 @@ export function createDocumentAccessedAudit(
   signerId: string,
   userId: string,
   userEmail?: Email,
-  securityContext?: {
-    ipAddress: string;
-    userAgent: string;
-    country?: string;
-  }
+  securityContext?: NetworkSecurityContext
 ): AuditEventData {
   return createAuditEvent(
     envelopeId,
@@ -116,6 +112,35 @@ export function createDocumentAccessedAudit(
     {
       signerId,
       externalUserIdentifier: userEmail ? `${userEmail.getValue()}_${userId}` : userId,
+      ipAddress: securityContext?.ipAddress,
+      userAgent: securityContext?.userAgent,
+      country: securityContext?.country
+    }
+  );
+}
+
+/**
+ * Creates audit event for document download
+ * @param envelopeId - The envelope ID
+ * @param userId - The user downloading the document
+ * @param userEmail - The user email
+ * @param securityContext - Security context information
+ * @returns Audit event data for document download
+ */
+export function createDocumentDownloadedAudit(
+  envelopeId: string,
+  userId: string,
+  userEmail?: Email,
+  securityContext?: NetworkSecurityContext
+): AuditEventData {
+  return createAuditEvent(
+    envelopeId,
+    AuditEventType.DOCUMENT_DOWNLOADED,
+    'Document downloaded',
+    userId,
+    undefined,
+    userEmail,
+    {
       ipAddress: securityContext?.ipAddress,
       userAgent: securityContext?.userAgent,
       country: securityContext?.country

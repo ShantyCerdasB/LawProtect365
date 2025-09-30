@@ -134,7 +134,11 @@ export class UseCaseFactory {
    * @returns Configured DownloadDocumentUseCase instance
    */
   static createDownloadDocumentUseCase(services: Services): DownloadDocumentUseCase {
-    return new DownloadDocumentUseCase(services.envelopeCrudService);
+    return new DownloadDocumentUseCase(
+      services.envelopeDownloadService,
+      services.envelopeAccessService,
+      services.auditEventService
+    );
   }
 
   /**

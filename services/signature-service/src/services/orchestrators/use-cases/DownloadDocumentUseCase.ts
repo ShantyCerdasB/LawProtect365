@@ -7,13 +7,18 @@
  * proper authorization and maintains clear application boundaries for document access.
  */
 
-import { EnvelopeCrudService } from '@/services/envelopeCrud/EnvelopeCrudService';
+import { EnvelopeDownloadService } from '@/services/envelopeDownload/EnvelopeDownloadService';
+import { EnvelopeAccessService } from '@/services/envelopeAccess/EnvelopeAccessService';
+import { AuditEventService } from '@/services/audit/AuditEventService';
 import { rethrow } from '@lawprotect/shared-ts';
 import { DownloadDocumentInput, DownloadDocumentResult } from '@/domain/types/usecase/orchestrator/DownloadDocumentUseCase';
+import { createDocumentDownloadedAudit } from '../utils/audit/envelopeAuditHelpers';
 
 export class DownloadDocumentUseCase {
   constructor(
-    private readonly envelopeCrudService: EnvelopeCrudService
+    private readonly envelopeDownloadService: EnvelopeDownloadService,
+    private readonly envelopeAccessService: EnvelopeAccessService,
+    private readonly auditEventService: AuditEventService
   ) {}
 
   /**
@@ -35,13 +40,36 @@ export class DownloadDocumentUseCase {
     const { envelopeId, userId, invitationToken, expiresIn, securityContext } = input;
 
     try {
-      return await this.envelopeCrudService.downloadDocument(
+      // 1. Access validation
+      if (userId) {
+        await this.envelopeAccessService.validateEnvelopeAccess(envelopeId, userId);
+      } else if (invitationToken) {
+        await this.envelopeAccessService.validateExternalUserAccess(envelopeId, invitationToken);
+      } else {
+        throw new Error('Either userId or invitationToken must be provided');
+      }
+
+      // 2. Download logic
+      const result = await this.envelopeDownloadService.downloadDocument(
         envelopeId,
-        userId,
-        invitationToken,
-        expiresIn,
-        securityContext
+        expiresIn
       );
+
+      // 3. Audit recording
+      await this.auditEventService.create(
+        createDocumentDownloadedAudit(
+          envelopeId.getValue(),
+          userId || 'external-user',
+          undefined, // userEmail not available in input
+          securityContext ? {
+            ipAddress: securityContext.ipAddress || '',
+            userAgent: securityContext.userAgent || '',
+            country: securityContext.country
+          } : undefined
+        )
+      );
+
+      return result;
     } catch (error) {
       rethrow(error);
     }

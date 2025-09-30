@@ -8,7 +8,6 @@
 
 export { ConsentService } from './ConsentService';
 export { SignatureOrchestrator } from './orchestrators/index';
-export { SignatureEnvelopeService } from './SignatureEnvelopeService';
 export { EnvelopeSignerService } from './EnvelopeSignerService';
 export { InvitationTokenService } from './InvitationTokenService';
 export { AuditEventService } from './audit';
@@ -20,3 +19,4 @@ export { EnvelopeHashService } from './envelopeHashService/EnvelopeHashService';
 export { EnvelopeAccessService } from './envelopeAccess/EnvelopeAccessService';
 export { EnvelopeStateService } from './envelopeStates/EnvelopeStateService';
 export { EnvelopeCrudService } from './envelopeCrud/EnvelopeCrudService';
+export { EnvelopeDownloadService } from './envelopeDownload/EnvelopeDownloadService';
