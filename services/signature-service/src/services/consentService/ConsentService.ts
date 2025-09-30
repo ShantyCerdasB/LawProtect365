@@ -6,20 +6,20 @@
  * the new Prisma-based architecture with proper separation of concerns.
  */
 
-import { Consent } from '../domain/entities/Consent';
-import { ConsentId } from '../domain/value-objects/ConsentId';
-import { SignerId } from '../domain/value-objects/SignerId';
+import { Consent } from '@/domain/entities/Consent';
+import { ConsentId } from '@/domain/value-objects/ConsentId';
+import { SignerId } from '@/domain/value-objects/SignerId';
 
-import { ConsentRepository } from '../repositories/ConsentRepository';
-import { EnvelopeSignerRepository } from '../repositories/EnvelopeSignerRepository';
+  import { ConsentRepository } from '@/repositories/ConsentRepository';
+import { EnvelopeSignerRepository } from '@/repositories/EnvelopeSignerRepository';
 import { AuditEventService } from '@/services/audit/AuditEventService';
-import { CreateConsentRequest } from '../domain/types/consent/CreateConsentRequest';
-import { AuditEventType } from '../domain/enums/AuditEventType';
+import { CreateConsentRequest } from '@/domain/types/consent/CreateConsentRequest';
+import { AuditEventType } from '@/domain/enums/AuditEventType';
 import { 
   consentNotFound,
   consentAlreadyExists,
   consentCreationFailed
-} from '../signature-errors';
+} from '@/signature-errors';
 
 /**
  * ConsentService implementation

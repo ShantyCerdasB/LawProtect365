@@ -9,11 +9,11 @@
 
 import {  createNetworkSecurityContext, rethrow } from '@lawprotect/shared-ts';
 import { EnvelopeCrudService } from '@/services/envelopeCrud/EnvelopeCrudService';
-import { EnvelopeSignerService } from '@/services/EnvelopeSignerService';
-import { InvitationTokenService } from '@/services/InvitationTokenService';
-import { ConsentService } from '@/services/ConsentService';
-import { S3Service } from '@/services/S3Service';
-import { KmsService } from '@/services/KmsService';
+import { EnvelopeSignerService } from '@/services/envelopeSignerService';
+import { InvitationTokenService } from '@/services/invitationTokenService';
+import { ConsentService } from '@/services/consentService';
+import { S3Service } from '@/services/s3Service';
+import { KmsService } from '@/services/kmsService';
 import { AuditEventService } from '@/services/audit/AuditEventService';
 import { EnvelopeHashService } from '@/services/envelopeHashService/EnvelopeHashService';
 import { EnvelopeAccessService } from '@/services/envelopeAccess/EnvelopeAccessService';

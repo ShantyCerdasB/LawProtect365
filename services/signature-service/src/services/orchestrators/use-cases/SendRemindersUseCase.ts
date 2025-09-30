@@ -9,9 +9,9 @@
 
 import { EnvelopeSigner } from '@/domain/entities/EnvelopeSigner';
 import { EnvelopeCrudService } from '@/services/envelopeCrud/EnvelopeCrudService';
-import { EnvelopeSignerService } from '@/services/EnvelopeSignerService';
-import { InvitationTokenService } from '@/services/InvitationTokenService';
-import { SignerReminderTrackingService } from '@/services/SignerReminderTrackingService';
+import { EnvelopeSignerService } from '@/services/envelopeSignerService';
+import { InvitationTokenService } from '@/services/invitationTokenService';
+import { SignerReminderTrackingService } from '@/services/signerReminderTrackingService';
 import { AuditEventService } from '@/services/audit/AuditEventService';
 import { EnvelopeNotificationService } from '@/services/notification/EnvelopeNotificationService';
 import { EnvelopeAccessValidationRule } from '@/domain/rules/EnvelopeAccessValidationRule';

@@ -9,7 +9,7 @@
 
 import { EnvelopeCrudService } from '@/services/envelopeCrud/EnvelopeCrudService';
 import { EnvelopeAccessService } from '@/services/envelopeAccess/EnvelopeAccessService';
-import { InvitationTokenService } from '@/services/InvitationTokenService';
+import { InvitationTokenService } from '@/services/invitationTokenService';
 import { AccessType } from '@/domain/enums/AccessType';
 import { rethrow } from '@lawprotect/shared-ts';
 import { GetEnvelopeInput, GetEnvelopeResult } from '@/domain/types/usecase/orchestrator/GetEnvelopeUseCase';

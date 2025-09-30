@@ -6,17 +6,17 @@
  * the new architecture with value objects and proper validation.
  */
 
-import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
-import { SignerId } from '../domain/value-objects/SignerId';
+import { EnvelopeId } from '@/domain/value-objects/EnvelopeId';
+import { SignerId } from '@/domain/value-objects/SignerId';
 import { S3Key } from '@lawprotect/shared-ts';
-import { AuditEventService } from './audit/AuditEventService';
-import { AuditEventType } from '../domain/enums/AuditEventType';
+import { AuditEventService } from '@/services/audit/AuditEventService';
+import { AuditEventType } from '@/domain/enums/AuditEventType';
 import { NetworkSecurityContext, createNetworkSecurityContext } from '@lawprotect/shared-ts';
-import { StoreDocumentRequest, RetrieveDocumentRequest, GeneratePresignedUrlRequest, DocumentResult } from '../domain/types/s3';
+import { StoreDocumentRequest, RetrieveDocumentRequest, GeneratePresignedUrlRequest, DocumentResult } from '@/domain/types/s3';
 import {S3Presigner, S3EvidenceStorage,  NotFoundError, BadRequestError, ErrorCodes, getDocumentContent } from '@lawprotect/shared-ts';
-import { validateStoreDocumentRequest, validateRetrieveDocumentRequest, validateGeneratePresignedUrlRequest } from '../domain/rules/s3/S3ValidationRules';
-import { validateS3StorageForDocument } from '../domain/rules/s3/S3StorageRules';
-import { documentS3Error, documentS3NotFound } from '../signature-errors';
+import { validateStoreDocumentRequest, validateRetrieveDocumentRequest, validateGeneratePresignedUrlRequest } from '@/domain/rules/s3/S3ValidationRules';
+import { validateS3StorageForDocument } from '@/domain/rules/s3/S3StorageRules';
+import { documentS3Error, documentS3NotFound } from '@/signature-errors';
 
 
 /**
@@ -172,7 +172,7 @@ export class S3Service {
   async generatePresignedUrl(request: GeneratePresignedUrlRequest): Promise<string> {
     try {
       // Load configuration for consistent validation
-      const { loadConfig } = await import('../config/AppConfig');
+      const { loadConfig } = await import('@/config/AppConfig');
       const config = loadConfig();
       
       // Validate input using domain rules with consistent configuration

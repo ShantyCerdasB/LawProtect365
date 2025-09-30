@@ -12,7 +12,7 @@ import { SignatureEnvelope } from '@/domain/entities/SignatureEnvelope';
 import { EnvelopeCrudService } from '@/services/envelopeCrud/EnvelopeCrudService';
 import { EnvelopeAccessService } from '@/services/envelopeAccess/EnvelopeAccessService';
 import { EnvelopeStateService } from '@/services/envelopeStates/EnvelopeStateService';
-import { EnvelopeSignerService } from '@/services/EnvelopeSignerService';
+import { EnvelopeSignerService } from '@/services/envelopeSignerService';
 import { EnvelopeNotificationService } from '@/services/notification/EnvelopeNotificationService';
 import { signerNotFound, envelopeNotFound } from '@/signature-errors';
 import { rethrow } from '@lawprotect/shared-ts';

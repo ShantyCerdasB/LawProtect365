@@ -6,20 +6,20 @@
  * using the new Prisma-based architecture with proper separation of concerns.
  */
 
-import { InvitationToken } from '../domain/entities/InvitationToken';
-import { InvitationTokenId } from '../domain/value-objects/InvitationTokenId';
-import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
-import { SignerId } from '../domain/value-objects/SignerId';
-import { EnvelopeSigner } from '../domain/entities/EnvelopeSigner';
-import { InvitationTokenRepository } from '../repositories/InvitationTokenRepository';
-import { EnvelopeSignerRepository } from '../repositories/EnvelopeSignerRepository';
-import { AuditEventService } from './audit/AuditEventService';
-import { InvitationTokenValidationRule } from '../domain/rules/InvitationTokenValidationRule';
-import { AuditEventType } from '../domain/enums/AuditEventType';
+import { InvitationToken } from '@/domain/entities/InvitationToken';
+import { InvitationTokenId } from '@/domain/value-objects/InvitationTokenId';
+import { EnvelopeId } from '@/domain/value-objects/EnvelopeId';
+import { SignerId } from '@/domain/value-objects/SignerId';
+import { EnvelopeSigner } from '@/domain/entities/EnvelopeSigner';
+import { InvitationTokenRepository } from '@/repositories/InvitationTokenRepository';
+import { EnvelopeSignerRepository } from '@/repositories/EnvelopeSignerRepository';
+import { AuditEventService } from '@/services/audit/AuditEventService';
+import { InvitationTokenValidationRule } from '@/domain/rules/InvitationTokenValidationRule';
+import { AuditEventType } from '@/domain/enums/AuditEventType';
 import { NetworkSecurityContext } from '@lawprotect/shared-ts';
 import { 
   invitationTokenInvalid
-} from '../signature-errors';
+} from '@/signature-errors';
 import { randomToken, sha256Hex } from '@lawprotect/shared-ts';
 
 /**

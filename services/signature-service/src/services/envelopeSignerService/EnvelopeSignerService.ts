@@ -6,21 +6,21 @@
  * the new Prisma-based architecture with proper separation of concerns.
  */
 
-import { EnvelopeSigner } from '../domain/entities/EnvelopeSigner';
-import { SignerId } from '../domain/value-objects/SignerId';
-import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
-import { SignatureMetadata } from '../domain/value-objects/SignatureMetadata';
-import { EntityFactory } from '../domain/factories/EntityFactory';
+import { EnvelopeSigner } from '@/domain/entities/EnvelopeSigner';
+import { SignerId } from '@/domain/value-objects/SignerId';
+import { EnvelopeId } from '@/domain/value-objects/EnvelopeId';
+import { SignatureMetadata } from '@/domain/value-objects/SignatureMetadata';
+import { EntityFactory } from '@/domain/factories/EntityFactory';
 import { SignerStatus } from '@prisma/client';
-import { EnvelopeSignerRepository } from '../repositories/EnvelopeSignerRepository';
-import { SignatureEnvelopeRepository } from '../repositories/SignatureEnvelopeRepository';
-import { AuditEventService } from './audit/AuditEventService';
+import { EnvelopeSignerRepository } from '@/repositories/EnvelopeSignerRepository';
+import { SignatureEnvelopeRepository } from '@/repositories/SignatureEnvelopeRepository';
+import { AuditEventService } from '@/services/audit/AuditEventService';
 import { 
   CreateSignerData, 
   DeclineSignerData, 
   SignatureData 
-} from '../domain/types/signer';
-import { AuditEventType } from '../domain/enums/AuditEventType';
+} from '@/domain/types/signer';
+import { AuditEventType } from '@/domain/enums/AuditEventType';
 import { NetworkSecurityContext } from '@lawprotect/shared-ts';
 import { 
   signerNotFound,
@@ -29,7 +29,7 @@ import {
   signerAlreadySigned,
   signerEmailDuplicate,
   envelopeNotFound
-} from '../signature-errors';
+} from '@/signature-errors';
 import { ConflictError, BadRequestError, NotFoundError, wrapServiceError } from '@lawprotect/shared-ts';
 
 /**

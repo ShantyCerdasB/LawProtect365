@@ -9,7 +9,7 @@ import { SignatureEnvelope } from '@/domain/entities/SignatureEnvelope';
 import { EnvelopeId } from '@/domain/value-objects/EnvelopeId';
 import { SigningOrder } from '@/domain/value-objects/SigningOrder';
 import { SignatureEnvelopeRepository } from '@/repositories/SignatureEnvelopeRepository';
-import { InvitationTokenService } from '@/services/InvitationTokenService';
+import { InvitationTokenService } from '@/services/invitationTokenService';
 import { S3Key } from '@lawprotect/shared-ts';
 
 import { EntityFactory } from '@/domain/factories/EntityFactory';

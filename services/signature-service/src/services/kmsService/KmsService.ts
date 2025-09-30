@@ -9,20 +9,20 @@
 import { mapAwsError, BadRequestError, KmsSigner, hexToUint8Array, uint8ArrayToHex, pickMessageType } from '@lawprotect/shared-ts';
 import { KMSClient, SignCommand, VerifyCommand, type SigningAlgorithmSpec } from '@aws-sdk/client-kms';
 import { KMSKeyId, DocumentHash } from '@lawprotect/shared-ts';
-import { SigningAlgorithm } from '../domain/value-objects/SigningAlgorithm';
-import { KmsKeyValidationRule } from '../domain/rules/KmsKeyValidationRule';
+import { SigningAlgorithm } from '@/domain/value-objects/SigningAlgorithm';
+import { KmsKeyValidationRule } from '@/domain/rules/KmsKeyValidationRule';
 import { 
   KmsSignRequest, 
   KmsSignResult, 
   KmsVerifyRequest, 
   KmsVerifyResult 
-} from '../domain/types/kms';
+} from '@/domain/types/kms';
 import { 
   kmsKeyNotFound,
   kmsPermissionDenied,
   kmsSigningFailed,
   kmsValidationFailed
-} from '../signature-errors';
+} from '@/signature-errors';
 
 /**
  * KmsService - Service for cryptographic operations only

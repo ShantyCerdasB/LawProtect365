@@ -7,7 +7,7 @@
  */
 
 import { sha256Hex } from '@lawprotect/shared-ts';
-import { S3Service } from '@/services/S3Service';
+import { S3Service } from '@/services/s3Service/S3Service';
 import { EnvelopeCrudService } from '@/services/envelopeCrud/EnvelopeCrudService';
 import { EnvelopeHashService } from '@/services/envelopeHashService/EnvelopeHashService';
 import { EnvelopeId } from '@/domain/value-objects/EnvelopeId';

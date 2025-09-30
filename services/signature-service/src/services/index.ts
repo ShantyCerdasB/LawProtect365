@@ -6,14 +6,14 @@
  */
 
 
-export { ConsentService } from './ConsentService';
+export { ConsentService } from './consentService';
 export { SignatureOrchestrator } from './orchestrators/index';
-export { EnvelopeSignerService } from './EnvelopeSignerService';
-export { InvitationTokenService } from './InvitationTokenService';
+export { EnvelopeSignerService } from './envelopeSignerService';
+export { InvitationTokenService } from './invitationTokenService';
 export { AuditEventService } from './audit';
-export { KmsService } from './KmsService';
-export { S3Service } from './S3Service';
-export { SignerReminderTrackingService } from './SignerReminderTrackingService';
+export { KmsService } from './kmsService';
+export { S3Service } from './s3Service';
+export { SignerReminderTrackingService } from './signerReminderTrackingService';
 export { EnvelopeNotificationService } from './notification';
 export { EnvelopeHashService } from './envelopeHashService/EnvelopeHashService';
 export { EnvelopeAccessService } from './envelopeAccess/EnvelopeAccessService';

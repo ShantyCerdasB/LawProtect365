@@ -8,7 +8,7 @@
  */
 
 import { EnvelopeStateService } from '@/services/envelopeStates/EnvelopeStateService';
-import { InvitationTokenService } from '@/services/InvitationTokenService';
+import { InvitationTokenService } from '@/services/invitationTokenService';
 import { AuditEventService } from '@/services/audit/AuditEventService';
 import { EnvelopeNotificationService } from '@/services/notification/EnvelopeNotificationService';
 import { createNetworkSecurityContext, rethrow } from '@lawprotect/shared-ts';

@@ -8,8 +8,8 @@
  */
 
 import { EnvelopeCrudService } from '@/services/envelopeCrud/EnvelopeCrudService';
-import { EnvelopeSignerService } from '@/services/EnvelopeSignerService';
-import { S3Service } from '@/services/S3Service';
+import { EnvelopeSignerService } from '@/services/envelopeSignerService';
+import { S3Service } from '@/services/s3Service';
 import { envelopeNotFound } from '@/signature-errors';
 import { rethrow } from '@lawprotect/shared-ts';
 import { EntityFactory } from '@/domain/factories/EntityFactory';

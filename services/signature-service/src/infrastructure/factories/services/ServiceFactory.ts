@@ -6,10 +6,10 @@
  * service creation and dependency wiring.
  */
 
-import { EnvelopeSignerService } from '../../../services/EnvelopeSignerService';
-import { InvitationTokenService } from '../../../services/InvitationTokenService';
-import { ConsentService } from '../../../services/ConsentService';
-import { SignerReminderTrackingService } from '../../../services/SignerReminderTrackingService';
+import { EnvelopeSignerService } from '../../../services/envelopeSignerService';
+import { InvitationTokenService } from '../../../services/invitationTokenService';
+import { ConsentService } from '../../../services/consentService';
+import { SignerReminderTrackingService } from '../../../services/signerReminderTrackingService';
 import { EnvelopeNotificationService } from '../../../services/notification/EnvelopeNotificationService';
 import { EnvelopeHashService } from '../../../services/envelopeHashService/EnvelopeHashService';
 import { EnvelopeAccessService } from '../../../services/envelopeAccess/EnvelopeAccessService';

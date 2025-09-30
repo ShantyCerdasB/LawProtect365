@@ -10,7 +10,7 @@ import { EnvelopeId } from '../../domain/value-objects/EnvelopeId';
 import { envelopeNotFound, envelopeAccessDenied } from '../../signature-errors';
 
 import type { SignatureEnvelopeRepository } from '../../repositories/SignatureEnvelopeRepository';
-import type { InvitationTokenService } from '../InvitationTokenService';
+import type { InvitationTokenService } from '@/services/invitationTokenService/InvitationTokenService';
 
 export class EnvelopeAccessService {
   constructor(

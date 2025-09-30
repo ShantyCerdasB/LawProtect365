@@ -5,11 +5,11 @@
  * including validation, creation, updates, and business rule enforcement.
  */
 
-import { SignerReminderTracking } from '../domain/entities/SignerReminderTracking';
-import { SignerReminderTrackingRepository } from '../repositories/SignerReminderTrackingRepository';
-import { SignerId } from '../domain/value-objects/SignerId';
-import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
-import { reminderTrackingNotFound, reminderTrackingCreationFailed } from '../signature-errors/factories';
+import { SignerReminderTracking } from '@/domain/entities/SignerReminderTracking';
+import { SignerReminderTrackingRepository } from '@/repositories/SignerReminderTrackingRepository';
+import { SignerId } from '@/domain/value-objects/SignerId';
+import { EnvelopeId } from '@/domain/value-objects/EnvelopeId';
+import { reminderTrackingNotFound, reminderTrackingCreationFailed } from '@/signature-errors/factories';
 
 /**
  * Service for managing signer reminder tracking

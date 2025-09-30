@@ -20,11 +20,11 @@ import {
   EventBridgeClientAdapter,
 } from '@lawprotect/shared-ts';
 
-import { KmsService } from '../../../services/KmsService';
-import { S3Service } from '../../../services/S3Service';
-import { AuditEventService } from '../../../services/audit/AuditEventService';
+import { KmsService } from '@/services/kmsService/KmsService';
+import { S3Service } from '@/services/s3Service/S3Service';
+import { AuditEventService } from '@/services/audit/AuditEventService';
 
-import { loadConfig } from '../../../config/AppConfig';
+import { loadConfig } from '@/config/AppConfig';
 
 /**
  * Factory responsible for creating all infrastructure and AWS service instances.
