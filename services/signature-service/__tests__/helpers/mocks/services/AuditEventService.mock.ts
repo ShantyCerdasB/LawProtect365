@@ -15,7 +15,9 @@ import { jest } from '@jest/globals';
 export function createAuditEventServiceMock() {
   return {
     getByEnvelope: jest.fn() as jest.MockedFunction<any>,
-    create: jest.fn() as jest.MockedFunction<any>
+    create: jest.fn() as jest.MockedFunction<any>,
+    createSignerEvent: jest.fn() as jest.MockedFunction<any>,
+    signatureAuditEventRepository: {} as any
   };
 }
 

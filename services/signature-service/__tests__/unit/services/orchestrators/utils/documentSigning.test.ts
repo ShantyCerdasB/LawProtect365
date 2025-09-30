@@ -16,6 +16,7 @@ import { envelopeNotFound, documentNotReady } from '../../../../../src/signature
 describe('documentSigning utilities', () => {
   let mockS3Service: any;
   let mockSignatureEnvelopeService: any;
+  let mockEnvelopeHashService: any;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -27,6 +28,10 @@ describe('documentSigning utilities', () => {
 
     mockSignatureEnvelopeService = {
       getEnvelopeWithSigners: jest.fn(),
+      updateFlattenedKey: jest.fn()
+    };
+
+    mockEnvelopeHashService = {
       updateFlattenedKey: jest.fn()
     };
   });
@@ -138,6 +143,7 @@ describe('documentSigning utilities', () => {
 
       const result = await handleFlattenedDocument(
         mockSignatureEnvelopeService,
+        mockEnvelopeHashService,
         mockS3Service,
         {
           envelopeId,
@@ -172,6 +178,7 @@ describe('documentSigning utilities', () => {
 
       const result = await handleFlattenedDocument(
         mockSignatureEnvelopeService,
+        mockEnvelopeHashService,
         mockS3Service,
         {
           envelopeId,
@@ -195,11 +202,12 @@ describe('documentSigning utilities', () => {
       });
 
       mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue(envelope);
-      mockSignatureEnvelopeService.updateFlattenedKey.mockResolvedValue(undefined);
+      mockEnvelopeHashService.updateFlattenedKey.mockResolvedValue(undefined);
       mockS3Service.getDocumentContent.mockResolvedValue(documentContent);
 
       const result = await handleFlattenedDocument(
         mockSignatureEnvelopeService,
+        mockEnvelopeHashService,
         mockS3Service,
         {
           envelopeId,
@@ -208,7 +216,7 @@ describe('documentSigning utilities', () => {
         }
       );
 
-      expect(mockSignatureEnvelopeService.updateFlattenedKey).toHaveBeenCalledWith(
+      expect(mockEnvelopeHashService.updateFlattenedKey).toHaveBeenCalledWith(
         envelopeId,
         providedFlattenedKey,
         userId
@@ -224,6 +232,7 @@ describe('documentSigning utilities', () => {
 
       await expect(handleFlattenedDocument(
         mockSignatureEnvelopeService,
+        mockEnvelopeHashService,
         mockS3Service,
         {
           envelopeId,
@@ -244,6 +253,7 @@ describe('documentSigning utilities', () => {
 
       await expect(handleFlattenedDocument(
         mockSignatureEnvelopeService,
+        mockEnvelopeHashService,
         mockS3Service,
         {
           envelopeId,
@@ -268,6 +278,7 @@ describe('documentSigning utilities', () => {
 
       await expect(handleFlattenedDocument(
         mockSignatureEnvelopeService,
+        mockEnvelopeHashService,
         mockS3Service,
         {
           envelopeId,
@@ -287,10 +298,11 @@ describe('documentSigning utilities', () => {
       });
 
       mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue(envelope);
-      mockSignatureEnvelopeService.updateFlattenedKey.mockRejectedValue(envelopeError);
+      mockEnvelopeHashService.updateFlattenedKey.mockRejectedValue(envelopeError);
 
       await expect(handleFlattenedDocument(
         mockSignatureEnvelopeService,
+        mockEnvelopeHashService,
         mockS3Service,
         {
           envelopeId,
@@ -316,6 +328,7 @@ describe('documentSigning utilities', () => {
 
       const result1 = await handleFlattenedDocument(
         mockSignatureEnvelopeService,
+        mockSignatureEnvelopeService, // envelopeHashService
         mockS3Service,
         {
           envelopeId,
@@ -325,6 +338,7 @@ describe('documentSigning utilities', () => {
 
       const result2 = await handleFlattenedDocument(
         mockSignatureEnvelopeService,
+        mockSignatureEnvelopeService, // envelopeHashService
         mockS3Service,
         {
           envelopeId,
@@ -353,6 +367,7 @@ describe('documentSigning utilities', () => {
 
       const smallResult = await handleFlattenedDocument(
         mockSignatureEnvelopeService,
+        mockSignatureEnvelopeService, // envelopeHashService
         mockS3Service,
         {
           envelopeId,
@@ -368,6 +383,7 @@ describe('documentSigning utilities', () => {
 
       const largeResult = await handleFlattenedDocument(
         mockSignatureEnvelopeService,
+        mockSignatureEnvelopeService, // envelopeHashService
         mockS3Service,
         {
           envelopeId,

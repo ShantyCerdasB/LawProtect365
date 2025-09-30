@@ -340,9 +340,9 @@ describe('SignatureEnvelope', () => {
     });
 
     it('should throw error when sending non-DRAFT envelope', () => {
-      const readyEnvelope = createBasicEnvelope(EnvelopeStatus.readyForSignature(), [signer1]);
+      const completedEnvelope = createBasicEnvelope(EnvelopeStatus.completed(), [signer1]);
 
-      expect(() => readyEnvelope.send()).toThrow("Invalid envelope state");
+      expect(() => completedEnvelope.send()).toThrow("Invalid envelope state");
     });
 
     it('should throw error when sending envelope without signers', () => {

@@ -98,7 +98,10 @@ describe('SignDocumentUseCase', () => {
       mockConsentService,
       mockS3Service,
       mockKmsService,
-      mockAuditEventService
+      mockAuditEventService,
+      mockSignatureEnvelopeService, // envelopeHashService
+      mockSignatureEnvelopeService, // envelopeAccessService
+      mockSignatureEnvelopeService  // envelopeStateService
     );
   });
 
@@ -376,6 +379,7 @@ describe('SignDocumentUseCase', () => {
 
       expect(mockHandleFlattenedDocument).toHaveBeenCalledWith(
         mockSignatureEnvelopeService,
+        mockSignatureEnvelopeService, // envelopeHashService
         mockS3Service,
         {
           envelopeId,

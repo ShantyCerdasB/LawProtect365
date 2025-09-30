@@ -29,7 +29,8 @@ export function createSignatureEnvelopeServiceMock() {
     updateSignedDocument: jest.fn() as jest.MockedFunction<any>,
     updateHashes: jest.fn() as jest.MockedFunction<any>,
     completeEnvelope: jest.fn() as jest.MockedFunction<any>,
-    updateEnvelope: jest.fn() as jest.MockedFunction<any>
+    updateEnvelope: jest.fn() as jest.MockedFunction<any>,
+    create: jest.fn() as jest.MockedFunction<any>
   };
 }
 

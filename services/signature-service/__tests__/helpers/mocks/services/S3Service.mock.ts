@@ -13,12 +13,24 @@ import { jest } from '@jest/globals';
  */
 export function createS3ServiceMock() {
   return {
+    // Legacy methods (for backward compatibility)
     upload: jest.fn() as jest.MockedFunction<any>,
     download: jest.fn() as jest.MockedFunction<any>,
     delete: jest.fn() as jest.MockedFunction<any>,
     getSignedUrl: jest.fn() as jest.MockedFunction<any>,
     copyObject: jest.fn() as jest.MockedFunction<any>,
     headObject: jest.fn() as jest.MockedFunction<any>,
-    assertExists: jest.fn() as jest.MockedFunction<any>
+    assertExists: jest.fn() as jest.MockedFunction<any>,
+    getDocumentContent: jest.fn() as jest.MockedFunction<any>,
+    
+    // New S3Service methods
+    storeDocument: jest.fn() as jest.MockedFunction<any>,
+    retrieveDocument: jest.fn() as jest.MockedFunction<any>,
+    generatePresignedUrl: jest.fn() as jest.MockedFunction<any>,
+    documentExists: jest.fn() as jest.MockedFunction<any>,
+    getDocumentMetadata: jest.fn() as jest.MockedFunction<any>,
+    getDocumentInfo: jest.fn() as jest.MockedFunction<any>,
+    recordDownloadAction: jest.fn() as jest.MockedFunction<any>,
+    storeSignedDocument: jest.fn() as jest.MockedFunction<any>
   };
 }

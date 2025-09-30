@@ -10,7 +10,7 @@ import { EnvelopeId } from '@/domain/value-objects/EnvelopeId';
 import { SignerId } from '@/domain/value-objects/SignerId';
 import { S3Key } from '@lawprotect/shared-ts';
 import { AuditEventService } from '@/services/audit/AuditEventService';
-import { AuditEventType } from '@/domain/enums/AuditEventType';
+import { AuditEventType, DocumentType } from '@/domain/enums';
 import { NetworkSecurityContext, createNetworkSecurityContext } from '@lawprotect/shared-ts';
 import { StoreDocumentRequest, RetrieveDocumentRequest, GeneratePresignedUrlRequest, DocumentResult } from '@/domain/types/s3';
 import {S3Presigner, S3EvidenceStorage,  NotFoundError, BadRequestError, ErrorCodes, getDocumentContent } from '@lawprotect/shared-ts';
@@ -19,18 +19,18 @@ import { validateS3StorageForDocument } from '@/domain/rules/s3/S3StorageRules';
 import { documentS3Error, documentS3NotFound } from '@/signature-errors';
 
 
-/**
- * S3Service
- * 
- * Service for managing document storage operations using AWS S3.
- * Handles document storage, retrieval, and presigned URL generation.
- */
 export class S3Service {
   constructor(
     private readonly s3Presigner: S3Presigner,
     private readonly s3EvidenceStorage: S3EvidenceStorage,
     private readonly bucketName: string,
-    private readonly signatureAuditEventService: AuditEventService
+    private readonly signatureAuditEventService: AuditEventService,
+    private readonly config: {
+      documentDownload: {
+        maxExpirationSeconds: number;
+        minExpirationSeconds: number;
+      }
+    }
   ) {}
 
   /**
@@ -171,14 +171,10 @@ export class S3Service {
    */
   async generatePresignedUrl(request: GeneratePresignedUrlRequest): Promise<string> {
     try {
-      // Load configuration for consistent validation
-      const { loadConfig } = await import('@/config/AppConfig');
-      const config = loadConfig();
-      
       // Validate input using domain rules with consistent configuration
       validateGeneratePresignedUrlRequest(request, {
-        maxExpirationTime: config.documentDownload.maxExpirationSeconds, // 24 hours
-        minExpirationTime: config.documentDownload.minExpirationSeconds  // 5 minutes
+        maxExpirationTime: this.config.documentDownload.maxExpirationSeconds,
+        minExpirationTime: this.config.documentDownload.minExpirationSeconds
       });
 
       const expiresIn = request.expiresIn || 3600; // Default 1 hour
@@ -449,7 +445,7 @@ export class S3Service {
         metadata: {
           envelopeId: request.envelopeId.getValue(),
           signerId: request.signerId.getValue(),
-          documentType: 'signed',
+          documentType: DocumentType.SIGNED,
           checksum: this.calculateChecksum(request.signedDocumentContent)
         }
       });
@@ -465,7 +461,7 @@ export class S3Service {
       await this.signatureAuditEventService.createSignerEvent({
         envelopeId: request.envelopeId.getValue(),
         signerId: request.signerId.getValue(),
-        eventType: 'DOCUMENT_STORED' as any,
+        eventType: AuditEventType.DOCUMENT_ACCESSED,
         description: `Signed document stored for envelope "${request.envelopeId.getValue()}"`,
         userId: 'system',
         metadata: {
@@ -478,9 +474,12 @@ export class S3Service {
 
       return documentResult;
     } catch (error: unknown) {
-      throw new Error(
-        `Failed to store signed document for envelope ${request.envelopeId.getValue()}: ${error instanceof Error ? error.message : error}`
-      );
+      throw documentS3Error({
+        operation: 'storeSignedDocument',
+        envelopeId: request.envelopeId.getValue(),
+        signerId: request.signerId.getValue(),
+        originalError: error instanceof Error ? error.message : error
+      });
     }
   }
 

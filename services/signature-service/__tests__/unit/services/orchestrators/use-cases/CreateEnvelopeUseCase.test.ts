@@ -8,6 +8,7 @@ import { SigningOrder } from '../../../../../src/domain/value-objects/SigningOrd
 import { TestUtils } from '../../../../helpers/testUtils';
 import { signatureEnvelopeEntity } from '../../../../helpers/builders/signatureEnvelope';
 import { createSignatureEnvelopeServiceMock } from '../../../../helpers/mocks/services';
+import { createS3ServiceMock } from '../../../../helpers/mocks/services/S3Service.mock';
 import { createUuidMock } from '../../../../helpers/mocks/uuid';
 
 // Mock the uuid module
@@ -27,12 +28,15 @@ jest.mock('../../../../../src/domain/factories/EntityFactory', () => ({
 describe('CreateEnvelopeUseCase', () => {
   let useCase: CreateEnvelopeUseCase;
   let mockSignatureEnvelopeService: any;
+  let mockS3Service: any;
   let mockUuid: any;
 
   beforeEach(() => {
     jest.clearAllMocks();
     
     mockSignatureEnvelopeService = createSignatureEnvelopeServiceMock();
+    mockS3Service = createS3ServiceMock();
+    mockS3Service.getDocumentContent.mockResolvedValue(Buffer.from('test document content'));
     
     // Get the mocked uuid function
     const { v4 } = require('uuid');
@@ -43,7 +47,12 @@ describe('CreateEnvelopeUseCase', () => {
     const { EntityFactory } = require('../../../../../src/domain/factories/EntityFactory');
     EntityFactory.createValueObjects.envelopeId.mockReturnValue(EnvelopeId.fromString(TestUtils.generateUuid()));
 
-    useCase = new CreateEnvelopeUseCase(mockSignatureEnvelopeService);
+    useCase = new CreateEnvelopeUseCase(
+      mockSignatureEnvelopeService,
+      mockSignatureEnvelopeService, // envelopeHashService
+      mockS3Service, // s3Service
+      mockSignatureEnvelopeService  // auditEventService
+    );
   });
 
   describe('execute', () => {
@@ -83,8 +92,7 @@ describe('CreateEnvelopeUseCase', () => {
           createdBy: userId,
           title: 'Test Document',
           description: 'Test document description'
-        }),
-        userId
+        })
       );
       expect(result).toEqual({
         envelope: testEnvelope,

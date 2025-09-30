@@ -656,8 +656,8 @@ describe('InvitationToken', () => {
       expect(token.isActive()).toBe(true);
     });
 
-    it('should handle token with expiration 1 millisecond in the future', () => {
-      const futureTime = new Date(Date.now() + 1); // 1ms in the future
+    it('should handle token with expiration 100 milliseconds in the future', () => {
+      const futureTime = new Date(Date.now() + 100); // 100ms in the future
       const token = createInvitationTokenWithParams({
         status: InvitationTokenStatus.ACTIVE,
         expiresAt: futureTime

@@ -4,16 +4,27 @@ import { DownloadDocumentInput } from '../../../../../src/domain/types/usecase/o
 import { EnvelopeId } from '../../../../../src/domain/value-objects/EnvelopeId';
 import { TestUtils } from '../../../../helpers/testUtils';
 import { createSignatureEnvelopeServiceMock } from '../../../../helpers/mocks/services/SignatureEnvelopeService.mock';
+import { createEnvelopeAccessServiceMock } from '../../../../helpers/mocks/services/EnvelopeAccessService.mock';
+import { createAuditEventServiceMock } from '../../../../helpers/mocks/services/AuditEventService.mock';
 
 describe('DownloadDocumentUseCase', () => {
   let useCase: DownloadDocumentUseCase;
   let mockSignatureEnvelopeService: any;
+  let mockEnvelopeAccessService: any;
+  let mockAuditEventService: any;
 
   beforeEach(() => {
     jest.clearAllMocks();
     
     mockSignatureEnvelopeService = createSignatureEnvelopeServiceMock();
-    useCase = new DownloadDocumentUseCase(mockSignatureEnvelopeService);
+    mockEnvelopeAccessService = createEnvelopeAccessServiceMock();
+    mockAuditEventService = createAuditEventServiceMock();
+    
+    useCase = new DownloadDocumentUseCase(
+      mockSignatureEnvelopeService,
+      mockEnvelopeAccessService,
+      mockAuditEventService
+    );
   });
 
   describe('execute', () => {
@@ -41,24 +52,25 @@ describe('DownloadDocumentUseCase', () => {
       };
 
       mockSignatureEnvelopeService.downloadDocument.mockResolvedValue(expectedResult);
+      mockEnvelopeAccessService.validateEnvelopeAccess.mockResolvedValue(undefined);
+      mockAuditEventService.create.mockResolvedValue(undefined);
 
       const result = await useCase.execute(input);
 
       expect(mockSignatureEnvelopeService.downloadDocument).toHaveBeenCalledWith(
         envelopeId,
-        userId,
-        invitationToken,
-        expiresIn,
-        input.securityContext
+        expiresIn
       );
       expect(result).toEqual(expectedResult);
     });
 
     it('should download document with minimal parameters', async () => {
       const envelopeId = TestUtils.generateEnvelopeId();
+      const userId = TestUtils.generateUuid();
       
       const input: DownloadDocumentInput = {
-        envelopeId
+        envelopeId,
+        userId
       };
 
       const expectedResult = {
@@ -67,14 +79,13 @@ describe('DownloadDocumentUseCase', () => {
       };
 
       mockSignatureEnvelopeService.downloadDocument.mockResolvedValue(expectedResult);
+      mockEnvelopeAccessService.validateEnvelopeAccess.mockResolvedValue(undefined);
+      mockAuditEventService.create.mockResolvedValue(undefined);
 
       const result = await useCase.execute(input);
 
       expect(mockSignatureEnvelopeService.downloadDocument).toHaveBeenCalledWith(
         envelopeId,
-        undefined,
-        undefined,
-        undefined,
         undefined
       );
       expect(result).toEqual(expectedResult);
@@ -95,14 +106,13 @@ describe('DownloadDocumentUseCase', () => {
       };
 
       mockSignatureEnvelopeService.downloadDocument.mockResolvedValue(expectedResult);
+      mockEnvelopeAccessService.validateEnvelopeAccess.mockResolvedValue(undefined);
+      mockAuditEventService.create.mockResolvedValue(undefined);
 
       const result = await useCase.execute(input);
 
       expect(mockSignatureEnvelopeService.downloadDocument).toHaveBeenCalledWith(
         envelopeId,
-        userId,
-        undefined,
-        undefined,
         undefined
       );
       expect(result).toEqual(expectedResult);
@@ -123,14 +133,13 @@ describe('DownloadDocumentUseCase', () => {
       };
 
       mockSignatureEnvelopeService.downloadDocument.mockResolvedValue(expectedResult);
+      mockEnvelopeAccessService.validateEnvelopeAccess.mockResolvedValue(undefined);
+      mockAuditEventService.create.mockResolvedValue(undefined);
 
       const result = await useCase.execute(input);
 
       expect(mockSignatureEnvelopeService.downloadDocument).toHaveBeenCalledWith(
         envelopeId,
-        undefined,
-        invitationToken,
-        undefined,
         undefined
       );
       expect(result).toEqual(expectedResult);
@@ -138,10 +147,12 @@ describe('DownloadDocumentUseCase', () => {
 
     it('should download document with custom expiresIn', async () => {
       const envelopeId = TestUtils.generateEnvelopeId();
+      const userId = TestUtils.generateUuid();
       const expiresIn = 7200;
       
       const input: DownloadDocumentInput = {
         envelopeId,
+        userId,
         expiresIn
       };
 
@@ -151,24 +162,25 @@ describe('DownloadDocumentUseCase', () => {
       };
 
       mockSignatureEnvelopeService.downloadDocument.mockResolvedValue(expectedResult);
+      mockEnvelopeAccessService.validateEnvelopeAccess.mockResolvedValue(undefined);
+      mockAuditEventService.create.mockResolvedValue(undefined);
 
       const result = await useCase.execute(input);
 
       expect(mockSignatureEnvelopeService.downloadDocument).toHaveBeenCalledWith(
         envelopeId,
-        undefined,
-        undefined,
-        expiresIn,
-        undefined
+        expiresIn
       );
       expect(result).toEqual(expectedResult);
     });
 
     it('should download document with security context only', async () => {
       const envelopeId = TestUtils.generateEnvelopeId();
+      const userId = TestUtils.generateUuid();
       
       const input: DownloadDocumentInput = {
         envelopeId,
+        userId,
         securityContext: {
           ipAddress: TestUtils.createTestIpAddress(),
           userAgent: TestUtils.createTestUserAgent(),
@@ -182,24 +194,25 @@ describe('DownloadDocumentUseCase', () => {
       };
 
       mockSignatureEnvelopeService.downloadDocument.mockResolvedValue(expectedResult);
+      mockEnvelopeAccessService.validateEnvelopeAccess.mockResolvedValue(undefined);
+      mockAuditEventService.create.mockResolvedValue(undefined);
 
       const result = await useCase.execute(input);
 
       expect(mockSignatureEnvelopeService.downloadDocument).toHaveBeenCalledWith(
         envelopeId,
-        undefined,
-        undefined,
-        undefined,
-        input.securityContext
+        undefined
       );
       expect(result).toEqual(expectedResult);
     });
 
     it('should handle service errors and rethrow', async () => {
       const envelopeId = TestUtils.generateEnvelopeId();
+      const userId = TestUtils.generateUuid();
       
       const input: DownloadDocumentInput = {
-        envelopeId
+        envelopeId,
+        userId
       };
 
       const serviceError = new Error('Document not found');
@@ -225,9 +238,11 @@ describe('DownloadDocumentUseCase', () => {
 
     it('should handle envelope not found errors', async () => {
       const envelopeId = TestUtils.generateEnvelopeId();
+      const userId = TestUtils.generateUuid();
       
       const input: DownloadDocumentInput = {
-        envelopeId
+        envelopeId,
+        userId
       };
 
       const notFoundError = new Error('Envelope not found');

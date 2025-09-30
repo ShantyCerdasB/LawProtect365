@@ -7,21 +7,25 @@ import { TestUtils } from '../../../../helpers/testUtils';
 import { signatureEnvelopeEntity } from '../../../../helpers/builders/signatureEnvelope';
 import { createSignatureEnvelopeServiceMock } from '../../../../helpers/mocks/services/SignatureEnvelopeService.mock';
 import { createInvitationTokenServiceMock } from '../../../../helpers/mocks/services/InvitationTokenService.mock';
+import { createEnvelopeAccessServiceMock } from '../../../../helpers/mocks/services/EnvelopeAccessService.mock';
 
 describe('GetEnvelopeUseCase', () => {
   let useCase: GetEnvelopeUseCase;
   let mockSignatureEnvelopeService: any;
   let mockInvitationTokenService: any;
+  let mockEnvelopeAccessService: any;
 
   beforeEach(() => {
     jest.clearAllMocks();
     
     mockSignatureEnvelopeService = createSignatureEnvelopeServiceMock();
     mockInvitationTokenService = createInvitationTokenServiceMock();
+    mockEnvelopeAccessService = createEnvelopeAccessServiceMock();
 
     useCase = new GetEnvelopeUseCase(
       mockSignatureEnvelopeService,
-      mockInvitationTokenService
+      mockInvitationTokenService,
+      mockEnvelopeAccessService
     );
   });
 
@@ -43,12 +47,12 @@ describe('GetEnvelopeUseCase', () => {
       const envelopeWithSigners = signatureEnvelopeEntity({ id: envelopeId.getValue() });
       envelopeWithSigners.getSigners = jest.fn().mockReturnValue(testSigners) as any;
 
-      mockSignatureEnvelopeService.validateUserAccess.mockResolvedValue(testEnvelope);
+      mockEnvelopeAccessService.validateUserAccess.mockResolvedValue(testEnvelope);
       mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue(envelopeWithSigners);
 
       const result = await useCase.execute(input);
 
-      expect(mockSignatureEnvelopeService.validateUserAccess).toHaveBeenCalledWith(
+      expect(mockEnvelopeAccessService.validateUserAccess).toHaveBeenCalledWith(
         envelopeId,
         userId,
         undefined
@@ -86,13 +90,13 @@ describe('GetEnvelopeUseCase', () => {
       const envelopeWithSigners = signatureEnvelopeEntity({ id: envelopeId.getValue() });
       envelopeWithSigners.getSigners = jest.fn().mockReturnValue(testSigners) as any;
 
-      mockSignatureEnvelopeService.validateUserAccess.mockResolvedValue(testEnvelope);
+      mockEnvelopeAccessService.validateUserAccess.mockResolvedValue(testEnvelope);
       mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue(envelopeWithSigners);
       mockInvitationTokenService.markTokenAsViewed.mockResolvedValue(undefined);
 
       const result = await useCase.execute(input);
 
-      expect(mockSignatureEnvelopeService.validateUserAccess).toHaveBeenCalledWith(
+      expect(mockEnvelopeAccessService.validateUserAccess).toHaveBeenCalledWith(
         envelopeId,
         undefined,
         invitationToken
@@ -139,7 +143,7 @@ describe('GetEnvelopeUseCase', () => {
       const envelopeWithSigners = signatureEnvelopeEntity({ id: envelopeId.getValue() });
       envelopeWithSigners.getSigners = jest.fn().mockReturnValue(testSigners) as any;
 
-      mockSignatureEnvelopeService.validateUserAccess.mockResolvedValue(testEnvelope);
+      mockEnvelopeAccessService.validateUserAccess.mockResolvedValue(testEnvelope);
       mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue(envelopeWithSigners);
       mockInvitationTokenService.markTokenAsViewed.mockRejectedValue(new Error('Token marking failed'));
 
@@ -165,7 +169,7 @@ describe('GetEnvelopeUseCase', () => {
       const envelopeWithSigners = signatureEnvelopeEntity({ id: envelopeId.getValue() });
       envelopeWithSigners.getSigners = jest.fn().mockReturnValue(testSigners) as any;
 
-      mockSignatureEnvelopeService.validateUserAccess.mockResolvedValue(testEnvelope);
+      mockEnvelopeAccessService.validateUserAccess.mockResolvedValue(testEnvelope);
       mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue(envelopeWithSigners);
 
       const result = await useCase.execute(input);
@@ -199,7 +203,7 @@ describe('GetEnvelopeUseCase', () => {
       const envelopeWithSigners = signatureEnvelopeEntity({ id: envelopeId.getValue() });
       envelopeWithSigners.getSigners = jest.fn().mockReturnValue(testSigners) as any;
 
-      mockSignatureEnvelopeService.validateUserAccess.mockResolvedValue(testEnvelope);
+      mockEnvelopeAccessService.validateUserAccess.mockResolvedValue(testEnvelope);
       mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue(envelopeWithSigners);
       mockInvitationTokenService.markTokenAsViewed.mockResolvedValue(undefined);
 
@@ -238,7 +242,7 @@ describe('GetEnvelopeUseCase', () => {
       const envelopeWithSigners = signatureEnvelopeEntity({ id: envelopeId.getValue() });
       envelopeWithSigners.getSigners = jest.fn().mockReturnValue([]) as any;
 
-      mockSignatureEnvelopeService.validateUserAccess.mockResolvedValue(testEnvelope);
+      mockEnvelopeAccessService.validateUserAccess.mockResolvedValue(testEnvelope);
       mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue(envelopeWithSigners);
 
       const result = await useCase.execute(input);
@@ -258,7 +262,7 @@ describe('GetEnvelopeUseCase', () => {
 
       const testEnvelope = signatureEnvelopeEntity({ id: envelopeId.getValue() });
 
-      mockSignatureEnvelopeService.validateUserAccess.mockResolvedValue(testEnvelope);
+      mockEnvelopeAccessService.validateUserAccess.mockResolvedValue(testEnvelope);
       mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue(null);
 
       const result = await useCase.execute(input);
@@ -277,7 +281,7 @@ describe('GetEnvelopeUseCase', () => {
       };
 
       const accessError = new Error('Access denied');
-      mockSignatureEnvelopeService.validateUserAccess.mockRejectedValue(accessError);
+      mockEnvelopeAccessService.validateUserAccess.mockRejectedValue(accessError);
 
       await expect(useCase.execute(input)).rejects.toThrow('Access denied');
     });
@@ -293,7 +297,7 @@ describe('GetEnvelopeUseCase', () => {
 
       const testEnvelope = signatureEnvelopeEntity({ id: envelopeId.getValue() });
 
-      mockSignatureEnvelopeService.validateUserAccess.mockResolvedValue(testEnvelope);
+      mockEnvelopeAccessService.validateUserAccess.mockResolvedValue(testEnvelope);
       mockSignatureEnvelopeService.getEnvelopeWithSigners.mockRejectedValue(new Error('Envelope retrieval failed'));
 
       await expect(useCase.execute(input)).rejects.toThrow('Envelope retrieval failed');
@@ -315,12 +319,12 @@ describe('GetEnvelopeUseCase', () => {
       const envelopeWithSigners = signatureEnvelopeEntity({ id: envelopeId.getValue() });
       envelopeWithSigners.getSigners = jest.fn().mockReturnValue(testSigners) as any;
 
-      mockSignatureEnvelopeService.validateUserAccess.mockResolvedValue(testEnvelope);
+      mockEnvelopeAccessService.validateUserAccess.mockResolvedValue(testEnvelope);
       mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue(envelopeWithSigners);
 
       const result = await useCase.execute(input);
 
-      expect(mockSignatureEnvelopeService.validateUserAccess).toHaveBeenCalledWith(
+      expect(mockEnvelopeAccessService.validateUserAccess).toHaveBeenCalledWith(
         envelopeId,
         userId,
         invitationToken
