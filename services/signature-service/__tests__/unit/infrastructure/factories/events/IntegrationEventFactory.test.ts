@@ -215,6 +215,7 @@ describe('IntegrationEventFactory', () => {
           getTitle: jest.fn(() => 'Test Envelope')
         } as any,
         signer: {
+          getId: jest.fn(() => ({ getValue: () => 'test-signer-id' })),
           getFullName: jest.fn(() => null),
           getEmail: jest.fn(() => null)
         } as any,
@@ -230,7 +231,7 @@ describe('IntegrationEventFactory', () => {
       expect(result).toBeDefined();
       expect(result.name).toBe('SIGNER_DECLINED');
       expect(result.payload).toBeDefined();
-      expect(result.payload.signerName).toBe('Unknown');
+      expect(result.payload.signerName).toBeNull();
       expect(result.payload.declineReason).toBe('I decline to sign');
     });
   });

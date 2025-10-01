@@ -529,7 +529,7 @@ describe('EnvelopeSignerService', () => {
       await expect(service.markSignerAsSigned(
         { getValue: () => signerId } as any,
         signatureData
-      )).rejects.toThrow('Failed to mark signer as signed');
+      )).rejects.toThrow('Failed to update signer');
     });
   });
 
@@ -562,7 +562,7 @@ describe('EnvelopeSignerService', () => {
 
       await expect(service.declineSigner(
         declineData
-      )).rejects.toThrow('Failed to decline signer');
+      )).rejects.toThrow('Failed to update signer');
     });
   });
 
