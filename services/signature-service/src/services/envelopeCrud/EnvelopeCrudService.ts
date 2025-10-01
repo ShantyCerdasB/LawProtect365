@@ -147,9 +147,7 @@ export class EnvelopeCrudService {
         // Check if auto-correction is needed
         correctedSigningOrder = envelope.validateSigningOrderConsistency(allSignersData);
         
-        if (correctedSigningOrder) {
-          console.log(`🔧 Auto-correcting signing order from ${envelope.getSigningOrder().getType()} to ${correctedSigningOrder}`);
-          // Update the envelope directly with the corrected signing order
+        if (correctedSigningOrder) {      // Update the envelope directly with the corrected signing order
           const newSigningOrder = new SigningOrder(correctedSigningOrder);
           envelope.updateSigningOrder(newSigningOrder);
         }

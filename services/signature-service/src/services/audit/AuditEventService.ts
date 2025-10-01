@@ -136,7 +136,6 @@ export class AuditEventService {
    * @throws Error if the envelope ID is invalid or retrieval fails.
    * @example
    * const events = await service.getByEnvelope('env-123');
-   * console.log(`Found ${events.length} events`);
    */
   async getByEnvelope(envelopeId: string): Promise<SignatureAuditEvent[]> {
     return this.signatureAuditEventRepository.getByEnvelope(envelopeId);

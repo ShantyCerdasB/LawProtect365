@@ -938,4 +938,121 @@ describe('SignatureEnvelope', () => {
       expect(() => envelope.validateSigningOrderChange('OWNER_FIRST', existingSigners)).not.toThrow();
     });
   });
+
+  describe('updateSourceKey', () => {
+    it('should update source key and updatedAt timestamp', () => {
+      const newSourceKey = S3Key.fromString('new-bucket/new-source-key.pdf');
+      const originalUpdatedAt = envelope.getUpdatedAt();
+      
+      // Wait a bit to ensure timestamp difference
+      setTimeout(() => {
+        envelope.updateSourceKey(newSourceKey);
+        
+        expect(envelope.getSourceKey()).toBe(newSourceKey);
+        expect(envelope.getUpdatedAt().getTime()).toBeGreaterThan(originalUpdatedAt.getTime());
+      }, 10);
+    });
+  });
+
+  describe('updateMetaKey', () => {
+    it('should update meta key and updatedAt timestamp', () => {
+      const newMetaKey = S3Key.fromString('new-bucket/new-meta-key.json');
+      const originalUpdatedAt = envelope.getUpdatedAt();
+      
+      // Wait a bit to ensure timestamp difference
+      setTimeout(() => {
+        envelope.updateMetaKey(newMetaKey);
+        
+        expect(envelope.getMetaKey()).toBe(newMetaKey);
+        expect(envelope.getUpdatedAt().getTime()).toBeGreaterThan(originalUpdatedAt.getTime());
+      }, 10);
+    });
+  });
+
+  describe('getExternalSigners', () => {
+    it('should return only external signers', () => {
+      const externalSigner1 = createMockSigner('external-1', 'external1@example.com', SignerStatus.PENDING);
+      externalSigner1.getIsExternal = jest.fn(() => true);
+      
+      const internalSigner = createMockSigner('internal-1', 'internal@example.com', SignerStatus.PENDING);
+      internalSigner.getIsExternal = jest.fn(() => false);
+      
+      const externalSigner2 = createMockSigner('external-2', 'external2@example.com', SignerStatus.PENDING);
+      externalSigner2.getIsExternal = jest.fn(() => true);
+
+      const envelopeWithMixedSigners = createBasicEnvelope(EnvelopeStatus.draft(), [
+        externalSigner1,
+        internalSigner,
+        externalSigner2
+      ]);
+
+      const externalSigners = envelopeWithMixedSigners.getExternalSigners();
+      
+      expect(externalSigners).toHaveLength(2);
+      expect(externalSigners).toContain(externalSigner1);
+      expect(externalSigners).toContain(externalSigner2);
+      expect(externalSigners).not.toContain(internalSigner);
+    });
+
+    it('should return empty array when no external signers', () => {
+      const internalSigner1 = createMockSigner('internal-1', 'internal1@example.com', SignerStatus.PENDING);
+      internalSigner1.getIsExternal = jest.fn(() => false);
+      
+      const internalSigner2 = createMockSigner('internal-2', 'internal2@example.com', SignerStatus.PENDING);
+      internalSigner2.getIsExternal = jest.fn(() => false);
+
+      const envelopeWithInternalSigners = createBasicEnvelope(EnvelopeStatus.draft(), [
+        internalSigner1,
+        internalSigner2
+      ]);
+
+      const externalSigners = envelopeWithInternalSigners.getExternalSigners();
+      
+      expect(externalSigners).toHaveLength(0);
+    });
+  });
+
+  describe('calculateProgress', () => {
+    it('should return 0 when no signers', () => {
+      const emptyEnvelope = createBasicEnvelope(EnvelopeStatus.draft(), []);
+      expect(emptyEnvelope.calculateProgress()).toBe(0);
+    });
+
+    it('should return 0 when no signers are signed', () => {
+      const pendingSigner1 = createMockSigner('signer-1', 'signer1@example.com', SignerStatus.PENDING);
+      const pendingSigner2 = createMockSigner('signer-2', 'signer2@example.com', SignerStatus.PENDING);
+      
+      const envelopeWithPendingSigners = createBasicEnvelope(EnvelopeStatus.readyForSignature(), [
+        pendingSigner1,
+        pendingSigner2
+      ]);
+
+      expect(envelopeWithPendingSigners.calculateProgress()).toBe(0);
+    });
+
+    it('should return 50 when half of signers are signed', () => {
+      const signedSigner = createMockSigner('signed-1', 'signed@example.com', SignerStatus.SIGNED);
+      const pendingSigner = createMockSigner('pending-1', 'pending@example.com', SignerStatus.PENDING);
+      
+      const envelopeWithMixedStatus = createBasicEnvelope(EnvelopeStatus.readyForSignature(), [
+        signedSigner,
+        pendingSigner
+      ]);
+
+      expect(envelopeWithMixedStatus.calculateProgress()).toBe(50);
+    });
+
+    it('should return 100 when all signers are signed', () => {
+      const signedSigner1 = createMockSigner('signed-1', 'signed1@example.com', SignerStatus.SIGNED);
+      const signedSigner2 = createMockSigner('signed-2', 'signed2@example.com', SignerStatus.SIGNED);
+      
+      const envelopeWithAllSigned = createBasicEnvelope(EnvelopeStatus.readyForSignature(), [
+        signedSigner1,
+        signedSigner2
+      ]);
+
+      expect(envelopeWithAllSigned.calculateProgress()).toBe(100);
+    });
+  });
+
 });

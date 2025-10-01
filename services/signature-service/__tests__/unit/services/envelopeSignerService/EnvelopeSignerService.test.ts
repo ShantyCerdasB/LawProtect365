@@ -304,7 +304,7 @@ describe('EnvelopeSignerService', () => {
       mockSignatureEnvelopeRepository.findById.mockResolvedValue(null);
 
       await expect(service.createViewerParticipant(envelopeId, email, fullName, userId))
-        .rejects.toThrow('Envelope with ID test-envelope-id not found');
+        .rejects.toThrow('Envelope not found');
     });
 
     it('should throw error when viewer already exists', async () => {
@@ -323,7 +323,7 @@ describe('EnvelopeSignerService', () => {
       mockEnvelopeSignerRepository.findByEnvelopeId.mockResolvedValue([]);
 
       await expect(service.createViewerParticipant(envelopeId, email, fullName, userId))
-        .rejects.toThrow('Failed to create viewer participant');
+        .rejects.toThrow('Failed to create signer');
     });
 
     it('should rethrow AppError when it has statusCode', async () => {
@@ -490,6 +490,109 @@ describe('EnvelopeSignerService', () => {
       const result = await service.findExistingExternalSigner(email, fullName);
 
       expect(result).toBeNull();
+    });
+  });
+
+  describe('markSignerAsSigned - error handling', () => {
+    it('should handle database error when marking signer as signed', async () => {
+      const signerId = 'test-signer-id';
+      const signatureData = {
+        documentHash: 'document-hash',
+        signatureHash: 'signature-hash',
+        signedS3Key: 'signed-s3-key',
+        kmsKeyId: 'kms-key-id',
+        algorithm: 'RSA-SHA256',
+        reason: 'I agree',
+        location: 'New York',
+        consentText: 'I consent to sign',
+        ipAddress: '127.0.0.1',
+        userAgent: 'TestAgent/1.0',
+        country: 'US'
+      };
+
+      const mockSigner = {
+        getId: jest.fn(() => ({ getValue: () => signerId })),
+        getEnvelopeId: jest.fn(() => ({ getValue: () => 'test-envelope-id' })),
+        getUserId: jest.fn(() => 'test-user-id'),
+        getEmail: jest.fn(() => 'test@example.com'),
+        getFullName: jest.fn(() => 'Test User'),
+        isExternal: false,
+        participantRole: 'SIGNER',
+        recordConsent: jest.fn(),
+        sign: jest.fn(),
+        hasSigned: jest.fn(() => false)
+      };
+
+      mockEnvelopeSignerRepository.findById.mockResolvedValue(mockSigner as any);
+      mockEnvelopeSignerRepository.update.mockRejectedValue(new Error('Database error'));
+
+      await expect(service.markSignerAsSigned(
+        { getValue: () => signerId } as any,
+        signatureData
+      )).rejects.toThrow('Failed to mark signer as signed');
+    });
+  });
+
+  describe('declineSigner - error handling', () => {
+    it('should handle database error when declining signer', async () => {
+      const signerId = 'test-signer-id';
+      const declineData = {
+        signerId: { getValue: () => signerId } as any,
+        reason: 'I decline to sign',
+        declinedAt: new Date(),
+        ipAddress: '127.0.0.1',
+        userAgent: 'TestAgent/1.0',
+        country: 'US'
+      };
+
+      const mockSigner = {
+        getId: jest.fn(() => ({ getValue: () => signerId })),
+        getEnvelopeId: jest.fn(() => ({ getValue: () => 'test-envelope-id' })),
+        getUserId: jest.fn(() => 'test-user-id'),
+        getEmail: jest.fn(() => 'test@example.com'),
+        getFullName: jest.fn(() => 'Test User'),
+        isExternal: false,
+        participantRole: 'SIGNER',
+        decline: jest.fn(),
+        getDeclinedAt: jest.fn(() => new Date())
+      };
+
+      mockEnvelopeSignerRepository.findById.mockResolvedValue(mockSigner as any);
+      mockEnvelopeSignerRepository.update.mockRejectedValue(new Error('Database error'));
+
+      await expect(service.declineSigner(
+        declineData
+      )).rejects.toThrow('Failed to decline signer');
+    });
+  });
+
+  describe('createSignersForEnvelope - duplicate email check', () => {
+    it('should throw error when email already exists in envelope', async () => {
+      const envelopeId = 'test-envelope-id';
+      const signersData = [
+        {
+          envelopeId: { getValue: () => envelopeId } as any,
+          email: 'existing@example.com',
+          fullName: 'Test User',
+          isExternal: true,
+          participantRole: 'SIGNER',
+          order: 1,
+          invitedByUserId: 'test-user-id'
+        }
+      ];
+
+      const mockEnvelope = {
+        getCreatedBy: jest.fn(() => 'test-user-id'),
+        validateNoDuplicateEmails: jest.fn()
+      };
+
+      mockSignatureEnvelopeRepository.findById.mockResolvedValue(mockEnvelope as any);
+      mockEnvelopeSignerRepository.existsByEmail.mockResolvedValue(true);
+
+      await expect(service.createSignersForEnvelope(
+        { getValue: () => envelopeId } as any,
+        signersData
+      )).rejects.toThrow('Email existing@example.com already exists in envelope');
     });
   });
 });

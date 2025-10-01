@@ -1,42 +1,237 @@
 import { IntegrationEventFactory } from '../../../../../src/infrastructure/factories/events/IntegrationEventFactory';
 
 describe('IntegrationEventFactory', () => {
+  let factory: IntegrationEventFactory;
+
+  beforeEach(() => {
+    factory = new IntegrationEventFactory();
+  });
+
   it('should be importable', () => {
     expect(IntegrationEventFactory).toBeDefined();
   });
 
   it('should be instantiable', () => {
-    const factory = new IntegrationEventFactory();
     expect(factory).toBeDefined();
   });
 
   it('should have envelopeInvitation method', () => {
-    const factory = new IntegrationEventFactory();
     expect(factory.envelopeInvitation).toBeDefined();
     expect(typeof factory.envelopeInvitation).toBe('function');
   });
 
   it('should have viewerInvitation method', () => {
-    const factory = new IntegrationEventFactory();
     expect(factory.viewerInvitation).toBeDefined();
     expect(typeof factory.viewerInvitation).toBe('function');
   });
 
   it('should have signerDeclined method', () => {
-    const factory = new IntegrationEventFactory();
     expect(factory.signerDeclined).toBeDefined();
     expect(typeof factory.signerDeclined).toBe('function');
   });
 
   it('should have envelopeCancelled method', () => {
-    const factory = new IntegrationEventFactory();
     expect(factory.envelopeCancelled).toBeDefined();
     expect(typeof factory.envelopeCancelled).toBe('function');
   });
 
   it('should have reminderNotification method', () => {
-    const factory = new IntegrationEventFactory();
     expect(factory.reminderNotification).toBeDefined();
     expect(typeof factory.reminderNotification).toBe('function');
+  });
+
+  describe('method signatures', () => {
+    it('should have envelopeInvitation method with correct signature', () => {
+      expect(factory.envelopeInvitation).toBeDefined();
+      expect(typeof factory.envelopeInvitation).toBe('function');
+      expect(factory.envelopeInvitation.length).toBe(1);
+    });
+
+    it('should have viewerInvitation method with correct signature', () => {
+      expect(factory.viewerInvitation).toBeDefined();
+      expect(typeof factory.viewerInvitation).toBe('function');
+      expect(factory.viewerInvitation.length).toBe(1);
+    });
+
+    it('should have signerDeclined method with correct signature', () => {
+      expect(factory.signerDeclined).toBeDefined();
+      expect(typeof factory.signerDeclined).toBe('function');
+      expect(factory.signerDeclined.length).toBe(1);
+    });
+
+    it('should have envelopeCancelled method with correct signature', () => {
+      expect(factory.envelopeCancelled).toBeDefined();
+      expect(typeof factory.envelopeCancelled).toBe('function');
+      expect(factory.envelopeCancelled.length).toBe(1);
+    });
+
+    it('should have reminderNotification method with correct signature', () => {
+      expect(factory.reminderNotification).toBeDefined();
+      expect(typeof factory.reminderNotification).toBe('function');
+      expect(factory.reminderNotification.length).toBe(1);
+    });
+  });
+
+  describe('event creation with mocks', () => {
+    it('should create envelope invitation event with proper structure', () => {
+      const mockEnvelope = {
+        getId: jest.fn(() => ({ getValue: () => 'test-envelope-id' })),
+        getTitle: jest.fn(() => 'Test Envelope'),
+        getCreatedBy: jest.fn(() => 'test-user-id')
+      };
+      
+      const mockSigner = {
+        getId: jest.fn(() => ({ getValue: () => 'test-signer-id' })),
+        getEmail: jest.fn(() => ({ getValue: () => 'test@example.com' })),
+        getFullName: jest.fn(() => 'Test User')
+      };
+
+      const args = {
+        envelope: mockEnvelope as any,
+        signer: mockSigner as any,
+        message: 'Please sign this document',
+        invitationToken: 'test-token',
+        sentAtISO: '2024-01-01T00:00:00.000Z'
+      };
+
+      const result = factory.envelopeInvitation(args);
+
+      expect(result).toBeDefined();
+      expect(result.name).toBe('ENVELOPE_INVITATION');
+      expect(result.payload).toBeDefined();
+      expect(result.payload.envelopeId).toBe('test-envelope-id');
+      expect(result.payload.signerId).toBe('test-signer-id');
+    });
+
+    it('should create viewer invitation event with proper structure', () => {
+      const mockEnvelope = {
+        getId: jest.fn(() => ({ getValue: () => 'test-envelope-id' })),
+        getTitle: jest.fn(() => 'Test Envelope'),
+        getCreatedBy: jest.fn(() => 'test-user-id')
+      };
+
+      const args = {
+        envelope: mockEnvelope as any,
+        email: 'viewer@example.com',
+        fullName: 'Viewer User',
+        message: 'Please view this document',
+        token: 'test-token',
+        expiresAtISO: '2024-01-02T00:00:00.000Z',
+        sentAtISO: '2024-01-01T00:00:00.000Z'
+      };
+
+      const result = factory.viewerInvitation(args);
+
+      expect(result).toBeDefined();
+      expect(result.name).toBe('DOCUMENT_VIEW_INVITATION');
+      expect(result.payload).toBeDefined();
+      expect(result.payload.envelopeId).toBe('test-envelope-id');
+      expect(result.payload.viewerEmail).toBe('viewer@example.com');
+    });
+
+    it('should create signer declined event with proper structure', () => {
+      const mockEnvelope = {
+        getId: jest.fn(() => ({ getValue: () => 'test-envelope-id' })),
+        getTitle: jest.fn(() => 'Test Envelope'),
+        getCreatedBy: jest.fn(() => 'test-user-id')
+      };
+      
+      const mockSigner = {
+        getId: jest.fn(() => ({ getValue: () => 'test-signer-id' })),
+        getEmail: jest.fn(() => ({ getValue: () => 'test@example.com' })),
+        getFullName: jest.fn(() => 'Test User')
+      };
+
+      const args = {
+        envelope: mockEnvelope as any,
+        signer: mockSigner as any,
+        reason: 'I decline to sign',
+        whenISO: '2024-01-01T00:00:00.000Z',
+        ipAddress: '127.0.0.1',
+        userAgent: 'TestAgent',
+        country: 'US'
+      };
+
+      const result = factory.signerDeclined(args);
+
+      expect(result).toBeDefined();
+      expect(result.name).toBe('SIGNER_DECLINED');
+      expect(result.payload).toBeDefined();
+      expect(result.payload.envelopeId).toBe('test-envelope-id');
+      expect(result.payload.signerId).toBe('test-signer-id');
+      expect(result.payload.declineReason).toBe('I decline to sign');
+    });
+
+    it('should create envelope cancelled event with proper structure', () => {
+      const mockEnvelope = {
+        getId: jest.fn(() => ({ getValue: () => 'test-envelope-id' })),
+        getTitle: jest.fn(() => 'Test Envelope'),
+        getCreatedBy: jest.fn(() => 'test-user-id'),
+        getStatus: jest.fn(() => ({ getValue: () => 'DRAFT' }))
+      };
+
+      const args = {
+        envelope: mockEnvelope as any,
+        cancelledByUserId: 'test-user-id',
+        whenISO: '2024-01-01T00:00:00.000Z',
+        ipAddress: '127.0.0.1',
+        userAgent: 'TestAgent',
+        country: 'US'
+      };
+
+      const result = factory.envelopeCancelled(args);
+
+      expect(result).toBeDefined();
+      expect(result.name).toBe('ENVELOPE_CANCELLED');
+      expect(result.payload).toBeDefined();
+      expect(result.payload.envelopeId).toBe('test-envelope-id');
+      expect(result.payload.cancelledByUserId).toBe('test-user-id');
+    });
+
+    it('should create reminder notification event with proper structure', () => {
+      const args = {
+        envelopeId: 'test-envelope-id',
+        signerId: 'test-signer-id',
+        message: 'Please sign this document',
+        reminderCount: 1,
+        whenISO: '2024-01-01T00:00:00.000Z'
+      };
+
+      const result = factory.reminderNotification(args);
+
+      expect(result).toBeDefined();
+      expect(result.name).toBe('REMINDER_NOTIFICATION');
+      expect(result.payload).toBeDefined();
+      expect(result.payload.envelopeId).toBe('test-envelope-id');
+      expect(result.payload.signerId).toBe('test-signer-id');
+      expect(result.payload.reminderCount).toBe(1);
+    });
+
+    it('should handle signer declined event with fallback values', () => {
+      const factory = new IntegrationEventFactory();
+      const args = {
+        envelope: {
+          getId: jest.fn(() => ({ getValue: () => 'test-envelope-id' })),
+          getTitle: jest.fn(() => 'Test Envelope')
+        } as any,
+        signer: {
+          getFullName: jest.fn(() => null),
+          getEmail: jest.fn(() => null)
+        } as any,
+        reason: 'I decline to sign',
+        whenISO: '2024-01-01T00:00:00Z',
+        ipAddress: '127.0.0.1',
+        userAgent: 'TestAgent/1.0',
+        country: 'US'
+      };
+
+      const result = factory.signerDeclined(args);
+
+      expect(result).toBeDefined();
+      expect(result.name).toBe('SIGNER_DECLINED');
+      expect(result.payload).toBeDefined();
+      expect(result.payload.signerName).toBe('Unknown');
+      expect(result.payload.declineReason).toBe('I decline to sign');
+    });
   });
 });

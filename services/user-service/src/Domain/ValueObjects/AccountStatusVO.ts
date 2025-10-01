@@ -17,7 +17,6 @@ import { validationFailed } from "../../UserServiceErrors";
  * @example
  * ```ts
  * const status = AccountStatusVO.fromString("ACTIVE");
- * console.log(status.isActive()); // true
  * ```
  */
 export class AccountStatusVO extends ValueObject<UserAccountStatus> {

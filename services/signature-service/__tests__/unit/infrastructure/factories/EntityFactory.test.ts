@@ -52,13 +52,13 @@ describe('EntityFactory', () => {
         description: 'Test Description',
         origin: DocumentOrigin.userUpload(),
         signingOrder: SigningOrder.ownerFirst(),
-        sourceKey: S3Key.fromString('source-key'),
-        metaKey: S3Key.fromString('meta-key'),
+        sourceKey: 'test-bucket/source-key',
+        metaKey: 'test-bucket/meta-key',
       };
 
       const result = EntityFactory.create('SignatureEnvelope', data);
       expect(result).toBeDefined();
-      expect(result.constructor.name).toBe('SignatureEnvelope');
+      expect((result as any).constructor.name).toBe('SignatureEnvelope');
     });
 
     it('should create EnvelopeSigner when entityType is EnvelopeSigner', () => {
@@ -74,7 +74,7 @@ describe('EntityFactory', () => {
 
       const result = EntityFactory.create('EnvelopeSigner', data);
       expect(result).toBeDefined();
-      expect(result.constructor.name).toBe('EnvelopeSigner');
+      expect((result as any).constructor.name).toBe('EnvelopeSigner');
     });
 
     it('should create InvitationToken when entityType is InvitationToken', () => {
@@ -88,7 +88,7 @@ describe('EntityFactory', () => {
 
       const result = EntityFactory.create('InvitationToken', data);
       expect(result).toBeDefined();
-      expect(result.constructor.name).toBe('InvitationToken');
+      expect((result as any).constructor.name).toBe('InvitationToken');
     });
 
     it('should create Consent when entityType is Consent', () => {
@@ -108,7 +108,7 @@ describe('EntityFactory', () => {
 
       const result = EntityFactory.create('Consent', data);
       expect(result).toBeDefined();
-      expect(result.constructor.name).toBe('Consent');
+      expect((result as any).constructor.name).toBe('Consent');
     });
 
     it('should throw error for unsupported entity type', () => {
@@ -163,6 +163,83 @@ describe('EntityFactory', () => {
       const result = EntityFactory.createValueObjects.consentId();
       expect(result).toBeDefined();
       expect(result.getValue()).toBeDefined();
+    });
+  });
+
+  describe('createSignatureEnvelope method', () => {
+    it('should create SignatureEnvelope with all required parameters', () => {
+      const data = {
+        id: EnvelopeId.fromString(TestUtils.generateUuid()),
+        createdBy: TestUtils.generateUuid(),
+        title: 'Test Envelope',
+        description: 'Test Description',
+        origin: DocumentOrigin.userUpload(),
+        signingOrder: SigningOrder.ownerFirst(),
+        sourceKey: 'test-bucket/source-key',
+        metaKey: 'test-bucket/meta-key',
+      };
+
+      const result = EntityFactory.createSignatureEnvelope(data);
+      expect(result).toBeDefined();
+      expect((result as any).constructor.name).toBe('SignatureEnvelope');
+    });
+  });
+
+  describe('createEnvelopeSigner method', () => {
+    it('should create EnvelopeSigner with all required parameters', () => {
+      const data = {
+        envelopeId: EnvelopeId.fromString(TestUtils.generateUuid()),
+        userId: TestUtils.generateUuid(),
+        email: 'test@example.com',
+        fullName: 'Test User',
+        isExternal: true,
+        order: 1,
+        participantRole: 'SIGNER' as const,
+      };
+
+      const result = EntityFactory.createEnvelopeSigner(data);
+      expect(result).toBeDefined();
+      expect((result as any).constructor.name).toBe('EnvelopeSigner');
+    });
+  });
+
+  describe('createInvitationToken method', () => {
+    it('should create InvitationToken with all required parameters', () => {
+      const data = {
+        id: InvitationTokenId.fromString(TestUtils.generateUuid()),
+        envelopeId: EnvelopeId.fromString(TestUtils.generateUuid()),
+        signerId: SignerId.fromString(TestUtils.generateUuid()),
+        tokenHash: 'test-token-hash',
+        expiresAt: new Date(),
+        createdBy: TestUtils.generateUuid(),
+        invitedByUserId: TestUtils.generateUuid(),
+      };
+
+      const result = EntityFactory.createInvitationToken(data);
+      expect(result).toBeDefined();
+      expect((result as any).constructor.name).toBe('InvitationToken');
+    });
+  });
+
+  describe('createConsent method', () => {
+    it('should create Consent with all required parameters', () => {
+      const data = {
+        id: ConsentId.fromString(TestUtils.generateUuid()),
+        envelopeId: EnvelopeId.fromString(TestUtils.generateUuid()),
+        signerId: SignerId.fromString(TestUtils.generateUuid()),
+        signatureId: SignerId.fromString(TestUtils.generateUuid()),
+        consentGiven: true,
+        consentTimestamp: new Date(),
+        consentText: 'I consent to sign',
+        ipAddress: '127.0.0.1',
+        userAgent: 'TestAgent',
+        country: 'US',
+        userEmail: 'test@example.com',
+      };
+
+      const result = EntityFactory.createConsent(data);
+      expect(result).toBeDefined();
+      expect((result as any).constructor.name).toBe('Consent');
     });
   });
 });
