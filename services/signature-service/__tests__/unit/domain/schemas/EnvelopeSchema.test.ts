@@ -11,7 +11,9 @@ import {
   UpdateEnvelopeSchema,
   EnvelopeIdSchema,
   EnvelopeStatusSchema,
-  EnvelopeQuerySchema
+  EnvelopeQuerySchema,
+  GetEnvelopeQuerySchema,
+  GetEnvelopesByUserQuerySchema
 } from '@/domain/schemas/EnvelopeSchema';
 import { SigningOrderType, DocumentOriginType, EnvelopeSortBy, SortOrder } from '@lawprotect/shared-ts';
 import { EnvelopeStatus } from '@/domain/value-objects/EnvelopeStatus';
@@ -451,6 +453,153 @@ describe('EnvelopeSchema', () => {
       };
 
       expect(() => EnvelopeQuerySchema.parse(invalidData)).toThrow();
+    });
+  });
+
+  describe('GetEnvelopeQuerySchema', () => {
+    it('should validate valid get envelope query with includeSigners true', () => {
+      const validData = {
+        invitationToken: 'token-123',
+        includeSigners: 'true'
+      };
+
+      const result = GetEnvelopeQuerySchema.parse(validData);
+      expect(result.invitationToken).toBe(validData.invitationToken);
+      expect(result.includeSigners).toBe(true);
+    });
+
+    it('should validate get envelope query with includeSigners false', () => {
+      const validData = {
+        invitationToken: 'token-123',
+        includeSigners: 'false'
+      };
+
+      const result = GetEnvelopeQuerySchema.parse(validData);
+      expect(result.invitationToken).toBe(validData.invitationToken);
+      expect(result.includeSigners).toBe(false);
+    });
+
+    it('should default includeSigners to true when not provided', () => {
+      const validData = {
+        invitationToken: 'token-123'
+      };
+
+      const result = GetEnvelopeQuerySchema.parse(validData);
+      expect(result.invitationToken).toBe(validData.invitationToken);
+      expect(result.includeSigners).toBe(true);
+    });
+
+    it('should default includeSigners to true when empty string', () => {
+      const validData = {
+        invitationToken: 'token-123',
+        includeSigners: ''
+      };
+
+      const result = GetEnvelopeQuerySchema.parse(validData);
+      expect(result.invitationToken).toBe(validData.invitationToken);
+      expect(result.includeSigners).toBe(true);
+    });
+  });
+
+  describe('GetEnvelopesByUserQuerySchema', () => {
+    it('should validate valid query with string limit', () => {
+      const validData = {
+        status: 'DRAFT',
+        limit: '25',
+        cursor: 'cursor-123',
+        includeSigners: 'true'
+      };
+
+      const result = GetEnvelopesByUserQuerySchema.parse(validData);
+      expect(result.status).toStrictEqual(EnvelopeStatus.draft());
+      expect(result.limit).toBe(25);
+      expect(result.cursor).toBe(validData.cursor);
+      expect(result.includeSigners).toBe(true);
+    });
+
+    it('should validate valid query with number limit', () => {
+      const validData = {
+        status: 'DRAFT',
+        limit: 25,
+        cursor: 'cursor-123',
+        includeSigners: 'true'
+      };
+
+      const result = GetEnvelopesByUserQuerySchema.parse(validData);
+      expect(result.status).toStrictEqual(EnvelopeStatus.draft());
+      expect(result.limit).toBe(25);
+      expect(result.cursor).toBe(validData.cursor);
+      expect(result.includeSigners).toBe(true);
+    });
+
+    it('should validate query with includeSigners false', () => {
+      const validData = {
+        limit: 25,
+        includeSigners: 'false'
+      };
+
+      const result = GetEnvelopesByUserQuerySchema.parse(validData);
+      expect(result.limit).toBe(25);
+      expect(result.includeSigners).toBe(false);
+    });
+
+    it('should default includeSigners to true when not provided', () => {
+      const validData = {
+        limit: 25
+      };
+
+      const result = GetEnvelopesByUserQuerySchema.parse(validData);
+      expect(result.limit).toBe(25);
+      expect(result.includeSigners).toBe(true);
+    });
+
+    it('should default includeSigners to true when empty string', () => {
+      const validData = {
+        limit: 25,
+        includeSigners: ''
+      };
+
+      const result = GetEnvelopesByUserQuerySchema.parse(validData);
+      expect(result.limit).toBe(25);
+      expect(result.includeSigners).toBe(true);
+    });
+
+    it('should reject limit that is too small', () => {
+      const invalidData = {
+        limit: 0
+      };
+
+      expect(() => GetEnvelopesByUserQuerySchema.parse(invalidData)).toThrow();
+    });
+
+    it('should reject limit that is too large', () => {
+      const invalidData = {
+        limit: 101
+      };
+
+      expect(() => GetEnvelopesByUserQuerySchema.parse(invalidData)).toThrow();
+    });
+
+    it('should reject missing limit', () => {
+      const invalidData = {};
+
+      expect(() => GetEnvelopesByUserQuerySchema.parse(invalidData)).toThrow();
+    });
+
+    it('should reject null limit', () => {
+      const invalidData = {
+        limit: null
+      };
+
+      expect(() => GetEnvelopesByUserQuerySchema.parse(invalidData)).toThrow();
+    });
+
+    it('should reject undefined limit', () => {
+      const invalidData = {
+        limit: undefined
+      };
+
+      expect(() => GetEnvelopesByUserQuerySchema.parse(invalidData)).toThrow();
     });
   });
 });

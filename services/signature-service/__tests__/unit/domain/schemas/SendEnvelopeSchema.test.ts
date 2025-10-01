@@ -56,6 +56,65 @@ describe('SendEnvelopeSchema', () => {
       expect(result).toEqual(minimalData);
     });
 
+    it('should validate send envelope body with signers array', () => {
+      const validData = {
+        message: 'Please review and sign this document',
+        signers: [
+          {
+            signerId: '550e8400-e29b-41d4-a716-446655440000',
+            message: 'Custom message for signer'
+          }
+        ]
+      };
+
+      const result = SendEnvelopeBodySchema.parse(validData);
+      expect(result.message).toBe(validData.message);
+      expect(result.signers).toEqual(validData.signers);
+      expect(result.sendToAll).toBe(false); // Default value applied
+    });
+
+    it('should validate send envelope body with both sendToAll and signers', () => {
+      const validData = {
+        message: 'Please review and sign this document',
+        sendToAll: true,
+        signers: [
+          {
+            signerId: '550e8400-e29b-41d4-a716-446655440000',
+            message: 'Custom message for signer'
+          }
+        ]
+      };
+
+      const result = SendEnvelopeBodySchema.parse(validData);
+      expect(result).toEqual(validData);
+    });
+
+    it('should reject send envelope body with neither sendToAll nor signers', () => {
+      const invalidData = {
+        message: 'Please review and sign this document'
+      };
+
+      expect(() => SendEnvelopeBodySchema.parse(invalidData)).toThrow('Either sendToAll must be true or signers array must be provided');
+    });
+
+    it('should reject send envelope body with empty signers array', () => {
+      const invalidData = {
+        message: 'Please review and sign this document',
+        signers: []
+      };
+
+      expect(() => SendEnvelopeBodySchema.parse(invalidData)).toThrow('Either sendToAll must be true or signers array must be provided');
+    });
+
+    it('should reject send envelope body with sendToAll false and no signers', () => {
+      const invalidData = {
+        message: 'Please review and sign this document',
+        sendToAll: false
+      };
+
+      expect(() => SendEnvelopeBodySchema.parse(invalidData)).toThrow('Either sendToAll must be true or signers array must be provided');
+    });
+
     it('should apply default values', () => {
       const data = {
         sendToAll: true
