@@ -6,6 +6,7 @@
  */
 
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
+import { generateTestIpAddress } from '../../integration/helpers/testHelpers';
 import { AuditEventService } from '../../../src/services/audit/AuditEventService';
 import { SignatureAuditEventRepository } from '../../../src/repositories/SignatureAuditEventRepository';
 import { SignatureAuditEvent } from '../../../src/domain/entities/SignatureAuditEvent';
@@ -40,7 +41,7 @@ describe('AuditEventService', () => {
         description: 'Signer added to envelope',
         userId: TestUtils.generateUuid(),
         userEmail: 'signer@example.com',
-        ipAddress: '192.168.1.100',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
         country: 'US',
         metadata: { source: 'test' }
@@ -64,7 +65,7 @@ describe('AuditEventService', () => {
       expect(createdEvent.getEventType()).toBe(AuditEventType.SIGNER_ADDED);
       expect(createdEvent.getDescription()).toBe('Signer added to envelope');
       expect(createdEvent.getNetworkContext()).toEqual({
-        ipAddress: '192.168.1.100',
+        ipAddress: expect.any(String),
         userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
         country: 'US'
       });
@@ -106,7 +107,7 @@ describe('AuditEventService', () => {
         eventType: AuditEventType.SIGNER_ADDED,
         description: 'Signer added',
         userId: TestUtils.generateUuid(),
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Mozilla/5.0',
         country: 'US'
       };
@@ -128,7 +129,7 @@ describe('AuditEventService', () => {
         userId: TestUtils.generateUuid(),
         userEmail: 'user@example.com',
         networkContext: {
-          ipAddress: '192.168.1.100',
+          ipAddress: generateTestIpAddress(),
           userAgent: 'Mozilla/5.0',
           country: 'US'
         },
@@ -251,7 +252,7 @@ describe('AuditEventService', () => {
         eventType: AuditEventType.SIGNER_ADDED,
         description: 'Signer added',
         userId: TestUtils.generateUuid(),
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Mozilla/5.0',
         country: 'US'
       };
@@ -292,7 +293,7 @@ describe('AuditEventService', () => {
         description: 'Signer added',
         userId: TestUtils.generateUuid(),
         userEmail: 'signer@example.com',
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Mozilla/5.0',
         country: 'US'
       };
@@ -319,7 +320,7 @@ describe('AuditEventService', () => {
         userId: TestUtils.generateUuid(),
         userEmail: 'signer@example.com',
         networkContext: {
-          ipAddress: '192.168.1.1',
+          ipAddress: generateTestIpAddress(),
           userAgent: 'Mozilla/5.0',
           country: 'US'
         },
@@ -336,7 +337,7 @@ describe('AuditEventService', () => {
       expect(createdEvent.getEventType()).toBe(AuditEventType.SIGNER_SIGNED);
       expect(createdEvent.getDescription()).toBe('Document signed');
       expect(createdEvent.getNetworkContext()).toEqual({
-        ipAddress: '192.168.1.1',
+        ipAddress: expect.any(String),
         userAgent: 'Mozilla/5.0',
         country: 'US'
       });

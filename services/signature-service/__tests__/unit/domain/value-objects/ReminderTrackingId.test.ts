@@ -27,22 +27,25 @@ describe('ReminderTrackingId', () => {
         '123e4567-e89b-12d3-a456-4266141740000' // Extra character
       ];
 
-      invalidUuids.forEach(invalidUuid => {
-        expect(() => {
-          ReminderTrackingId.fromString(invalidUuid);
-        }).toThrow('Invalid ReminderTrackingId');
-      });
+      invalidUuids.forEach(testInvalidUuid);
+      
+      function testInvalidUuid(invalidUuid: string): void {
+        expect(() => ReminderTrackingId.fromString(invalidUuid)).toThrow('Invalid ReminderTrackingId');
+      }
     });
 
     it('should throw error for null or undefined values', () => {
-      expect(() => {
-        ReminderTrackingId.fromString(null as any);
-      }).toThrow();
-
-      expect(() => {
-        ReminderTrackingId.fromString(undefined as any);
-      }).toThrow();
+      expect(() => testNullValue()).toThrow();
+      expect(() => testUndefinedValue()).toThrow();
     });
+
+    function testNullValue(): void {
+      ReminderTrackingId.fromString(null as any);
+    }
+
+    function testUndefinedValue(): void {
+      ReminderTrackingId.fromString(undefined as any);
+    }
 
     it('should handle valid UUID v4 format', () => {
       const uuidV4 = '550e8400-e29b-41d4-a716-446655440000';

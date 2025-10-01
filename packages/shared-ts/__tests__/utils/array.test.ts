@@ -23,8 +23,8 @@ describe("compact", () => {
   });
 
   it("retains other falsy values (0, '', false, NaN)", () => {
-    const input = [0, "", false, NaN, null, undefined];
-    expect(compact(input)).toEqual([0, "", false, NaN]);
+    const input = [0, "", false, Number.NaN, null, undefined];
+    expect(compact(input)).toEqual([0, "", false, Number.NaN]);
   });
 
   it("does not mutate the original array", () => {

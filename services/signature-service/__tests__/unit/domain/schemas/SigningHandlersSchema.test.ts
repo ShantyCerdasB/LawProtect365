@@ -5,6 +5,7 @@
  * viewing, declining operations, and invitation token validation with proper error handling.
  */
 
+import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
 import {
   SignDocumentRequestSchema,
   ViewDocumentRequestSchema,
@@ -26,7 +27,7 @@ describe('SigningHandlersSchema', () => {
           given: true,
           timestamp: '2024-01-01T00:00:00Z',
           text: 'I agree to sign this document',
-          ipAddress: '192.168.1.1',
+          ipAddress: generateTestIpAddress(),
           userAgent: 'Mozilla/5.0',
           country: 'US'
         }
@@ -46,7 +47,7 @@ describe('SigningHandlersSchema', () => {
           given: true,
           timestamp: '2024-01-01T00:00:00Z',
           text: 'I agree to sign this document',
-          ipAddress: '192.168.1.1',
+          ipAddress: generateTestIpAddress(),
           userAgent: 'Mozilla/5.0',
           country: 'US'
         }

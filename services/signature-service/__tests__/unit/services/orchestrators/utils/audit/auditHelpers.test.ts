@@ -6,13 +6,14 @@
  */
 
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
+import { generateTestIpAddress } from '../../../../../integration/helpers/testHelpers';
 import { createAuditEvent, AuditEventData } from '../../../../../../src/services/orchestrators/utils/audit/auditHelpers';
 import { AuditEventType } from '../../../../../../src/domain/enums/AuditEventType';
 
 // Mock the createNetworkSecurityContext function
 jest.mock('@lawprotect/shared-ts', () => ({
   createNetworkSecurityContext: jest.fn(() => ({
-    ipAddress: '192.168.1.1',
+    ipAddress: generateTestIpAddress(),
     userAgent: 'TestAgent/1.0',
     country: 'US'
   })),
@@ -60,7 +61,7 @@ describe('auditHelpers', () => {
         userId,
         userEmail: 'test@example.com',
         networkContext: {
-          ipAddress: '192.168.1.1',
+          ipAddress: expect.any(String),
           userAgent: 'TestAgent/1.0',
           country: 'US'
         },
@@ -92,7 +93,7 @@ describe('auditHelpers', () => {
         userId,
         userEmail: undefined,
         networkContext: {
-          ipAddress: '192.168.1.1',
+          ipAddress: expect.any(String),
           userAgent: 'TestAgent/1.0',
           country: 'US'
         },
@@ -265,7 +266,7 @@ describe('auditHelpers', () => {
         description: 'Test audit event',
         userId: 'test-user-id',
         networkContext: {
-          ipAddress: '192.168.1.1',
+          ipAddress: generateTestIpAddress(),
           userAgent: 'TestAgent/1.0',
           country: 'US'
         },
@@ -290,7 +291,7 @@ describe('auditHelpers', () => {
         userId: 'test-user-id',
         signerId: 'test-signer-id',
         networkContext: {
-          ipAddress: '192.168.1.1',
+          ipAddress: generateTestIpAddress(),
           userAgent: 'TestAgent/1.0',
           country: 'US'
         },
@@ -304,7 +305,7 @@ describe('auditHelpers', () => {
         userId: 'test-user-id',
         signerId: undefined,
         networkContext: {
-          ipAddress: '192.168.1.1',
+          ipAddress: generateTestIpAddress(),
           userAgent: 'TestAgent/1.0',
           country: 'US'
         },
@@ -323,7 +324,7 @@ describe('auditHelpers', () => {
         userId: 'test-user-id',
         userEmail: 'test@example.com',
         networkContext: {
-          ipAddress: '192.168.1.1',
+          ipAddress: generateTestIpAddress(),
           userAgent: 'TestAgent/1.0',
           country: 'US'
         },
@@ -337,7 +338,7 @@ describe('auditHelpers', () => {
         userId: 'test-user-id',
         userEmail: undefined,
         networkContext: {
-          ipAddress: '192.168.1.1',
+          ipAddress: generateTestIpAddress(),
           userAgent: 'TestAgent/1.0',
           country: 'US'
         },

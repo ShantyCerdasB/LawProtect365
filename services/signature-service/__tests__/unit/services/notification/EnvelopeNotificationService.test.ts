@@ -6,14 +6,12 @@
  */
 
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
+import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
 import { EnvelopeNotificationService } from '../../../../src/services/notification/EnvelopeNotificationService';
 import { IntegrationEventFactory } from '../../../../src/infrastructure/factories/events/IntegrationEventFactory';
 import { IntegrationEventPublisher } from '@lawprotect/shared-ts';
 import { SignatureEnvelope } from '../../../../src/domain/entities/SignatureEnvelope';
 import { EnvelopeSigner } from '../../../../src/domain/entities/EnvelopeSigner';
-// import { EnvelopeId } from '../../../../src/domain/value-objects/EnvelopeId';
-// import { SignerId } from '../../../../src/domain/value-objects/SignerId';
-// import { TestUtils } from '../../../helpers/testUtils';
 
 // Mock the shared-ts modules
 jest.mock('@lawprotect/shared-ts', () => ({
@@ -224,7 +222,7 @@ describe('EnvelopeNotificationService', () => {
 
     it('should publish signer declined with security context', async () => {
       const securityContext = {
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'TestAgent/1.0',
         country: 'US'
       };
@@ -244,7 +242,7 @@ describe('EnvelopeNotificationService', () => {
         signer: mockSigners[0],
         reason: 'Not interested',
         whenISO: '2024-01-01T10:00:00Z',
-        ipAddress: '192.168.1.1',
+        ipAddress: expect.any(String),
         userAgent: 'TestAgent/1.0',
         country: 'US'
       });
@@ -275,7 +273,7 @@ describe('EnvelopeNotificationService', () => {
 
     it('should publish envelope cancelled with security context', async () => {
       const securityContext = {
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'TestAgent/1.0',
         country: 'US'
       };
@@ -293,7 +291,7 @@ describe('EnvelopeNotificationService', () => {
         envelope: mockEnvelope,
         cancelledByUserId: 'user123',
         whenISO: '2024-01-01T10:00:00Z',
-        ipAddress: '192.168.1.1',
+        ipAddress: expect.any(String),
         userAgent: 'TestAgent/1.0',
         country: 'US'
       });

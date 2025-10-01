@@ -6,6 +6,7 @@
  */
 
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
+import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
 import { S3Service } from '../../../../src/services/s3Service/S3Service';
 import { AuditEventService } from '../../../../src/services/audit/AuditEventService';
 import { S3Presigner, S3EvidenceStorage, NotFoundError, BadRequestError } from '@lawprotect/shared-ts';
@@ -16,7 +17,7 @@ import { DocumentType } from '../../../../src/domain/enums';
 // Mock the shared-ts modules
 jest.mock('@lawprotect/shared-ts', () => ({
   createNetworkSecurityContext: jest.fn(() => ({
-    ipAddress: '192.168.1.1',
+    ipAddress: generateTestIpAddress(),
     userAgent: 'TestAgent/1.0',
     country: 'US'
   })),
@@ -102,7 +103,7 @@ jest.mock('../../../../src/services/s3Service/S3Service', () => {
             description: 'Document stored successfully',
             eventType: 'DOCUMENT_ACCESSED',
             userId: request.signerId.getValue(),
-            networkContext: { ipAddress: '192.168.1.1', userAgent: 'TestAgent/1.0', country: 'US' },
+            networkContext: { ipAddress: generateTestIpAddress(), userAgent: 'TestAgent/1.0', country: 'US' },
             metadata: { operation: 'storeDocument' }
           });
 
@@ -131,7 +132,7 @@ jest.mock('../../../../src/services/s3Service/S3Service', () => {
             description: 'Document retrieved successfully',
             eventType: 'DOCUMENT_ACCESSED',
             userId: request.signerId.getValue(),
-            networkContext: { ipAddress: '192.168.1.1', userAgent: 'TestAgent/1.0', country: 'US' },
+            networkContext: { ipAddress: generateTestIpAddress(), userAgent: 'TestAgent/1.0', country: 'US' },
             metadata: { operation: 'retrieveDocument' }
           });
 
@@ -172,7 +173,7 @@ jest.mock('../../../../src/services/s3Service/S3Service', () => {
             description: 'Presigned URL generated successfully',
             eventType: 'DOCUMENT_ACCESSED',
             userId: request.signerId.getValue(),
-            networkContext: { ipAddress: '192.168.1.1', userAgent: 'TestAgent/1.0', country: 'US' },
+            networkContext: { ipAddress: generateTestIpAddress(), userAgent: 'TestAgent/1.0', country: 'US' },
             metadata: { operation: 'generatePresignedUrl', operationType: request.operation.getValue() }
           });
 
@@ -727,7 +728,7 @@ describe('S3Service', () => {
         userId: 'test-user-id',
         userEmail: 'test@example.com',
         s3Key: 'envelopes/test-envelope/signers/test-signer/signed-document.pdf',
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'TestAgent/1.0',
         country: 'US'
       };

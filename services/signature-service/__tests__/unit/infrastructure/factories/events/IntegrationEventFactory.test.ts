@@ -1,3 +1,4 @@
+import { generateTestIpAddress } from '../../../../integration/helpers/testHelpers';
 import { IntegrationEventFactory } from '../../../../../src/infrastructure/factories/events/IntegrationEventFactory';
 
 describe('IntegrationEventFactory', () => {
@@ -147,7 +148,7 @@ describe('IntegrationEventFactory', () => {
         signer: mockSigner as any,
         reason: 'I decline to sign',
         whenISO: '2024-01-01T00:00:00.000Z',
-        ipAddress: '127.0.0.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'TestAgent',
         country: 'US'
       };
@@ -174,7 +175,7 @@ describe('IntegrationEventFactory', () => {
         envelope: mockEnvelope as any,
         cancelledByUserId: 'test-user-id',
         whenISO: '2024-01-01T00:00:00.000Z',
-        ipAddress: '127.0.0.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'TestAgent',
         country: 'US'
       };
@@ -221,7 +222,7 @@ describe('IntegrationEventFactory', () => {
         } as any,
         reason: 'I decline to sign',
         whenISO: '2024-01-01T00:00:00Z',
-        ipAddress: '127.0.0.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'TestAgent/1.0',
         country: 'US'
       };

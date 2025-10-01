@@ -139,6 +139,20 @@ variable "skip_final_snapshot" {
 }
 
 /**
+ * @variable kms_key_id
+ * KMS key ID for encrypting the Aurora cluster storage.
+ *
+ * @description Optional KMS key for encryption. If not provided, AWS managed key is used.
+ * @type string
+ * @default null
+ */
+variable "kms_key_id" {
+  description = "KMS key ID for cluster encryption (optional)"
+  type        = string
+  default     = null
+}
+
+/**
  * @variable tags
  * Tags to apply to all resources created by this module.
  *

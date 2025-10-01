@@ -5,6 +5,7 @@
  * audit trail queries, and response validation with proper error handling and edge cases.
  */
 
+import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
 import {
   AuditEventTypeSchema,
   CreateAuditEventSchema,
@@ -47,7 +48,7 @@ describe('AuditSchema', () => {
         description: 'Envelope created successfully',
         userId: 'user-123',
         userEmail: 'user@example.com',
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Mozilla/5.0',
         metadata: { key: 'value' }
       };
@@ -252,7 +253,7 @@ describe('AuditSchema', () => {
         description: 'Envelope created',
         userId: 'user-123',
         userEmail: 'user@example.com',
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Mozilla/5.0',
         metadata: { key: 'value' },
         createdAt: new Date('2024-01-01')

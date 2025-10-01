@@ -49,9 +49,9 @@ export function loadOutboxStreamConfig(): OutboxStreamConfig {
     eventBusName: process.env.EVENT_BUS_NAME || DEFAULT_OUTBOX_STREAM_CONFIG.eventBusName,
     eventSource: process.env.EVENT_SOURCE || DEFAULT_OUTBOX_STREAM_CONFIG.eventSource,
     region: process.env.AWS_REGION || DEFAULT_OUTBOX_STREAM_CONFIG.region,
-    maxConcurrency: parseInt(process.env.MAX_CONCURRENCY || '10'),
-    maxRetries: parseInt(process.env.MAX_RETRIES || '3'),
-    retryDelayMs: parseInt(process.env.RETRY_DELAY_MS || '1000')
+    maxConcurrency: Number.parseInt(process.env.MAX_CONCURRENCY || '10'),
+    maxRetries: Number.parseInt(process.env.MAX_RETRIES || '3'),
+    retryDelayMs: Number.parseInt(process.env.RETRY_DELAY_MS || '1000')
   };
 }
 

@@ -177,7 +177,7 @@ describe('InvitationToken', () => {
 
   describe('Metadata', () => {
     it('should return metadata object with all fields', () => {
-      const ipAddress = '192.168.1.100';
+      const ipAddress = generateTestIpAddress();
       const token = createInvitationTokenWithParams({
         ipAddress: ipAddress,
         userAgent: 'Mozilla/5.0',
@@ -210,7 +210,7 @@ describe('InvitationToken', () => {
     });
 
     it('should return metadata object with partial fields', () => {
-      const ipAddress = '192.168.1.101';
+      const ipAddress = generateTestIpAddress();
       const token = createInvitationTokenWithParams({
         ipAddress: ipAddress,
         userAgent: undefined,
@@ -398,8 +398,9 @@ describe('InvitationToken', () => {
         expiresAt: new Date(Date.now() + 86400000) // 1 day from now
       });
 
+      const testIpAddress = generateTestIpAddress();
       const securityContext = {
-        ipAddress: '192.168.1.100',
+        ipAddress: testIpAddress,
         userAgent: 'Mozilla/5.0',
         country: 'US'
       };
@@ -411,7 +412,7 @@ describe('InvitationToken', () => {
       expect(token.getLastViewedAt()).toBeDefined();
       expect(token.getUsedAt()).toBeDefined();
       expect(token.getUsedBy()).toBe(token.getSignerId().getValue());
-      expect(token.getIpAddress()).toBe('192.168.1.100');
+      expect(token.getIpAddress()).toBe(testIpAddress);
       expect(token.getUserAgent()).toBe('Mozilla/5.0');
       expect(token.getCountry()).toBe('US');
     });
@@ -467,8 +468,9 @@ describe('InvitationToken', () => {
         expiresAt: new Date(Date.now() + 86400000)
       });
 
+      const testIpAddress = generateTestIpAddress();
       const securityContext = {
-        ipAddress: '192.168.1.100',
+        ipAddress: testIpAddress,
         userAgent: 'Mozilla/5.0',
         country: 'US'
       };
@@ -480,7 +482,7 @@ describe('InvitationToken', () => {
       expect(token.getSignedBy()).toBe('signer-123');
       expect(token.getUsedAt()).toBeDefined();
       expect(token.getUsedBy()).toBe('signer-123');
-      expect(token.getIpAddress()).toBe('192.168.1.100');
+      expect(token.getIpAddress()).toBe(testIpAddress);
       expect(token.getUserAgent()).toBe('Mozilla/5.0');
       expect(token.getCountry()).toBe('US');
     });
@@ -729,18 +731,19 @@ describe('InvitationToken', () => {
         const expiresAt = new Date(Date.now() + 86400000);
         const createdBy = 'user-123';
 
+        const testIpAddress = generateTestIpAddress();
         const token = InvitationToken.create({
           envelopeId,
           signerId,
           tokenHash,
           expiresAt,
           createdBy,
-          ipAddress: '192.168.1.100',
+          ipAddress: testIpAddress,
           userAgent: 'Mozilla/5.0',
           country: 'US'
         });
 
-        expect(token.getIpAddress()).toBe('192.168.1.100');
+        expect(token.getIpAddress()).toBe(testIpAddress);
         expect(token.getUserAgent()).toBe('Mozilla/5.0');
       expect(token.getCountry()).toBe('US');
     });
@@ -802,7 +805,7 @@ describe('InvitationToken', () => {
           revokedAt: null,
           revokedReason: null,
           createdBy: 'admin-456',
-          ipAddress: '192.168.1.100',
+          ipAddress: generateTestIpAddress(),
           userAgent: 'Mozilla/5.0',
           country: 'US',
           createdAt: new Date(Date.now() - 7200000),
@@ -837,7 +840,12 @@ describe('InvitationToken', () => {
       });
 
       it('should throw error when handling negative counts', () => {
-        const data = {
+        const data = createInvalidTokenData();
+        expect(() => InvitationToken.fromPersistence(data)).toThrow('Invalid value for viewCount: expected non-negative number, got -2');
+      });
+
+      function createInvalidTokenData() {
+        return {
           id: TestUtils.generateUuid(),
           envelopeId: TestUtils.generateUuid(),
           signerId: TestUtils.generateUuid(),
@@ -862,9 +870,7 @@ describe('InvitationToken', () => {
           createdAt: new Date(),
           updatedAt: new Date()
         };
-
-        expect(() => InvitationToken.fromPersistence(data)).toThrow('Invalid value for viewCount: expected non-negative number, got -2');
-      });
+      }
 
       it('should handle invalid date formats', () => {
         const data = {

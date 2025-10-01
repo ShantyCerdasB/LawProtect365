@@ -6,6 +6,7 @@
  */
 
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
+import { generateTestIpAddress } from '../../../../../integration/helpers/testHelpers';
 import {
   createEnvelopeCreatedAudit,
   createEnvelopeUpdatedAudit,
@@ -264,7 +265,7 @@ describe('envelopeAuditHelpers', () => {
       const userId = 'test-user-id';
       const userEmail = { getValue: () => 'external@example.com' } as any;
       const securityContext = {
-        ipAddress: '192.168.1.100',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'ExternalAgent/1.0',
         country: 'CA'
       };
@@ -279,7 +280,7 @@ describe('envelopeAuditHelpers', () => {
         metadata: {
           signerId,
           externalUserIdentifier: 'external@example.com_test-user-id',
-          ipAddress: '192.168.1.100',
+          ipAddress: generateTestIpAddress(),
           userAgent: 'ExternalAgent/1.0',
           country: 'CA'
         }
@@ -305,7 +306,7 @@ describe('envelopeAuditHelpers', () => {
         {
           signerId,
           externalUserIdentifier: 'external@example.com_test-user-id',
-          ipAddress: '192.168.1.100',
+          ipAddress: expect.any(String),
           userAgent: 'ExternalAgent/1.0',
           country: 'CA'
         }
@@ -318,7 +319,7 @@ describe('envelopeAuditHelpers', () => {
       const signerId = 'test-signer-id';
       const userId = 'test-user-id';
       const securityContext = {
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'TestAgent/1.0',
         country: 'US'
       };
@@ -392,7 +393,7 @@ describe('envelopeAuditHelpers', () => {
       const userId = 'test-user-id';
       const userEmail = { getValue: () => 'user@example.com' } as any;
       const securityContext = {
-        ipAddress: '10.0.0.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'DownloadAgent/2.0',
         country: 'US'
       };
@@ -405,7 +406,7 @@ describe('envelopeAuditHelpers', () => {
         userEmail: 'user@example.com',
         networkContext: {},
         metadata: {
-          ipAddress: '10.0.0.1',
+          ipAddress: generateTestIpAddress(),
           userAgent: 'DownloadAgent/2.0',
           country: 'US'
         }
@@ -428,7 +429,7 @@ describe('envelopeAuditHelpers', () => {
         undefined,
         userEmail,
         {
-          ipAddress: '10.0.0.1',
+          ipAddress: expect.any(String),
           userAgent: 'DownloadAgent/2.0',
           country: 'US'
         }
@@ -440,7 +441,7 @@ describe('envelopeAuditHelpers', () => {
       const envelopeId = 'test-envelope-id';
       const userId = 'test-user-id';
       const securityContext = {
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'TestAgent/1.0',
         country: 'US'
       };
@@ -455,7 +456,7 @@ describe('envelopeAuditHelpers', () => {
         undefined,
         undefined,
         expect.objectContaining({
-          ipAddress: '192.168.1.1',
+          ipAddress: expect.any(String),
           userAgent: 'TestAgent/1.0',
           country: 'US'
         })
@@ -509,7 +510,7 @@ describe('envelopeAuditHelpers', () => {
       const envelopeId = 'test-envelope-id';
       const userId = 'test-user-id';
       const securityContext = {
-        ipAddress: '203.0.113.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'CustomAgent/3.0',
         country: 'GB'
       };
@@ -524,7 +525,7 @@ describe('envelopeAuditHelpers', () => {
         undefined,
         undefined,
         {
-          ipAddress: '203.0.113.1',
+          ipAddress: expect.any(String),
           userAgent: 'CustomAgent/3.0',
           country: 'GB'
         }

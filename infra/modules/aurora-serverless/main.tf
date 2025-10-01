@@ -66,6 +66,10 @@ resource "aws_rds_cluster" "cluster" {
   vpc_security_group_ids  = var.vpc_security_group_ids
   backup_retention_period = var.backup_retention_period
   skip_final_snapshot     = var.skip_final_snapshot
+  
+  # Security: Enable storage encryption
+  storage_encrypted = true
+  kms_key_id       = var.kms_key_id
 
   tags = var.tags
 }

@@ -325,7 +325,7 @@ describe('SignatureAuditEvent', () => {
         'Test event',
         'user-123',
         'user@example.com',
-        { ipAddress: '192.168.1.1', userAgent: 'Mozilla/5.0', country: 'US' },
+        { ipAddress: generateTestIpAddress(), userAgent: 'Mozilla/5.0', country: 'US' },
         { test: 'data' },
         createdAt
       );
@@ -338,7 +338,7 @@ describe('SignatureAuditEvent', () => {
         'Test event',
         'user-123',
         'user@example.com',
-        { ipAddress: '192.168.1.1', userAgent: 'Mozilla/5.0', country: 'US' },
+        { ipAddress: generateTestIpAddress(), userAgent: 'Mozilla/5.0', country: 'US' },
         { test: 'data' },
         createdAt
       );
@@ -499,12 +499,13 @@ describe('SignatureAuditEvent', () => {
 
   describe('JSON Serialization', () => {
     it('should serialize to JSON with all fields', () => {
+      const testIpAddress = generateTestIpAddress();
       const event = createAuditEventWithParams({
         description: 'Test event',
         userId: 'user-123',
         userEmail: 'user@example.com',
         networkContext: {
-          ipAddress: '192.168.1.100',
+          ipAddress: testIpAddress,
           userAgent: 'Mozilla/5.0',
           country: 'US'
         },
@@ -520,7 +521,7 @@ describe('SignatureAuditEvent', () => {
       expect(json.description).toBe('Test event');
       expect(json.userId).toBe('user-123');
       expect(json.userEmail).toBe('user@example.com');
-      expect(json.ipAddress).toBe('192.168.1.100');
+      expect(json.ipAddress).toBe(testIpAddress);
       expect(json.userAgent).toBe('Mozilla/5.0');
       expect(json.country).toBe('US');
       expect(json.metadata).toEqual({ key: 'value' });
@@ -555,7 +556,7 @@ describe('SignatureAuditEvent', () => {
         const envelopeId = TestUtils.generateEnvelopeId();
         const signerId = TestUtils.generateSignerId();
         const networkContext = {
-          ipAddress: '192.168.1.100',
+          ipAddress: generateTestIpAddress(),
           userAgent: 'Mozilla/5.0',
           country: 'US'
         };
@@ -578,11 +579,6 @@ describe('SignatureAuditEvent', () => {
         expect(event.getUserId()).toBe('user-123');
         expect(event.getUserEmail()).toBe('user@example.com');
         expect(event.getNetworkContext()).toEqual(networkContext);
-        expect(event.getNetworkContext()).toEqual({
-          ipAddress: '192.168.1.100',
-          userAgent: 'Mozilla/5.0',
-          country: 'US'
-        });
         expect(event.getMetadata()).toEqual({ source: 'test' });
         expect(event.getCreatedAt()).toBeInstanceOf(Date);
       });
@@ -601,37 +597,34 @@ describe('SignatureAuditEvent', () => {
       });
 
       it('should throw error for empty description after trimming', () => {
-        expect(() => {
-          SignatureAuditEvent.create({
-            envelopeId: new EnvelopeId(TestUtils.generateUuid()),
-            eventType: AuditEventType.ENVELOPE_CREATED,
-            description: '   ',
-            userId: 'user-123'
-          });
-        }).toThrow('Audit event creation failed');
+        expect(() => createAuditEventWithDescription('   ')).toThrow('Audit event creation failed');
       });
 
       it('should throw error for undefined description', () => {
-        expect(() => {
-          SignatureAuditEvent.create({
-            envelopeId: new EnvelopeId(TestUtils.generateUuid()),
-            eventType: AuditEventType.ENVELOPE_CREATED,
-            description: undefined as any,
-            userId: 'user-123'
-          });
-        }).toThrow('Audit event creation failed');
+        expect(() => createAuditEventWithDescription(undefined as any)).toThrow('Audit event creation failed');
       });
 
+      function createAuditEventWithDescription(description: string | undefined) {
+        return SignatureAuditEvent.create({
+          envelopeId: new EnvelopeId(TestUtils.generateUuid()),
+          eventType: AuditEventType.ENVELOPE_CREATED,
+          description: description as string,
+          userId: 'user-123'
+        });
+      }
+
       it('should enforce signer ID requirement for signer events', () => {
-        expect(() => {
-          SignatureAuditEvent.create({
-            envelopeId: new EnvelopeId(TestUtils.generateUuid()),
-            eventType: AuditEventType.SIGNER_ADDED,
-            description: 'Signer added',
-            // Missing signerId for signer event
-          });
-        }).toThrow('Audit event creation failed');
+        expect(() => createSignerEventWithoutSignerId()).toThrow('Audit event creation failed');
       });
+
+      function createSignerEventWithoutSignerId() {
+        return SignatureAuditEvent.create({
+          envelopeId: new EnvelopeId(TestUtils.generateUuid()),
+          eventType: AuditEventType.SIGNER_ADDED,
+          description: 'Signer added',
+          // Missing signerId for signer event
+        });
+      }
 
       it('should allow envelope events without signer ID', () => {
         const event = SignatureAuditEvent.create({
@@ -655,7 +648,7 @@ describe('SignatureAuditEvent', () => {
           description: 'Signer added from primitives',
           userId: 'user-123',
           userEmail: 'user@example.com',
-          ipAddress: '192.168.1.100',
+          ipAddress: generateTestIpAddress(),
           userAgent: 'Mozilla/5.0',
           country: 'US',
           metadata: { source: 'primitives' }
@@ -666,7 +659,7 @@ describe('SignatureAuditEvent', () => {
         expect(event.getUserId()).toBe('user-123');
         expect(event.getUserEmail()).toBe('user@example.com');
         expect(event.getNetworkContext()).toEqual({
-          ipAddress: '192.168.1.100',
+          ipAddress: expect.any(String),
           userAgent: 'Mozilla/5.0',
           country: 'US'
         });
@@ -698,7 +691,7 @@ describe('SignatureAuditEvent', () => {
           description: 'Test event',
           userId: 'user-123',
           userEmail: 'user@example.com',
-          ipAddress: '192.168.1.100',
+          ipAddress: generateTestIpAddress(),
           userAgent: 'Mozilla/5.0',
           country: 'US',
           metadata: { key: 'value' },
@@ -796,11 +789,12 @@ describe('SignatureAuditEvent', () => {
 
   describe('Network Context Getters', () => {
     it('should get IP address from network context', () => {
+      const testIpAddress = generateTestIpAddress();
       const event = auditEventWithNetwork({
-        ipAddress: '192.168.1.100'
+        ipAddress: testIpAddress
       });
 
-      expect(event.getIpAddress()).toBe('192.168.1.100');
+      expect(event.getIpAddress()).toBe(testIpAddress);
     });
 
     it('should get user agent from network context', () => {

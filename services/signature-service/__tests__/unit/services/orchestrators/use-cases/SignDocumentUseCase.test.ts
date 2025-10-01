@@ -1,4 +1,5 @@
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
+import { generateTestIpAddress } from '../../../../integration/helpers/testHelpers';
 import { SignDocumentUseCase } from '../../../../../src/services/orchestrators/use-cases/SignDocumentUseCase';
 import { SignDocumentUseCaseInput, SignDocumentUseCaseResult } from '../../../../../src/domain/types/usecase/orchestrator/SignDocumentUseCase';
 import { EnvelopeId } from '../../../../../src/domain/value-objects/EnvelopeId';
@@ -126,7 +127,7 @@ describe('SignDocumentUseCase', () => {
             given: true,
             timestamp: '2023-01-01T10:00:00Z',
             text: 'I consent to sign this document',
-            ipAddress: '192.168.1.1',
+            ipAddress: generateTestIpAddress(),
             userAgent: 'Mozilla/5.0',
             country: 'US'
           },

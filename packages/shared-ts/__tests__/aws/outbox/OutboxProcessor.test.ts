@@ -8,6 +8,20 @@ describe('OutboxProcessor', () => {
   let mockMetrics: jest.Mocked<OutboxProcessor['metrics']>;
   let mockOptions: OutboxProcessor['options'];
 
+  function createMockEvent(id: string): OutboxRecord {
+    return {
+      id,
+      type: 'TestEvent',
+      payload: { test: 'data' },
+      occurredAt: '2023-01-01T00:00:00.000Z',
+      status: 'pending',
+      retryCount: 0,
+      lastError: null,
+      createdAt: '2023-01-01T00:00:00.000Z',
+      updatedAt: '2023-01-01T00:00:00.000Z'
+    };
+  }
+
   beforeEach(() => {
     mockOutboxRepository = {
       pullPending: jest.fn(),
@@ -260,13 +274,4 @@ describe('OutboxProcessor', () => {
     });
   });
 
-  function createMockEvent(id: string): OutboxRecord {
-    return {
-      id,
-      type: 'TestEvent',
-      payload: { test: 'data' },
-      occurredAt: '2023-01-01T00:00:00.000Z',
-      status: 'pending',
-      attempts: 0};
-  }
 });

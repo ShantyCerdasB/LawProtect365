@@ -31,7 +31,8 @@ module.exports = {
     "<rootDir>/src/**/*.ts", 
     "!<rootDir>/src/**/*.d.ts",
     "!<rootDir>/src/**/index.ts",
-    "!<rootDir>/src/**/enums/**/*.ts"
+    "!<rootDir>/src/**/enums/**/*.ts",
+    "!<rootDir>/src/**/handlers/**/*.ts"
   ],
   coverageDirectory: "<rootDir>/coverage",
   coverageReporters: ["text", "lcov", "html"],

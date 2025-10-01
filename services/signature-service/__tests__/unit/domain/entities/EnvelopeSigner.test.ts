@@ -5,6 +5,7 @@
  * for the EnvelopeSigner entity that consolidates signer and signature data.
  */
 
+import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
 import { EnvelopeSigner } from '../../../../src/domain/entities/EnvelopeSigner';
 import { NetworkSecurityContext } from '@lawprotect/shared-ts';
 import { SignerId } from '../../../../src/domain/value-objects/SignerId';
@@ -13,7 +14,6 @@ import { Email } from '@lawprotect/shared-ts';
 import { SignatureMetadata } from '../../../../src/domain/value-objects/SignatureMetadata';
 import { SignerStatus } from '@prisma/client';
 import { TestUtils } from '../../../helpers/testUtils';
-import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
 import { 
   invalidSignerState, 
   signerAlreadySigned,
@@ -582,7 +582,7 @@ describe('EnvelopeSigner', () => {
         signedS3Key: null,
         kmsKeyId: null,
         algorithm: null,
-        ipAddress: '127.0.0.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Mozilla/5.0',
         reason: null,
         location: null,
@@ -733,12 +733,12 @@ describe('EnvelopeSigner', () => {
 
     beforeEach(() => {
       signer = createEnvelopeSignerWithParams({});
-      signer.recordConsent('I consent to electronic signing', '127.0.0.1', 'Mozilla/5.0');
+      signer.recordConsent('I consent to electronic signing', generateTestIpAddress(), 'Mozilla/5.0');
       
       metadata = SignatureMetadata.fromObject({
         reason: 'Legal compliance',
         location: 'New York, NY',
-        ipAddress: '127.0.0.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Mozilla/5.0'
       });
     });
@@ -800,7 +800,7 @@ describe('EnvelopeSigner', () => {
       const metadata = SignatureMetadata.fromObject({
         reason: 'Legal compliance',
         location: 'New York, NY',
-        ipAddress: '127.0.0.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Mozilla/5.0'
       });
 

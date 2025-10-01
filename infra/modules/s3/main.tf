@@ -12,6 +12,17 @@ resource "aws_s3_bucket" "main_bucket" {
 }
 
 /**
+ * S3 bucket logging for audit trail.
+ */
+resource "aws_s3_bucket_logging" "main_bucket_logging" {
+  bucket = aws_s3_bucket.main_bucket.id
+  target_bucket = aws_s3_bucket.main_bucket.id
+  target_prefix = "logs/"
+  
+  depends_on = [aws_s3_bucket.main_bucket]
+}
+
+/**
  * Optional S3 bucket versioning.
  */
 resource "aws_s3_bucket_versioning" "main_bucket_versioning" {

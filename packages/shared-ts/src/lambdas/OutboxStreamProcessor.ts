@@ -82,9 +82,7 @@ export class OutboxStreamProcessor {
       const occurredAt = dynamoDbRecord.occurredAt?.S;
       const traceId = dynamoDbRecord.traceId?.S;
       const status = dynamoDbRecord.status?.S;
-      const attempts = dynamoDbRecord.attempts?.N ? parseInt(dynamoDbRecord.attempts.N) : 0;
-      const createdAt = dynamoDbRecord.createdAt?.S;
-      const updatedAt = dynamoDbRecord.updatedAt?.S;
+      const attempts = dynamoDbRecord.attempts?.N ? Number.parseInt(dynamoDbRecord.attempts.N) : 0;
 
       if (!id || !type || !occurredAt) {
         console.warn('Invalid outbox record - missing required fields:', {

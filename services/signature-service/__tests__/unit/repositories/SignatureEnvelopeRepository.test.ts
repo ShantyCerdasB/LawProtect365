@@ -28,12 +28,10 @@ import {
 describe('SignatureEnvelopeRepository - Internal Methods', () => {
   let repository: SignatureEnvelopeRepository;
   let prismaMock: { signatureEnvelope: PrismaModelMock };
-  let envelopeOps: PrismaModelMock;
   beforeEach(async () => {
     await import('@lawprotect/shared-ts');
-    const { prisma, signatureEnvelope } = createSignatureEnvelopePrismaMock();
+    const { prisma } = createSignatureEnvelopePrismaMock();
     prismaMock = prisma as unknown as { signatureEnvelope: PrismaModelMock };
-    envelopeOps = signatureEnvelope;
     repository = new SignatureEnvelopeRepository(prismaMock as any);
     jest.clearAllMocks();
     mockListPage.mockClear();

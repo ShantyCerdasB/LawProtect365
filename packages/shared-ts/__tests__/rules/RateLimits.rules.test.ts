@@ -183,7 +183,7 @@ describe('RateLimits.rules', () => {
     });
 
     it('should return minimum for non-finite values', () => {
-      expect(clampListPageSize(NaN)).toBe(1);
+      expect(clampListPageSize(Number.NaN)).toBe(1);
       expect(clampListPageSize(Infinity)).toBe(1);
       expect(clampListPageSize(-Infinity)).toBe(1);
     });

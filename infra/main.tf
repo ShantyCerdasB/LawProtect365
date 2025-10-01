@@ -20,6 +20,7 @@ module "networking" {
   azs                  = ["us-east-1a", "us-east-1b", "us-east-1c"]
   public_subnet_cidrs  = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
   private_subnet_cidrs = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]
+  region               = var.region
   tags                 = local.common_tags
 }
 
@@ -240,8 +241,9 @@ module "frontend" {
 }
 
 resource "aws_sns_topic" "budgets_alerts" {
-  name = "${var.project_name}-${var.env}-budget-alerts"
-  tags = local.common_tags
+  name              = "${var.project_name}-${var.env}-budget-alerts"
+  kms_master_key_id = module.kms_factory.observability_kms_key_arn
+  tags              = local.common_tags
 }
 
 module "cloudwatch_budgets" {

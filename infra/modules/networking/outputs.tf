@@ -39,9 +39,22 @@ output "rds_security_group_id" {
 }
 
 /**
- * ID of the NAT Gateway.
+ * VPC Endpoints information.
  */
-output "nat_gateway_id" {
-  description = "NAT Gateway ID."
-  value       = aws_nat_gateway.nat.id
+output "vpc_endpoints" {
+  description = "VPC endpoints information"
+  value = {
+    s3_endpoint_id         = aws_vpc_endpoint.s3.id
+    dynamodb_endpoint_id   = aws_vpc_endpoint.dynamodb.id
+    kms_endpoint_id        = aws_vpc_endpoint.kms.id
+    eventbridge_endpoint_id = aws_vpc_endpoint.eventbridge.id
+  }
+}
+
+/**
+ * Security group ID for VPC endpoints.
+ */
+output "vpc_endpoints_security_group_id" {
+  description = "Security group ID for VPC endpoints"
+  value       = aws_security_group.vpc_endpoints.id
 }

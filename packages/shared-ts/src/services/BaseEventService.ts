@@ -6,7 +6,7 @@
  * SignerEventService, etc.). Uses the outbox pattern for reliable event delivery.
  */
 
-import { randomBytes } from 'crypto';
+import { randomBytes } from 'node:crypto';
 import type { ActorContext, DomainEvent } from '../index.js';
 import { makeEvent } from '../index.js';
 import { OutboxRepository } from '../aws/outbox/OutboxRepository.js';

@@ -65,11 +65,11 @@ async function main() {
 /**
  * Executes the seed function and handles cleanup
  */
-main()
-  .catch((e) => {
-    console.error('Fatal error during seeding:', e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+try {
+  await main();
+} catch (e) {
+  console.error('Fatal error during seeding:', e);
+  process.exit(1);
+} finally {
+  await prisma.$disconnect();
+}

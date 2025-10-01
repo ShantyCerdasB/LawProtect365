@@ -90,8 +90,8 @@ data "aws_iam_policy_document" "outbox_publisher" {
       "dynamodb:Scan"
     ]
     resources = [
-      module.outbox_table.table_arn,
-      "${module.outbox_table.table_arn}/index/*"
+      module.event_publisher_service.outbox_table_arn,
+      "${module.event_publisher_service.outbox_table_arn}/index/*"
     ]
   }
 }

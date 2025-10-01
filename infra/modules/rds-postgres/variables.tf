@@ -91,6 +91,13 @@ variable "deletion_protection" {
   description = "Enable deletion protection"
 }
 
+/** KMS key ID for encrypting the RDS instance storage */
+variable "kms_key_id" {
+  type        = string
+  default     = null
+  description = "KMS key ID for RDS encryption (optional)"
+}
+
 /** Common tags applied to resources */
 variable "tags" {
   type        = map(string)

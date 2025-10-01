@@ -5,6 +5,7 @@
  * validation, and linking with signatures with proper mocking and error handling.
  */
 
+import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
 import { ConsentService } from '../../../../src/services/consentService/ConsentService';
 import { ConsentRepository } from '../../../../src/repositories/ConsentRepository';
 import { EnvelopeSignerRepository } from '../../../../src/repositories/EnvelopeSignerRepository';
@@ -79,7 +80,7 @@ describe('ConsentService', () => {
         consentGiven: true,
         consentTimestamp: new Date('2024-01-01'),
         consentText: 'I consent to sign this document',
-        ipAddress: '127.0.0.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'TestAgent/1.0',
         country: 'US',
         userEmail: 'test@example.com'
@@ -122,7 +123,7 @@ describe('ConsentService', () => {
         consentGiven: true,
         consentTimestamp: new Date('2024-01-01'),
         consentText: 'I consent to sign this document',
-        ipAddress: '127.0.0.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'TestAgent/1.0',
         country: 'US',
         userEmail: 'test@example.com'
@@ -147,7 +148,7 @@ describe('ConsentService', () => {
         consentGiven: true,
         consentTimestamp: new Date('2024-01-01'),
         consentText: 'I consent to sign this document',
-        ipAddress: '127.0.0.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'TestAgent/1.0',
         country: 'US',
         userEmail: 'test@example.com'
@@ -169,7 +170,7 @@ describe('ConsentService', () => {
         consentGiven: true,
         consentTimestamp: new Date('2024-01-01'),
         consentText: 'I consent to sign this document',
-        ipAddress: '127.0.0.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'TestAgent/1.0',
         country: 'US',
         userEmail: 'test@example.com'

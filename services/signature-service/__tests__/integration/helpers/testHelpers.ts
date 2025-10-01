@@ -6,7 +6,7 @@
  * generation, authentication helpers, and request context creation.
  */
 
-import { createHash, randomUUID, randomBytes } from 'crypto';
+import { createHash, randomUUID, randomBytes } from 'node:crypto';
 import { generateTestJwtToken as generateJwtFromMock } from '../mocks/cognito/jwksMock';
 
 /**

@@ -123,17 +123,18 @@ describe('SignatureMetadata', () => {
 
   describe('Equality', () => {
     it('should return true for equal SignatureMetadata objects', () => {
+      const testIpAddress = generateTestIpAddress();
       const metadata1 = new SignatureMetadata(
         'Document signing',
         'Los Angeles, CA',
-        '203.0.113.1',
+        testIpAddress,
         'Firefox/89.0'
       );
 
       const metadata2 = new SignatureMetadata(
         'Document signing',
         'Los Angeles, CA',
-        '203.0.113.1',
+        testIpAddress,
         'Firefox/89.0'
       );
 
@@ -144,14 +145,14 @@ describe('SignatureMetadata', () => {
       const metadata1 = new SignatureMetadata(
         'Document signing',
         'Los Angeles, CA',
-        '203.0.113.1',
+        generateTestIpAddress(),
         'Firefox/89.0'
       );
 
       const metadata2 = new SignatureMetadata(
         'Contract signing',
         'Los Angeles, CA',
-        '203.0.113.1',
+        generateTestIpAddress(),
         'Firefox/89.0'
       );
 
@@ -210,10 +211,11 @@ describe('SignatureMetadata', () => {
 
   describe('Serialization', () => {
     it('should serialize to object with all properties', () => {
+      const testIpAddress = generateTestIpAddress();
       const metadata = new SignatureMetadata(
         'Agreement signing',
         'Chicago, IL',
-        '198.51.100.1',
+        testIpAddress,
         'Safari/14.1'
       );
 
@@ -222,16 +224,17 @@ describe('SignatureMetadata', () => {
       expect(obj).toEqual({
         reason: 'Agreement signing',
         location: 'Chicago, IL',
-        ipAddress: '198.51.100.1',
+        ipAddress: testIpAddress,
         userAgent: 'Safari/14.1'
       });
     });
 
     it('should serialize to object with partial properties', () => {
+      const testIpAddress = generateTestIpAddress();
       const metadata = new SignatureMetadata(
         'Contract signing',
         undefined,
-        '203.0.113.1',
+        testIpAddress,
         undefined
       );
 
@@ -240,7 +243,7 @@ describe('SignatureMetadata', () => {
       expect(obj).toEqual({
         reason: 'Contract signing',
         location: undefined,
-        ipAddress: '203.0.113.1',
+        ipAddress: testIpAddress,
         userAgent: undefined
       });
     });
@@ -272,10 +275,11 @@ describe('SignatureMetadata', () => {
     });
 
     it('should be serializable to JSON', () => {
+      const testIpAddress = '192.0.2.1';
       const metadata = new SignatureMetadata(
         'Legal document',
         'Miami, FL',
-        '192.0.2.1',
+        testIpAddress,
         'Edge/91.0.864.59'
       );
 

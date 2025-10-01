@@ -1,3 +1,4 @@
+import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
 import { EntityFactory } from '../../../../src/infrastructure/factories/EntityFactory';
 import { TestUtils } from '../../../helpers/testUtils';
 import { EnvelopeId } from '../../../../src/domain/value-objects/EnvelopeId';
@@ -100,7 +101,7 @@ describe('EntityFactory', () => {
         consentGiven: true,
         consentTimestamp: new Date(),
         consentText: 'I consent to sign',
-        ipAddress: '127.0.0.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'TestAgent',
         country: 'US',
         userEmail: 'test@example.com',
@@ -231,7 +232,7 @@ describe('EntityFactory', () => {
         consentGiven: true,
         consentTimestamp: new Date(),
         consentText: 'I consent to sign',
-        ipAddress: '127.0.0.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'TestAgent',
         country: 'US',
         userEmail: 'test@example.com',

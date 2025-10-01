@@ -87,10 +87,12 @@ export class ValueObjectTestPatterns {
       });
 
       it('should throw error for invalid UUID patterns', () => {
-        INVALID_UUID_PATTERNS.forEach(invalidUuid => {
-          expect(() => new ValueObjectClass(invalidUuid)).toThrow(expectedError);
-        });
+        INVALID_UUID_PATTERNS.forEach(testInvalidUuid);
       });
+
+      function testInvalidUuid(invalidUuid: string): void {
+        expect(() => new ValueObjectClass(invalidUuid)).toThrow(expectedError);
+      }
     });
   }
 

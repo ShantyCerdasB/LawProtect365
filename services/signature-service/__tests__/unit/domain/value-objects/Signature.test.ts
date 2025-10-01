@@ -4,6 +4,7 @@
  * @description Comprehensive unit tests for Signature class methods
  */
 
+import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
 import { Signature } from '../../../../src/domain/value-objects/Signature';
 import { SignatureMetadata } from '../../../../src/domain/value-objects/SignatureMetadata';
 import { TestUtils } from '../../../helpers/testUtils';
@@ -433,7 +434,9 @@ describe('Signature', () => {
         'legal/agreements/2024/Q1/signed/terms-and-conditions.pdf'
       ];
 
-      complexS3Keys.forEach(signedS3Key => {
+      complexS3Keys.forEach(testComplexS3Key);
+      
+      function testComplexS3Key(signedS3Key: string): void {
         expect(() => new Signature(
           signerId,
           documentHash,
@@ -444,7 +447,7 @@ describe('Signature', () => {
           signedAt,
           metadata
         )).not.toThrow();
-      });
+      }
     });
   });
 
@@ -464,10 +467,11 @@ describe('Signature', () => {
     });
 
     it('should get IP address from metadata', () => {
-      const metadata = new SignatureMetadata(undefined, undefined, '192.168.1.1');
+      const testIpAddress = generateTestIpAddress();
+      const metadata = new SignatureMetadata(undefined, undefined, testIpAddress);
       const signature = createSignature({ metadata });
       
-      expect(signature.getIpAddress()).toBe('192.168.1.1');
+      expect(signature.getIpAddress()).toBe(testIpAddress);
     });
 
     it('should get user agent from metadata', () => {
@@ -490,7 +494,17 @@ describe('Signature', () => {
 
   describe('Static Factory Methods', () => {
     it('should create Signature from EnvelopeSigner with valid data', () => {
-      const mockSigner = {
+      const mockSigner = createValidMockSigner();
+      const signature = Signature.fromEnvelopeSigner(mockSigner);
+      
+      expect(signature).toBeInstanceOf(Signature);
+      expect(signature?.getSignerId()).toBe('test-signer-id');
+      expect(signature?.getDocumentHash()).toBe('test-document-hash');
+      expect(signature?.getSignatureHash()).toBe('test-signature-hash');
+    });
+
+    function createValidMockSigner() {
+      return {
         getId: () => ({ getValue: () => 'test-signer-id' }),
         getDocumentHash: () => 'test-document-hash',
         getSignatureHash: () => 'test-signature-hash',
@@ -500,20 +514,19 @@ describe('Signature', () => {
         getSignedAt: () => new Date('2024-01-01T00:00:00Z'),
         getReason: () => 'test-reason',
         getLocation: () => 'test-location',
-        getIpAddress: () => '192.168.1.1',
+        getIpAddress: () => generateTestIpAddress(),
         getUserAgent: () => 'test-user-agent'
       };
-
-      const signature = Signature.fromEnvelopeSigner(mockSigner);
-      
-      expect(signature).toBeInstanceOf(Signature);
-      expect(signature?.getSignerId()).toBe('test-signer-id');
-      expect(signature?.getDocumentHash()).toBe('test-document-hash');
-      expect(signature?.getSignatureHash()).toBe('test-signature-hash');
-    });
+    }
 
     it('should return null when EnvelopeSigner has no document hash', () => {
-      const mockSigner = {
+      const mockSigner = createMockSignerWithoutDocumentHash();
+      const signature = Signature.fromEnvelopeSigner(mockSigner);
+      expect(signature).toBeNull();
+    });
+
+    function createMockSignerWithoutDocumentHash() {
+      return {
         getId: () => ({ getValue: () => 'test-signer-id' }),
         getDocumentHash: () => null,
         getSignatureHash: () => 'test-signature-hash',
@@ -522,13 +535,16 @@ describe('Signature', () => {
         getAlgorithm: () => 'RSA-SHA256',
         getSignedAt: () => new Date('2024-01-01T00:00:00Z')
       };
+    }
 
+    it('should return null when EnvelopeSigner has no signature hash', () => {
+      const mockSigner = createMockSignerWithoutSignatureHash();
       const signature = Signature.fromEnvelopeSigner(mockSigner);
       expect(signature).toBeNull();
     });
 
-    it('should return null when EnvelopeSigner has no signature hash', () => {
-      const mockSigner = {
+    function createMockSignerWithoutSignatureHash() {
+      return {
         getId: () => ({ getValue: () => 'test-signer-id' }),
         getDocumentHash: () => 'test-document-hash',
         getSignatureHash: () => null,
@@ -537,10 +553,7 @@ describe('Signature', () => {
         getAlgorithm: () => 'RSA-SHA256',
         getSignedAt: () => new Date('2024-01-01T00:00:00Z')
       };
-
-      const signature = Signature.fromEnvelopeSigner(mockSigner);
-      expect(signature).toBeNull();
-    });
+    }
   });
 
   describe('Validation and Utility Methods', () => {

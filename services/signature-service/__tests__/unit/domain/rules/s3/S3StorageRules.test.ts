@@ -106,7 +106,7 @@ describe('S3StorageRules', () => {
         allowedS3Buckets: ['test-bucket'],
         maxKeyLength: 100,
         minKeyLength: 10,
-        allowedCharacters: /^[a-zA-Z0-9\/\-_\.]+$/
+        allowedCharacters: /^[a-zA-Z0-9/\-_.]+$/
       };
 
       expect(() => {
@@ -154,7 +154,7 @@ describe('S3StorageRules', () => {
       const invalidKey = S3Key.fromString('documents/test@file.pdf');
       const config = {
         allowedS3Buckets: [],
-        allowedCharacters: /^[a-zA-Z0-9\/\-_\.]+$/
+        allowedCharacters: /^[a-zA-Z0-9/\-_.]+$/
       };
 
       expect(() => {

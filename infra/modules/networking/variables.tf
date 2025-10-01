@@ -51,6 +51,15 @@ variable "private_subnet_cidrs" {
 }
 
 /**
+ * AWS region for VPC endpoints.
+ */
+variable "region" {
+  description = "AWS region for VPC endpoints"
+  type        = string
+  default     = "us-east-1"
+}
+
+/**
  * Map of tags to apply to all networking resources.
  */
 variable "tags" {

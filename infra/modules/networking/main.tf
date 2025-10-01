@@ -84,28 +84,7 @@ resource "aws_route_table_association" "public_assoc" {
   route_table_id = aws_route_table.public.id
 }
 
-/**
- * Allocates an Elastic IP for the NAT Gateway.
- */
-resource "aws_eip" "nat_eip" {
-  vpc = true
-
-  tags = merge(var.tags, {
-    Name = "${var.project_name}-${var.env}-nat-eip"
-  })
-}
-
-/**
- * Creates a NAT Gateway in the first public subnet for outbound internet access from private subnets.
- */
-resource "aws_nat_gateway" "nat" {
-  allocation_id = aws_eip.nat_eip.id
-  subnet_id     = aws_subnet.public[var.azs[0]].id
-
-  tags = merge(var.tags, {
-    Name = "${var.project_name}-${var.env}-nat"
-  })
-}
+# NAT Gateway removed - using VPC Endpoints instead
 
 /**
  * Creates a private route table for routing internet-bound traffic from private subnets via the NAT Gateway.
@@ -118,14 +97,7 @@ resource "aws_route_table" "private" {
   })
 }
 
-/**
- * Adds a default route in the private route table to the NAT Gateway.
- */
-resource "aws_route" "private_nat" {
-  route_table_id         = aws_route_table.private.id
-  destination_cidr_block = "0.0.0.0/0"
-  nat_gateway_id         = aws_nat_gateway.nat.id
-}
+# Private route table - no internet access needed with VPC Endpoints
 
 /**
  * Associates all private subnets with the private route table.
@@ -183,5 +155,97 @@ resource "aws_security_group" "rds_sg" {
 
   tags = merge(var.tags, {
     Name = "${var.project_name}-${var.env}-rds-sg"
+  })
+}
+
+########################################
+# VPC Endpoints for AWS Services
+########################################
+
+/**
+ * VPC Gateway Endpoint for S3 (FREE)
+ * Allows private access to S3 without internet
+ */
+resource "aws_vpc_endpoint" "s3" {
+  vpc_id       = aws_vpc.main.id
+  service_name = "com.amazonaws.${var.region}.s3"
+  
+  tags = merge(var.tags, {
+    Name = "${var.project_name}-${var.env}-s3-endpoint"
+  })
+}
+
+/**
+ * VPC Gateway Endpoint for DynamoDB (FREE)
+ * Allows private access to DynamoDB without internet
+ */
+resource "aws_vpc_endpoint" "dynamodb" {
+  vpc_id       = aws_vpc.main.id
+  service_name = "com.amazonaws.${var.region}.dynamodb"
+  
+  tags = merge(var.tags, {
+    Name = "${var.project_name}-${var.env}-dynamodb-endpoint"
+  })
+}
+
+/**
+ * Security Group for VPC Interface Endpoints
+ * Allows HTTPS traffic from VPC CIDR
+ */
+resource "aws_security_group" "vpc_endpoints" {
+  name        = "${var.project_name}-${var.env}-vpc-endpoints-sg"
+  description = "Security group for VPC endpoints"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = [var.vpc_cidr]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = merge(var.tags, {
+    Name = "${var.project_name}-${var.env}-vpc-endpoints-sg"
+  })
+}
+
+/**
+ * VPC Interface Endpoint for KMS (COST: $7.20/mes)
+ * Allows private access to KMS without internet
+ */
+resource "aws_vpc_endpoint" "kms" {
+  vpc_id       = aws_vpc.main.id
+  service_name = "com.amazonaws.${var.region}.kms"
+  vpc_endpoint_type = "Interface"
+  
+  subnet_ids = [for subnet in aws_subnet.private : subnet.id]
+  security_group_ids = [aws_security_group.vpc_endpoints.id]
+  
+  tags = merge(var.tags, {
+    Name = "${var.project_name}-${var.env}-kms-endpoint"
+  })
+}
+
+/**
+ * VPC Interface Endpoint for EventBridge (COST: $7.20/mes)
+ * Allows private access to EventBridge without internet
+ */
+resource "aws_vpc_endpoint" "eventbridge" {
+  vpc_id       = aws_vpc.main.id
+  service_name = "com.amazonaws.${var.region}.events"
+  vpc_endpoint_type = "Interface"
+  
+  subnet_ids = [for subnet in aws_subnet.private : subnet.id]
+  security_group_ids = [aws_security_group.vpc_endpoints.id]
+  
+  tags = merge(var.tags, {
+    Name = "${var.project_name}-${var.env}-eventbridge-endpoint"
   })
 }

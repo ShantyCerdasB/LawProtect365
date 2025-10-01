@@ -10,6 +10,7 @@ import { SignerId } from '../../../src/domain/value-objects/SignerId';
 import { S3Key, ContentType } from '@lawprotect/shared-ts';
 import { TestUtils } from '../testUtils';
 import { DocumentType } from '../../../src/domain/enums';
+import { generateTestIpAddress } from '../../integration/helpers/testHelpers';
 
 /**
  * Creates a StoreDocumentRequest for testing
@@ -112,7 +113,7 @@ export function downloadActionRequest(overrides: any = {}) {
     userId: overrides.userId || 'test-user-id',
     userEmail: overrides.userEmail || 'test@example.com',
     s3Key: overrides.s3Key || 'envelopes/test-envelope/signers/test-signer/signed-document.pdf',
-    ipAddress: overrides.ipAddress || '192.168.1.1',
+    ipAddress: overrides.ipAddress || generateTestIpAddress(),
     userAgent: overrides.userAgent || 'TestAgent/1.0',
     country: overrides.country || 'US'
   };

@@ -65,8 +65,8 @@ export const loadConfig = (): SignatureServiceConfig => {
     ...base,
     database: {
       url: process.env.DATABASE_URL!,
-      maxConnections: parseInt(process.env.DB_MAX_CONNECTIONS || '10'),
-      connectionTimeout: parseInt(process.env.DB_CONNECTION_TIMEOUT || '30000')
+      maxConnections: Number.parseInt(process.env.DB_MAX_CONNECTIONS || '10'),
+      connectionTimeout: Number.parseInt(process.env.DB_CONNECTION_TIMEOUT || '30000')
     },
   s3: {
     bucketName: process.env.EVIDENCE_BUCKET!,
@@ -88,16 +88,16 @@ export const loadConfig = (): SignatureServiceConfig => {
     region: process.env.AWS_REGION || 'us-east-1'
   },
     documentDownload: {
-      defaultExpirationSeconds: parseInt(process.env.DOCUMENT_DOWNLOAD_DEFAULT_EXPIRATION_SECONDS || '3600'), // 1 hour
-      maxExpirationSeconds: parseInt(process.env.DOCUMENT_DOWNLOAD_MAX_EXPIRATION_SECONDS || '86400'), // 24 hours
-      minExpirationSeconds: parseInt(process.env.DOCUMENT_DOWNLOAD_MIN_EXPIRATION_SECONDS || '300') // 5 minutes
+      defaultExpirationSeconds: Number.parseInt(process.env.DOCUMENT_DOWNLOAD_DEFAULT_EXPIRATION_SECONDS || '3600'), // 1 hour
+      maxExpirationSeconds: Number.parseInt(process.env.DOCUMENT_DOWNLOAD_MAX_EXPIRATION_SECONDS || '86400'), // 24 hours
+      minExpirationSeconds: Number.parseInt(process.env.DOCUMENT_DOWNLOAD_MIN_EXPIRATION_SECONDS || '300') // 5 minutes
     },
     reminders: {
-      maxRemindersPerSigner: parseInt(process.env.MAX_REMINDERS_PER_SIGNER || '3'),
-      minHoursBetweenReminders: parseInt(process.env.MIN_HOURS_BETWEEN_REMINDERS || '24'),
-      firstReminderHours: parseInt(process.env.FIRST_REMINDER_HOURS || '24'),
-      secondReminderHours: parseInt(process.env.SECOND_REMINDER_HOURS || '48'),
-      thirdReminderHours: parseInt(process.env.THIRD_REMINDER_HOURS || '72')
+      maxRemindersPerSigner: Number.parseInt(process.env.MAX_REMINDERS_PER_SIGNER || '3'),
+      minHoursBetweenReminders: Number.parseInt(process.env.MIN_HOURS_BETWEEN_REMINDERS || '24'),
+      firstReminderHours: Number.parseInt(process.env.FIRST_REMINDER_HOURS || '24'),
+      secondReminderHours: Number.parseInt(process.env.SECOND_REMINDER_HOURS || '48'),
+      thirdReminderHours: Number.parseInt(process.env.THIRD_REMINDER_HOURS || '72')
     }
   };
 };

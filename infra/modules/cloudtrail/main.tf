@@ -5,6 +5,13 @@
  */
 
 ########################################
+# Data Sources
+########################################
+
+data "aws_caller_identity" "current" {}
+data "aws_region" "current" {}
+
+########################################
 # Local Values
 ########################################
 
@@ -81,17 +88,25 @@ resource "aws_iam_role_policy" "cloudtrail_logs_policy" {
   role  = aws_iam_role.cloudtrail_logs_role[0].id
   policy = jsonencode({
     Version = "2012-10-17",
-    Statement = [{
-      Effect   = "Allow",
-      Action   = [
-        "logs:CreateLogGroup",
-        "logs:CreateLogStream",
-        "logs:PutLogEvents",
-        "logs:DescribeLogGroups",
-        "logs:DescribeLogStreams"
-      ],
-      Resource = "*"
-    }]
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:DescribeLogGroups"
+        ],
+        Resource = "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:${local.log_group_name}"
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "logs:DescribeLogStreams"
+        ],
+        Resource = "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:${local.log_group_name}:log-stream:*"
+      }
+    ]
   })
 }
 

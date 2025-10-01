@@ -84,6 +84,13 @@ resource "aws_cloudfront_distribution" "cdn" {
   enabled     = true
   price_class = var.price_class
 
+  # Security: Enable CloudFront logging
+  logging_config {
+    bucket          = "${var.bucket_name}.s3.amazonaws.com"
+    prefix          = "cloudfront-logs/"
+    include_cookies = false
+  }
+
   origin {
     domain_name = "${var.bucket_name}.s3.amazonaws.com"
     origin_id   = "${var.bucket_name}-origin"

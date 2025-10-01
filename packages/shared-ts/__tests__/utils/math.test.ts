@@ -184,7 +184,7 @@ describe("randomInt()", () => {
   it("throws for invalid range with non-finite numbers", async () => {
     await jest.isolateModulesAsync(async () => {
       const { randomInt } = await import("../../src/utils/math.js");
-      expect(() => randomInt(NaN, 5)).toThrow("Invalid range");
+      expect(() => randomInt(Number.NaN, 5)).toThrow("Invalid range");
       expect(() => randomInt(1, Infinity)).toThrow("Invalid range");
       expect(() => randomInt(-Infinity, 5)).toThrow("Invalid range");
     });

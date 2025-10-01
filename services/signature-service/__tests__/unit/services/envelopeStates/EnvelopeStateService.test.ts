@@ -5,6 +5,7 @@
  */
 
 import { jest } from '@jest/globals';
+import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
 import { EnvelopeStateService } from '../../../../src/services/envelopeStates/EnvelopeStateService';
 import { AuditEventType } from '../../../../src/domain/enums/AuditEventType';
 
@@ -19,7 +20,7 @@ jest.mock('../../../../src/signature-errors');
 // Mock the shared-ts modules
 jest.mock('@lawprotect/shared-ts', () => ({
   createNetworkSecurityContext: jest.fn(() => ({
-    ipAddress: '192.168.1.1',
+    ipAddress: generateTestIpAddress(),
     userAgent: 'TestAgent/1.0',
     country: 'US'
   }))

@@ -5,6 +5,7 @@
  * testing all CRUD operations with mocked dependencies to ensure proper functionality.
  */
 
+import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
 import { EnvelopeCrudService } from '@/services/envelopeCrud/EnvelopeCrudService';
 import { TestUtils } from '../../../helpers/testUtils';
 import { SignatureEnvelopeRepository } from '@/repositories/SignatureEnvelopeRepository';
@@ -123,7 +124,7 @@ describe('EnvelopeCrudService', () => {
       const envelopeId = EnvelopeId.fromString(TestUtils.generateUuid());
       const invitationToken = 'token-123';
       const securityContext = {
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Test Agent',
         country: 'US',
       };

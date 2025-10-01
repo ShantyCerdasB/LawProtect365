@@ -78,7 +78,7 @@ describe("validation/schemas", () => {
     });
 
     it("rejects zero, negatives, and non-integers", () => {
-      for (const v of [0, -1, 1.5, NaN, Infinity, -Infinity]) {
+      for (const v of [0, -1, 1.5, Number.NaN, Infinity, -Infinity]) {
         const r = PositiveIntSchema.safeParse(v as number);
         expect(r.success).toBe(false);
       }

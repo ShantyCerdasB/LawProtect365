@@ -5,6 +5,7 @@
  * testing all public methods with mocked dependencies to ensure proper delegation to use cases.
  */
 
+import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
 import { SignatureOrchestrator } from '@/services/orchestrators/SignatureOrchestrator';
 import { TestUtils } from '../../../helpers/testUtils';
 import { NetworkSecurityContext, NotificationType } from '@lawprotect/shared-ts';
@@ -134,7 +135,7 @@ describe('SignatureOrchestrator', () => {
         },
         userId: TestUtils.generateUuid(),
         securityContext: {
-          ipAddress: '192.168.1.1',
+          ipAddress: generateTestIpAddress(),
           userAgent: 'Test Agent',
         } as NetworkSecurityContext,
       };
@@ -165,7 +166,7 @@ describe('SignatureOrchestrator', () => {
         },
         userId: TestUtils.generateUuid(),
         securityContext: {
-          ipAddress: '192.168.1.1',
+          ipAddress: generateTestIpAddress(),
           userAgent: 'Test Agent',
         } as NetworkSecurityContext,
       };
@@ -183,7 +184,7 @@ describe('SignatureOrchestrator', () => {
       const userId = TestUtils.generateUuid();
       const invitationToken = 'token-123';
       const securityContext = {
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Test Agent',
         country: 'US',
       };
@@ -303,7 +304,7 @@ describe('SignatureOrchestrator', () => {
         invitationToken: 'token-123',
       };
       const securityContext = {
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Test Agent',
       } as NetworkSecurityContext;
       const expectedResult = {
@@ -329,7 +330,7 @@ describe('SignatureOrchestrator', () => {
       const signerId = SignerId.fromString(TestUtils.generateUuid());
       const request = { reason: 'Test reason' };
       const securityContext = {
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Test Agent',
       } as NetworkSecurityContext;
       const error = new Error('Invalid state');
@@ -349,7 +350,7 @@ describe('SignatureOrchestrator', () => {
       const invitationToken = 'token-123';
       const expiresIn = 3600;
       const securityContext = {
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Test Agent',
       } as NetworkSecurityContext;
       const expectedResult = {
@@ -449,7 +450,7 @@ describe('SignatureOrchestrator', () => {
       };
       const userId = TestUtils.generateUuid();
       const securityContext = {
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Test Agent',
       } as NetworkSecurityContext;
       const expectedResult = {
@@ -477,7 +478,7 @@ describe('SignatureOrchestrator', () => {
       };
       const userId = TestUtils.generateUuid();
       const securityContext = {
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Test Agent',
       } as NetworkSecurityContext;
       const error = new Error('Rate limit exceeded');
@@ -495,7 +496,7 @@ describe('SignatureOrchestrator', () => {
       const envelopeId = EnvelopeId.fromString(TestUtils.generateUuid());
       const userId = TestUtils.generateUuid();
       const securityContext = {
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Test Agent',
       } as NetworkSecurityContext;
       const expectedResult = {
@@ -518,7 +519,7 @@ describe('SignatureOrchestrator', () => {
       const envelopeId = EnvelopeId.fromString(TestUtils.generateUuid());
       const userId = TestUtils.generateUuid();
       const securityContext = {
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Test Agent',
       } as NetworkSecurityContext;
       const error = new Error('Invalid state');
@@ -575,7 +576,7 @@ describe('SignatureOrchestrator', () => {
       const envelopeId = EnvelopeId.fromString(TestUtils.generateUuid());
       const userId = TestUtils.generateUuid();
       const securityContext = {
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Test Agent',
       } as NetworkSecurityContext;
       const options = {
@@ -614,7 +615,7 @@ describe('SignatureOrchestrator', () => {
       const envelopeId = EnvelopeId.fromString(TestUtils.generateUuid());
       const userId = TestUtils.generateUuid();
       const securityContext = {
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Test Agent',
       } as NetworkSecurityContext;
       const expectedResult = {
@@ -644,7 +645,7 @@ describe('SignatureOrchestrator', () => {
       const envelopeId = EnvelopeId.fromString(TestUtils.generateUuid());
       const userId = TestUtils.generateUuid();
       const securityContext = {
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Test Agent',
       } as NetworkSecurityContext;
       const error = new Error('Notification failed');
@@ -666,7 +667,7 @@ describe('SignatureOrchestrator', () => {
       const expiresInDays = 7;
       const userId = TestUtils.generateUuid();
       const securityContext = {
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Test Agent',
       } as NetworkSecurityContext;
       const expectedResult = {
@@ -710,7 +711,7 @@ describe('SignatureOrchestrator', () => {
       const fullName = 'Viewer Name';
       const userId = TestUtils.generateUuid();
       const securityContext = {
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Test Agent',
       } as NetworkSecurityContext;
       const expectedResult = {
@@ -754,7 +755,7 @@ describe('SignatureOrchestrator', () => {
       const fullName = 'Viewer Name';
       const userId = TestUtils.generateUuid();
       const securityContext = {
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Test Agent',
       } as NetworkSecurityContext;
       const error = new Error('Invalid email');
@@ -781,13 +782,13 @@ describe('SignatureOrchestrator', () => {
           given: true,
           timestamp: new Date().toISOString(),
           text: 'I consent to sign this document',
-          ipAddress: '192.168.1.1',
+          ipAddress: generateTestIpAddress(),
           userAgent: 'Test Agent',
         },
       };
       const userId = TestUtils.generateUuid();
       const securityContext = {
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Test Agent',
       } as NetworkSecurityContext;
       const expectedResult = {
@@ -829,13 +830,13 @@ describe('SignatureOrchestrator', () => {
           given: true,
           timestamp: new Date().toISOString(),
           text: 'I consent to sign this document',
-          ipAddress: '192.168.1.1',
+          ipAddress: generateTestIpAddress(),
           userAgent: 'Test Agent',
         },
       };
       const userId = TestUtils.generateUuid();
       const securityContext = {
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Test Agent',
       } as NetworkSecurityContext;
       const error = new Error('KMS signing failed');

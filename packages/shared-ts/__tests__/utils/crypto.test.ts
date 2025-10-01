@@ -114,7 +114,7 @@ describe('Crypto Utils', () => {
     });
 
     it('should handle invalid input by using default', () => {
-      const result = randomBase64Url(NaN);
+      const result = randomBase64Url(Number.NaN);
       expect(typeof result).toBe('string');
     });
 

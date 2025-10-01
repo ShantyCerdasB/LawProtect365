@@ -6,7 +6,7 @@
  * for JWT token validation during integration tests.
  */
 
-import { generateKeyPairSync } from 'crypto';
+import { generateKeyPairSync } from 'node:crypto';
 import { SignJWT, importPKCS8, exportJWK, importSPKI } from 'jose';
 import express from 'express';
 

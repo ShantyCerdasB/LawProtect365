@@ -51,5 +51,10 @@ resource "aws_db_instance" "postgres" {
   skip_final_snapshot     = var.skip_final_snapshot
   deletion_protection     = var.deletion_protection
   multi_az                = false
-  tags                    = var.tags
+  
+  # Security: Enable storage encryption
+  storage_encrypted = true
+  kms_key_id       = var.kms_key_id
+  
+  tags = var.tags
 }

@@ -5,6 +5,7 @@
  */
 
 import { jest } from '@jest/globals';
+import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
 import { EnvelopeSignerService } from '../../../../src/services/envelopeSignerService/EnvelopeSignerService';
 import { EnvelopeSignerRepository } from '../../../../src/repositories/EnvelopeSignerRepository';
 import { SignatureEnvelopeRepository } from '../../../../src/repositories/SignatureEnvelopeRepository';
@@ -199,7 +200,7 @@ describe('EnvelopeSignerService', () => {
         reason: 'I agree',
         location: 'New York',
         consentText: 'I consent to sign',
-        ipAddress: '127.0.0.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'TestAgent/1.0',
         country: 'US'
       };
@@ -238,7 +239,7 @@ describe('EnvelopeSignerService', () => {
         reason: 'I agree',
         location: 'New York',
         consentText: 'I consent to sign',
-        ipAddress: '127.0.0.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'TestAgent/1.0',
         country: 'US'
       };
@@ -354,7 +355,7 @@ describe('EnvelopeSignerService', () => {
       const declineData = {
         signerId: { getValue: () => 'test-signer-id' } as any,
         reason: 'I decline to sign',
-        ipAddress: '127.0.0.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'TestAgent/1.0',
         country: 'US',
         userId: 'test-user-id'
@@ -384,7 +385,7 @@ describe('EnvelopeSignerService', () => {
       const declineData = {
         signerId: { getValue: () => 'non-existent-signer' } as any,
         reason: 'I decline to sign',
-        ipAddress: '127.0.0.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'TestAgent/1.0',
         country: 'US',
         userId: 'test-user-id'
@@ -505,7 +506,7 @@ describe('EnvelopeSignerService', () => {
         reason: 'I agree',
         location: 'New York',
         consentText: 'I consent to sign',
-        ipAddress: '127.0.0.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'TestAgent/1.0',
         country: 'US'
       };
@@ -540,7 +541,7 @@ describe('EnvelopeSignerService', () => {
         signerId: { getValue: () => signerId } as any,
         reason: 'I decline to sign',
         declinedAt: new Date(),
-        ipAddress: '127.0.0.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'TestAgent/1.0',
         country: 'US'
       };

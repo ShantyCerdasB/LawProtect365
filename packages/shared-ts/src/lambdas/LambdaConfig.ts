@@ -68,8 +68,8 @@ export function loadLambdaConfig(): LambdaConfig {
     outboxTableName: process.env.OUTBOX_TABLE_NAME || 'outbox',
     eventBusName: process.env.EVENT_BUS_NAME || 'default-bus',
     eventSource: process.env.EVENT_SOURCE || 'lambda.outbox-stream',
-    maxConcurrency: parseInt(process.env.MAX_CONCURRENCY || '10'),
-    maxRetries: parseInt(process.env.MAX_RETRIES || '3'),
-    retryDelayMs: parseInt(process.env.RETRY_DELAY_MS || '1000')
+    maxConcurrency: Number.parseInt(process.env.MAX_CONCURRENCY || '10'),
+    maxRetries: Number.parseInt(process.env.MAX_RETRIES || '3'),
+    retryDelayMs: Number.parseInt(process.env.RETRY_DELAY_MS || '1000')
   };
 }

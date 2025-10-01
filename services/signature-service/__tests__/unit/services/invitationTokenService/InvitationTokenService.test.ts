@@ -6,6 +6,7 @@
  */
 
 import { jest } from '@jest/globals';
+import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
 import { InvitationTokenService } from '../../../../src/services/invitationTokenService/InvitationTokenService';
 import { AuditEventType } from '../../../../src/domain/enums/AuditEventType';
 
@@ -86,7 +87,7 @@ describe('InvitationTokenService', () => {
   describe('generateInvitationTokensForSigners', () => {
     const mockSecurityContext = {
       userId: 'test-user-id',
-      ipAddress: '192.168.1.1',
+      ipAddress: generateTestIpAddress(),
       userAgent: 'TestAgent/1.0',
       country: 'US'
     };
@@ -138,7 +139,7 @@ describe('InvitationTokenService', () => {
         description: 'Invitation issued to signer@example.com',
         userId: 'test-user-id',
         userEmail: 'signer@example.com',
-        ipAddress: '192.168.1.1',
+        ipAddress: expect.any(String),
         userAgent: 'TestAgent/1.0',
         country: 'US',
         metadata: expect.objectContaining({
@@ -213,7 +214,7 @@ describe('InvitationTokenService', () => {
   describe('generateViewerInvitationToken', () => {
     const mockSecurityContext = {
       userId: 'test-user-id',
-      ipAddress: '192.168.1.1',
+      ipAddress: generateTestIpAddress(),
       userAgent: 'TestAgent/1.0',
       country: 'US'
     };
@@ -261,7 +262,7 @@ describe('InvitationTokenService', () => {
         description: 'View invitation issued to viewer@example.com (Test Viewer)',
         userId: 'test-user-id',
         userEmail: 'viewer@example.com',
-        ipAddress: '192.168.1.1',
+        ipAddress: expect.any(String),
         userAgent: 'TestAgent/1.0',
         country: 'US',
         metadata: expect.objectContaining({
@@ -352,7 +353,7 @@ describe('InvitationTokenService', () => {
 
   describe('markTokenAsViewed', () => {
     const mockSecurityContext = {
-      ipAddress: '192.168.1.1',
+      ipAddress: generateTestIpAddress(),
       userAgent: 'TestAgent/1.0',
       country: 'US'
     };
@@ -394,7 +395,7 @@ describe('InvitationTokenService', () => {
         description: 'Invitation token viewed by external signer',
         userId: 'external-user:Test Signer',
         userEmail: 'signer@example.com',
-        ipAddress: '192.168.1.1',
+        ipAddress: expect.any(String),
         userAgent: 'TestAgent/1.0',
         country: 'US',
         metadata: {
@@ -433,7 +434,7 @@ describe('InvitationTokenService', () => {
 
   describe('markTokenAsSigned', () => {
     const mockSecurityContext = {
-      ipAddress: '192.168.1.1',
+      ipAddress: generateTestIpAddress(),
       userAgent: 'TestAgent/1.0',
       country: 'US'
     };
@@ -475,7 +476,7 @@ describe('InvitationTokenService', () => {
         description: 'Invitation token used for signing by Test Signer',
         userId: 'external-user:Test Signer',
         userEmail: 'signer@example.com',
-        ipAddress: '192.168.1.1',
+        ipAddress: expect.any(String),
         userAgent: 'TestAgent/1.0',
         country: 'US',
         metadata: {

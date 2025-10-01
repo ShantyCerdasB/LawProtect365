@@ -1,4 +1,5 @@
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
+import { generateTestIpAddress } from '../../integration/helpers/testHelpers';
 import { textContainsInsensitive, rangeFilter } from '@lawprotect/shared-ts';
 
 import { setupCursorPaginationMocks } from '../../helpers/mocks/cursorPagination';
@@ -25,13 +26,11 @@ import {
 describe('SignatureAuditEventRepository - Internal Methods', () => {
   let repository: SignatureAuditEventRepository;
   let prismaMock: { signatureAuditEvent: PrismaModelMock };
-  let auditEventOps: PrismaModelMock;
 
   beforeEach(async () => {
     await import('@lawprotect/shared-ts');
-    const { prisma, signatureAuditEvent } = createSignatureAuditEventPrismaMock();
+    const { prisma } = createSignatureAuditEventPrismaMock();
     prismaMock = prisma as unknown as { signatureAuditEvent: PrismaModelMock };
-    auditEventOps = signatureAuditEvent;
     repository = new SignatureAuditEventRepository(prismaMock as any);
     jest.clearAllMocks();
     mockListPage.mockClear();
@@ -176,7 +175,7 @@ describe('SignatureAuditEventRepository - Internal Methods', () => {
         eventType: AuditEventType.SIGNER_ADDED,
         userId: 'user-789',
         userEmail: 'test@example.com',
-        ipAddress: '127.0.0.1',
+        ipAddress: generateTestIpAddress(),
         country: 'US',
       });
       const where = repository['whereFromSpec'](spec);
@@ -188,7 +187,7 @@ describe('SignatureAuditEventRepository - Internal Methods', () => {
           { eventType: AuditEventType.SIGNER_ADDED },
           { userId: 'user-789' },
           { userEmail: 'test@example.com' },
-          { ipAddress: '127.0.0.1' },
+          { ipAddress: expect.any(String) },
           { country: 'US' },
         ],
       });
@@ -503,7 +502,7 @@ describe('SignatureAuditEventRepository - Public Methods', () => {
         eventType: AuditEventType.SIGNER_ADDED,
         userId: TestUtils.generateUuid(),
         userEmail: 'test@example.com',
-        ipAddress: '192.168.1.1',
+        ipAddress: generateTestIpAddress(),
         userAgent: 'Mozilla/5.0',
         country: 'US',
         description: 'Test event',
