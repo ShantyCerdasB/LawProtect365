@@ -18,16 +18,12 @@ export interface SignatureServiceConfig extends AppConfig {
   s3: {
     bucketName: string;
     region: string;
-    accessKeyId: string;
-    secretAccessKey: string;
   };
   
   kms: {
     signerKeyId: string;
     signingAlgorithm: string;
     region: string;
-    accessKeyId: string;
-    secretAccessKey: string;
   };
   
   eventbridge: {
@@ -41,8 +37,6 @@ export interface SignatureServiceConfig extends AppConfig {
   
   aws: {
     region: string;
-    accessKeyId: string;
-    secretAccessKey: string;
   };
   
   documentDownload: {
@@ -74,19 +68,15 @@ export const loadConfig = (): SignatureServiceConfig => {
       maxConnections: parseInt(process.env.DB_MAX_CONNECTIONS || '10'),
       connectionTimeout: parseInt(process.env.DB_CONNECTION_TIMEOUT || '30000')
     },
-    s3: {
-      bucketName: process.env.S3_BUCKET_NAME!,
-      region: process.env.S3_REGION!,
-      accessKeyId: process.env.S3_ACCESS_KEY_ID!,
-      secretAccessKey: process.env.S3_SECRET_ACCESS_KEY!
-    },
-    kms: {
-      signerKeyId: process.env.KMS_SIGNER_KEY_ID!,
-      signingAlgorithm: process.env.KMS_SIGNING_ALGORITHM || 'RSASSA_PSS_SHA_256',
-      region: process.env.KMS_REGION || process.env.AWS_REGION || 'us-east-1',
-      accessKeyId: process.env.KMS_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID!,
-      secretAccessKey: process.env.KMS_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY!
-    },
+  s3: {
+    bucketName: process.env.EVIDENCE_BUCKET!,
+    region: process.env.AWS_REGION!
+  },
+  kms: {
+    signerKeyId: process.env.KMS_SIGNER_KEY_ID!,
+    signingAlgorithm: process.env.KMS_SIGNING_ALGORITHM || 'RSASSA_PSS_SHA_256',
+    region: process.env.AWS_REGION!
+  },
     eventbridge: {
       busName: process.env.EVENTBRIDGE_BUS_NAME!,
       source: process.env.EVENTBRIDGE_SOURCE || `${base.projectName}.${base.serviceName}`
@@ -94,11 +84,9 @@ export const loadConfig = (): SignatureServiceConfig => {
     outbox: {
       tableName: process.env.OUTBOX_TABLE_NAME!
     },
-    aws: {
-      region: process.env.AWS_REGION || 'us-east-1',
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!
-    },
+  aws: {
+    region: process.env.AWS_REGION || 'us-east-1'
+  },
     documentDownload: {
       defaultExpirationSeconds: parseInt(process.env.DOCUMENT_DOWNLOAD_DEFAULT_EXPIRATION_SECONDS || '3600'), // 1 hour
       maxExpirationSeconds: parseInt(process.env.DOCUMENT_DOWNLOAD_MAX_EXPIRATION_SECONDS || '86400'), // 24 hours

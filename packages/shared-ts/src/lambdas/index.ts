@@ -5,7 +5,8 @@
  * for event processing, background tasks, and other serverless operations.
  */
 
-export * from './EventPublisherLambda.js';
+export * from './OutboxStreamHandler.js';
+export * from './OutboxStreamProcessor.js';
+export * from './OutboxStreamConfig.js';
 export * from './LambdaConfig.js';
-export * from './EventBridgeRuleConfig.js';
 export * from './adapters/index.js';

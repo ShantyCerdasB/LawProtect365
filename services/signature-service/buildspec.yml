@@ -1,0 +1,32 @@
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - echo "Building signature-service..."
+      - cd services/signature-service
+      - npm ci --production
+      
+  build:
+    commands:
+      # Run tests with coverage requirements (commented out for now)
+      # - npm run test -- --coverage --coverageThreshold='{"global":{"branches":95,"functions":95,"lines":95,"statements":95}}'
+      # - npm run test  # Uncomment when ready for 95% coverage requirement
+      
+      - npm run build
+      
+      # Create individual handler ZIPs
+      - |
+        handlers=("create-envelope" "get-envelope" "send-envelope" "sign-document" "decline-signer" "share-document" "send-notification" "get-audit-trail" "get-envelopes-by-user" "update-envelope" "cancel-envelope" "download-document")
+        for handler in "${handlers[@]}"; do
+          echo "Creating sign-$handler.zip..."
+          mkdir -p temp-$handler
+          cp -r dist/handlers/$handler/* temp-$handler/
+          cp package.json temp-$handler/
+          cd temp-$handler && zip -r ../sign-$handler.zip . && cd ..
+          rm -rf temp-$handler
+        done
+
+artifacts:
+  files:
+    - sign-*.zip

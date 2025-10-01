@@ -434,14 +434,11 @@ locals {
     # Object Lock (retention & legal hold) for evidence immutability
     "s3-object-lock"      = data.aws_iam_policy_document.sign_s3_object_lock.json
 
-    # DynamoDB RW — envelopes aggregate
-    "ddb-rw-envelopes"    = data.aws_iam_policy_document.sign_dynamo_envelopes_rw.json
+    # Outbox table for event publishing (from root)
+    "outbox-publisher"    = var.outbox_publisher_policy
 
-    # DynamoDB RW — signing tokens
-    "ddb-rw-tokens"       = data.aws_iam_policy_document.sign_dynamo_tokens_rw.json
-
-    # DynamoDB transactions & conditional checks — envelopes
-    "ddb-transact"        = data.aws_iam_policy_document.sign_dynamo_transact.json
+    # EventBridge publishing (from root)
+    "eventbridge-publisher" = var.eventbridge_publisher_policy
 
     # CloudWatch custom metrics in the "SignService" namespace
     "cw-metrics"          = data.aws_iam_policy_document.sign_cloudwatch_metrics.json
@@ -487,10 +484,6 @@ locals {
   inline_policies = merge(
     local.inline_policies_base,
     local.inline_policies_kms,
-    {
-      "events-put"       = data.aws_iam_policy_document.sign_eventbridge_put.json
-      "ddb-streams-read" = data.aws_iam_policy_document.sign_dynamo_stream_consumer.json
-    },
     var.extra_inline_policies
   )
 }

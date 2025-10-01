@@ -109,10 +109,10 @@ export class OutboxRepository {
   }
 
   /**
-   * Marks an outbox record as dispatched
+   * Marks an outbox record as processed (for DynamoDB Streams)
    * @param id - Event ID
    */
-  async markDispatched(id: string): Promise<void> {
+  async markAsProcessed(id: string): Promise<void> {
     try {
       const record = await this.getById(id);
       if (!record) {
@@ -147,92 +147,7 @@ export class OutboxRepository {
         }
       });
     } catch (err) {
-      throw mapAwsError(err, 'OutboxRepository.markDispatched');
-    }
-  }
-
-  /**
-   * Marks an outbox record as failed
-   * @param id - Event ID
-   * @param error - Error message
-   */
-  async markFailed(id: string, error: string): Promise<void> {
-    try {
-      const record = await this.getById(id);
-      if (!record) {
-        throw new NotFoundError('Outbox record not found', ErrorCodes.COMMON_NOT_FOUND);
-      }
-
-      const updatedRecord = { 
-        ...record, 
-        status: OUTBOX_STATUSES.FAILED,
-        attempts: record.attempts + 1,
-        lastError: error
-      };
-      const item = outboxToDdbItem(updatedRecord);
-
-      await this.ddb.update!({
-        TableName: this.tableName,
-        Key: OutboxKeyBuilders.buildPrimaryKey(id),
-        UpdateExpression: [
-          'SET #status = :status',
-          '#gsi1pk = :gsi1pk',
-          '#gsi1sk = :gsi1sk',
-          '#updatedAt = :updatedAt',
-          '#attempts = :attempts',
-          '#lastError = :lastError'
-        ].join(', '),
-        ExpressionAttributeNames: {
-          '#status': 'status',
-          '#gsi1pk': 'gsi1pk',
-          '#gsi1sk': 'gsi1sk',
-          '#updatedAt': 'updatedAt',
-          '#attempts': 'attempts',
-          '#lastError': 'lastError'
-        },
-        ExpressionAttributeValues: {
-          ':status': OUTBOX_STATUSES.FAILED,
-          ':gsi1pk': item.gsi1pk,
-          ':gsi1sk': item.gsi1sk,
-          ':updatedAt': new Date().toISOString(),
-          ':attempts': updatedRecord.attempts,
-          ':lastError': error
-        }
-      });
-    } catch (err) {
-      throw mapAwsError(err, 'OutboxRepository.markFailed');
-    }
-  }
-
-  /**
-   * Pulls pending outbox records for processing
-   * @param limit - Maximum number of records to retrieve
-   * @returns Array of pending outbox records
-   */
-  async pullPending(limit: number): Promise<OutboxRecord[]> {
-    const pageSize = Math.min(Math.max(limit, 1), 100);
-
-    try {
-      const result = await this.ddb.query!({
-        TableName: this.tableName,
-        IndexName: 'gsi1',
-        KeyConditionExpression: '#gsi1pk = :gsi1pk',
-        ExpressionAttributeNames: {
-          '#gsi1pk': 'gsi1pk'
-        },
-        ExpressionAttributeValues: {
-          ':gsi1pk': `STATUS#${OUTBOX_STATUSES.PENDING}`
-        },
-        Limit: pageSize,
-        ScanIndexForward: true // Oldest first
-      });
-
-      const items = result.Items ?? [];
-      return items
-        .filter(isOutboxDdbItem)
-        .map(item => outboxFromDdbItem(item as unknown as OutboxDdbItem));
-    } catch (err) {
-      throw mapAwsError(err, 'OutboxRepository.pullPending');
+      throw mapAwsError(err, 'OutboxRepository.markAsProcessed');
     }
   }
 
@@ -318,6 +233,32 @@ export class OutboxRepository {
       };
     } catch (err) {
       throw mapAwsError(err, 'OutboxRepository.countByStatus');
+    }
+  }
+
+  /**
+   * Gets current outbox statistics
+   * @returns Statistics about outbox status
+   */
+  async getOutboxStats(): Promise<{
+    pending: number;
+    dispatched: number;
+    failed: number;
+  }> {
+    try {
+      const [pending, dispatched, failed] = await Promise.all([
+        this.countByStatus('pending'),
+        this.countByStatus('dispatched'),
+        this.countByStatus('failed')
+      ]);
+
+      return {
+        pending: pending.count,
+        dispatched: dispatched.count,
+        failed: failed.count
+      };
+    } catch (error) {
+      throw mapAwsError(error, 'OutboxRepository.getOutboxStats');
     }
   }
 

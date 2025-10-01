@@ -106,3 +106,13 @@ variable "xray_tracing" {
   type        = bool
   default     = false
 }
+
+/**
+ * List of Lambda layer ARNs to attach to the function.
+ * Default: empty list
+ */
+variable "layers" {
+  description = "List of Lambda layer ARNs to attach to the function"
+  type        = list(string)
+  default     = []
+}

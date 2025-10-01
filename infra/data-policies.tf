@@ -77,3 +77,31 @@ data "aws_iam_policy_document" "db_secret_read" {
   }
 }
 
+data "aws_iam_policy_document" "outbox_publisher" {
+  statement {
+    sid     = "OutboxPublisher"
+    effect  = "Allow"
+    actions = [
+      "dynamodb:PutItem",
+      "dynamodb:GetItem",
+      "dynamodb:UpdateItem",
+      "dynamodb:DeleteItem",
+      "dynamodb:Query",
+      "dynamodb:Scan"
+    ]
+    resources = [
+      module.outbox_table.table_arn,
+      "${module.outbox_table.table_arn}/index/*"
+    ]
+  }
+}
+
+data "aws_iam_policy_document" "eventbridge_publisher" {
+  statement {
+    sid     = "EventBridgePublisher"
+    effect  = "Allow"
+    actions = ["events:PutEvents"]
+    resources = [module.events.eventbridge_bus_arn]
+  }
+}
+

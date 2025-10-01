@@ -24,10 +24,12 @@ export interface LambdaConfig {
   eventBusName: string;
   /** Event source identifier */
   eventSource: string;
-  /** AWS access key ID */
-  accessKeyId?: string;
-  /** AWS secret access key */
-  secretAccessKey?: string;
+  /** Maximum number of events to process in parallel */
+  maxConcurrency?: number;
+  /** Maximum number of retries for failed events */
+  maxRetries?: number;
+  /** Delay between retries in milliseconds */
+  retryDelayMs?: number;
 }
 
 /**
@@ -37,13 +39,7 @@ export interface LambdaConfig {
  */
 export function createDynamoDBClient(config: LambdaConfig): DdbClientLike {
   const client = new DynamoDBClient({
-    region: config.region,
-    ...(config.accessKeyId && config.secretAccessKey && {
-      credentials: {
-        accessKeyId: config.accessKeyId,
-        secretAccessKey: config.secretAccessKey
-      }
-    })
+    region: config.region
   });
   
   return new DynamoDBClientAdapter(client);
@@ -56,13 +52,7 @@ export function createDynamoDBClient(config: LambdaConfig): DdbClientLike {
  */
 export function createEventBridgeClient(config: LambdaConfig): EventBridgeAdapterClient {
   const client = new EventBridgeClient({
-    region: config.region,
-    ...(config.accessKeyId && config.secretAccessKey && {
-      credentials: {
-        accessKeyId: config.accessKeyId,
-        secretAccessKey: config.secretAccessKey
-      }
-    })
+    region: config.region
   });
   
   return new EventBridgeClientAdapter(client);
@@ -77,8 +67,9 @@ export function loadLambdaConfig(): LambdaConfig {
     region: process.env.AWS_REGION || 'us-east-1',
     outboxTableName: process.env.OUTBOX_TABLE_NAME || 'outbox',
     eventBusName: process.env.EVENT_BUS_NAME || 'default-bus',
-    eventSource: process.env.EVENT_SOURCE || 'lambda.event-publisher',
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+    eventSource: process.env.EVENT_SOURCE || 'lambda.outbox-stream',
+    maxConcurrency: parseInt(process.env.MAX_CONCURRENCY || '10'),
+    maxRetries: parseInt(process.env.MAX_RETRIES || '3'),
+    retryDelayMs: parseInt(process.env.RETRY_DELAY_MS || '1000')
   };
 }

@@ -108,6 +108,23 @@ variable "stream_view_type" {
 }
 
 /**
+ * Global Secondary Indexes for the DynamoDB table.
+ */
+variable "global_secondary_indexes" {
+  description = "List of global secondary indexes for the table"
+  type = list(object({
+    name             = string
+    hash_key         = string
+    hash_key_type    = string
+    range_key        = optional(string)
+    range_key_type   = optional(string)
+    projection_type  = string
+    non_key_attributes = optional(list(string))
+  }))
+  default = []
+}
+
+/**
  * Tags to apply to the DynamoDB table.
  */
 variable "tags" {

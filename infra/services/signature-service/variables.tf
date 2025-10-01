@@ -116,6 +116,16 @@ variable "aws_region" {
   default     = null
 }
 
+variable "outbox_publisher_policy" {
+  description = "IAM policy document for outbox table access"
+  type        = string
+}
+
+variable "eventbridge_publisher_policy" {
+  description = "IAM policy document for EventBridge publishing"
+  type        = string
+}
+
 # List of allowed audiences (Cognito app client IDs)
 variable "jwt_audiences" {
   description = "Allowed audiences (Cognito app client IDs)"
@@ -225,5 +235,10 @@ variable "existing_sns_topic_arn" {
 
 variable "outbox_table_name" {
   description = "Name of the outbox DynamoDB table for event publishing"
+  type        = string
+}
+
+variable "shared_ts_layer_arn" {
+  description = "ARN of the shared-ts Lambda layer from root"
   type        = string
 }

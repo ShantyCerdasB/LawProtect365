@@ -63,6 +63,8 @@ resource "aws_lambda_function" "func" {
     mode = var.xray_tracing ? "Active" : "PassThrough"
   }
 
+  layers = var.layers
+
   environment {
     variables = merge(
       {

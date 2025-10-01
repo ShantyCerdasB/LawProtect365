@@ -36,25 +36,17 @@ export class InfrastructureFactory {
   /** Singleton AWS KMS client */
   private static readonly kmsClient = new KMSClient({
     region: this.config.kms.region,
-    credentials: {
-      accessKeyId: this.config.kms.accessKeyId,
-      secretAccessKey: this.config.kms.secretAccessKey,
-    },
   });
 
   /** Singleton S3 presigner client */
   private static readonly s3Presigner = new S3Presigner({
     region: this.config.s3.region,
-    accessKeyId: this.config.s3.accessKeyId,
-    secretAccessKey: this.config.s3.secretAccessKey,
   });
 
   /** Singleton S3 evidence storage client */
   private static readonly s3EvidenceStorage = new S3EvidenceStorage({
     defaultBucket: this.config.s3.bucketName,
     region: this.config.s3.region,
-    accessKeyId: this.config.s3.accessKeyId,
-    secretAccessKey: this.config.s3.secretAccessKey,
   });
 
   /**
@@ -75,7 +67,13 @@ export class InfrastructureFactory {
       this.s3Presigner,
       this.s3EvidenceStorage,
       this.config.s3.bucketName,
-      auditEventService
+      auditEventService,
+      {
+        documentDownload: {
+          maxExpirationSeconds: this.config.documentDownload.maxExpirationSeconds,
+          minExpirationSeconds: this.config.documentDownload.minExpirationSeconds
+        }
+      }
     );
   }
 
@@ -96,10 +94,6 @@ export class InfrastructureFactory {
   static createOutboxRepository(): OutboxRepository {
     const dynamoDbClient = new DynamoDBClient({
       region: this.config.aws.region,
-      credentials: {
-        accessKeyId: this.config.aws.accessKeyId,
-        secretAccessKey: this.config.aws.secretAccessKey,
-      },
     });
 
     const ddbAdapter = new DynamoDBClientAdapter(dynamoDbClient);
@@ -113,10 +107,6 @@ export class InfrastructureFactory {
   static createEventBridgeAdapter(): EventBridgeAdapter {
     const eventBridgeClient = new EventBridgeClient({
       region: this.config.aws.region,
-      credentials: {
-        accessKeyId: this.config.aws.accessKeyId,
-        secretAccessKey: this.config.aws.secretAccessKey,
-      },
     });
 
     const eventBridgeAdapter = new EventBridgeClientAdapter(eventBridgeClient);

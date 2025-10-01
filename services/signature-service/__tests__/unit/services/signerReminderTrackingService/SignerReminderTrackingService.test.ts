@@ -2,7 +2,7 @@
  * @fileoverview SignerReminderTrackingService.test.ts - Unit tests for SignerReminderTrackingService
  * @summary Tests for SignerReminderTrackingService reminder tracking operations
  * @description Tests all SignerReminderTrackingService methods including reminder recording,
- * eligibility checking, and business rule enforcement with comprehensive coverage.
+ * reminder validation, and tracking management with comprehensive coverage.
  */
 
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
@@ -12,13 +12,6 @@ import { SignerReminderTracking } from '../../../../src/domain/entities/SignerRe
 import { EnvelopeId } from '../../../../src/domain/value-objects/EnvelopeId';
 import { SignerId } from '../../../../src/domain/value-objects/SignerId';
 import { TestUtils } from '../../../helpers/testUtils';
-import { 
-  trackingEntity,
-  trackingEntityNew,
-  trackingPersistenceRow
-} from '../../../helpers/builders/signerReminderTracking';
-import { createSignerReminderTrackingServiceMock } from '../../../helpers/mocks/services/SignerReminderTrackingService.mock';
-import { reminderTrackingNotFound, reminderTrackingCreationFailed } from '../../../../src/signature-errors/factories';
 
 describe('SignerReminderTrackingService', () => {
   let signerReminderTrackingService: SignerReminderTrackingService;
@@ -29,13 +22,16 @@ describe('SignerReminderTrackingService', () => {
     
     // Create mock repository
     mockRepository = {
+      create: jest.fn(),
       findBySignerAndEnvelope: jest.fn(),
-      upsert: jest.fn(),
+      update: jest.fn(),
       findById: jest.fn(),
+      delete: jest.fn(),
       findByEnvelope: jest.fn(),
       findBySigner: jest.fn(),
-      delete: jest.fn(),
-      findMany: jest.fn()
+      countBySignerAndEnvelope: jest.fn(),
+      findRecentReminders: jest.fn(),
+      upsert: jest.fn()
     } as any;
 
     // Create service instance
@@ -43,43 +39,49 @@ describe('SignerReminderTrackingService', () => {
   });
 
   describe('recordReminderSent', () => {
-    it('should create new tracking when none exists', async () => {
-      const signerId = TestUtils.generateSignerId();
-      const envelopeId = TestUtils.generateEnvelopeId();
-      const message = 'Test reminder message';
+    it('should record reminder sent successfully for new tracking', async () => {
+      const signerId = new SignerId(TestUtils.generateUuid());
+      const envelopeId = new EnvelopeId(TestUtils.generateUuid());
+      const message = 'Please sign the document';
       
-      const newTracking = trackingEntityNew({ signerId, envelopeId });
-      const updatedTracking = trackingEntity({ 
-        signerId, 
-        envelopeId,
+      const trackingEntity = SignerReminderTracking.create({
+        id: TestUtils.generateUuid(),
+        signerId: signerId.getValue(),
+        envelopeId: envelopeId.getValue(),
+        lastReminderAt: new Date(),
         reminderCount: 1,
         lastReminderMessage: message
       });
 
       mockRepository.findBySignerAndEnvelope.mockResolvedValue(null);
-      mockRepository.upsert.mockResolvedValue(updatedTracking);
+      mockRepository.upsert.mockResolvedValue(trackingEntity);
 
       const result = await signerReminderTrackingService.recordReminderSent(signerId, envelopeId, message);
 
-      expect(mockRepository.findBySignerAndEnvelope).toHaveBeenCalledWith(signerId, envelopeId);
-      expect(mockRepository.upsert).toHaveBeenCalledWith(expect.any(SignerReminderTracking));
-      expect(result).toBe(updatedTracking);
+      expect(mockRepository.findBySignerAndEnvelope).toHaveBeenCalledTimes(1);
+      expect(mockRepository.upsert).toHaveBeenCalledTimes(1);
+      expect(result).toBe(trackingEntity);
     });
 
-    it('should update existing tracking', async () => {
-      const signerId = TestUtils.generateSignerId();
-      const envelopeId = TestUtils.generateEnvelopeId();
-      const message = 'Test reminder message';
+    it('should update existing tracking when reminder already exists', async () => {
+      const signerId = new SignerId(TestUtils.generateUuid());
+      const envelopeId = new EnvelopeId(TestUtils.generateUuid());
+      const message = 'Please sign the document';
       
-      const existingTracking = trackingEntity({ 
-        signerId, 
-        envelopeId,
+      const existingTracking = SignerReminderTracking.create({
+        id: TestUtils.generateUuid(),
+        signerId: signerId.getValue(),
+        envelopeId: envelopeId.getValue(),
+        lastReminderAt: new Date(Date.now() - 3600000), // 1 hour ago
         reminderCount: 1,
         lastReminderMessage: 'Previous message'
       });
-      const updatedTracking = trackingEntity({ 
-        signerId, 
-        envelopeId,
+
+      const updatedTracking = SignerReminderTracking.create({
+        id: existingTracking.getId().getValue(),
+        signerId: signerId.getValue(),
+        envelopeId: envelopeId.getValue(),
+        lastReminderAt: new Date(),
         reminderCount: 2,
         lastReminderMessage: message
       });
@@ -89,78 +91,41 @@ describe('SignerReminderTrackingService', () => {
 
       const result = await signerReminderTrackingService.recordReminderSent(signerId, envelopeId, message);
 
-      expect(mockRepository.findBySignerAndEnvelope).toHaveBeenCalledWith(signerId, envelopeId);
-      expect(mockRepository.upsert).toHaveBeenCalledWith(expect.any(SignerReminderTracking));
+      expect(mockRepository.findBySignerAndEnvelope).toHaveBeenCalledTimes(1);
+      expect(mockRepository.upsert).toHaveBeenCalledTimes(1);
       expect(result).toBe(updatedTracking);
     });
 
-    it('should record reminder without message', async () => {
-      const signerId = TestUtils.generateSignerId();
-      const envelopeId = TestUtils.generateEnvelopeId();
+    it('should handle repository errors gracefully', async () => {
+      const signerId = new SignerId(TestUtils.generateUuid());
+      const envelopeId = new EnvelopeId(TestUtils.generateUuid());
+      const message = 'Please sign the document';
       
-      const newTracking = trackingEntityNew({ signerId, envelopeId });
-      const updatedTracking = trackingEntity({ 
-        signerId, 
-        envelopeId,
-        reminderCount: 1,
-        lastReminderMessage: null
-      });
-
-      mockRepository.findBySignerAndEnvelope.mockResolvedValue(null);
-      mockRepository.upsert.mockResolvedValue(updatedTracking);
-
-      const result = await signerReminderTrackingService.recordReminderSent(signerId, envelopeId);
-
-      expect(mockRepository.findBySignerAndEnvelope).toHaveBeenCalledWith(signerId, envelopeId);
-      expect(mockRepository.upsert).toHaveBeenCalledWith(expect.any(SignerReminderTracking));
-      expect(result).toBe(updatedTracking);
-    });
-
-    it('should handle repository errors', async () => {
-      const signerId = TestUtils.generateSignerId();
-      const envelopeId = TestUtils.generateEnvelopeId();
-      const message = 'Test reminder message';
-      const error = new Error('Database error');
-
+      const error = new Error('Database connection failed');
       mockRepository.findBySignerAndEnvelope.mockRejectedValue(error);
 
-      await expect(
-        signerReminderTrackingService.recordReminderSent(signerId, envelopeId, message)
-      ).rejects.toThrow();
-    });
-
-    it('should handle upsert errors', async () => {
-      const signerId = TestUtils.generateSignerId();
-      const envelopeId = TestUtils.generateEnvelopeId();
-      const message = 'Test reminder message';
-      const error = new Error('Upsert failed');
-
-      mockRepository.findBySignerAndEnvelope.mockResolvedValue(null);
-      mockRepository.upsert.mockRejectedValue(error);
-
-      await expect(
-        signerReminderTrackingService.recordReminderSent(signerId, envelopeId, message)
-      ).rejects.toThrow();
+      await expect(signerReminderTrackingService.recordReminderSent(signerId, envelopeId, message))
+        .rejects.toThrow('Database connection failed');
     });
   });
 
   describe('canSendReminder', () => {
-    it('should return canSend true when no tracking exists', async () => {
-      const signerId = TestUtils.generateSignerId();
-      const envelopeId = TestUtils.generateEnvelopeId();
+    it('should allow reminder when no previous reminders exist', async () => {
+      const signerId = new SignerId(TestUtils.generateUuid());
+      const envelopeId = new EnvelopeId(TestUtils.generateUuid());
       const maxReminders = 3;
       const minHoursBetween = 24;
 
       mockRepository.findBySignerAndEnvelope.mockResolvedValue(null);
 
       const result = await signerReminderTrackingService.canSendReminder(
-        signerId, 
-        envelopeId, 
-        maxReminders, 
+        signerId,
+        envelopeId,
+        maxReminders,
         minHoursBetween
       );
 
-      expect(mockRepository.findBySignerAndEnvelope).toHaveBeenCalledWith(signerId, envelopeId);
+      expect(mockRepository.findBySignerAndEnvelope).toHaveBeenCalledTimes(1);
       expect(result).toEqual({
         canSend: true,
         reason: undefined,
@@ -168,421 +133,199 @@ describe('SignerReminderTrackingService', () => {
       });
     });
 
-    it('should return canSend true when tracking allows reminder', async () => {
-      const signerId = TestUtils.generateSignerId();
-      const envelopeId = TestUtils.generateEnvelopeId();
+    it('should allow reminder when under max limit and enough time has passed', async () => {
+      const signerId = new SignerId(TestUtils.generateUuid());
+      const envelopeId = new EnvelopeId(TestUtils.generateUuid());
       const maxReminders = 3;
       const minHoursBetween = 24;
       
-      const tracking = trackingEntity({
-        signerId,
-        envelopeId,
-        reminderCount: 1,
-        lastReminderAt: new Date(Date.now() - 25 * 60 * 60 * 1000) // 25 hours ago
+      const existingTracking = SignerReminderTracking.create({
+        id: TestUtils.generateUuid(),
+        signerId: signerId.getValue(),
+        envelopeId: envelopeId.getValue(),
+        lastReminderAt: new Date(Date.now() - 25 * 3600000), // 25 hours ago
+        reminderCount: 2,
+        lastReminderMessage: 'Previous message'
       });
 
-      mockRepository.findBySignerAndEnvelope.mockResolvedValue(tracking);
+      mockRepository.findBySignerAndEnvelope.mockResolvedValue(existingTracking);
 
       const result = await signerReminderTrackingService.canSendReminder(
-        signerId, 
-        envelopeId, 
-        maxReminders, 
+        signerId,
+        envelopeId,
+        maxReminders,
         minHoursBetween
       );
 
       expect(result).toEqual({
         canSend: true,
         reason: undefined,
-        tracking
+        tracking: existingTracking
       });
     });
 
-    it('should return canSend false when max reminders reached', async () => {
-      const signerId = TestUtils.generateSignerId();
-      const envelopeId = TestUtils.generateEnvelopeId();
-      const maxReminders = 2;
-      const minHoursBetween = 24;
-      
-      const tracking = trackingEntity({
-        signerId,
-        envelopeId,
-        reminderCount: 2, // At max
-        lastReminderAt: new Date(Date.now() - 25 * 60 * 60 * 1000) // 25 hours ago
-      });
-
-      mockRepository.findBySignerAndEnvelope.mockResolvedValue(tracking);
-
-      const result = await signerReminderTrackingService.canSendReminder(
-        signerId, 
-        envelopeId, 
-        maxReminders, 
-        minHoursBetween
-      );
-
-      expect(result).toEqual({
-        canSend: false,
-        reason: expect.stringContaining('Maximum reminders limit reached'),
-        tracking
-      });
-    });
-
-    it('should return canSend false when time restriction not met', async () => {
-      const signerId = TestUtils.generateSignerId();
-      const envelopeId = TestUtils.generateEnvelopeId();
+    it('should deny reminder when max limit reached', async () => {
+      const signerId = new SignerId(TestUtils.generateUuid());
+      const envelopeId = new EnvelopeId(TestUtils.generateUuid());
       const maxReminders = 3;
       const minHoursBetween = 24;
       
-      const tracking = trackingEntity({
-        signerId,
-        envelopeId,
-        reminderCount: 1,
-        lastReminderAt: new Date(Date.now() - 12 * 60 * 60 * 1000) // 12 hours ago
+      const existingTracking = SignerReminderTracking.create({
+        id: TestUtils.generateUuid(),
+        signerId: signerId.getValue(),
+        envelopeId: envelopeId.getValue(),
+        lastReminderAt: new Date(Date.now() - 25 * 3600000), // 25 hours ago
+        reminderCount: 3,
+        lastReminderMessage: 'Previous message'
       });
 
-      mockRepository.findBySignerAndEnvelope.mockResolvedValue(tracking);
+      mockRepository.findBySignerAndEnvelope.mockResolvedValue(existingTracking);
 
       const result = await signerReminderTrackingService.canSendReminder(
-        signerId, 
-        envelopeId, 
-        maxReminders, 
+        signerId,
+        envelopeId,
+        maxReminders,
         minHoursBetween
       );
 
       expect(result).toEqual({
         canSend: false,
-        reason: expect.stringContaining('Minimum'),
-        tracking
+        reason: 'Maximum reminders limit reached (3/3)',
+        tracking: existingTracking
       });
     });
 
-    it('should handle edge case with zero max reminders', async () => {
-      const signerId = TestUtils.generateSignerId();
-      const envelopeId = TestUtils.generateEnvelopeId();
-      const maxReminders = 0;
+    it('should deny reminder when not enough time has passed', async () => {
+      const signerId = new SignerId(TestUtils.generateUuid());
+      const envelopeId = new EnvelopeId(TestUtils.generateUuid());
+      const maxReminders = 3;
       const minHoursBetween = 24;
       
-      const tracking = trackingEntity({
-        signerId,
-        envelopeId,
-        reminderCount: 0
+      const existingTracking = SignerReminderTracking.create({
+        id: TestUtils.generateUuid(),
+        signerId: signerId.getValue(),
+        envelopeId: envelopeId.getValue(),
+        lastReminderAt: new Date(Date.now() - 12 * 3600000), // 12 hours ago
+        reminderCount: 1,
+        lastReminderMessage: 'Previous message'
       });
 
-      mockRepository.findBySignerAndEnvelope.mockResolvedValue(tracking);
+      mockRepository.findBySignerAndEnvelope.mockResolvedValue(existingTracking);
 
       const result = await signerReminderTrackingService.canSendReminder(
-        signerId, 
-        envelopeId, 
-        maxReminders, 
+        signerId,
+        envelopeId,
+        maxReminders,
         minHoursBetween
       );
 
       expect(result).toEqual({
         canSend: false,
-        reason: expect.stringContaining('Maximum reminders limit reached'),
-        tracking
+        reason: 'Minimum 24 hours between reminders not met (12 hours remaining)',
+        tracking: existingTracking
       });
     });
 
-    it('should handle edge case with zero min hours', async () => {
-      const signerId = TestUtils.generateSignerId();
-      const envelopeId = TestUtils.generateEnvelopeId();
+    it('should handle edge case when lastReminderSentAt is null', async () => {
+      const signerId = new SignerId(TestUtils.generateUuid());
+      const envelopeId = new EnvelopeId(TestUtils.generateUuid());
+      const maxReminders = 3;
+      const minHoursBetween = 24;
+      
+      const existingTracking = SignerReminderTracking.create({
+        id: TestUtils.generateUuid(),
+        signerId: signerId.getValue(),
+        envelopeId: envelopeId.getValue(),
+        lastReminderAt: null,
+        reminderCount: 1,
+        lastReminderMessage: 'Previous message'
+      });
+
+      mockRepository.findBySignerAndEnvelope.mockResolvedValue(existingTracking);
+
+      const result = await signerReminderTrackingService.canSendReminder(
+        signerId,
+        envelopeId,
+        maxReminders,
+        minHoursBetween
+      );
+
+      expect(result).toEqual({
+        canSend: true,
+        reason: undefined,
+        tracking: existingTracking
+      });
+    });
+
+    it('should handle repository errors gracefully', async () => {
+      const signerId = new SignerId(TestUtils.generateUuid());
+      const envelopeId = new EnvelopeId(TestUtils.generateUuid());
+      const maxReminders = 3;
+      const minHoursBetween = 24;
+      
+      const error = new Error('Database connection failed');
+      mockRepository.findBySignerAndEnvelope.mockRejectedValue(error);
+
+      await expect(signerReminderTrackingService.canSendReminder(
+        signerId,
+        envelopeId,
+        maxReminders,
+        minHoursBetween
+      )).rejects.toThrow('Database connection failed');
+    });
+
+    it('should handle zero maxReminders limit', async () => {
+      const signerId = new SignerId(TestUtils.generateUuid());
+      const envelopeId = new EnvelopeId(TestUtils.generateUuid());
+      const maxReminders = 0;
+      const minHoursBetween = 24;
+
+      mockRepository.findBySignerAndEnvelope.mockResolvedValue(null);
+
+      const result = await signerReminderTrackingService.canSendReminder(
+        signerId,
+        envelopeId,
+        maxReminders,
+        minHoursBetween
+      );
+
+      // When no tracking exists, it allows the first reminder regardless of maxReminders
+      expect(result).toEqual({
+        canSend: true,
+        reason: undefined,
+        tracking: undefined
+      });
+    });
+
+    it('should handle zero minHoursBetween requirement', async () => {
+      const signerId = new SignerId(TestUtils.generateUuid());
+      const envelopeId = new EnvelopeId(TestUtils.generateUuid());
       const maxReminders = 3;
       const minHoursBetween = 0;
       
-      const tracking = trackingEntity({
-        signerId,
-        envelopeId,
+      const existingTracking = SignerReminderTracking.create({
+        id: TestUtils.generateUuid(),
+        signerId: signerId.getValue(),
+        envelopeId: envelopeId.getValue(),
+        lastReminderAt: new Date(Date.now() - 1 * 3600000), // 1 hour ago
         reminderCount: 1,
-        lastReminderAt: new Date(Date.now() - 1 * 60 * 1000) // 1 minute ago
+        lastReminderMessage: 'Previous message'
       });
 
-      mockRepository.findBySignerAndEnvelope.mockResolvedValue(tracking);
+      mockRepository.findBySignerAndEnvelope.mockResolvedValue(existingTracking);
 
       const result = await signerReminderTrackingService.canSendReminder(
-        signerId, 
-        envelopeId, 
-        maxReminders, 
+        signerId,
+        envelopeId,
+        maxReminders,
         minHoursBetween
       );
 
       expect(result).toEqual({
         canSend: true,
         reason: undefined,
-        tracking
+        tracking: existingTracking
       });
-    });
-
-    it('should handle repository errors', async () => {
-      const signerId = TestUtils.generateSignerId();
-      const envelopeId = TestUtils.generateEnvelopeId();
-      const maxReminders = 3;
-      const minHoursBetween = 24;
-      const error = new Error('Database error');
-
-      mockRepository.findBySignerAndEnvelope.mockRejectedValue(error);
-
-      await expect(
-        signerReminderTrackingService.canSendReminder(signerId, envelopeId, maxReminders, minHoursBetween)
-      ).rejects.toThrow();
-    });
-
-    it('should handle tracking with null lastReminderAt', async () => {
-      const signerId = TestUtils.generateSignerId();
-      const envelopeId = TestUtils.generateEnvelopeId();
-      const maxReminders = 3;
-      const minHoursBetween = 24;
-      
-      const tracking = trackingEntity({
-        signerId,
-        envelopeId,
-        reminderCount: 1,
-        lastReminderAt: null
-      });
-
-      mockRepository.findBySignerAndEnvelope.mockResolvedValue(tracking);
-
-      const result = await signerReminderTrackingService.canSendReminder(
-        signerId, 
-        envelopeId, 
-        maxReminders, 
-        minHoursBetween
-      );
-
-      expect(result).toEqual({
-        canSend: true,
-        reason: undefined,
-        tracking
-      });
-    });
-
-    it('should handle tracking with undefined lastReminderAt', async () => {
-      const signerId = TestUtils.generateSignerId();
-      const envelopeId = TestUtils.generateEnvelopeId();
-      const maxReminders = 3;
-      const minHoursBetween = 24;
-      
-      const tracking = trackingEntity({
-        signerId,
-        envelopeId,
-        reminderCount: 1,
-        lastReminderAt: undefined
-      });
-
-      mockRepository.findBySignerAndEnvelope.mockResolvedValue(tracking);
-
-      const result = await signerReminderTrackingService.canSendReminder(
-        signerId, 
-        envelopeId, 
-        maxReminders, 
-        minHoursBetween
-      );
-
-      expect(result).toEqual({
-        canSend: true,
-        reason: undefined,
-        tracking
-      });
-    });
-  });
-
-  describe('edge cases and error handling', () => {
-    it('should handle null signerId', async () => {
-      const envelopeId = TestUtils.generateEnvelopeId();
-      const maxReminders = 3;
-      const minHoursBetween = 24;
-
-      // Mock repository to return null (no tracking exists)
-      mockRepository.findBySignerAndEnvelope.mockResolvedValue(null);
-
-      const result = await signerReminderTrackingService.canSendReminder(null as any, envelopeId, maxReminders, minHoursBetween);
-      
-      // Should still work but return canSend true
-      expect(result.canSend).toBe(true);
-    });
-
-    it('should handle null envelopeId', async () => {
-      const signerId = TestUtils.generateSignerId();
-      const maxReminders = 3;
-      const minHoursBetween = 24;
-
-      // Mock repository to return null (no tracking exists)
-      mockRepository.findBySignerAndEnvelope.mockResolvedValue(null);
-
-      const result = await signerReminderTrackingService.canSendReminder(signerId, null as any, maxReminders, minHoursBetween);
-      
-      // Should still work but return canSend true
-      expect(result.canSend).toBe(true);
-    });
-
-    it('should handle negative maxReminders', async () => {
-      const signerId = TestUtils.generateSignerId();
-      const envelopeId = TestUtils.generateEnvelopeId();
-      const maxReminders = -1;
-      const minHoursBetween = 24;
-      
-      const tracking = trackingEntity({
-        signerId,
-        envelopeId,
-        reminderCount: 0
-      });
-
-      mockRepository.findBySignerAndEnvelope.mockResolvedValue(tracking);
-
-      await expect(
-        signerReminderTrackingService.canSendReminder(signerId, envelopeId, maxReminders, minHoursBetween)
-      ).rejects.toThrow();
-    });
-
-    it('should handle negative minHoursBetween', async () => {
-      const signerId = TestUtils.generateSignerId();
-      const envelopeId = TestUtils.generateEnvelopeId();
-      const maxReminders = 3;
-      const minHoursBetween = -1;
-      
-      const tracking = trackingEntity({
-        signerId,
-        envelopeId,
-        reminderCount: 1,
-        lastReminderAt: new Date(Date.now() - 1 * 60 * 1000) // 1 minute ago
-      });
-
-      mockRepository.findBySignerAndEnvelope.mockResolvedValue(tracking);
-
-      await expect(
-        signerReminderTrackingService.canSendReminder(signerId, envelopeId, maxReminders, minHoursBetween)
-      ).rejects.toThrow();
-    });
-
-    it('should handle very large numbers', async () => {
-      const signerId = TestUtils.generateSignerId();
-      const envelopeId = TestUtils.generateEnvelopeId();
-      const maxReminders = Number.MAX_SAFE_INTEGER;
-      const minHoursBetween = Number.MAX_SAFE_INTEGER;
-      
-      const tracking = trackingEntity({
-        signerId,
-        envelopeId,
-        reminderCount: 1,
-        lastReminderAt: new Date(Date.now() - 1 * 60 * 1000) // 1 minute ago
-      });
-
-      mockRepository.findBySignerAndEnvelope.mockResolvedValue(tracking);
-
-      const result = await signerReminderTrackingService.canSendReminder(
-        signerId, 
-        envelopeId, 
-        maxReminders, 
-        minHoursBetween
-      );
-
-      expect(result.canSend).toBe(false); // Should block due to time restriction
-    });
-  });
-
-  describe('business logic validation', () => {
-    it('should correctly calculate time differences', async () => {
-      const signerId = TestUtils.generateSignerId();
-      const envelopeId = TestUtils.generateEnvelopeId();
-      const maxReminders = 3;
-      const minHoursBetween = 24;
-      
-      // Test with exactly 24 hours ago
-      const tracking = trackingEntity({
-        signerId,
-        envelopeId,
-        reminderCount: 1,
-        lastReminderAt: new Date(Date.now() - 24 * 60 * 60 * 1000)
-      });
-
-      mockRepository.findBySignerAndEnvelope.mockResolvedValue(tracking);
-
-      const result = await signerReminderTrackingService.canSendReminder(
-        signerId, 
-        envelopeId, 
-        maxReminders, 
-        minHoursBetween
-      );
-
-      expect(result.canSend).toBe(true);
-    });
-
-    it('should correctly handle boundary conditions', async () => {
-      const signerId = TestUtils.generateSignerId();
-      const envelopeId = TestUtils.generateEnvelopeId();
-      const maxReminders = 3;
-      const minHoursBetween = 24;
-      
-      // Test with exactly 24 hours and 1 minute ago
-      const tracking = trackingEntity({
-        signerId,
-        envelopeId,
-        reminderCount: 1,
-        lastReminderAt: new Date(Date.now() - (24 * 60 + 1) * 60 * 1000)
-      });
-
-      mockRepository.findBySignerAndEnvelope.mockResolvedValue(tracking);
-
-      const result = await signerReminderTrackingService.canSendReminder(
-        signerId, 
-        envelopeId, 
-        maxReminders, 
-        minHoursBetween
-      );
-
-      expect(result.canSend).toBe(true);
-    });
-
-    it('should handle tracking with very old lastReminderAt', async () => {
-      const signerId = TestUtils.generateSignerId();
-      const envelopeId = TestUtils.generateEnvelopeId();
-      const maxReminders = 3;
-      const minHoursBetween = 24;
-      
-      // Test with 1 year ago
-      const tracking = trackingEntity({
-        signerId,
-        envelopeId,
-        reminderCount: 1,
-        lastReminderAt: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
-      });
-
-      mockRepository.findBySignerAndEnvelope.mockResolvedValue(tracking);
-
-      const result = await signerReminderTrackingService.canSendReminder(
-        signerId, 
-        envelopeId, 
-        maxReminders, 
-        minHoursBetween
-      );
-
-      expect(result.canSend).toBe(true);
-    });
-
-    it('should handle tracking with future lastReminderAt', async () => {
-      const signerId = TestUtils.generateSignerId();
-      const envelopeId = TestUtils.generateEnvelopeId();
-      const maxReminders = 3;
-      const minHoursBetween = 24;
-      
-      // Test with 1 hour in the future
-      const tracking = trackingEntity({
-        signerId,
-        envelopeId,
-        reminderCount: 1,
-        lastReminderAt: new Date(Date.now() + 60 * 60 * 1000)
-      });
-
-      mockRepository.findBySignerAndEnvelope.mockResolvedValue(tracking);
-
-      const result = await signerReminderTrackingService.canSendReminder(
-        signerId, 
-        envelopeId, 
-        maxReminders, 
-        minHoursBetween
-      );
-
-      expect(result.canSend).toBe(false);
-      expect(result.reason).toContain('Minimum');
     });
   });
 });

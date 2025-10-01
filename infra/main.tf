@@ -143,6 +143,20 @@ module "codeartifact" {
   tags = local.common_tags
 }
 
+# Lambda layer for shared-ts dependencies
+module "shared_ts_layer" {
+  source       = "./modules/lambda-layer"
+  project_name = var.project_name
+  env          = var.env
+  
+  layer_name   = "${var.project_name}-shared-ts-layer"
+  s3_bucket    = var.code_bucket
+  s3_key       = "shared-ts-layer.zip"
+  
+  description  = "Shared TypeScript utilities for all microservices"
+  compatible_runtimes = ["nodejs20.x"]
+}
+
 
 # Authentication service configuration using OIDC, Lambda, and MFA via SNS
 module "auth_service" {
@@ -346,8 +360,11 @@ module "events" {
   event_pattern = jsonencode({
     "source"      = ["sign.service"]
     "detail-type" = [
-      "InvitationSent","ReminderSent","EnvelopeFinalised",
-      "EnvelopeDeclined","EnvelopeCancelled","InputCompleted","DocumentLocked"
+      "ENVELOPE_INVITATION",
+      "DOCUMENT_VIEW_INVITATION", 
+      "SIGNER_DECLINED",
+      "ENVELOPE_CANCELLED",
+      "REMINDER_NOTIFICATION"
     ]
   })
 
@@ -383,7 +400,10 @@ module "sign_service" {
   waf_web_acl_arn    = var.waf_web_acl_arn
   budgets_alerts_topic_arn = aws_sns_topic.budgets_alerts.arn
   event_bus_arn = module.events.eventbridge_bus_arn
-  outbox_table_name = module.outbox_table.table_name
+  outbox_table_name = module.event_publisher_service.outbox_table_name
+  shared_ts_layer_arn = module.shared_ts_layer.layer_arn
+  outbox_publisher_policy = data.aws_iam_policy_document.outbox_publisher.json
+  eventbridge_publisher_policy = data.aws_iam_policy_document.eventbridge_publisher.json
 
   # JWT authorizer (Cognito)
   enable_jwt_authorizer = true
@@ -441,37 +461,16 @@ module "db_secret" {
   env          = var.env
 }
 
-/**
- * @module outbox_table
- * @description 
- * Creates DynamoDB table for outbox pattern implementation.
- * Used by signature-service for reliable event publishing.
- * 
- * @remarks
- * - Single-table design with GSI for status-based queries
- * - Supports outbox pattern for reliable messaging
- * - Used by signature-service for event publishing
- */
-module "outbox_table" {
-  source = "./modules/dynamodb"
+# Event Publisher Service
+module "event_publisher_service" {
+  source = "./services/event-publisher-service"
   
-  table_name = "${var.project_name}-outbox-${var.env}"
-  hash_key = "pk"
-  hash_key_type = "S"
-  range_key = "sk"
-  range_key_type = "S"
-  billing_mode = "PAY_PER_REQUEST"
-  
-  global_secondary_indexes = [{
-    name = "GSI1"
-    hash_key = "gsi1pk"
-    hash_key_type = "S"
-    range_key = "gsi1sk"
-    range_key_type = "S"
-    projection_type = "ALL"
-  }]
-  
-  tags = local.common_tags
+  project_name    = var.project_name
+  env             = var.env
+  region          = var.region
+  code_bucket     = var.code_bucket
+  event_bus_name  = module.events.eventbridge_bus_name
+  tags            = local.common_tags
 }
 
 /** 

@@ -51,6 +51,9 @@
       S3_BUCKET_NAME = var.documents_bucket_name
       EVIDENCE_BUCKET = module.evidence_bucket.bucket_id
       
+      # AWS Region
+      AWS_REGION = var.aws_region
+      
       # KMS configuration
       KMS_SIGNER_KEY_ID = var.kms_sign_key_arn
       
@@ -63,10 +66,13 @@
       # SSM Parameter Store
       SSM_PARAM_PREFIX = "/${var.project_name}/${var.env}"
       
-      # CloudWatch metrics
-      METRICS_NAMESPACE = "SignService"
+  # CloudWatch metrics
+  METRICS_NAMESPACE = "SignService"
     }
   )
+
+  # Shared layer ARN for all Lambda functions
+  shared_layer_arn = var.shared_ts_layer_arn
 
   # ---------- CODEBUILD/PIPELINE ENVS ----------
   codebuild_env_vars = concat(
@@ -153,6 +159,7 @@ module "lambda_create_envelope" {
   role_arn      = module.sign_lambda_role.role_arn
 
   environment_variables = local.lambda_env_common
+  layers = [local.shared_layer_arn]
 
   xray_tracing = true
 }
@@ -182,6 +189,7 @@ module "lambda_get_envelope" {
   role_arn      = module.sign_lambda_role.role_arn
 
   environment_variables = local.lambda_env_common
+  layers = [local.shared_layer_arn]
 
   xray_tracing = true
 }
@@ -211,6 +219,7 @@ module "lambda_send_envelope" {
   role_arn      = module.sign_lambda_role.role_arn
 
   environment_variables = local.lambda_env_common
+  layers = [local.shared_layer_arn]
 
   xray_tracing = true
 }
@@ -666,14 +675,12 @@ module "sign_deployment" {
   project_name          = var.project_name
   env                   = var.env
   service_name          = "sign"
-
   artifacts_bucket      = var.artifacts_bucket
-  buildspec_path        = "../sign-service/buildspec.yml"
-
+  buildspec_path        = "services/signature-service/buildspec.yml"
   compute_type          = var.compute_type
   environment_image     = var.environment_image
  environment_variables = local.codebuild_env_vars
-
+ 
   github_owner          = var.github_owner
   github_repo           = var.github_repo
   provider_type         = var.provider_type
