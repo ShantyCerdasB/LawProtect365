@@ -294,6 +294,59 @@ describe('EnvelopeSignerService', () => {
       expect(mockEnvelopeSignerRepository.findByEnvelopeId).toHaveBeenCalledWith(envelopeId);
       expect(mockEnvelopeSignerRepository.create).toHaveBeenCalled();
     });
+
+    it('should throw error when envelope not found', async () => {
+      const envelopeId = { getValue: () => 'test-envelope-id' } as any;
+      const email = 'test@example.com';
+      const fullName = 'Test User';
+      const userId = 'test-user-id';
+
+      mockSignatureEnvelopeRepository.findById.mockResolvedValue(null);
+
+      await expect(service.createViewerParticipant(envelopeId, email, fullName, userId))
+        .rejects.toThrow('Envelope with ID test-envelope-id not found');
+    });
+
+    it('should throw error when viewer already exists', async () => {
+      const envelopeId = { getValue: () => 'test-envelope-id' } as any;
+      const email = 'test@example.com';
+      const fullName = 'Test User';
+      const userId = 'test-user-id';
+
+      const mockEnvelope = {
+        validateViewerNotExists: jest.fn().mockImplementation(() => {
+          throw new Error('Viewer already exists');
+        })
+      };
+
+      mockSignatureEnvelopeRepository.findById.mockResolvedValue(mockEnvelope as any);
+      mockEnvelopeSignerRepository.findByEnvelopeId.mockResolvedValue([]);
+
+      await expect(service.createViewerParticipant(envelopeId, email, fullName, userId))
+        .rejects.toThrow('Failed to create viewer participant');
+    });
+
+    it('should rethrow AppError when it has statusCode', async () => {
+      const envelopeId = { getValue: () => 'test-envelope-id' } as any;
+      const email = 'test@example.com';
+      const fullName = 'Test User';
+      const userId = 'test-user-id';
+
+      const appError = new Error('Business validation error');
+      (appError as any).statusCode = 400;
+
+      const mockEnvelope = {
+        validateViewerNotExists: jest.fn().mockImplementation(() => {
+          throw appError;
+        })
+      };
+
+      mockSignatureEnvelopeRepository.findById.mockResolvedValue(mockEnvelope as any);
+      mockEnvelopeSignerRepository.findByEnvelopeId.mockResolvedValue([]);
+
+      await expect(service.createViewerParticipant(envelopeId, email, fullName, userId))
+        .rejects.toThrow('Business validation error');
+    });
   });
 
   describe('declineSigner', () => {

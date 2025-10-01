@@ -17,9 +17,6 @@ import {
 
 /**
  * Domain rule for invitation token validations
- * 
- * Contains all business validations related to invitation tokens, including
- * token validation, access control, and security checks for external signer access.
  */
 export class InvitationTokenValidationRule {
   /**
@@ -35,7 +32,6 @@ export class InvitationTokenValidationRule {
       throw invitationTokenInvalid('Token is required');
     }
 
-    // Check if token is expired
     if (token.isExpired()) {
       throw invitationTokenExpired({
         tokenId: token.getId().getValue(),
@@ -43,7 +39,6 @@ export class InvitationTokenValidationRule {
       });
     }
 
-    // Check if token has already been used
     if (token.isUsed()) {
       throw invitationTokenAlreadyUsed({
         tokenId: token.getId().getValue(),
@@ -51,7 +46,6 @@ export class InvitationTokenValidationRule {
       });
     }
 
-    // Check if token has been revoked
     if (token.isRevoked()) {
       throw invitationTokenRevoked({
         tokenId: token.getId().getValue(),
@@ -71,7 +65,6 @@ export class InvitationTokenValidationRule {
       throw invitationTokenInvalid('Token is required');
     }
 
-    // Check if token is expired
     if (token.isExpired()) {
       throw invitationTokenExpired({
         tokenId: token.getId().getValue(),
@@ -79,7 +72,6 @@ export class InvitationTokenValidationRule {
       });
     }
 
-    // Check if token has been revoked
     if (token.isRevoked()) {
       throw invitationTokenRevoked({
         tokenId: token.getId().getValue(),
@@ -87,9 +79,6 @@ export class InvitationTokenValidationRule {
         revokedReason: token.getRevokedReason()
       });
     }
-
-    // For viewer tokens, we don't check if they're used since viewers can access multiple times
-    // until the token expires
   }
 
   /**
@@ -104,21 +93,18 @@ export class InvitationTokenValidationRule {
       throw signerNotFound('Signer is required for token validation');
     }
 
-    // Validate that the signer was invited by the owner who created the token
     if (signer.getInvitedByUserId() !== token.getCreatedBy()) {
       throw signerNotFound(
         `Signer ${signer.getId().getValue()} was not invited by the token creator ${token.getCreatedBy()}`
       );
     }
 
-    // Validate that the signer is external
     if (!signer.getIsExternal()) {
       throw signerNotFound(
         `Signer ${signer.getId().getValue()} is not external and cannot use invitation tokens`
       );
     }
 
-    // Validate that the token belongs to this signer
     if (!token.getSignerId().equals(signer.getId())) {
       throw signerNotFound(
         `Token ${token.getId().getValue()} does not belong to signer ${signer.getId().getValue()}`
@@ -137,14 +123,12 @@ export class InvitationTokenValidationRule {
       throw signerNotFound('Signer is required for token creation validation');
     }
 
-    // Validate that the signer was invited by the creator
     if (signer.getInvitedByUserId() !== creatorUserId) {
       throw signerNotFound(
         `User ${creatorUserId} is not authorized to create tokens for signer ${signer.getId().getValue()}`
       );
     }
 
-    // Validate that the signer is external
     if (!signer.getIsExternal()) {
       throw signerNotFound(
         `Cannot create invitation tokens for non-external signer ${signer.getId().getValue()}`
@@ -167,7 +151,6 @@ export class InvitationTokenValidationRule {
       throw invitationTokenInvalid('Token expiration date must be in the future');
     }
 
-    // Check if expiration is too far in the future (e.g., more than 1 year)
     const oneYearFromNow = new Date();
     oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
     if (expiresAt > oneYearFromNow) {

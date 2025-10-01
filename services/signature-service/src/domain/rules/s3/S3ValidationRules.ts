@@ -5,107 +5,118 @@
  * document storage, retrieval, and presigned URL generation using domain rules.
  */
 
-import { BadRequestError, ErrorCodes } from '@lawprotect/shared-ts';
+import { 
+  S3Key, 
+  ContentType, 
+  S3Operation,
+  s3RequestValidationFailed,
+  s3EnvelopeIdRequired,
+  s3SignerIdRequired,
+  s3DocumentContentRequired,
+  s3ContentTypeInvalid,
+  s3FileSizeExceeded,
+  s3MetadataSizeMismatch,
+  s3DocumentKeyRequired,
+  s3KeyInvalidFormat,
+  s3OperationInvalid,
+  s3ExpirationTimeInvalid
+} from '@lawprotect/shared-ts';
 import { StoreDocumentRequest } from '../../types/s3/StoreDocumentRequest';
 import { RetrieveDocumentRequest } from '../../types/s3/RetrieveDocumentRequest';
 import { GeneratePresignedUrlRequest } from '../../types/s3/GeneratePresignedUrlRequest';
 import { validateS3StorageForDocument, validateS3StorageGeneral } from './S3StorageRules';
-import { S3Key, ContentType, S3Operation } from '@lawprotect/shared-ts';
 
 /**
- * Validates a store document request
+ * Validates a store document request for S3 storage operations
  * @param request - The store document request to validate
  * @throws BadRequestError when validation fails
  */
 export function validateStoreDocumentRequest(request: StoreDocumentRequest): void {
   if (!request) {
-    throw new BadRequestError('Store document request is required', ErrorCodes.COMMON_BAD_REQUEST);
+    throw s3RequestValidationFailed('Store document request is required');
   }
 
   if (!request.envelopeId) {
-    throw new BadRequestError('Envelope ID is required', ErrorCodes.COMMON_BAD_REQUEST);
+    throw s3EnvelopeIdRequired();
   }
 
   if (!request.signerId) {
-    throw new BadRequestError('Signer ID is required', ErrorCodes.COMMON_BAD_REQUEST);
+    throw s3SignerIdRequired();
   }
 
   if (!request.documentContent || request.documentContent.length === 0) {
-    throw new BadRequestError('Document content is required', ErrorCodes.COMMON_BAD_REQUEST);
+    throw s3DocumentContentRequired();
   }
 
   if (!request.contentType) {
-    throw new BadRequestError('Content type is required', ErrorCodes.COMMON_BAD_REQUEST);
+    throw s3RequestValidationFailed('Content type is required');
   }
 
-  // Validate content type
   try {
     ContentType.fromString(request.contentType.getValue());
   } catch (error) {
-    throw new BadRequestError(
-      `Invalid content type: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      ErrorCodes.COMMON_BAD_REQUEST
+    throw s3ContentTypeInvalid(
+      request.contentType.getValue(), 
+      { originalError: error instanceof Error ? error.message : 'Unknown error' }
     );
   }
 
-  // Validate file size limits
-  const maxFileSize = 50 * 1024 * 1024; // 50MB
+  const maxFileSize = 50 * 1024 * 1024;
   if (request.documentContent.length > maxFileSize) {
-    throw new BadRequestError('Document size exceeds maximum allowed size of 50MB', ErrorCodes.COMMON_BAD_REQUEST);
+    throw s3FileSizeExceeded(request.documentContent.length, maxFileSize);
   }
 
-  // Validate metadata if provided
   if (request.metadata) {
     if (request.metadata.fileSize && request.metadata.fileSize !== request.documentContent.length) {
-      throw new BadRequestError('File size in metadata does not match actual content size', ErrorCodes.COMMON_BAD_REQUEST);
+      throw s3MetadataSizeMismatch(request.metadata.fileSize, request.documentContent.length);
     }
   }
 }
 
 /**
- * Validates a retrieve document request
+ * Validates a retrieve document request for S3 document retrieval operations
  * @param request - The retrieve document request to validate
  * @throws BadRequestError when validation fails
  */
 export function validateRetrieveDocumentRequest(request: RetrieveDocumentRequest): void {
   if (!request) {
-    throw new BadRequestError('Retrieve document request is required', ErrorCodes.COMMON_BAD_REQUEST);
+    throw s3RequestValidationFailed('Retrieve document request is required');
   }
 
   if (!request.documentKey) {
-    throw new BadRequestError('Document key is required', ErrorCodes.COMMON_BAD_REQUEST);
+    throw s3DocumentKeyRequired();
   }
 
   if (!request.envelopeId) {
-    throw new BadRequestError('Envelope ID is required', ErrorCodes.COMMON_BAD_REQUEST);
+    throw s3EnvelopeIdRequired();
   }
 
   if (!request.signerId) {
-    throw new BadRequestError('Signer ID is required', ErrorCodes.COMMON_BAD_REQUEST);
+    throw s3SignerIdRequired();
   }
 
-  // Validate S3 key format
   try {
     S3Key.fromString(request.documentKey.getValue());
   } catch (error) {
-    throw new BadRequestError(
-      `Invalid document key format: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      ErrorCodes.COMMON_BAD_REQUEST
+    throw s3KeyInvalidFormat(
+      request.documentKey.getValue(),
+      { originalError: error instanceof Error ? error.message : 'Unknown error' }
     );
   }
 
-  // Validate S3 key using storage rules
   validateS3StorageForDocument(request.documentKey, {
-    allowedS3Buckets: [], // Will be validated by service configuration
+    allowedS3Buckets: [],
     documentKeyPrefix: 'envelopes/',
     allowedExtensions: ['pdf']
   });
 }
 
 /**
- * Validates a generate presigned URL request
+ * Validates a generate presigned URL request for S3 presigned URL generation
  * @param request - The generate presigned URL request to validate
  * @param config - Service configuration for validation
+ * @param config.maxExpirationTime - Maximum allowed expiration time in seconds
+ * @param config.minExpirationTime - Minimum allowed expiration time in seconds
  * @throws BadRequestError when validation fails
  */
 export function validateGeneratePresignedUrlRequest(
@@ -113,62 +124,54 @@ export function validateGeneratePresignedUrlRequest(
   config: { maxExpirationTime?: number; minExpirationTime?: number }
 ): void {
   if (!request) {
-    throw new BadRequestError('Generate presigned URL request is required', ErrorCodes.COMMON_BAD_REQUEST);
+    throw s3RequestValidationFailed('Generate presigned URL request is required');
   }
 
   if (!request.documentKey) {
-    throw new BadRequestError('Document key is required', ErrorCodes.COMMON_BAD_REQUEST);
+    throw s3DocumentKeyRequired();
   }
 
   if (!request.operation) {
-    throw new BadRequestError('S3 operation is required', ErrorCodes.COMMON_BAD_REQUEST);
+    throw s3RequestValidationFailed('S3 operation is required');
   }
 
   if (!request.envelopeId) {
-    throw new BadRequestError('Envelope ID is required', ErrorCodes.COMMON_BAD_REQUEST);
+    throw s3EnvelopeIdRequired();
   }
 
   if (!request.signerId) {
-    throw new BadRequestError('Signer ID is required', ErrorCodes.COMMON_BAD_REQUEST);
+    throw s3SignerIdRequired();
   }
 
-  // Validate S3 key format
   try {
     S3Key.fromString(request.documentKey.getValue());
   } catch (error) {
-    throw new BadRequestError(
-      `Invalid document key format: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      ErrorCodes.COMMON_BAD_REQUEST
+    throw s3KeyInvalidFormat(
+      request.documentKey.getValue(),
+      { originalError: error instanceof Error ? error.message : 'Unknown error' }
     );
   }
 
-  // Validate S3 operation
   try {
     S3Operation.fromString(request.operation.getValue());
   } catch (error) {
-    throw new BadRequestError(
-      `Invalid S3 operation: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      ErrorCodes.COMMON_BAD_REQUEST
+    throw s3OperationInvalid(
+      request.operation.getValue(),
+      { originalError: error instanceof Error ? error.message : 'Unknown error' }
     );
   }
 
-  // Validate expiration time
   if (request.expiresIn !== undefined) {
-    const minExpiration = config.minExpirationTime || 300; // 5 minutes
-    const maxExpiration = config.maxExpirationTime || 3600; // 1 hour
+    const minExpiration = config.minExpirationTime || 300;
+    const maxExpiration = config.maxExpirationTime || 3600;
 
-    if (request.expiresIn < minExpiration) {
-      throw new BadRequestError(`Expiration time must be at least ${minExpiration} seconds`, ErrorCodes.COMMON_BAD_REQUEST);
-    }
-
-    if (request.expiresIn > maxExpiration) {
-      throw new BadRequestError(`Expiration time cannot exceed ${maxExpiration} seconds`, ErrorCodes.COMMON_BAD_REQUEST);
+    if (request.expiresIn < minExpiration || request.expiresIn > maxExpiration) {
+      throw s3ExpirationTimeInvalid(request.expiresIn, minExpiration, maxExpiration);
     }
   }
 
-  // Validate S3 key using storage rules
   validateS3StorageGeneral(request.documentKey, {
-    allowedS3Buckets: [], // Will be validated by service configuration
+    allowedS3Buckets: [],
     maxKeyLength: 1024,
     minKeyLength: 1
   });

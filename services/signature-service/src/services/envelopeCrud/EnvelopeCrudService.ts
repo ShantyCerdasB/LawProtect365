@@ -12,7 +12,7 @@ import { SignatureEnvelopeRepository } from '@/repositories/SignatureEnvelopeRep
 import { InvitationTokenService } from '@/services/invitationTokenService';
 import { S3Key } from '@lawprotect/shared-ts';
 
-import { EntityFactory } from '@/domain/factories/EntityFactory';
+import { EntityFactory } from '@/infrastructure/factories/EntityFactory';
 import { EnvelopeUpdateValidationRule, UpdateEnvelopeData } from '@/domain/rules/EnvelopeUpdateValidationRule';
 import { EnvelopeSpec, CreateEnvelopeData } from '@/domain/types/envelope';
 import { SigningOrderType } from '@prisma/client';

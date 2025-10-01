@@ -12,7 +12,7 @@ import { EnvelopeCrudService } from '@/services/envelopeCrud/EnvelopeCrudService
 import { EnvelopeHashService } from '@/services/envelopeHashService/EnvelopeHashService';
 import { EnvelopeId } from '@/domain/value-objects/EnvelopeId';
 import { SignerId } from '@/domain/value-objects/SignerId';
-import { EntityFactory } from '@/domain/factories/EntityFactory';
+import { EntityFactory } from '@/infrastructure/factories/EntityFactory';
 import { envelopeNotFound, documentNotReady } from '@/signature-errors';
 
 /**

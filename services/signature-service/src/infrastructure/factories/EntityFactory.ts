@@ -6,23 +6,23 @@
  * It follows the Abstract Factory pattern to create different types of entities based on input data.
  */
 
-import { EnvelopeId } from '../value-objects/EnvelopeId';
-import { SignerId } from '../value-objects/SignerId';
-import { InvitationTokenId } from '../value-objects/InvitationTokenId';
-import { ConsentId } from '../value-objects/ConsentId';
-import { DocumentOrigin } from '../value-objects/DocumentOrigin';
-import { SigningOrder } from '../value-objects/SigningOrder';
-import { EnvelopeStatus } from '../value-objects/EnvelopeStatus';
+import { EnvelopeId } from '../../domain/value-objects/EnvelopeId';
+import { SignerId } from '../../domain/value-objects/SignerId';
+import { InvitationTokenId } from '../../domain/value-objects/InvitationTokenId';
+import { ConsentId } from '../../domain/value-objects/ConsentId';
+import { DocumentOrigin } from '../../domain/value-objects/DocumentOrigin';
+import { SigningOrder } from '../../domain/value-objects/SigningOrder';
+import { EnvelopeStatus } from '../../domain/value-objects/EnvelopeStatus';
 import { Email, S3Key, DocumentHash } from '@lawprotect/shared-ts';
 
-import { SignatureEnvelope } from '../entities/SignatureEnvelope';
-import { EnvelopeSigner } from '../entities/EnvelopeSigner';
-import { InvitationToken } from '../entities/InvitationToken';
-import { Consent } from '../entities/Consent';
+import { SignatureEnvelope } from '../../domain/entities/SignatureEnvelope';
+import { EnvelopeSigner } from '../../domain/entities/EnvelopeSigner';
+import { InvitationToken } from '../../domain/entities/InvitationToken';
+import { Consent } from '../../domain/entities/Consent';
 
-import { CreateEnvelopeData } from '../types/envelope/CreateEnvelopeData';
-import { CreateSignerData } from '../types/signer/CreateSignerData';
-import { CreateConsentRequest } from '../types/consent/CreateConsentRequest';
+import { CreateEnvelopeData } from '../../domain/types/envelope/CreateEnvelopeData';
+import { CreateSignerData } from '../../domain/types/signer/CreateSignerData';
+import { CreateConsentRequest } from '../../domain/types/consent/CreateConsentRequest';
 
 import { InvitationTokenStatus, SignerStatus } from '@prisma/client';
 

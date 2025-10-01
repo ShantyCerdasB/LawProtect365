@@ -250,5 +250,20 @@ describe('DownloadDocumentUseCase', () => {
 
       await expect(useCase.execute(input)).rejects.toThrow('Envelope not found');
     });
+
+    it('should throw error when neither userId nor invitationToken is provided', async () => {
+      const envelopeId = TestUtils.generateEnvelopeId();
+      
+      const input: DownloadDocumentInput = {
+        envelopeId,
+        securityContext: {
+          ipAddress: TestUtils.createTestIpAddress(),
+          userAgent: TestUtils.createTestUserAgent(),
+          country: 'US'
+        }
+      };
+
+      await expect(useCase.execute(input)).rejects.toThrow('Either userId or invitationToken must be provided');
+    });
   });
 });

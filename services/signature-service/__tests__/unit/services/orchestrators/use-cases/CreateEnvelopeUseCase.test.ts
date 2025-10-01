@@ -17,7 +17,7 @@ jest.mock('uuid', () => ({
 }));
 
 // Mock EntityFactory
-jest.mock('../../../../../src/domain/factories/EntityFactory', () => ({
+jest.mock('../../../../../src/infrastructure/factories/EntityFactory', () => ({
   EntityFactory: {
     createValueObjects: {
       envelopeId: jest.fn()
@@ -44,7 +44,7 @@ describe('CreateEnvelopeUseCase', () => {
     mockUuid.mockReturnValue('test-uuid-12345');
     
     // Get the mocked EntityFactory
-    const { EntityFactory } = require('../../../../../src/domain/factories/EntityFactory');
+    const { EntityFactory } = require('../../../../../src/infrastructure/factories/EntityFactory');
     EntityFactory.createValueObjects.envelopeId.mockReturnValue(EnvelopeId.fromString(TestUtils.generateUuid()));
 
     useCase = new CreateEnvelopeUseCase(
@@ -78,7 +78,7 @@ describe('CreateEnvelopeUseCase', () => {
       const testEnvelopeId = EnvelopeId.fromString(TestUtils.generateUuid());
       const testEnvelope = signatureEnvelopeEntity();
 
-      const { EntityFactory } = require('../../../../../src/domain/factories/EntityFactory');
+      const { EntityFactory } = require('../../../../../src/infrastructure/factories/EntityFactory');
       EntityFactory.createValueObjects.envelopeId.mockReturnValue(testEnvelopeId);
       mockSignatureEnvelopeService.createEnvelope.mockResolvedValue(testEnvelope);
 
@@ -121,7 +121,7 @@ describe('CreateEnvelopeUseCase', () => {
       const testEnvelopeId = EnvelopeId.fromString(TestUtils.generateUuid());
       const testEnvelope = signatureEnvelopeEntity();
 
-      const { EntityFactory } = require('../../../../../src/domain/factories/EntityFactory');
+      const { EntityFactory } = require('../../../../../src/infrastructure/factories/EntityFactory');
       EntityFactory.createValueObjects.envelopeId.mockReturnValue(testEnvelopeId);
       mockSignatureEnvelopeService.createEnvelope.mockResolvedValue(testEnvelope);
 
@@ -154,7 +154,7 @@ describe('CreateEnvelopeUseCase', () => {
       };
 
       const testEnvelope = signatureEnvelopeEntity();
-      const { EntityFactory } = require('../../../../../src/domain/factories/EntityFactory');
+      const { EntityFactory } = require('../../../../../src/infrastructure/factories/EntityFactory');
       EntityFactory.createValueObjects.envelopeId.mockReturnValue(EnvelopeId.generate());
       mockSignatureEnvelopeService.createEnvelope.mockResolvedValue(testEnvelope);
 
@@ -185,7 +185,7 @@ describe('CreateEnvelopeUseCase', () => {
       };
 
       const serviceError = new Error('Service creation failed');
-      const { EntityFactory } = require('../../../../../src/domain/factories/EntityFactory');
+      const { EntityFactory } = require('../../../../../src/infrastructure/factories/EntityFactory');
       EntityFactory.createValueObjects.envelopeId.mockReturnValue(EnvelopeId.generate());
       mockSignatureEnvelopeService.createEnvelope.mockRejectedValue(serviceError);
 

@@ -1,23 +1,28 @@
 /**
- * @fileoverview DownloadDocumentSchema - Schema for downloading documents
- * @summary Validation schemas for document download operations
- * @description This file contains Zod schemas for validating document download requests,
- * including path parameters, query parameters for both authenticated and external users,
- * and response formatting.
+ * @fileoverview DownloadSignedDocumentSchema - Validation schemas for document download operations
+ * @summary Provides Zod validation schemas for downloading signed documents from envelopes
+ * @description This module defines comprehensive validation schemas for document download operations,
+ * supporting both authenticated users and external users with invitation tokens. It includes
+ * path parameter validation, query parameter validation with expiration limits, and response
+ * formatting for secure document downloads.
  */
 
 import { z, UuidV4 } from '@lawprotect/shared-ts';
+import { loadConfig } from '../../config/AppConfig';
 
 /**
- * Schema for envelope ID in path parameters
+ * Schema for envelope ID path parameter validation
+ * @description Validates the envelope ID in the URL path for document download requests
  */
 export const DownloadDocumentPathSchema = z.object({
   envelopeId: UuidV4
 });
 
 /**
- * Schema for download document query parameters
- * Supports both authenticated users and external users with invitation tokens
+ * Schema for download document query parameters validation
+ * @description Validates query parameters for document download requests, supporting both
+ * authenticated users and external users with invitation tokens. Includes expiration
+ * time validation against configured limits.
  */
 export const DownloadDocumentQuerySchema = z.object({
   expiresIn: z.string().optional()
@@ -26,8 +31,7 @@ export const DownloadDocumentQuerySchema = z.object({
       if (val === undefined) return true;
       if (isNaN(val)) return false;
       
-      // Import configuration dynamically to avoid circular dependencies
-      const { loadConfig } = require('../../config/AppConfig');
+      // Load configuration to validate expiration limits
       const config = loadConfig();
       return val >= config.documentDownload.minExpirationSeconds && 
              val <= config.documentDownload.maxExpirationSeconds;
@@ -38,7 +42,9 @@ export const DownloadDocumentQuerySchema = z.object({
 });
 
 /**
- * Schema for download document response
+ * Schema for download document response validation
+ * @description Validates the response structure for document download operations,
+ * ensuring all required fields are present and properly typed.
  */
 export const DownloadDocumentResponseSchema = z.object({
   success: z.boolean(),
@@ -49,7 +55,9 @@ export const DownloadDocumentResponseSchema = z.object({
 });
 
 /**
- * Type exports
+ * Type definitions derived from validation schemas
+ * @description Provides TypeScript types inferred from Zod schemas for type safety
+ * throughout the application.
  */
 export type DownloadDocumentPath = z.infer<typeof DownloadDocumentPathSchema>;
 export type DownloadDocumentQuery = z.infer<typeof DownloadDocumentQuerySchema>;

@@ -14,10 +14,6 @@ import {
 
 /**
  * Domain rule for envelope access validation
- * 
- * This rule handles complex business logic for validating user access to envelopes,
- * including owner validation, external user validation via invitation tokens, and
- * proper error handling with specific error types.
  */
 export class EnvelopeAccessValidationRule {
   
@@ -35,23 +31,19 @@ export class EnvelopeAccessValidationRule {
     userId: string,
     invitationToken?: InvitationToken
   ): SignatureEnvelope {
-    // Check if envelope exists
     if (!envelope) {
       throw envelopeNotFound('Envelope not found');
     }
 
-    // Check if user is the owner/creator
     if (envelope.getCreatedBy() === userId) {
       return envelope;
     }
 
-    // If not owner, check if it's an external user with valid invitation token
     if (invitationToken) {
       this.validateExternalUserAccess(envelope, userId, invitationToken);
       return envelope;
     }
 
-    // No valid access found
     throw envelopeAccessDenied(
       `User ${userId} does not have access to envelope ${envelope.getId().getValue()}. ` +
       'Either be the envelope owner or provide a valid invitation token.'
@@ -69,29 +61,23 @@ export class EnvelopeAccessValidationRule {
     _userId: string,
     invitationToken: InvitationToken
   ): void {
-    // Validate token is for this envelope
     if (invitationToken.getEnvelopeId().getValue() !== envelope.getId().getValue()) {
       throw envelopeAccessDenied(
         `Invitation token is not valid for envelope ${envelope.getId().getValue()}`
       );
     }
 
-    // Validate token is active and not expired
     if (invitationToken.isExpired()) {
       throw envelopeAccessDenied(
         `Invitation token for envelope ${envelope.getId().getValue()} has expired`
       );
     }
 
-    // Validate token is not revoked
     if (invitationToken.isRevoked()) {
       throw envelopeAccessDenied(
         `Invitation token for envelope ${envelope.getId().getValue()} has been revoked`
       );
     }
-
-    // For external users, we don't validate userId match since they might not have accounts yet
-    // The token itself provides the authorization
   }
 
   /**
@@ -106,12 +92,10 @@ export class EnvelopeAccessValidationRule {
     envelope: SignatureEnvelope | null,
     userId: string
   ): SignatureEnvelope {
-    // Check if envelope exists
     if (!envelope) {
       throw envelopeNotFound('Envelope not found');
     }
 
-    // Only the owner can modify envelopes
     if (envelope.getCreatedBy() !== userId) {
       throw envelopeAccessDenied(
         `Only the envelope owner can modify envelope ${envelope.getId().getValue()}. ` +
@@ -119,7 +103,6 @@ export class EnvelopeAccessValidationRule {
       );
     }
 
-    // Validate envelope can be modified (using entity method)
     if (!envelope.canBeModified()) {
       throw envelopeAccessDenied(
         `Envelope ${envelope.getId().getValue()} cannot be modified in current state: ${envelope.getStatus().getValue()}`
@@ -141,12 +124,10 @@ export class EnvelopeAccessValidationRule {
     envelope: SignatureEnvelope | null,
     userId: string
   ): SignatureEnvelope {
-    // Check if envelope exists
     if (!envelope) {
       throw envelopeNotFound('Envelope not found');
     }
 
-    // Only the owner can delete envelopes
     if (envelope.getCreatedBy() !== userId) {
       throw envelopeAccessDenied(
         `Only the envelope owner can delete envelope ${envelope.getId().getValue()}. ` +
@@ -154,7 +135,6 @@ export class EnvelopeAccessValidationRule {
       );
     }
 
-    // Validate envelope can be modified (using entity method)
     if (!envelope.canBeModified()) {
       throw envelopeAccessDenied(
         `Envelope ${envelope.getId().getValue()} cannot be deleted in current state: ${envelope.getStatus().getValue()}`

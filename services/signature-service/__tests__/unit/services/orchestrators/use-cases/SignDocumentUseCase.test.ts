@@ -18,7 +18,7 @@ import { signatureEnvelopeEntity } from '../../../../helpers/builders/signatureE
 import { EnvelopeSigner } from '../../../../../src/domain/entities/EnvelopeSigner';
 
 // Mock the EntityFactory
-jest.mock('../../../../../src/domain/factories/EntityFactory', () => ({
+jest.mock('../../../../../src/infrastructure/factories/EntityFactory', () => ({
   EntityFactory: {
     createValueObjects: {
       envelopeId: jest.fn(),
@@ -79,7 +79,7 @@ describe('SignDocumentUseCase', () => {
     mockAuditEventService = createAuditEventServiceMock();
 
     // Get references to mocked functions
-    mockEntityFactory = require('../../../../../src/domain/factories/EntityFactory').EntityFactory;
+    mockEntityFactory = require('../../../../../src/infrastructure/factories/EntityFactory').EntityFactory;
     mockBuildSigningResponse = require('../../../../../src/services/orchestrators').buildSigningResponse as jest.Mock;
     mockHandleSignedDocumentFromFrontend = require('../../../../../src/services/orchestrators').handleSignedDocumentFromFrontend as jest.Mock;
     mockHandleFlattenedDocument = require('../../../../../src/services/orchestrators').handleFlattenedDocument as jest.Mock;

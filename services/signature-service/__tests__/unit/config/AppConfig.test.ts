@@ -52,15 +52,11 @@ describe('AppConfig', () => {
     it('should load configuration with default values', () => {
       // Set required environment variables
       process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/test';
-      process.env.S3_BUCKET_NAME = 'test-bucket';
-      process.env.S3_REGION = 'us-east-1';
-      process.env.S3_ACCESS_KEY_ID = 'test-access-key';
-      process.env.S3_SECRET_ACCESS_KEY = 'test-secret-key';
+      process.env.EVIDENCE_BUCKET = 'test-bucket';
+      process.env.AWS_REGION = 'us-east-1';
       process.env.KMS_SIGNER_KEY_ID = 'test-kms-key';
       process.env.EVENTBRIDGE_BUS_NAME = 'test-bus';
       process.env.OUTBOX_TABLE_NAME = 'test-outbox';
-      process.env.AWS_ACCESS_KEY_ID = 'test-aws-key';
-      process.env.AWS_SECRET_ACCESS_KEY = 'test-aws-secret';
 
       const config = loadConfig();
 
@@ -85,21 +81,14 @@ describe('AppConfig', () => {
       process.env.DATABASE_URL = 'postgresql://custom:custom@localhost:5432/custom';
       process.env.DB_MAX_CONNECTIONS = '20';
       process.env.DB_CONNECTION_TIMEOUT = '60000';
-      process.env.S3_BUCKET_NAME = 'custom-bucket';
-      process.env.S3_REGION = 'us-west-2';
-      process.env.S3_ACCESS_KEY_ID = 'custom-s3-key';
-      process.env.S3_SECRET_ACCESS_KEY = 'custom-s3-secret';
+      process.env.EVIDENCE_BUCKET = 'custom-bucket';
+      process.env.AWS_REGION = 'us-west-2';
       process.env.KMS_SIGNER_KEY_ID = 'custom-kms-key';
       process.env.KMS_SIGNING_ALGORITHM = 'RSASSA_PKCS1_V1_5_SHA_256';
-      process.env.KMS_REGION = 'us-west-2';
-      process.env.KMS_ACCESS_KEY_ID = 'custom-kms-access';
-      process.env.KMS_SECRET_ACCESS_KEY = 'custom-kms-secret';
       process.env.EVENTBRIDGE_BUS_NAME = 'custom-bus';
       process.env.EVENTBRIDGE_SOURCE = 'custom.source';
       process.env.OUTBOX_TABLE_NAME = 'custom-outbox';
       process.env.AWS_REGION = 'us-west-2';
-      process.env.AWS_ACCESS_KEY_ID = 'custom-aws-key';
-      process.env.AWS_SECRET_ACCESS_KEY = 'custom-aws-secret';
       process.env.DOCUMENT_DOWNLOAD_DEFAULT_EXPIRATION_SECONDS = '7200';
       process.env.DOCUMENT_DOWNLOAD_MAX_EXPIRATION_SECONDS = '172800';
       process.env.DOCUMENT_DOWNLOAD_MIN_EXPIRATION_SECONDS = '600';
@@ -116,19 +105,13 @@ describe('AppConfig', () => {
       expect(config.database.connectionTimeout).toBe(60000);
       expect(config.s3.bucketName).toBe('custom-bucket');
       expect(config.s3.region).toBe('us-west-2');
-      expect(config.s3.accessKeyId).toBe('custom-s3-key');
-      expect(config.s3.secretAccessKey).toBe('custom-s3-secret');
       expect(config.kms.signerKeyId).toBe('custom-kms-key');
       expect(config.kms.signingAlgorithm).toBe('RSASSA_PKCS1_V1_5_SHA_256');
       expect(config.kms.region).toBe('us-west-2');
-      expect(config.kms.accessKeyId).toBe('custom-kms-access');
-      expect(config.kms.secretAccessKey).toBe('custom-kms-secret');
       expect(config.eventbridge.busName).toBe('custom-bus');
       expect(config.eventbridge.source).toBe('custom.source');
       expect(config.outbox.tableName).toBe('custom-outbox');
       expect(config.aws.region).toBe('us-west-2');
-      expect(config.aws.accessKeyId).toBe('custom-aws-key');
-      expect(config.aws.secretAccessKey).toBe('custom-aws-secret');
       expect(config.documentDownload.defaultExpirationSeconds).toBe(7200);
       expect(config.documentDownload.maxExpirationSeconds).toBe(172800);
       expect(config.documentDownload.minExpirationSeconds).toBe(600);
@@ -141,15 +124,11 @@ describe('AppConfig', () => {
 
     it('should inherit from base AppConfig', () => {
       process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/test';
-      process.env.S3_BUCKET_NAME = 'test-bucket';
-      process.env.S3_REGION = 'us-east-1';
-      process.env.S3_ACCESS_KEY_ID = 'test-access-key';
-      process.env.S3_SECRET_ACCESS_KEY = 'test-secret-key';
+      process.env.EVIDENCE_BUCKET = 'test-bucket';
+      process.env.AWS_REGION = 'us-east-1';
       process.env.KMS_SIGNER_KEY_ID = 'test-kms-key';
       process.env.EVENTBRIDGE_BUS_NAME = 'test-bus';
       process.env.OUTBOX_TABLE_NAME = 'test-outbox';
-      process.env.AWS_ACCESS_KEY_ID = 'test-aws-key';
-      process.env.AWS_SECRET_ACCESS_KEY = 'test-aws-secret';
 
       const config = loadConfig();
 
@@ -161,58 +140,38 @@ describe('AppConfig', () => {
 
     it('should use KMS fallback to AWS credentials when KMS credentials not provided', () => {
       process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/test';
-      process.env.S3_BUCKET_NAME = 'test-bucket';
-      process.env.S3_REGION = 'us-east-1';
-      process.env.S3_ACCESS_KEY_ID = 'test-access-key';
-      process.env.S3_SECRET_ACCESS_KEY = 'test-secret-key';
+      process.env.EVIDENCE_BUCKET = 'test-bucket';
+      process.env.AWS_REGION = 'us-east-1';
       process.env.KMS_SIGNER_KEY_ID = 'test-kms-key';
       process.env.EVENTBRIDGE_BUS_NAME = 'test-bus';
       process.env.OUTBOX_TABLE_NAME = 'test-outbox';
       process.env.AWS_REGION = 'us-west-2';
-      process.env.AWS_ACCESS_KEY_ID = 'fallback-aws-key';
-      process.env.AWS_SECRET_ACCESS_KEY = 'fallback-aws-secret';
 
       const config = loadConfig();
 
       expect(config.kms.region).toBe('us-west-2');
-      expect(config.kms.accessKeyId).toBe('fallback-aws-key');
-      expect(config.kms.secretAccessKey).toBe('fallback-aws-secret');
     });
 
     it('should use KMS credentials when provided instead of AWS fallback', () => {
       process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/test';
-      process.env.S3_BUCKET_NAME = 'test-bucket';
-      process.env.S3_REGION = 'us-east-1';
-      process.env.S3_ACCESS_KEY_ID = 'test-access-key';
-      process.env.S3_SECRET_ACCESS_KEY = 'test-secret-key';
+      process.env.EVIDENCE_BUCKET = 'test-bucket';
+      process.env.AWS_REGION = 'us-east-1';
       process.env.KMS_SIGNER_KEY_ID = 'test-kms-key';
-      process.env.KMS_REGION = 'us-east-1';
-      process.env.KMS_ACCESS_KEY_ID = 'kms-specific-key';
-      process.env.KMS_SECRET_ACCESS_KEY = 'kms-specific-secret';
       process.env.EVENTBRIDGE_BUS_NAME = 'test-bus';
       process.env.OUTBOX_TABLE_NAME = 'test-outbox';
-      process.env.AWS_REGION = 'us-west-2';
-      process.env.AWS_ACCESS_KEY_ID = 'fallback-aws-key';
-      process.env.AWS_SECRET_ACCESS_KEY = 'fallback-aws-secret';
 
       const config = loadConfig();
 
       expect(config.kms.region).toBe('us-east-1');
-      expect(config.kms.accessKeyId).toBe('kms-specific-key');
-      expect(config.kms.secretAccessKey).toBe('kms-specific-secret');
     });
 
     it('should generate eventbridge source from project and service name when not provided', () => {
       process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/test';
-      process.env.S3_BUCKET_NAME = 'test-bucket';
-      process.env.S3_REGION = 'us-east-1';
-      process.env.S3_ACCESS_KEY_ID = 'test-access-key';
-      process.env.S3_SECRET_ACCESS_KEY = 'test-secret-key';
+      process.env.EVIDENCE_BUCKET = 'test-bucket';
+      process.env.AWS_REGION = 'us-east-1';
       process.env.KMS_SIGNER_KEY_ID = 'test-kms-key';
       process.env.EVENTBRIDGE_BUS_NAME = 'test-bus';
       process.env.OUTBOX_TABLE_NAME = 'test-outbox';
-      process.env.AWS_ACCESS_KEY_ID = 'test-aws-key';
-      process.env.AWS_SECRET_ACCESS_KEY = 'test-aws-secret';
 
       const config = loadConfig();
 
@@ -221,15 +180,11 @@ describe('AppConfig', () => {
 
     it('should return SignatureServiceConfig type', () => {
       process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/test';
-      process.env.S3_BUCKET_NAME = 'test-bucket';
-      process.env.S3_REGION = 'us-east-1';
-      process.env.S3_ACCESS_KEY_ID = 'test-access-key';
-      process.env.S3_SECRET_ACCESS_KEY = 'test-secret-key';
+      process.env.EVIDENCE_BUCKET = 'test-bucket';
+      process.env.AWS_REGION = 'us-east-1';
       process.env.KMS_SIGNER_KEY_ID = 'test-kms-key';
       process.env.EVENTBRIDGE_BUS_NAME = 'test-bus';
       process.env.OUTBOX_TABLE_NAME = 'test-outbox';
-      process.env.AWS_ACCESS_KEY_ID = 'test-aws-key';
-      process.env.AWS_SECRET_ACCESS_KEY = 'test-aws-secret';
 
       const config = loadConfig();
 
@@ -248,15 +203,11 @@ describe('AppConfig', () => {
 
     it('should handle numeric parsing with invalid values', () => {
       process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/test';
-      process.env.S3_BUCKET_NAME = 'test-bucket';
-      process.env.S3_REGION = 'us-east-1';
-      process.env.S3_ACCESS_KEY_ID = 'test-access-key';
-      process.env.S3_SECRET_ACCESS_KEY = 'test-secret-key';
+      process.env.EVIDENCE_BUCKET = 'test-bucket';
+      process.env.AWS_REGION = 'us-east-1';
       process.env.KMS_SIGNER_KEY_ID = 'test-kms-key';
       process.env.EVENTBRIDGE_BUS_NAME = 'test-bus';
       process.env.OUTBOX_TABLE_NAME = 'test-outbox';
-      process.env.AWS_ACCESS_KEY_ID = 'test-aws-key';
-      process.env.AWS_SECRET_ACCESS_KEY = 'test-aws-secret';
       
       // Set invalid numeric values
       process.env.DB_MAX_CONNECTIONS = 'invalid';
@@ -272,15 +223,11 @@ describe('AppConfig', () => {
 
     it('should handle empty string environment variables', () => {
       process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/test';
-      process.env.S3_BUCKET_NAME = 'test-bucket';
-      process.env.S3_REGION = 'us-east-1';
-      process.env.S3_ACCESS_KEY_ID = 'test-access-key';
-      process.env.S3_SECRET_ACCESS_KEY = 'test-secret-key';
+      process.env.EVIDENCE_BUCKET = 'test-bucket';
+      process.env.AWS_REGION = 'us-east-1';
       process.env.KMS_SIGNER_KEY_ID = 'test-kms-key';
       process.env.EVENTBRIDGE_BUS_NAME = 'test-bus';
       process.env.OUTBOX_TABLE_NAME = 'test-outbox';
-      process.env.AWS_ACCESS_KEY_ID = 'test-aws-key';
-      process.env.AWS_SECRET_ACCESS_KEY = 'test-aws-secret';
       
       // Set empty string values
       process.env.DB_MAX_CONNECTIONS = '';

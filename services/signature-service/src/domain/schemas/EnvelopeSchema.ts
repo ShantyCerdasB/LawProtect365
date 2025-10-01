@@ -38,8 +38,6 @@ export const CreateEnvelopeSchema = z.object({
   expiresAt: z.date().optional(),
   sourceKey: z.string().min(1, 'Source key is required'),
   metaKey: z.string().min(1, 'Meta key is required')
-  // Note: signers are not created in CreateEnvelope flow
-  // They are added separately via UpdateEnvelope flow
 }).refine((data) => {
   // Validate template fields when originType is TEMPLATE
   if (data.originType === DocumentOriginType.TEMPLATE) {
@@ -71,7 +69,6 @@ export const UpdateEnvelopeSchema = z.object({
   addSigners: z.array(SignerDataSchema).optional(),
   removeSignerIds: z.array(UuidV4).optional(),
   
-  // Legacy fields (keep for backward compatibility)
   customFields: JsonObjectSchema.optional(),
   tags: z.array(z.string()).optional(),
   reminders: z.object({
@@ -141,7 +138,6 @@ export type EnvelopeQuery = z.infer<typeof EnvelopeQuerySchema>;
  * Schema for getting audit trail (no query parameters needed)
  */
 export const GetAuditTrailQuerySchema = z.object({
-  // No query parameters needed since we get all events
 });
 
 export type GetEnvelopeQuery = z.infer<typeof GetEnvelopeQuerySchema>;

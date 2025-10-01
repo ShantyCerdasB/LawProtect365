@@ -1,8 +1,9 @@
 /**
- * @fileoverview AuditSchema - Zod schemas for audit event validation
- * @summary Validation schemas for audit events and audit trail operations
- * @description This file contains Zod schemas for validating audit event data,
- * audit trail queries, and audit event responses.
+ * @fileoverview AuditSchema - Validation schemas for audit event operations
+ * @summary Provides comprehensive Zod validation schemas for audit events and audit trail operations
+ * @description This module defines validation schemas for audit event data, audit trail queries,
+ * and audit event responses. It ensures type safety and data validation for all audit-related
+ * operations including event creation, trail queries, and response formatting.
  */
 
 import { z, UuidV4, NonEmptyStringSchema } from '@lawprotect/shared-ts';
@@ -10,11 +11,15 @@ import { AuditEventType } from '../enums/AuditEventType';
 
 /**
  * Schema for audit event type validation
+ * @description Validates audit event types against the defined enum values
  */
 export const AuditEventTypeSchema = z.nativeEnum(AuditEventType);
 
 /**
- * Schema for creating audit events
+ * Schema for creating audit events validation
+ * @description Validates audit event creation requests with comprehensive field validation
+ * including envelope ID, optional signer ID, event type, description, user information,
+ * and optional metadata for audit trail compliance.
  */
 export const CreateAuditEventSchema = z.object({
   envelopeId: UuidV4,

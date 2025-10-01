@@ -91,7 +91,11 @@ describe('ConsentService', () => {
       mockEnvelopeSignerRepository.findById.mockResolvedValue(mockSigner as any);
       mockAuditEventService.createSignerEvent.mockResolvedValue({} as any);
 
-      await expect(service.createConsent(request, userId)).rejects.toThrow();
+      const result = await service.createConsent(request, userId);
+      
+      expect(result).toBe(mockConsent);
+      expect(mockConsentRepository.create).toHaveBeenCalled();
+      expect(mockAuditEventService.createSignerEvent).toHaveBeenCalled();
     });
 
     it('should handle consent already exists', async () => {
@@ -138,7 +142,29 @@ describe('ConsentService', () => {
       mockConsentRepository.findBySignerAndEnvelope.mockResolvedValue(null);
       mockConsentRepository.create.mockRejectedValue(new Error('Database error'));
 
-      await expect(service.createConsent(request, userId)).rejects.toThrow();
+      await expect(service.createConsent(request, userId)).rejects.toThrow('Failed to create consent');
+    });
+
+    it('should handle error in consent creation and wrap it', async () => {
+      const request: CreateConsentRequest = {
+        id: { getValue: () => 'test-consent-id' } as any,
+        envelopeId: { getValue: () => 'test-envelope-id' } as any,
+        signerId: { getValue: () => 'test-signer-id' } as any,
+        signatureId: { getValue: () => 'test-signature-id' } as any,
+        consentGiven: true,
+        consentTimestamp: new Date('2024-01-01'),
+        consentText: 'I consent to sign this document',
+        ipAddress: '127.0.0.1',
+        userAgent: 'TestAgent/1.0',
+        country: 'US',
+        userEmail: 'test@example.com'
+      };
+      const userId = 'test-user-id';
+
+      mockConsentRepository.findBySignerAndEnvelope.mockResolvedValue(null);
+      mockConsentRepository.create.mockRejectedValue(new Error('Database connection failed'));
+
+      await expect(service.createConsent(request, userId)).rejects.toThrow('Failed to create consent');
     });
   });
 

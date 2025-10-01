@@ -12,7 +12,7 @@ import { EnvelopeSignerService } from '@/services/envelopeSignerService';
 import { S3Service } from '@/services/s3Service';
 import { envelopeNotFound } from '@/signature-errors';
 import { rethrow } from '@lawprotect/shared-ts';
-import { EntityFactory } from '@/domain/factories/EntityFactory';
+import { EntityFactory } from '@/infrastructure/factories/EntityFactory';
 import { mapAddSigners } from '@/services/orchestrators/utils/mapAddSigners';
 import { UpdateEnvelopeUseCaseInput, UpdateEnvelopeUseCaseResult } from '@/domain/types/usecase/orchestrator/UpdateEnvelopeUseCase';
 

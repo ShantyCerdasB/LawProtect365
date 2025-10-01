@@ -1,7 +1,8 @@
 /**
- * @fileoverview Use Case Factory Barrel Export
- * @summary Centralized exports for use case factory components
- * @description Provides clean imports for all use case factory functionality
+ * @fileoverview Use cases factories barrel export - Exports all use case factories
+ * @summary Centralized exports for all use case factories
+ * @description This barrel file exports all use case factories for easy importing
+ * throughout the application.
  */
 
-export { UseCaseFactory } from './UseCaseFactory';
+export * from './UseCaseFactory';

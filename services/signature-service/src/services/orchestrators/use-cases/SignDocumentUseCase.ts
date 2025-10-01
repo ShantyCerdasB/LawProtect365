@@ -19,7 +19,7 @@ import { EnvelopeHashService } from '@/services/envelopeHashService/EnvelopeHash
 import { EnvelopeAccessService } from '@/services/envelopeAccess/EnvelopeAccessService';
 import { EnvelopeStateService } from '@/services/envelopeStates/EnvelopeStateService';
 
-import { EntityFactory } from '@/domain/factories/EntityFactory';
+import { EntityFactory } from '@/infrastructure/factories/EntityFactory';
 import { EnvelopeId } from '@/domain/value-objects/EnvelopeId';
 import { SignerId } from '@/domain/value-objects/SignerId';
 import { ConsentId } from '@/domain/value-objects/ConsentId';

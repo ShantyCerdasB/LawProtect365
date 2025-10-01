@@ -17,21 +17,6 @@ export {
   type EnvelopeQuery
 } from './EnvelopeSchema';
 
-export {
-  CreateSignerSchema,
-  UpdateSignerSchema,
-  SignerIdSchema,
-  SignerStatusSchema,
-  SignerConsentSchema,
-  SignerDeclineSchema,
-  SignerQuerySchema,
-  type CreateSignerRequest,
-  type UpdateSignerRequest,
-  type SignerIdParams,
-  type SignerConsentRequest,
-  type SignerDeclineRequest,
-  type SignerQuery
-} from './SignerSchema';
 
 export {
   SignDocumentRequestSchema,

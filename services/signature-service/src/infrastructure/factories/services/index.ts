@@ -1,7 +1,8 @@
 /**
- * @fileoverview Service Factory Barrel Export
- * @summary Centralized exports for service factory components
- * @description Provides clean imports for all service factory functionality
+ * @fileoverview Services factories barrel export - Exports all service factories
+ * @summary Centralized exports for all service factories
+ * @description This barrel file exports all service factories for easy importing
+ * throughout the application.
  */
 
-export { ServiceFactory } from './ServiceFactory';
+export * from './ServiceFactory';

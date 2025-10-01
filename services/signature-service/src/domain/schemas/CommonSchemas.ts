@@ -1,13 +1,17 @@
 /**
- * @fileoverview CommonSchemas - Shared validation schemas
- * @summary Common validation schemas used across multiple domain schemas
- * @description Provides reusable validation schemas to avoid duplication
+ * @fileoverview CommonSchemas - Shared validation schemas for domain operations
+ * @summary Provides reusable Zod validation schemas used across multiple domain schemas
+ * @description This module defines common validation schemas to avoid duplication and ensure
+ * consistency across the application. It includes schemas for signer data, envelope metadata,
+ * S3 keys, content hashes, lifecycle timestamps, and audit timestamps.
  */
 
 import { z, EmailStringSchema, NonEmptyStringSchema } from '@lawprotect/shared-ts';
 
 /**
- * Common signer data schema used in multiple contexts
+ * Common signer data schema for validation across multiple contexts
+ * @description Validates signer information including email, full name, order, external status,
+ * and optional user ID for both internal and external signers.
  */
 export const SignerDataSchema = z.object({
   email: EmailStringSchema,

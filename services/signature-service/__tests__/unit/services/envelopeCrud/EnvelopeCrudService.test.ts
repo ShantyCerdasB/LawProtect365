@@ -1,26 +1,23 @@
 /**
- * @fileoverview EnvelopeCrudService Tests - Unit tests for envelope CRUD operations
- * @summary Tests for EnvelopeCrudService covering all CRUD operations
- * @description Comprehensive unit tests for EnvelopeCrudService including creation,
- * retrieval, updates, cancellation, and listing with proper mocking and error handling.
+ * @fileoverview EnvelopeCrudService.test.ts - Unit tests for EnvelopeCrudService
+ * @summary Tests for the envelope CRUD service
+ * @description This file contains comprehensive unit tests for the EnvelopeCrudService class,
+ * testing all CRUD operations with mocked dependencies to ensure proper functionality.
  */
 
 import { EnvelopeCrudService } from '@/services/envelopeCrud/EnvelopeCrudService';
+import { TestUtils } from '../../../helpers/testUtils';
 import { SignatureEnvelopeRepository } from '@/repositories/SignatureEnvelopeRepository';
-import { InvitationTokenService } from '@/services/invitationTokenService/InvitationTokenService';
-import { SignatureEnvelope } from '@/domain/entities/SignatureEnvelope';
+import { InvitationTokenService } from '@/services/invitationTokenService';
 import { EnvelopeId } from '@/domain/value-objects/EnvelopeId';
-import { CreateEnvelopeData } from '@/domain/types/envelope';
-import { EnvelopeSpec } from '@/domain/types/envelope';
-import { EnvelopeStatus } from '@/domain/value-objects/EnvelopeStatus';
+import { SignatureEnvelope } from '@/domain/entities/SignatureEnvelope';
 import { DocumentOrigin } from '@/domain/value-objects/DocumentOrigin';
 import { SigningOrder } from '@/domain/value-objects/SigningOrder';
-
-// Mock the dependencies
-jest.mock('@/repositories/SignatureEnvelopeRepository');
-jest.mock('@/services/invitationTokenService/InvitationTokenService');
-jest.mock('@/domain/entities/SignatureEnvelope');
-jest.mock('@/domain/value-objects/EnvelopeId');
+import { EnvelopeStatus } from '@/domain/value-objects/EnvelopeStatus';
+import { SignerId } from '@/domain/value-objects/SignerId';
+import { S3Key } from '@lawprotect/shared-ts';
+import { SignatureEnvelopeBuilder } from '../../../helpers/builders/SignatureEnvelopeBuilder';
+import { EnvelopeSignerBuilder } from '../../../helpers/builders/EnvelopeSignerBuilder';
 
 describe('EnvelopeCrudService', () => {
   let service: EnvelopeCrudService;
@@ -34,11 +31,24 @@ describe('EnvelopeCrudService', () => {
       getWithSigners: jest.fn(),
       update: jest.fn(),
       list: jest.fn(),
-    } as any;
+      delete: jest.fn(),
+      updateHashes: jest.fn(),
+      updateSignedDocument: jest.fn(),
+      completeEnvelope: jest.fn(),
+      updateFlattenedKey: jest.fn(),
+      listWithCursorPagination: jest.fn(),
+    } as unknown as jest.Mocked<SignatureEnvelopeRepository>;
 
     mockInvitationTokenService = {
       validateInvitationToken: jest.fn(),
-    } as any;
+      createInvitationToken: jest.fn(),
+      revokeInvitationToken: jest.fn(),
+      generateInvitationTokensForSigners: jest.fn(),
+      generateViewerInvitationToken: jest.fn(),
+      markTokenAsViewed: jest.fn(),
+      markTokenAsSigned: jest.fn(),
+      updateTokenSentAt: jest.fn(),
+    } as unknown as jest.Mocked<InvitationTokenService>;
 
     service = new EnvelopeCrudService(
       mockSignatureEnvelopeRepository,
@@ -48,265 +58,310 @@ describe('EnvelopeCrudService', () => {
 
   describe('createEnvelope', () => {
     it('should create envelope successfully', async () => {
-      const createData: CreateEnvelopeData = {
-        id: { getValue: () => 'test-envelope-id' } as any,
+      const data = {
+        id: EnvelopeId.fromString(TestUtils.generateUuid()),
+        createdBy: TestUtils.generateUuid(),
         title: 'Test Envelope',
         description: 'Test Description',
-        createdBy: 'test-user-id',
-        origin: { getValue: () => 'UPLOAD' } as any,
-        signingOrder: { getType: () => 'PARALLEL' } as any,
-        expiresAt: new Date('2024-12-31'),
-        sourceKey: 'test-source-key',
-        metaKey: 'test-meta-key'
+        origin: DocumentOrigin.userUpload(),
+        signingOrder: SigningOrder.ownerFirst(),
+        sourceKey: 'source-key-123',
+        metaKey: 'meta-key-123',
       };
+      const expectedEnvelope = SignatureEnvelopeBuilder.create()
+        .withId(data.id)
+        .withCreatedBy(data.createdBy)
+        .withTitle(data.title)
+        .build();
 
-      const mockEnvelope = {
-        getId: jest.fn(() => ({ getValue: () => 'test-envelope-id' })),
-        getTitle: jest.fn(() => 'Test Envelope'),
-        getDescription: jest.fn(() => 'Test Description'),
-        getCreatedBy: jest.fn(() => 'test-user-id'),
-        getExpiresAt: jest.fn(() => new Date('2024-12-31')),
-        getSigningOrder: jest.fn(() => ({ getType: () => 'PARALLEL' })),
-        getSourceKey: jest.fn(() => ({ getValue: () => 'test-source-key' })),
-        getMetaKey: jest.fn(() => ({ getValue: () => 'test-meta-key' }))
-      };
+      mockSignatureEnvelopeRepository.create.mockResolvedValue(expectedEnvelope);
 
-      mockSignatureEnvelopeRepository.create.mockResolvedValue(mockEnvelope as any);
+      const result = await service.createEnvelope(data);
 
-      const result = await service.createEnvelope(createData);
-
-      expect(result).toBe(mockEnvelope);
-      expect(mockSignatureEnvelopeRepository.create).toHaveBeenCalled();
+      expect(mockSignatureEnvelopeRepository.create).toHaveBeenCalledWith(expect.any(SignatureEnvelope));
+      expect(result).toEqual(expectedEnvelope);
     });
 
-    it('should handle creation errors', async () => {
-      const createData: CreateEnvelopeData = {
-        id: { getValue: () => 'test-envelope-id' } as any,
+    it('should throw error when creation fails', async () => {
+      const data = {
+        id: EnvelopeId.fromString(TestUtils.generateUuid()),
+        createdBy: TestUtils.generateUuid(),
         title: 'Test Envelope',
         description: 'Test Description',
-        createdBy: 'test-user-id',
-        origin: { getValue: () => 'UPLOAD' } as any,
-        signingOrder: { getType: () => 'PARALLEL' } as any,
-        expiresAt: new Date('2024-12-31'),
-        sourceKey: 'test-source-key',
-        metaKey: 'test-meta-key'
+        origin: DocumentOrigin.userUpload(),
+        signingOrder: SigningOrder.ownerFirst(),
+        sourceKey: 'source-key-123',
+        metaKey: 'meta-key-123',
       };
+      const error = new Error('Repository error');
 
-      mockSignatureEnvelopeRepository.create.mockRejectedValue(new Error('Database error'));
+      mockSignatureEnvelopeRepository.create.mockRejectedValue(error);
 
-      await expect(service.createEnvelope(createData))
-        .rejects.toThrow();
+      await expect(service.createEnvelope(data)).rejects.toThrow('Envelope creation failed');
     });
   });
 
   describe('getEnvelopeWithSigners', () => {
     it('should get envelope with signers successfully', async () => {
-      const envelopeId = { getValue: () => 'test-envelope-id' } as any;
-      const mockEnvelope = {
-        getId: jest.fn(() => ({ getValue: () => 'test-envelope-id' })),
-        getTitle: jest.fn(() => 'Test Envelope'),
-        getSigners: jest.fn(() => [])
-      };
+      const envelopeId = EnvelopeId.fromString(TestUtils.generateUuid());
+      const expectedEnvelope = SignatureEnvelopeBuilder.create()
+        .withId(envelopeId)
+        .withSigners([
+          EnvelopeSignerBuilder.create().withId(TestUtils.generateSignerId()).build(),
+        ])
+        .build();
 
-      mockSignatureEnvelopeRepository.getWithSigners.mockResolvedValue(mockEnvelope as any);
+      mockSignatureEnvelopeRepository.getWithSigners.mockResolvedValue(expectedEnvelope);
 
       const result = await service.getEnvelopeWithSigners(envelopeId);
 
-      expect(result).toBe(mockEnvelope);
       expect(mockSignatureEnvelopeRepository.getWithSigners).toHaveBeenCalledWith(envelopeId);
-    });
-
-    it('should handle envelope not found', async () => {
-      const envelopeId = { getValue: () => 'non-existent-envelope' } as any;
-
-      mockSignatureEnvelopeRepository.getWithSigners.mockRejectedValue(new Error('Envelope not found'));
-
-      await expect(service.getEnvelopeWithSigners(envelopeId))
-        .rejects.toThrow();
+      expect(result).toEqual(expectedEnvelope);
     });
 
     it('should handle external user access with invitation token', async () => {
-      const envelopeId = { getValue: () => 'test-envelope-id' } as any;
-      const invitationToken = 'test-token';
+      const envelopeId = EnvelopeId.fromString(TestUtils.generateUuid());
+      const invitationToken = 'token-123';
       const securityContext = {
-        ipAddress: '127.0.0.1',
-        userAgent: 'TestAgent/1.0',
-        country: 'US'
+        ipAddress: '192.168.1.1',
+        userAgent: 'Test Agent',
+        country: 'US',
       };
-
-      const mockEnvelope = {
-        getId: jest.fn(() => ({ getValue: () => 'test-envelope-id' })),
-        getTitle: jest.fn(() => 'Test Envelope'),
-        getSigners: jest.fn(() => [])
-      };
-
+      const expectedEnvelope = SignatureEnvelopeBuilder.create()
+        .withId(envelopeId)
+        .build();
       const mockToken = {
-        getEnvelopeId: jest.fn(() => ({ getValue: () => 'test-envelope-id' }))
+        getEnvelopeId: () => envelopeId,
       };
 
-      mockSignatureEnvelopeRepository.getWithSigners.mockResolvedValue(mockEnvelope as any);
+      mockSignatureEnvelopeRepository.getWithSigners.mockResolvedValue(expectedEnvelope);
       mockInvitationTokenService.validateInvitationToken.mockResolvedValue(mockToken as any);
 
       const result = await service.getEnvelopeWithSigners(envelopeId, securityContext, invitationToken);
 
-      expect(result).toBe(mockEnvelope);
       expect(mockInvitationTokenService.validateInvitationToken).toHaveBeenCalledWith(invitationToken);
+      expect(result).toEqual(expectedEnvelope);
+    });
+
+    it('should throw error when envelope not found', async () => {
+      const envelopeId = EnvelopeId.fromString(TestUtils.generateUuid());
+      const error = new Error('Repository error');
+
+      mockSignatureEnvelopeRepository.getWithSigners.mockRejectedValue(error);
+
+      await expect(service.getEnvelopeWithSigners(envelopeId)).rejects.toThrow('Envelope not found');
     });
   });
 
   describe('updateEnvelope', () => {
     it('should update envelope successfully', async () => {
-      const envelopeId = { getValue: () => 'test-envelope-id' } as any;
+      const envelopeId = EnvelopeId.fromString(TestUtils.generateUuid());
+      const userId = TestUtils.generateUuid();
       const updateData = {
         title: 'Updated Title',
         description: 'Updated Description',
-        expiresAt: new Date('2024-12-31'),
-        signingOrderType: 'SEQUENTIAL',
-        sourceKey: 'updated-source-key',
-        metaKey: 'updated-meta-key'
       };
-      const userId = 'test-user-id';
+      const existingEnvelope = SignatureEnvelopeBuilder.create()
+        .withId(envelopeId)
+        .withCreatedBy(userId)
+        .withTitle('Original Title')
+        .build();
+      const updatedEnvelope = SignatureEnvelopeBuilder.create()
+        .withId(envelopeId)
+        .withTitle('Updated Title')
+        .build();
 
-      const mockEnvelope = {
-        getId: jest.fn(() => ({ getValue: () => 'test-envelope-id' })),
-        getTitle: jest.fn(() => 'Test Envelope'),
-        getDescription: jest.fn(() => 'Test Description'),
-        getCreatedBy: jest.fn(() => 'test-user-id'),
-        getExpiresAt: jest.fn(() => new Date('2024-12-31')),
-        getSigningOrder: jest.fn(() => ({ getType: () => 'PARALLEL' })),
-        getSourceKey: jest.fn(() => ({ getValue: () => 'test-source-key' })),
-        getMetaKey: jest.fn(() => ({ getValue: () => 'test-meta-key' })),
-        getSigners: jest.fn(() => []),
-        updateTitle: jest.fn(),
-        updateDescription: jest.fn(),
-        updateExpiresAt: jest.fn(),
-        updateSigningOrder: jest.fn(),
-        updateSourceKey: jest.fn(),
-        updateMetaKey: jest.fn(),
-        validateSigningOrderConsistency: jest.fn(() => null)
-      };
+      mockSignatureEnvelopeRepository.getWithSigners.mockResolvedValue(existingEnvelope);
+      mockSignatureEnvelopeRepository.update.mockResolvedValue(updatedEnvelope);
 
-      mockSignatureEnvelopeRepository.getWithSigners.mockResolvedValue(mockEnvelope as any);
-      mockSignatureEnvelopeRepository.update.mockResolvedValue(mockEnvelope as any);
+      const result = await service.updateEnvelope(envelopeId, updateData, userId);
 
-      await expect(service.updateEnvelope(envelopeId, updateData as any, userId)).rejects.toThrow();
+      expect(mockSignatureEnvelopeRepository.getWithSigners).toHaveBeenCalledWith(envelopeId);
+      expect(mockSignatureEnvelopeRepository.update).toHaveBeenCalledWith(envelopeId, expect.any(SignatureEnvelope));
+      expect(result).toEqual(updatedEnvelope);
     });
 
-    it('should handle envelope not found during update', async () => {
-      const envelopeId = { getValue: () => 'non-existent-envelope' } as any;
+    it('should handle signing order auto-correction when adding signers', async () => {
+      const envelopeId = EnvelopeId.fromString(TestUtils.generateUuid());
+      const userId = TestUtils.generateUuid();
       const updateData = {
-        title: 'Updated Title'
+        addSigners: [
+          {
+            email: 'new@example.com',
+            fullName: 'New Signer',
+            isExternal: true,
+            order: 1,
+          },
+        ],
       };
-      const userId = 'test-user-id';
+      const existingEnvelope = SignatureEnvelopeBuilder.create()
+        .withId(envelopeId)
+        .withCreatedBy(userId)
+        .withSigningOrder(SigningOrder.ownerFirst())
+        .build();
+      const updatedEnvelope = SignatureEnvelopeBuilder.create()
+        .withId(envelopeId)
+        .withSigningOrder(SigningOrder.inviteesFirst())
+        .build();
+
+      // Mock the validateSigningOrderConsistency method to return a correction
+      existingEnvelope.validateSigningOrderConsistency = jest.fn().mockReturnValue('INVITEES_FIRST');
+
+      mockSignatureEnvelopeRepository.getWithSigners.mockResolvedValue(existingEnvelope);
+      mockSignatureEnvelopeRepository.update.mockResolvedValue(updatedEnvelope);
+
+      const result = await service.updateEnvelope(envelopeId, updateData, userId);
+
+      expect(existingEnvelope.validateSigningOrderConsistency).toHaveBeenCalled();
+      expect(result).toEqual(updatedEnvelope);
+    });
+
+    it('should throw error when envelope not found', async () => {
+      const envelopeId = EnvelopeId.fromString(TestUtils.generateUuid());
+      const userId = TestUtils.generateUuid();
+      const updateData = { title: 'Updated Title' };
 
       mockSignatureEnvelopeRepository.getWithSigners.mockResolvedValue(null);
 
-      await expect(service.updateEnvelope(envelopeId, updateData as any, userId))
-        .rejects.toThrow();
+      await expect(service.updateEnvelope(envelopeId, updateData, userId)).rejects.toThrow('Envelope update failed');
     });
 
-    it('should handle update errors', async () => {
-      const envelopeId = { getValue: () => 'test-envelope-id' } as any;
-      const updateData = {
-        title: 'Updated Title'
-      };
-      const userId = 'test-user-id';
+    it('should throw error when update fails', async () => {
+      const envelopeId = EnvelopeId.fromString(TestUtils.generateUuid());
+      const userId = TestUtils.generateUuid();
+      const updateData = { title: 'Updated Title' };
+      const existingEnvelope = SignatureEnvelopeBuilder.create()
+        .withId(envelopeId)
+        .withCreatedBy(userId)
+        .build();
+      const error = new Error('Repository error');
 
-      mockSignatureEnvelopeRepository.getWithSigners.mockRejectedValue(new Error('Database error'));
+      mockSignatureEnvelopeRepository.getWithSigners.mockResolvedValue(existingEnvelope);
+      mockSignatureEnvelopeRepository.update.mockRejectedValue(error);
 
-      await expect(service.updateEnvelope(envelopeId, updateData as any, userId))
-        .rejects.toThrow();
+      await expect(service.updateEnvelope(envelopeId, updateData, userId)).rejects.toThrow('Envelope update failed');
     });
   });
 
   describe('cancelEnvelope', () => {
     it('should cancel envelope successfully', async () => {
-      const envelopeId = { getValue: () => 'test-envelope-id' } as any;
-      const userId = 'test-user-id';
+      const envelopeId = EnvelopeId.fromString(TestUtils.generateUuid());
+      const userId = TestUtils.generateUuid();
+      const existingEnvelope = SignatureEnvelopeBuilder.create()
+        .withId(envelopeId)
+        .withCreatedBy(userId)
+        .build();
+      const cancelledEnvelope = SignatureEnvelopeBuilder.create()
+        .withId(envelopeId)
+        .withStatus('CANCELLED' as any)
+        .build();
 
-      const mockEnvelope = {
-        getId: jest.fn(() => ({ getValue: () => 'test-envelope-id' })),
-        getTitle: jest.fn(() => 'Test Envelope'),
-        getCreatedBy: jest.fn(() => 'test-user-id'),
-        cancel: jest.fn()
-      };
-
-      mockSignatureEnvelopeRepository.findById.mockResolvedValue(mockEnvelope as any);
-      mockSignatureEnvelopeRepository.update.mockResolvedValue(mockEnvelope as any);
+      mockSignatureEnvelopeRepository.findById.mockResolvedValue(existingEnvelope);
+      mockSignatureEnvelopeRepository.update.mockResolvedValue(cancelledEnvelope);
 
       const result = await service.cancelEnvelope(envelopeId, userId);
 
-      expect(result).toBe(mockEnvelope);
       expect(mockSignatureEnvelopeRepository.findById).toHaveBeenCalledWith(envelopeId);
-      expect(mockEnvelope.cancel).toHaveBeenCalledWith(userId);
-      expect(mockSignatureEnvelopeRepository.update).toHaveBeenCalledWith(envelopeId, mockEnvelope);
+      expect(mockSignatureEnvelopeRepository.update).toHaveBeenCalledWith(envelopeId, expect.any(SignatureEnvelope));
+      expect(result).toEqual(cancelledEnvelope);
     });
 
-    it('should handle envelope not found during cancellation', async () => {
-      const envelopeId = { getValue: () => 'non-existent-envelope' } as any;
-      const userId = 'test-user-id';
+    it('should throw error when envelope not found', async () => {
+      const envelopeId = EnvelopeId.fromString(TestUtils.generateUuid());
+      const userId = TestUtils.generateUuid();
 
       mockSignatureEnvelopeRepository.findById.mockResolvedValue(null);
 
-      await expect(service.cancelEnvelope(envelopeId, userId))
-        .rejects.toThrow();
+      await expect(service.cancelEnvelope(envelopeId, userId)).rejects.toThrow('Envelope update failed');
     });
 
-    it('should handle cancellation errors', async () => {
-      const envelopeId = { getValue: () => 'test-envelope-id' } as any;
-      const userId = 'test-user-id';
+    it('should rethrow business validation errors', async () => {
+      const envelopeId = EnvelopeId.fromString(TestUtils.generateUuid());
+      const userId = TestUtils.generateUuid();
+      const existingEnvelope = SignatureEnvelopeBuilder.create()
+        .withId(envelopeId)
+        .withCreatedBy(userId)
+        .build();
+      const businessError = {
+        code: 'ENVELOPE_ACCESS_DENIED',
+        message: 'Access denied',
+      };
 
-      mockSignatureEnvelopeRepository.findById.mockRejectedValue(new Error('Database error'));
+      mockSignatureEnvelopeRepository.findById.mockResolvedValue(existingEnvelope);
+      existingEnvelope.cancel = jest.fn().mockImplementation(() => {
+        throw businessError;
+      });
 
-      await expect(service.cancelEnvelope(envelopeId, userId))
-        .rejects.toThrow();
+      await expect(service.cancelEnvelope(envelopeId, userId)).rejects.toEqual(businessError);
+    });
+
+    it('should throw error when cancellation fails', async () => {
+      const envelopeId = EnvelopeId.fromString(TestUtils.generateUuid());
+      const userId = TestUtils.generateUuid();
+      const existingEnvelope = SignatureEnvelopeBuilder.create()
+        .withId(envelopeId)
+        .withCreatedBy(userId)
+        .build();
+      const error = new Error('Repository error');
+
+      mockSignatureEnvelopeRepository.findById.mockResolvedValue(existingEnvelope);
+      mockSignatureEnvelopeRepository.update.mockRejectedValue(error);
+
+      await expect(service.cancelEnvelope(envelopeId, userId)).rejects.toThrow('Envelope update failed');
     });
   });
 
   describe('listEnvelopes', () => {
     it('should list envelopes successfully', async () => {
-      const spec: EnvelopeSpec = {
-        createdBy: 'test-user-id',
-        status: EnvelopeStatus.draft()
+      const spec = {
+        createdBy: TestUtils.generateUuid(),
+        status: EnvelopeStatus.draft(),
       };
       const limit = 10;
-      const cursor = 'test-cursor';
-
-      const mockEnvelopes = [
-        {
-          getId: jest.fn(() => ({ getValue: () => 'envelope-1' })),
-          getTitle: jest.fn(() => 'Envelope 1')
-        },
-        {
-          getId: jest.fn(() => ({ getValue: () => 'envelope-2' })),
-          getTitle: jest.fn(() => 'Envelope 2')
-        }
-      ];
-
-      const mockResult = {
-        items: mockEnvelopes,
-        nextCursor: 'next-cursor'
+      const cursor = 'cursor-123';
+      const expectedResult = {
+        items: [
+          SignatureEnvelopeBuilder.create().withId(EnvelopeId.fromString(TestUtils.generateUuid())).build(),
+        ],
+        nextCursor: 'next-cursor',
       };
 
-      mockSignatureEnvelopeRepository.list.mockResolvedValue(mockResult as any);
+      mockSignatureEnvelopeRepository.list.mockResolvedValue(expectedResult);
 
       const result = await service.listEnvelopes(spec, limit, cursor);
 
-      expect(result).toBe(mockResult);
       expect(mockSignatureEnvelopeRepository.list).toHaveBeenCalledWith(spec, limit, cursor);
+      expect(result).toEqual(expectedResult);
     });
 
-    it('should handle listing errors', async () => {
-      const spec: EnvelopeSpec = {
-        createdBy: 'test-user-id',
-        status: EnvelopeStatus.draft()
+    it('should list envelopes without cursor', async () => {
+      const spec = {
+        createdBy: TestUtils.generateUuid(),
       };
       const limit = 10;
+      const expectedResult = {
+        items: [],
+        nextCursor: undefined,
+      };
 
-      mockSignatureEnvelopeRepository.list.mockRejectedValue(new Error('Database error'));
+      mockSignatureEnvelopeRepository.list.mockResolvedValue(expectedResult);
 
-      await expect(service.listEnvelopes(spec, limit))
-        .rejects.toThrow();
+      const result = await service.listEnvelopes(spec, limit);
+
+      expect(mockSignatureEnvelopeRepository.list).toHaveBeenCalledWith(spec, limit, undefined);
+      expect(result).toEqual(expectedResult);
+    });
+
+    it('should throw error when listing fails', async () => {
+      const spec = {
+        createdBy: TestUtils.generateUuid(),
+      };
+      const limit = 10;
+      const error = new Error('Repository error');
+
+      mockSignatureEnvelopeRepository.list.mockRejectedValue(error);
+
+      await expect(service.listEnvelopes(spec, limit)).rejects.toThrow('Envelope not found');
     });
   });
 });

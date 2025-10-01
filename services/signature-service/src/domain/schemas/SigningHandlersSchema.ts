@@ -1,15 +1,19 @@
 /**
- * @fileoverview SigningHandlersSchema - Zod schemas for signing handlers validation
- * @summary Validation schemas for signing handlers requests and responses
- * @description The SigningHandlersSchema provides Zod validation schemas for signing handlers
- * including document signing, viewing, and declining operations with invitation tokens.
+ * @fileoverview SigningHandlersSchema - Validation schemas for signing handler operations
+ * @summary Provides comprehensive Zod validation schemas for signing handler requests and responses
+ * @description This module defines validation schemas for signing handler operations including
+ * document signing, viewing, and declining operations with invitation tokens. It ensures
+ * type safety and data validation for all signing-related workflows with proper business
+ * rule enforcement.
  */
 
 import { z, UuidV4, NonEmptyStringSchema } from '@lawprotect/shared-ts';
 
 /**
- * Schema for document signing request (supports both authenticated users and invitation tokens)
- * Simplified to only include user-provided data - orchestrator handles the rest
+ * Schema for document signing request validation
+ * @description Validates document signing requests supporting both authenticated users and
+ * invitation tokens. Includes consent validation and business rule enforcement for
+ * secure document signing operations.
  */
 export const SignDocumentRequestSchema = z.object({
   // For invitation token users

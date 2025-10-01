@@ -1,13 +1,14 @@
 /**
- * @fileoverview Factories Barrel Export
- * @summary Centralized exports for all factory components
- * @description Provides clean imports for all factory functionality including
- * repositories, services, use cases, infrastructure, and composition root
+ * @fileoverview Factories barrel export - Exports all infrastructure factories
+ * @summary Centralized exports for all infrastructure factories
+ * @description This barrel file exports all infrastructure factories for easy importing
+ * throughout the application.
  */
 
-export { RepositoryFactory } from './repositories';
-export { ServiceFactory } from './services';
-export { InfrastructureFactory } from './infrastructure';
-export { UseCaseFactory } from './use-cases';
-export { CompositionRoot } from './CompositionRoot';
-export { IntegrationEventFactory } from './events/IntegrationEventFactory';
+export * from './EntityFactory';
+export * from './CompositionRoot';
+export * from './events/index';
+export * from './infrastructure';
+export * from './repositories';
+export * from './services';
+export * from './use-cases';

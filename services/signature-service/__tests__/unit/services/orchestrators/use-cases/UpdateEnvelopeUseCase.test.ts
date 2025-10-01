@@ -11,7 +11,7 @@ import { EnvelopeSigner } from '../../../../../src/domain/entities/EnvelopeSigne
 import { SignerId } from '../../../../../src/domain/value-objects/SignerId';
 
 // Mock external utilities
-jest.mock('../../../../../src/domain/factories/EntityFactory', () => ({
+jest.mock('../../../../../src/infrastructure/factories/EntityFactory', () => ({
   EntityFactory: {
     createValueObjects: {
       signerId: jest.fn(id => ({ getValue: () => id })),
@@ -38,7 +38,7 @@ describe('UpdateEnvelopeUseCase', () => {
     mockS3Service = createS3ServiceMock();
 
     // Get references to mocked functions
-    mockEntityFactory = require('../../../../../src/domain/factories/EntityFactory').EntityFactory;
+    mockEntityFactory = require('../../../../../src/infrastructure/factories/EntityFactory').EntityFactory;
     mockMapAddSigners = require('../../../../../src/services/orchestrators/utils/mapAddSigners').mapAddSigners as jest.Mock;
 
     useCase = new UpdateEnvelopeUseCase(

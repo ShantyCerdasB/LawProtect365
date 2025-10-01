@@ -15,10 +15,7 @@ import {
 } from '../../signature-errors';
 
 /**
- * KmsKeyValidationRule
- * 
- * Domain rule that validates KMS keys for digital signature operations.
- * Ensures keys are properly configured, enabled, and accessible.
+ * Domain rule that validates KMS keys for digital signature operations
  */
 export class KmsKeyValidationRule {
   constructor(
@@ -35,24 +32,19 @@ export class KmsKeyValidationRule {
    */
   async validateKeyForSigning(kmsKeyId: string): Promise<void> {
     try {
-      // 1. Validate key format using value object
       KMSKeyId.fromString(kmsKeyId);
 
-      // 2. Check key availability and configuration in AWS KMS
       const keyMetadata = await this.kmsSigner.describeKey(kmsKeyId);
 
-      // 3. Validate that key is enabled
       if (!keyMetadata.enabled) {
         throw kmsValidationFailed(`KMS key is not enabled. Current state: ${keyMetadata.keyState}`);
       }
 
-      // 4. Validate that key is configured for signing
       if (keyMetadata.keyUsage !== 'SIGN_VERIFY') {
         throw kmsValidationFailed(`KMS key is not configured for signing. Current usage: ${keyMetadata.keyUsage}`);
       }
 
     } catch (error) {
-      // Handle KMS-specific errors
       if (error instanceof Error) {
         if (error.message.includes('NotFoundException') || error.message.includes('not found')) {
           throw kmsKeyNotFound(`KMS key not found: ${kmsKeyId}`);
@@ -65,7 +57,6 @@ export class KmsKeyValidationRule {
         }
       }
 
-      // Re-throw domain errors
       throw error;
     }
   }

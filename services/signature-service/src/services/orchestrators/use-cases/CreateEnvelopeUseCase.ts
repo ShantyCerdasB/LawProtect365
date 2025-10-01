@@ -15,7 +15,7 @@ import { EnvelopeCrudService } from '@/services/envelopeCrud/EnvelopeCrudService
 import { EnvelopeHashService } from '@/services/envelopeHashService/EnvelopeHashService';
 import { S3Service } from '@/services/s3Service/S3Service';
 import { AuditEventService } from '@/services/audit/AuditEventService';
-import { EntityFactory } from '@/domain/factories/EntityFactory';
+import { EntityFactory } from '@/infrastructure/factories/EntityFactory';
 import { sha256Hex } from '@lawprotect/shared-ts';
 import { createEnvelopeCreatedAudit } from '../utils/audit/envelopeAuditHelpers';
 export class CreateEnvelopeUseCase {

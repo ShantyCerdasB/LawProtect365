@@ -10,7 +10,7 @@ import { EnvelopeSigner } from '@/domain/entities/EnvelopeSigner';
 import { SignerId } from '@/domain/value-objects/SignerId';
 import { EnvelopeId } from '@/domain/value-objects/EnvelopeId';
 import { SignatureMetadata } from '@/domain/value-objects/SignatureMetadata';
-import { EntityFactory } from '@/domain/factories/EntityFactory';
+import { EntityFactory } from '@/infrastructure/factories/EntityFactory';
 import { SignerStatus } from '@prisma/client';
 import { EnvelopeSignerRepository } from '@/repositories/EnvelopeSignerRepository';
 import { SignatureEnvelopeRepository } from '@/repositories/SignatureEnvelopeRepository';

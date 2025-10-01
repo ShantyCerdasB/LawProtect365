@@ -12,6 +12,7 @@ import { SigningOrderValidationRule } from './SigningOrderValidationRule';
 import { SigningOrderType } from '@lawprotect/shared-ts';
 import { invalidEnvelopeState } from '../../signature-errors';
 import { IMMUTABLE_ENVELOPE_FIELDS } from '../enums/ImmutableEnvelopeFields';
+import { ParticipantRole } from '@prisma/client';
 
 export interface UpdateEnvelopeData {
   title?: string;
@@ -30,6 +31,9 @@ export interface UpdateEnvelopeData {
   removeSignerIds?: string[];
 }
 
+/**
+ * Domain rule for envelope update validation
+ */
 export class EnvelopeUpdateValidationRule {
   /**
    * Validates envelope update request
@@ -44,13 +48,10 @@ export class EnvelopeUpdateValidationRule {
     userId: string,
     existingSigners: EnvelopeSigner[]
   ): void {
-    // 1. Validate access using existing rule
     EnvelopeAccessValidationRule.validateEnvelopeModificationAccess(envelope, userId);
     
-    // 2. Validate immutable fields
     this.validateImmutableFields(updateData);
     
-    // 3. Validate signing order changes
     if (updateData.signingOrderType) {
       this.validateSigningOrderChange(envelope, updateData.signingOrderType, existingSigners);
     }
@@ -61,7 +62,6 @@ export class EnvelopeUpdateValidationRule {
    * @param updateData - Update data to validate
    */
   private static validateImmutableFields(updateData: UpdateEnvelopeData): void {
-    // Validate that immutable fields are not being changed
     const providedFields = Object.keys(updateData);
     
     for (const field of IMMUTABLE_ENVELOPE_FIELDS) {
@@ -71,6 +71,12 @@ export class EnvelopeUpdateValidationRule {
     }
   }
   
+  /**
+   * Validates signing order change consistency
+   * @param envelope - Current envelope
+   * @param newSigningOrderType - New signing order type
+   * @param existingSigners - Current signers
+   */
   private static validateSigningOrderChange(
     envelope: SignatureEnvelope,
     newSigningOrderType: SigningOrderType,
@@ -83,7 +89,7 @@ export class EnvelopeUpdateValidationRule {
       fullName: signer.getFullName() || '',
       isExternal: signer.getIsExternal(),
       order: signer.getOrder(),
-      participantRole: 'SIGNER' as const
+      participantRole: ParticipantRole.SIGNER
     }));
     
     SigningOrderValidationRule.validateSigningOrderConsistency(
@@ -92,5 +98,4 @@ export class EnvelopeUpdateValidationRule {
       envelope.getCreatedBy()
     );
   }
-  
 }
