@@ -29,14 +29,21 @@
     "coverage": "jest --coverage --config ./jest.config.cjs",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",
-    "prisma:seed": "tsx prisma/seeds/seed.ts"
+    "prisma:seed": "tsx prisma/seeds/seed.ts",
   },
   "dependencies": {
     "@prisma/client": "^5.16.1",
     "dayjs": "^1.11.11",
     "jose": "^5.9.3",
     "ulid": "^2.3.0",
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "@aws-sdk/client-kms": "^3.891.0",
+    "@aws-sdk/client-s3": "^3.891.0",
+    "@aws-sdk/s3-request-presigner": "^3.891.0",
+    "@aws-sdk/client-ssm": "^3.891.0",
+    "@aws-sdk/client-dynamodb": "^3.891.0",
+    "@aws-sdk/client-eventbridge": "^3.891.0",
+    "@aws-sdk/client-cloudwatch": "^3.891.0"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.152",

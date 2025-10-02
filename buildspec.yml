@@ -13,6 +13,7 @@ phases:
       - echo "Building shared-ts layer..."
       - cd packages/shared-ts
       - npm ci
+      - DATABASE_URL="postgresql://user:pass@localhost:5432/postgres?schema=public" npx prisma generate
       - npm run build
       - npm prune --omit=dev
       - cd -
