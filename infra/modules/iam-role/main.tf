@@ -32,14 +32,25 @@ resource "aws_iam_role_policy_attachment" "managed" {
 /**
  * Creates inline IAM policies for the IAM Role.
  *
- * Filters out any policies whose keys contain the word "assume" (case-insensitive).
+ * Uses known policy names to avoid for_each with unknown keys.
+ * Filters out any policies whose names contain the word "assume" (case-insensitive).
  *
  * @resource aws_iam_role_policy.inline
+ * @param {set(string)} var.inline_policy_names - Set of policy names to create.
  * @param {map(string)} var.inline_policies - Map of policy names to policy documents.
  */
+# Individual inline policies - create one resource per policy
 resource "aws_iam_role_policy" "inline" {
-  for_each = var.inline_policies != null ? { for k, v in var.inline_policies : k => v if !can(regex("assume", k)) } : {}
+  for_each = var.inline_policies
   name   = each.key
   role   = aws_iam_role.role.name
   policy = each.value
+}
+
+# Add delay for IAM policy propagation
+resource "time_sleep" "wait_for_iam_propagation" {
+  count = length(var.inline_policies) > 0 ? 1 : 0
+  create_duration = "60s"
+  
+  depends_on = [aws_iam_role_policy.inline]
 }

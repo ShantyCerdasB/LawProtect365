@@ -66,10 +66,10 @@ module "outbox_stream_role" {
   
   assume_role_policy = data.aws_iam_policy_document.lambda_assume_role.json
   
-  inline_policies = {
-    "dynamodb-streams-read" = data.aws_iam_policy_document.dynamodb_streams_read.json
-    "eventbridge-publish"   = data.aws_iam_policy_document.eventbridge_publisher.json
-  }
+        inline_policies = {
+          "dynamodb-streams-read" = data.aws_iam_policy_document.dynamodb_streams_read.json
+          "eventbridge-publish"   = data.aws_iam_policy_document.eventbridge_publisher.json
+        }
 }
 
 # DynamoDB Streams Event Source Mapping

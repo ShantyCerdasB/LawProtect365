@@ -234,9 +234,9 @@ describe('EnvelopeStatus', () => {
         EnvelopeStatus.expired()
       ];
 
-      finalStates.forEach(status => {
+      for (const status of finalStates) {
         expect(status.isInFinalState()).toBe(true);
-      });
+      }
     });
 
     it('should correctly identify non-final states', () => {
@@ -245,9 +245,9 @@ describe('EnvelopeStatus', () => {
         EnvelopeStatus.readyForSignature()
       ];
 
-      nonFinalStates.forEach(status => {
+      for (const status of nonFinalStates) {
         expect(status.isInFinalState()).toBe(false);
-      });
+      }
     });
 
     it('should correctly identify modifiable states', () => {
@@ -256,9 +256,9 @@ describe('EnvelopeStatus', () => {
         EnvelopeStatus.readyForSignature()
       ];
 
-      modifiableStates.forEach(status => {
+      for (const status of modifiableStates) {
         expect(status.canBeModified()).toBe(true);
-      });
+      }
     });
 
     it('should correctly identify non-modifiable states', () => {
@@ -269,9 +269,9 @@ describe('EnvelopeStatus', () => {
         EnvelopeStatus.expired()
       ];
 
-      nonModifiableStates.forEach(status => {
+      for (const status of nonModifiableStates) {
         expect(status.canBeModified()).toBe(false);
-      });
+      }
     });
 
     it('should correctly identify sendable states', () => {
@@ -286,9 +286,9 @@ describe('EnvelopeStatus', () => {
         EnvelopeStatus.expired()
       ];
 
-      nonSendableStates.forEach(status => {
+      for (const status of nonSendableStates) {
         expect(status.canBeSent()).toBe(false);
-      });
+      }
     });
 
     it('should correctly identify cancellable states', () => {
@@ -297,9 +297,9 @@ describe('EnvelopeStatus', () => {
         EnvelopeStatus.readyForSignature()
       ];
 
-      cancellableStates.forEach(status => {
+      for (const status of cancellableStates) {
         expect(status.canBeCancelled()).toBe(true);
-      });
+      }
     });
 
     it('should correctly identify non-cancellable states', () => {
@@ -310,9 +310,9 @@ describe('EnvelopeStatus', () => {
         EnvelopeStatus.expired()
       ];
 
-      nonCancellableStates.forEach(status => {
+      for (const status of nonCancellableStates) {
         expect(status.canBeCancelled()).toBe(false);
-      });
+      }
     });
   });
 

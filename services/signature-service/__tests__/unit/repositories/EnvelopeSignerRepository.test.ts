@@ -12,15 +12,12 @@ import { setupCursorPaginationMocks } from '../../helpers/mocks/cursorPagination
 const { mockListPage, mockDecodeCursor } = setupCursorPaginationMocks();
 
 // Import AFTER the mock is set up
-import { Prisma, SignerStatus, ParticipantRole } from '@prisma/client';
+import { SignerStatus, ParticipantRole } from '@prisma/client';
 import { EnvelopeSignerRepository } from '../../../src/repositories/EnvelopeSignerRepository';
 import { EnvelopeSigner } from '../../../src/domain/entities/EnvelopeSigner';
-import { SignerId } from '../../../src/domain/value-objects/SignerId';
-import { EnvelopeId } from '../../../src/domain/value-objects/EnvelopeId';
 import { TestUtils } from '../../helpers/testUtils';
 import {
   createEnvelopeSignerPrismaMock,
-  createSingleModelTransactionMock,
   PrismaModelMock,
 } from '../../helpers/mocks/prisma';
 import {
@@ -31,11 +28,6 @@ import {
   partialSignerEntity,
   signerVO,
 } from '../../helpers/builders/envelopeSigner';
-import {
-  mockRepositoryMethod,
-  mockRepositoryMethodError,
-  createMockPage,
-} from '../../helpers/mocks/repository';
 
 describe('EnvelopeSignerRepository - Internal Methods', () => {
   let repository: EnvelopeSignerRepository;

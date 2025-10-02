@@ -37,3 +37,13 @@ output "role_unique_id" {
   description = "Stable unique identifier for the IAM role."
   value       = aws_iam_role.role.unique_id
 }
+
+/**
+ * IAM propagation delay resource.
+ *
+ * Use this to ensure IAM policies are fully propagated before creating dependent resources.
+ */
+output "iam_propagation_delay" {
+  description = "Time sleep resource for IAM policy propagation."
+  value       = try(time_sleep.wait_for_iam_propagation[0].id, null)
+}

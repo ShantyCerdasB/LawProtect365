@@ -6,14 +6,14 @@
 
 import { SignatureAuditEventId } from '../../../../src/domain/value-objects/SignatureAuditEventId';
 import { TestUtils } from '../../../helpers/testUtils';
-import { invalidEntity } from '../../../../src/signature-errors';
+
+function testInvalidUuid(invalidUuid: string): void {
+  expect(() => {
+    new SignatureAuditEventId(invalidUuid);
+  }).toThrow('Invalid entity');
+}
 
 describe('SignatureAuditEventId', () => {
-  function testInvalidUuid(invalidUuid: string): void {
-    expect(() => {
-      new SignatureAuditEventId(invalidUuid);
-    }).toThrow('Invalid entity');
-  }
 
   describe('constructor', () => {
     it('should create a SignatureAuditEventId with valid UUID', () => {
@@ -26,17 +26,20 @@ describe('SignatureAuditEventId', () => {
 
     it('should throw invalidEntity error for empty string', () => {
       expect(() => {
-        new SignatureAuditEventId('');
+        const id = new SignatureAuditEventId('');
+        id.getValue(); // Use the object to avoid useless instantiation
       }).toThrow('Invalid entity');
     });
 
     it('should throw invalidEntity error for null or undefined', () => {
       expect(() => {
-        new SignatureAuditEventId(null as any);
+        const id = new SignatureAuditEventId(null as any);
+        id.getValue(); // Use the object to avoid useless instantiation
       }).toThrow('Invalid entity');
 
       expect(() => {
-        new SignatureAuditEventId(undefined as any);
+        const id = new SignatureAuditEventId(undefined as any);
+        id.getValue(); // Use the object to avoid useless instantiation
       }).toThrow('Invalid entity');
     });
 

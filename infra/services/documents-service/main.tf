@@ -1,4 +1,5 @@
-﻿############################################################
+﻿
+############################################################
 # documents-service — Main Module
 # This service manages document templates, draft overlays, and finalized PDFs.
 # It provisions S3 buckets, a DynamoDB table, IAM roles, and Lambda functions.
@@ -72,7 +73,7 @@ module "documents_lambda_role" {
     "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"
   ]
 
-  inline_policies = local.inline_policies
+        inline_policies = local.inline_policies
 
   project_name = var.project_name
   env          = var.env

@@ -52,7 +52,6 @@
       EVIDENCE_BUCKET = module.evidence_bucket.bucket_id
       
       # AWS Region
-      AWS_REGION = var.aws_region
       
       # KMS configuration
       KMS_SIGNER_KEY_ID = var.kms_sign_key_arn
@@ -128,7 +127,19 @@ module "sign_lambda_role" {
     "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"
   ]
 
-  inline_policies = local.inline_policies
+        inline_policies = {
+          "kms-sign" = data.aws_iam_policy_document.sign_kms_sign.json
+          "s3-documents-read" = data.aws_iam_policy_document.sign_s3_documents_read.json
+          "s3-evidence-rw" = data.aws_iam_policy_document.sign_s3_evidence_rw.json
+          "kms-evidence-s3" = data.aws_iam_policy_document.sign_kms_evidence_s3[0].json
+          "cloudwatch-metrics" = data.aws_iam_policy_document.sign_cloudwatch_metrics.json
+          "eventbridge-put" = data.aws_iam_policy_document.sign_eventbridge_put.json
+          "s3-evidence-mpu" = data.aws_iam_policy_document.sign_s3_evidence_mpu.json
+          "s3-object-lock" = data.aws_iam_policy_document.sign_s3_object_lock.json
+          "ssm-read" = data.aws_iam_policy_document.sign_ssm_read.json
+          "outbox-publisher" = var.outbox_publisher_policy
+          "eventbridge-publisher" = var.eventbridge_publisher_policy
+        }
 
   project_name = var.project_name
   env          = var.env

@@ -30,6 +30,12 @@ variable "managed_policy_arns" {
 }
 
 /**
+ * Set of inline policy names to create.
+ * 
+ * Example: ["s3-readonly", "kms-decrypt", "dynamodb-access"]
+ */
+
+/**
  * Map of inline policy names to JSON policy documents.
  * 
  * Example:
