@@ -72,7 +72,9 @@ module "codebuild_role" {
     "arn:aws:iam::aws:policy/AmazonS3FullAccess",
     "arn:aws:iam::aws:policy/AWSCodeBuildDeveloperAccess",
   ]
-  inline_policies = {}
+  inline_policies = {
+    "cloudwatch-logs-access" = data.aws_iam_policy_document.cloudwatch_logs_policy.json
+  }
   project_name    = var.project_name
   env             = var.env
 }
@@ -122,6 +124,7 @@ module "pipeline_role" {
   ]
   inline_policies = {
     "codestar-connection-access" = data.aws_iam_policy_document.codestar_connection_policy.json
+    "s3-artifacts-access" = data.aws_iam_policy_document.s3_artifacts_policy.json
   }
   project_name    = var.project_name
   env             = var.env
