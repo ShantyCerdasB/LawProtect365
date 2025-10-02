@@ -551,3 +551,30 @@ module "xray" {
   rule_service_name = "*"
   rule_url_path     = "*"
 }
+
+# Shared Components Pipeline (shared-ts layer + outbox handler)
+module "shared_components_pipeline" {
+  source = "./services/deployment-service"
+  
+  project_name          = var.project_name
+  env                   = var.env
+  service_name          = "shared-components"
+  artifacts_bucket      = module.code_bucket.bucket_id
+  buildspec_path        = "buildspec.yml"  # Root buildspec
+  compute_type          = var.compute_type
+  environment_image     = var.environment_image
+  environment_variables = [
+    {
+      name  = "CODEARTIFACT_REPO_ENDPOINTS"
+      value = jsonencode(module.codeartifact.artifact_repository_endpoints)
+      type  = "PLAINTEXT"
+    },
+  ]
+  
+  github_owner    = var.github_owner
+  github_repo     = var.github_repo
+  provider_type   = var.provider_type
+  branch          = var.github_branch
+  
+  tags = local.common_tags
+}

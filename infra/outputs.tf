@@ -748,3 +748,19 @@ output "event_bus_arn" {
   value       = module.events.eventbridge_bus_arn
 }
 
+# Shared Components Pipeline Outputs
+output "shared_components_pipeline_name" {
+  description = "Name of the shared components pipeline"
+  value       = module.shared_components_pipeline.pipeline_name
+}
+
+output "shared_components_pipeline_arn" {
+  description = "ARN of the shared components pipeline"
+  value       = module.shared_components_pipeline.pipeline_arn
+}
+
+output "shared_components_pipeline_console_url" {
+  description = "Console URL for the shared components pipeline"
+  value       = module.shared_components_pipeline.pipeline_console_url
+}
+

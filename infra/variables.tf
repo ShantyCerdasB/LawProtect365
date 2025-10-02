@@ -268,3 +268,22 @@ variable "third_reminder_hours" {
   type        = number
   default     = 72
 }
+
+# CI/CD Configuration
+variable "compute_type" {
+  description = "CodeBuild compute type (e.g., BUILD_GENERAL1_SMALL)"
+  type        = string
+  default     = "BUILD_GENERAL1_SMALL"
+}
+
+variable "environment_image" {
+  description = "CodeBuild environment image (e.g., aws/codebuild/standard:6.0)"
+  type        = string
+  default     = "aws/codebuild/standard:6.0"
+}
+
+variable "github_branch" {
+  description = "Git branch to track for pipeline triggers"
+  type        = string
+  default     = "main"
+}
