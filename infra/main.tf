@@ -197,7 +197,7 @@ module "auth_service" {
       type  = "PLAINTEXT"
     },
   ]
-  environment_image = "aws/codebuild/standard:6.0"
+  environment_image = "aws/codebuild/amazonlinux2-x86_64-standard:5.0"
   compute_type     = "BUILD_GENERAL1_SMALL"
   github_branch    = var.branch
   github_owner     = var.github_owner
@@ -227,7 +227,7 @@ module "frontend" {
   
   # GitHub connection
   github_connection_arn = module.github_connection.connection_arn
-  environment_image = "aws/codebuild/standard:6.0"
+  environment_image = "aws/codebuild/amazonlinux2-x86_64-standard:5.0"
   existing_sns_topic_arn = aws_sns_topic.budgets_alerts.arn
   environment_variables = [
     {
@@ -450,7 +450,7 @@ module "sign_service" {
 
   # CI/CD
   artifacts_bucket      = module.code_bucket.bucket_id
-  environment_image     = "aws/codebuild/standard:6.0"
+  environment_image     = "aws/codebuild/amazonlinux2-x86_64-standard:5.0"
   compute_type          = "BUILD_GENERAL1_SMALL"
   github_owner          = var.github_owner
   github_repo           = var.github_repo

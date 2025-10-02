@@ -3,7 +3,7 @@
  * @summary Handles envelope creation orchestration with signers (without invitation tokens)
  * @description This handler orchestrates the creation of a new envelope with all signers included.
  * It uses the new DDD architecture with Prisma repositories and validates business rules.
- * Invitation tokens are generated separately in the Send Invitations flow..
+ * Invitation tokens are generated separately in the Send Invitations flow.
  */
 
 import { ControllerFactory, VALID_COGNITO_ROLES } from '@lawprotect/shared-ts';
