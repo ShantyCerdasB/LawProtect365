@@ -1,44 +1,59 @@
 import { generateTestIpAddress } from '../../../../integration/helpers/testHelpers';
 import { IntegrationEventFactory } from '../../../../../src/infrastructure/factories/events/IntegrationEventFactory';
 
+function createMockEnvelope() {
+  return {
+    getId: jest.fn(() => ({ getValue: () => 'test-envelope-id' })),
+    getTitle: jest.fn(() => 'Test Envelope'),
+    getCreatedBy: jest.fn(() => 'test-user-id')
+  };
+}
+
+function createMockSigner() {
+  return {
+    getId: jest.fn(() => ({ getValue: () => 'test-signer-id' })),
+    getEmail: jest.fn(() => ({ getValue: () => 'test@example.com' })),
+    getFullName: jest.fn(() => 'Test User')
+  };
+}
+
+function createMockViewer() {
+  return {
+    getId: jest.fn(() => ({ getValue: () => 'test-viewer-id' })),
+    getEmail: jest.fn(() => ({ getValue: () => 'viewer@example.com' })),
+    getFullName: jest.fn(() => 'Test Viewer')
+  };
+}
+
+function createMockNetworkContext() {
+  return {
+    ipAddress: generateTestIpAddress(),
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+    country: 'US'
+  };
+}
+
+function createMockEnvelopeWithFallback() {
+  return {
+    getId: jest.fn(() => ({ getValue: () => 'test-envelope-id' })),
+    getTitle: jest.fn(() => 'Test Envelope')
+  };
+}
+
+function createMockSignerWithFallback() {
+  return {
+    getId: jest.fn(() => ({ getValue: () => 'test-signer-id' })),
+    getFullName: jest.fn(() => null),
+    getEmail: jest.fn(() => null)
+  };
+}
+
 describe('IntegrationEventFactory', () => {
   let factory: IntegrationEventFactory;
 
   beforeEach(() => {
     factory = new IntegrationEventFactory();
   });
-
-  function createMockEnvelope() {
-    return {
-      getId: jest.fn(() => ({ getValue: () => 'test-envelope-id' })),
-      getTitle: jest.fn(() => 'Test Envelope'),
-      getCreatedBy: jest.fn(() => 'test-user-id')
-    };
-  }
-
-  function createMockSigner() {
-    return {
-      getId: jest.fn(() => ({ getValue: () => 'test-signer-id' })),
-      getEmail: jest.fn(() => ({ getValue: () => 'test@example.com' })),
-      getFullName: jest.fn(() => 'Test User')
-    };
-  }
-
-  function createMockViewer() {
-    return {
-      getId: jest.fn(() => ({ getValue: () => 'test-viewer-id' })),
-      getEmail: jest.fn(() => ({ getValue: () => 'viewer@example.com' })),
-      getFullName: jest.fn(() => 'Test Viewer')
-    };
-  }
-
-  function createMockNetworkContext() {
-    return {
-      ipAddress: generateTestIpAddress(),
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      country: 'US'
-    };
-  }
 
   it('should be importable', () => {
     expect(IntegrationEventFactory).toBeDefined();
@@ -215,16 +230,12 @@ describe('IntegrationEventFactory', () => {
 
     it('should handle signer declined event with fallback values', () => {
       const factory = new IntegrationEventFactory();
+      const mockEnvelope = createMockEnvelopeWithFallback();
+      const mockSigner = createMockSignerWithFallback();
+      
       const args = {
-        envelope: {
-          getId: jest.fn(() => ({ getValue: () => 'test-envelope-id' })),
-          getTitle: jest.fn(() => 'Test Envelope')
-        } as any,
-        signer: {
-          getId: jest.fn(() => ({ getValue: () => 'test-signer-id' })),
-          getFullName: jest.fn(() => null),
-          getEmail: jest.fn(() => null)
-        } as any,
+        envelope: mockEnvelope as any,
+        signer: mockSigner as any,
         reason: 'I decline to sign',
         whenISO: '2024-01-01T00:00:00Z',
         ipAddress: generateTestIpAddress(),

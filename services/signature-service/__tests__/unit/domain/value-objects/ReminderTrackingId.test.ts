@@ -7,19 +7,19 @@
 import { ReminderTrackingId } from '../../../../src/domain/value-objects/ReminderTrackingId';
 import { TestUtils } from '../../../helpers/testUtils';
 
-describe('ReminderTrackingId', () => {
-  function testInvalidUuid(invalidUuid: string): void {
+function testInvalidUuid(invalidUuid: string): void {
     expect(() => ReminderTrackingId.fromString(invalidUuid)).toThrow('Invalid ReminderTrackingId');
   }
 
-  function testNullValue(): void {
+function testNullValue(): void {
     ReminderTrackingId.fromString(null as any);
   }
 
-  function testUndefinedValue(): void {
+function testUndefinedValue(): void {
     ReminderTrackingId.fromString(undefined as any);
   }
 
+describe('ReminderTrackingId', () => {
   describe('fromString', () => {
     it('should create a ReminderTrackingId from a valid UUID', () => {
       const validUuid = TestUtils.generateUuid();
@@ -39,7 +39,9 @@ describe('ReminderTrackingId', () => {
         '123e4567-e89b-12d3-a456-4266141740000' // Extra character
       ];
 
-      invalidUuids.forEach(testInvalidUuid);
+      for (const invalidUuid of invalidUuids) {
+        testInvalidUuid(invalidUuid);
+      }
     });
 
     it('should throw error for null or undefined values', () => {

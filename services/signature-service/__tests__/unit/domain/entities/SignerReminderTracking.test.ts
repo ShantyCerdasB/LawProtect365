@@ -6,11 +6,8 @@
  */
 
 import { SignerReminderTracking, ReminderGateReason } from '../../../../src/domain/entities/SignerReminderTracking';
-import { SignerId } from '../../../../src/domain/value-objects/SignerId';
-import { EnvelopeId } from '../../../../src/domain/value-objects/EnvelopeId';
-import { ReminderTrackingId } from '../../../../src/domain/value-objects/ReminderTrackingId';
 import { TestUtils } from '../../../helpers/testUtils';
-import { trackingEntity, trackingEntityNew, trackingPersistenceRow } from '../../../helpers/builders/signerReminderTracking';
+import { trackingEntity, trackingPersistenceRow } from '../../../helpers/builders/signerReminderTracking';
 import { createFixedClock } from '@lawprotect/shared-ts';
 
 describe('SignerReminderTracking', () => {

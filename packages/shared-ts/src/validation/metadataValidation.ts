@@ -73,8 +73,8 @@ function validateCustomFieldsCount(
     return;
   }
   
-  throw new Error(
-    `${fieldName} cannot have more than ${config.maxFields} field${config.maxFields !== 1 ? 's' : ''}`
+  throw new TypeError(
+    `${fieldName} cannot have more than ${config.maxFields} field${config.maxFields > 1 ? 's' : ''}`
   );
 }
 
@@ -178,8 +178,8 @@ function validateTagsCount(
     return;
   }
   
-  throw new Error(
-    `${fieldName} cannot have more than ${config.maxTags} tag${config.maxTags !== 1 ? 's' : ''}`
+  throw new TypeError(
+    `${fieldName} cannot have more than ${config.maxTags} tag${config.maxTags > 1 ? 's' : ''}`
   );
 }
 
@@ -392,8 +392,8 @@ export function validateArrayField(
     return;
   }
   
-  throw new Error(
-    `${fieldName} cannot have more than ${maxLength} item${maxLength !== 1 ? 's' : ''}`
+  throw new TypeError(
+    `${fieldName} cannot have more than ${maxLength} item${maxLength > 1 ? 's' : ''}`
   );
 }
 

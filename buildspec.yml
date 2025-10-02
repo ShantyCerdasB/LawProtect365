@@ -5,41 +5,31 @@ phases:
     runtime-versions:
       nodejs: 20
     commands:
-      - "set -euo pipefail"
-      - "echo Using Node: $(node -v)"
-      - "echo Using npm:  $(npm -v)"
+      - bash -lc 'set -euo pipefail'
+      - echo "Using Node: $(node -v)"
+      - echo "Using npm:  $(npm -v)"
 
   pre_build:
     commands:
       - echo "Building shared-ts layer..."
-     # Si CODEARTIFACT_REPO_ENDPOINTS viene desde Terraform, configuramos npm automáticamente.
       - |
         if [ -n "${CODEARTIFACT_REPO_ENDPOINTS:-}" ]; then
-          echo "Configuring npm for CodeArtifact…"
-          export NPM_ENDPOINT=$(node -e 'const j=process.env.CODEARTIFACT_REPO_ENDPOINTS?JSON.parse(process.env.CODEARTIFACT_REPO_ENDPOINTS):{}; if(!j.npm){process.exit(2)}; console.log(j.npm)')
-          export NPM_HOST=$(node -e 'const u=new URL(process.env.NPM_ENDPOINT); console.log(u.host + u.pathname)')
-          # Intenta obtener token (ajusta PROJECT_DOMAIN si lo necesitas)
-          export CA_DOMAIN="${PROJECT_DOMAIN:-${PROJECT_NAME:-project}-domain}"
-          export CA_TOKEN=$(aws codeartifact get-authorization-token --domain "$CA_DOMAIN" --query authorizationToken --output text || true)
+          NPM_ENDPOINT=$(node -e 'const j=process.env.CODEARTIFACT_REPO_ENDPOINTS?JSON.parse(process.env.CODEARTIFACT_REPO_ENDPOINTS):{}; if(!j.npm){process.exit(2)}; console.log(j.npm)')
+          NPM_HOST=$(node -e 'const u=new URL(process.env.NPM_ENDPOINT); console.log(u.host + u.pathname)')
+          CA_DOMAIN="${PROJECT_DOMAIN:-${PROJECT_NAME:-project}-domain}"
+          CA_TOKEN=$(aws codeartifact get-authorization-token --domain "$CA_DOMAIN" --query authorizationToken --output text || true)
           if [ -n "${CA_TOKEN:-}" ]; then
-            echo "//${NPM_HOST}:_authToken=${CA_TOKEN}" > ~/.npmrc
-            echo "registry=${NPM_ENDPOINT}" >> ~/.npmrc
+            printf "//%s:_authToken=%s\n" "$NPM_HOST" "$CA_TOKEN" > ~/.npmrc
+            echo "registry=$NPM_ENDPOINT" >> ~/.npmrc
             echo "always-auth=true" >> ~/.npmrc
-          else
-            echo "WARN: Could not obtain CodeArtifact token. Falling back to default npm registry."
           fi
-        else
-          echo "CODEARTIFACT_REPO_ENDPOINTS not set. Using default npm registry."
         fi
-      - npm config get registry
-
       - cd packages/shared-ts
       - npm ci
       - DATABASE_URL="postgresql://user:pass@localhost:5432/postgres?schema=public" npx prisma generate
       - npm run build
       - npm prune --omit=dev
       - cd -
-
       - rm -rf /tmp/layer && mkdir -p /tmp/layer/nodejs
       - cp -R packages/shared-ts/dist /tmp/layer/nodejs/
       - cp -R packages/shared-ts/node_modules /tmp/layer/nodejs/
@@ -50,7 +40,7 @@ phases:
     commands:
       - cd /tmp/layer
       - zip -r shared-ts-layer.zip .
-      - 'if [ -z "${CODE_BUCKET:-}" ]; then echo "ERROR: CODE_BUCKET env var is not set"; exit 1; fi'
+      - '[ -n "${CODE_BUCKET:-}" ] || { echo "ERROR: CODE_BUCKET env var is not set"; exit 1; }'
       - aws s3 cp shared-ts-layer.zip s3://$CODE_BUCKET/shared-ts-layer.zip
       - echo "Uploaded layer to s3://$CODE_BUCKET/shared-ts-layer.zip"
 

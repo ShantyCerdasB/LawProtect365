@@ -18,16 +18,8 @@ jest.mock('../../../../../src/domain/rules/EnvelopeAccessValidationRule', () => 
   },
 }));
 
-describe('ShareDocumentViewUseCase', () => {
-  let useCase: ShareDocumentViewUseCase;
-  let mockSignatureEnvelopeService: any;
-  let mockEnvelopeSignerService: any;
-  let mockInvitationTokenService: any;
-  let mockAuditEventService: any;
-  let mockEnvelopeNotificationService: any;
-
-  // Helper function to create test input
-  function createTestInput(overrides: Partial<ShareDocumentViewInput> = {}): ShareDocumentViewInput {
+// Helper function to create test input
+function createTestInput(overrides: Partial<ShareDocumentViewInput> = {}): ShareDocumentViewInput {
     const envelopeId = TestUtils.generateEnvelopeId();
     const email = Email.fromString('viewer@example.com');
     const fullName = 'John Doe';
@@ -48,21 +40,21 @@ describe('ShareDocumentViewUseCase', () => {
     };
   }
 
-  // Helper function to create test envelope
-  function createTestEnvelope(envelopeId: any, userId: string) {
+// Helper function to create test envelope
+function createTestEnvelope(envelopeId: any, userId: string) {
     return signatureEnvelopeEntity({ id: envelopeId.getValue(), createdBy: userId });
   }
 
-  // Helper function to create test viewer
-  function createTestViewer() {
+// Helper function to create test viewer
+function createTestViewer() {
     const viewerId = TestUtils.generateSignerId();
     return {
       getId: () => viewerId
     };
   }
 
-  // Helper function to create token result
-  function createTokenResult(tokenId: string = 'viewer-token-123') {
+// Helper function to create token result
+function createTokenResult(tokenId: string = 'viewer-token-123') {
     return {
       token: tokenId,
       expiresAt: new Date('2023-12-31T23:59:59Z'),
@@ -71,6 +63,14 @@ describe('ShareDocumentViewUseCase', () => {
       }
     };
   }
+
+describe('ShareDocumentViewUseCase', () => {
+  let useCase: ShareDocumentViewUseCase;
+  let mockSignatureEnvelopeService: any;
+  let mockEnvelopeSignerService: any;
+  let mockInvitationTokenService: any;
+  let mockAuditEventService: any;
+  let mockEnvelopeNotificationService: any;
 
   // Helper function to setup successful mocks
   function setupSuccessfulMocks(testEnvelope: any, viewer: any, tokenResult: any) {

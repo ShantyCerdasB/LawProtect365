@@ -87,16 +87,12 @@ export class SignatureOrchestrator {
     invitationToken?: string,
     securityContext?: { ipAddress: string; userAgent: string; country?: string }
   ) {
-    try {
-      return await this.deps.useCases.getEnvelopeUseCase.execute({
-        envelopeId,
-        userId,
-        invitationToken,
-        securityContext,
-      });
-    } catch (error) {
-      throw error;
-    }
+    return await this.deps.useCases.getEnvelopeUseCase.execute({
+      envelopeId,
+      userId,
+      invitationToken,
+      securityContext,
+    });
   }
 
   /**
@@ -111,11 +107,7 @@ export class SignatureOrchestrator {
     userId: string,
     filters: { status?: EnvelopeStatus; limit?: number; cursor?: string } = {}
   ) {
-    try {
-      return await this.deps.useCases.listEnvelopesByUserUseCase.execute({ userId, filters });
-    } catch (error) {
-      throw error;
-    }
+    return await this.deps.useCases.listEnvelopesByUserUseCase.execute({ userId, filters });
   }
 
   /**
@@ -134,16 +126,12 @@ export class SignatureOrchestrator {
     request: { reason: string; invitationToken?: string },
     securityContext: NetworkSecurityContext
   ) {
-    try {
-      return await this.deps.useCases.declineSignerUseCase.execute({
-        envelopeId,
-        signerId,
-        request,
-        securityContext,
-      });
-    } catch (error) {
-      throw error;
-    }
+    return await this.deps.useCases.declineSignerUseCase.execute({
+      envelopeId,
+      signerId,
+      request,
+      securityContext,
+    });
   }
 
   /**
@@ -165,17 +153,13 @@ export class SignatureOrchestrator {
     expiresIn?: number,
     securityContext?: NetworkSecurityContext
   ) {
-    try {
-      return await this.deps.useCases.downloadDocumentUseCase.execute({
-        envelopeId,
-        userId,
-        invitationToken,
-        expiresIn,
-        securityContext,
-      });
-    } catch (error) {
-      throw error;
-    }
+    return await this.deps.useCases.downloadDocumentUseCase.execute({
+      envelopeId,
+      userId,
+      invitationToken,
+      expiresIn,
+      securityContext,
+    });
   }
 
   /**
@@ -188,11 +172,7 @@ export class SignatureOrchestrator {
    * @throws Propagates authorization/errors from the use case.
    */
   async getAuditTrail(envelopeId: EnvelopeId, userId: string) {
-    try {
-      return await this.deps.useCases.getAuditTrailUseCase.execute({ envelopeId, userId });
-    } catch (error) {
-      throw error;
-    }
+    return await this.deps.useCases.getAuditTrailUseCase.execute({ envelopeId, userId });
   }
 
   /**
@@ -237,15 +217,11 @@ export class SignatureOrchestrator {
     userId: string,
     securityContext: NetworkSecurityContext
   ): Promise<{ envelope: SignatureEnvelope }> {
-    try {
-      return await this.deps.useCases.cancelEnvelopeUseCase.execute({
-        envelopeId,
-        userId,
-        securityContext,
-      });
-    } catch (error) {
-      rethrow(error);
-    }
+    return await this.deps.useCases.cancelEnvelopeUseCase.execute({
+      envelopeId,
+      userId,
+      securityContext,
+    });
   }
 
   /**
@@ -262,15 +238,11 @@ export class SignatureOrchestrator {
     updateData: UpdateEnvelopeData,
     userId: string
   ): Promise<{ envelope: SignatureEnvelope; signers?: EnvelopeSigner[] }> {
-    try {
-      return await this.deps.useCases.updateEnvelopeUseCase.execute({
-        envelopeId,
-        updateData,
-        userId,
-      });
-    } catch (error) {
-      rethrow(error);
-    }
+    return await this.deps.useCases.updateEnvelopeUseCase.execute({
+      envelopeId,
+      updateData,
+      userId,
+    });
   }
 
   /**
@@ -302,16 +274,12 @@ export class SignatureOrchestrator {
     signersNotified: number;
     tokens: Array<{ signerId: string; email?: string; token: string; expiresAt: Date }>;
   }> {
-    try {
-      return await this.deps.useCases.sendEnvelopeUseCase.execute({
-        envelopeId,
-        userId,
-        securityContext,
-        options,
-      });
-    } catch (error) {
-      rethrow(error);
-    }
+    return await this.deps.useCases.sendEnvelopeUseCase.execute({
+      envelopeId,
+      userId,
+      securityContext,
+      options,
+    });
   }
 
   /**
@@ -345,19 +313,15 @@ export class SignatureOrchestrator {
     expiresAt: Date;
     expiresInDays: number;
   }> {
-    try {
-      return await this.deps.useCases.shareDocumentViewUseCase.execute({
-        envelopeId,
-        email,
-        fullName,
-        message,
-        expiresInDays,
-        userId,
-        securityContext,
-      });
-    } catch (error) {
-      throw error;
-    }
+    return await this.deps.useCases.shareDocumentViewUseCase.execute({
+      envelopeId,
+      email,
+      fullName,
+      message,
+      expiresInDays,
+      userId,
+      securityContext,
+    });
   }
 
   /**
@@ -375,14 +339,10 @@ export class SignatureOrchestrator {
     userId: string,
     securityContext: NetworkSecurityContext
   ): Promise<SignDocumentResult> {
-    try {
-      return await this.deps.useCases.signDocumentUseCase.execute({
-        request,
-        userId,
-        securityContext,
-      });
-    } catch (error) {
-      rethrow(error as Error);
-    }
+    return await this.deps.useCases.signDocumentUseCase.execute({
+      request,
+      userId,
+      securityContext,
+    });
   }
 }

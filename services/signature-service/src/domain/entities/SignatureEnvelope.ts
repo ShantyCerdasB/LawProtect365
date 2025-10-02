@@ -11,9 +11,8 @@ import { SignerId } from '../value-objects/SignerId';
 import { SigningOrder } from '../value-objects/SigningOrder';
 import { DocumentOrigin } from '../value-objects/DocumentOrigin';
 import { EnvelopeStatus } from '../value-objects/EnvelopeStatus';
-import { S3Key, DocumentHash } from '@lawprotect/shared-ts';
+import { S3Key, DocumentHash, roundTo } from '@lawprotect/shared-ts';
 import { SignerStatus, SigningOrderType } from '@prisma/client';
-import { roundTo } from '@lawprotect/shared-ts';
 import { EnvelopeSigner } from './EnvelopeSigner';
 import { CreateSignerData } from '../types/signer/CreateSignerData';
 import { SigningOrderValidationRule } from '../rules/SigningOrderValidationRule';
@@ -785,14 +784,14 @@ export class SignatureEnvelope {
       if (creatorSigner) {
         creatorSigner.updateOrder(1);
         // External signers can have any order > 1 (no specific order required)
-        externalSigners.forEach((signer, index) => {
+        for (const [index, signer] of externalSigners.entries()) {
           signer.updateOrder(index + 2); // Just assign sequential numbers
-        });
+        }
       } else {
         // No creator, external signers can be in any order
-        externalSigners.forEach((signer, index) => {
+        for (const [index, signer] of externalSigners.entries()) {
           signer.updateOrder(index + 1);
-        });
+        }
       }
     } else if (newSigningOrderType === 'INVITEES_FIRST') {
       // External signers first (any order), creator last (if present)

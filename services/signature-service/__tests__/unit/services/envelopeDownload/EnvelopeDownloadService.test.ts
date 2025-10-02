@@ -8,7 +8,6 @@ import { jest } from '@jest/globals';
 import { EnvelopeDownloadService } from '../../../../src/services/envelopeDownload/EnvelopeDownloadService';
 import { SignatureEnvelopeRepository } from '../../../../src/repositories/SignatureEnvelopeRepository';
 import { S3Service } from '../../../../src/services/s3Service/S3Service';
-import { EnvelopeId } from '../../../../src/domain/value-objects/EnvelopeId';
 
 // Mock dependencies
 jest.mock('../../../../src/repositories/SignatureEnvelopeRepository');
@@ -72,6 +71,20 @@ jest.mock('@lawprotect/shared-ts', () => ({
   }
 }));
 
+function createMockEnvelope(envelopeId: string) {
+  return {
+    getId: jest.fn(() => ({ getValue: () => envelopeId })),
+    getLatestSignedDocumentKey: jest.fn(() => ({ getValue: () => 'signed-document-key' })),
+  };
+}
+
+function createMockEnvelopeWithDocumentKey(envelopeId: string, documentKey: string) {
+  return {
+    getId: jest.fn(() => ({ getValue: () => envelopeId })),
+    getLatestSignedDocumentKey: jest.fn(() => ({ getValue: () => documentKey })),
+  };
+}
+
 describe('EnvelopeDownloadService', () => {
   let service: EnvelopeDownloadService;
   let mockSignatureEnvelopeRepository: jest.Mocked<SignatureEnvelopeRepository>;
@@ -99,10 +112,7 @@ describe('EnvelopeDownloadService', () => {
       const expiresIn = 3600;
       const expectedUrl = 'https://s3.amazonaws.com/bucket/signed-document.pdf';
 
-      const mockEnvelope = {
-        getId: jest.fn(() => ({ getValue: () => envelopeId })),
-        getLatestSignedDocumentKey: jest.fn(() => ({ getValue: () => 'signed-document-key' })),
-      };
+      const mockEnvelope = createMockEnvelope(envelopeId);
 
       mockSignatureEnvelopeRepository.findById.mockResolvedValue(mockEnvelope as any);
       mockS3Service.generatePresignedUrl.mockResolvedValue(expectedUrl);
@@ -144,10 +154,7 @@ describe('EnvelopeDownloadService', () => {
 
     it('should handle S3 service errors', async () => {
       const envelopeId = 'test-envelope-id';
-      const mockEnvelope = {
-        getId: jest.fn(() => ({ getValue: () => envelopeId })),
-        getLatestSignedDocumentKey: jest.fn(() => ({ getValue: () => 'signed-document-key' })),
-      };
+      const mockEnvelope = createMockEnvelope(envelopeId);
 
       mockSignatureEnvelopeRepository.findById.mockResolvedValue(mockEnvelope as any);
       mockS3Service.generatePresignedUrl.mockRejectedValue(new Error('S3 error'));

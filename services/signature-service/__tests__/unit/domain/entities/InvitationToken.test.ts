@@ -6,12 +6,11 @@
  */
 
 import { InvitationToken } from '../../../../src/domain/entities/InvitationToken';
-import { NetworkSecurityContext } from '@lawprotect/shared-ts';
+import { NetworkSecurityContext, systemClock } from '@lawprotect/shared-ts';
 import { InvitationTokenId } from '../../../../src/domain/value-objects/InvitationTokenId';
 import { EnvelopeId } from '../../../../src/domain/value-objects/EnvelopeId';
 import { SignerId } from '../../../../src/domain/value-objects/SignerId';
 import { InvitationTokenStatus } from '@prisma/client';
-import { systemClock } from '@lawprotect/shared-ts';
 import { TestUtils } from '../../../helpers/testUtils';
 import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
 import { 
@@ -20,9 +19,8 @@ import {
   invitationTokenRevoked
 } from '../../../../src/signature-errors';
 
-describe('InvitationToken', () => {
-  // Helper function to create InvitationToken with custom parameters
-  function createInvitationTokenWithParams(params: {
+// Helper function to create InvitationToken with custom parameters
+function createInvitationTokenWithParams(params: {
     id?: string;
     envelopeId?: string;
     signerId?: string;
@@ -72,7 +70,7 @@ describe('InvitationToken', () => {
     );
   }
 
-  function createInvalidTokenData() {
+function createInvalidTokenData() {
     return {
       id: TestUtils.generateUuid(),
       envelopeId: TestUtils.generateUuid(),
@@ -100,6 +98,7 @@ describe('InvitationToken', () => {
     };
   }
 
+describe('InvitationToken', () => {
   describe('Constructor and Getters', () => {
     it('should create token with all properties', () => {
       const tokenId = TestUtils.generateUuid();

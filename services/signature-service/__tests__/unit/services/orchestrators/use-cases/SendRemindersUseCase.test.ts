@@ -34,6 +34,59 @@ jest.mock('../../../../../src/services/orchestrators/utils/signerSelection', () 
   filterSignersByIds: jest.fn((signers: any[], ids: string[]) => signers.filter((s: any) => ids.includes(s.getId().getValue())))
 }));
 
+// Helper function to create test input
+function createTestInput(overrides: Partial<SendRemindersInput> = {}): SendRemindersInput {
+  const envelopeId = TestUtils.generateEnvelopeId();
+  const userId = TestUtils.generateUuid();
+  const securityContext = {
+    ipAddress: TestUtils.createTestIpAddress(),
+    userAgent: TestUtils.createTestUserAgent(),
+    country: 'US'
+  };
+  
+  return {
+    envelopeId,
+    request: {
+      message: 'Please sign this document',
+      type: NotificationType.REMINDER,
+      ...overrides.request
+    },
+    userId,
+    securityContext,
+    ...overrides
+  };
+}
+
+// Helper function to create test envelope
+function createTestEnvelope(envelopeId: any, userId: string) {
+  return signatureEnvelopeEntity({ id: envelopeId.getValue(), createdBy: userId });
+}
+
+// Helper function to create test signer
+function createTestSigner(signerId: any, email: string = 'signer@example.com', name: string = 'Test User') {
+  return {
+    getId: () => signerId,
+    getEmail: () => Email.fromString(email),
+    getFullName: () => name
+  } as EnvelopeSigner;
+}
+
+// Helper function to create active token
+function createActiveToken(tokenId: string = 'token-1') {
+  return {
+    getId: () => ({ getValue: () => tokenId }),
+    isExpired: () => false
+  };
+}
+
+// Helper function to create tracking data
+function createTrackingData(reminderCount: number = 1, lastReminderAt: Date = new Date('2023-01-01T00:00:00Z')) {
+  return {
+    getReminderCount: () => reminderCount,
+    getLastReminderAt: () => lastReminderAt
+  };
+}
+
 describe('SendRemindersUseCase', () => {
   let useCase: SendRemindersUseCase;
   let mockSignatureEnvelopeService: any;
@@ -42,59 +95,6 @@ describe('SendRemindersUseCase', () => {
   let mockSignerReminderTrackingService: any;
   let mockAuditEventService: any;
   let mockEnvelopeNotificationService: any;
-
-  // Helper function to create test input
-  function createTestInput(overrides: Partial<SendRemindersInput> = {}): SendRemindersInput {
-    const envelopeId = TestUtils.generateEnvelopeId();
-    const userId = TestUtils.generateUuid();
-    const securityContext = {
-      ipAddress: TestUtils.createTestIpAddress(),
-      userAgent: TestUtils.createTestUserAgent(),
-      country: 'US'
-    };
-    
-    return {
-      envelopeId,
-      request: {
-        message: 'Please sign this document',
-        type: NotificationType.REMINDER,
-        ...overrides.request
-      },
-      userId,
-      securityContext,
-      ...overrides
-    };
-  }
-
-  // Helper function to create test envelope
-  function createTestEnvelope(envelopeId: any, userId: string) {
-    return signatureEnvelopeEntity({ id: envelopeId.getValue(), createdBy: userId });
-  }
-
-  // Helper function to create test signer
-  function createTestSigner(signerId: any, email: string = 'signer@example.com', name: string = 'Test User') {
-    return {
-      getId: () => signerId,
-      getEmail: () => Email.fromString(email),
-      getFullName: () => name
-    } as EnvelopeSigner;
-  }
-
-  // Helper function to create active token
-  function createActiveToken(tokenId: string = 'token-1') {
-    return {
-      getId: () => ({ getValue: () => tokenId }),
-      isExpired: () => false
-    };
-  }
-
-  // Helper function to create tracking data
-  function createTrackingData(reminderCount: number = 1, lastReminderAt: Date = new Date('2023-01-01T00:00:00Z')) {
-    return {
-      getReminderCount: () => reminderCount,
-      getLastReminderAt: () => lastReminderAt
-    };
-  }
 
   beforeEach(() => {
     jest.clearAllMocks();

@@ -51,14 +51,14 @@ export function validateDateRange(
   // Validate minimum range
   if (dateTime < minDate) {
     throw new Error(
-      `${fieldName} must be at least ${config.minDaysFromNow} day${config.minDaysFromNow !== 1 ? 's' : ''} from now`
+      `${fieldName} must be at least ${config.minDaysFromNow} day${config.minDaysFromNow > 1 ? 's' : ''} from now`
     );
   }
 
   // Validate maximum range
   if (dateTime > maxDate) {
     throw new Error(
-      `${fieldName} cannot be more than ${config.maxDaysFromNow} day${config.maxDaysFromNow !== 1 ? 's' : ''} from now`
+      `${fieldName} cannot be more than ${config.maxDaysFromNow} day${config.maxDaysFromNow > 1 ? 's' : ''} from now`
     );
   }
 }
@@ -109,7 +109,7 @@ export function validateMaxDaysFromNow(
   
   if (dateTime > maxDate) {
     throw new Error(
-      `${fieldName} cannot be more than ${maxDaysFromNow} day${maxDaysFromNow !== 1 ? 's' : ''} from now`
+      `${fieldName} cannot be more than ${maxDaysFromNow} day${maxDaysFromNow > 1 ? 's' : ''} from now`
     );
   }
 }
@@ -137,7 +137,7 @@ export function validateMinDaysFromNow(
   
   if (dateTime < minDate) {
     throw new Error(
-      `${fieldName} must be at least ${minDaysFromNow} day${minDaysFromNow !== 1 ? 's' : ''} from now`
+      `${fieldName} must be at least ${minDaysFromNow} day${minDaysFromNow > 1 ? 's' : ''} from now`
     );
   }
 }

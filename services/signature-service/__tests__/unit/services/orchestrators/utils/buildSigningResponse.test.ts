@@ -8,10 +8,8 @@
 
 import { describe, it, expect } from '@jest/globals';
 import { buildSigningResponse, SigningSummary } from '../../../../../src/services/orchestrators/utils/buildSigningResponse';
-import { SignatureEnvelope } from '../../../../../src/domain/entities/SignatureEnvelope';
 import { EnvelopeId } from '../../../../../src/domain/value-objects/EnvelopeId';
 import { SignerId } from '../../../../../src/domain/value-objects/SignerId';
-import { EnvelopeStatus } from '../../../../../src/domain/value-objects/EnvelopeStatus';
 import { TestUtils } from '../../../../helpers/testUtils';
 import { signatureEnvelopeEntity } from '../../../../helpers/builders/signatureEnvelope';
 import { SigningMessages } from '../../../../../src/domain/enums/SigningMessages';
@@ -209,7 +207,6 @@ describe('buildSigningResponse', () => {
     it('should handle different signer IDs correctly', () => {
       const envelopeId = TestUtils.generateEnvelopeId();
       const signerId1 = TestUtils.generateSignerId();
-      const signerId2 = TestUtils.generateSignerId();
       const originalEnvelope = signatureEnvelopeEntity({
         id: envelopeId.getValue(),
         status: 'READY_FOR_SIGNATURE'

@@ -6,11 +6,7 @@ import {
 import { StoreDocumentRequest } from '../../../../../src/domain/types/s3/StoreDocumentRequest';
 import { RetrieveDocumentRequest } from '../../../../../src/domain/types/s3/RetrieveDocumentRequest';
 import { GeneratePresignedUrlRequest } from '../../../../../src/domain/types/s3/GeneratePresignedUrlRequest';
-import { S3Key } from '@lawprotect/shared-ts';
-import { ContentType } from '@lawprotect/shared-ts';
-import { S3Operation } from '@lawprotect/shared-ts';
-import { EnvelopeId } from '../../../../../src/domain/value-objects/EnvelopeId';
-import { SignerId } from '../../../../../src/domain/value-objects/SignerId';
+import { S3Key, ContentType, S3Operation } from '@lawprotect/shared-ts';
 import { TestUtils } from '../../../../helpers/testUtils';
 
 describe('S3ValidationRules', () => {
