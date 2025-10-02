@@ -12,25 +12,16 @@ phases:
     commands:
       - echo "Building shared-ts layer..."
       - cd packages/shared-ts
-      # Install ALL dependencies (including devDependencies for TypeScript)
       - npm ci
       - npm run build
-      # Prune dev dependencies after build to keep layer slim
       - npm prune --omit=dev
       
   build:
     commands:
-      # Create shared-ts layer directory
       - mkdir -p shared-ts-layer/nodejs
-      
-      # Copy shared-ts compiled code
       - cp -r packages/shared-ts/dist shared-ts-layer/nodejs/@lawprotect/shared-ts
       - cp -r packages/shared-ts/node_modules shared-ts-layer/nodejs/
-      
-      # Create shared-ts layer zip
       - cd shared-ts-layer && zip -r ../shared-ts-layer.zip . && cd ..
-      
-      # Build OutboxStreamHandler
       - mkdir -p outbox-stream-handler
       - cp -r packages/shared-ts/dist/lambdas/* outbox-stream-handler/
       - cp packages/shared-ts/package.json outbox-stream-handler/

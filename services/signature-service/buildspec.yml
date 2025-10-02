@@ -12,20 +12,12 @@ phases:
     commands:
       - echo "Building signature-service..."
       - cd services/signature-service
-      # Install ALL dependencies (including devDependencies for TypeScript)
       - npm ci
       
   build:
     commands:
-      # Run tests with coverage requirements (commented out for now)
-      # - npm run test -- --coverage --coverageThreshold='{"global":{"branches":95,"functions":95,"lines":95,"statements":95}}'
-      # - npm run test  # Uncomment when ready for 95% coverage requirement
-      
       - npm run build
-      # Prune dev dependencies after build to keep artifacts slim
       - npm prune --omit=dev
-      
-      # Create individual handler ZIPs
       - |
         handlers=("create-envelope" "get-envelope" "send-envelope" "sign-document" "decline-signer" "share-document" "send-notification" "get-audit-trail" "get-envelopes-by-user" "update-envelope" "cancel-envelope" "download-document")
         for handler in "${handlers[@]}"; do
