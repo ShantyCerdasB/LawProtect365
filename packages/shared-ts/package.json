@@ -29,7 +29,7 @@
     "coverage": "jest --coverage --config ./jest.config.cjs",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",
-    "prisma:seed": "tsx prisma/seeds/seed.ts",
+    "prisma:seed": "tsx prisma/seeds/seed.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.16.1",
