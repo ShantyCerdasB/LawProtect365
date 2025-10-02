@@ -5,9 +5,9 @@ phases:
     runtime-versions:
       nodejs: 20
     commands:
-      - echo "Node version: $(node -v)"
-      - echo "npm version: $(npm -v)"
-      
+      - echo "Using Node: $(node -v)"
+      - echo "Using npm:  $(npm -v)"
+
   pre_build:
     commands:
       - echo "Building shared-ts layer..."
@@ -15,19 +15,24 @@ phases:
       - npm ci
       - npm run build
       - npm prune --omit=dev
-      
+      - cd -
+
+
+      - rm -rf /tmp/layer && mkdir -p /tmp/layer/nodejs
+      - cp -R packages/shared-ts/dist /tmp/layer/nodejs/
+      - cp -R packages/shared-ts/node_modules /tmp/layer/nodejs/
+      - cp packages/shared-ts/package.json /tmp/layer/nodejs/
+      - cp packages/shared-ts/package-lock.json /tmp/layer/nodejs/
+
   build:
     commands:
-      - mkdir -p shared-ts-layer/nodejs
-      - cp -r packages/shared-ts/dist shared-ts-layer/nodejs/@lawprotect/shared-ts
-      - cp -r packages/shared-ts/node_modules shared-ts-layer/nodejs/
-      - cd shared-ts-layer && zip -r ../shared-ts-layer.zip . && cd ..
-      - mkdir -p outbox-stream-handler
-      - cp -r packages/shared-ts/dist/lambdas/* outbox-stream-handler/
-      - cp packages/shared-ts/package.json outbox-stream-handler/
-      - cd outbox-stream-handler && zip -r ../outbox-stream-handler.zip . && cd ..
+      - cd /tmp/layer
+      - zip -r shared-ts-layer.zip .
+      - 'if [ -z "${CODE_BUCKET:-}" ]; then echo "ERROR: CODE_BUCKET env var is not set"; exit 1; fi'
+      - aws s3 cp shared-ts-layer.zip s3://$CODE_BUCKET/shared-ts-layer.zip
+      - echo "Uploaded layer to s3://$CODE_BUCKET/shared-ts-layer.zip"
 
 artifacts:
   files:
-    - shared-ts-layer.zip
-    - outbox-stream-handler.zip
+    - '**/*'
+  discard-paths: yes
