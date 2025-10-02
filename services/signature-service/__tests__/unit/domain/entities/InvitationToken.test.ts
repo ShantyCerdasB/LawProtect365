@@ -723,56 +723,55 @@ describe('InvitationToken', () => {
     });
   });
 
-  describe('Static Methods', () => {
-    describe('create', () => {
-      it('should create new token with all required parameters', () => {
-        const envelopeId = new EnvelopeId(TestUtils.generateUuid());
-        const signerId = new SignerId(TestUtils.generateUuid());
-        const tokenHash = TestUtils.generateSha256Hash();
-        const expiresAt = new Date(Date.now() + 86400000);
-        const createdBy = 'user-123';
+  describe('Static Methods - Create', () => {
+    it('should create new token with all required parameters', () => {
+      const envelopeId = new EnvelopeId(TestUtils.generateUuid());
+      const signerId = new SignerId(TestUtils.generateUuid());
+      const tokenHash = TestUtils.generateSha256Hash();
+      const expiresAt = new Date(Date.now() + 86400000);
+      const createdBy = 'user-123';
 
-        const token = InvitationToken.create({
-          envelopeId,
-          signerId,
-          tokenHash,
-          expiresAt,
-          createdBy
-        });
-
-        expect(token.getEnvelopeId()).toEqual(envelopeId);
-        expect(token.getSignerId()).toEqual(signerId);
-        expect(token.getTokenHash()).toBe(tokenHash);
-        expect(token.getExpiresAt()).toEqual(expiresAt);
-        expect(token.getCreatedBy()).toBe(createdBy);
-        expect(token.getStatus()).toBe(InvitationTokenStatus.ACTIVE);
-        expect(token.getResendCount()).toBe(0);
-        expect(token.getViewCount()).toBe(0);
-        expect(token.getCreatedAt()).toBeDefined();
-        expect(token.getUpdatedAt()).toBeDefined();
+      const token = InvitationToken.create({
+        envelopeId,
+        signerId,
+        tokenHash,
+        expiresAt,
+        createdBy
       });
 
-      it('should create new token with optional metadata', () => {
-        const envelopeId = new EnvelopeId(TestUtils.generateUuid());
-        const signerId = new SignerId(TestUtils.generateUuid());
-        const tokenHash = TestUtils.generateSha256Hash();
-        const expiresAt = new Date(Date.now() + 86400000);
-        const createdBy = 'user-123';
+      expect(token.getEnvelopeId()).toEqual(envelopeId);
+      expect(token.getSignerId()).toEqual(signerId);
+      expect(token.getTokenHash()).toBe(tokenHash);
+      expect(token.getExpiresAt()).toEqual(expiresAt);
+      expect(token.getCreatedBy()).toBe(createdBy);
+      expect(token.getStatus()).toBe(InvitationTokenStatus.ACTIVE);
+      expect(token.getResendCount()).toBe(0);
+      expect(token.getViewCount()).toBe(0);
+      expect(token.getCreatedAt()).toBeDefined();
+      expect(token.getUpdatedAt()).toBeDefined();
+    });
 
-        const testIpAddress = generateTestIpAddress();
-        const token = InvitationToken.create({
-          envelopeId,
-          signerId,
-          tokenHash,
-          expiresAt,
-          createdBy,
-          ipAddress: testIpAddress,
-          userAgent: 'Mozilla/5.0',
-          country: 'US'
-        });
+    it('should create new token with optional metadata', () => {
+      const envelopeId = new EnvelopeId(TestUtils.generateUuid());
+      const signerId = new SignerId(TestUtils.generateUuid());
+      const tokenHash = TestUtils.generateSha256Hash();
+      const expiresAt = new Date(Date.now() + 86400000);
+      const createdBy = 'user-123';
 
-        expect(token.getIpAddress()).toBe(testIpAddress);
-        expect(token.getUserAgent()).toBe('Mozilla/5.0');
+      const testIpAddress = generateTestIpAddress();
+      const token = InvitationToken.create({
+        envelopeId,
+        signerId,
+        tokenHash,
+        expiresAt,
+        createdBy,
+        ipAddress: testIpAddress,
+        userAgent: 'Mozilla/5.0',
+        country: 'US'
+      });
+
+      expect(token.getIpAddress()).toBe(testIpAddress);
+      expect(token.getUserAgent()).toBe('Mozilla/5.0');
       expect(token.getCountry()).toBe('US');
     });
 
@@ -812,132 +811,130 @@ describe('InvitationToken', () => {
     });
   });
 
-    describe('fromPersistence', () => {
-      it('should create token from persistence data with all fields', () => {
-        const data = {
-          id: TestUtils.generateUuid(),
-          envelopeId: TestUtils.generateUuid(),
-          signerId: TestUtils.generateUuid(),
-          tokenHash: TestUtils.generateSha256Hash(),
-          status: InvitationTokenStatus.ACTIVE,
-          expiresAt: new Date(Date.now() + 86400000),
-          sentAt: new Date(Date.now() - 3600000),
-          lastSentAt: new Date(Date.now() - 1800000),
-          resendCount: 2,
-          usedAt: new Date(Date.now() - 900000),
-          usedBy: 'user-123',
-          viewCount: 1,
-          lastViewedAt: new Date(Date.now() - 900000),
-          signedAt: new Date(Date.now() - 600000),
-          signedBy: 'user-123',
-          revokedAt: null,
-          revokedReason: null,
-          createdBy: 'admin-456',
-          ipAddress: generateTestIpAddress(),
-          userAgent: 'Mozilla/5.0',
-          country: 'US',
-          createdAt: new Date(Date.now() - 7200000),
-          updatedAt: new Date(Date.now() - 600000)
-        };
+  describe('Static Methods - FromPersistence', () => {
+    it('should create token from persistence data with all fields', () => {
+      const data = {
+        id: TestUtils.generateUuid(),
+        envelopeId: TestUtils.generateUuid(),
+        signerId: TestUtils.generateUuid(),
+        tokenHash: TestUtils.generateSha256Hash(),
+        status: InvitationTokenStatus.ACTIVE,
+        expiresAt: new Date(Date.now() + 86400000),
+        sentAt: new Date(Date.now() - 3600000),
+        lastSentAt: new Date(Date.now() - 1800000),
+        resendCount: 2,
+        usedAt: new Date(Date.now() - 900000),
+        usedBy: 'user-123',
+        viewCount: 1,
+        lastViewedAt: new Date(Date.now() - 900000),
+        signedAt: new Date(Date.now() - 600000),
+        signedBy: 'user-123',
+        revokedAt: null,
+        revokedReason: null,
+        createdBy: 'admin-456',
+        ipAddress: generateTestIpAddress(),
+        userAgent: 'Mozilla/5.0',
+        country: 'US',
+        createdAt: new Date(Date.now() - 7200000),
+        updatedAt: new Date(Date.now() - 600000)
+      };
 
-        const token = InvitationToken.fromPersistence(data);
+      const token = InvitationToken.fromPersistence(data);
 
-        expect(token.getId().getValue()).toBe(data.id);
-        expect(token.getEnvelopeId().getValue()).toBe(data.envelopeId);
-        expect(token.getSignerId().getValue()).toBe(data.signerId);
-        expect(token.getTokenHash()).toBe(data.tokenHash);
-        expect(token.getStatus()).toBe(data.status);
-        expect(token.getExpiresAt()).toEqual(data.expiresAt);
-        expect(token.getSentAt()).toEqual(data.sentAt);
-        expect(token.getLastSentAt()).toEqual(data.lastSentAt);
-        expect(token.getResendCount()).toBe(data.resendCount);
-        expect(token.getUsedAt()).toEqual(data.usedAt);
-        expect(token.getUsedBy()).toBe(data.usedBy);
-        expect(token.getViewCount()).toBe(data.viewCount);
-        expect(token.getLastViewedAt()).toEqual(data.lastViewedAt);
-        expect(token.getSignedAt()).toEqual(data.signedAt);
-        expect(token.getSignedBy()).toBe(data.signedBy);
-        expect(token.getRevokedAt()).toBeUndefined();
-        expect(token.getRevokedReason()).toBeUndefined();
-        expect(token.getCreatedBy()).toBe(data.createdBy);
-        expect(token.getIpAddress()).toBe(data.ipAddress);
-        expect(token.getUserAgent()).toBe(data.userAgent);
-        expect(token.getCountry()).toBe(data.country);
-        expect(token.getCreatedAt()).toEqual(data.createdAt);
-        expect(token.getUpdatedAt()).toEqual(data.updatedAt);
-      });
+      expect(token.getId().getValue()).toBe(data.id);
+      expect(token.getEnvelopeId().getValue()).toBe(data.envelopeId);
+      expect(token.getSignerId().getValue()).toBe(data.signerId);
+      expect(token.getTokenHash()).toBe(data.tokenHash);
+      expect(token.getStatus()).toBe(data.status);
+      expect(token.getExpiresAt()).toEqual(data.expiresAt);
+      expect(token.getSentAt()).toEqual(data.sentAt);
+      expect(token.getLastSentAt()).toEqual(data.lastSentAt);
+      expect(token.getResendCount()).toBe(data.resendCount);
+      expect(token.getUsedAt()).toEqual(data.usedAt);
+      expect(token.getUsedBy()).toBe(data.usedBy);
+      expect(token.getViewCount()).toBe(data.viewCount);
+      expect(token.getLastViewedAt()).toEqual(data.lastViewedAt);
+      expect(token.getSignedAt()).toEqual(data.signedAt);
+      expect(token.getSignedBy()).toBe(data.signedBy);
+      expect(token.getRevokedAt()).toBeUndefined();
+      expect(token.getRevokedReason()).toBeUndefined();
+      expect(token.getCreatedBy()).toBe(data.createdBy);
+      expect(token.getIpAddress()).toBe(data.ipAddress);
+      expect(token.getUserAgent()).toBe(data.userAgent);
+      expect(token.getCountry()).toBe(data.country);
+      expect(token.getCreatedAt()).toEqual(data.createdAt);
+      expect(token.getUpdatedAt()).toEqual(data.updatedAt);
+    });
 
-      it('should throw error when handling negative counts', () => {
-        const data = createInvalidTokenData();
-        expect(() => InvitationToken.fromPersistence(data)).toThrow('Invalid value for viewCount: expected non-negative number, got -2');
-      });
+    it('should throw error when handling negative counts', () => {
+      const data = createInvalidTokenData();
+      expect(() => InvitationToken.fromPersistence(data)).toThrow('Invalid value for viewCount: expected non-negative number, got -2');
+    });
 
+    it('should handle invalid date formats', () => {
+      const data = {
+        id: TestUtils.generateUuid(),
+        envelopeId: TestUtils.generateUuid(),
+        signerId: TestUtils.generateUuid(),
+        tokenHash: TestUtils.generateSha256Hash(),
+        status: InvitationTokenStatus.ACTIVE,
+        expiresAt: 'invalid-date',
+        sentAt: 1234567890,
+        lastSentAt: null,
+        resendCount: 0,
+        usedAt: null,
+        usedBy: null,
+        viewCount: 0,
+        lastViewedAt: null,
+        signedAt: null,
+        signedBy: null,
+        revokedAt: null,
+        revokedReason: null,
+        createdBy: null,
+        ipAddress: null,
+        userAgent: null,
+        country: null,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
 
-      it('should handle invalid date formats', () => {
-        const data = {
-          id: TestUtils.generateUuid(),
-          envelopeId: TestUtils.generateUuid(),
-          signerId: TestUtils.generateUuid(),
-          tokenHash: TestUtils.generateSha256Hash(),
-          status: InvitationTokenStatus.ACTIVE,
-          expiresAt: 'invalid-date',
-          sentAt: 1234567890,
-          lastSentAt: null,
-          resendCount: 0,
-          usedAt: null,
-          usedBy: null,
-          viewCount: 0,
-          lastViewedAt: null,
-          signedAt: null,
-          signedBy: null,
-          revokedAt: null,
-          revokedReason: null,
-          createdBy: null,
-          ipAddress: null,
-          userAgent: null,
-          country: null,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        };
+      const token = InvitationToken.fromPersistence(data);
 
-        const token = InvitationToken.fromPersistence(data);
+      expect(token.getExpiresAt()).toBeUndefined();
+      expect(token.getSentAt()).toBeUndefined();
+    });
 
-        expect(token.getExpiresAt()).toBeUndefined();
-        expect(token.getSentAt()).toBeUndefined();
-      });
+    it('should handle valid date formats', () => {
+      const data = {
+        id: TestUtils.generateUuid(),
+        envelopeId: TestUtils.generateUuid(),
+        signerId: TestUtils.generateUuid(),
+        tokenHash: TestUtils.generateSha256Hash(),
+        status: InvitationTokenStatus.ACTIVE,
+        expiresAt: '2024-01-01T12:00:00.000Z',
+        sentAt: new Date('2024-01-01T10:00:00.000Z'),
+        lastSentAt: null,
+        resendCount: 0,
+        usedAt: null,
+        usedBy: null,
+        viewCount: 0,
+        lastViewedAt: null,
+        signedAt: null,
+        signedBy: null,
+        revokedAt: null,
+        revokedReason: null,
+        createdBy: null,
+        ipAddress: null,
+        userAgent: null,
+        country: null,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
 
-      it('should handle valid date formats', () => {
-        const data = {
-          id: TestUtils.generateUuid(),
-          envelopeId: TestUtils.generateUuid(),
-          signerId: TestUtils.generateUuid(),
-          tokenHash: TestUtils.generateSha256Hash(),
-          status: InvitationTokenStatus.ACTIVE,
-          expiresAt: '2024-01-01T12:00:00.000Z',
-          sentAt: new Date('2024-01-01T10:00:00.000Z'),
-          lastSentAt: null,
-          resendCount: 0,
-          usedAt: null,
-          usedBy: null,
-          viewCount: 0,
-          lastViewedAt: null,
-          signedAt: null,
-          signedBy: null,
-          revokedAt: null,
-          revokedReason: null,
-          createdBy: null,
-          ipAddress: null,
-          userAgent: null,
-          country: null,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        };
+      const token = InvitationToken.fromPersistence(data);
 
-        const token = InvitationToken.fromPersistence(data);
-
-        expect(token.getExpiresAt()).toEqual(new Date('2024-01-01T12:00:00.000Z'));
-        expect(token.getSentAt()).toEqual(new Date('2024-01-01T10:00:00.000Z'));
-      });
+      expect(token.getExpiresAt()).toEqual(new Date('2024-01-01T12:00:00.000Z'));
+      expect(token.getSentAt()).toEqual(new Date('2024-01-01T10:00:00.000Z'));
     });
   });
 });

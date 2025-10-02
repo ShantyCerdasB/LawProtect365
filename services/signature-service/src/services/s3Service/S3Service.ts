@@ -490,7 +490,7 @@ export class S3Service {
    * @returns S3 key for document storage
    */
   private generateDocumentKey(envelopeId: EnvelopeId, signerId: SignerId): string {
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const timestamp = new Date().toISOString().replaceAll(/[:.]/g, '-');
     return `envelopes/${envelopeId.getValue()}/signers/${signerId.getValue()}/document-${timestamp}.pdf`;
   }
 
@@ -501,7 +501,7 @@ export class S3Service {
    * @returns S3 key for signed document storage
    */
   private generateSignedDocumentKey(envelopeId: EnvelopeId, signerId: SignerId): string {
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const timestamp = new Date().toISOString().replaceAll(/[:.]/g, '-');
     return `envelopes/${envelopeId.getValue()}/signers/${signerId.getValue()}/signed-document-${timestamp}.pdf`;
   }
 

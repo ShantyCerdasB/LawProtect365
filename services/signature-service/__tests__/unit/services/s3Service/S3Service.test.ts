@@ -8,9 +8,7 @@
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
 import { S3Service } from '../../../../src/services/s3Service/S3Service';
-import { AuditEventService } from '../../../../src/services/audit/AuditEventService';
 import { S3Presigner, S3EvidenceStorage, NotFoundError, BadRequestError } from '@lawprotect/shared-ts';
-import { createS3ServiceMock } from '../../../helpers/mocks/services/S3Service.mock';
 import { createAuditEventServiceMock } from '../../../helpers/mocks/services/AuditEventService.mock';
 import { DocumentType } from '../../../../src/domain/enums';
 
@@ -85,7 +83,7 @@ jest.mock('../../../../src/services/s3Service/S3Service', () => {
       async storeDocument(request: any) {
         try {
           // Mock successful storage
-          const result = await this.s3EvidenceStorage.putObject({
+          await this.s3EvidenceStorage.putObject({
             bucket: this.bucketName,
             key: `envelopes/${request.envelopeId.getValue()}/signers/${request.signerId.getValue()}/document.pdf`,
             body: request.documentContent,
@@ -114,6 +112,8 @@ jest.mock('../../../../src/services/s3Service/S3Service', () => {
             size: request.documentContent.length
           };
         } catch (error) {
+          // Log the error and re-throw to maintain error context
+          console.error('Error storing document:', error);
           throw error;
         }
       }
@@ -143,6 +143,8 @@ jest.mock('../../../../src/services/s3Service/S3Service', () => {
             size: headResult.size
           };
         } catch (error) {
+          // Log the error and re-throw to maintain error context
+          console.error('Error retrieving document:', error);
           throw error;
         }
       }
@@ -179,6 +181,8 @@ jest.mock('../../../../src/services/s3Service/S3Service', () => {
 
           return url;
         } catch (error) {
+          // Log the error and re-throw to maintain error context
+          console.error('Error generating presigned URL:', error);
           throw error;
         }
       }
@@ -241,6 +245,8 @@ jest.mock('../../../../src/services/s3Service/S3Service', () => {
             size: headResult.size
           };
         } catch (error) {
+          // Log the error and re-throw to maintain error context
+          console.error('Error getting document info:', error);
           throw error;
         }
       }
@@ -250,6 +256,8 @@ jest.mock('../../../../src/services/s3Service/S3Service', () => {
           const result = await this.s3EvidenceStorage.getObject(this.bucketName, s3Key);
           return result.body;
         } catch (error) {
+          // Log the error and re-throw to maintain error context
+          console.error('Error getting document content:', error);
           throw error;
         }
       }
@@ -274,13 +282,15 @@ jest.mock('../../../../src/services/s3Service/S3Service', () => {
             }
           });
         } catch (error) {
+          // Log the error and re-throw to maintain error context
+          console.error('Error recording download action:', error);
           throw error;
         }
       }
 
       async storeSignedDocument(request: any) {
         try {
-          const result = await this.s3EvidenceStorage.putObject({
+          await this.s3EvidenceStorage.putObject({
             bucket: this.bucketName,
             key: `envelopes/${request.envelopeId.getValue()}/signers/${request.signerId.getValue()}/signed-document.pdf`,
             body: request.signedDocumentContent,
@@ -309,6 +319,8 @@ jest.mock('../../../../src/services/s3Service/S3Service', () => {
             size: request.signedDocumentContent.length
           };
         } catch (error) {
+          // Log the error and re-throw to maintain error context
+          console.error('Error storing signed document:', error);
           throw error;
         }
       }

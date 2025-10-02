@@ -5,8 +5,14 @@
  */
 
 import { SigningAlgorithm } from '../../../../src/domain/value-objects/SigningAlgorithm';
-import { SigningAlgorithm as SigningAlgorithmEnum, SecurityLevel, ComplianceLevel } from '@lawprotect/shared-ts';
-import { BadRequestError } from '@lawprotect/shared-ts';
+import { 
+  SigningAlgorithm as SigningAlgorithmEnum, 
+  SecurityLevel, 
+  ComplianceLevel, 
+  BadRequestError,
+  validateAlgorithmSecurityLevel,
+  validateAlgorithmCompliance
+} from '@lawprotect/shared-ts';
 
 // Mock the validation functions
 jest.mock('@lawprotect/shared-ts', () => ({
@@ -14,8 +20,6 @@ jest.mock('@lawprotect/shared-ts', () => ({
   validateAlgorithmSecurityLevel: jest.fn(),
   validateAlgorithmCompliance: jest.fn(),
 }));
-
-import { validateAlgorithmSecurityLevel, validateAlgorithmCompliance } from '@lawprotect/shared-ts';
 
 const mockValidateAlgorithmSecurityLevel = validateAlgorithmSecurityLevel as jest.MockedFunction<typeof validateAlgorithmSecurityLevel>;
 const mockValidateAlgorithmCompliance = validateAlgorithmCompliance as jest.MockedFunction<typeof validateAlgorithmCompliance>;
@@ -35,13 +39,15 @@ describe('SigningAlgorithm', () => {
 
     it('should throw BadRequestError for empty algorithm', () => {
       expect(() => {
-        new SigningAlgorithm('' as any);
+        const algorithm = new SigningAlgorithm('' as any);
+        algorithm.getValue(); // Use the object to avoid "useless instantiation" warning
       }).toThrow(BadRequestError);
     });
 
     it('should throw BadRequestError for null algorithm', () => {
       expect(() => {
-        new SigningAlgorithm(null as any);
+        const algorithm = new SigningAlgorithm(null as any);
+        algorithm.getValue(); // Use the object to avoid "useless instantiation" warning
       }).toThrow(BadRequestError);
     });
 
@@ -50,7 +56,8 @@ describe('SigningAlgorithm', () => {
       const algorithm = SigningAlgorithmEnum.SHA384_RSA;
       
       expect(() => {
-        new SigningAlgorithm(algorithm, allowedAlgorithms);
+        const signingAlgorithm = new SigningAlgorithm(algorithm, allowedAlgorithms);
+        signingAlgorithm.getValue(); // Use the object to avoid "useless instantiation" warning
       }).toThrow(BadRequestError);
     });
 
@@ -59,7 +66,8 @@ describe('SigningAlgorithm', () => {
       const algorithm = SigningAlgorithmEnum.SHA256_RSA;
       
       expect(() => {
-        new SigningAlgorithm(algorithm, allowedAlgorithms);
+        const signingAlgorithm = new SigningAlgorithm(algorithm, allowedAlgorithms);
+        signingAlgorithm.getValue(); // Use the object to avoid "useless instantiation" warning
       }).not.toThrow();
     });
 
@@ -69,7 +77,8 @@ describe('SigningAlgorithm', () => {
       
       mockValidateAlgorithmSecurityLevel.mockImplementation(() => {});
       
-      new SigningAlgorithm(algorithm, [], securityLevel);
+      const signingAlgorithm = new SigningAlgorithm(algorithm, [], securityLevel);
+      signingAlgorithm.getValue(); // Use the object to avoid "useless instantiation" warning
       
       expect(mockValidateAlgorithmSecurityLevel).toHaveBeenCalledWith(algorithm, securityLevel);
     });
@@ -83,7 +92,8 @@ describe('SigningAlgorithm', () => {
       });
       
       expect(() => {
-        new SigningAlgorithm(algorithm, [], securityLevel);
+        const signingAlgorithm = new SigningAlgorithm(algorithm, [], securityLevel);
+        signingAlgorithm.getValue(); // Use the object to avoid "useless instantiation" warning
       }).toThrow(BadRequestError);
     });
 
@@ -93,7 +103,8 @@ describe('SigningAlgorithm', () => {
       
       mockValidateAlgorithmCompliance.mockImplementation(() => {});
       
-      new SigningAlgorithm(algorithm, [], undefined, complianceLevel);
+      const signingAlgorithm = new SigningAlgorithm(algorithm, [], undefined, complianceLevel);
+      signingAlgorithm.getValue(); // Use the object to avoid "useless instantiation" warning
       
       expect(mockValidateAlgorithmCompliance).toHaveBeenCalledWith(algorithm, complianceLevel);
     });
@@ -107,7 +118,8 @@ describe('SigningAlgorithm', () => {
       });
       
       expect(() => {
-        new SigningAlgorithm(algorithm, [], undefined, complianceLevel);
+        const signingAlgorithm = new SigningAlgorithm(algorithm, [], undefined, complianceLevel);
+        signingAlgorithm.getValue(); // Use the object to avoid "useless instantiation" warning
       }).toThrow(BadRequestError);
     });
   });
@@ -194,9 +206,9 @@ describe('SigningAlgorithm', () => {
         SigningAlgorithm.sha512Rsa()
       ];
       
-      rsaAlgorithms.forEach(algorithm => {
+      for (const algorithm of rsaAlgorithms) {
         expect(algorithm.isRsa()).toBe(true);
-      });
+      }
     });
 
     it('should return false for ECDSA algorithms', () => {
@@ -205,9 +217,9 @@ describe('SigningAlgorithm', () => {
         SigningAlgorithm.ecdsaP384()
       ];
       
-      ecdsaAlgorithms.forEach(algorithm => {
+      for (const algorithm of ecdsaAlgorithms) {
         expect(algorithm.isRsa()).toBe(false);
-      });
+      }
     });
   });
 
@@ -218,9 +230,9 @@ describe('SigningAlgorithm', () => {
         SigningAlgorithm.ecdsaP384()
       ];
       
-      ecdsaAlgorithms.forEach(algorithm => {
+      for (const algorithm of ecdsaAlgorithms) {
         expect(algorithm.isEcdsa()).toBe(true);
-      });
+      }
     });
 
     it('should return false for RSA algorithms', () => {
@@ -230,9 +242,9 @@ describe('SigningAlgorithm', () => {
         SigningAlgorithm.sha512Rsa()
       ];
       
-      rsaAlgorithms.forEach(algorithm => {
+      for (const algorithm of rsaAlgorithms) {
         expect(algorithm.isEcdsa()).toBe(false);
-      });
+      }
     });
   });
 
@@ -257,9 +269,9 @@ describe('SigningAlgorithm', () => {
         SigningAlgorithm.sha512Rsa()
       ];
       
-      rsaAlgorithms.forEach(algorithm => {
+      for (const algorithm of rsaAlgorithms) {
         expect(algorithm.getKeyAlgorithm()).toBe('RSA');
-      });
+      }
     });
 
     it('should return ECDSA for ECDSA algorithms', () => {
@@ -268,9 +280,9 @@ describe('SigningAlgorithm', () => {
         SigningAlgorithm.ecdsaP384()
       ];
       
-      ecdsaAlgorithms.forEach(algorithm => {
+      for (const algorithm of ecdsaAlgorithms) {
         expect(algorithm.getKeyAlgorithm()).toBe('ECDSA');
-      });
+      }
     });
   });
 

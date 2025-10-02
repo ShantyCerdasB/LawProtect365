@@ -11,16 +11,67 @@ import { ConsentRepository } from '../../../../src/repositories/ConsentRepositor
 import { EnvelopeSignerRepository } from '../../../../src/repositories/EnvelopeSignerRepository';
 import { AuditEventService } from '../../../../src/services/audit/AuditEventService';
 import { Consent } from '../../../../src/domain/entities/Consent';
-import { ConsentId } from '../../../../src/domain/value-objects/ConsentId';
-import { SignerId } from '../../../../src/domain/value-objects/SignerId';
-import { EnvelopeId } from '../../../../src/domain/value-objects/EnvelopeId';
 import { CreateConsentRequest } from '../../../../src/domain/types/consent/CreateConsentRequest';
-import { AuditEventType } from '../../../../src/domain/enums/AuditEventType';
 
 // Mock the dependencies
 jest.mock('../../../../src/repositories/ConsentRepository');
 jest.mock('../../../../src/repositories/EnvelopeSignerRepository');
 jest.mock('../../../../src/services/audit/AuditEventService');
+
+// Helper functions to reduce nesting and improve readability
+function createTestConsentRequest(): CreateConsentRequest {
+  return {
+    id: { getValue: () => 'test-consent-id' } as any,
+    envelopeId: { getValue: () => 'test-envelope-id' } as any,
+    signerId: { getValue: () => 'test-signer-id' } as any,
+    signatureId: { getValue: () => 'test-signature-id' } as any,
+    consentGiven: true,
+    consentTimestamp: new Date('2024-01-01'),
+    consentText: 'I consent to sign this document',
+    ipAddress: generateTestIpAddress(),
+    userAgent: 'TestAgent/1.0',
+    country: 'US',
+    userEmail: 'test@example.com'
+  };
+}
+
+function createMockConsent() {
+  return {
+    getId: jest.fn(() => ({ getValue: () => 'test-consent-id' })),
+    getEnvelopeId: jest.fn(() => ({ getValue: () => 'test-envelope-id' })),
+    getSignerId: jest.fn(() => ({ getValue: () => 'test-signer-id' })),
+    getConsentGiven: jest.fn(() => true),
+    getConsentText: jest.fn(() => 'I consent to sign this document'),
+    getCountry: jest.fn(() => 'US'),
+    validateForCompliance: jest.fn()
+  };
+}
+
+function createMockSigner() {
+  return {
+    getFullName: jest.fn(() => 'Test User'),
+    getEmail: jest.fn(() => ({ getValue: () => 'test@example.com' }))
+  };
+}
+
+function createMockConsentWithLink() {
+  return {
+    getId: jest.fn(() => ({ getValue: () => 'test-consent-id' })),
+    getEnvelopeId: jest.fn(() => ({ getValue: () => 'test-envelope-id' })),
+    getSignerId: jest.fn(() => ({ getValue: () => 'test-signer-id' })),
+    linkWithSignature: jest.fn(() => ({
+      getId: jest.fn(() => ({ getValue: () => 'test-consent-id' })),
+      getSignatureId: jest.fn(() => ({ getValue: () => 'test-signature-id' }))
+    }))
+  };
+}
+
+function createMockUpdatedConsent() {
+  return {
+    getId: jest.fn(() => ({ getValue: () => 'test-consent-id' })),
+    getSignatureId: jest.fn(() => ({ getValue: () => 'test-signature-id' }))
+  };
+}
 
 // Mock the Consent entity
 jest.mock('../../../../src/domain/entities/Consent', () => ({
@@ -37,9 +88,6 @@ jest.mock('../../../../src/domain/entities/Consent', () => ({
   }
 }));
 jest.mock('../../../../src/domain/entities/Consent');
-jest.mock('../../../../src/domain/value-objects/ConsentId');
-jest.mock('../../../../src/domain/value-objects/SignerId');
-jest.mock('../../../../src/domain/value-objects/EnvelopeId');
 
 describe('ConsentService', () => {
   let service: ConsentService;
@@ -70,37 +118,13 @@ describe('ConsentService', () => {
     );
   });
 
-  describe('createConsent', () => {
+  describe('Create Consent - Success Cases', () => {
     it('should create consent successfully', async () => {
-      const request: CreateConsentRequest = {
-        id: { getValue: () => 'test-consent-id' } as any,
-        envelopeId: { getValue: () => 'test-envelope-id' } as any,
-        signerId: { getValue: () => 'test-signer-id' } as any,
-        signatureId: { getValue: () => 'test-signature-id' } as any,
-        consentGiven: true,
-        consentTimestamp: new Date('2024-01-01'),
-        consentText: 'I consent to sign this document',
-        ipAddress: generateTestIpAddress(),
-        userAgent: 'TestAgent/1.0',
-        country: 'US',
-        userEmail: 'test@example.com'
-      };
+      const request = createTestConsentRequest();
       const userId = 'test-user-id';
 
-      const mockConsent = {
-        getId: jest.fn(() => ({ getValue: () => 'test-consent-id' })),
-        getEnvelopeId: jest.fn(() => ({ getValue: () => 'test-envelope-id' })),
-        getSignerId: jest.fn(() => ({ getValue: () => 'test-signer-id' })),
-        getConsentGiven: jest.fn(() => true),
-        getConsentText: jest.fn(() => 'I consent to sign this document'),
-        getCountry: jest.fn(() => 'US'),
-        validateForCompliance: jest.fn()
-      };
-
-      const mockSigner = {
-        getFullName: jest.fn(() => 'Test User'),
-        getEmail: jest.fn(() => ({ getValue: () => 'test@example.com' }))
-      };
+      const mockConsent = createMockConsent();
+      const mockSigner = createMockSigner();
 
       mockConsentRepository.findBySignerAndEnvelope.mockResolvedValue(null);
       mockConsentRepository.create.mockResolvedValue(mockConsent as any);
@@ -113,21 +137,11 @@ describe('ConsentService', () => {
       expect(mockConsentRepository.create).toHaveBeenCalled();
       expect(mockAuditEventService.createSignerEvent).toHaveBeenCalled();
     });
+  });
 
+  describe('Create Consent - Error Cases', () => {
     it('should handle consent already exists', async () => {
-      const request: CreateConsentRequest = {
-        id: { getValue: () => 'test-consent-id' } as any,
-        envelopeId: { getValue: () => 'test-envelope-id' } as any,
-        signerId: { getValue: () => 'test-signer-id' } as any,
-        signatureId: { getValue: () => 'test-signature-id' } as any,
-        consentGiven: true,
-        consentTimestamp: new Date('2024-01-01'),
-        consentText: 'I consent to sign this document',
-        ipAddress: generateTestIpAddress(),
-        userAgent: 'TestAgent/1.0',
-        country: 'US',
-        userEmail: 'test@example.com'
-      };
+      const request = createTestConsentRequest();
       const userId = 'test-user-id';
 
       const existingConsent = {
@@ -140,19 +154,7 @@ describe('ConsentService', () => {
     });
 
     it('should handle creation errors', async () => {
-      const request: CreateConsentRequest = {
-        id: { getValue: () => 'test-consent-id' } as any,
-        envelopeId: { getValue: () => 'test-envelope-id' } as any,
-        signerId: { getValue: () => 'test-signer-id' } as any,
-        signatureId: { getValue: () => 'test-signature-id' } as any,
-        consentGiven: true,
-        consentTimestamp: new Date('2024-01-01'),
-        consentText: 'I consent to sign this document',
-        ipAddress: generateTestIpAddress(),
-        userAgent: 'TestAgent/1.0',
-        country: 'US',
-        userEmail: 'test@example.com'
-      };
+      const request = createTestConsentRequest();
       const userId = 'test-user-id';
 
       mockConsentRepository.findBySignerAndEnvelope.mockResolvedValue(null);
@@ -162,19 +164,7 @@ describe('ConsentService', () => {
     });
 
     it('should handle error in consent creation and wrap it', async () => {
-      const request: CreateConsentRequest = {
-        id: { getValue: () => 'test-consent-id' } as any,
-        envelopeId: { getValue: () => 'test-envelope-id' } as any,
-        signerId: { getValue: () => 'test-signer-id' } as any,
-        signatureId: { getValue: () => 'test-signature-id' } as any,
-        consentGiven: true,
-        consentTimestamp: new Date('2024-01-01'),
-        consentText: 'I consent to sign this document',
-        ipAddress: generateTestIpAddress(),
-        userAgent: 'TestAgent/1.0',
-        country: 'US',
-        userEmail: 'test@example.com'
-      };
+      const request = createTestConsentRequest();
       const userId = 'test-user-id';
 
       mockConsentRepository.findBySignerAndEnvelope.mockResolvedValue(null);
@@ -184,25 +174,13 @@ describe('ConsentService', () => {
     });
   });
 
-  describe('linkConsentWithSignature', () => {
+  describe('Link Consent with Signature - Success Cases', () => {
     it('should link consent with signature successfully', async () => {
       const consentId = { getValue: () => 'test-consent-id' } as any;
       const signatureId = { getValue: () => 'test-signature-id' } as any;
 
-      const mockConsent = {
-        getId: jest.fn(() => ({ getValue: () => 'test-consent-id' })),
-        getEnvelopeId: jest.fn(() => ({ getValue: () => 'test-envelope-id' })),
-        getSignerId: jest.fn(() => ({ getValue: () => 'test-signer-id' })),
-        linkWithSignature: jest.fn(() => ({
-          getId: jest.fn(() => ({ getValue: () => 'test-consent-id' })),
-          getSignatureId: jest.fn(() => ({ getValue: () => 'test-signature-id' }))
-        }))
-      };
-
-      const updatedConsent = {
-        getId: jest.fn(() => ({ getValue: () => 'test-consent-id' })),
-        getSignatureId: jest.fn(() => ({ getValue: () => 'test-signature-id' }))
-      };
+      const mockConsent = createMockConsentWithLink();
+      const updatedConsent = createMockUpdatedConsent();
 
       mockConsentRepository.findById.mockResolvedValue(mockConsent as any);
       mockConsentRepository.update.mockResolvedValue(updatedConsent as any);
@@ -214,7 +192,9 @@ describe('ConsentService', () => {
       expect(mockConsent.linkWithSignature).toHaveBeenCalledWith(signatureId);
       expect(mockConsentRepository.update).toHaveBeenCalledWith(consentId, expect.any(Object));
     });
+  });
 
+  describe('Link Consent with Signature - Error Cases', () => {
     it('should handle consent not found', async () => {
       const consentId = { getValue: () => 'non-existent-consent' } as any;
       const signatureId = { getValue: () => 'test-signature-id' } as any;

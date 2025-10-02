@@ -732,7 +732,7 @@ describe('InvitationTokenRepository - Internal Methods', () => {
 
     it('should use notExpired when includeExpired is NaN', () => {
       const spec = {
-        includeExpired: NaN,
+        includeExpired: Number.NaN,
         isActive: true
       };
       

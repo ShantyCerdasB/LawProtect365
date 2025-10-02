@@ -19,4 +19,4 @@ export const NormalizedEmail = z.preprocess(
 /** Collapses inner whitespace to single spaces and trims ends. */
 export const CollapsedWhitespace = z
   .string()
-  .transform((s) => s.replace(/\s+/g, " ").trim());
+  .transform((s) => s.replaceAll(/\s+/g, " ").trim());

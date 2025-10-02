@@ -8,19 +8,30 @@
 import { EnvelopeAccessService } from '@/services/envelopeAccess/EnvelopeAccessService';
 import { SignatureEnvelopeRepository } from '@/repositories/SignatureEnvelopeRepository';
 import { InvitationTokenService } from '@/services/invitationTokenService/InvitationTokenService';
-import { SignatureEnvelope } from '@/domain/entities/SignatureEnvelope';
-import { EnvelopeId } from '@/domain/value-objects/EnvelopeId';
 
 // Mock the dependencies
 jest.mock('@/repositories/SignatureEnvelopeRepository');
 jest.mock('@/services/invitationTokenService/InvitationTokenService');
-jest.mock('@/domain/entities/SignatureEnvelope');
-jest.mock('@/domain/value-objects/EnvelopeId');
 
 describe('EnvelopeAccessService', () => {
   let service: EnvelopeAccessService;
   let mockSignatureEnvelopeRepository: jest.Mocked<SignatureEnvelopeRepository>;
   let mockInvitationTokenService: jest.Mocked<InvitationTokenService>;
+
+  // Helper functions to reduce nesting
+  const createMockEnvelope = (id: string = 'test-envelope-id', createdBy: string = 'test-user-id') => ({
+    getId: jest.fn(() => ({ getValue: () => id })),
+    getTitle: jest.fn(() => 'Test Envelope'),
+    getCreatedBy: jest.fn(() => createdBy)
+  });
+
+  const createMockEnvelopeId = (id: string = 'test-envelope-id') => ({
+    getValue: () => id
+  });
+
+  const createMockToken = (envelopeId: string = 'test-envelope-id') => ({
+    getEnvelopeId: jest.fn(() => ({ getValue: () => envelopeId }))
+  });
 
   beforeEach(() => {
     mockSignatureEnvelopeRepository = {
@@ -37,16 +48,11 @@ describe('EnvelopeAccessService', () => {
     );
   });
 
-  describe('validateEnvelopeAccess', () => {
+  describe('Validate Envelope Access - Success Cases', () => {
     it('should validate authenticated user access successfully', async () => {
-      const envelopeId = { getValue: () => 'test-envelope-id' } as any;
+      const envelopeId = createMockEnvelopeId();
       const userId = 'test-user-id';
-
-      const mockEnvelope = {
-        getId: jest.fn(() => ({ getValue: () => 'test-envelope-id' })),
-        getTitle: jest.fn(() => 'Test Envelope'),
-        getCreatedBy: jest.fn(() => 'test-user-id')
-      };
+      const mockEnvelope = createMockEnvelope();
 
       mockSignatureEnvelopeRepository.findById.mockResolvedValue(mockEnvelope as any);
 
@@ -56,8 +62,11 @@ describe('EnvelopeAccessService', () => {
       expect(mockSignatureEnvelopeRepository.findById).toHaveBeenCalledWith(envelopeId);
     });
 
+  });
+
+  describe('Validate Envelope Access - Error Cases', () => {
     it('should handle envelope not found', async () => {
-      const envelopeId = { getValue: () => 'non-existent-envelope' } as any;
+      const envelopeId = createMockEnvelopeId('non-existent-envelope');
       const userId = 'test-user-id';
 
       mockSignatureEnvelopeRepository.findById.mockResolvedValue(null);
@@ -67,14 +76,9 @@ describe('EnvelopeAccessService', () => {
     });
 
     it('should handle access denied for different user', async () => {
-      const envelopeId = { getValue: () => 'test-envelope-id' } as any;
+      const envelopeId = createMockEnvelopeId();
       const userId = 'different-user-id';
-
-      const mockEnvelope = {
-        getId: jest.fn(() => ({ getValue: () => 'test-envelope-id' })),
-        getTitle: jest.fn(() => 'Test Envelope'),
-        getCreatedBy: jest.fn(() => 'test-user-id')
-      };
+      const mockEnvelope = createMockEnvelope();
 
       mockSignatureEnvelopeRepository.findById.mockResolvedValue(mockEnvelope as any);
 
@@ -83,7 +87,7 @@ describe('EnvelopeAccessService', () => {
     });
 
     it('should handle repository errors', async () => {
-      const envelopeId = { getValue: () => 'test-envelope-id' } as any;
+      const envelopeId = createMockEnvelopeId();
       const userId = 'test-user-id';
 
       mockSignatureEnvelopeRepository.findById.mockRejectedValue(new Error('Database error'));
@@ -93,20 +97,12 @@ describe('EnvelopeAccessService', () => {
     });
   });
 
-  describe('validateExternalUserAccess', () => {
+  describe('Validate External User Access - Success Cases', () => {
     it('should validate external user access successfully', async () => {
-      const envelopeId = { getValue: () => 'test-envelope-id' } as any;
+      const envelopeId = createMockEnvelopeId();
       const invitationToken = 'test-token';
-
-      const mockToken = {
-        getEnvelopeId: jest.fn(() => ({ getValue: () => 'test-envelope-id' }))
-      };
-
-      const mockEnvelope = {
-        getId: jest.fn(() => ({ getValue: () => 'test-envelope-id' })),
-        getTitle: jest.fn(() => 'Test Envelope'),
-        getCreatedBy: jest.fn(() => 'test-user-id')
-      };
+      const mockToken = createMockToken();
+      const mockEnvelope = createMockEnvelope();
 
       mockInvitationTokenService.validateInvitationToken.mockResolvedValue(mockToken as any);
       mockSignatureEnvelopeRepository.findById.mockResolvedValue(mockEnvelope as any);
@@ -117,14 +113,13 @@ describe('EnvelopeAccessService', () => {
       expect(mockInvitationTokenService.validateInvitationToken).toHaveBeenCalledWith(invitationToken);
       expect(mockSignatureEnvelopeRepository.findById).toHaveBeenCalledWith(envelopeId);
     });
+  });
 
+  describe('Validate External User Access - Error Cases', () => {
     it('should handle invalid invitation token for different envelope', async () => {
-      const envelopeId = { getValue: () => 'test-envelope-id' } as any;
+      const envelopeId = createMockEnvelopeId();
       const invitationToken = 'test-token';
-
-      const mockToken = {
-        getEnvelopeId: jest.fn(() => ({ getValue: () => 'different-envelope-id' }))
-      };
+      const mockToken = createMockToken('different-envelope-id');
 
       mockInvitationTokenService.validateInvitationToken.mockResolvedValue(mockToken as any);
 
@@ -133,12 +128,9 @@ describe('EnvelopeAccessService', () => {
     });
 
     it('should handle envelope not found for external user', async () => {
-      const envelopeId = { getValue: () => 'test-envelope-id' } as any;
+      const envelopeId = createMockEnvelopeId();
       const invitationToken = 'test-token';
-
-      const mockToken = {
-        getEnvelopeId: jest.fn(() => ({ getValue: () => 'test-envelope-id' }))
-      };
+      const mockToken = createMockToken();
 
       mockInvitationTokenService.validateInvitationToken.mockResolvedValue(mockToken as any);
       mockSignatureEnvelopeRepository.findById.mockResolvedValue(null);
@@ -148,7 +140,7 @@ describe('EnvelopeAccessService', () => {
     });
 
     it('should handle invitation token validation errors', async () => {
-      const envelopeId = { getValue: () => 'test-envelope-id' } as any;
+      const envelopeId = createMockEnvelopeId();
       const invitationToken = 'invalid-token';
 
       mockInvitationTokenService.validateInvitationToken.mockRejectedValue(new Error('Invalid token'));
@@ -158,16 +150,11 @@ describe('EnvelopeAccessService', () => {
     });
   });
 
-  describe('validateUserAccess', () => {
+  describe('Validate User Access - Success Cases', () => {
     it('should validate authenticated user access', async () => {
-      const envelopeId = { getValue: () => 'test-envelope-id' } as any;
+      const envelopeId = createMockEnvelopeId();
       const userId = 'test-user-id';
-
-      const mockEnvelope = {
-        getId: jest.fn(() => ({ getValue: () => 'test-envelope-id' })),
-        getTitle: jest.fn(() => 'Test Envelope'),
-        getCreatedBy: jest.fn(() => 'test-user-id')
-      };
+      const mockEnvelope = createMockEnvelope();
 
       mockSignatureEnvelopeRepository.findById.mockResolvedValue(mockEnvelope as any);
 
@@ -177,18 +164,10 @@ describe('EnvelopeAccessService', () => {
     });
 
     it('should validate external user access with invitation token', async () => {
-      const envelopeId = { getValue: () => 'test-envelope-id' } as any;
+      const envelopeId = createMockEnvelopeId();
       const invitationToken = 'test-token';
-
-      const mockToken = {
-        getEnvelopeId: jest.fn(() => ({ getValue: () => 'test-envelope-id' }))
-      };
-
-      const mockEnvelope = {
-        getId: jest.fn(() => ({ getValue: () => 'test-envelope-id' })),
-        getTitle: jest.fn(() => 'Test Envelope'),
-        getCreatedBy: jest.fn(() => 'test-user-id')
-      };
+      const mockToken = createMockToken();
+      const mockEnvelope = createMockEnvelope();
 
       mockInvitationTokenService.validateInvitationToken.mockResolvedValue(mockToken as any);
       mockSignatureEnvelopeRepository.findById.mockResolvedValue(mockEnvelope as any);
@@ -198,28 +177,22 @@ describe('EnvelopeAccessService', () => {
       expect(result).toBe(mockEnvelope);
     });
 
+  });
+
+  describe('Validate User Access - Error Cases', () => {
     it('should throw error when neither userId nor invitationToken provided', async () => {
-      const envelopeId = { getValue: () => 'test-envelope-id' } as any;
+      const envelopeId = createMockEnvelopeId();
 
       await expect(service.validateUserAccess(envelopeId))
         .rejects.toThrow();
     });
 
-    it('should throw error when both userId and invitationToken provided', async () => {
-      const envelopeId = { getValue: () => 'test-envelope-id' } as any;
+    it('should prioritize invitationToken when both userId and invitationToken provided', async () => {
+      const envelopeId = createMockEnvelopeId();
       const userId = 'test-user-id';
       const invitationToken = 'test-token';
-
-      // This should prioritize invitationToken (external user access)
-      const mockToken = {
-        getEnvelopeId: jest.fn(() => ({ getValue: () => 'test-envelope-id' }))
-      };
-
-      const mockEnvelope = {
-        getId: jest.fn(() => ({ getValue: () => 'test-envelope-id' })),
-        getTitle: jest.fn(() => 'Test Envelope'),
-        getCreatedBy: jest.fn(() => 'test-user-id')
-      };
+      const mockToken = createMockToken();
+      const mockEnvelope = createMockEnvelope();
 
       mockInvitationTokenService.validateInvitationToken.mockResolvedValue(mockToken as any);
       mockSignatureEnvelopeRepository.findById.mockResolvedValue(mockEnvelope as any);

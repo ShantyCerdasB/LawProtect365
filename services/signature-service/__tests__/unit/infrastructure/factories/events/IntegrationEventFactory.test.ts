@@ -73,7 +73,7 @@ describe('IntegrationEventFactory', () => {
     expect(typeof factory.reminderNotification).toBe('function');
   });
 
-  describe('method signatures', () => {
+  describe('Method Signatures', () => {
     it('should have envelopeInvitation method with correct signature', () => {
       expect(factory.envelopeInvitation).toBeDefined();
       expect(typeof factory.envelopeInvitation).toBe('function');
@@ -105,7 +105,7 @@ describe('IntegrationEventFactory', () => {
     });
   });
 
-  describe('event creation with mocks', () => {
+  describe('Event Creation with Mocks', () => {
     it('should create envelope invitation event with proper structure', () => {
       const mockEnvelope = createMockEnvelope();
       const mockSigner = createMockSigner();

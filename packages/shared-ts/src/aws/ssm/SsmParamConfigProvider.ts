@@ -174,7 +174,7 @@ export class SsmParamConfigProvider implements SsmPort {
   /** Builds an environment variable key from the SSM name if fallback prefix is configured. */
   private readEnvFallback(name: string): string | undefined {
     if (!this.envPrefix) return undefined;
-    const normalized = name.replaceAll("/", "_").replace(/__+/g, "_").toUpperCase();
+    const normalized = name.replaceAll("/", "_").replaceAll(/__+/g, "_").toUpperCase();
     const key = `${this.envPrefix}_${normalized}`;
     return getEnv(key);
   }

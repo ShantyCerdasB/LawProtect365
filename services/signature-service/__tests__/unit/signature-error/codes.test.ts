@@ -27,9 +27,9 @@ describe('SignatureErrorCodes', () => {
         key.startsWith('ENVELOPE_')
       );
       expect(envelopeCodes).toHaveLength(16);
-      envelopeCodes.forEach(code => {
+      for (const code of envelopeCodes) {
         expect(code).toMatch(/^ENVELOPE_[A-Z_]+$/);
-      });
+      }
     });
   });
 
@@ -49,9 +49,9 @@ describe('SignatureErrorCodes', () => {
         key.startsWith('SIGNER_')
       );
       expect(signerCodes).toHaveLength(12);
-      signerCodes.forEach(code => {
+      for (const code of signerCodes) {
         expect(code).toMatch(/^SIGNER_[A-Z_]+$/);
-      });
+      }
     });
   });
 
@@ -68,9 +68,9 @@ describe('SignatureErrorCodes', () => {
         key.startsWith('SIGNATURE_')
       );
       expect(signatureCodes).toHaveLength(5);
-      signatureCodes.forEach(code => {
+      for (const code of signatureCodes) {
         expect(code).toMatch(/^SIGNATURE_[A-Z_]+$/);
-      });
+      }
     });
   });
 
@@ -87,9 +87,9 @@ describe('SignatureErrorCodes', () => {
         key.startsWith('KMS_')
       );
       expect(kmsCodes).toHaveLength(4);
-      kmsCodes.forEach(code => {
+      for (const code of kmsCodes) {
         expect(code).toMatch(/^KMS_[A-Z_]+$/);
-      });
+      }
     });
   });
 
@@ -115,9 +115,9 @@ describe('SignatureErrorCodes', () => {
         key.startsWith('CONSENT_')
       );
       expect(consentCodes).toHaveLength(10);
-      consentCodes.forEach(code => {
+      for (const code of consentCodes) {
         expect(code).toMatch(/^CONSENT_[A-Z_]+$/);
-      });
+      }
     });
   });
 
@@ -134,9 +134,9 @@ describe('SignatureErrorCodes', () => {
         key.startsWith('DOCUMENT_')
       );
       expect(documentCodes).toHaveLength(5);
-      documentCodes.forEach(code => {
+      for (const code of documentCodes) {
         expect(code).toMatch(/^DOCUMENT_[A-Z0-9_]+$/);
-      });
+      }
     });
   });
 
@@ -151,9 +151,9 @@ describe('SignatureErrorCodes', () => {
         key.startsWith('AUDIT_')
       );
       expect(auditCodes).toHaveLength(5);
-      auditCodes.forEach(code => {
+      for (const code of auditCodes) {
         expect(code).toMatch(/^AUDIT_[A-Z_]+$/);
-      });
+      }
     });
   });
 
@@ -170,9 +170,9 @@ describe('SignatureErrorCodes', () => {
         key.startsWith('RATE_LIMIT_')
       );
       expect(rateLimitCodes).toHaveLength(4);
-      rateLimitCodes.forEach(code => {
+      for (const code of rateLimitCodes) {
         expect(code).toMatch(/^RATE_LIMIT_[A-Z_]+$/);
-      });
+      }
     });
   });
 
@@ -220,10 +220,10 @@ describe('SignatureErrorCodes', () => {
     });
 
     it('should have all string values', () => {
-      Object.values(SignatureErrorCodes).forEach(value => {
+      for (const value of Object.values(SignatureErrorCodes)) {
         expect(typeof value).toBe('string');
         expect(value.length).toBeGreaterThan(0);
-      });
+      }
     });
 
     it('should have unique values', () => {
@@ -233,10 +233,10 @@ describe('SignatureErrorCodes', () => {
     });
 
     it('should have consistent UPPER_SNAKE_CASE naming', () => {
-      Object.keys(SignatureErrorCodes).forEach(key => {
+      for (const key of Object.keys(SignatureErrorCodes)) {
         expect(key).toMatch(/^[A-Z][A-Z0-9_]*$/);
         expect(key).not.toMatch(/[a-z]/);
-      });
+      }
     });
   });
 
@@ -303,9 +303,9 @@ describe('Type Definitions', () => {
         'WORKFLOW_VIOLATION'
       ];
 
-      validCodes.forEach(code => {
+      for (const code of validCodes) {
         expect(SignatureErrorCodes[code]).toBeDefined();
-      });
+      }
     });
   });
 
@@ -339,9 +339,9 @@ describe('Integration with Shared Error Codes', () => {
       'KMS_KEY_NOT_FOUND'
     ];
 
-    signatureSpecificCodes.forEach(code => {
+    for (const code of signatureSpecificCodes) {
       expect(SignatureErrorCodes[code as keyof typeof SignatureErrorCodes]).toBeDefined();
-    });
+    }
   });
 });
 
@@ -356,9 +356,9 @@ describe('Error Code Stability', () => {
       CONSENT_REQUIRED: 'CONSENT_REQUIRED'
     };
 
-    Object.entries(stableCodes).forEach(([key, expectedValue]) => {
+    for (const [key, expectedValue] of Object.entries(stableCodes)) {
       expect(SignatureErrorCodes[key as keyof typeof SignatureErrorCodes]).toBe(expectedValue);
-    });
+    }
   });
 
   it('should have descriptive error code names', () => {
@@ -371,9 +371,9 @@ describe('Error Code Stability', () => {
       'CONSENT_TIMESTAMP_REQUIRED'
     ];
 
-    descriptiveCodes.forEach(code => {
+    for (const code of descriptiveCodes) {
       expect(SignatureErrorCodes[code as keyof typeof SignatureErrorCodes]).toBe(code);
       expect(code).toMatch(/^[A-Z][A-Z0-9_]*$/);
-    });
+    }
   });
 });

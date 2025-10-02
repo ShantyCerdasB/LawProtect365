@@ -7,10 +7,18 @@
  */
 
 import { PrismaClient, Prisma } from '@prisma/client';
-import { RepositoryBase, Page, decodeCursor, listPage, EntityMapper, WhereBuilder  } from '@lawprotect/shared-ts';
+import { 
+  RepositoryBase, 
+  Page, 
+  decodeCursor, 
+  listPage, 
+  EntityMapper, 
+  WhereBuilder,
+  S3Key, 
+  DocumentHash 
+} from '@lawprotect/shared-ts';
 import { SignatureEnvelope } from '../domain/entities/SignatureEnvelope';
 import { EnvelopeId } from '../domain/value-objects/EnvelopeId';
-import { S3Key, DocumentHash } from '@lawprotect/shared-ts';
 import { EnvelopeSpec, Hashes } from '../domain/types/envelope';
 import { EnvelopeStatus } from '../domain/value-objects/EnvelopeStatus';
 import { repositoryError } from '../signature-errors';
@@ -38,11 +46,11 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
   protected toDomain(model: EnvelopeWithIncludes): SignatureEnvelope {
     try {
       return SignatureEnvelope.fromPersistence(model as any);
-    } catch (cause) {
+    } catch (error_) {
       throw repositoryError({ 
         operation: 'toDomain', 
         envelopeId: (model as any)?.id, 
-        cause 
+        cause: error_ 
       });
     }
   }
@@ -203,11 +211,11 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
       });
 
       return envelope ? this.toDomain(envelope) : null;
-    } catch (cause) {
+    } catch (error_) {
       throw repositoryError({
         operation: 'findById',
         envelopeId: id.getValue(),
-        cause
+        cause: error_
       });
     }
   }
@@ -229,11 +237,11 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
       });
 
       return this.toDomain(created);
-    } catch (cause) {
+    } catch (error_) {
       throw repositoryError({
         operation: 'create',
         envelopeId: data.getId?.()?.getValue(),
-        cause
+        cause: error_
       });
     }
   }
@@ -258,11 +266,11 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
       });
 
       return this.toDomain(updated);
-    } catch (cause) {
+    } catch (error_) {
       throw repositoryError({
         operation: 'update',
         envelopeId: id.getValue(),
-        cause
+        cause: error_
       });
     }
   }
@@ -279,11 +287,11 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
       await client.signatureEnvelope.delete({
         where: this.whereById(id)
       });
-    } catch (cause) {
+    } catch (error_) {
       throw repositoryError({
         operation: 'delete',
         envelopeId: id.getValue(),
-        cause
+        cause: error_
       });
     }
   }
@@ -312,8 +320,8 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
       const client = tx ?? this.prisma;
       const { rows, nextCursor } = await listPage(client.signatureEnvelope, where, limit, decoded, cfg);
       return { items: rows.map(r => this.toDomain(r as EnvelopeWithIncludes)), nextCursor };
-    } catch (cause) {
-      throw repositoryError({ operation: 'list', spec, cause });
+    } catch (error_) {
+      throw repositoryError({ operation: 'list', spec, cause: error_ });
     }
   }
 
@@ -333,11 +341,11 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
       });
 
       return envelope ? this.toDomain(envelope) : null;
-    } catch (cause) {
+    } catch (error_) {
       throw repositoryError({
         operation: 'getWithSigners',
         envelopeId: id.getValue(),
-        cause
+        cause: error_
       });
     }
   }
@@ -389,11 +397,11 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
       });
 
       return this.toDomain(updated);
-    } catch (cause) {
+    } catch (error_) {
       throw repositoryError({
         operation: 'updateHashes',
         envelopeId: id.getValue(),
-        cause,
+        cause: error_,
       });
     }
   }
@@ -437,11 +445,11 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
       });
 
       return this.toDomain(updated);
-    } catch (cause) {
+    } catch (error_) {
       throw repositoryError({
         operation: 'updateSignedDocument',
         envelopeId: id.getValue(),
-        cause
+        cause: error_
       });
     }
   }
@@ -479,11 +487,11 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
       });
 
       return this.toDomain(updated);
-    } catch (cause) {
+    } catch (error_) {
       throw repositoryError({
         operation: 'completeEnvelope',
         envelopeId: id.getValue(),
-        cause
+        cause: error_
       });
     }
   }
@@ -510,11 +518,11 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
       });
 
       return this.toDomain(updated);
-    } catch (cause) {
+    } catch (error_) {
       throw repositoryError({
         operation: 'updateFlattenedKey',
         envelopeId: envelopeId.getValue(),
-        cause
+        cause: error_
       });
     }
   }

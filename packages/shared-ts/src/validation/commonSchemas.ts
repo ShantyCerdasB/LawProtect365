@@ -16,7 +16,7 @@ import { z } from "zod";
  */
 const hasAsciiControl = (s: string): boolean => {
   for (let i = 0; i < s.length; i++) {
-    const c = s.charCodeAt(i);
+    const c = s.codePointAt(i)!;
     if (c <= 0x1f || c === 0x7f) return true;
   }
   return false;

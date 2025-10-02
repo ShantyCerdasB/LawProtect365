@@ -37,9 +37,10 @@ resource "aws_iam_role_policy_attachment" "managed" {
  * @resource aws_iam_role_policy.inline
  * @param {map(string)} var.inline_policies - Map of policy names to policy documents.
  */
-resource "aws_iam_role_policy" "inline" {
+/*resource "aws_iam_role_policy" "inline" {
   for_each = { for k, v in var.inline_policies : k => v if !can(regex("assume", k)) }
   name   = each.key
   role   = aws_iam_role.role.name
   policy = each.value
 }
+*/

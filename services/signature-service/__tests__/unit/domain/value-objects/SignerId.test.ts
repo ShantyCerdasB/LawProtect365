@@ -76,7 +76,7 @@ describe('SignerId', () => {
     });
 
     it('should handle mixed case UUIDs', () => {
-      const mixedCaseUuid = TestUtils.generateUuid().replace(/[0-9a-f]/g, (char, index) => 
+      const mixedCaseUuid = TestUtils.generateUuid().replaceAll(/[0-9a-f]/g, (char, index) => 
         index % 2 === 0 ? char.toUpperCase() : char
       );
       

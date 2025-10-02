@@ -91,7 +91,7 @@ const isLengthWithin = (s: string, min: number, max: number): boolean =>
  */
 const isAllPrintableNoSpace = (s: string): boolean => {
   for (let i = 0; i < s.length; i++) {
-    const c = s.charCodeAt(i);
+    const c = s.codePointAt(i)!;
     if (c <= 32 || c === 127) return false;
   }
   return true;
@@ -140,7 +140,7 @@ const isValidDomainLabel = (label: string): boolean => {
   if (label.length === 0) return false;
   if (label.startsWith("-") || label.endsWith("-")) return false;
   for (let i = 0; i < label.length; i++) {
-    const cc = label.charCodeAt(i);
+    const cc = label.codePointAt(i)!;
     const isDigit = cc >= 48 && cc <= 57;
     const isLower = cc >= 97 && cc <= 122;
     const isUpper = cc >= 65 && cc <= 90;
