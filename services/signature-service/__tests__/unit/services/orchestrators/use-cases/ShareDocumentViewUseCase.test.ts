@@ -144,15 +144,15 @@ describe('ShareDocumentViewUseCase', () => {
         userId
       );
       expect(mockInvitationTokenService.generateViewerInvitationToken).toHaveBeenCalledWith(
-        viewerId,
+        viewer.getId(),
         email.getValue(),
         fullName,
         envelopeId,
         {
           userId,
-          ipAddress: securityContext.ipAddress,
-          userAgent: securityContext.userAgent,
-          country: securityContext.country
+          ipAddress: input.securityContext.ipAddress,
+          userAgent: input.securityContext.userAgent,
+          country: input.securityContext.country
         },
         expiresInDays
       );
@@ -167,7 +167,7 @@ describe('ShareDocumentViewUseCase', () => {
       expect(mockAuditEventService.create).toHaveBeenCalledWith(
         expect.objectContaining({
           envelopeId: envelopeId.getValue(),
-          signerId: viewerId.getValue(),
+          signerId: viewer.getId().getValue(),
           eventType: AuditEventType.LINK_SHARED,
           description: `Document view access shared with ${fullName} (${email.getValue()})`,
           userId,
@@ -211,15 +211,15 @@ describe('ShareDocumentViewUseCase', () => {
       const result = await useCase.execute(input);
 
       expect(mockInvitationTokenService.generateViewerInvitationToken).toHaveBeenCalledWith(
-        viewerId,
+        viewer.getId(),
         email.getValue(),
         fullName,
         envelopeId,
         {
           userId,
-          ipAddress: securityContext.ipAddress,
-          userAgent: securityContext.userAgent,
-          country: securityContext.country
+          ipAddress: input.securityContext.ipAddress,
+          userAgent: input.securityContext.userAgent,
+          country: input.securityContext.country
         },
         7 // Default expiresInDays
       );
@@ -267,14 +267,14 @@ describe('ShareDocumentViewUseCase', () => {
       const result = await useCase.execute(input);
 
       expect(mockInvitationTokenService.generateViewerInvitationToken).toHaveBeenCalledWith(
-        viewerId,
+        viewer.getId(),
         email.getValue(),
         fullName,
         envelopeId,
         {
           userId,
-          ipAddress: securityContext.ipAddress,
-          userAgent: securityContext.userAgent,
+          ipAddress: input.securityContext.ipAddress,
+          userAgent: input.securityContext.userAgent,
           country: undefined // Should be undefined when not provided
         },
         7
@@ -282,8 +282,8 @@ describe('ShareDocumentViewUseCase', () => {
       expect(mockAuditEventService.create).toHaveBeenCalledWith(
         expect.objectContaining({
           networkContext: expect.objectContaining({
-            ipAddress: securityContext.ipAddress,
-            userAgent: securityContext.userAgent,
+            ipAddress: input.securityContext.ipAddress,
+            userAgent: input.securityContext.userAgent,
             country: undefined // Should be undefined when not provided
           })
         })
@@ -455,15 +455,15 @@ describe('ShareDocumentViewUseCase', () => {
       const result = await useCase.execute(input);
 
       expect(mockInvitationTokenService.generateViewerInvitationToken).toHaveBeenCalledWith(
-        viewerId,
+        viewer.getId(),
         email.getValue(),
         fullName,
         envelopeId,
         {
           userId,
-          ipAddress: securityContext.ipAddress,
-          userAgent: securityContext.userAgent,
-          country: securityContext.country
+          ipAddress: input.securityContext.ipAddress,
+          userAgent: input.securityContext.userAgent,
+          country: input.securityContext.country
         },
         30 // Custom expiration
       );

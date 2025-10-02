@@ -8,6 +8,7 @@
 import { EnvelopeAccessService } from '@/services/envelopeAccess/EnvelopeAccessService';
 import { SignatureEnvelopeRepository } from '@/repositories/SignatureEnvelopeRepository';
 import { InvitationTokenService } from '@/services/invitationTokenService/InvitationTokenService';
+import { TestUtils } from '../../../helpers/testUtils';
 
 // Mock the dependencies
 jest.mock('@/repositories/SignatureEnvelopeRepository');
@@ -25,9 +26,11 @@ describe('EnvelopeAccessService', () => {
     getCreatedBy: jest.fn(() => createdBy)
   });
 
-  const createMockEnvelopeId = (id: string = 'test-envelope-id') => ({
-    getValue: () => id
-  });
+  const createMockEnvelopeId = (id: string = 'test-envelope-id') => {
+    const envelopeId = TestUtils.generateEnvelopeId();
+    envelopeId.getValue = jest.fn(() => id);
+    return envelopeId;
+  };
 
   const createMockToken = (envelopeId: string = 'test-envelope-id') => ({
     getEnvelopeId: jest.fn(() => ({ getValue: () => envelopeId }))

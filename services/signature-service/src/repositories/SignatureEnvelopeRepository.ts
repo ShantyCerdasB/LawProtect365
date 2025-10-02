@@ -318,7 +318,7 @@ export class SignatureEnvelopeRepository extends RepositoryBase<SignatureEnvelop
       };
 
       const client = tx ?? this.prisma;
-      const { rows, nextCursor } = await listPage(client.signatureEnvelope, where, limit, decoded, cfg);
+      const { rows, nextCursor } = await listPage(client.signatureEnvelope, where, limit, decoded?.id, cfg);
       return { items: rows.map(r => this.toDomain(r as EnvelopeWithIncludes)), nextCursor };
     } catch (error_) {
       throw repositoryError({ operation: 'list', spec, cause: error_ });

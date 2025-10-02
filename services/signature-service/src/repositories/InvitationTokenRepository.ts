@@ -37,7 +37,7 @@ export class InvitationTokenRepository extends RepositoryBase<InvitationToken, I
    * @param model - Prisma model data
    * @returns Domain entity
    */
-  protected toDomain(model: TokenRow): InvitationToken {
+  protected toDomain(model: TokenRow | unknown): InvitationToken {
     try {
       return InvitationToken.fromPersistence(model as any);
     } catch (error) {
@@ -264,7 +264,7 @@ export class InvitationTokenRepository extends RepositoryBase<InvitationToken, I
           d ? { id: d.id, createdAt: d.createdAt instanceof Date ? d.createdAt : new Date(d.createdAt) } : undefined,
       };
 
-      const { rows, nextCursor } = await listPage(this.prisma.invitationToken, where, limit, decoded, cfg);
+      const { rows, nextCursor } = await listPage(this.prisma.invitationToken, where, limit, decoded?.id, cfg);
       return { items: rows.map(r => this.toDomain(r)), nextCursor };
     } catch (error) {
       throw repositoryError({ operation: 'list', spec, cause: error });
@@ -380,7 +380,7 @@ export class InvitationTokenRepository extends RepositoryBase<InvitationToken, I
           d ? { id: d.id, expiresAt: d.expiresAt instanceof Date ? d.expiresAt : new Date(d.expiresAt) } : undefined,
       };
 
-      const { rows, nextCursor } = await listPage(this.prisma.invitationToken, where, limit, decoded, cfg);
+      const { rows, nextCursor } = await listPage(this.prisma.invitationToken, where, limit, decoded?.id, cfg);
       return { items: rows.map(r => this.toDomain(r)), nextCursor };
     } catch (error) {
       throw repositoryError({ operation: 'findExpiredTokens', cause: error });
@@ -412,7 +412,7 @@ export class InvitationTokenRepository extends RepositoryBase<InvitationToken, I
           d ? { id: d.id, lastSentAt: d.lastSentAt instanceof Date ? d.lastSentAt : new Date(d.lastSentAt) } : undefined,
       };
 
-      const { rows, nextCursor } = await listPage(this.prisma.invitationToken, where, limit, decoded, cfg);
+      const { rows, nextCursor } = await listPage(this.prisma.invitationToken, where, limit, decoded?.id, cfg);
       return { items: rows.map(r => this.toDomain(r)), nextCursor };
     } catch (error) {
       throw repositoryError({ operation: 'findTokensForResend', cause: error, maxResends, limit });

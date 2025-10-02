@@ -602,6 +602,11 @@ module "shared_components_pipeline" {
       value = "${var.project_name}-domain"
       type  = "PLAINTEXT"
     },
+    {
+      name  = "CODE_BUCKET"
+      value = module.code_bucket.bucket_id
+      type  = "PLAINTEXT"
+    },
   ]
   
   github_connection_arn = module.github_connection.connection_arn

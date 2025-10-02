@@ -10,6 +10,7 @@ import { SignerReminderTrackingRepository } from '@/repositories/SignerReminderT
 import { SignerId } from '@/domain/value-objects/SignerId';
 import { EnvelopeId } from '@/domain/value-objects/EnvelopeId';
 import { reminderTrackingNotFound, reminderTrackingCreationFailed } from '@/signature-errors/factories';
+import { Clock, systemClock } from '@lawprotect/shared-ts';
 
 /**
  * Service for managing signer reminder tracking
@@ -19,7 +20,8 @@ import { reminderTrackingNotFound, reminderTrackingCreationFailed } from '@/sign
  */
 export class SignerReminderTrackingService {
   constructor(
-    private readonly signerReminderTrackingRepository: SignerReminderTrackingRepository
+    private readonly signerReminderTrackingRepository: SignerReminderTrackingRepository,
+    private readonly clock: Clock = systemClock
   ) {}
 
 

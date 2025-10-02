@@ -10,6 +10,7 @@ import { EnvelopeCrudService } from '@/services/envelopeCrud/EnvelopeCrudService
 import { TestUtils } from '../../../helpers/testUtils';
 import { SignatureEnvelopeRepository } from '@/repositories/SignatureEnvelopeRepository';
 import { InvitationTokenService } from '@/services/invitationTokenService';
+import { AuditEventService } from '@/services/audit/AuditEventService';
 import { EnvelopeId } from '@/domain/value-objects/EnvelopeId';
 import { SignatureEnvelope } from '@/domain/entities/SignatureEnvelope';
 import { DocumentOrigin } from '@/domain/value-objects/DocumentOrigin';
@@ -22,6 +23,7 @@ describe('EnvelopeCrudService', () => {
   let service: EnvelopeCrudService;
   let mockSignatureEnvelopeRepository: jest.Mocked<SignatureEnvelopeRepository>;
   let mockInvitationTokenService: jest.Mocked<InvitationTokenService>;
+  let mockAuditEventService: jest.Mocked<AuditEventService>;
 
   beforeEach(() => {
     mockSignatureEnvelopeRepository = {
@@ -49,9 +51,16 @@ describe('EnvelopeCrudService', () => {
       updateTokenSentAt: jest.fn(),
     } as unknown as jest.Mocked<InvitationTokenService>;
 
+    mockAuditEventService = {
+      createSignerEvent: jest.fn(),
+      createEnvelopeEvent: jest.fn(),
+      createAuditEvent: jest.fn(),
+    } as unknown as jest.Mocked<AuditEventService>;
+
     service = new EnvelopeCrudService(
       mockSignatureEnvelopeRepository,
-      mockInvitationTokenService
+      mockInvitationTokenService,
+      mockAuditEventService
     );
   });
 

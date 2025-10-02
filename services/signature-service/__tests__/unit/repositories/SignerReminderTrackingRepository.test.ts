@@ -222,7 +222,7 @@ describe('SignerReminderTrackingRepository - CRUD Operations', () => {
   beforeEach(async () => {
     const { prisma } = createSignerReminderTrackingPrismaMock();
     prismaMock = prisma as unknown as { signerReminderTracking: PrismaModelMock };
-    trackingOps = signerReminderTracking;
+    trackingOps = prismaMock.signerReminderTracking;
     repository = new SignerReminderTrackingRepository(prismaMock as any);
     jest.clearAllMocks();
   });
@@ -517,7 +517,7 @@ describe('SignerReminderTrackingRepository - Business Methods', () => {
   beforeEach(async () => {
     const { prisma } = createSignerReminderTrackingPrismaMock();
     prismaMock = prisma as unknown as { signerReminderTracking: PrismaModelMock };
-    trackingOps = signerReminderTracking;
+    trackingOps = prismaMock.signerReminderTracking;
     repository = new SignerReminderTrackingRepository(prismaMock as any);
     jest.clearAllMocks();
   });

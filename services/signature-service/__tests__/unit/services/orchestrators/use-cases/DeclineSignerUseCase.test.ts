@@ -100,7 +100,7 @@ describe('DeclineSignerUseCase', () => {
       const input = createTestInput({
         envelopeId,
         signerId,
-        request: { invitationToken }
+        request: { reason: 'Not interested in signing', invitationToken }
       });
 
       const testSigner = createTestSigner(signerId);

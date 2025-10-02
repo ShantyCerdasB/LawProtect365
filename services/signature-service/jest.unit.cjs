@@ -23,6 +23,8 @@ module.exports = {
     ...baseConfig.moduleNameMapper,
     '^@/(.*)\\.js$': '<rootDir>/src/$1',
     '^@/(.*)$': '<rootDir>/src/$1',
+    // Mock AWS modules that are not available in test environment
+    '^@aws/lambda-invoke-store$': '<rootDir>/__tests__/mocks/@aws/lambda-invoke-store.ts',
   },
 };
 

@@ -5,7 +5,7 @@
  * data transformation, edge cases, and type safety for signer orchestration.
  */
 
-import { jest, describe, it, expect } from '@jest/globals';
+import { describe, it, expect } from '@jest/globals';
 import { mapAddSigners, MappedSigner } from '../../../../../src/services/orchestrators/utils/mapAddSigners';
 import { EnvelopeId } from '../../../../../src/domain/value-objects/EnvelopeId';
 import { ParticipantRole } from '@prisma/client';

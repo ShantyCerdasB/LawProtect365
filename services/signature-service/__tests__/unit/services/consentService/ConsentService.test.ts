@@ -19,6 +19,12 @@ jest.mock('../../../../src/repositories/EnvelopeSignerRepository');
 jest.mock('../../../../src/services/audit/AuditEventService');
 
 // Helper functions to reduce nesting and improve readability
+function createExistingConsent() {
+  return {
+    getId: jest.fn(() => ({ getValue: () => 'existing-consent-id' }))
+  };
+}
+
 function createTestConsentRequest(): CreateConsentRequest {
   return {
     id: { getValue: () => 'test-consent-id' } as any,
@@ -144,9 +150,7 @@ describe('ConsentService', () => {
       const request = createTestConsentRequest();
       const userId = 'test-user-id';
 
-      const existingConsent = {
-        getId: jest.fn(() => ({ getValue: () => 'existing-consent-id' }))
-      };
+      const existingConsent = createExistingConsent();
 
       mockConsentRepository.findBySignerAndEnvelope.mockResolvedValue(existingConsent as any);
 
