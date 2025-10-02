@@ -6,8 +6,7 @@
  * configured for signing, and accessible by the current AWS credentials.
  */
 
-import { KmsSigner } from '@lawprotect/shared-ts';
-import { KMSKeyId } from '@lawprotect/shared-ts';
+import { KmsSigner, KMSKeyId } from '@lawprotect/shared-ts';
 import { 
   kmsKeyNotFound,
   kmsPermissionDenied,

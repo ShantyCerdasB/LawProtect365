@@ -37,7 +37,7 @@ export class InvitationTokenRepository extends RepositoryBase<InvitationToken, I
    * @param model - Prisma model data
    * @returns Domain entity
    */
-  protected toDomain(model: TokenRow | unknown): InvitationToken {
+  protected toDomain(model: TokenRow): InvitationToken {
     try {
       return InvitationToken.fromPersistence(model as any);
     } catch (error) {

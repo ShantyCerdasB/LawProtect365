@@ -8,9 +8,8 @@
 import { InvitationTokenId } from '../value-objects/InvitationTokenId';
 import { EnvelopeId } from '../value-objects/EnvelopeId';
 import { SignerId } from '../value-objects/SignerId';
-import { NetworkSecurityContext } from '@lawprotect/shared-ts';
+import { NetworkSecurityContext, Clock, systemClock, ensureNonNegative, toDateOrUndefined } from '@lawprotect/shared-ts';
 import { InvitationTokenStatus } from '@prisma/client';
-import { Clock, systemClock, ensureNonNegative, toDateOrUndefined } from '@lawprotect/shared-ts';
 import { 
   invitationTokenExpired,
   invitationTokenAlreadyUsed,
@@ -254,7 +253,7 @@ export class InvitationToken {
    */
   markAsSent(ipAddress?: string, userAgent?: string, country?: string): void {
     const now = this.clock.now();
-    if (!this.sentAt) this.sentAt = now;
+    this.sentAt ??= now;
     this.lastSentAt = now;
     this.resendCount = this.resendCount + 1;
     this.applySecurityContext({ ipAddress, userAgent, country });

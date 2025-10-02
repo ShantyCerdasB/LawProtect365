@@ -72,8 +72,8 @@ export class SignerReminderTrackingService {
         return { canSend: true };
       }
       
-      const canSend = tracking.canSendReminder(maxReminders, minHoursBetween);
-      const reason = canSend ? undefined : tracking.getReminderBlockReason(maxReminders, minHoursBetween);
+      const canSend = tracking.canSendReminder(maxReminders, minHoursBetween, this.clock);
+      const reason = canSend ? undefined : tracking.getReminderBlockReason(maxReminders, minHoursBetween, this.clock);
       
       return { canSend, reason: reason || undefined, tracking };
     } catch (error) {

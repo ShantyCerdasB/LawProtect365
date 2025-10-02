@@ -4,8 +4,7 @@
  */
 
 import { EnvelopeId } from '@/domain/value-objects/EnvelopeId';
-import { Email } from '@lawprotect/shared-ts';
-import { NetworkSecurityContext } from '@lawprotect/shared-ts';
+import { Email, NetworkSecurityContext } from '@lawprotect/shared-ts';
 
 /**
  * Input parameters for the ShareDocumentViewUseCase.

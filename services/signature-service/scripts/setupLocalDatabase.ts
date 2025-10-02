@@ -112,5 +112,5 @@ const main = async (): Promise<void> => {
  * Executes the main function when this script is run directly from the command line
  */
 if (require.main === module) {
-  main().catch(console.error);
+  await main();
 }

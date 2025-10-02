@@ -9,7 +9,6 @@
 import { describe, it, expect } from '@jest/globals';
 import { selectTargetSigners, filterSignersByIds } from '../../../../../src/services/orchestrators/utils/signerSelection';
 import { EnvelopeSigner } from '../../../../../src/domain/entities/EnvelopeSigner';
-import { TestUtils } from '../../../../helpers/testUtils';
 
 describe('signerSelection utilities', () => {
   // Helper function to create mock EnvelopeSigner

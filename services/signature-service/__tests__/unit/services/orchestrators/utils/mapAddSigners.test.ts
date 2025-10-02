@@ -118,11 +118,11 @@ describe('mapAddSigners', () => {
 
       const result = mapAddSigners(signersData, envelopeId, userId);
 
-      result.forEach(signer => {
+      for (const signer of result) {
         expect(signer).toHaveProperty('envelopeId', envelopeId);
         expect(signer).toHaveProperty('participantRole', ParticipantRole.SIGNER);
         expect(signer).toHaveProperty('invitedByUserId', userId);
-      });
+      }
     });
 
     it('should handle signers with minimal data', () => {
@@ -192,10 +192,10 @@ describe('mapAddSigners', () => {
 
       const result = mapAddSigners(signersData, envelopeId, userId);
 
-      result.forEach(signer => {
+      for (const signer of result) {
         expect(signer.envelopeId).toBe(envelopeId);
         expect(signer.envelopeId).toBeInstanceOf(EnvelopeId);
-      });
+      }
     });
 
     it('should handle readonly array input', () => {
@@ -344,12 +344,13 @@ describe('mapAddSigners', () => {
       const result = mapAddSigners(signersData, envelopeId, userId);
 
       expect(result).toHaveLength(1000);
-      result.forEach((signer, index) => {
+      for (let index = 0; index < result.length; index++) {
+        const signer = result[index];
         expect(signer).toHaveProperty('email', `signer${index}@example.com`);
         expect(signer).toHaveProperty('envelopeId', envelopeId);
         expect(signer).toHaveProperty('participantRole', ParticipantRole.SIGNER);
         expect(signer).toHaveProperty('invitedByUserId', userId);
-      });
+      }
     });
   });
 });

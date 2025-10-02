@@ -914,7 +914,7 @@ describe('Signature Error Factories', () => {
         workflowViolation(testDetails)
       ];
 
-      errors.forEach(error => {
+      for (const error of errors) {
         expect(error).toHaveProperty('statusCode');
         expect(error).toHaveProperty('message');
         expect(error).toHaveProperty('code');
@@ -922,7 +922,7 @@ describe('Signature Error Factories', () => {
         expect(typeof error.statusCode).toBe('number');
         expect(typeof error.message).toBe('string');
         expect(typeof error.code).toBe('string');
-      });
+      }
     });
 
     it('should use correct HTTP status codes for each error type', () => {
@@ -940,9 +940,10 @@ describe('Signature Error Factories', () => {
       ];
 
       const expected = [404, 409, 400, 400, 500, 422, 403, 403, 401, 429];
-      results.forEach((error, idx) => {
+      for (let idx = 0; idx < results.length; idx++) {
+        const error = results[idx];
         expect(error.statusCode).toBe(expected[idx]);
-      });
+      }
     });
   });
 });

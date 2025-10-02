@@ -9,7 +9,6 @@ import { TestUtils } from '../../../../helpers/testUtils';
 import { signatureEnvelopeEntity } from '../../../../helpers/builders/signatureEnvelope';
 import { createSignatureEnvelopeServiceMock } from '../../../../helpers/mocks/services';
 import { createS3ServiceMock } from '../../../../helpers/mocks/services/S3Service.mock';
-import { createUuidMock } from '../../../../helpers/mocks/uuid';
 
 // Mock the uuid module
 jest.mock('uuid', () => ({

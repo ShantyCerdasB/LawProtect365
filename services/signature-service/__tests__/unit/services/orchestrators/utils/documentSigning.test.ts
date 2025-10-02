@@ -7,11 +7,8 @@
 
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 import { handleSignedDocumentFromFrontend, handleFlattenedDocument } from '../../../../../src/services/orchestrators/utils/documentSigning';
-import { EnvelopeId } from '../../../../../src/domain/value-objects/EnvelopeId';
-import { SignerId } from '../../../../../src/domain/value-objects/SignerId';
 import { TestUtils } from '../../../../helpers/testUtils';
 import { signatureEnvelopeEntity } from '../../../../helpers/builders/signatureEnvelope';
-import { envelopeNotFound, documentNotReady } from '../../../../../src/signature-errors';
 
 describe('documentSigning utilities', () => {
   let mockS3Service: any;

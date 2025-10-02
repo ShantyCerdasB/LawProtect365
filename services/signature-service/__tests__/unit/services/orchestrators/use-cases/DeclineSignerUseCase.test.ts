@@ -9,6 +9,62 @@ import { createEnvelopeNotificationServiceMock } from '../../../../helpers/mocks
 import { createEnvelopeAccessServiceMock } from '../../../../helpers/mocks/services/EnvelopeAccessService.mock';
 import { createEnvelopeStateServiceMock } from '../../../../helpers/mocks/services/EnvelopeStateService.mock';
 
+// Helper function to create test input
+function createTestInput(overrides: Partial<DeclineSignerInput> = {}): DeclineSignerInput {
+  const envelopeId = TestUtils.generateEnvelopeId();
+  const signerId = TestUtils.generateSignerId();
+  const reason = 'Not interested in signing';
+  
+  return {
+    envelopeId,
+    signerId,
+    request: {
+      reason,
+      ...overrides.request
+    },
+    securityContext: {
+      ipAddress: TestUtils.createTestIpAddress(),
+      userAgent: TestUtils.createTestUserAgent(),
+      country: 'US',
+      ...overrides.securityContext
+    },
+    ...overrides
+  };
+}
+
+// Helper function to create test signer
+function createTestSigner(signerId: any) {
+  return { 
+    getId: () => signerId,
+    getFullName: () => 'John Doe',
+    getEmail: () => ({ getValue: () => 'john.doe@example.com' })
+  } as any;
+}
+
+// Helper function to create test envelope
+function createTestEnvelope(envelopeId: any, signer: any) {
+  const testEnvelope = signatureEnvelopeEntity({ id: envelopeId.getValue() });
+  testEnvelope.getSigners = jest.fn().mockReturnValue([signer]) as any;
+  return testEnvelope;
+}
+
+// Helper function to setup successful mocks
+function setupSuccessfulMocks(
+  mockEnvelopeAccessService: any,
+  mockEnvelopeSignerService: any,
+  mockEnvelopeStateService: any,
+  mockEnvelopeNotificationService: any,
+  mockSignatureEnvelopeService: any,
+  testEnvelope: any,
+  updatedEnvelope: any
+) {
+  mockEnvelopeAccessService.validateUserAccess.mockResolvedValue(testEnvelope);
+  mockEnvelopeSignerService.declineSigner.mockResolvedValue(undefined);
+  mockEnvelopeStateService.updateEnvelopeStatusAfterDecline.mockResolvedValue(undefined);
+  mockEnvelopeNotificationService.publishSignerDeclined.mockResolvedValue(undefined);
+  mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue(updatedEnvelope);
+}
+
 describe('DeclineSignerUseCase', () => {
   let useCase: DeclineSignerUseCase;
   let mockSignatureEnvelopeService: any;
@@ -16,54 +72,6 @@ describe('DeclineSignerUseCase', () => {
   let mockEnvelopeNotificationService: any;
   let mockEnvelopeAccessService: any;
   let mockEnvelopeStateService: any;
-
-  // Helper function to create test input
-  function createTestInput(overrides: Partial<DeclineSignerInput> = {}): DeclineSignerInput {
-    const envelopeId = TestUtils.generateEnvelopeId();
-    const signerId = TestUtils.generateSignerId();
-    const reason = 'Not interested in signing';
-    
-    return {
-      envelopeId,
-      signerId,
-      request: {
-        reason,
-        ...overrides.request
-      },
-      securityContext: {
-        ipAddress: TestUtils.createTestIpAddress(),
-        userAgent: TestUtils.createTestUserAgent(),
-        country: 'US',
-        ...overrides.securityContext
-      },
-      ...overrides
-    };
-  }
-
-  // Helper function to create test signer
-  function createTestSigner(signerId: any) {
-    return { 
-      getId: () => signerId,
-      getFullName: () => 'John Doe',
-      getEmail: () => ({ getValue: () => 'john.doe@example.com' })
-    } as any;
-  }
-
-  // Helper function to create test envelope
-  function createTestEnvelope(envelopeId: any, signer: any) {
-    const testEnvelope = signatureEnvelopeEntity({ id: envelopeId.getValue() });
-    testEnvelope.getSigners = jest.fn().mockReturnValue([signer]) as any;
-    return testEnvelope;
-  }
-
-  // Helper function to setup successful mocks
-  function setupSuccessfulMocks(testEnvelope: any, updatedEnvelope: any) {
-    mockEnvelopeAccessService.validateUserAccess.mockResolvedValue(testEnvelope);
-    mockEnvelopeSignerService.declineSigner.mockResolvedValue(undefined);
-    mockEnvelopeStateService.updateEnvelopeStatusAfterDecline.mockResolvedValue(undefined);
-    mockEnvelopeNotificationService.publishSignerDeclined.mockResolvedValue(undefined);
-    mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue(updatedEnvelope);
-  }
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -102,7 +110,15 @@ describe('DeclineSignerUseCase', () => {
         status: 'DRAFT'
       });
 
-      setupSuccessfulMocks(testEnvelope, updatedEnvelope);
+      setupSuccessfulMocks(
+        mockEnvelopeAccessService,
+        mockEnvelopeSignerService,
+        mockEnvelopeStateService,
+        mockEnvelopeNotificationService,
+        mockSignatureEnvelopeService,
+        testEnvelope,
+        updatedEnvelope
+      );
 
       const result = await useCase.execute(input);
 
@@ -247,7 +263,15 @@ describe('DeclineSignerUseCase', () => {
         status: 'DRAFT'
       });
 
-      setupSuccessfulMocks(testEnvelope, updatedEnvelope);
+      setupSuccessfulMocks(
+        mockEnvelopeAccessService,
+        mockEnvelopeSignerService,
+        mockEnvelopeStateService,
+        mockEnvelopeNotificationService,
+        mockSignatureEnvelopeService,
+        testEnvelope,
+        updatedEnvelope
+      );
 
       const result = await useCase.execute(input);
 
@@ -292,7 +316,15 @@ describe('DeclineSignerUseCase', () => {
         status: 'DRAFT'
       });
 
-      setupSuccessfulMocks(testEnvelope, updatedEnvelope);
+      setupSuccessfulMocks(
+        mockEnvelopeAccessService,
+        mockEnvelopeSignerService,
+        mockEnvelopeStateService,
+        mockEnvelopeNotificationService,
+        mockSignatureEnvelopeService,
+        testEnvelope,
+        updatedEnvelope
+      );
 
       const result = await useCase.execute(input);
 

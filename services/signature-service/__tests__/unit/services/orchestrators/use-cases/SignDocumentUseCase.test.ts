@@ -1,7 +1,7 @@
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 import { generateTestIpAddress } from '../../../../integration/helpers/testHelpers';
 import { SignDocumentUseCase } from '../../../../../src/services/orchestrators/use-cases/SignDocumentUseCase';
-import { SignDocumentUseCaseInput, SignDocumentUseCaseResult } from '../../../../../src/domain/types/usecase/orchestrator/SignDocumentUseCase';
+import { SignDocumentUseCaseInput } from '../../../../../src/domain/types/usecase/orchestrator/SignDocumentUseCase';
 import { Email } from '@lawprotect/shared-ts';
 import { AuditEventType } from '../../../../../src/domain/enums/AuditEventType';
 import { TestUtils } from '../../../../helpers/testUtils';

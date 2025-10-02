@@ -194,6 +194,8 @@ jest.mock('../../../../src/services/s3Service/S3Service', () => {
           const headResult = await this.s3EvidenceStorage.headObject(this.bucketName, documentKey);
           return headResult.exists;
         } catch (error) {
+          // Log the error for debugging purposes
+          console.warn('Error checking document existence:', error);
           return false;
         }
       }
@@ -227,6 +229,8 @@ jest.mock('../../../../src/services/s3Service/S3Service', () => {
             size: headResult.size
           };
         } catch (error) {
+          // Log the error for debugging purposes
+          console.warn('Error getting document metadata:', error);
           return null;
         }
       }

@@ -795,9 +795,10 @@ export class SignatureEnvelope {
       }
     } else if (newSigningOrderType === 'INVITEES_FIRST') {
       // External signers first (any order), creator last (if present)
-      externalSigners.forEach((signer, index) => {
+      for (let index = 0; index < externalSigners.length; index++) {
+        const signer = externalSigners[index];
         signer.updateOrder(index + 1);
-      });
+      }
       if (creatorSigner) {
         creatorSigner.updateOrder(externalSigners.length + 1);
       }
