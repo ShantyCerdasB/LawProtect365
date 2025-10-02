@@ -420,7 +420,7 @@ export function validateObjectField(
   }
 
   if (typeof value !== 'object' || Array.isArray(value)) {
-    throw new Error(`${fieldName} must be an object`);
+    throw new TypeError(`${fieldName} must be an object`);
   }
 
   if (!allowEmpty && Object.keys(value).length === 0) {

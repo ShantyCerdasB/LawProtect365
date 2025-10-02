@@ -246,7 +246,7 @@ export function validateDateWindow(
   
   if (dateTime < windowStart || dateTime > windowEnd) {
     throw new Error(
-      `${fieldName} must be within ${windowDays} day${windowDays !== 1 ? 's' : ''} from now`
+      `${fieldName} must be within ${windowDays} day${windowDays > 1 ? 's' : ''} from now`
     );
   }
 }

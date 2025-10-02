@@ -7,10 +7,9 @@
 
 import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
 import { EnvelopeSigner } from '../../../../src/domain/entities/EnvelopeSigner';
-import { NetworkSecurityContext } from '@lawprotect/shared-ts';
+import { NetworkSecurityContext, Email } from '@lawprotect/shared-ts';
 import { SignerId } from '../../../../src/domain/value-objects/SignerId';
 import { EnvelopeId } from '../../../../src/domain/value-objects/EnvelopeId';
-import { Email } from '@lawprotect/shared-ts';
 import { SignatureMetadata } from '../../../../src/domain/value-objects/SignatureMetadata';
 import { SignerStatus } from '@prisma/client';
 import { TestUtils } from '../../../helpers/testUtils';
@@ -21,9 +20,8 @@ import {
   consentTextRequired
 } from '../../../../src/signature-errors';
 
-describe('EnvelopeSigner', () => {
-  // Helper function to create EnvelopeSigner with custom parameters
-  function createEnvelopeSignerWithParams(params: {
+// Helper function to create EnvelopeSigner with custom parameters
+function createEnvelopeSignerWithParams(params: {
     id?: string;
     envelopeId?: string;
     userId?: string;

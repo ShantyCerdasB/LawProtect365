@@ -4,13 +4,11 @@
  * @description Zod schema for validating party ID branded type
  */
 
-import { PartyIdSchema } from "./index";
-
 /**
  * @summary Party ID validation schema
  * @description Validates and transforms string to PartyId branded type
  */
-export const PartyIdValidationSchema = PartyIdSchema;
+export { PartyIdSchema as PartyIdValidationSchema } from "./index";
 
 /**
  * @summary Optional party ID validation schema

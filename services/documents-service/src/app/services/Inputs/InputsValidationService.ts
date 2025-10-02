@@ -59,7 +59,7 @@ export class InputsValidationService {
    * @description Helper method to validate x, y coordinates
    */
   private validateCoordinates(x: number, y: number, context: any, index?: number): void {
-    const prefix = index !== undefined ? `for item at index ${index}` : '';
+    const prefix = index === undefined ? '' : `for item at index ${index}`;
     
     if (x < 0 || !Number.isFinite(x)) {
       throw new BadRequestError(
@@ -82,7 +82,7 @@ export class InputsValidationService {
    * @description Helper method to validate page number
    */
   private validatePageNumber(page: number, context: any, index?: number): void {
-    const prefix = index !== undefined ? `for item at index ${index}` : '';
+    const prefix = index === undefined ? '' : `for item at index ${index}`;
     
     if (page < 1 || !Number.isInteger(page)) {
       throw new BadRequestError(

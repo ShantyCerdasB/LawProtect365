@@ -20,7 +20,6 @@ import {
 import { TestUtils, TEST_CONSTANTS } from '../../../helpers/testUtils';
 import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
 import { consentEntity, consentPersistenceRow } from '../../../helpers/builders/consent';
-import { fixedNow, resetTime } from '../../../helpers/time';
 
 // Helper function to create Consent with custom parameters
 function createConsentWithParams(params: {

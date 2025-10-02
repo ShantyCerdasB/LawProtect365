@@ -6,9 +6,6 @@
  */
 
 import { SignerReminderTracking } from '../../../src/domain/entities/SignerReminderTracking';
-import { ReminderTrackingId } from '../../../src/domain/value-objects/ReminderTrackingId';
-import { EnvelopeId } from '../../../src/domain/value-objects/EnvelopeId';
-import { SignerId } from '../../../src/domain/value-objects/SignerId';
 import { TestUtils } from '../testUtils';
 
 /**

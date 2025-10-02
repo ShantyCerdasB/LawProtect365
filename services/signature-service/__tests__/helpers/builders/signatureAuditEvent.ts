@@ -35,7 +35,7 @@ export function auditEventEntity(overrides: any = {}) {
   // Use the new entity create method with NetworkSecurityContext
   return SignatureAuditEvent.create({
     envelopeId: overrides.envelopeId || TestUtils.generateEnvelopeId(),
-    signerId: overrides.signerId !== undefined ? overrides.signerId : TestUtils.generateSignerId(),
+    signerId: overrides.signerId === undefined ? TestUtils.generateSignerId() : overrides.signerId,
     eventType: overrides.eventType || AuditEventType.SIGNER_ADDED,
     description: overrides.description || 'Test audit event',
     userId: overrides.userId || TestUtils.generateUuid(),
@@ -53,7 +53,7 @@ export function envelopeEventEntity(overrides: any = {}) {
   // Use the new entity create method with NetworkSecurityContext for envelope events
   return SignatureAuditEvent.create({
     envelopeId: overrides.envelopeId || TestUtils.generateEnvelopeId(),
-    signerId: overrides.signerId !== undefined ? overrides.signerId : undefined,
+    signerId: overrides.signerId === undefined ? undefined : overrides.signerId,
     eventType: overrides.eventType || AuditEventType.ENVELOPE_CREATED,
     description: overrides.description || 'Test envelope event',
     userId: overrides.userId || TestUtils.generateUuid(),

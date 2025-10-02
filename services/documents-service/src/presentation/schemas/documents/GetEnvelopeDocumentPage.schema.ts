@@ -3,11 +3,9 @@
  * @summary Path/query schemas for retrieving a single document page preview.
  */
 
-import { EnvelopeDocPagePath, PageRenderQuery } from "../common";
-
 /** Path params for a document page. */
-export { EnvelopeDocPagePath };
+export { EnvelopeDocPagePath } from "../common";
 
 /** Query params for rendering a document page. */
-export { PageRenderQuery };
+export { PageRenderQuery } from "../common";
 

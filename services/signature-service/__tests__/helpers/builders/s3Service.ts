@@ -5,8 +5,6 @@
  * requests, responses, configurations, and mock data for comprehensive testing.
  */
 
-import { EnvelopeId } from '../../../src/domain/value-objects/EnvelopeId';
-import { SignerId } from '../../../src/domain/value-objects/SignerId';
 import { S3Key, ContentType } from '@lawprotect/shared-ts';
 import { TestUtils } from '../testUtils';
 import { DocumentType } from '../../../src/domain/enums';
@@ -139,7 +137,7 @@ export function documentInfo(overrides: any = {}) {
  */
 export function s3HeadObjectResult(overrides: any = {}) {
   return {
-    exists: overrides.exists !== undefined ? overrides.exists : true,
+    exists: overrides.exists === undefined ? true : overrides.exists,
     size: overrides.size || 1024,
     lastModified: overrides.lastModified || new Date('2024-01-01T10:00:00Z'),
     metadata: overrides.metadata || {

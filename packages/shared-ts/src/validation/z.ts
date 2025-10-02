@@ -54,4 +54,4 @@ z.setErrorMap((issue, ctx) => {
  *
  * @public
  */
-export { z };
+export { z } from 'zod';

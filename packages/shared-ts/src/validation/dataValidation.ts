@@ -57,7 +57,7 @@ export function toStringOrUndefined(v: unknown): string | undefined {
   if (v == null) {
     return undefined;
   }
-  return String(v);
+  return JSON.stringify(v);
 }
 
 /**

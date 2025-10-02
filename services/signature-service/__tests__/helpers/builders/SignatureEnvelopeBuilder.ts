@@ -4,8 +4,7 @@ import { EnvelopeStatus } from '../../../src/domain/value-objects/EnvelopeStatus
 import { SigningOrder } from '../../../src/domain/value-objects/SigningOrder';
 import { DocumentOrigin } from '../../../src/domain/value-objects/DocumentOrigin';
 import { EnvelopeSigner } from '../../../src/domain/entities/EnvelopeSigner';
-import { S3Key } from '@lawprotect/shared-ts';
-import { DocumentHash } from '@lawprotect/shared-ts';
+import { S3Key, DocumentHash } from '@lawprotect/shared-ts';
 import { SignerId } from '../../../src/domain/value-objects/SignerId';
 import { TestUtils } from '../testUtils';
 

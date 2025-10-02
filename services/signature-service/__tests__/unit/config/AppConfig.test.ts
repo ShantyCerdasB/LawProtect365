@@ -23,9 +23,9 @@ describe('AppConfig', () => {
     originalEnv = { ...process.env };
     
     // Clear all env vars
-    Object.keys(process.env).forEach(key => {
+    for (const key of Object.keys(process.env)) {
       delete process.env[key];
-    });
+    }
 
     // Setup mock
     mockBuildAppConfig = buildAppConfig as jest.MockedFunction<typeof buildAppConfig>;

@@ -30,7 +30,9 @@ export function createUuidMock(returnValue?: string) {
  */
 export function createUuidMockWithSequence(values: string[]) {
   const mockUuid = jest.fn();
-  values.forEach(value => mockUuid.mockReturnValueOnce(value));
+  for (const value of values) {
+    mockUuid.mockReturnValueOnce(value);
+  }
   return mockUuid;
 }
 

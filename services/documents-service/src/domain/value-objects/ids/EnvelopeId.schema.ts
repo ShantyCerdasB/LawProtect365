@@ -4,13 +4,11 @@
  * @description Zod schema for validating envelope ID branded type
  */
 
-import { EnvelopeIdSchema } from "./index";
-
 /**
  * @summary Envelope ID validation schema
  * @description Validates and transforms string to EnvelopeId branded type
  */
-export const EnvelopeIdValidationSchema = EnvelopeIdSchema;
+export { EnvelopeIdSchema as EnvelopeIdValidationSchema } from "./index";
 
 /**
  * @summary Optional envelope ID validation schema

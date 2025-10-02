@@ -87,3 +87,19 @@ data "aws_iam_policy_document" "cloudwatch_logs_policy" {
     ]
   }
 }
+
+# CodeArtifact permissions for CodeBuild
+data "aws_iam_policy_document" "codeartifact_policy" {
+  statement {
+    effect = "Allow"
+    actions = [
+      "codeartifact:GetAuthorizationToken",
+      "codeartifact:GetRepositoryEndpoint",
+      "codeartifact:ReadFromRepository"
+    ]
+    resources = [
+      "arn:aws:codeartifact:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:domain/${var.project_name}-domain",
+      "arn:aws:codeartifact:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:domain/${var.project_name}-domain/repository/*"
+    ]
+  }
+}

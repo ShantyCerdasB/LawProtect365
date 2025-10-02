@@ -21,7 +21,7 @@ export const validatePath = <S extends z.ZodTypeAny>(
   evt: ApiEvent,
   schema: S
 ): z.infer<S> => {
-  const input = { ...(evt.pathParameters ?? {}) } as Record<string, unknown>;
+  const input = { ...evt.pathParameters } as Record<string, unknown>;
   const out = schema.safeParse(input);
   if (!out.success) {
     // Extract the first error message from Zod issues

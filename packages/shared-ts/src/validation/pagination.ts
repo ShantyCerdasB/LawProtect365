@@ -10,7 +10,7 @@ export const paginationQuerySchema = (maxDefault = 100) =>
   z.object({
     limit: z
       .union([z.string(), z.number()])
-      .transform((v) => Number(v))
+      .transform(Number)
       .pipe(z.number().int().positive().max(maxDefault))
       .default(Math.min(50, maxDefault)),
     cursor: z.string().min(1).optional()

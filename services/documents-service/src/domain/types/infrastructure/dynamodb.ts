@@ -382,7 +382,7 @@ export const toPartyItem = (src: Party): DdbPartyItem => ({
   status: src.status as string,
 
   invitedAt: src.invitedAt,
-  ...(src.signedAt !== undefined ? { signedAt: src.signedAt } : {}),
+  ...(src.signedAt === undefined ? {} : { signedAt: src.signedAt }),
 
   sequence: src.sequence,
 

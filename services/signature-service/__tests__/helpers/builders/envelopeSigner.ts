@@ -7,8 +7,6 @@
  */
 
 import { EnvelopeSigner } from '../../../src/domain/entities/EnvelopeSigner';
-import { SignerId } from '../../../src/domain/value-objects/SignerId';
-import { EnvelopeId } from '../../../src/domain/value-objects/EnvelopeId';
 import { Email } from '@lawprotect/shared-ts';
 import { SignerSpec } from '../../../src/domain/types/signer/SignerSpec';
 import { TestUtils } from '../testUtils';

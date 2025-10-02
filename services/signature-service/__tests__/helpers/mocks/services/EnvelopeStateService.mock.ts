@@ -7,8 +7,6 @@
  */
 
 import { jest } from '@jest/globals';
-import { EnvelopeId } from '../../../../src/domain/value-objects/EnvelopeId';
-import { SignerId } from '../../../../src/domain/value-objects/SignerId';
 
 /**
  * Creates a mock EnvelopeStateService with default implementations
