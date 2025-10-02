@@ -1,7 +1,6 @@
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 import { DownloadDocumentUseCase } from '../../../../../src/services/orchestrators/use-cases/DownloadDocumentUseCase';
 import { DownloadDocumentInput } from '../../../../../src/domain/types/usecase/orchestrator/DownloadDocumentUseCase';
-import { EnvelopeId } from '../../../../../src/domain/value-objects/EnvelopeId';
 import { TestUtils } from '../../../../helpers/testUtils';
 import { createSignatureEnvelopeServiceMock } from '../../../../helpers/mocks/services/SignatureEnvelopeService.mock';
 import { createEnvelopeAccessServiceMock } from '../../../../helpers/mocks/services/EnvelopeAccessService.mock';

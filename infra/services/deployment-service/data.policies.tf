@@ -95,7 +95,8 @@ data "aws_iam_policy_document" "codeartifact_policy" {
     actions = [
       "codeartifact:GetAuthorizationToken",
       "codeartifact:GetRepositoryEndpoint",
-      "codeartifact:ReadFromRepository"
+      "codeartifact:ReadFromRepository",
+      "sts:GetServiceBearerToken"
     ]
     resources = [
       "arn:aws:codeartifact:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:domain/${var.project_name}-domain",

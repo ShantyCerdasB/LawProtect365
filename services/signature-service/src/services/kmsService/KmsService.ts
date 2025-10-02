@@ -6,9 +6,8 @@
  * This service focuses solely on the cryptographic aspects of digital signature creation and verification.
  */
 
-import { mapAwsError, BadRequestError, KmsSigner, hexToUint8Array, uint8ArrayToHex, pickMessageType } from '@lawprotect/shared-ts';
+import { mapAwsError, BadRequestError, KmsSigner, hexToUint8Array, uint8ArrayToHex, pickMessageType, KMSKeyId, DocumentHash } from '@lawprotect/shared-ts';
 import { KMSClient, SignCommand, VerifyCommand, type SigningAlgorithmSpec } from '@aws-sdk/client-kms';
-import { KMSKeyId, DocumentHash } from '@lawprotect/shared-ts';
 import { SigningAlgorithm } from '@/domain/value-objects/SigningAlgorithm';
 import { KmsKeyValidationRule } from '@/domain/rules/KmsKeyValidationRule';
 import { 

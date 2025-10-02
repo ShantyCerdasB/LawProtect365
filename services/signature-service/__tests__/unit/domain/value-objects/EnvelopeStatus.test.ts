@@ -364,12 +364,12 @@ describe('EnvelopeStatus', () => {
     it('should handle all Prisma EnvelopeStatus enum values', () => {
       const allStatuses = Object.values(PrismaEnvelopeStatus);
 
-      allStatuses.forEach(prismaStatus => {
+      for (const prismaStatus of allStatuses) {
         const status = new EnvelopeStatus(prismaStatus);
         expect(status.getValue()).toBe(prismaStatus);
         expect(status.toString()).toBe(prismaStatus);
         expect(status.toJSON()).toBe(prismaStatus);
-      });
+      }
     });
 
     it('should maintain immutability', () => {

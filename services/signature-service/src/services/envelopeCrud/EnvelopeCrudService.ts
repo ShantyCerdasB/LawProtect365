@@ -10,8 +10,9 @@ import { EnvelopeId } from '@/domain/value-objects/EnvelopeId';
 import { SigningOrder } from '@/domain/value-objects/SigningOrder';
 import { SignatureEnvelopeRepository } from '@/repositories/SignatureEnvelopeRepository';
 import { InvitationTokenService } from '@/services/invitationTokenService';
-import { S3Key } from '@lawprotect/shared-ts';
-
+import { AuditEventService } from '@/services/audit/AuditEventService';
+import { S3Key, Email } from '@lawprotect/shared-ts';
+import { createDocumentAccessedAudit } from '@/services/orchestrators/utils/audit/envelopeAuditHelpers';
 import { EntityFactory } from '@/infrastructure/factories/EntityFactory';
 import { EnvelopeUpdateValidationRule, UpdateEnvelopeData } from '@/domain/rules/EnvelopeUpdateValidationRule';
 import { EnvelopeSpec, CreateEnvelopeData } from '@/domain/types/envelope';
@@ -29,7 +30,8 @@ import {
 export class EnvelopeCrudService {
   constructor(
     private readonly signatureEnvelopeRepository: SignatureEnvelopeRepository,
-    private readonly invitationTokenService: InvitationTokenService
+    private readonly invitationTokenService: InvitationTokenService,
+    private readonly auditEventService: AuditEventService
   ) {}
 
   /**
@@ -79,8 +81,25 @@ export class EnvelopeCrudService {
         const token = await this.invitationTokenService.validateInvitationToken(invitationToken);
 
         // Only audit if token matches the envelope being accessed
-        if (token.getEnvelopeId().getValue() === envelopeId.getValue()) {
-          // TODO: Add audit logic here when needed
+        if (token.getEnvelopeId().getValue() === envelopeId.getValue() && envelopeWithSigners) {
+          const signer = envelopeWithSigners.getSigners().find(s => 
+            s.getId().equals(token.getSignerId())
+          );
+          
+          if (signer) {
+            const externalUserId = signer.getId().getValue();
+            const signerEmail = signer.getEmail()?.getValue();
+            
+            const auditData = createDocumentAccessedAudit(
+              envelopeId.getValue(),
+              signer.getId().getValue(),
+              externalUserId,
+              signerEmail ? Email.fromString(signerEmail) : undefined,
+              securityContext
+            );
+            
+            await this.auditEventService.create(auditData);
+          }
         }
       }
 

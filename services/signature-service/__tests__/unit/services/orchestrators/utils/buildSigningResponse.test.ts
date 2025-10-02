@@ -8,8 +8,6 @@
 
 import { describe, it, expect } from '@jest/globals';
 import { buildSigningResponse, SigningSummary } from '../../../../../src/services/orchestrators/utils/buildSigningResponse';
-import { EnvelopeId } from '../../../../../src/domain/value-objects/EnvelopeId';
-import { SignerId } from '../../../../../src/domain/value-objects/SignerId';
 import { TestUtils } from '../../../../helpers/testUtils';
 import { signatureEnvelopeEntity } from '../../../../helpers/builders/signatureEnvelope';
 import { SigningMessages } from '../../../../../src/domain/enums/SigningMessages';

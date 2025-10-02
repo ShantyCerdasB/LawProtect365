@@ -159,7 +159,8 @@ export class ServiceFactory {
   ): EnvelopeCrudService {
     return new EnvelopeCrudService(
       repositories.signatureEnvelopeRepository,
-      this.createInvitationTokenService(repositories, infrastructure.auditEventService)
+      this.createInvitationTokenService(repositories, infrastructure.auditEventService),
+      infrastructure.auditEventService
     );
   }
 

@@ -30,7 +30,7 @@ phases:
       - 'cd -'
       - 'rm -rf /tmp/layer && mkdir -p /tmp/layer/nodejs'
       - 'cp -R packages/shared-ts/dist /tmp/layer/nodejs/'
-      - 'cp -R packages/shared-ts/node_modules /tmp/layer/nodejs/'
+      - 'if [ -d "packages/shared-ts/node_modules" ]; then cp -R packages/shared-ts/node_modules /tmp/layer/nodejs/; fi'
       - 'cp packages/shared-ts/package.json /tmp/layer/nodejs/'
       - 'cp packages/shared-ts/package-lock.json /tmp/layer/nodejs/'
 

@@ -27,10 +27,10 @@ import { SigningFlowValidationRule } from '@/domain/rules/SigningFlowValidationR
 import { getDefaultSigningAlgorithm } from '@/domain/enums/SigningAlgorithmEnum';
 import { envelopeNotFound } from '@/signature-errors';
 
-import { buildSigningResponse } from '@/services/orchestrators';
-import {
+import { 
+  buildSigningResponse,
   handleSignedDocumentFromFrontend,
-  handleFlattenedDocument,
+  handleFlattenedDocument
 } from '@/services/orchestrators';
 import { v4 as uuid } from 'uuid';
 import { SignDocumentUseCaseInput, SignDocumentUseCaseResult } from '@/domain/types/usecase/orchestrator/SignDocumentUseCase';

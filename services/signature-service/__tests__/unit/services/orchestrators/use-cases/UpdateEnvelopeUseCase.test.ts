@@ -1,7 +1,6 @@
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 import { UpdateEnvelopeUseCase } from '../../../../../src/services/orchestrators/use-cases/UpdateEnvelopeUseCase';
-import { UpdateEnvelopeUseCaseInput, UpdateEnvelopeUseCaseResult } from '../../../../../src/domain/types/usecase/orchestrator/UpdateEnvelopeUseCase';
-import { EnvelopeId } from '../../../../../src/domain/value-objects/EnvelopeId';
+import { UpdateEnvelopeUseCaseInput } from '../../../../../src/domain/types/usecase/orchestrator/UpdateEnvelopeUseCase';
 import { TestUtils } from '../../../../helpers/testUtils';
 import { createSignatureEnvelopeServiceMock } from '../../../../helpers/mocks/services/SignatureEnvelopeService.mock';
 import { createEnvelopeSignerServiceMock } from '../../../../helpers/mocks/services/EnvelopeSignerService.mock';

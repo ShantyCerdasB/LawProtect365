@@ -1,7 +1,6 @@
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 import { GetEnvelopeUseCase } from '../../../../../src/services/orchestrators/use-cases/GetEnvelopeUseCase';
 import { GetEnvelopeInput } from '../../../../../src/domain/types/usecase/orchestrator/GetEnvelopeUseCase';
-import { EnvelopeId } from '../../../../../src/domain/value-objects/EnvelopeId';
 import { AccessType } from '../../../../../src/domain/enums/AccessType';
 import { TestUtils } from '../../../../helpers/testUtils';
 import { signatureEnvelopeEntity } from '../../../../helpers/builders/signatureEnvelope';

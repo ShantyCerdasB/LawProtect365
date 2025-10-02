@@ -8,10 +8,9 @@
 import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
 import { SignatureOrchestrator } from '@/services/orchestrators/SignatureOrchestrator';
 import { TestUtils } from '../../../helpers/testUtils';
-import { NetworkSecurityContext, NotificationType } from '@lawprotect/shared-ts';
+import { NetworkSecurityContext, NotificationType, Email } from '@lawprotect/shared-ts';
 import { EnvelopeId } from '@/domain/value-objects/EnvelopeId';
 import { SignerId } from '@/domain/value-objects/SignerId';
-import { Email } from '@lawprotect/shared-ts';
 import { EnvelopeStatus } from '@/domain/value-objects/EnvelopeStatus';
 import { DocumentOrigin } from '@/domain/value-objects/DocumentOrigin';
 import { SigningOrder } from '@/domain/value-objects/SigningOrder';

@@ -35,10 +35,8 @@ export class SignerReminderTrackingService {
       // Try to find existing tracking
       let tracking = await this.signerReminderTrackingRepository.findBySignerAndEnvelope(signerId, envelopeId);
       
-      if (!tracking) {
-        // Create new tracking if it doesn't exist
-        tracking = SignerReminderTracking.createNew(signerId, envelopeId);
-      }
+      // Create new tracking if it doesn't exist
+      tracking ??= SignerReminderTracking.createNew(signerId, envelopeId);
       
       // Record the reminder
       const updatedTracking = tracking.recordReminderSent(message);

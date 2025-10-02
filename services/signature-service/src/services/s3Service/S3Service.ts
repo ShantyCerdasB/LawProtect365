@@ -8,12 +8,10 @@
 
 import { EnvelopeId } from '@/domain/value-objects/EnvelopeId';
 import { SignerId } from '@/domain/value-objects/SignerId';
-import { S3Key } from '@lawprotect/shared-ts';
+import { S3Key, NetworkSecurityContext, createNetworkSecurityContext, S3Presigner, S3EvidenceStorage, NotFoundError, BadRequestError, ErrorCodes, getDocumentContent } from '@lawprotect/shared-ts';
 import { AuditEventService } from '@/services/audit/AuditEventService';
 import { AuditEventType, DocumentType } from '@/domain/enums';
-import { NetworkSecurityContext, createNetworkSecurityContext } from '@lawprotect/shared-ts';
 import { StoreDocumentRequest, RetrieveDocumentRequest, GeneratePresignedUrlRequest, DocumentResult } from '@/domain/types/s3';
-import {S3Presigner, S3EvidenceStorage,  NotFoundError, BadRequestError, ErrorCodes, getDocumentContent } from '@lawprotect/shared-ts';
 import { validateStoreDocumentRequest, validateRetrieveDocumentRequest, validateGeneratePresignedUrlRequest } from '@/domain/rules/s3/S3ValidationRules';
 import { validateS3StorageForDocument } from '@/domain/rules/s3/S3StorageRules';
 import { documentS3Error, documentS3NotFound } from '@/signature-errors';

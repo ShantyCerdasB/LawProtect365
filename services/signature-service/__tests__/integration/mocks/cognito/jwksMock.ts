@@ -155,7 +155,8 @@ export async function startMockJwksServer(): Promise<void> {
     });
     
   } catch (error) {
-    throw error;
+    console.error('Failed to start JWKS mock server:', error);
+    throw new Error(`JWKS mock server initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 

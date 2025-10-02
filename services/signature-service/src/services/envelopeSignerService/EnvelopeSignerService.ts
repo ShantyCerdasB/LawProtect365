@@ -21,7 +21,7 @@ import {
   SignatureData 
 } from '@/domain/types/signer';
 import { AuditEventType } from '@/domain/enums/AuditEventType';
-import { NetworkSecurityContext } from '@lawprotect/shared-ts';
+import { NetworkSecurityContext, ConflictError, BadRequestError, NotFoundError, wrapServiceError } from '@lawprotect/shared-ts';
 import { 
   signerNotFound,
   signerCreationFailed,
@@ -30,7 +30,6 @@ import {
   signerEmailDuplicate,
   envelopeNotFound
 } from '@/signature-errors';
-import { ConflictError, BadRequestError, NotFoundError, wrapServiceError } from '@lawprotect/shared-ts';
 
 /**
  * EnvelopeSignerService implementation

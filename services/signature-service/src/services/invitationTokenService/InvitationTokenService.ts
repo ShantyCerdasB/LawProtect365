@@ -16,11 +16,10 @@ import { EnvelopeSignerRepository } from '@/repositories/EnvelopeSignerRepositor
 import { AuditEventService } from '@/services/audit/AuditEventService';
 import { InvitationTokenValidationRule } from '@/domain/rules/InvitationTokenValidationRule';
 import { AuditEventType } from '@/domain/enums/AuditEventType';
-import { NetworkSecurityContext } from '@lawprotect/shared-ts';
+import { NetworkSecurityContext, randomToken, sha256Hex } from '@lawprotect/shared-ts';
 import { 
   invitationTokenInvalid
 } from '@/signature-errors';
-import { randomToken, sha256Hex } from '@lawprotect/shared-ts';
 
 /**
  * Result of invitation token generation containing both the original token and entity

@@ -1,6 +1,5 @@
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 import { GetAuditTrailUseCase } from '../../../../../src/services/orchestrators/use-cases/GetAuditTrailUseCase';
-import { GetAuditTrailInput } from '../../../../../src/domain/types/usecase/orchestrator/GetAuditTrailUseCase';
 import { AuditEventType } from '../../../../../src/domain/enums/AuditEventType';
 import { TestUtils } from '../../../../helpers/testUtils';
 import { signatureEnvelopeEntity } from '../../../../helpers/builders/signatureEnvelope';

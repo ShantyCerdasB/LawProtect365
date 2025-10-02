@@ -215,7 +215,7 @@ describe('auditHelpers', () => {
         AuditEventType.DOCUMENT_DOWNLOADED
       ];
 
-      eventTypes.forEach(eventType => {
+      for (const eventType of eventTypes) {
         const result = createAuditEvent(
           envelopeId,
           eventType,
@@ -224,7 +224,7 @@ describe('auditHelpers', () => {
         );
 
         expect(result.eventType).toBe(eventType);
-      });
+      }
     });
 
     it('should preserve all parameters in result object', () => {
