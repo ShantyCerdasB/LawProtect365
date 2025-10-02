@@ -49,7 +49,7 @@ export const buildAppConfig = (overrides?: Partial<AppConfig>): AppConfig => {
   };
 
   // Shallow merge overrides
-  return { ...cfg, ...(overrides ?? {}) };
+  return { ...cfg, ...overrides };
 };
 
 /**

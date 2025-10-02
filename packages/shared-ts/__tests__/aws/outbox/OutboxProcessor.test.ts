@@ -1,14 +1,7 @@
 import { OutboxProcessor } from '../../../src/aws/outbox/OutboxProcessor.js';
 import type { OutboxPort, EventBusPort, OutboxRecord } from '../../../src/index.js';
 
-describe('OutboxProcessor', () => {
-  let processor: OutboxProcessor;
-  let mockOutboxRepository: jest.Mocked<OutboxPort>;
-  let mockEventBus: jest.Mocked<EventBusPort>;
-  let mockMetrics: jest.Mocked<OutboxProcessor['metrics']>;
-  let mockOptions: OutboxProcessor['options'];
-
-  function createMockEvent(id: string): OutboxRecord {
+function createMockEvent(id: string): OutboxRecord {
     return {
       id,
       type: 'TestEvent',
@@ -21,6 +14,13 @@ describe('OutboxProcessor', () => {
       updatedAt: '2023-01-01T00:00:00.000Z'
     };
   }
+
+describe('OutboxProcessor', () => {
+  let processor: OutboxProcessor;
+  let mockOutboxRepository: jest.Mocked<OutboxPort>;
+  let mockEventBus: jest.Mocked<EventBusPort>;
+  let mockMetrics: jest.Mocked<OutboxProcessor['metrics']>;
+  let mockOptions: OutboxProcessor['options'];
 
   beforeEach(() => {
     mockOutboxRepository = {

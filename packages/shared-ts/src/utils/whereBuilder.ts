@@ -104,13 +104,15 @@ export class WhereBuilder<W extends AnyWhere> {
     expiresField = 'expiresAt', 
     expiredValue = 'EXPIRED' as any
   ): this {
-    this.AND.push({ [statusField]: { not: expiredValue } } as W);
-    this.AND.push({ 
-      OR: [
-        { [expiresField]: null }, 
-        { [expiresField]: { gte: this.now() } }
-      ] 
-    } as unknown as W);
+    this.AND.push(
+      { [statusField]: { not: expiredValue } } as W,
+      { 
+        OR: [
+          { [expiresField]: null }, 
+          { [expiresField]: { gte: this.now() } }
+        ] 
+      } as unknown as W
+    );
     return this;
   }
 

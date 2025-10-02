@@ -60,9 +60,9 @@ export const apiHandler = (fn: HandlerFn, opts: ApiHandlerOptions = {}): Handler
     return {
       ...structured,
       headers: {
-        ...(opts.defaultHeaders ?? {}),
+        ...opts.defaultHeaders,
         ...corsHeaders,
-        ...(structured.headers ?? {})
+        ...structured.headers
       }
     };
   };

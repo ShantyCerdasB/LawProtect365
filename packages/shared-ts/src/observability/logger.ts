@@ -54,8 +54,8 @@ export const createLogger = (baseFields: Fields = {}, level: LogLevel = GLOBAL_L
       requestId: ctx?.requestId ?? getRequestId(),
       traceId: ctx?.traceId ?? getTraceId(),
       ...bound,
-      ...(ctx?.fields ?? {}),
-      ...(fields ?? {})
+      ...ctx?.fields,
+      ...fields
     });
 
     const line = JSON.stringify(record);

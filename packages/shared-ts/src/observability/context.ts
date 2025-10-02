@@ -30,7 +30,7 @@ export const withRequestContexts = <T>(
     requestId: ctx.requestId ?? ulid(),
     traceId: ctx.traceId ?? ulid(),
     parentSpanId: ctx.parentSpanId,
-    fields: { ...(ctx.fields ?? {}) }
+    fields: { ...ctx.fields }
   };
   return storage.run(base, fn);
 };
@@ -59,5 +59,5 @@ export const getTraceId = (): string =>
 export const setContextFields = (patch: Record<string, unknown>): void => {
   const current = storage.getStore();
   if (!current) return;
-  current.fields = { ...(current.fields ?? {}), ...patch };
+  current.fields = { ...current.fields, ...patch };
 };

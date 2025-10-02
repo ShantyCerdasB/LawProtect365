@@ -81,9 +81,9 @@ describe("isEmail", () => {
   // Helper function to test invalid email cases
   const testInvalidEmails = (testName: string, invalidEmails: string[]) => {
     it(testName, () => {
-      invalidEmails.forEach(email => {
+      for (const email of invalidEmails) {
         expect(isEmail(email)).toBe(false);
-      });
+      }
     });
   };
 

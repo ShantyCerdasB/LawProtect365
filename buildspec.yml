@@ -5,13 +5,11 @@ phases:
     runtime-versions:
       nodejs: 20
     commands:
-      - bash -lc 'set -euo pipefail'
-      - echo "Using Node: $(node -v)"
-      - echo "Using npm:  $(npm -v)"
+      - 'bash -lc "set -euo pipefail; echo Using Node: $(node -v); echo Using npm: $(npm -v)"'
 
   pre_build:
     commands:
-      - echo "Building shared-ts layer..."
+      - 'echo Building shared-ts layer...'
       - |
         if [ -n "${CODEARTIFACT_REPO_ENDPOINTS:-}" ]; then
           NPM_ENDPOINT=$(node -e 'const j=process.env.CODEARTIFACT_REPO_ENDPOINTS?JSON.parse(process.env.CODEARTIFACT_REPO_ENDPOINTS):{}; if(!j.npm){process.exit(2)}; console.log(j.npm)')
@@ -24,25 +22,25 @@ phases:
             echo "always-auth=true" >> ~/.npmrc
           fi
         fi
-      - cd packages/shared-ts
-      - npm ci
-      - DATABASE_URL="postgresql://user:pass@localhost:5432/postgres?schema=public" npx prisma generate
-      - npm run build
-      - npm prune --omit=dev
-      - cd -
-      - rm -rf /tmp/layer && mkdir -p /tmp/layer/nodejs
-      - cp -R packages/shared-ts/dist /tmp/layer/nodejs/
-      - cp -R packages/shared-ts/node_modules /tmp/layer/nodejs/
-      - cp packages/shared-ts/package.json /tmp/layer/nodejs/
-      - cp packages/shared-ts/package-lock.json /tmp/layer/nodejs/
+      - 'cd packages/shared-ts'
+      - 'npm ci'
+      - 'DATABASE_URL="postgresql://user:pass@localhost:5432/postgres?schema=public" npx prisma generate'
+      - 'npm run build'
+      - 'npm prune --omit=dev'
+      - 'cd -'
+      - 'rm -rf /tmp/layer && mkdir -p /tmp/layer/nodejs'
+      - 'cp -R packages/shared-ts/dist /tmp/layer/nodejs/'
+      - 'cp -R packages/shared-ts/node_modules /tmp/layer/nodejs/'
+      - 'cp packages/shared-ts/package.json /tmp/layer/nodejs/'
+      - 'cp packages/shared-ts/package-lock.json /tmp/layer/nodejs/'
 
   build:
     commands:
-      - cd /tmp/layer
-      - zip -r shared-ts-layer.zip .
+      - 'cd /tmp/layer'
+      - 'zip -r shared-ts-layer.zip .'
       - '[ -n "${CODE_BUCKET:-}" ] || { echo "ERROR: CODE_BUCKET env var is not set"; exit 1; }'
-      - aws s3 cp shared-ts-layer.zip s3://$CODE_BUCKET/shared-ts-layer.zip
-      - echo "Uploaded layer to s3://$CODE_BUCKET/shared-ts-layer.zip"
+      - 'aws s3 cp shared-ts-layer.zip s3://$CODE_BUCKET/shared-ts-layer.zip'
+      - 'echo Uploaded layer to s3://$CODE_BUCKET/shared-ts-layer.zip'
 
 artifacts:
   files:

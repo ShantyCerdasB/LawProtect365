@@ -12,7 +12,7 @@ export const TIME_CONSTANTS = {
   /**
    * 1 second in milliseconds
    */
-  SECOND_MS: 1_000,
+  SECOND_MS: 1000,
 
   /**
    * 1 minute in milliseconds

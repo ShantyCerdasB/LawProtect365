@@ -155,7 +155,9 @@ describe('utils barrel (src/utils/index.ts)', () => {
     ];
     for (const p of starModules) {
       const mod: UtilsModuleExports = await import(p);
-      utilsPublicKeys(mod).forEach((k) => expected.add(k));
+      for (const k of utilsPublicKeys(mod)) {
+        expected.add(k);
+      }
     }
 
     const expectedKeys = Array.from(expected).sort();

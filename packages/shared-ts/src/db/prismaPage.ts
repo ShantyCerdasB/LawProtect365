@@ -29,7 +29,7 @@ export async function listPage<T>(
   model: { findMany: Function },
   where: Record<string, any>,
   limit: number,
-  cursor: any | undefined,          // decoded cursor (not string)
+  cursor: unknown | undefined,          // decoded cursor (not string)
   cfg: PagingCfg
 ): Promise<{ rows: T[]; nextCursor?: string }> {
   const prismaCursor = cfg.normalizeCursor ? cfg.normalizeCursor(cursor) : cursor;

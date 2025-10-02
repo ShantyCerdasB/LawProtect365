@@ -195,7 +195,7 @@ export const composeController = <Req, Out, Ctx>(
       // AFTER phase
       for (const a of afters) {
         const maybe = await a(req, result, ctx); // 'result' is already resolved (Out)
-        if (typeof maybe !== "undefined") result = maybe;
+        if (maybe !== undefined) result = maybe;
       }
 
       return result;
@@ -203,7 +203,7 @@ export const composeController = <Req, Out, Ctx>(
       // ON ERROR phase
       for (const oe of onErrors) {
         const maybe = await oe(err, req, ctx);
-        if (typeof maybe !== "undefined") return maybe as Out;
+        if (maybe !== undefined) return maybe as Out;
       }
       throw err;
     }

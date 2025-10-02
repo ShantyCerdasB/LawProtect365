@@ -86,7 +86,7 @@ const randInt = (min: number, max: number): number => {
     throw new Error("Secure RNG unavailable: globalThis.crypto.getRandomValues is required");
   }
 
-  const range = 0x1_0000_0000; // 2^32
+  const range = 0x100000000; // 2^32
   const limit = range - (range % span); // rejection sampling to remove bias
   const buf = new Uint32Array(1);
   let x = 0;

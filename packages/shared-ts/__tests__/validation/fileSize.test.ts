@@ -27,7 +27,7 @@ describe('FileSizeSchema', () => {
 
     it('should reject non-integer values', () => {
       expect(() => schema.parse(1.5)).toThrow();
-      expect(schema.parse(1.0)).toBe(1); // 1.0 is valid as it's an integer
+      expect(schema.parse(1)).toBe(1); // 1 is valid as it's an integer
     });
 
     it('should reject non-number values', () => {

@@ -151,7 +151,7 @@ export type DdbClientWithQuery = DdbClientLike & {
  */
 export function requireUpdate(ddb: DdbClientLike): asserts ddb is DdbClientWithUpdate {
   if (typeof ddb.update !== "function") {
-    throw new Error("DdbClientLike.update is required by this operation but is undefined.");
+    throw new TypeError("DdbClientLike.update is required by this operation but is undefined.");
   }
 }
 
@@ -168,6 +168,6 @@ export function requireUpdate(ddb: DdbClientLike): asserts ddb is DdbClientWithU
  */
 export function requireQuery(ddb: DdbClientLike): asserts ddb is DdbClientWithQuery {
   if (typeof ddb.query !== "function") {
-    throw new Error("DdbClientLike.query is required by this operation but is undefined.");
+    throw new TypeError("DdbClientLike.query is required by this operation but is undefined.");
   }
 }

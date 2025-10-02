@@ -96,7 +96,7 @@ describe("validateQuery()", () => {
       page: z
         .string()
         .default("1")
-        .transform((s) => Number(s))
+        .transform(Number)
         .pipe(z.number().int().min(1))});
 
     const evt = mkEvt({ queryStringParameters: { q: "hello", page: "3" } });

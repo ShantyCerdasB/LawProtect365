@@ -1,7 +1,7 @@
-import { decodeCursor, cursorFromRecord } from "./cursor.js";
+import { decodeCursor } from "./cursor.js";
 
 // Re-export cursorFromRecord for use in other modules
-export { cursorFromRecord };
+export { cursorFromRecord } from "./cursor.js";
 
 /**
  * Result page shape for cursor pagination.
@@ -28,7 +28,7 @@ export const pageFromRows = <T>(
 ): Page<T> => {
   const hasMore = rows.length > limit;
   const items = hasMore ? rows.slice(0, limit) : rows;
-  const nextCursor = hasMore ? toCursor(items[items.length - 1]) : undefined;
+  const nextCursor = hasMore ? toCursor(items.at(-1)!) : undefined;
   return { items, nextCursor };
 };
 

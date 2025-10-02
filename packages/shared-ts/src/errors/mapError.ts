@@ -21,7 +21,7 @@ export const mapError = (err: unknown, opts: MapErrorOptions = {}): APIGatewayPr
   const headers: Record<string, string> = {
     "Content-Type": "application/json; charset=utf-8",
     ...(opts.requestId ? { "x-request-id": String(opts.requestId) } : {}),
-    ...(opts.headers ?? {})
+    ...opts.headers
   };
 
   // Add Retry-After for throttling

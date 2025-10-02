@@ -26,7 +26,7 @@ export const withControllerLogging = (): { before: BeforeMiddleware; after: Afte
     // Optionally expose request id
     if (typeof res !== "string") {
       res.headers = {
-        ...(res.headers ?? {}),
+        ...res.headers,
         "x-request-id": (evt.headers?.["x-request-id"] as string) ?? ""
       };
     }

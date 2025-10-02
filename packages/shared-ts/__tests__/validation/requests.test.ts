@@ -62,7 +62,7 @@ describe("validateRequest()", () => {
         page: z
           .string()
           .default("1")
-          .transform((s) => Number(s))
+          .transform(Number)
           .pipe(z.number().int().min(1))}),
       body: z.object({ name: z.string().min(1), age: z.number().int().min(0) })};
 

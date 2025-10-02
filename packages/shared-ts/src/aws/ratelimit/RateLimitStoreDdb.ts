@@ -92,8 +92,8 @@ export class RateLimitStoreDdb implements RateLimitStore {
         // Try to create a new record - if it fails, rate limit is exceeded
         try {
           return await this.createRecord(key, window);
-        } catch (createErr: any) {
-          if (String(createErr?.name) === "ConditionalCheckFailedException") {
+        } catch (error_: any) {
+          if (String(error_?.name) === "ConditionalCheckFailedException") {
             // Record exists and rate limit exceeded
             throw new TooManyRequestsError(
               "Rate limit exceeded",
