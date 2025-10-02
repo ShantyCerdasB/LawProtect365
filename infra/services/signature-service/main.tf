@@ -65,6 +65,25 @@
       # SSM Parameter Store
       SSM_PARAM_PREFIX = "/${var.project_name}/${var.env}"
       
+      # Database configuration
+      DB_MAX_CONNECTIONS = var.db_max_connections
+      DB_CONNECTION_TIMEOUT = var.db_connection_timeout
+      
+      # KMS configuration
+      KMS_SIGNING_ALGORITHM = var.kms_signing_algorithm
+      
+      # Document download configuration
+      DOCUMENT_DOWNLOAD_DEFAULT_EXPIRATION_SECONDS = var.document_download_default_expiration_seconds
+      DOCUMENT_DOWNLOAD_MAX_EXPIRATION_SECONDS = var.document_download_max_expiration_seconds
+      DOCUMENT_DOWNLOAD_MIN_EXPIRATION_SECONDS = var.document_download_min_expiration_seconds
+      
+      # Reminders configuration
+      MAX_REMINDERS_PER_SIGNER = var.max_reminders_per_signer
+      MIN_HOURS_BETWEEN_REMINDERS = var.min_hours_between_reminders
+      FIRST_REMINDER_HOURS = var.first_reminder_hours
+      SECOND_REMINDER_HOURS = var.second_reminder_hours
+      THIRD_REMINDER_HOURS = var.third_reminder_hours
+      
   # CloudWatch metrics
   METRICS_NAMESPACE = "SignService"
     }

@@ -198,3 +198,73 @@ variable "attach_waf_web_acl" {
   type        = bool
   default     = false
 }
+
+# Database configuration
+variable "db_max_connections" {
+  description = "Maximum database connections"
+  type        = number
+  default     = 10
+}
+
+variable "db_connection_timeout" {
+  description = "Database connection timeout in milliseconds"
+  type        = number
+  default     = 30000
+}
+
+# KMS configuration
+variable "kms_signing_algorithm" {
+  description = "KMS signing algorithm"
+  type        = string
+  default     = "RSASSA_PSS_SHA_256"
+}
+
+# Document download configuration
+variable "document_download_default_expiration_seconds" {
+  description = "Default document download expiration in seconds"
+  type        = number
+  default     = 3600
+}
+
+variable "document_download_max_expiration_seconds" {
+  description = "Maximum document download expiration in seconds"
+  type        = number
+  default     = 86400
+}
+
+variable "document_download_min_expiration_seconds" {
+  description = "Minimum document download expiration in seconds"
+  type        = number
+  default     = 300
+}
+
+# Reminders configuration
+variable "max_reminders_per_signer" {
+  description = "Maximum reminders per signer"
+  type        = number
+  default     = 3
+}
+
+variable "min_hours_between_reminders" {
+  description = "Minimum hours between reminders"
+  type        = number
+  default     = 24
+}
+
+variable "first_reminder_hours" {
+  description = "Hours for first reminder"
+  type        = number
+  default     = 24
+}
+
+variable "second_reminder_hours" {
+  description = "Hours for second reminder"
+  type        = number
+  default     = 48
+}
+
+variable "third_reminder_hours" {
+  description = "Hours for third reminder"
+  type        = number
+  default     = 72
+}

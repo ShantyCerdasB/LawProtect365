@@ -407,6 +407,25 @@ module "sign_service" {
   outbox_publisher_policy = data.aws_iam_policy_document.outbox_publisher.json
   eventbridge_publisher_policy = data.aws_iam_policy_document.eventbridge_publisher.json
 
+  # Database configuration
+  db_max_connections = var.db_max_connections
+  db_connection_timeout = var.db_connection_timeout
+
+  # KMS configuration
+  kms_signing_algorithm = var.kms_signing_algorithm
+
+  # Document download configuration
+  document_download_default_expiration_seconds = var.document_download_default_expiration_seconds
+  document_download_max_expiration_seconds = var.document_download_max_expiration_seconds
+  document_download_min_expiration_seconds = var.document_download_min_expiration_seconds
+
+  # Reminders configuration
+  max_reminders_per_signer = var.max_reminders_per_signer
+  min_hours_between_reminders = var.min_hours_between_reminders
+  first_reminder_hours = var.first_reminder_hours
+  second_reminder_hours = var.second_reminder_hours
+  third_reminder_hours = var.third_reminder_hours
+
   # JWT authorizer (Cognito)
   enable_jwt_authorizer = true
   jwt_issuer            = "https://cognito-idp.${var.region}.amazonaws.com/${module.auth_service.cognito_user_pool_id}"
