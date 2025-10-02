@@ -133,7 +133,7 @@ export class S3Key {
     }
 
     // S3 key cannot contain certain characters
-    const invalidChars = /[<>:"|?*\u0000-\u001f]/;
+    const invalidChars = /[<>:"|?*\u0000-\u001F]/;
     if (invalidChars.test(key)) {
       return false;
     }

@@ -80,7 +80,7 @@ export class EnvelopeCrudService {
 
         // Only audit if token matches the envelope being accessed
         if (token.getEnvelopeId().getValue() === envelopeId.getValue()) {
-          
+          // TODO: Add audit logic here when needed
         }
       }
 

@@ -56,7 +56,7 @@ export const retry = async <T>(
   const retries = opts.retries ?? 3;
   const factor = opts.factor ?? 2;
   const min = opts.minDelayMs ?? 100;
-  const max = opts.maxDelayMs ?? 2_000;
+  const max = opts.maxDelayMs ?? 2000;
   const should = opts.shouldRetry ?? (() => true);
 
   let attempt = 0;

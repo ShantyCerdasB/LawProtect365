@@ -11,7 +11,6 @@ describe('InvitationTokenValidationRule', () => {
   let signer: EnvelopeSigner;
 
   beforeEach(() => {
-    const tokenId = TestUtils.generateUuid();
     const signerId = TestUtils.generateSignerId();
     const envelopeId = TestUtils.generateEnvelopeId();
     const createdBy = TestUtils.generateUuid();

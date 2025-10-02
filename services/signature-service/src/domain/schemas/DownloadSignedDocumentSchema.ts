@@ -26,10 +26,10 @@ export const DownloadDocumentPathSchema = z.object({
  */
 export const DownloadDocumentQuerySchema = z.object({
   expiresIn: z.string().optional()
-    .transform((val) => val ? parseInt(val, 10) : undefined)
+    .transform((val) => val ? Number.parseInt(val, 10) : undefined)
     .refine((val) => {
       if (val === undefined) return true;
-      if (isNaN(val)) return false;
+      if (Number.isNaN(val)) return false;
       
       // Load configuration to validate expiration limits
       const config = loadConfig();

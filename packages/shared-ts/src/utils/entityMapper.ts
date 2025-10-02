@@ -39,7 +39,7 @@ export class EntityMapper {
   ): T {
     const p = patch as any;
     const out = {} as T;
-    const has = (k: string) => Object.prototype.hasOwnProperty.call(p, k);
+    const has = (k: string) => Object.hasOwn(p, k);
     const set = (k: string, v: unknown) => { if (v !== undefined) (out as any)[k] = v; };
   
     for (const mapping of mappings) {
@@ -47,7 +47,7 @@ export class EntityMapper {
       const directValue = has(mapping.field) ? p[mapping.field] : undefined;
   
       // Prefer getter; si viene undefined, usa DTO
-      const raw = getterValue !== undefined ? getterValue : directValue;
+      const raw = getterValue === undefined ? directValue : getterValue;
   
       if (raw !== undefined) {
         // valueExtractor con Fallback: si no aplica, devuelve el mismo valor

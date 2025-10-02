@@ -40,7 +40,7 @@ export class ReminderTrackingId {
    * @returns New ReminderTrackingId instance
    */
   static generate(): ReminderTrackingId {
-    const { randomUUID } = require('crypto');
+    const { randomUUID } = require('node:crypto');
     return new ReminderTrackingId(randomUUID());
   }
 

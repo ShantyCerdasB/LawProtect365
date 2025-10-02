@@ -143,15 +143,15 @@ const normalizeError = (err: unknown): {
  * @param code Error code.
  */
 const isThrottling = (name: string, code: string): boolean => {
-  const list = [
+  const list = new Set([
     "ThrottlingException",
     "TooManyRequestsException",
     "ProvisionedThroughputExceededException",
     "RequestLimitExceeded",
     "LimitExceededException",
     "ServiceQuotaExceededException"
-  ];
-  return list.includes(name) || list.includes(code);
+  ]);
+  return list.has(name) || list.has(code);
 };
 
 /**

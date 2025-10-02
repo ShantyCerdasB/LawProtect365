@@ -21,6 +21,10 @@ export const INVALID_UUID_PATTERNS = [
   '550e8400-e29b-41d4-a716-4466554400000' // Too long
 ] as const;
 
+function testInvalidUuid(invalidUuid: string, ValueObjectClass: any, expectedError: string): void {
+  expect(() => new ValueObjectClass(invalidUuid)).toThrow(expectedError);
+}
+
 /**
  * Common invalid string patterns for testing value object validation
  */
@@ -87,12 +91,8 @@ export class ValueObjectTestPatterns {
       });
 
       it('should throw error for invalid UUID patterns', () => {
-        INVALID_UUID_PATTERNS.forEach(testInvalidUuid);
+        INVALID_UUID_PATTERNS.forEach(uuid => testInvalidUuid(uuid, ValueObjectClass, expectedError));
       });
-
-      function testInvalidUuid(invalidUuid: string): void {
-        expect(() => new ValueObjectClass(invalidUuid)).toThrow(expectedError);
-      }
     });
   }
 

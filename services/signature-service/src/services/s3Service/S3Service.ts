@@ -511,7 +511,7 @@ export class S3Service {
    * @returns Checksum string
    */
   private calculateChecksum(content: Buffer): string {
-    const crypto = require('crypto');
+    const crypto = require('node:crypto');
     return crypto.createHash('sha256').update(content).digest('hex');
   }
 

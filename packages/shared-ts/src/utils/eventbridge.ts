@@ -79,7 +79,7 @@ export function validateEventMetadata(metadata: EventMetadataSchema): string[] {
 export function generateEventId(): string {
   // Use crypto.randomUUID for secure random generation
   const crypto = require('node:crypto');
-  const randomPart = crypto.randomUUID().replace(/-/g, '').substring(0, 9);
+  const randomPart = crypto.randomUUID().replaceAll('-', '').substring(0, 9);
   return `evt_${Date.now()}_${randomPart}`;
 }
 

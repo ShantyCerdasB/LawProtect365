@@ -5,9 +5,9 @@
  * It uses the real PostgreSQL database configured in DATABASE_URL.
  */
 
-import { execSync } from 'child_process';
-import { join } from 'path';
-import { existsSync } from 'fs';
+import { execSync } from 'node:child_process';
+import { join } from 'node:path';
+import { existsSync } from 'node:fs';
 
 /**
  * Runs Prisma migrations on the database

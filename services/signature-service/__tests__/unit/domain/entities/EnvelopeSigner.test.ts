@@ -836,7 +836,7 @@ describe('EnvelopeSigner', () => {
     it('should throw error when order is NaN', () => {
       const signer = createEnvelopeSignerWithParams({});
       
-      expect(() => signer.updateOrder(NaN))
+      expect(() => signer.updateOrder(Number.NaN))
         .toThrow(invalidSignerState('Order must be a non-negative integer'));
     });
 

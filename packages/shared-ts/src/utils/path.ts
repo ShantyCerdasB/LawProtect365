@@ -14,14 +14,14 @@ const p = nodePath.posix;
  * Converts any separators to POSIX-style forward slashes.
  * @param input Path string (may contain backslashes).
  */
-export const toPosix = (input: string): string => input.replace(/\\/g, "/");
+export const toPosix = (input: string): string => input.replaceAll("\\", "/");
 
 /**
  * Joins path segments using POSIX semantics.
  * @param parts Path segments.
  */
 export const join = (...parts: Array<string | undefined | null>): string =>
-  p.join(...parts.filter((x): x is string => Boolean(x)).map((x) => toPosix(x)));
+  p.join(...parts.filter((x): x is string => x).map((x) => toPosix(x)));
 
 /**
  * Normalizes a path (collapses '.', '..' and redundant slashes).

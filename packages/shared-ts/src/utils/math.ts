@@ -106,7 +106,7 @@ export const randomInt = (min: number, max: number): number => {
     | undefined;
 
   if (web?.getRandomValues) {
-    const range = 0x1_0000_0000; // 2^32
+    const range = 0x100000000; // 2^32
     const limit = range - (range % span); // rejection sampling to avoid bias
     const buf = new Uint32Array(1);
     let x = 0;

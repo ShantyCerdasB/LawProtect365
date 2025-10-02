@@ -11,7 +11,7 @@ export const isBlank = (s: string | undefined | null): boolean =>
 
 /** Collapses consecutive whitespace into single spaces and trims ends. */
 export const normalizeWhitespace = (s: string): string =>
-  s.replace(/\s+/g, " ").trim();
+  s.replaceAll(/\s+/g, " ").trim();
 
 /** Trims a string to max length and appends suffix when truncated. */
 export const trimTo = (s: string, max: number, suffix = "…"): string =>
@@ -19,7 +19,7 @@ export const trimTo = (s: string, max: number, suffix = "…"): string =>
 
 /** Converts text to Title Case (basic ASCII-safe). */
 export const toTitleCase = (s: string): string =>
-  s.toLowerCase().replace(/\b([a-z])/g, (_m: string, c: string) => c.toUpperCase());
+  s.toLowerCase().replaceAll(/\b([a-z])/g, (_m: string, c: string) => c.toUpperCase());
 
 /**
  * Produces a URL-safe slug.
@@ -31,12 +31,12 @@ export const toTitleCase = (s: string): string =>
  * @returns A lowercase, URL-safe slug.
  */
 export const slugify = (s: string): string => {
-  const ascii = s.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const ascii = s.normalize("NFKD").replaceAll(/[\u0300-\u036f]/g, "").toLowerCase();
 
   let out = "";
   let prevDash = false;
   for (let i = 0; i < ascii.length; i++) {
-    const code = ascii.charCodeAt(i);
+    const code = ascii.codePointAt(i)!;
     const isAlpha = code >= 97 && code <= 122; // a-z
     const isDigit = code >= 48 && code <= 57; // 0-9
     if (isAlpha || isDigit) {
@@ -51,9 +51,9 @@ export const slugify = (s: string): string => {
   }
 
   let start = 0;
-  while (start < out.length && out.charCodeAt(start) === 45) start++; // '-'
+  while (start < out.length && out.codePointAt(start) === 45) start++; // '-'
   let end = out.length;
-  while (end > start && out.charCodeAt(end - 1) === 45) end--; // '-'
+  while (end > start && out.codePointAt(end - 1) === 45) end--; // '-'
 
   return out.slice(start, end);
 };
@@ -61,7 +61,7 @@ export const slugify = (s: string): string => {
 /** Removes ASCII control characters (U+0000–U+001F, U+007F). */
 export const stripControlChars = (s: string): string => {
   return s.split('').filter(char => {
-    const code = char.charCodeAt(0);
+    const code = char.codePointAt(0)!;
     return !(code >= 0 && code <= 31) && code !== 127;
   }).join('');
 };

@@ -37,7 +37,7 @@ export function toDateOrUndefined(d: unknown): Date | undefined {
   if (d) {
     const date = new Date(d as string | number);
     // Reject invalid dates or dates that are too old (before year 2000)
-    if (isNaN(date.getTime()) || date.getFullYear() < 2000) {
+    if (Number.isNaN(date.getTime()) || date.getFullYear() < 2000) {
       return undefined;
     }
     return date;

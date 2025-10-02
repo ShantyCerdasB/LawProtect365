@@ -31,7 +31,7 @@ const DEFAULT_FIELDS = [
  * @param opts Redaction options.
  */
 export const deepRedact = <T>(value: T, opts: RedactOptions = {}): T => {
-  const fields = (opts.fields ?? DEFAULT_FIELDS).map((s) => s.toLowerCase());
+  const fields = new Set((opts.fields ?? DEFAULT_FIELDS).map((s) => s.toLowerCase()));
   const seen = new WeakSet<object>();
   const repl = opts.replacement ?? "[REDACTED]";
   const maxDepth = opts.maxDepth ?? 8;
@@ -48,7 +48,7 @@ export const deepRedact = <T>(value: T, opts: RedactOptions = {}): T => {
 
     const out: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(val)) {
-      if (fields.includes(k.toLowerCase())) {
+      if (fields.has(k.toLowerCase())) {
         out[k] = repl;
       } else {
         out[k] = visit(v, depth + 1);

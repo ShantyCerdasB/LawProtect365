@@ -404,7 +404,7 @@ function isIPInRange(ip: string, cidr: string): boolean {
   try {
     // Simplified implementation - in production, use a proper CIDR library
     const [rangeIP, prefix] = cidr.split('/');
-    const prefixLength = parseInt(prefix);
+    const prefixLength = Number.parseInt(prefix);
     
     // This is a simplified check - proper implementation would handle all CIDR cases
     return ip.startsWith(rangeIP.split('.').slice(0, Math.floor(prefixLength / 8)).join('.'));

@@ -34,18 +34,18 @@ export const startSpan = (name: string, attributes?: Record<string, unknown>): S
   setContextFields({ spanId: id, parentSpanId });
 
   const addEvent = (event: string, attrs?: Record<string, unknown>) => {
-    logger.debug("span.event", { span: name, spanId: id, event, ...(attrs ?? {}) });
+    logger.debug("span.event", { span: name, spanId: id, event, ...attrs });
   };
 
   const end = (extra?: Record<string, unknown>) => {
     const ms = t.end();
-    logger.info("span.end", { span: name, spanId: id, durationMs: ms, ...(attributes ?? {}), ...(extra ?? {}) });
+    logger.info("span.end", { span: name, spanId: id, durationMs: ms, ...attributes, ...extra });
     // Restore parent span id for subsequent logs
     setContextFields({ spanId: parentSpanId });
     return ms;
   };
 
-  logger.debug("span.start", { span: name, spanId: id, ...(attributes ?? {}) });
+  logger.debug("span.start", { span: name, spanId: id, ...attributes });
 
   return { id, name, attributes, end, addEvent };
 };

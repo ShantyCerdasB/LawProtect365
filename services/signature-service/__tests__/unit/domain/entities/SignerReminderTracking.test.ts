@@ -309,7 +309,6 @@ describe('SignerReminderTracking', () => {
       const clock = createFixedClock(new Date());
 
       // Mock the evaluateReminderGate to return an unknown reason
-      const originalEvaluate = entity.evaluateReminderGate.bind(entity);
       jest.spyOn(entity, 'evaluateReminderGate').mockReturnValue({
         ok: false,
         reason: 'UNKNOWN_REASON' as any,

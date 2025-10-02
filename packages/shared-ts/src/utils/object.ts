@@ -49,7 +49,7 @@ export const setPath = (obj: any, path: string, value: unknown): any => {
     if (!isPlainObject(cur[p])) cur[p] = {};
     cur = cur[p];
   }
-  cur[parts[parts.length - 1]] = value;
+  cur[parts.at(-1)!] = value;
   return obj;
 };
 

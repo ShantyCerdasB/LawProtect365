@@ -16,12 +16,12 @@ export interface S3Uri {
 // Internal helpers for slash trimming (no regex, linear time).
 const stripLeadingSlashes = (s: string): string => {
   let i = 0;
-  while (i < s.length && s.charCodeAt(i) === 47 /* '/' */) i++;
+  while (i < s.length && s.codePointAt(i) === 47 /* '/' */) i++;
   return s.slice(i);
 };
 const stripTrailingSlashes = (s: string): string => {
   let end = s.length;
-  while (end > 0 && s.charCodeAt(end - 1) === 47 /* '/' */) end--;
+  while (end > 0 && s.codePointAt(end - 1) === 47 /* '/' */) end--;
   return s.slice(0, end);
 };
 const stripEdgeSlashes = (s: string): string => stripTrailingSlashes(stripLeadingSlashes(s));
@@ -65,7 +65,7 @@ export const isS3Uri = (uri: string): boolean => /^s3:\/\//i.test(uri);
  */
 export const joinKey = (...parts: Array<string | undefined | null>): string =>
   parts
-    .filter((p): p is string => Boolean(p))
+    .filter((p): p is string => p)
     .map((p) => stripEdgeSlashes(p))
     .filter(Boolean)
     .join("/");
@@ -129,7 +129,7 @@ export const isValidKey = (key: string): boolean => {
   if (key.length === 0 || key.length > 1024) return false;
 
   for (let i = 0; i < key.length; i++) {
-    const c = key.charCodeAt(i);
+    const c = key.codePointAt(i)!;
     if (c <= 0x1f || c === 0x7f) return false; // ASCII control chars U+0000–U+001F and U+007F
   }
   return true;

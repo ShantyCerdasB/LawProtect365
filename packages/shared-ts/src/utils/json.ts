@@ -79,7 +79,7 @@ export const stableStringify = (value: JsonValue, space?: number): string => {
 export const deepClone = <T extends JsonValue>(value: T): T => {
   const sc: ((v: unknown) => unknown) | undefined = (globalThis as any).structuredClone;
   if (typeof sc === "function") return sc(value) as T;
-  return JSON.parse(JSON.stringify(value)) as T;
+  return structuredClone(value) as T;
 };
 
 /**

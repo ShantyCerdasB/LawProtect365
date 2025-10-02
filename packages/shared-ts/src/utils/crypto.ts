@@ -144,7 +144,7 @@ export const createHash = crypto.createHash;
  */
 export function base64urlToBytes(base64url: string): Uint8Array {
   const padded = base64url + "=".repeat((4 - (base64url.length % 4)) % 4);
-  const base64 = padded.replace(/-/g, "+").replace(/_/g, "/");
+  const base64 = padded.replaceAll("-", "+").replaceAll("_", "/");
   return Buffer.from(base64, "base64");
 }
 
@@ -189,9 +189,9 @@ export function hexToUint8Array(hex: string): Uint8Array {
 
   const bytes = new Uint8Array(hex.length / 2);
   for (let i = 0; i < hex.length; i += 2) {
-    const byte = parseInt(hex.substring(i, i + 2), 16);
-    if (isNaN(byte)) {
-      throw new Error(`Invalid hex character at position ${i}: ${hex.substring(i, i + 2)}`);
+    const byte = Number.parseInt(hex.substring(i, i + 2), 16);
+    if (Number.isNaN(byte)) {
+      throw new TypeError(`Invalid hex character at position ${i}: ${hex.substring(i, i + 2)}`);
     }
     bytes[i / 2] = byte;
   }

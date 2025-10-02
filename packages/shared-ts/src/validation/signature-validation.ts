@@ -21,8 +21,8 @@ function isValidIpAddress(ipAddress: string): boolean {
   }
   
   for (const part of parts) {
-    const num = parseInt(part, 10);
-    if (isNaN(num) || num < 0 || num > 255) {
+    const num = Number.parseInt(part, 10);
+    if (Number.isNaN(num) || num < 0 || num > 255) {
       return false;
     }
   }
