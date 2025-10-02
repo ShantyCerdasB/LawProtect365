@@ -12,6 +12,11 @@ variable "tags" {
   description = "Map of tags to apply to every resource"
   type        = map(string)
 }
+
+variable "github_connection_arn" {
+  description = "ARN of existing GitHub CodeStar connection"
+  type        = string
+}
 variable "existing_sns_topic_arn" {
   description = "ARN of the existing SNS topic for budget alerts"
   type        = string

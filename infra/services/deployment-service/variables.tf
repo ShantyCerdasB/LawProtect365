@@ -90,9 +90,8 @@ variable "branch" {
 }
 
 variable "github_connection_arn" {
-  description = "ARN of existing GitHub CodeStar connection (optional)"
+  description = "ARN of existing GitHub CodeStar connection"
   type        = string
-  default     = null
 }
 
 variable "tags" {

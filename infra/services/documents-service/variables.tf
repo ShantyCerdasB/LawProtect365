@@ -15,6 +15,11 @@ variable "env" {
   description = "Deployment environment (e.g., dev, prod)."
   type        = string
 }
+
+variable "github_connection_arn" {
+  description = "ARN of existing GitHub CodeStar connection"
+  type        = string
+}
 variable "existing_sns_topic_arn" {
   description = "ARN of the existing SNS topic for budget alerts"
   type        = string

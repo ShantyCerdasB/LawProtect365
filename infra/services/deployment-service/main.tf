@@ -43,19 +43,14 @@
 #   - repository     : GitHub repository name.
 #   - branch         : Default branch for pipeline source.
 ################################################################
-locals {
-  # Use existing connection if provided, otherwise use the created one
-  github_connection_arn = var.github_connection_arn != null ? var.github_connection_arn : module.github.connection_arn
+# Data source to get existing GitHub connection
+data "aws_codestarconnections_connection" "github" {
+  arn = var.github_connection_arn
 }
 
-# Always create GitHub connection (will be ignored if connection_arn is provided)
-module "github" {
-  source       = "../../modules/github"
-  project_name = var.project_name
-  github_owner = var.github_owner
-  github_repo  = var.github_repo
-  provider_type = var.provider_type
-  tags         = var.tags
+locals {
+  # Use the provided connection ARN
+  github_connection_arn = data.aws_codestarconnections_connection.github.arn
 }
 
 ################################################################

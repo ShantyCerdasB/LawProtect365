@@ -428,6 +428,9 @@ module "documents_deployment" {
   github_repo           = var.github_repo
   provider_type         = var.provider_type
   branch                = var.github_branch
+  
+  # GitHub connection
+  github_connection_arn = var.github_connection_arn
 
   tags                  = local.common_tags
 }

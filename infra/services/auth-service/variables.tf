@@ -8,6 +8,11 @@ variable "env" {
   type        = string
 }
 
+variable "github_connection_arn" {
+  description = "ARN of existing GitHub CodeStar connection"
+  type        = string
+}
+
 variable "code_bucket" {
   description = "Name of the S3 bucket for CI/CD artifacts"
   type        = string

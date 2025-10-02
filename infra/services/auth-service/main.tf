@@ -324,6 +324,9 @@ module "auth_deployment" {
   github_owner          = var.github_owner
   github_repo           = var.github_repo
   provider_type         = var.provider_type
+  
+  # GitHub connection
+  github_connection_arn = var.github_connection_arn
 
   tags = local.common_tags
 }

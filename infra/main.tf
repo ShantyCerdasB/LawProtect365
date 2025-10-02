@@ -174,6 +174,9 @@ module "auth_service" {
   alerts_emails              = var.alerts_emails
   access_log_format          = var.access_logs_format
   existing_sns_topic_arn = aws_sns_topic.budgets_alerts.arn
+  
+  # GitHub connection
+  github_connection_arn = module.github_connection.connection_arn
   networking = {
     private_subnet_ids       = module.networking.private_subnet_ids
     lambda_security_group_id = module.networking.lambda_security_group_id
@@ -221,6 +224,9 @@ module "frontend" {
   price_class      = var.price_class
   artifacts_bucket = module.code_bucket.bucket_id
   compute_type     = "BUILD_GENERAL1_SMALL"
+  
+  # GitHub connection
+  github_connection_arn = module.github_connection.connection_arn
   environment_image = "aws/codebuild/standard:6.0"
   existing_sns_topic_arn = aws_sns_topic.budgets_alerts.arn
   environment_variables = [
@@ -292,6 +298,9 @@ module "documents_service" {
   documents_bucket_name = "${var.project_name}-documents-${var.env}"
   documents_table_name  = "${var.project_name}-documents-${var.env}"
   budgets_alerts_topic_arn = aws_sns_topic.budgets_alerts.arn
+  
+  # GitHub connection
+  github_connection_arn = module.github_connection.connection_arn
 
   # Enforce SSE-KMS with root CMKs
   templates_encryption  = "SSE_KMS"

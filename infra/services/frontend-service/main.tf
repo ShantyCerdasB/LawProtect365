@@ -136,6 +136,9 @@ module "frontend_deployment" {
 
   artifacts_bucket              = var.artifacts_bucket
   buildspec_path                = "../frontend-service/buildspec.yml"
+  
+  # GitHub connection
+  github_connection_arn         = var.github_connection_arn
 
   compute_type                  = var.compute_type
   environment_image             = var.environment_image
