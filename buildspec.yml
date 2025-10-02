@@ -1,12 +1,22 @@
 version: 0.2
 
 phases:
+  install:
+    runtime-versions:
+      nodejs: 20
+    commands:
+      - echo "Node version: $(node -v)"
+      - echo "npm version: $(npm -v)"
+      
   pre_build:
     commands:
       - echo "Building shared-ts layer..."
       - cd packages/shared-ts
-      - npm ci --production
+      # Install ALL dependencies (including devDependencies for TypeScript)
+      - npm ci
       - npm run build
+      # Prune dev dependencies after build to keep layer slim
+      - npm prune --omit=dev
       
   build:
     commands:
