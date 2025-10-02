@@ -162,7 +162,7 @@ export abstract class RepositoryBase<TDomain, TId = string, TSpec = unknown> {
         ...(include && { include })
       };
 
-      const { rows, nextCursor } = await listPage(model, where as Record<string, any>, limit, decoded, cfg);
+      const { rows, nextCursor } = await listPage(model, where as Record<string, any>, limit, decoded as any, cfg);
       return { items: rows.map((r: any) => this.toDomain(r)), nextCursor };
     } catch (error) {
       throw repositoryError({ operation: 'list', spec, cause: error });

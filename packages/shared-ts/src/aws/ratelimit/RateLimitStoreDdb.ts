@@ -104,7 +104,7 @@ export class RateLimitStoreDdb implements RateLimitStore {
                 resetInSeconds: window.windowSeconds}
             );
           }
-          throw createErr;
+          throw error_;
         }
       }
       throw mapAwsError(err, "RateLimitStoreDdb.incrementAndCheck");

@@ -592,6 +592,16 @@ module "shared_components_pipeline" {
       value = jsonencode(module.codeartifact.artifact_repository_endpoints)
       type  = "PLAINTEXT"
     },
+    {
+      name  = "PROJECT_NAME"
+      value = var.project_name
+      type  = "PLAINTEXT"
+    },
+    {
+      name  = "PROJECT_DOMAIN"
+      value = "${var.project_name}-domain"
+      type  = "PLAINTEXT"
+    },
   ]
   
   github_connection_arn = module.github_connection.connection_arn

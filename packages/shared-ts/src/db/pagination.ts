@@ -1,4 +1,4 @@
-import { decodeCursor } from "./cursor.js";
+import { decodeCursor, cursorFromRecord } from "./cursor.js";
 
 // Re-export cursorFromRecord for use in other modules
 export { cursorFromRecord } from "./cursor.js";
