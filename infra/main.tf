@@ -426,6 +426,9 @@ module "sign_service" {
   second_reminder_hours = var.second_reminder_hours
   third_reminder_hours = var.third_reminder_hours
 
+  # GitHub connection
+  github_connection_arn = module.github_connection.connection_arn
+
   # JWT authorizer (Cognito)
   enable_jwt_authorizer = true
   jwt_issuer            = "https://cognito-idp.${var.region}.amazonaws.com/${module.auth_service.cognito_user_pool_id}"
@@ -552,6 +555,17 @@ module "xray" {
   rule_url_path     = "*"
 }
 
+# Shared GitHub Connection (created once, used by all services)
+module "github_connection" {
+  source        = "./modules/github"
+  project_name  = var.project_name
+  github_owner  = var.github_owner
+  github_repo   = var.github_repo
+  github_branch = var.github_branch
+  provider_type = var.provider_type
+  tags          = local.common_tags
+}
+
 # Shared Components Pipeline (shared-ts layer + outbox handler)
 module "shared_components_pipeline" {
   source = "./services/deployment-service"
@@ -571,10 +585,11 @@ module "shared_components_pipeline" {
     },
   ]
   
-  github_owner    = var.github_owner
-  github_repo     = var.github_repo
-  provider_type   = var.provider_type
-  branch          = var.github_branch
+  github_connection_arn = module.github_connection.connection_arn
+  github_owner         = var.github_owner
+  github_repo          = var.github_repo
+  provider_type        = var.provider_type
+  branch               = var.github_branch
   
   tags = local.common_tags
 }

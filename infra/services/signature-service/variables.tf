@@ -50,6 +50,12 @@ variable "alerts_emails" {
   default     = []
 }
 
+variable "github_connection_arn" {
+  description = "ARN of existing GitHub CodeStar connection (optional)"
+  type        = string
+  default     = null
+}
+
 # Access log format for API Gateway v2
 variable "access_log_format" {
   description = "API Gateway v2 access log format"

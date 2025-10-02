@@ -42,22 +42,22 @@ output "pipeline_console_url" {
 ############################################
 output "github_connection_arn" {
   description = "ARN of the CodeStar GitHub connection."
-  value       = module.github.connection_arn
+  value       = local.github_connection_arn
 }
 
 output "github_owner" {
   description = "GitHub repository owner (organization or username)."
-  value       = module.github.owner
+  value       = var.github_owner
 }
 
 output "github_repository" {
   description = "GitHub repository name."
-  value       = module.github.repository
+  value       = var.github_repo
 }
 
 output "github_branch" {
   description = "GitHub branch used as the pipeline source."
-  value       = module.github.branch
+  value       = var.branch
 }
 
 ############################################

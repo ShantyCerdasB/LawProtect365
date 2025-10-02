@@ -34,8 +34,8 @@
 ################################################################
 # 0) GitHub CodeStar Connection
 #
-# Creates a CodeStar connection between AWS and the specified
-# GitHub repository for pulling source code.
+# Uses existing CodeStar connection or creates a new one if not provided.
+# This prevents duplicate connections across services.
 #
 # Outputs:
 #   - connection_arn : ARN of the CodeStar connection.
@@ -43,13 +43,19 @@
 #   - repository     : GitHub repository name.
 #   - branch         : Default branch for pipeline source.
 ################################################################
+locals {
+  # Use existing connection if provided, otherwise use the created one
+  github_connection_arn = var.github_connection_arn != null ? var.github_connection_arn : module.github.connection_arn
+}
+
+# Always create GitHub connection (will be ignored if connection_arn is provided)
 module "github" {
-  source        = "../../modules/github"
-  project_name  = var.project_name
-  github_owner  = var.github_owner
-  github_repo   = var.github_repo
+  source       = "../../modules/github"
+  project_name = var.project_name
+  github_owner = var.github_owner
+  github_repo  = var.github_repo
   provider_type = var.provider_type
-  tags          = var.tags
+  tags         = var.tags
 }
 
 ################################################################
@@ -119,7 +125,9 @@ module "pipeline_role" {
     "arn:aws:iam::aws:policy/AWSCodeBuildDeveloperAccess",
     "arn:aws:iam::aws:policy/AWSCodeDeployFullAccess",
   ]
-  inline_policies = {}
+  inline_policies = {
+    "codestar-connection-access" = data.aws_iam_policy_document.codestar_connection_policy.json
+  }
   project_name    = var.project_name
   env             = var.env
 }
@@ -179,17 +187,16 @@ module "codedeploy" {
 # Outputs:
 #   - pipeline_name : Name of the CodePipeline.
 ################################################################
-data "aws_region" "current" {}
 
 module "pipeline" {
   source                           = "../../modules/codepipeline"
   pipeline_name                    = "${var.project_name}-${var.service_name}-pipeline-${var.env}"
   role_arn                         = module.pipeline_role.role_arn
   artifacts_bucket                 = var.artifacts_bucket
-  github_connection_arn            = module.github.connection_arn
-  github_owner                     = module.github.owner
-  github_repo                      = module.github.repository
-  github_branch                    = module.github.branch
+  github_connection_arn            = local.github_connection_arn
+  github_owner                     = var.github_owner
+  github_repo                      = var.github_repo
+  github_branch                    = var.branch
   codebuild_project_name           = module.build.codebuild_project_name
   build_output_artifact            = "${var.service_name}_build_output"
   codedeploy_app_name              = module.codedeploy.codedeploy_application_name

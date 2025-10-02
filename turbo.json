@@ -1,5 +1,6 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": ["jest.base.cjs", "jest.config.cjs"],
   "pipeline": {
     "clean": {
       "cache": false
@@ -10,8 +11,7 @@
     },
     "build": {
       "dependsOn": ["^build", "prisma:generate"],
-      "outputs": ["dist/**", "node_modules/.cache/**"],
-      "globalDependencies": ["tsconfig.json", "jest.base.cjs", "jest.config.cjs"]
+      "outputs": ["dist/**", "node_modules/.cache/**"]
     },
     "typecheck": {
       "dependsOn": ["^typecheck"],
@@ -23,8 +23,7 @@
     },
     "test": {
       "dependsOn": ["^build"],
-      "outputs": ["coverage/**"],
-      "globalDependencies": ["jest.base.cjs", "jest.config.cjs"]
+      "outputs": ["coverage/**"]
     },
     "dev": {
       "cache": false,

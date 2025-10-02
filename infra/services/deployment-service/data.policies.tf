@@ -34,3 +34,20 @@ data "aws_iam_policy_document" "pipeline_assume" {
     actions = ["sts:AssumeRole"]
   }
 }
+
+# Data sources for CodeStar Connection policy
+data "aws_caller_identity" "current" {}
+data "aws_region" "current" {}
+
+# CodeStar Connection permissions for CodePipeline
+data "aws_iam_policy_document" "codestar_connection_policy" {
+  statement {
+    effect = "Allow"
+    actions = [
+      "codestar-connections:UseConnection"
+    ]
+    resources = [
+      "arn:aws:codestar-connections:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:connection/*"
+    ]
+  }
+}

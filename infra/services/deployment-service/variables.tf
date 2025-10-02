@@ -89,6 +89,12 @@ variable "branch" {
   default     = "main"
 }
 
+variable "github_connection_arn" {
+  description = "ARN of existing GitHub CodeStar connection (optional)"
+  type        = string
+  default     = null
+}
+
 variable "tags" {
   description = "Tags to apply to all CI/CD resources"
   type        = map(string)

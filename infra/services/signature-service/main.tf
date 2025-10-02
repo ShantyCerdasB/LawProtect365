@@ -709,8 +709,9 @@ module "sign_deployment" {
   buildspec_path        = "services/signature-service/buildspec.yml"
   compute_type          = var.compute_type
   environment_image     = var.environment_image
- environment_variables = local.codebuild_env_vars
+  environment_variables = local.codebuild_env_vars
  
+  github_connection_arn = var.github_connection_arn
   github_owner          = var.github_owner
   github_repo           = var.github_repo
   provider_type         = var.provider_type
