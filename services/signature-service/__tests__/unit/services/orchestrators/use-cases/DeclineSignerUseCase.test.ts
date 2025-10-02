@@ -1,11 +1,6 @@
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 import { DeclineSignerUseCase } from '../../../../../src/services/orchestrators/use-cases/DeclineSignerUseCase';
 import { DeclineSignerInput } from '../../../../../src/domain/types/usecase/orchestrator/DeclineSignerUseCase';
-import { EnvelopeId } from '../../../../../src/domain/value-objects/EnvelopeId';
-import { SignerId } from '../../../../../src/domain/value-objects/SignerId';
-import { SignatureEnvelope } from '../../../../../src/domain/entities/SignatureEnvelope';
-import { EnvelopeSigner } from '../../../../../src/domain/entities/EnvelopeSigner';
-import { EnvelopeStatus } from '../../../../../src/domain/value-objects/EnvelopeStatus';
 import { TestUtils } from '../../../../helpers/testUtils';
 import { signatureEnvelopeEntity } from '../../../../helpers/builders/signatureEnvelope';
 import { createSignatureEnvelopeServiceMock } from '../../../../helpers/mocks/services/SignatureEnvelopeService.mock';
@@ -21,6 +16,54 @@ describe('DeclineSignerUseCase', () => {
   let mockEnvelopeNotificationService: any;
   let mockEnvelopeAccessService: any;
   let mockEnvelopeStateService: any;
+
+  // Helper function to create test input
+  function createTestInput(overrides: Partial<DeclineSignerInput> = {}): DeclineSignerInput {
+    const envelopeId = TestUtils.generateEnvelopeId();
+    const signerId = TestUtils.generateSignerId();
+    const reason = 'Not interested in signing';
+    
+    return {
+      envelopeId,
+      signerId,
+      request: {
+        reason,
+        ...overrides.request
+      },
+      securityContext: {
+        ipAddress: TestUtils.createTestIpAddress(),
+        userAgent: TestUtils.createTestUserAgent(),
+        country: 'US',
+        ...overrides.securityContext
+      },
+      ...overrides
+    };
+  }
+
+  // Helper function to create test signer
+  function createTestSigner(signerId: any) {
+    return { 
+      getId: () => signerId,
+      getFullName: () => 'John Doe',
+      getEmail: () => ({ getValue: () => 'john.doe@example.com' })
+    } as any;
+  }
+
+  // Helper function to create test envelope
+  function createTestEnvelope(envelopeId: any, signer: any) {
+    const testEnvelope = signatureEnvelopeEntity({ id: envelopeId.getValue() });
+    testEnvelope.getSigners = jest.fn().mockReturnValue([signer]) as any;
+    return testEnvelope;
+  }
+
+  // Helper function to setup successful mocks
+  function setupSuccessfulMocks(testEnvelope: any, updatedEnvelope: any) {
+    mockEnvelopeAccessService.validateUserAccess.mockResolvedValue(testEnvelope);
+    mockEnvelopeSignerService.declineSigner.mockResolvedValue(undefined);
+    mockEnvelopeStateService.updateEnvelopeStatusAfterDecline.mockResolvedValue(undefined);
+    mockEnvelopeNotificationService.publishSignerDeclined.mockResolvedValue(undefined);
+    mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue(updatedEnvelope);
+  }
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -44,40 +87,22 @@ describe('DeclineSignerUseCase', () => {
     it('should decline signer successfully with all operations', async () => {
       const envelopeId = TestUtils.generateEnvelopeId();
       const signerId = TestUtils.generateSignerId();
-      const reason = 'Not interested in signing';
       const invitationToken = TestUtils.generateUuid();
       
-      const input: DeclineSignerInput = {
+      const input = createTestInput({
         envelopeId,
         signerId,
-        request: {
-          reason,
-          invitationToken
-        },
-        securityContext: {
-          ipAddress: TestUtils.createTestIpAddress(),
-          userAgent: TestUtils.createTestUserAgent(),
-          country: 'US'
-        }
-      };
+        request: { invitationToken }
+      });
 
-      const testEnvelope = signatureEnvelopeEntity({ id: envelopeId.getValue() });
-      const testSigner = { 
-        getId: () => signerId,
-        getFullName: () => 'John Doe',
-        getEmail: () => ({ getValue: () => 'john.doe@example.com' })
-      } as any;
-      testEnvelope.getSigners = jest.fn().mockReturnValue([testSigner]) as any;
+      const testSigner = createTestSigner(signerId);
+      const testEnvelope = createTestEnvelope(envelopeId, testSigner);
       const updatedEnvelope = signatureEnvelopeEntity({ 
         id: envelopeId.getValue(),
         status: 'DRAFT'
       });
 
-      mockEnvelopeAccessService.validateUserAccess.mockResolvedValue(testEnvelope);
-      mockEnvelopeSignerService.declineSigner.mockResolvedValue(undefined);
-      mockEnvelopeStateService.updateEnvelopeStatusAfterDecline.mockResolvedValue(undefined);
-      mockEnvelopeNotificationService.publishSignerDeclined.mockResolvedValue(undefined);
-      mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue(updatedEnvelope);
+      setupSuccessfulMocks(testEnvelope, updatedEnvelope);
 
       const result = await useCase.execute(input);
 
@@ -88,7 +113,7 @@ describe('DeclineSignerUseCase', () => {
       );
       expect(mockEnvelopeSignerService.declineSigner).toHaveBeenCalledWith({
         signerId,
-        reason,
+        reason: 'Not interested in signing',
         userId: undefined,
         invitationToken,
         ipAddress: input.securityContext.ipAddress,
@@ -98,13 +123,13 @@ describe('DeclineSignerUseCase', () => {
       expect(mockEnvelopeStateService.updateEnvelopeStatusAfterDecline).toHaveBeenCalledWith(
         envelopeId,
         signerId,
-        reason,
+        'Not interested in signing',
         'external-user:John Doe'
       );
       expect(mockEnvelopeNotificationService.publishSignerDeclined).toHaveBeenCalledWith(
         testEnvelope,
         testSigner,
-        reason,
+        'Not interested in signing',
         input.securityContext
       );
       expect(mockSignatureEnvelopeService.getEnvelopeWithSigners).toHaveBeenCalledWith(envelopeId);
@@ -118,7 +143,7 @@ describe('DeclineSignerUseCase', () => {
         },
         declineInfo: {
           signerId: signerId.getValue(),
-          reason,
+          reason: 'Not interested in signing',
           declinedAt: expect.any(String)
         }
       });
@@ -127,23 +152,15 @@ describe('DeclineSignerUseCase', () => {
     it('should throw error when signer is not found in envelope', async () => {
       const envelopeId = TestUtils.generateEnvelopeId();
       const signerId = TestUtils.generateSignerId();
-      const reason = 'Not interested';
       
-      const input: DeclineSignerInput = {
+      const input = createTestInput({
         envelopeId,
         signerId,
-        request: { reason },
-        securityContext: {
-          ipAddress: TestUtils.createTestIpAddress(),
-          userAgent: TestUtils.createTestUserAgent(),
-          country: 'US'
-        }
-      };
+        request: { reason: 'Not interested' }
+      });
 
-      const testEnvelope = signatureEnvelopeEntity({ id: envelopeId.getValue() });
-      // Mock envelope with different signer ID
-      const differentSigner = { getId: () => TestUtils.generateSignerId() } as any;
-      testEnvelope.getSigners = jest.fn().mockReturnValue([differentSigner]) as any;
+      const differentSigner = createTestSigner(TestUtils.generateSignerId());
+      const testEnvelope = createTestEnvelope(envelopeId, differentSigner);
 
       mockEnvelopeAccessService.validateUserAccess.mockResolvedValue(testEnvelope);
 
@@ -153,26 +170,15 @@ describe('DeclineSignerUseCase', () => {
     it('should throw error when envelope is not found after decline', async () => {
       const envelopeId = TestUtils.generateEnvelopeId();
       const signerId = TestUtils.generateSignerId();
-      const reason = 'Not interested';
       
-      const input: DeclineSignerInput = {
+      const input = createTestInput({
         envelopeId,
         signerId,
-        request: { reason },
-        securityContext: {
-          ipAddress: TestUtils.createTestIpAddress(),
-          userAgent: TestUtils.createTestUserAgent(),
-          country: 'US'
-        }
-      };
+        request: { reason: 'Not interested' }
+      });
 
-      const testEnvelope = signatureEnvelopeEntity({ id: envelopeId.getValue() });
-      const testSigner = { 
-        getId: () => signerId,
-        getFullName: () => 'John Doe',
-        getEmail: () => ({ getValue: () => 'john.doe@example.com' })
-      } as any;
-      testEnvelope.getSigners = jest.fn().mockReturnValue([testSigner]) as any;
+      const testSigner = createTestSigner(signerId);
+      const testEnvelope = createTestEnvelope(envelopeId, testSigner);
 
       mockEnvelopeAccessService.validateUserAccess.mockResolvedValue(testEnvelope);
       mockEnvelopeSignerService.declineSigner.mockResolvedValue(undefined);
@@ -186,26 +192,15 @@ describe('DeclineSignerUseCase', () => {
     it('should throw error when decline signer fails', async () => {
       const envelopeId = TestUtils.generateEnvelopeId();
       const signerId = TestUtils.generateSignerId();
-      const reason = 'Not interested';
       
-      const input: DeclineSignerInput = {
+      const input = createTestInput({
         envelopeId,
         signerId,
-        request: { reason },
-        securityContext: {
-          ipAddress: TestUtils.createTestIpAddress(),
-          userAgent: TestUtils.createTestUserAgent(),
-          country: 'US'
-        }
-      };
+        request: { reason: 'Not interested' }
+      });
 
-      const testEnvelope = signatureEnvelopeEntity({ id: envelopeId.getValue() });
-      const testSigner = { 
-        getId: () => signerId,
-        getFullName: () => 'John Doe',
-        getEmail: () => ({ getValue: () => 'john.doe@example.com' })
-      } as any;
-      testEnvelope.getSigners = jest.fn().mockReturnValue([testSigner]) as any;
+      const testSigner = createTestSigner(signerId);
+      const testEnvelope = createTestEnvelope(envelopeId, testSigner);
 
       const declineError = new Error('Decline signer failed');
       mockEnvelopeAccessService.validateUserAccess.mockResolvedValue(testEnvelope);
@@ -217,26 +212,15 @@ describe('DeclineSignerUseCase', () => {
     it('should throw error when update envelope status fails', async () => {
       const envelopeId = TestUtils.generateEnvelopeId();
       const signerId = TestUtils.generateSignerId();
-      const reason = 'Not interested';
       
-      const input: DeclineSignerInput = {
+      const input = createTestInput({
         envelopeId,
         signerId,
-        request: { reason },
-        securityContext: {
-          ipAddress: TestUtils.createTestIpAddress(),
-          userAgent: TestUtils.createTestUserAgent(),
-          country: 'US'
-        }
-      };
+        request: { reason: 'Not interested' }
+      });
 
-      const testEnvelope = signatureEnvelopeEntity({ id: envelopeId.getValue() });
-      const testSigner = { 
-        getId: () => signerId,
-        getFullName: () => 'John Doe',
-        getEmail: () => ({ getValue: () => 'john.doe@example.com' })
-      } as any;
-      testEnvelope.getSigners = jest.fn().mockReturnValue([testSigner]) as any;
+      const testSigner = createTestSigner(signerId);
+      const testEnvelope = createTestEnvelope(envelopeId, testSigner);
 
       const updateError = new Error('Update envelope status failed');
       mockEnvelopeAccessService.validateUserAccess.mockResolvedValue(testEnvelope);
@@ -249,36 +233,21 @@ describe('DeclineSignerUseCase', () => {
     it('should handle notification failure gracefully (fire-and-forget)', async () => {
       const envelopeId = TestUtils.generateEnvelopeId();
       const signerId = TestUtils.generateSignerId();
-      const reason = 'Not interested';
       
-      const input: DeclineSignerInput = {
+      const input = createTestInput({
         envelopeId,
         signerId,
-        request: { reason },
-        securityContext: {
-          ipAddress: TestUtils.createTestIpAddress(),
-          userAgent: TestUtils.createTestUserAgent(),
-          country: 'US'
-        }
-      };
+        request: { reason: 'Not interested' }
+      });
 
-      const testEnvelope = signatureEnvelopeEntity({ id: envelopeId.getValue() });
-      const testSigner = { 
-        getId: () => signerId,
-        getFullName: () => 'John Doe',
-        getEmail: () => ({ getValue: () => 'john.doe@example.com' })
-      } as any;
-      testEnvelope.getSigners = jest.fn().mockReturnValue([testSigner]) as any;
+      const testSigner = createTestSigner(signerId);
+      const testEnvelope = createTestEnvelope(envelopeId, testSigner);
       const updatedEnvelope = signatureEnvelopeEntity({ 
         id: envelopeId.getValue(),
         status: 'DRAFT'
       });
 
-      mockEnvelopeAccessService.validateUserAccess.mockResolvedValue(testEnvelope);
-      mockEnvelopeSignerService.declineSigner.mockResolvedValue(undefined);
-      mockEnvelopeStateService.updateEnvelopeStatusAfterDecline.mockResolvedValue(undefined);
-      mockEnvelopeNotificationService.publishSignerDeclined.mockResolvedValue(undefined);
-      mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue(updatedEnvelope);
+      setupSuccessfulMocks(testEnvelope, updatedEnvelope);
 
       const result = await useCase.execute(input);
 
@@ -289,18 +258,12 @@ describe('DeclineSignerUseCase', () => {
     it('should throw error when validate user access fails', async () => {
       const envelopeId = TestUtils.generateEnvelopeId();
       const signerId = TestUtils.generateSignerId();
-      const reason = 'Not interested';
       
-      const input: DeclineSignerInput = {
+      const input = createTestInput({
         envelopeId,
         signerId,
-        request: { reason },
-        securityContext: {
-          ipAddress: TestUtils.createTestIpAddress(),
-          userAgent: TestUtils.createTestUserAgent(),
-          country: 'US'
-        }
-      };
+        request: { reason: 'Not interested' }
+      });
 
       const accessError = new Error('Access denied');
       mockEnvelopeAccessService.validateUserAccess.mockRejectedValue(accessError);
@@ -311,40 +274,25 @@ describe('DeclineSignerUseCase', () => {
     it('should handle decline with invitation token', async () => {
       const envelopeId = TestUtils.generateEnvelopeId();
       const signerId = TestUtils.generateSignerId();
-      const reason = 'Not interested';
       const invitationToken = TestUtils.generateUuid();
       
-      const input: DeclineSignerInput = {
+      const input = createTestInput({
         envelopeId,
         signerId,
         request: {
-          reason,
+          reason: 'Not interested',
           invitationToken
-        },
-        securityContext: {
-          ipAddress: TestUtils.createTestIpAddress(),
-          userAgent: TestUtils.createTestUserAgent(),
-          country: 'US'
         }
-      };
+      });
 
-      const testEnvelope = signatureEnvelopeEntity({ id: envelopeId.getValue() });
-      const testSigner = { 
-        getId: () => signerId,
-        getFullName: () => 'John Doe',
-        getEmail: () => ({ getValue: () => 'john.doe@example.com' })
-      } as any;
-      testEnvelope.getSigners = jest.fn().mockReturnValue([testSigner]) as any;
+      const testSigner = createTestSigner(signerId);
+      const testEnvelope = createTestEnvelope(envelopeId, testSigner);
       const updatedEnvelope = signatureEnvelopeEntity({ 
         id: envelopeId.getValue(),
         status: 'DRAFT'
       });
 
-      mockEnvelopeAccessService.validateUserAccess.mockResolvedValue(testEnvelope);
-      mockEnvelopeSignerService.declineSigner.mockResolvedValue(undefined);
-      mockEnvelopeStateService.updateEnvelopeStatusAfterDecline.mockResolvedValue(undefined);
-      mockEnvelopeNotificationService.publishSignerDeclined.mockResolvedValue(undefined);
-      mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue(updatedEnvelope);
+      setupSuccessfulMocks(testEnvelope, updatedEnvelope);
 
       const result = await useCase.execute(input);
 
@@ -355,7 +303,7 @@ describe('DeclineSignerUseCase', () => {
       );
       expect(mockEnvelopeSignerService.declineSigner).toHaveBeenCalledWith({
         signerId,
-        reason,
+        reason: 'Not interested',
         userId: undefined,
         invitationToken,
         ipAddress: input.securityContext.ipAddress,
@@ -365,7 +313,7 @@ describe('DeclineSignerUseCase', () => {
 
       expect(result.success).toBe(true);
       expect(result.declineInfo.signerId).toBe(signerId.getValue());
-      expect(result.declineInfo.reason).toBe(reason);
+      expect(result.declineInfo.reason).toBe('Not interested');
     });
   });
 });

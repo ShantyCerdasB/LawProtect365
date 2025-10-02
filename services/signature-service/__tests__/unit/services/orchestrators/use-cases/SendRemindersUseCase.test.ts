@@ -1,8 +1,7 @@
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 import { SendRemindersUseCase } from '../../../../../src/services/orchestrators/use-cases/SendRemindersUseCase';
-import { SendRemindersInput, SendRemindersResult } from '../../../../../src/domain/types/usecase/orchestrator/SendRemindersUseCase';
-import { EnvelopeId } from '../../../../../src/domain/value-objects/EnvelopeId';
-import { NotificationType } from '@lawprotect/shared-ts';
+import { SendRemindersInput } from '../../../../../src/domain/types/usecase/orchestrator/SendRemindersUseCase';
+import { NotificationType, Email } from '@lawprotect/shared-ts';
 import { TestUtils } from '../../../../helpers/testUtils';
 import { createSignatureEnvelopeServiceMock } from '../../../../helpers/mocks/services/SignatureEnvelopeService.mock';
 import { createEnvelopeSignerServiceMock } from '../../../../helpers/mocks/services/EnvelopeSignerService.mock';
@@ -12,9 +11,6 @@ import { createAuditEventServiceMock } from '../../../../helpers/mocks/services/
 import { createEnvelopeNotificationServiceMock } from '../../../../helpers/mocks/services/EnvelopeNotificationService.mock';
 import { signatureEnvelopeEntity } from '../../../../helpers/builders/signatureEnvelope';
 import { EnvelopeSigner } from '../../../../../src/domain/entities/EnvelopeSigner';
-import { SignerId } from '../../../../../src/domain/value-objects/SignerId';
-import { Email } from '@lawprotect/shared-ts';
-import { AuditEventType } from '../../../../../src/domain/enums/AuditEventType';
 
 // Mock the EnvelopeAccessValidationRule
 jest.mock('../../../../../src/domain/rules/EnvelopeAccessValidationRule', () => ({
@@ -47,6 +43,59 @@ describe('SendRemindersUseCase', () => {
   let mockAuditEventService: any;
   let mockEnvelopeNotificationService: any;
 
+  // Helper function to create test input
+  function createTestInput(overrides: Partial<SendRemindersInput> = {}): SendRemindersInput {
+    const envelopeId = TestUtils.generateEnvelopeId();
+    const userId = TestUtils.generateUuid();
+    const securityContext = {
+      ipAddress: TestUtils.createTestIpAddress(),
+      userAgent: TestUtils.createTestUserAgent(),
+      country: 'US'
+    };
+    
+    return {
+      envelopeId,
+      request: {
+        message: 'Please sign this document',
+        type: NotificationType.REMINDER,
+        ...overrides.request
+      },
+      userId,
+      securityContext,
+      ...overrides
+    };
+  }
+
+  // Helper function to create test envelope
+  function createTestEnvelope(envelopeId: any, userId: string) {
+    return signatureEnvelopeEntity({ id: envelopeId.getValue(), createdBy: userId });
+  }
+
+  // Helper function to create test signer
+  function createTestSigner(signerId: any, email: string = 'signer@example.com', name: string = 'Test User') {
+    return {
+      getId: () => signerId,
+      getEmail: () => Email.fromString(email),
+      getFullName: () => name
+    } as EnvelopeSigner;
+  }
+
+  // Helper function to create active token
+  function createActiveToken(tokenId: string = 'token-1') {
+    return {
+      getId: () => ({ getValue: () => tokenId }),
+      isExpired: () => false
+    };
+  }
+
+  // Helper function to create tracking data
+  function createTrackingData(reminderCount: number = 1, lastReminderAt: Date = new Date('2023-01-01T00:00:00Z')) {
+    return {
+      getReminderCount: () => reminderCount,
+      getLastReminderAt: () => lastReminderAt
+    };
+  }
+
   beforeEach(() => {
     jest.clearAllMocks();
 
@@ -77,55 +126,25 @@ describe('SendRemindersUseCase', () => {
     it('should send reminders successfully to all pending signers', async () => {
       const envelopeId = TestUtils.generateEnvelopeId();
       const userId = TestUtils.generateUuid();
-      const securityContext = {
-        ipAddress: TestUtils.createTestIpAddress(),
-        userAgent: TestUtils.createTestUserAgent(),
-        country: 'US'
-      };
-
-      const input: SendRemindersInput = {
+      
+      const input = createTestInput({
         envelopeId,
-        request: {
-          message: 'Please sign this document',
-          type: NotificationType.REMINDER
-        },
-        userId,
-        securityContext
-      };
+        userId
+      });
 
-      const testEnvelope = signatureEnvelopeEntity({ id: envelopeId.getValue(), createdBy: userId });
+      const testEnvelope = createTestEnvelope(envelopeId, userId);
       const signer1Id = TestUtils.generateSignerId();
       const signer2Id = TestUtils.generateSignerId();
       const pendingSigners: EnvelopeSigner[] = [
-        { 
-          getId: () => signer1Id, 
-          getEmail: () => Email.fromString('signer1@example.com'),
-          getFullName: () => 'John Doe'
-        } as EnvelopeSigner,
-        { 
-          getId: () => signer2Id, 
-          getEmail: () => Email.fromString('signer2@example.com'),
-          getFullName: () => 'Jane Smith'
-        } as EnvelopeSigner
+        createTestSigner(signer1Id, 'signer1@example.com', 'John Doe'),
+        createTestSigner(signer2Id, 'signer2@example.com', 'Jane Smith')
       ];
 
-      const tracking1 = {
-        getReminderCount: () => 1,
-        getLastReminderAt: () => new Date('2023-01-01T00:00:00Z')
-      };
-      const tracking2 = {
-        getReminderCount: () => 2,
-        getLastReminderAt: () => new Date('2023-01-02T00:00:00Z')
-      };
+      const tracking1 = createTrackingData(1, new Date('2023-01-01T00:00:00Z'));
+      const tracking2 = createTrackingData(2, new Date('2023-01-02T00:00:00Z'));
 
-      const activeToken1 = {
-        getId: () => ({ getValue: () => 'token-1' }),
-        isExpired: () => false
-      };
-      const activeToken2 = {
-        getId: () => ({ getValue: () => 'token-2' }),
-        isExpired: () => false
-      };
+      const activeToken1 = createActiveToken('token-1');
+      const activeToken2 = createActiveToken('token-2');
 
       mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue(testEnvelope);
       mockEnvelopeSignerService.getPendingSigners.mockResolvedValue(pendingSigners);
@@ -166,49 +185,27 @@ describe('SendRemindersUseCase', () => {
     it('should send reminders to filtered signers only', async () => {
       const envelopeId = TestUtils.generateEnvelopeId();
       const userId = TestUtils.generateUuid();
-      const securityContext = {
-        ipAddress: TestUtils.createTestIpAddress(),
-        userAgent: TestUtils.createTestUserAgent(),
-        country: 'US'
-      };
-
       const signer1Id = TestUtils.generateSignerId();
       const signer2Id = TestUtils.generateSignerId();
 
-      const input: SendRemindersInput = {
+      const input = createTestInput({
         envelopeId,
+        userId,
         request: {
           signerIds: [signer1Id.getValue()],
           message: 'Please sign this document',
           type: NotificationType.REMINDER
-        },
-        userId,
-        securityContext
-      };
+        }
+      });
 
-      const testEnvelope = signatureEnvelopeEntity({ id: envelopeId.getValue(), createdBy: userId });
+      const testEnvelope = createTestEnvelope(envelopeId, userId);
       const pendingSigners: EnvelopeSigner[] = [
-        { 
-          getId: () => signer1Id, 
-          getEmail: () => Email.fromString('signer1@example.com'),
-          getFullName: () => 'John Doe'
-        } as EnvelopeSigner,
-        { 
-          getId: () => signer2Id, 
-          getEmail: () => Email.fromString('signer2@example.com'),
-          getFullName: () => 'Jane Smith'
-        } as EnvelopeSigner
+        createTestSigner(signer1Id, 'signer1@example.com', 'John Doe'),
+        createTestSigner(signer2Id, 'signer2@example.com', 'Jane Smith')
       ];
 
-      const tracking = {
-        getReminderCount: () => 1,
-        getLastReminderAt: () => new Date('2023-01-01T00:00:00Z')
-      };
-
-      const activeToken = {
-        getId: () => ({ getValue: () => 'token-1' }),
-        isExpired: () => false
-      };
+      const tracking = createTrackingData();
+      const activeToken = createActiveToken();
 
       mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue(testEnvelope);
       mockEnvelopeSignerService.getPendingSigners.mockResolvedValue(pendingSigners);
@@ -229,23 +226,13 @@ describe('SendRemindersUseCase', () => {
     it('should return early when no pending signers', async () => {
       const envelopeId = TestUtils.generateEnvelopeId();
       const userId = TestUtils.generateUuid();
-      const securityContext = {
-        ipAddress: TestUtils.createTestIpAddress(),
-        userAgent: TestUtils.createTestUserAgent(),
-        country: 'US'
-      };
-
-      const input: SendRemindersInput = {
+      
+      const input = createTestInput({
         envelopeId,
-        request: {
-          message: 'Please sign this document',
-          type: NotificationType.REMINDER
-        },
-        userId,
-        securityContext
-      };
+        userId
+      });
 
-      const testEnvelope = signatureEnvelopeEntity({ id: envelopeId.getValue(), createdBy: userId });
+      const testEnvelope = createTestEnvelope(envelopeId, userId);
 
       mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue(testEnvelope);
       mockEnvelopeSignerService.getPendingSigners.mockResolvedValue([]);
@@ -262,38 +249,23 @@ describe('SendRemindersUseCase', () => {
     it('should return early when no matching signers after filtering', async () => {
       const envelopeId = TestUtils.generateEnvelopeId();
       const userId = TestUtils.generateUuid();
-      const securityContext = {
-        ipAddress: TestUtils.createTestIpAddress(),
-        userAgent: TestUtils.createTestUserAgent(),
-        country: 'US'
-      };
-
       const signer1Id = TestUtils.generateSignerId();
       const signer2Id = TestUtils.generateSignerId();
 
-      const input: SendRemindersInput = {
+      const input = createTestInput({
         envelopeId,
+        userId,
         request: {
           signerIds: ['non-existent-signer'],
           message: 'Please sign this document',
           type: NotificationType.REMINDER
-        },
-        userId,
-        securityContext
-      };
+        }
+      });
 
-      const testEnvelope = signatureEnvelopeEntity({ id: envelopeId.getValue(), createdBy: userId });
+      const testEnvelope = createTestEnvelope(envelopeId, userId);
       const pendingSigners: EnvelopeSigner[] = [
-        { 
-          getId: () => signer1Id, 
-          getEmail: () => Email.fromString('signer1@example.com'),
-          getFullName: () => 'John Doe'
-        } as EnvelopeSigner,
-        { 
-          getId: () => signer2Id, 
-          getEmail: () => Email.fromString('signer2@example.com'),
-          getFullName: () => 'Jane Smith'
-        } as EnvelopeSigner
+        createTestSigner(signer1Id, 'signer1@example.com', 'John Doe'),
+        createTestSigner(signer2Id, 'signer2@example.com', 'Jane Smith')
       ];
 
       mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue(testEnvelope);
@@ -311,30 +283,16 @@ describe('SendRemindersUseCase', () => {
     it('should skip signers when reminder policy prevents sending', async () => {
       const envelopeId = TestUtils.generateEnvelopeId();
       const userId = TestUtils.generateUuid();
-      const securityContext = {
-        ipAddress: TestUtils.createTestIpAddress(),
-        userAgent: TestUtils.createTestUserAgent(),
-        country: 'US'
-      };
-
-      const input: SendRemindersInput = {
+      
+      const input = createTestInput({
         envelopeId,
-        request: {
-          message: 'Please sign this document',
-          type: NotificationType.REMINDER
-        },
-        userId,
-        securityContext
-      };
+        userId
+      });
 
-      const testEnvelope = signatureEnvelopeEntity({ id: envelopeId.getValue(), createdBy: userId });
+      const testEnvelope = createTestEnvelope(envelopeId, userId);
       const signerId = TestUtils.generateSignerId();
       const pendingSigners: EnvelopeSigner[] = [
-        { 
-          getId: () => signerId, 
-          getEmail: () => Email.fromString('signer@example.com'),
-          getFullName: () => 'John Doe'
-        } as EnvelopeSigner
+        createTestSigner(signerId, 'signer@example.com', 'John Doe')
       ];
 
       mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue(testEnvelope);
@@ -356,36 +314,19 @@ describe('SendRemindersUseCase', () => {
     it('should skip signers when no active invitation token found', async () => {
       const envelopeId = TestUtils.generateEnvelopeId();
       const userId = TestUtils.generateUuid();
-      const securityContext = {
-        ipAddress: TestUtils.createTestIpAddress(),
-        userAgent: TestUtils.createTestUserAgent(),
-        country: 'US'
-      };
-
-      const input: SendRemindersInput = {
+      
+      const input = createTestInput({
         envelopeId,
-        request: {
-          message: 'Please sign this document',
-          type: NotificationType.REMINDER
-        },
-        userId,
-        securityContext
-      };
+        userId
+      });
 
-      const testEnvelope = signatureEnvelopeEntity({ id: envelopeId.getValue(), createdBy: userId });
+      const testEnvelope = createTestEnvelope(envelopeId, userId);
       const signerId = TestUtils.generateSignerId();
       const pendingSigners: EnvelopeSigner[] = [
-        { 
-          getId: () => signerId, 
-          getEmail: () => Email.fromString('signer@example.com'),
-          getFullName: () => 'John Doe'
-        } as EnvelopeSigner
+        createTestSigner(signerId, 'signer@example.com', 'John Doe')
       ];
 
-      const tracking = {
-        getReminderCount: () => 1,
-        getLastReminderAt: () => new Date('2023-01-01T00:00:00Z')
-      };
+      const tracking = createTrackingData();
 
       mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue(testEnvelope);
       mockEnvelopeSignerService.getPendingSigners.mockResolvedValue(pendingSigners);
@@ -405,47 +346,22 @@ describe('SendRemindersUseCase', () => {
     it('should handle mixed success and skip scenarios', async () => {
       const envelopeId = TestUtils.generateEnvelopeId();
       const userId = TestUtils.generateUuid();
-      const securityContext = {
-        ipAddress: TestUtils.createTestIpAddress(),
-        userAgent: TestUtils.createTestUserAgent(),
-        country: 'US'
-      };
-
-      const input: SendRemindersInput = {
+      
+      const input = createTestInput({
         envelopeId,
-        request: {
-          message: 'Please sign this document',
-          type: NotificationType.REMINDER
-        },
-        userId,
-        securityContext
-      };
+        userId
+      });
 
-      const testEnvelope = signatureEnvelopeEntity({ id: envelopeId.getValue(), createdBy: userId });
+      const testEnvelope = createTestEnvelope(envelopeId, userId);
       const signer1Id = TestUtils.generateSignerId();
       const signer2Id = TestUtils.generateSignerId();
       const pendingSigners: EnvelopeSigner[] = [
-        { 
-          getId: () => signer1Id, 
-          getEmail: () => Email.fromString('signer1@example.com'),
-          getFullName: () => 'John Doe'
-        } as EnvelopeSigner,
-        { 
-          getId: () => signer2Id, 
-          getEmail: () => Email.fromString('signer2@example.com'),
-          getFullName: () => 'Jane Smith'
-        } as EnvelopeSigner
+        createTestSigner(signer1Id, 'signer1@example.com', 'John Doe'),
+        createTestSigner(signer2Id, 'signer2@example.com', 'Jane Smith')
       ];
 
-      const tracking = {
-        getReminderCount: () => 1,
-        getLastReminderAt: () => new Date('2023-01-01T00:00:00Z')
-      };
-
-      const activeToken = {
-        getId: () => ({ getValue: () => 'token-1' }),
-        isExpired: () => false
-      };
+      const tracking = createTrackingData();
+      const activeToken = createActiveToken();
 
       mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue(testEnvelope);
       mockEnvelopeSignerService.getPendingSigners.mockResolvedValue(pendingSigners);
@@ -472,21 +388,11 @@ describe('SendRemindersUseCase', () => {
     it('should throw error when envelope is not found', async () => {
       const envelopeId = TestUtils.generateEnvelopeId();
       const userId = TestUtils.generateUuid();
-      const securityContext = {
-        ipAddress: TestUtils.createTestIpAddress(),
-        userAgent: TestUtils.createTestUserAgent(),
-        country: 'US'
-      };
-
-      const input: SendRemindersInput = {
+      
+      const input = createTestInput({
         envelopeId,
-        request: {
-          message: 'Please sign this document',
-          type: NotificationType.REMINDER
-        },
-        userId,
-        securityContext
-      };
+        userId
+      });
 
       mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue(null);
 
@@ -496,23 +402,13 @@ describe('SendRemindersUseCase', () => {
     it('should throw error when access validation fails', async () => {
       const envelopeId = TestUtils.generateEnvelopeId();
       const userId = TestUtils.generateUuid();
-      const securityContext = {
-        ipAddress: TestUtils.createTestIpAddress(),
-        userAgent: TestUtils.createTestUserAgent(),
-        country: 'US'
-      };
-
-      const input: SendRemindersInput = {
+      
+      const input = createTestInput({
         envelopeId,
-        request: {
-          message: 'Please sign this document',
-          type: NotificationType.REMINDER
-        },
-        userId,
-        securityContext
-      };
+        userId
+      });
 
-      const testEnvelope = signatureEnvelopeEntity({ id: envelopeId.getValue(), createdBy: 'another-user' });
+      const testEnvelope = createTestEnvelope(envelopeId, 'another-user');
       mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue(testEnvelope);
 
       const { EnvelopeAccessValidationRule } = require('../../../../../src/domain/rules/EnvelopeAccessValidationRule');
@@ -526,23 +422,13 @@ describe('SendRemindersUseCase', () => {
     it('should throw error when getPendingSigners fails', async () => {
       const envelopeId = TestUtils.generateEnvelopeId();
       const userId = TestUtils.generateUuid();
-      const securityContext = {
-        ipAddress: TestUtils.createTestIpAddress(),
-        userAgent: TestUtils.createTestUserAgent(),
-        country: 'US'
-      };
-
-      const input: SendRemindersInput = {
+      
+      const input = createTestInput({
         envelopeId,
-        request: {
-          message: 'Please sign this document',
-          type: NotificationType.REMINDER
-        },
-        userId,
-        securityContext
-      };
+        userId
+      });
 
-      const testEnvelope = signatureEnvelopeEntity({ id: envelopeId.getValue(), createdBy: userId });
+      const testEnvelope = createTestEnvelope(envelopeId, userId);
       mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue(testEnvelope);
       mockEnvelopeSignerService.getPendingSigners.mockRejectedValue(new Error('Get pending signers failed'));
 
@@ -552,23 +438,13 @@ describe('SendRemindersUseCase', () => {
     it('should handle signers with missing optional fields', async () => {
       const envelopeId = TestUtils.generateEnvelopeId();
       const userId = TestUtils.generateUuid();
-      const securityContext = {
-        ipAddress: TestUtils.createTestIpAddress(),
-        userAgent: TestUtils.createTestUserAgent(),
-        country: 'US'
-      };
-
-      const input: SendRemindersInput = {
+      
+      const input = createTestInput({
         envelopeId,
-        request: {
-          message: 'Please sign this document',
-          type: NotificationType.REMINDER
-        },
-        userId,
-        securityContext
-      };
+        userId
+      });
 
-      const testEnvelope = signatureEnvelopeEntity({ id: envelopeId.getValue(), createdBy: userId });
+      const testEnvelope = createTestEnvelope(envelopeId, userId);
       const signerId = TestUtils.generateSignerId();
       const pendingSigners: EnvelopeSigner[] = [
         { 
@@ -578,15 +454,8 @@ describe('SendRemindersUseCase', () => {
         } as EnvelopeSigner
       ];
 
-      const tracking = {
-        getReminderCount: () => 1,
-        getLastReminderAt: () => new Date('2023-01-01T00:00:00Z')
-      };
-
-      const activeToken = {
-        getId: () => ({ getValue: () => 'token-1' }),
-        isExpired: () => false
-      };
+      const tracking = createTrackingData();
+      const activeToken = createActiveToken();
 
       mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue(testEnvelope);
       mockEnvelopeSignerService.getPendingSigners.mockResolvedValue(pendingSigners);

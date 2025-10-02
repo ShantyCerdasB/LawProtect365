@@ -66,3 +66,16 @@ variable "env" {
   description = "Deployment environment (e.g. dev or prod)."
   type        = string
 }
+
+/**
+ * @var enable_acl
+ * @type bool
+ * @default false
+ * @description
+ * Whether to enable ACL for CloudFront logging or other services that require ACL access.
+ */
+variable "enable_acl" {
+  description = "Enable ACL for CloudFront logging."
+  type        = bool
+  default     = false
+}

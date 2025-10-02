@@ -69,11 +69,13 @@ function validateCustomFieldsCount(
 ): void {
   const fieldKeys = Object.keys(customFields);
   
-  if (fieldKeys.length > config.maxFields) {
-    throw new Error(
-      `${fieldName} cannot have more than ${config.maxFields} field${config.maxFields !== 1 ? 's' : ''}`
-    );
+  if (fieldKeys.length <= config.maxFields) {
+    return;
   }
+  
+  throw new Error(
+    `${fieldName} cannot have more than ${config.maxFields} field${config.maxFields !== 1 ? 's' : ''}`
+  );
 }
 
 /**
@@ -172,11 +174,13 @@ function validateTagsCount(
   config: TagsConfig,
   fieldName: string
 ): void {
-  if (tags.length > config.maxTags) {
-    throw new Error(
-      `${fieldName} cannot have more than ${config.maxTags} tag${config.maxTags !== 1 ? 's' : ''}`
-    );
+  if (tags.length <= config.maxTags) {
+    return;
   }
+  
+  throw new Error(
+    `${fieldName} cannot have more than ${config.maxTags} tag${config.maxTags !== 1 ? 's' : ''}`
+  );
 }
 
 /**
@@ -281,11 +285,13 @@ export function validateStringField(
     throw new Error(`${fieldName} is required`);
   }
 
-  if (value.length > maxLength) {
-    throw new Error(
-      `${fieldName} exceeds maximum length of ${maxLength} characters`
-    );
+  if (value.length <= maxLength) {
+    return;
   }
+  
+  throw new Error(
+    `${fieldName} exceeds maximum length of ${maxLength} characters`
+  );
 
   if (!allowEmpty && value.trim().length === 0) {
     throw new Error(`${fieldName} cannot be empty`);
@@ -317,7 +323,7 @@ export function validateNumberField(
   }
 
   if (!Number.isFinite(value)) {
-    throw new Error(`${fieldName} must be a valid number`);
+    throw new TypeError(`${fieldName} must be a valid number`);
   }
 
   if (value < min || value > max) {
@@ -348,7 +354,7 @@ export function validateBooleanField(
   }
 
   if (typeof value !== 'boolean') {
-    throw new Error(`${fieldName} must be a boolean value`);
+    throw new TypeError(`${fieldName} must be a boolean value`);
   }
 }
 
@@ -375,14 +381,16 @@ export function validateArrayField(
   }
 
   if (!Array.isArray(value)) {
-    throw new Error(`${fieldName} must be an array`);
+    throw new TypeError(`${fieldName} must be an array`);
   }
 
-  if (value.length > maxLength) {
-    throw new Error(
-      `${fieldName} cannot have more than ${maxLength} item${maxLength !== 1 ? 's' : ''}`
-    );
+  if (value.length <= maxLength) {
+    return;
   }
+  
+  throw new Error(
+    `${fieldName} cannot have more than ${maxLength} item${maxLength !== 1 ? 's' : ''}`
+  );
 
   if (!allowEmpty && value.length === 0) {
     throw new Error(`${fieldName} cannot be empty`);

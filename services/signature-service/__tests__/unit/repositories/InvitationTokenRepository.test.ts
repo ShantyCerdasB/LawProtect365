@@ -3,16 +3,11 @@ import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 import { setupCursorPaginationMocks } from '../../helpers/mocks/cursorPagination';
 const { mockListPage, mockDecodeCursor } = setupCursorPaginationMocks();
 
-import { Prisma, InvitationTokenStatus } from '@prisma/client';
+import { InvitationTokenStatus } from '@prisma/client';
 import { InvitationTokenRepository } from '../../../src/repositories/InvitationTokenRepository';
 import { InvitationToken } from '../../../src/domain/entities/InvitationToken';
-import { InvitationTokenId } from '../../../src/domain/value-objects/InvitationTokenId';
-import { EnvelopeId } from '../../../src/domain/value-objects/EnvelopeId';
-import { SignerId } from '../../../src/domain/value-objects/SignerId';
-import { TestUtils } from '../../helpers/testUtils';
 import {
   createInvitationTokenPrismaMock,
-  createSingleModelTransactionMock,
   PrismaModelMock,
 } from '../../helpers/mocks/prisma';
 import {
@@ -23,11 +18,6 @@ import {
   partialTokenEntity,
   tokenVO,
 } from '../../helpers/builders/invitationToken';
-import {
-  mockRepositoryMethod,
-  mockRepositoryMethodError,
-  createMockPage,
-} from '../../helpers/mocks/repository';
 
 describe('InvitationTokenRepository - Internal Methods', () => {
   let repository: InvitationTokenRepository;

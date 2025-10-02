@@ -22,6 +22,7 @@ module "frontend_bucket" {
   bucket_name  = "${var.project_name}-frontend-${var.env}"
   project_name = var.project_name
   env          = var.env
+  enable_acl   = true  # Enable ACL for CloudFront logging
 }
 
 ############################################################

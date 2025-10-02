@@ -41,7 +41,11 @@ function createMockSigner(id: string = 'test-signer-id') {
     participantRole: 'SIGNER',
     order: 1,
     invitedByUserId: 'inviter-id',
-    hasSigned: jest.fn(() => false)
+    hasSigned: jest.fn(() => false),
+    recordConsent: jest.fn(),
+    sign: jest.fn(),
+    decline: jest.fn(),
+    getDeclinedAt: jest.fn(() => new Date())
   };
 }
 
@@ -51,6 +55,33 @@ function createMockEnvelope() {
     validateViewerNotExists: jest.fn(),
     validateNoDuplicateEmails: jest.fn()
   };
+}
+
+function createMockViewer(id: string = 'test-viewer-id') {
+  return {
+    getId: jest.fn(() => ({ getValue: () => id })),
+    getEnvelopeId: jest.fn(() => ({ getValue: () => 'test-envelope-id' })),
+    getUserId: jest.fn(() => 'test-user-id'),
+    getEmail: jest.fn(() => 'test@example.com'),
+    getFullName: jest.fn(() => 'Test User'),
+    isExternal: false,
+    participantRole: 'VIEWER',
+    order: 1,
+    invitedByUserId: 'inviter-id'
+  };
+}
+
+function createMockSignersArray(count: number = 2) {
+  return Array.from({ length: count }, (_, index) => ({
+    getId: jest.fn(() => ({ getValue: () => `test-signer-${index + 1}` })),
+    getEnvelopeId: jest.fn(() => ({ getValue: () => 'test-envelope-id' })),
+    getUserId: jest.fn(() => null),
+    getEmail: jest.fn(() => `test${index + 1}@example.com`),
+    getFullName: jest.fn(() => `Test User ${index + 1}`),
+    isExternal: true,
+    participantRole: 'SIGNER',
+    order: index + 1
+  }));
 }
 
 function createTestSignatureData() {
@@ -80,28 +111,6 @@ function createTestDeclineData(signerId: string = 'test-signer-id') {
   };
 }
 
-function createMockSignersArray() {
-  return [
-    {
-      getId: jest.fn(() => ({ getValue: () => 'signer-1' })),
-      getEnvelopeId: jest.fn(() => ({ getValue: () => 'test-envelope-id' })),
-      getUserId: jest.fn(() => 'user-1'),
-      getEmail: jest.fn(() => 'user1@example.com'),
-      getFullName: jest.fn(() => 'User One'),
-      isExternal: false,
-      participantRole: 'SIGNER'
-    },
-    {
-      getId: jest.fn(() => ({ getValue: () => 'signer-2' })),
-      getEnvelopeId: jest.fn(() => ({ getValue: () => 'test-envelope-id' })),
-      getUserId: jest.fn(() => 'user-2'),
-      getEmail: jest.fn(() => 'user2@example.com'),
-      getFullName: jest.fn(() => 'User Two'),
-      isExternal: false,
-      participantRole: 'SIGNER'
-    }
-  ];
-}
 
 function createMockSignerWithSigning(id: string = 'test-signer-id') {
   return {
@@ -292,17 +301,7 @@ describe('EnvelopeSignerService', () => {
       const userId = 'test-user-id';
 
       const mockEnvelope = createMockEnvelope();
-      const mockCreatedViewer = {
-        getId: jest.fn(() => ({ getValue: () => 'test-viewer-id' })),
-        getEnvelopeId: jest.fn(() => ({ getValue: () => 'test-envelope-id' })),
-        getUserId: jest.fn(() => 'test-user-id'),
-        getEmail: jest.fn(() => 'test@example.com'),
-        getFullName: jest.fn(() => 'Test User'),
-        isExternal: false,
-        participantRole: 'VIEWER',
-        order: 1,
-        invitedByUserId: 'inviter-id'
-      };
+      const mockCreatedViewer = createMockViewer();
 
       mockSignatureEnvelopeRepository.findById.mockResolvedValue(mockEnvelope as any);
       mockEnvelopeSignerRepository.findByEnvelopeId.mockResolvedValue([]);
@@ -428,33 +427,8 @@ describe('EnvelopeSignerService', () => {
         }
       ];
 
-      const mockEnvelope = {
-        getCreatedBy: jest.fn(() => 'test-user-id'),
-        validateNoDuplicateEmails: jest.fn()
-      };
-
-      const mockCreatedSigners = [
-        {
-          getId: jest.fn(() => ({ getValue: () => 'test-signer-1' })),
-          getEnvelopeId: jest.fn(() => ({ getValue: () => 'test-envelope-id' })),
-          getUserId: jest.fn(() => null),
-          getEmail: jest.fn(() => 'test1@example.com'),
-          getFullName: jest.fn(() => 'Test User 1'),
-          isExternal: true,
-          participantRole: 'SIGNER',
-          order: 1
-        },
-        {
-          getId: jest.fn(() => ({ getValue: () => 'test-signer-2' })),
-          getEnvelopeId: jest.fn(() => ({ getValue: () => 'test-envelope-id' })),
-          getUserId: jest.fn(() => null),
-          getEmail: jest.fn(() => 'test2@example.com'),
-          getFullName: jest.fn(() => 'Test User 2'),
-          isExternal: true,
-          participantRole: 'SIGNER',
-          order: 2
-        }
-      ];
+      const mockEnvelope = createMockEnvelope();
+      const mockCreatedSigners = createMockSignersArray(2);
 
       mockSignatureEnvelopeRepository.findById.mockResolvedValue(mockEnvelope as any);
       mockEnvelopeSignerRepository.findByEnvelopeId.mockResolvedValue([]);
@@ -472,15 +446,10 @@ describe('EnvelopeSignerService', () => {
       const email = 'external@example.com';
       const fullName = 'External User';
 
-      const mockSigner = {
-        getId: jest.fn(() => ({ getValue: () => 'test-signer-id' })),
-        getEnvelopeId: jest.fn(() => ({ getValue: () => 'test-envelope-id' })),
-        getUserId: jest.fn(() => null),
-        getEmail: jest.fn(() => email),
-        getFullName: jest.fn(() => fullName),
-        isExternal: true,
-        participantRole: 'SIGNER'
-      };
+      const mockSigner = createMockSigner('test-signer-id');
+      mockSigner.getEmail = jest.fn(() => email);
+      mockSigner.getFullName = jest.fn(() => fullName);
+      mockSigner.isExternal = true;
 
       mockEnvelopeSignerRepository.list.mockResolvedValue({ items: [mockSigner] } as any);
 
@@ -516,18 +485,10 @@ describe('EnvelopeSignerService', () => {
         country: 'US'
       };
 
-      const mockSigner = {
-        getId: jest.fn(() => ({ getValue: () => signerId })),
-        getEnvelopeId: jest.fn(() => ({ getValue: () => 'test-envelope-id' })),
-        getUserId: jest.fn(() => 'test-user-id'),
-        getEmail: jest.fn(() => 'test@example.com'),
-        getFullName: jest.fn(() => 'Test User'),
-        isExternal: false,
-        participantRole: 'SIGNER',
-        recordConsent: jest.fn(),
-        sign: jest.fn(),
-        hasSigned: jest.fn(() => false)
-      };
+      const mockSigner = createMockSigner(signerId);
+      mockSigner.recordConsent = jest.fn();
+      mockSigner.sign = jest.fn();
+      mockSigner.hasSigned = jest.fn(() => false);
 
       mockEnvelopeSignerRepository.findById.mockResolvedValue(mockSigner as any);
       mockEnvelopeSignerRepository.update.mockRejectedValue(new Error('Database error'));
@@ -551,17 +512,9 @@ describe('EnvelopeSignerService', () => {
         country: 'US'
       };
 
-      const mockSigner = {
-        getId: jest.fn(() => ({ getValue: () => signerId })),
-        getEnvelopeId: jest.fn(() => ({ getValue: () => 'test-envelope-id' })),
-        getUserId: jest.fn(() => 'test-user-id'),
-        getEmail: jest.fn(() => 'test@example.com'),
-        getFullName: jest.fn(() => 'Test User'),
-        isExternal: false,
-        participantRole: 'SIGNER',
-        decline: jest.fn(),
-        getDeclinedAt: jest.fn(() => new Date())
-      };
+      const mockSigner = createMockSigner(signerId);
+      mockSigner.decline = jest.fn();
+      mockSigner.getDeclinedAt = jest.fn(() => new Date());
 
       mockEnvelopeSignerRepository.findById.mockResolvedValue(mockSigner as any);
       mockEnvelopeSignerRepository.update.mockRejectedValue(new Error('Database error'));

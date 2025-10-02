@@ -1,7 +1,6 @@
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 import { ShareDocumentViewUseCase } from '../../../../../src/services/orchestrators/use-cases/ShareDocumentViewUseCase';
-import { ShareDocumentViewInput, ShareDocumentViewResult } from '../../../../../src/domain/types/usecase/orchestrator/ShareDocumentViewUseCase';
-import { EnvelopeId } from '../../../../../src/domain/value-objects/EnvelopeId';
+import { ShareDocumentViewInput } from '../../../../../src/domain/types/usecase/orchestrator/ShareDocumentViewUseCase';
 import { Email } from '@lawprotect/shared-ts';
 import { TestUtils } from '../../../../helpers/testUtils';
 import { createSignatureEnvelopeServiceMock } from '../../../../helpers/mocks/services/SignatureEnvelopeService.mock';
@@ -26,6 +25,61 @@ describe('ShareDocumentViewUseCase', () => {
   let mockInvitationTokenService: any;
   let mockAuditEventService: any;
   let mockEnvelopeNotificationService: any;
+
+  // Helper function to create test input
+  function createTestInput(overrides: Partial<ShareDocumentViewInput> = {}): ShareDocumentViewInput {
+    const envelopeId = TestUtils.generateEnvelopeId();
+    const email = Email.fromString('viewer@example.com');
+    const fullName = 'John Doe';
+    const userId = TestUtils.generateUuid();
+    const securityContext = {
+      ipAddress: TestUtils.createTestIpAddress(),
+      userAgent: TestUtils.createTestUserAgent(),
+      country: 'US'
+    };
+    
+    return {
+      envelopeId,
+      email,
+      fullName,
+      userId,
+      securityContext,
+      ...overrides
+    };
+  }
+
+  // Helper function to create test envelope
+  function createTestEnvelope(envelopeId: any, userId: string) {
+    return signatureEnvelopeEntity({ id: envelopeId.getValue(), createdBy: userId });
+  }
+
+  // Helper function to create test viewer
+  function createTestViewer() {
+    const viewerId = TestUtils.generateSignerId();
+    return {
+      getId: () => viewerId
+    };
+  }
+
+  // Helper function to create token result
+  function createTokenResult(tokenId: string = 'viewer-token-123') {
+    return {
+      token: tokenId,
+      expiresAt: new Date('2023-12-31T23:59:59Z'),
+      entity: {
+        getId: () => ({ getValue: () => `token-entity-${tokenId}` })
+      }
+    };
+  }
+
+  // Helper function to setup successful mocks
+  function setupSuccessfulMocks(testEnvelope: any, viewer: any, tokenResult: any) {
+    mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue(testEnvelope);
+    mockEnvelopeSignerService.createViewerParticipant.mockResolvedValue(viewer);
+    mockInvitationTokenService.generateViewerInvitationToken.mockResolvedValue(tokenResult);
+    mockEnvelopeNotificationService.sendViewerInvitation.mockResolvedValue(undefined);
+    mockAuditEventService.create.mockResolvedValue(undefined);
+  }
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -59,35 +113,19 @@ describe('ShareDocumentViewUseCase', () => {
       const message = 'Please review this document';
       const expiresInDays = 7;
       const userId = TestUtils.generateUuid();
-      const securityContext = {
-        ipAddress: TestUtils.createTestIpAddress(),
-        userAgent: TestUtils.createTestUserAgent(),
-        country: 'US'
-      };
-
-      const input: ShareDocumentViewInput = {
+      
+      const input = createTestInput({
         envelopeId,
         email,
         fullName,
         message,
         expiresInDays,
-        userId,
-        securityContext
-      };
+        userId
+      });
 
-      const testEnvelope = signatureEnvelopeEntity({ id: envelopeId.getValue(), createdBy: userId });
-      const viewerId = TestUtils.generateSignerId();
-      const viewer = {
-        getId: () => viewerId
-      };
-
-      const tokenResult = {
-        token: 'viewer-token-123',
-        expiresAt: new Date('2023-12-31T23:59:59Z'),
-        entity: {
-          getId: () => ({ getValue: () => 'token-entity-123' })
-        }
-      };
+      const testEnvelope = createTestEnvelope(envelopeId, userId);
+      const viewer = createTestViewer();
+      const tokenResult = createTokenResult();
 
       mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue(testEnvelope);
       mockEnvelopeSignerService.createViewerParticipant.mockResolvedValue(viewer);
@@ -151,34 +189,18 @@ describe('ShareDocumentViewUseCase', () => {
       const email = Email.fromString('viewer@example.com');
       const fullName = 'Jane Smith';
       const userId = TestUtils.generateUuid();
-      const securityContext = {
-        ipAddress: TestUtils.createTestIpAddress(),
-        userAgent: TestUtils.createTestUserAgent(),
-        country: 'US'
-      };
-
-      const input: ShareDocumentViewInput = {
+      
+      const input = createTestInput({
         envelopeId,
         email,
         fullName,
-        userId,
-        securityContext
+        userId
         // No message, expiresInDays defaults to 7
-      };
+      });
 
-      const testEnvelope = signatureEnvelopeEntity({ id: envelopeId.getValue(), createdBy: userId });
-      const viewerId = TestUtils.generateSignerId();
-      const viewer = {
-        getId: () => viewerId
-      };
-
-      const tokenResult = {
-        token: 'viewer-token-minimal',
-        expiresAt: new Date('2023-12-31T23:59:59Z'),
-        entity: {
-          getId: () => ({ getValue: () => 'token-entity-minimal' })
-        }
-      };
+      const testEnvelope = createTestEnvelope(envelopeId, userId);
+      const viewer = createTestViewer();
+      const tokenResult = createTokenResult('viewer-token-minimal');
 
       mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue(testEnvelope);
       mockEnvelopeSignerService.createViewerParticipant.mockResolvedValue(viewer);
@@ -224,27 +246,17 @@ describe('ShareDocumentViewUseCase', () => {
         country: undefined // Missing country
       };
 
-      const input: ShareDocumentViewInput = {
+      const input = createTestInput({
         envelopeId,
         email,
         fullName,
         userId,
         securityContext
-      };
+      });
 
-      const testEnvelope = signatureEnvelopeEntity({ id: envelopeId.getValue(), createdBy: userId });
-      const viewerId = TestUtils.generateSignerId();
-      const viewer = {
-        getId: () => viewerId
-      };
-
-      const tokenResult = {
-        token: 'viewer-token-missing-fields',
-        expiresAt: new Date('2023-12-31T23:59:59Z'),
-        entity: {
-          getId: () => ({ getValue: () => 'token-entity-missing' })
-        }
-      };
+      const testEnvelope = createTestEnvelope(envelopeId, userId);
+      const viewer = createTestViewer();
+      const tokenResult = createTokenResult('viewer-token-missing-fields');
 
       mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue(testEnvelope);
       mockEnvelopeSignerService.createViewerParticipant.mockResolvedValue(viewer);
@@ -284,19 +296,13 @@ describe('ShareDocumentViewUseCase', () => {
       const email = Email.fromString('viewer@example.com');
       const fullName = 'John Doe';
       const userId = TestUtils.generateUuid();
-      const securityContext = {
-        ipAddress: TestUtils.createTestIpAddress(),
-        userAgent: TestUtils.createTestUserAgent(),
-        country: 'US'
-      };
-
-      const input: ShareDocumentViewInput = {
+      
+      const input = createTestInput({
         envelopeId,
         email,
         fullName,
-        userId,
-        securityContext
-      };
+        userId
+      });
 
       mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue(null);
 
@@ -308,21 +314,15 @@ describe('ShareDocumentViewUseCase', () => {
       const email = Email.fromString('viewer@example.com');
       const fullName = 'John Doe';
       const userId = TestUtils.generateUuid();
-      const securityContext = {
-        ipAddress: TestUtils.createTestIpAddress(),
-        userAgent: TestUtils.createTestUserAgent(),
-        country: 'US'
-      };
-
-      const input: ShareDocumentViewInput = {
+      
+      const input = createTestInput({
         envelopeId,
         email,
         fullName,
-        userId,
-        securityContext
-      };
+        userId
+      });
 
-      const testEnvelope = signatureEnvelopeEntity({ id: envelopeId.getValue(), createdBy: 'another-user' });
+      const testEnvelope = createTestEnvelope(envelopeId, 'another-user');
       mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue(testEnvelope);
 
       const { EnvelopeAccessValidationRule } = require('../../../../../src/domain/rules/EnvelopeAccessValidationRule');
@@ -338,21 +338,15 @@ describe('ShareDocumentViewUseCase', () => {
       const email = Email.fromString('viewer@example.com');
       const fullName = 'John Doe';
       const userId = TestUtils.generateUuid();
-      const securityContext = {
-        ipAddress: TestUtils.createTestIpAddress(),
-        userAgent: TestUtils.createTestUserAgent(),
-        country: 'US'
-      };
-
-      const input: ShareDocumentViewInput = {
+      
+      const input = createTestInput({
         envelopeId,
         email,
         fullName,
-        userId,
-        securityContext
-      };
+        userId
+      });
 
-      const testEnvelope = signatureEnvelopeEntity({ id: envelopeId.getValue(), createdBy: userId });
+      const testEnvelope = createTestEnvelope(envelopeId, userId);
       mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue(testEnvelope);
       mockEnvelopeSignerService.createViewerParticipant.mockRejectedValue(new Error('Viewer creation failed'));
 
@@ -364,25 +358,16 @@ describe('ShareDocumentViewUseCase', () => {
       const email = Email.fromString('viewer@example.com');
       const fullName = 'John Doe';
       const userId = TestUtils.generateUuid();
-      const securityContext = {
-        ipAddress: TestUtils.createTestIpAddress(),
-        userAgent: TestUtils.createTestUserAgent(),
-        country: 'US'
-      };
-
-      const input: ShareDocumentViewInput = {
+      
+      const input = createTestInput({
         envelopeId,
         email,
         fullName,
-        userId,
-        securityContext
-      };
+        userId
+      });
 
-      const testEnvelope = signatureEnvelopeEntity({ id: envelopeId.getValue(), createdBy: userId });
-      const viewerId = TestUtils.generateSignerId();
-      const viewer = {
-        getId: () => viewerId
-      };
+      const testEnvelope = createTestEnvelope(envelopeId, userId);
+      const viewer = createTestViewer();
 
       mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue(testEnvelope);
       mockEnvelopeSignerService.createViewerParticipant.mockResolvedValue(viewer);
@@ -396,33 +381,17 @@ describe('ShareDocumentViewUseCase', () => {
       const email = Email.fromString('viewer@example.com');
       const fullName = 'John Doe';
       const userId = TestUtils.generateUuid();
-      const securityContext = {
-        ipAddress: TestUtils.createTestIpAddress(),
-        userAgent: TestUtils.createTestUserAgent(),
-        country: 'US'
-      };
-
-      const input: ShareDocumentViewInput = {
+      
+      const input = createTestInput({
         envelopeId,
         email,
         fullName,
-        userId,
-        securityContext
-      };
+        userId
+      });
 
-      const testEnvelope = signatureEnvelopeEntity({ id: envelopeId.getValue(), createdBy: userId });
-      const viewerId = TestUtils.generateSignerId();
-      const viewer = {
-        getId: () => viewerId
-      };
-
-      const tokenResult = {
-        token: 'viewer-token-notification-fail',
-        expiresAt: new Date('2023-12-31T23:59:59Z'),
-        entity: {
-          getId: () => ({ getValue: () => 'token-entity-notification' })
-        }
-      };
+      const testEnvelope = createTestEnvelope(envelopeId, userId);
+      const viewer = createTestViewer();
+      const tokenResult = createTokenResult('viewer-token-notification-fail');
 
       mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue(testEnvelope);
       mockEnvelopeSignerService.createViewerParticipant.mockResolvedValue(viewer);
@@ -437,33 +406,17 @@ describe('ShareDocumentViewUseCase', () => {
       const email = Email.fromString('viewer@example.com');
       const fullName = 'John Doe';
       const userId = TestUtils.generateUuid();
-      const securityContext = {
-        ipAddress: TestUtils.createTestIpAddress(),
-        userAgent: TestUtils.createTestUserAgent(),
-        country: 'US'
-      };
-
-      const input: ShareDocumentViewInput = {
+      
+      const input = createTestInput({
         envelopeId,
         email,
         fullName,
-        userId,
-        securityContext
-      };
+        userId
+      });
 
-      const testEnvelope = signatureEnvelopeEntity({ id: envelopeId.getValue(), createdBy: userId });
-      const viewerId = TestUtils.generateSignerId();
-      const viewer = {
-        getId: () => viewerId
-      };
-
-      const tokenResult = {
-        token: 'viewer-token-audit-fail',
-        expiresAt: new Date('2023-12-31T23:59:59Z'),
-        entity: {
-          getId: () => ({ getValue: () => 'token-entity-audit' })
-        }
-      };
+      const testEnvelope = createTestEnvelope(envelopeId, userId);
+      const viewer = createTestViewer();
+      const tokenResult = createTokenResult('viewer-token-audit-fail');
 
       mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue(testEnvelope);
       mockEnvelopeSignerService.createViewerParticipant.mockResolvedValue(viewer);
@@ -480,34 +433,18 @@ describe('ShareDocumentViewUseCase', () => {
       const fullName = 'John Doe';
       const expiresInDays = 30;
       const userId = TestUtils.generateUuid();
-      const securityContext = {
-        ipAddress: TestUtils.createTestIpAddress(),
-        userAgent: TestUtils.createTestUserAgent(),
-        country: 'US'
-      };
-
-      const input: ShareDocumentViewInput = {
+      
+      const input = createTestInput({
         envelopeId,
         email,
         fullName,
         expiresInDays,
-        userId,
-        securityContext
-      };
+        userId
+      });
 
-      const testEnvelope = signatureEnvelopeEntity({ id: envelopeId.getValue(), createdBy: userId });
-      const viewerId = TestUtils.generateSignerId();
-      const viewer = {
-        getId: () => viewerId
-      };
-
-      const tokenResult = {
-        token: 'viewer-token-30-days',
-        expiresAt: new Date('2024-01-31T23:59:59Z'),
-        entity: {
-          getId: () => ({ getValue: () => 'token-entity-30' })
-        }
-      };
+      const testEnvelope = createTestEnvelope(envelopeId, userId);
+      const viewer = createTestViewer();
+      const tokenResult = createTokenResult('viewer-token-30-days');
 
       mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue(testEnvelope);
       mockEnvelopeSignerService.createViewerParticipant.mockResolvedValue(viewer);

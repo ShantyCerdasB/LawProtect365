@@ -12,6 +12,29 @@ resource "aws_s3_bucket" "main_bucket" {
 }
 
 /**
+ * Enable ACL for CloudFront logging (conditional)
+ */
+resource "aws_s3_bucket_acl" "main_bucket_acl" {
+  count  = var.enable_acl ? 1 : 0
+  bucket = aws_s3_bucket.main_bucket.id
+  acl    = "private"
+  
+  depends_on = [aws_s3_bucket_ownership_controls.main_bucket_ownership]
+}
+
+/**
+ * Ownership controls for ACL (conditional)
+ */
+resource "aws_s3_bucket_ownership_controls" "main_bucket_ownership" {
+  count  = var.enable_acl ? 1 : 0
+  bucket = aws_s3_bucket.main_bucket.id
+
+  rule {
+    object_ownership = "BucketOwnerPreferred"
+  }
+}
+
+/**
  * S3 bucket logging for audit trail.
  */
 resource "aws_s3_bucket_logging" "main_bucket_logging" {

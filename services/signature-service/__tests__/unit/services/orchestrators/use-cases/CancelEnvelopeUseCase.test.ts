@@ -1,19 +1,11 @@
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 import { CancelEnvelopeUseCase } from '../../../../../src/services/orchestrators/use-cases/CancelEnvelopeUseCase';
-import { EnvelopeId } from '../../../../../src/domain/value-objects/EnvelopeId';
 import { NetworkSecurityContext } from '@lawprotect/shared-ts';
 import { TestUtils } from '../../../../helpers/testUtils';
 import { signatureEnvelopeEntity } from '../../../../helpers/builders/signatureEnvelope';
 import {
   createSignatureEnvelopeServiceMock,
-  createSignatureEnvelopeServiceMockWithSuccess,
-  createSignatureEnvelopeServiceMockWithFailure,
-  createSignatureEnvelopeServiceMockWithPartialFailure
-} from '../../../../helpers/mocks/services';
-import {
-  createEnvelopeNotificationServiceMock,
-  createEnvelopeNotificationServiceMockWithSuccess,
-  createEnvelopeNotificationServiceMockWithFailure
+  createEnvelopeNotificationServiceMock
 } from '../../../../helpers/mocks/services';
 
 describe('CancelEnvelopeUseCase', () => {

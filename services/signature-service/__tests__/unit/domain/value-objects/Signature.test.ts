@@ -7,76 +7,86 @@
 import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
 import { Signature } from '../../../../src/domain/value-objects/Signature';
 import { SignatureMetadata } from '../../../../src/domain/value-objects/SignatureMetadata';
-import { SignerId } from '../../../../src/domain/value-objects/SignerId';
 import { TestUtils } from '../../../helpers/testUtils';
 
+// Helper function to test complex S3 key with reduced parameters
+function testComplexS3Key(params: {
+  signedS3Key: string;
+  signerId: string;
+  documentHash: string;
+  signatureHash: string;
+  kmsKeyId: string;
+  algorithm: string;
+  signedAt: Date;
+  metadata: SignatureMetadata;
+}): void {
+  expect(() => new Signature(
+    params.signerId,
+    params.documentHash,
+    params.signatureHash,
+    params.signedS3Key,
+    params.kmsKeyId,
+    params.algorithm,
+    params.signedAt,
+    params.metadata
+  )).not.toThrow();
+}
+
+function createValidMockSigner() {
+  return {
+    getId: () => ({ getValue: () => 'test-signer-id' }),
+    getDocumentHash: () => 'test-document-hash',
+    getSignatureHash: () => 'test-signature-hash',
+    getSignedS3Key: () => 'test-s3-key',
+    getKmsKeyId: () => 'test-kms-key',
+    getAlgorithm: () => 'RSA-SHA256',
+    getSignedAt: () => new Date('2024-01-01T00:00:00Z'),
+    getReason: () => 'test-reason',
+    getLocation: () => 'test-location',
+    getIpAddress: () => generateTestIpAddress(),
+    getUserAgent: () => 'test-user-agent',
+    getCountry: () => 'US',
+    getMetadata: () => new SignatureMetadata()
+  };
+}
+
+function createMockSignerWithoutDocumentHash() {
+  return {
+    getId: () => ({ getValue: () => 'test-signer-id' }),
+    getDocumentHash: () => null,
+    getSignatureHash: () => 'test-signature-hash',
+    getSignedS3Key: () => 'test-s3-key',
+    getKmsKeyId: () => 'test-kms-key',
+    getAlgorithm: () => 'RSA-SHA256',
+    getSignedAt: () => new Date('2024-01-01T00:00:00Z'),
+    getReason: () => 'test-reason',
+    getLocation: () => 'test-location',
+    getIpAddress: () => generateTestIpAddress(),
+    getUserAgent: () => 'test-user-agent',
+    getCountry: () => 'US',
+    getMetadata: () => new SignatureMetadata()
+  };
+}
+
+function createMockSignerWithoutSignatureHash() {
+  return {
+    getId: () => ({ getValue: () => 'test-signer-id' }),
+    getDocumentHash: () => 'test-document-hash',
+    getSignatureHash: () => null,
+    getSignedS3Key: () => 'test-s3-key',
+    getKmsKeyId: () => 'test-kms-key',
+    getAlgorithm: () => 'RSA-SHA256',
+    getSignedAt: () => new Date('2024-01-01T00:00:00Z'),
+    getReason: () => 'test-reason',
+    getLocation: () => 'test-location',
+    getIpAddress: () => generateTestIpAddress(),
+    getUserAgent: () => 'test-user-agent',
+    getCountry: () => 'US',
+    getMetadata: () => new SignatureMetadata()
+  };
+}
+
 describe('Signature', () => {
-  function testComplexS3Key(signedS3Key: string, signerId: string, documentHash: string, signatureHash: string, kmsKeyId: string, algorithm: string, signedAt: Date, metadata: SignatureMetadata): void {
-    expect(() => new Signature(
-      signerId,
-      documentHash,
-      signatureHash,
-      signedS3Key,
-      kmsKeyId,
-      algorithm,
-      signedAt,
-      metadata
-    )).not.toThrow();
-  }
-
-  function createValidMockSigner() {
-    return {
-      getId: () => ({ getValue: () => 'test-signer-id' }),
-      getDocumentHash: () => 'test-document-hash',
-      getSignatureHash: () => 'test-signature-hash',
-      getSignedS3Key: () => 'test-s3-key',
-      getKmsKeyId: () => 'test-kms-key',
-      getAlgorithm: () => 'RSA-SHA256',
-      getSignedAt: () => new Date('2024-01-01T00:00:00Z'),
-      getReason: () => 'test-reason',
-      getLocation: () => 'test-location',
-      getIpAddress: () => generateTestIpAddress(),
-      getUserAgent: () => 'test-user-agent',
-      getCountry: () => 'US',
-      getMetadata: () => new SignatureMetadata()
-    };
-  }
-
-  function createMockSignerWithoutDocumentHash() {
-    return {
-      getId: () => ({ getValue: () => 'test-signer-id' }),
-      getDocumentHash: () => null,
-      getSignatureHash: () => 'test-signature-hash',
-      getSignedS3Key: () => 'test-s3-key',
-      getKmsKeyId: () => 'test-kms-key',
-      getAlgorithm: () => 'RSA-SHA256',
-      getSignedAt: () => new Date('2024-01-01T00:00:00Z'),
-      getReason: () => 'test-reason',
-      getLocation: () => 'test-location',
-      getIpAddress: () => generateTestIpAddress(),
-      getUserAgent: () => 'test-user-agent',
-      getCountry: () => 'US',
-      getMetadata: () => new SignatureMetadata()
-    };
-  }
-
-  function createMockSignerWithoutSignatureHash() {
-    return {
-      getId: () => ({ getValue: () => 'test-signer-id' }),
-      getDocumentHash: () => 'test-document-hash',
-      getSignatureHash: () => null,
-      getSignedS3Key: () => 'test-s3-key',
-      getKmsKeyId: () => 'test-kms-key',
-      getAlgorithm: () => 'RSA-SHA256',
-      getSignedAt: () => new Date('2024-01-01T00:00:00Z'),
-      getReason: () => 'test-reason',
-      getLocation: () => 'test-location',
-      getIpAddress: () => generateTestIpAddress(),
-      getUserAgent: () => 'test-user-agent',
-      getCountry: () => 'US',
-      getMetadata: () => new SignatureMetadata()
-    };
-  }
 
   describe('Constructor and Validation', () => {
     it('should create a Signature with valid parameters', () => {
@@ -359,10 +369,10 @@ describe('Signature', () => {
     it('should handle different algorithms', () => {
       const algorithms = ['RSA-SHA256', 'RSA-SHA384', 'RSA-SHA512', 'ECDSA-SHA256', 'ECDSA-SHA384'];
       
-      algorithms.forEach(algorithm => {
+      for (const algorithm of algorithms) {
         const signature = createSignature({ algorithm });
         expect(signature.getAlgorithm()).toBe(algorithm);
-      });
+      }
     });
 
     it('should handle future dates', () => {
@@ -459,10 +469,10 @@ describe('Signature', () => {
         'legal/agreements/2024/Q1/signed/terms-and-conditions.pdf'
       ];
 
-      complexS3Keys.forEach(signedS3Key => {
+      for (const signedS3Key of complexS3Keys) {
         const signature = createSignature({ signedS3Key });
         expect(signature.getSignedS3Key()).toBe(signedS3Key);
-      });
+      }
     });
 
     it('should handle complex KMS key ARNs', () => {
@@ -502,7 +512,18 @@ describe('Signature', () => {
         'legal/agreements/2024/Q1/signed/terms-and-conditions.pdf'
       ];
 
-      complexS3Keys.forEach(key => testComplexS3Key(key, signerId, documentHash, signatureHash, kmsKeyId, algorithm, signedAt, metadata));
+      for (const key of complexS3Keys) {
+        testComplexS3Key({
+          signedS3Key: key,
+          signerId,
+          documentHash,
+          signatureHash,
+          kmsKeyId,
+          algorithm,
+          signedAt,
+          metadata
+        });
+      }
     });
   });
 
