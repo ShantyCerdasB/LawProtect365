@@ -21,7 +21,7 @@ export const toPosix = (input: string): string => input.replaceAll("\\", "/");
  * @param parts Path segments.
  */
 export const join = (...parts: Array<string | undefined | null>): string =>
-  p.join(...parts.filter((x): x is string => x).map((x) => toPosix(x)));
+  p.join(...parts.filter((x): x is string => x !== null && x !== undefined).map((x) => toPosix(x)));
 
 /**
  * Normalizes a path (collapses '.', '..' and redundant slashes).

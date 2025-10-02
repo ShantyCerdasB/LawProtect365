@@ -65,7 +65,7 @@ export const isS3Uri = (uri: string): boolean => /^s3:\/\//i.test(uri);
  */
 export const joinKey = (...parts: Array<string | undefined | null>): string =>
   parts
-    .filter((p): p is string => p)
+    .filter((p): p is string => p !== null && p !== undefined)
     .map((p) => stripEdgeSlashes(p))
     .filter(Boolean)
     .join("/");

@@ -5,8 +5,8 @@ phases:
     runtime-versions:
       nodejs: 20
     commands:
-      - echo "Using Node: $(node -v)"
-      - echo "Using npm:  $(npm -v)"
+      - "echo Using Node: $(node -v)"
+      - "echo Using npm:  $(npm -v)"
 
   pre_build:
     commands:
@@ -16,8 +16,6 @@ phases:
       - npm run build
       - npm prune --omit=dev
       - cd -
-
-
       - rm -rf /tmp/layer && mkdir -p /tmp/layer/nodejs
       - cp -R packages/shared-ts/dist /tmp/layer/nodejs/
       - cp -R packages/shared-ts/node_modules /tmp/layer/nodejs/

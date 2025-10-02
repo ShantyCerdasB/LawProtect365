@@ -285,6 +285,10 @@ export function validateStringField(
     throw new Error(`${fieldName} is required`);
   }
 
+  if (!allowEmpty && value.trim().length === 0) {
+    throw new Error(`${fieldName} cannot be empty`);
+  }
+
   if (value.length <= maxLength) {
     return;
   }
@@ -292,10 +296,6 @@ export function validateStringField(
   throw new Error(
     `${fieldName} exceeds maximum length of ${maxLength} characters`
   );
-
-  if (!allowEmpty && value.trim().length === 0) {
-    throw new Error(`${fieldName} cannot be empty`);
-  }
 }
 
 /**
@@ -384,6 +384,10 @@ export function validateArrayField(
     throw new TypeError(`${fieldName} must be an array`);
   }
 
+  if (!allowEmpty && value.length === 0) {
+    throw new Error(`${fieldName} cannot be empty`);
+  }
+
   if (value.length <= maxLength) {
     return;
   }
@@ -391,10 +395,6 @@ export function validateArrayField(
   throw new Error(
     `${fieldName} cannot have more than ${maxLength} item${maxLength !== 1 ? 's' : ''}`
   );
-
-  if (!allowEmpty && value.length === 0) {
-    throw new Error(`${fieldName} cannot be empty`);
-  }
 }
 
 /**
