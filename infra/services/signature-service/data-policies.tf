@@ -164,84 +164,8 @@ data "aws_iam_policy_document" "sign_kms_evidence_s3" {
   }
 }
 
-/**
- * @policy DynamoDB RW — Envelopes table
- * @purpose CRUD + queries on the envelopes aggregate (envelopes, parties, inputs, steps).
- * @permissions
- *  - PutItem, GetItem, UpdateItem, DeleteItem
- *  - BatchWriteItem, BatchGetItem
- *  - Query, Scan, DescribeTable
- * @resources
- *  - module.ddb_envelopes.table_arn
- *  - module.ddb_envelopes.table_arn/index/*
- */
-data "aws_iam_policy_document" "sign_dynamo_envelopes_rw" {
-  statement {
-    sid     = "DdbRWEnvelopes"
-    effect  = "Allow"
-    actions = [
-      "dynamodb:PutItem","dynamodb:GetItem","dynamodb:UpdateItem","dynamodb:DeleteItem",
-      "dynamodb:BatchWriteItem","dynamodb:BatchGetItem","dynamodb:Query","dynamodb:Scan",
-      "dynamodb:DescribeTable"
-    ]
-    resources = [
-      module.ddb_envelopes.table_arn,
-      "${module.ddb_envelopes.table_arn}/index/*"
-    ]
-  }
-}
 
-/**
- * @policy DynamoDB RW — Signing tokens table
- * @purpose Issue/consume short-lived signing tokens (email links, magic links).
- * @permissions
- *  - PutItem, GetItem, UpdateItem, DeleteItem
- *  - BatchWriteItem, BatchGetItem
- *  - Query, Scan, DescribeTable
- * @resources
- *  - module.ddb_signing_tokens.table_arn
- *  - module.ddb_signing_tokens.table_arn/index/*
- */
-data "aws_iam_policy_document" "sign_dynamo_tokens_rw" {
-  statement {
-    sid     = "DdbRWTokens"
-    effect  = "Allow"
-    actions = [
-      "dynamodb:PutItem","dynamodb:GetItem","dynamodb:UpdateItem","dynamodb:DeleteItem",
-      "dynamodb:BatchWriteItem","dynamodb:BatchGetItem","dynamodb:Query","dynamodb:Scan",
-      "dynamodb:DescribeTable"
-    ]
-    resources = [
-      module.ddb_signing_tokens.table_arn,
-      "${module.ddb_signing_tokens.table_arn}/index/*"
-    ]
-  }
-}
 
-/**
- * @policy DynamoDB transactions & conditional checks — Envelopes table
- * @purpose Atomic multi-record state transitions (e.g., pending→viewed→signed) and idempotency.
- * @permissions
- *  - TransactWriteItems, TransactGetItems, ConditionCheckItem
- * @resources
- *  - module.ddb_envelopes.table_arn
- *  - module.ddb_envelopes.table_arn/index/*
- */
-data "aws_iam_policy_document" "sign_dynamo_transact" {
-  statement {
-    sid     = "DdbTransactAndConditions"
-    effect  = "Allow"
-    actions = [
-      "dynamodb:TransactWriteItems",
-      "dynamodb:TransactGetItems",
-      "dynamodb:ConditionCheckItem"
-    ]
-    resources = [
-      module.ddb_envelopes.table_arn,
-      "${module.ddb_envelopes.table_arn}/index/*"
-    ]
-  }
-}
 
 /**
  * @policy CloudWatch custom metrics
@@ -361,29 +285,6 @@ data "aws_iam_policy_document" "sign_s3_object_lock" {
   }
 }
 
-/**
- * @policy DynamoDB Streams (optional)
- * @purpose Read change stream from envelopes table (for async processors/auditing).
- * @permissions
- *  - dynamodb:DescribeStream, GetRecords, GetShardIterator, ListStreams
- * @resources
- *  - module.ddb_envelopes.table_stream_arn (when streams are enabled)
- */
-data "aws_iam_policy_document" "sign_dynamo_stream_consumer" {
-  statement {
-    sid     = "DdbStreamsRead"
-    effect  = "Allow"
-    actions = [
-      "dynamodb:DescribeStream",
-      "dynamodb:GetRecords",
-      "dynamodb:GetShardIterator",
-      "dynamodb:ListStreams"
-    ]
-    resources = [
-      "arn:aws:dynamodb:${var.aws_region}:${var.aws_caller.account_id}:table/${module.ddb_envelopes.table_name}/stream/*"
-    ]
-  }
-}
 
 /**
  * @policy SSM Parameter Store (feature flags / client config)
@@ -457,15 +358,12 @@ locals {
 
   /**
    * @local inline_policies_optional
-   * EventBridge and DynamoDB Streams policies, only when configured.
+   * EventBridge policies, only when configured.
    *
    * Always define keys with `null` when not used, then clean them below.
    */
   inline_policies_optional = {
     "events-put" = var.event_bus_arn != null ? data.aws_iam_policy_document.sign_eventbridge_put.json : null
-    "ddb-streams-read" = (
-      can(module.ddb_envelopes.table_stream_arn) && module.ddb_envelopes.table_stream_arn != ""
-    ) ? one(data.aws_iam_policy_document.sign_dynamo_stream_consumer[*].json) : null
   }
 
   /**
@@ -479,11 +377,12 @@ locals {
   /**
    * @local inline_policies
    * Final merged inline policies:
-   *  - base + (optional KMS for SSE_KMS) + (optional EB/Streams) + extra overrides from root.
+   *  - base + (optional KMS for SSE_KMS) + (optional EB) + extra overrides from root.
    */
   inline_policies = merge(
     local.inline_policies_base,
     local.inline_policies_kms,
+    local.inline_policies_clean,
     var.extra_inline_policies
   )
 }

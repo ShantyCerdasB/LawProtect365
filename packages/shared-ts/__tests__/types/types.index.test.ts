@@ -52,7 +52,9 @@ describe('types barrel (src/types/index.ts)', () => {
     const union = new Set<string>();
     for (const p of MODULE_PATHS) {
       const mod: ModuleExports = await import(p);
-      publicKeys(mod).forEach((k) => union.add(k));
+      for (const k of publicKeys(mod)) {
+        union.add(k);
+      }
     }
     const unionKeys = Array.from(union).sort();
 

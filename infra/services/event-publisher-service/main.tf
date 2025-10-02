@@ -19,9 +19,12 @@ module "outbox_table" {
   
   global_secondary_indexes = [
     {
-      name     = "gsi1"
-      hash_key = "gsi1pk"
-      range_key = "gsi1sk"
+      name             = "gsi1"
+      hash_key         = "sk"
+      hash_key_type    = "S"
+      range_key        = "pk"
+      range_key_type   = "S"
+      projection_type  = "ALL"
     }
   ]
   
@@ -43,7 +46,6 @@ module "outbox_stream_handler" {
   env          = var.env
   
   environment_variables = {
-    AWS_REGION           = var.region
     OUTBOX_TABLE_NAME    = module.outbox_table.table_name
     EVENT_BUS_NAME       = var.event_bus_name
     EVENT_SOURCE         = "${var.project_name}.${var.env}.outbox-stream"
@@ -72,7 +74,7 @@ module "outbox_stream_role" {
 
 # DynamoDB Streams Event Source Mapping
 resource "aws_lambda_event_source_mapping" "outbox_stream_mapping" {
-  event_source_arn                   = module.outbox_table.table_stream_arn
+  event_source_arn                   = module.outbox_table.stream_arn
   function_name                      = module.outbox_stream_handler.lambda_function_arn
   starting_position                  = "LATEST"
   batch_size                         = 10

@@ -28,13 +28,13 @@ const withEnv = async (vars: Record<string, string | undefined>, fn: () => void 
   }
   try {
     for (const [k, v] of Object.entries(vars)) {
-      if (typeof v === "undefined") delete (process.env as any)[k];
+      if (v === undefined) delete (process.env as any)[k];
       else process.env[k] = v;
     }
     await fn();
   } finally {
     for (const [k, v] of Object.entries(prev)) {
-      if (typeof v === "undefined") delete (process.env as any)[k];
+      if (v === undefined) delete (process.env as any)[k];
       else process.env[k] = v;
     }
   }

@@ -154,8 +154,8 @@ describe("utils/s3", () => {
       expect(isValidKey("x".repeat(1025))).toBe(false);
 
       // Control chars (e.g., NUL and DEL)
-      expect(isValidKey("ok" + String.fromCharCode(0) + "no")).toBe(false);
-      expect(isValidKey("ok" + String.fromCharCode(127) + "no")).toBe(false);
+      expect(isValidKey("ok" + String.fromCodePoint(0) + "no")).toBe(false);
+      expect(isValidKey("ok" + String.fromCodePoint(127) + "no")).toBe(false);
     });
   });
 

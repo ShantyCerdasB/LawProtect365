@@ -16,7 +16,7 @@ describe('withRetry', () => {
   });
 
   it('returns on first attempt without scheduling backoff', async () => {
-    const setTimeoutSpy = jest.spyOn(global, 'setTimeout');
+    const setTimeoutSpy = jest.spyOn(globalThis, 'setTimeout');
     const op = jest.fn(async () => 'ok');
     const wrapped = withRetry(op, { maxAttempts: 3 });
 
@@ -28,7 +28,7 @@ describe('withRetry', () => {
   });
 
   it('retries on error by default and honors backoffMs before retry, then succeeds', async () => {
-    const setTimeoutSpy = jest.spyOn(global, 'setTimeout');
+    const setTimeoutSpy = jest.spyOn(globalThis, 'setTimeout');
     let calls = 0;
     const op = jest.fn(async () => {
       calls += 1;
@@ -58,7 +58,7 @@ describe('withRetry', () => {
   });
 
   it('does not retry when shouldRetry returns false; throws original error; no delay', async () => {
-    const setTimeoutSpy = jest.spyOn(global, 'setTimeout');
+    const setTimeoutSpy = jest.spyOn(globalThis, 'setTimeout');
     const err = new Error('no-retry');
     const op = jest.fn(async () => {
       throw err;
@@ -74,7 +74,7 @@ describe('withRetry', () => {
   });
 
   it('performs exactly one attempt when maxAttempts=0 due to guard and throws without delay', async () => {
-    const setTimeoutSpy = jest.spyOn(global, 'setTimeout');
+    const setTimeoutSpy = jest.spyOn(globalThis, 'setTimeout');
     const err = new Error('one-shot');
     const op = jest.fn(async () => {
       throw err;
@@ -90,7 +90,7 @@ describe('withRetry', () => {
   });
 
   it('clamps negative backoff to 0 and throws the last error after exhausting attempts', async () => {
-    const setTimeoutSpy = jest.spyOn(global, 'setTimeout');
+    const setTimeoutSpy = jest.spyOn(globalThis, 'setTimeout');
     const e1 = new Error('first');
     const e2 = new Error('second');
     let n = 0;

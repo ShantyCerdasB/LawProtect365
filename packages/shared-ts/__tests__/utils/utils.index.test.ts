@@ -5,7 +5,6 @@
  * - Marks the file as a module via `export {}` to avoid global-scope collisions across test files.
  * - Uses unique identifier names (prefixed with `UTILS_`) to prevent duplicate identifiers.
  */
-export {};
 
 const UTILS_BARREL_PATH = '../../src/utils/index.js';
 

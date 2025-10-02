@@ -7,9 +7,77 @@
 import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
 import { Signature } from '../../../../src/domain/value-objects/Signature';
 import { SignatureMetadata } from '../../../../src/domain/value-objects/SignatureMetadata';
+import { SignerId } from '../../../../src/domain/value-objects/SignerId';
 import { TestUtils } from '../../../helpers/testUtils';
 
 describe('Signature', () => {
+  function testComplexS3Key(signedS3Key: string, signerId: string, documentHash: string, signatureHash: string, kmsKeyId: string, algorithm: string, signedAt: Date, metadata: SignatureMetadata): void {
+    expect(() => new Signature(
+      signerId,
+      documentHash,
+      signatureHash,
+      signedS3Key,
+      kmsKeyId,
+      algorithm,
+      signedAt,
+      metadata
+    )).not.toThrow();
+  }
+
+  function createValidMockSigner() {
+    return {
+      getId: () => ({ getValue: () => 'test-signer-id' }),
+      getDocumentHash: () => 'test-document-hash',
+      getSignatureHash: () => 'test-signature-hash',
+      getSignedS3Key: () => 'test-s3-key',
+      getKmsKeyId: () => 'test-kms-key',
+      getAlgorithm: () => 'RSA-SHA256',
+      getSignedAt: () => new Date('2024-01-01T00:00:00Z'),
+      getReason: () => 'test-reason',
+      getLocation: () => 'test-location',
+      getIpAddress: () => generateTestIpAddress(),
+      getUserAgent: () => 'test-user-agent',
+      getCountry: () => 'US',
+      getMetadata: () => new SignatureMetadata()
+    };
+  }
+
+  function createMockSignerWithoutDocumentHash() {
+    return {
+      getId: () => ({ getValue: () => 'test-signer-id' }),
+      getDocumentHash: () => null,
+      getSignatureHash: () => 'test-signature-hash',
+      getSignedS3Key: () => 'test-s3-key',
+      getKmsKeyId: () => 'test-kms-key',
+      getAlgorithm: () => 'RSA-SHA256',
+      getSignedAt: () => new Date('2024-01-01T00:00:00Z'),
+      getReason: () => 'test-reason',
+      getLocation: () => 'test-location',
+      getIpAddress: () => generateTestIpAddress(),
+      getUserAgent: () => 'test-user-agent',
+      getCountry: () => 'US',
+      getMetadata: () => new SignatureMetadata()
+    };
+  }
+
+  function createMockSignerWithoutSignatureHash() {
+    return {
+      getId: () => ({ getValue: () => 'test-signer-id' }),
+      getDocumentHash: () => 'test-document-hash',
+      getSignatureHash: () => null,
+      getSignedS3Key: () => 'test-s3-key',
+      getKmsKeyId: () => 'test-kms-key',
+      getAlgorithm: () => 'RSA-SHA256',
+      getSignedAt: () => new Date('2024-01-01T00:00:00Z'),
+      getReason: () => 'test-reason',
+      getLocation: () => 'test-location',
+      getIpAddress: () => generateTestIpAddress(),
+      getUserAgent: () => 'test-user-agent',
+      getCountry: () => 'US',
+      getMetadata: () => new SignatureMetadata()
+    };
+  }
+
   describe('Constructor and Validation', () => {
     it('should create a Signature with valid parameters', () => {
       const signerId = TestUtils.generateUuid();
@@ -434,20 +502,7 @@ describe('Signature', () => {
         'legal/agreements/2024/Q1/signed/terms-and-conditions.pdf'
       ];
 
-      complexS3Keys.forEach(testComplexS3Key);
-      
-      function testComplexS3Key(signedS3Key: string): void {
-        expect(() => new Signature(
-          signerId,
-          documentHash,
-          signatureHash,
-          signedS3Key,
-          kmsKeyId,
-          algorithm,
-          signedAt,
-          metadata
-        )).not.toThrow();
-      }
+      complexS3Keys.forEach(key => testComplexS3Key(key, signerId, documentHash, signatureHash, kmsKeyId, algorithm, signedAt, metadata));
     });
   });
 
@@ -503,21 +558,6 @@ describe('Signature', () => {
       expect(signature?.getSignatureHash()).toBe('test-signature-hash');
     });
 
-    function createValidMockSigner() {
-      return {
-        getId: () => ({ getValue: () => 'test-signer-id' }),
-        getDocumentHash: () => 'test-document-hash',
-        getSignatureHash: () => 'test-signature-hash',
-        getSignedS3Key: () => 'test-s3-key',
-        getKmsKeyId: () => 'test-kms-key',
-        getAlgorithm: () => 'RSA-SHA256',
-        getSignedAt: () => new Date('2024-01-01T00:00:00Z'),
-        getReason: () => 'test-reason',
-        getLocation: () => 'test-location',
-        getIpAddress: () => generateTestIpAddress(),
-        getUserAgent: () => 'test-user-agent'
-      };
-    }
 
     it('should return null when EnvelopeSigner has no document hash', () => {
       const mockSigner = createMockSignerWithoutDocumentHash();
@@ -525,17 +565,6 @@ describe('Signature', () => {
       expect(signature).toBeNull();
     });
 
-    function createMockSignerWithoutDocumentHash() {
-      return {
-        getId: () => ({ getValue: () => 'test-signer-id' }),
-        getDocumentHash: () => null,
-        getSignatureHash: () => 'test-signature-hash',
-        getSignedS3Key: () => 'test-s3-key',
-        getKmsKeyId: () => 'test-kms-key',
-        getAlgorithm: () => 'RSA-SHA256',
-        getSignedAt: () => new Date('2024-01-01T00:00:00Z')
-      };
-    }
 
     it('should return null when EnvelopeSigner has no signature hash', () => {
       const mockSigner = createMockSignerWithoutSignatureHash();
@@ -543,17 +572,6 @@ describe('Signature', () => {
       expect(signature).toBeNull();
     });
 
-    function createMockSignerWithoutSignatureHash() {
-      return {
-        getId: () => ({ getValue: () => 'test-signer-id' }),
-        getDocumentHash: () => 'test-document-hash',
-        getSignatureHash: () => null,
-        getSignedS3Key: () => 'test-s3-key',
-        getKmsKeyId: () => 'test-kms-key',
-        getAlgorithm: () => 'RSA-SHA256',
-        getSignedAt: () => new Date('2024-01-01T00:00:00Z')
-      };
-    }
   });
 
   describe('Validation and Utility Methods', () => {

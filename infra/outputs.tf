@@ -737,18 +737,6 @@ output "sign_pipeline_role_name" {
   value       = module.sign_service.sign_pipeline_role_name
 }
 
-# ----------------------------
-# DynamoDB tables
-# ----------------------------
-output "ddb_envelopes_table_name" {
-  description = "Name of the DynamoDB table used by sign-service"
-  value       = module.sign_service.ddb_envelopes_table_name
-}
-
-output "ddb_signing_tokens_table_name" {
-  description = "Name of the DynamoDB table for signing tokens"
-  value       = module.sign_service.ddb_signing_tokens_table_name
-}
 
 output "KMS_SIGN_KEY_ARN" {
   description = "ARN of the KMS key used for signing"

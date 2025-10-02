@@ -9,6 +9,12 @@ import { TestUtils } from '../../../helpers/testUtils';
 import { invalidEntity } from '../../../../src/signature-errors';
 
 describe('SignatureAuditEventId', () => {
+  function testInvalidUuid(invalidUuid: string): void {
+    expect(() => {
+      new SignatureAuditEventId(invalidUuid);
+    }).toThrow('Invalid entity');
+  }
+
   describe('constructor', () => {
     it('should create a SignatureAuditEventId with valid UUID', () => {
       const validUuid = TestUtils.generateUuid();
@@ -42,11 +48,7 @@ describe('SignatureAuditEventId', () => {
         '123e4567-e89b-12d3-a456-42661417400' // Missing character
       ];
 
-      invalidUuids.forEach(invalidUuid => {
-        expect(() => {
-          new SignatureAuditEventId(invalidUuid);
-        }).toThrow('Invalid entity');
-      });
+      invalidUuids.forEach(testInvalidUuid);
     });
 
     it('should accept valid UUID v4 format', () => {

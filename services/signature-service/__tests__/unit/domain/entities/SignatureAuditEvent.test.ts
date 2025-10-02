@@ -38,6 +38,24 @@ function createAuditEventWithParams(params: any): SignatureAuditEvent {
   });
 }
 
+function createAuditEventWithDescription(description: string | undefined) {
+  return SignatureAuditEvent.create({
+    envelopeId: new EnvelopeId(TestUtils.generateUuid()),
+    eventType: AuditEventType.ENVELOPE_CREATED,
+    description: description as string,
+    userId: 'user-123'
+  });
+}
+
+function createSignerEventWithoutSignerId() {
+  return SignatureAuditEvent.create({
+    envelopeId: new EnvelopeId(TestUtils.generateUuid()),
+    eventType: AuditEventType.SIGNER_ADDED,
+    description: 'Signer added',
+    // Missing signerId for signer event
+  });
+}
+
 describe('SignatureAuditEvent', () => {
   describe('Constructor and Getters', () => {
     it('should create audit event with all properties', () => {
@@ -604,27 +622,9 @@ describe('SignatureAuditEvent', () => {
         expect(() => createAuditEventWithDescription(undefined as any)).toThrow('Audit event creation failed');
       });
 
-      function createAuditEventWithDescription(description: string | undefined) {
-        return SignatureAuditEvent.create({
-          envelopeId: new EnvelopeId(TestUtils.generateUuid()),
-          eventType: AuditEventType.ENVELOPE_CREATED,
-          description: description as string,
-          userId: 'user-123'
-        });
-      }
-
       it('should enforce signer ID requirement for signer events', () => {
         expect(() => createSignerEventWithoutSignerId()).toThrow('Audit event creation failed');
       });
-
-      function createSignerEventWithoutSignerId() {
-        return SignatureAuditEvent.create({
-          envelopeId: new EnvelopeId(TestUtils.generateUuid()),
-          eventType: AuditEventType.SIGNER_ADDED,
-          description: 'Signer added',
-          // Missing signerId for signer event
-        });
-      }
 
       it('should allow envelope events without signer ID', () => {
         const event = SignatureAuditEvent.create({

@@ -28,7 +28,7 @@ import {
 describe("utils/path", () => {
   describe("toPosix()", () => {
     it("replaces backslashes with forward slashes", () => {
-      expect(toPosix("a\\b\\c")).toBe("a/b/c");
+      expect(toPosix(String.raw`a\b\c`)).toBe("a/b/c");
       expect(toPosix("a/b")).toBe("a/b");
     });
   });
@@ -39,7 +39,7 @@ describe("utils/path", () => {
     });
 
     it("ignores null/undefined/empty segments and normalizes separators", () => {
-      expect(join("a\\b", undefined as any, "c\\d", null as any, "")).toBe("a/b/c/d");
+      expect(join(String.raw`a\b`, undefined as any, String.raw`c\d`, null as any, "")).toBe("a/b/c/d");
       expect(join(undefined as any, null as any, "")).toBe(".");
     });
   });

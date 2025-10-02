@@ -65,3 +65,56 @@ resource "aws_s3_bucket_lifecycle_configuration" "main_bucket_lifecycle" {
     filter {}
   }
 }
+
+/**
+ * S3 bucket policy to allow user access for uploading Lambda ZIPs.
+ */
+resource "aws_s3_bucket_policy" "main_bucket_policy" {
+  bucket = aws_s3_bucket.main_bucket.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "AllowUserAccess"
+        Effect = "Allow"
+        Principal = {
+          AWS = "arn:aws:iam::088609649600:user/ShantyCerdas"
+        }
+        Action = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:DeleteObject",
+          "s3:PutObjectAcl"
+        ]
+        Resource = "${aws_s3_bucket.main_bucket.arn}/*"
+      },
+      {
+        Sid       = "AllowLambdaServiceAccess"
+        Effect    = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+        Action = [
+          "s3:GetObject",
+          "s3:GetObjectVersion"
+        ]
+        Resource = "${aws_s3_bucket.main_bucket.arn}/*"
+      },
+      {
+        Sid       = "AllowCodeBuildAccess"
+        Effect    = "Allow"
+        Principal = {
+          Service = "codebuild.amazonaws.com"
+        }
+        Action = [
+          "s3:GetObject",
+          "s3:GetObjectVersion",
+          "s3:PutObject",
+          "s3:PutObjectAcl"
+        ]
+        Resource = "${aws_s3_bucket.main_bucket.arn}/*"
+      }
+    ]
+  })
+}

@@ -31,7 +31,9 @@ describe('isRetryable', () => {
     const e5 = { name: 'LimitExceededException' };
     const e6 = { name: 'ServiceQuotaExceededException' };
 
-    [e1, e2, e3, e4, e5, e6].forEach((e) => expect(isRetryable(e)).toBe(true));
+    for (const e of [e1, e2, e3, e4, e5, e6]) {
+      expect(isRetryable(e)).toBe(true);
+    }
   });
 
   it('matches on error code', () => {

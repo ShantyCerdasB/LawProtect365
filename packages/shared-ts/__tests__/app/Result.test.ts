@@ -90,8 +90,8 @@ describe('Result', () => {
     try {
       resultUnwrap(resultErr(payload));
       fail('expected throw');
-    } catch (t) {
-      expect(t).toBe(payload);
+    } catch (error_) {
+      expect(error_).toBe(payload);
     }
   });
 

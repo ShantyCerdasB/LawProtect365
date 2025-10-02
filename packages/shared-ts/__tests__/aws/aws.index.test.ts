@@ -58,7 +58,7 @@ describe('aws barrel exports', () => {
     const d = aws.backoffDelay(0, { jitter: 'none', baseMs: 123 });
     expect(d).toBe(123);
 
-    const r = aws.shouldRetry(0, 2, () => true, new Error(), { jitter: 'none', baseMs: 10 });
+    const r = aws.shouldRetry(0, 2, () => true, new Error('Test error'), { jitter: 'none', baseMs: 10 });
     expect(r).toEqual({ retry: true, delayMs: 10 });
   });
 

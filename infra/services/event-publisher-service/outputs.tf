@@ -17,7 +17,7 @@ output "outbox_table_arn" {
 
 output "outbox_table_stream_arn" {
   description = "ARN of the outbox DynamoDB table stream"
-  value       = module.outbox_table.table_stream_arn
+  value       = module.outbox_table.stream_arn
 }
 
 output "lambda_function_arn" {

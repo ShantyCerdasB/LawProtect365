@@ -8,6 +8,38 @@ describe('IntegrationEventFactory', () => {
     factory = new IntegrationEventFactory();
   });
 
+  function createMockEnvelope() {
+    return {
+      getId: jest.fn(() => ({ getValue: () => 'test-envelope-id' })),
+      getTitle: jest.fn(() => 'Test Envelope'),
+      getCreatedBy: jest.fn(() => 'test-user-id')
+    };
+  }
+
+  function createMockSigner() {
+    return {
+      getId: jest.fn(() => ({ getValue: () => 'test-signer-id' })),
+      getEmail: jest.fn(() => ({ getValue: () => 'test@example.com' })),
+      getFullName: jest.fn(() => 'Test User')
+    };
+  }
+
+  function createMockViewer() {
+    return {
+      getId: jest.fn(() => ({ getValue: () => 'test-viewer-id' })),
+      getEmail: jest.fn(() => ({ getValue: () => 'viewer@example.com' })),
+      getFullName: jest.fn(() => 'Test Viewer')
+    };
+  }
+
+  function createMockNetworkContext() {
+    return {
+      ipAddress: generateTestIpAddress(),
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      country: 'US'
+    };
+  }
+
   it('should be importable', () => {
     expect(IntegrationEventFactory).toBeDefined();
   });
@@ -75,17 +107,8 @@ describe('IntegrationEventFactory', () => {
 
   describe('event creation with mocks', () => {
     it('should create envelope invitation event with proper structure', () => {
-      const mockEnvelope = {
-        getId: jest.fn(() => ({ getValue: () => 'test-envelope-id' })),
-        getTitle: jest.fn(() => 'Test Envelope'),
-        getCreatedBy: jest.fn(() => 'test-user-id')
-      };
-      
-      const mockSigner = {
-        getId: jest.fn(() => ({ getValue: () => 'test-signer-id' })),
-        getEmail: jest.fn(() => ({ getValue: () => 'test@example.com' })),
-        getFullName: jest.fn(() => 'Test User')
-      };
+      const mockEnvelope = createMockEnvelope();
+      const mockSigner = createMockSigner();
 
       const args = {
         envelope: mockEnvelope as any,
@@ -105,11 +128,7 @@ describe('IntegrationEventFactory', () => {
     });
 
     it('should create viewer invitation event with proper structure', () => {
-      const mockEnvelope = {
-        getId: jest.fn(() => ({ getValue: () => 'test-envelope-id' })),
-        getTitle: jest.fn(() => 'Test Envelope'),
-        getCreatedBy: jest.fn(() => 'test-user-id')
-      };
+      const mockEnvelope = createMockEnvelope();
 
       const args = {
         envelope: mockEnvelope as any,
@@ -131,17 +150,8 @@ describe('IntegrationEventFactory', () => {
     });
 
     it('should create signer declined event with proper structure', () => {
-      const mockEnvelope = {
-        getId: jest.fn(() => ({ getValue: () => 'test-envelope-id' })),
-        getTitle: jest.fn(() => 'Test Envelope'),
-        getCreatedBy: jest.fn(() => 'test-user-id')
-      };
-      
-      const mockSigner = {
-        getId: jest.fn(() => ({ getValue: () => 'test-signer-id' })),
-        getEmail: jest.fn(() => ({ getValue: () => 'test@example.com' })),
-        getFullName: jest.fn(() => 'Test User')
-      };
+      const mockEnvelope = createMockEnvelope();
+      const mockSigner = createMockSigner();
 
       const args = {
         envelope: mockEnvelope as any,
@@ -164,12 +174,7 @@ describe('IntegrationEventFactory', () => {
     });
 
     it('should create envelope cancelled event with proper structure', () => {
-      const mockEnvelope = {
-        getId: jest.fn(() => ({ getValue: () => 'test-envelope-id' })),
-        getTitle: jest.fn(() => 'Test Envelope'),
-        getCreatedBy: jest.fn(() => 'test-user-id'),
-        getStatus: jest.fn(() => ({ getValue: () => 'DRAFT' }))
-      };
+      const mockEnvelope = createMockEnvelope();
 
       const args = {
         envelope: mockEnvelope as any,

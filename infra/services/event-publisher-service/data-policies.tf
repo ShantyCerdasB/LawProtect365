@@ -29,7 +29,7 @@ data "aws_iam_policy_document" "dynamodb_streams_read" {
       "dynamodb:GetShardIterator",
       "dynamodb:ListStreams"
     ]
-    resources = [module.outbox_table.table_stream_arn]
+    resources = [module.outbox_table.stream_arn]
   }
 }
 

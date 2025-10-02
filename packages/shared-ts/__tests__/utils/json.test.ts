@@ -112,7 +112,7 @@ describe("deepClone", () => {
 
   it("uses structuredClone when available (native branch)", () => {
     const original = { x: { y: 1 } };
-    const spy = jest.fn((v: unknown) => JSON.parse(JSON.stringify(v)));
+    const spy = jest.fn((v: unknown) => structuredClone(v));
     const orig = (globalThis as any).structuredClone;
     (globalThis as any).structuredClone = spy;
     try {

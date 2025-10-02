@@ -72,6 +72,34 @@ describe('InvitationToken', () => {
     );
   }
 
+  function createInvalidTokenData() {
+    return {
+      id: TestUtils.generateUuid(),
+      envelopeId: TestUtils.generateUuid(),
+      signerId: TestUtils.generateUuid(),
+      tokenHash: TestUtils.generateSha256Hash(),
+      status: InvitationTokenStatus.ACTIVE,
+      expiresAt: null,
+      sentAt: null,
+      lastSentAt: null,
+      resendCount: -5,
+      usedAt: null,
+      usedBy: null,
+      viewCount: -2,
+      lastViewedAt: null,
+      signedAt: null,
+      signedBy: null,
+      revokedAt: null,
+      revokedReason: null,
+      createdBy: null,
+      ipAddress: null,
+      userAgent: null,
+      country: null,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+  }
+
   describe('Constructor and Getters', () => {
     it('should create token with all properties', () => {
       const tokenId = TestUtils.generateUuid();
@@ -844,33 +872,6 @@ describe('InvitationToken', () => {
         expect(() => InvitationToken.fromPersistence(data)).toThrow('Invalid value for viewCount: expected non-negative number, got -2');
       });
 
-      function createInvalidTokenData() {
-        return {
-          id: TestUtils.generateUuid(),
-          envelopeId: TestUtils.generateUuid(),
-          signerId: TestUtils.generateUuid(),
-          tokenHash: TestUtils.generateSha256Hash(),
-          status: InvitationTokenStatus.ACTIVE,
-          expiresAt: null,
-          sentAt: null,
-          lastSentAt: null,
-          resendCount: -5,
-          usedAt: null,
-          usedBy: null,
-          viewCount: -2,
-          lastViewedAt: null,
-          signedAt: null,
-          signedBy: null,
-          revokedAt: null,
-          revokedReason: null,
-          createdBy: null,
-          ipAddress: null,
-          userAgent: null,
-          country: null,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        };
-      }
 
       it('should handle invalid date formats', () => {
         const data = {

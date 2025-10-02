@@ -62,7 +62,7 @@ export const commonBasenameTestCases: BasenameTestCase[] = [
  */
 export const pathSpecificDirnameTestCases: DirnameTestCase[] = [
   {
-    input: "a\\b\\c.txt",
+    input: String.raw`a\b\c.txt`,
     expected: "a/b",
     description: "handles backslashes (converted to forward slashes)"
   }
@@ -118,11 +118,11 @@ export const runDirnameTests = (
   dirnameFn: (input: string) => string,
   testCases: DirnameTestCase[]
 ): void => {
-  testCases.forEach(({ input, expected, description }) => {
+  for (const { input, expected, description } of testCases) {
     it(description, () => {
       expect(dirnameFn(input)).toBe(expected);
     });
-  });
+  }
 };
 
 /**
@@ -134,9 +134,9 @@ export const runBasenameTests = (
   basenameFn: (input: string) => string,
   testCases: BasenameTestCase[]
 ): void => {
-  testCases.forEach(({ input, expected, description }) => {
+  for (const { input, expected, description } of testCases) {
     it(description, () => {
       expect(basenameFn(input)).toBe(expected);
     });
-  });
+  }
 };
