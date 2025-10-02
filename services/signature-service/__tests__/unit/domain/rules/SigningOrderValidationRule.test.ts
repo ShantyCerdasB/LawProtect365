@@ -1,7 +1,6 @@
 import { SigningOrderValidationRule } from '../../../../src/domain/rules/SigningOrderValidationRule';
 import { SignatureEnvelope } from '../../../../src/domain/entities/SignatureEnvelope';
 import { EnvelopeSigner } from '../../../../src/domain/entities/EnvelopeSigner';
-import { SignerId } from '../../../../src/domain/value-objects/SignerId';
 import { SigningOrder } from '../../../../src/domain/value-objects/SigningOrder';
 import { SigningOrderType } from '@prisma/client';
 import { TestUtils } from '../../../helpers/testUtils';

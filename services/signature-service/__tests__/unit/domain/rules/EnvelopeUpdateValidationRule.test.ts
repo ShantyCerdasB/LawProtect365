@@ -3,7 +3,6 @@ import { SignatureEnvelope } from '../../../../src/domain/entities/SignatureEnve
 import { EnvelopeSigner } from '../../../../src/domain/entities/EnvelopeSigner';
 import { EnvelopeStatus } from '../../../../src/domain/value-objects/EnvelopeStatus';
 import { SigningOrderType } from '@lawprotect/shared-ts';
-import { ParticipantRole } from '@prisma/client';
 import { TestUtils } from '../../../helpers/testUtils';
 import { SignatureEnvelopeBuilder } from '../../../helpers/builders/SignatureEnvelopeBuilder';
 import { EnvelopeSignerBuilder } from '../../../helpers/builders/EnvelopeSignerBuilder';

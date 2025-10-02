@@ -8,8 +8,6 @@
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 import { generateTestIpAddress } from '../../integration/helpers/testHelpers';
 import { AuditEventService } from '../../../src/services/audit/AuditEventService';
-import { SignatureAuditEventRepository } from '../../../src/repositories/SignatureAuditEventRepository';
-import { SignatureAuditEvent } from '../../../src/domain/entities/SignatureAuditEvent';
 import { AuditEventType } from '../../../src/domain/enums/AuditEventType';
 import { TestUtils } from '../../helpers/testUtils';
 import { 

@@ -7,7 +7,6 @@ import { InvitationTokenId } from '../../../../src/domain/value-objects/Invitati
 import { ConsentId } from '../../../../src/domain/value-objects/ConsentId';
 import { DocumentOrigin } from '../../../../src/domain/value-objects/DocumentOrigin';
 import { SigningOrder } from '../../../../src/domain/value-objects/SigningOrder';
-import { S3Key } from '@lawprotect/shared-ts';
 
 describe('EntityFactory', () => {
   it('should be importable', () => {

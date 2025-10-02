@@ -23,11 +23,6 @@ import {
   partialConsentEntity,
   consentVO,
 } from '../../helpers/builders/consent';
-import {
-  mockRepositoryMethod,
-  mockRepositoryMethodError,
-  createMockPage,
-} from '../../helpers/mocks/repository';
 
 describe('ConsentRepository - Internal Methods', () => {
   let repository: ConsentRepository;

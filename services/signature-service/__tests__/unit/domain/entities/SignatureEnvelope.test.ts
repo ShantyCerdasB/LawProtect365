@@ -19,7 +19,6 @@ import { SignerId } from '../../../../src/domain/value-objects/SignerId';
 import { S3Key, DocumentHash } from '@lawprotect/shared-ts';
 import { 
   invalidEnvelopeState, 
-  signerEmailDuplicate, 
   signerCannotBeRemoved,
   envelopeCompleted,
   invalidSignerState,
@@ -203,10 +202,10 @@ describe('SignatureEnvelope', () => {
         EnvelopeStatus.expired()
       ];
 
-      finalStates.forEach(status => {
+      for (const status of finalStates) {
         const testEnvelope = createBasicEnvelope(status);
         expect(testEnvelope.isInFinalState()).toBe(true);
-      });
+      }
 
       expect(envelope.isInFinalState()).toBe(false);
     });

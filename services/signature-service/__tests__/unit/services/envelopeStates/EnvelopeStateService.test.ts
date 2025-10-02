@@ -18,6 +18,21 @@ jest.mock('../../../../src/domain/value-objects/SignerId');
 jest.mock('../../../../src/signature-errors');
 
 // Mock the shared-ts modules
+
+// Helper function to create mock envelope
+function createMockEnvelope(envelopeId: string, isDraft: boolean = true) {
+  return {
+    getCreatedBy: () => 'test-user-id',
+    isInFinalState: () => false,
+    hasExternalSigners: () => true,
+    validateExternalSigners: jest.fn(),
+    getStatus: () => ({ isDraft: () => isDraft }),
+    send: jest.fn(),
+    getTitle: () => 'Test Envelope',
+    getSigners: () => [{ id: 'signer1' }],
+    getSentAt: () => new Date('2024-01-01T10:00:00Z')
+  };
+}
 jest.mock('@lawprotect/shared-ts', () => ({
   createNetworkSecurityContext: jest.fn(() => ({
     ipAddress: generateTestIpAddress(),
@@ -166,11 +181,7 @@ describe('EnvelopeStateService', () => {
     });
 
     it('should return envelope without updating if not in draft state', async () => {
-      const mockEnvelopeNotDraft = {
-        ...mockEnvelope,
-        getStatus: () => ({ isDraft: () => false }),
-        validateExternalSigners: jest.fn()
-      };
+      const mockEnvelopeNotDraft = createMockEnvelope('test-envelope-id', false);
 
       mockSignatureEnvelopeRepository.getWithSigners.mockResolvedValue(mockEnvelopeNotDraft);
 
@@ -321,24 +332,13 @@ describe('EnvelopeStateService', () => {
     const mockEnvelopeId = { getValue: () => 'test-envelope-id' };
 
     it('should get envelope with signers successfully', async () => {
-      const mockEnvelopeWithSigners = {
-        getCreatedBy: () => 'test-user-id',
-        isInFinalState: () => false,
-        hasExternalSigners: () => true,
-        validateExternalSigners: jest.fn(),
-        getStatus: () => ({ isDraft: () => true }),
-        send: jest.fn(),
-        getTitle: () => 'Test Envelope',
-        getSigners: () => [{ id: 'signer1' }],
-        getSentAt: () => new Date('2024-01-01T10:00:00Z')
-      };
+      const mockEnvelopeWithSigners = createMockEnvelope('test-envelope-id');
       
       mockSignatureEnvelopeRepository.getWithSigners.mockResolvedValue(mockEnvelopeWithSigners);
       mockSignatureEnvelopeRepository.update.mockResolvedValue(mockEnvelopeWithSigners);
       mockAuditEventService.create.mockResolvedValue({} as any);
 
-      // This is a private method, so we test it indirectly through public methods
-      const result = await envelopeStateService.sendEnvelope(mockEnvelopeId as any, 'test-user-id');
+      await envelopeStateService.sendEnvelope(mockEnvelopeId as any, 'test-user-id');
 
       expect(mockSignatureEnvelopeRepository.getWithSigners).toHaveBeenCalledWith(mockEnvelopeId);
     });

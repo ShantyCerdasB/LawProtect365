@@ -1,6 +1,5 @@
 import { validateS3StorageForDocument, validateS3StorageGeneral } from '../../../../../src/domain/rules/s3/S3StorageRules';
 import { S3Key } from '@lawprotect/shared-ts';
-import { TestUtils } from '../../../../helpers/testUtils';
 
 describe('S3StorageRules', () => {
   let s3Key: S3Key;

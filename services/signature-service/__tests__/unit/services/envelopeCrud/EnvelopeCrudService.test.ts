@@ -15,8 +15,6 @@ import { SignatureEnvelope } from '@/domain/entities/SignatureEnvelope';
 import { DocumentOrigin } from '@/domain/value-objects/DocumentOrigin';
 import { SigningOrder } from '@/domain/value-objects/SigningOrder';
 import { EnvelopeStatus } from '@/domain/value-objects/EnvelopeStatus';
-import { SignerId } from '@/domain/value-objects/SignerId';
-import { S3Key } from '@lawprotect/shared-ts';
 import { SignatureEnvelopeBuilder } from '../../../helpers/builders/SignatureEnvelopeBuilder';
 import { EnvelopeSignerBuilder } from '../../../helpers/builders/EnvelopeSignerBuilder';
 

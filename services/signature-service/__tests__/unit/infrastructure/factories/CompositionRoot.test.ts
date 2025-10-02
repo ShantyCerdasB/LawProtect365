@@ -6,7 +6,6 @@
  */
 
 import { CompositionRoot } from '../../../../src/infrastructure/factories/CompositionRoot';
-import { SignatureOrchestrator } from '../../../../src/services/orchestrators/SignatureOrchestrator';
 
 // Mock all dependencies to avoid configuration loading
 jest.mock('../../../../src/infrastructure/factories/repositories/RepositoryFactory', () => ({

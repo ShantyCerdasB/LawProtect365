@@ -19,8 +19,6 @@ import {
   partialTrackingEntity,
   trackingVO,
 } from '../../helpers/builders/signerReminderTracking';
-import {
-} from '../../helpers/mocks/repository';
 
 describe('SignerReminderTrackingRepository - Internal Methods', () => {
   let repository: SignerReminderTrackingRepository;
@@ -30,7 +28,6 @@ describe('SignerReminderTrackingRepository - Internal Methods', () => {
   beforeEach(async () => {
     const { prisma, signerReminderTracking } = createSignerReminderTrackingPrismaMock();
     prismaMock = prisma as unknown as { signerReminderTracking: PrismaModelMock };
-    trackingOps = signerReminderTracking;
     repository = new SignerReminderTrackingRepository(prismaMock as any);
     jest.clearAllMocks();
     mockListPage.mockClear();

@@ -22,8 +22,6 @@ import {
   partialSignatureEnvelopeEntity,
   createTestSigner,
 } from '../../helpers/builders/signatureEnvelope';
-import {
-} from '../../helpers/mocks/repository';
 
 describe('SignatureEnvelopeRepository - Internal Methods', () => {
   let repository: SignatureEnvelopeRepository;
@@ -1079,7 +1077,6 @@ describe('SignatureEnvelopeRepository - Public Methods', () => {
   describe('error handling edge cases', () => {
     it('should handle updateFlattenedKey error', async () => {
       const id = TestUtils.generateEnvelopeId();
-      const txMock = jest.fn();
       
       envelopeOps.update.mockRejectedValueOnce(new Error('Update failed'));
       

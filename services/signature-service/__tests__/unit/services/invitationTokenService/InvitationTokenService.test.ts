@@ -11,6 +11,15 @@ import { InvitationTokenService } from '../../../../src/services/invitationToken
 import { AuditEventType } from '../../../../src/domain/enums/AuditEventType';
 
 // Mock all the problematic imports
+
+// Helper function to create mock signer
+function createMockSigner(signerId: string, email: string, fullName: string) {
+  return {
+    getId: () => ({ getValue: () => signerId }),
+    getEmail: () => ({ getValue: () => email }),
+    getFullName: () => fullName
+  };
+}
 jest.mock('../../../../src/repositories/InvitationTokenRepository');
 jest.mock('../../../../src/repositories/EnvelopeSignerRepository');
 jest.mock('../../../../src/services/audit/AuditEventService');
@@ -163,11 +172,7 @@ describe('InvitationTokenService', () => {
     });
 
     it('should handle multiple signers', async () => {
-      const mockSigner2 = {
-        getId: () => ({ getValue: () => 'test-signer-id-2' }),
-        getEmail: () => ({ getValue: () => 'signer2@example.com' }),
-        getFullName: () => 'Test Signer 2'
-      };
+      const mockSigner2 = createMockSigner('test-signer-id-2', 'signer2@example.com', 'Test Signer 2');
 
       const mockCreatedToken = mockInvitationToken;
       const mockSentToken = mockInvitationToken;

@@ -51,7 +51,9 @@ describe('SignatureAuditEventId', () => {
         '123e4567-e89b-12d3-a456-42661417400' // Missing character
       ];
 
-      invalidUuids.forEach(testInvalidUuid);
+      for (const invalidUuid of invalidUuids) {
+        testInvalidUuid(invalidUuid);
+      }
     });
 
     it('should accept valid UUID v4 format', () => {

@@ -2,7 +2,6 @@ import { SigningFlowValidationRule } from '../../../../src/domain/rules/SigningF
 import { SignatureEnvelope } from '../../../../src/domain/entities/SignatureEnvelope';
 import { EnvelopeSigner } from '../../../../src/domain/entities/EnvelopeSigner';
 import { EnvelopeStatus } from '../../../../src/domain/value-objects/EnvelopeStatus';
-import { EnvelopeId } from '../../../../src/domain/value-objects/EnvelopeId';
 import { SignerStatus } from '@prisma/client';
 import { TestUtils } from '../../../helpers/testUtils';
 import { SignatureEnvelopeBuilder } from '../../../helpers/builders/SignatureEnvelopeBuilder';

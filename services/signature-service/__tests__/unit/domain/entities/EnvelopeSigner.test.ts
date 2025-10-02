@@ -77,6 +77,7 @@ function createEnvelopeSignerWithParams(params: {
     );
   }
 
+describe('EnvelopeSigner', () => {
   describe('Constructor and Getters', () => {
     it('should create signer with all properties', () => {
       const signerId = TestUtils.generateUuid();

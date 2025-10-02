@@ -13,6 +13,26 @@ import { AuditEventService } from '../../../../src/services/audit/AuditEventServ
 jest.mock('../../../../src/repositories/SignatureEnvelopeRepository');
 jest.mock('../../../../src/services/audit/AuditEventService');
 
+// Helper function to create mock envelope
+function createMockEnvelope(envelopeId: string) {
+  return {
+    getId: jest.fn(() => ({ getValue: () => envelopeId })),
+    getTitle: jest.fn(() => 'Test Envelope'),
+    updateHashes: jest.fn(),
+    updateSignedDocument: jest.fn(),
+    updateFlattenedKey: jest.fn(),
+  };
+}
+
+// Helper function to create mock hash data
+function createMockHashData() {
+  return {
+    sourceSha256: 'source-hash',
+    signedSha256: 'signed-hash',
+    flattenedSha256: 'flattened-hash'
+  };
+}
+
 describe('EnvelopeHashService', () => {
   let service: EnvelopeHashService;
   let mockSignatureEnvelopeRepository: jest.Mocked<SignatureEnvelopeRepository>;
@@ -41,17 +61,8 @@ describe('EnvelopeHashService', () => {
   describe('updateHashes', () => {
     it('should update hashes successfully', async () => {
       const envelopeId = 'test-envelope-id';
-      const hashes = {
-        sourceSha256: 'source-hash',
-        signedSha256: 'signed-hash',
-        flattenedSha256: 'flattened-hash'
-      };
-
-      const mockEnvelope = {
-        getId: jest.fn(() => ({ getValue: () => envelopeId })),
-        getTitle: jest.fn(() => 'Test Envelope'),
-        updateHashes: jest.fn(),
-      };
+      const hashes = createMockHashData();
+      const mockEnvelope = createMockEnvelope(envelopeId);
 
       mockSignatureEnvelopeRepository.updateHashes.mockResolvedValue(mockEnvelope as any);
       mockAuditEventService.create.mockResolvedValue({} as any);
@@ -112,12 +123,7 @@ describe('EnvelopeHashService', () => {
       const envelopeId = 'test-envelope-id';
       const signedDocumentKey = 'signed-document-key';
       const signedDocumentHash = 'signed-hash';
-
-      const mockEnvelope = {
-        getId: jest.fn(() => ({ getValue: () => envelopeId })),
-        getTitle: jest.fn(() => 'Test Envelope'),
-        updateSignedDocument: jest.fn(),
-      };
+      const mockEnvelope = createMockEnvelope(envelopeId);
 
       mockSignatureEnvelopeRepository.updateSignedDocument.mockResolvedValue(mockEnvelope as any);
       mockAuditEventService.createSignerEvent.mockResolvedValue({} as any);
@@ -162,12 +168,7 @@ describe('EnvelopeHashService', () => {
     it('should update flattened key successfully', async () => {
       const envelopeId = 'test-envelope-id';
       const flattenedKey = 'flattened-key';
-
-      const mockEnvelope = {
-        getId: jest.fn(() => ({ getValue: () => envelopeId })),
-        getTitle: jest.fn(() => 'Test Envelope'),
-        updateFlattenedKey: jest.fn(),
-      };
+      const mockEnvelope = createMockEnvelope(envelopeId);
 
       mockSignatureEnvelopeRepository.updateFlattenedKey.mockResolvedValue(mockEnvelope as any);
       mockAuditEventService.create.mockResolvedValue({} as any);

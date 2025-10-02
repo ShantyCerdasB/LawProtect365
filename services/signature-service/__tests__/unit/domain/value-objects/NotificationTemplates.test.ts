@@ -77,11 +77,11 @@ describe('NotificationTemplates', () => {
         NotificationTemplates.defaultReminderMessage()
       ];
       
-      messages.forEach(message => {
+      for (const message of messages) {
         expect(message).toBeDefined();
         expect(message).not.toBe('');
         expect(message.trim().length).toBeGreaterThan(0);
-      });
+      }
     });
   });
 });

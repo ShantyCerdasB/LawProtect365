@@ -20,8 +20,6 @@ import {
   partialAuditEventEntity,
   envelopeEventEntity,
 } from '../../helpers/builders/signatureAuditEvent';
-import {
-} from '../../helpers/mocks/repository';
 
 describe('SignatureAuditEventRepository - Internal Methods', () => {
   let repository: SignatureAuditEventRepository;
