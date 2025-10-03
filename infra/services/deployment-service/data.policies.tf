@@ -124,6 +124,7 @@ data "aws_iam_policy_document" "lambda_policy" {
     effect = "Allow"
     actions = [
       "lambda:UpdateFunctionCode",
+      "lambda:UpdateFunctionConfiguration",
       "lambda:PublishVersion",
       "lambda:CreateAlias",
       "lambda:GetAlias",

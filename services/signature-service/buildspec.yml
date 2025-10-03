@@ -14,7 +14,7 @@ phases:
 
   pre_build:
     commands:
-      # Construir el layer local de shared-ts (incluye Prisma Client del workspace raíz)
+      # 1) Construir shared-ts y generar Prisma allí
       - |
         bash -lc '
           set -euo pipefail
@@ -32,16 +32,17 @@ phases:
             cp -a "$CODEBUILD_SRC_DIR/node_modules/." /tmp/layer/nodejs/node_modules/
           fi
         '
-      # Instalar y generar Prisma en el servicio (para que Jest vea enums/tipos)
+
+      # 2) Instalar deps del servicio (SIN prisma generate aquí)
       - |
         bash -lc '
           set -euo pipefail
-          echo "[INFO] deps + prisma generate en signature-service"
+          echo "[INFO] deps en signature-service"
           cd "$CODEBUILD_SRC_DIR/services/signature-service"
           npm ci
-          DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}" npx -y prisma@5.22.0 generate
         '
-      # Configurar NODE_PATH para que en tests se consuma shared-ts desde el layer
+
+      # 3) Configurar NODE_PATH para que los tests usen el layer + root node_modules
       - |
         bash -lc '
           set -euo pipefail
@@ -50,7 +51,8 @@ phases:
           export NODE_PATH="/tmp/layer/nodejs:/tmp/layer/nodejs/node_modules:$CODEBUILD_SRC_DIR/node_modules:$(npm root)"
           node -e "require(\"module\").Module._initPaths()"
           rm -rf node_modules/@lawprotect/shared-ts || true
-          node -e "console.log(require.resolve(\"@lawprotect/shared-ts\") ? \"resolve OK\" : \"resolve FAIL\")"
+          node -e "console.log(require.resolve(\"@prisma/client\") ? \"@prisma/client OK\" : \"@prisma/client NO\")"
+          node -e "console.log(require.resolve(\"@lawprotect/shared-ts\") ? \"shared-ts OK\" : \"shared-ts NO\")"
         '
 
   build:
@@ -58,7 +60,7 @@ phases:
       - |
         bash -lc '
           set -euo pipefail
-          echo "[INFO] ejecutar tests unitarios"
+          echo "[INFO] tests unitarios"
           cd "$CODEBUILD_SRC_DIR/services/signature-service"
           export NODE_PATH="/tmp/layer/nodejs:/tmp/layer/nodejs/node_modules:$CODEBUILD_SRC_DIR/node_modules:$(npm root)"
           node -e "require(\"module\").Module._initPaths()"
@@ -67,7 +69,7 @@ phases:
       - |
         bash -lc '
           set -euo pipefail
-          echo "[INFO] compilar TypeScript"
+          echo "[INFO] build TS y prune"
           cd "$CODEBUILD_SRC_DIR/services/signature-service"
           npm run build
           npm prune --omit=dev
