@@ -57,7 +57,7 @@ phases:
         version: 0.0
         Resources:
           - TargetService:
-              Type: AWS::Serverless::Function
+              Type: AWS::Lambda::Function
               Properties:
                 Name: "outbox-stream-handler"
                 Alias: "outbox-stream-handler-alias"

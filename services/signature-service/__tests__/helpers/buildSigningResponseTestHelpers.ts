@@ -50,15 +50,18 @@ export function createTestSigningData(overrides: TestSigningDataOverrides = {}) 
     ...overrides.originalEnvelope
   });
 
-  const responseEnvelope = overrides.responseEnvelope === null 
-    ? null 
-    : overrides.responseEnvelope === undefined
-    ? undefined
-    : signatureEnvelopeEntity({
-        id: envelopeId.getValue(),
-        status: overrides.responseEnvelope?.status || 'COMPLETED',
-        ...overrides.responseEnvelope
-      });
+  let responseEnvelope;
+  if (overrides.responseEnvelope === null) {
+    responseEnvelope = null;
+  } else if (overrides.responseEnvelope === undefined) {
+    responseEnvelope = undefined;
+  } else {
+    responseEnvelope = signatureEnvelopeEntity({
+      id: envelopeId.getValue(),
+      status: overrides.responseEnvelope?.status || 'COMPLETED',
+      ...overrides.responseEnvelope
+    });
+  }
 
   const signature = {
     id: overrides.signature?.id || TestUtils.generateUuid(),
@@ -206,7 +209,7 @@ export function createStatusScenarioData(scenario: 'draft' | 'ready' | 'complete
         })
       };
     
-    case 'differentIds':
+    case 'differentIds': {
       const envelopeId1 = TestUtils.generateEnvelopeId();
       const envelopeId2 = TestUtils.generateEnvelopeId();
       return {
@@ -221,6 +224,7 @@ export function createStatusScenarioData(scenario: 'draft' | 'ready' | 'complete
           status: 'COMPLETED'
         })
       };
+    }
     
     default:
       throw new Error(`Unknown scenario: ${scenario}`);

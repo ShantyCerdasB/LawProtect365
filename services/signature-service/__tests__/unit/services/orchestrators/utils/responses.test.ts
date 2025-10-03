@@ -44,7 +44,11 @@ describe('responses utility', () => {
     describe.each(TEST_SCENARIOS.responseEnvelopeScenarios)(
       'should build response $name',
       ({ responseEnvelope }) => {
-        it(`should build response ${responseEnvelope === null ? 'with null' : responseEnvelope === undefined ? 'with undefined' : 'with provided'} response envelope`, () => {
+        it(`should build response ${(() => {
+          if (responseEnvelope === null) return 'with null';
+          if (responseEnvelope === undefined) return 'with undefined';
+          return 'with provided';
+        })()} response envelope`, () => {
           const testData = createTestSigningData({
             originalEnvelope: { status: 'READY_FOR_SIGNATURE' },
             responseEnvelope: responseEnvelope === 'provided' ? { status: 'COMPLETED' } : responseEnvelope

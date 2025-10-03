@@ -14,6 +14,14 @@ import { createKmsServiceMock } from '../../../../helpers/mocks/services/KmsServ
 import { createAuditEventServiceMock } from '../../../../helpers/mocks/services/AuditEventService.mock';
 import { signatureEnvelopeEntity } from '../../../../helpers/builders/signatureEnvelope';
 import { EnvelopeSigner } from '../../../../../src/domain/entities/EnvelopeSigner';
+import { 
+  createSignDocumentTestData, 
+  createSignDocumentInput, 
+  setupSignDocumentMocks,
+  SIGN_DOCUMENT_TEST_SCENARIOS,
+  createErrorScenarioData,
+  createEdgeCaseData
+} from '../../../../helpers/SignDocumentUseCaseTestHelpers';
 
 // Mock the EntityFactory
 jest.mock('../../../../../src/infrastructure/factories/EntityFactory', () => ({
@@ -105,20 +113,9 @@ describe('SignDocumentUseCase', () => {
 
   describe('execute', () => {
     it('should sign document successfully with frontend-signed document', async () => {
-      const envelopeId = TestUtils.generateEnvelopeId();
-      const signerId = TestUtils.generateSignerId();
-      const consentId = TestUtils.generateConsentId();
-      const userId = TestUtils.generateUuid();
-      const securityContext = {
-        ipAddress: TestUtils.createTestIpAddress(),
-        userAgent: TestUtils.createTestUserAgent(),
-        country: 'US'
-      };
-
-      const input: SignDocumentUseCaseInput = {
+      const testData = createSignDocumentTestData();
+      const input = createSignDocumentInput(testData, {
         request: {
-          envelopeId: envelopeId.getValue(),
-          signerId: signerId.getValue(),
           invitationToken: 'token-123',
           consent: {
             given: true,
@@ -134,80 +131,49 @@ describe('SignDocumentUseCase', () => {
           s3Key: 's3-key-signed',
           kmsKeyId: 'kms-key-123',
           algorithm: 'RS256'
-        },
-        userId,
-        securityContext
-      };
+        }
+      });
 
-      const testEnvelope = signatureEnvelopeEntity({ id: envelopeId.getValue(), createdBy: userId });
-      const testSigner = { 
-        getId: () => signerId, 
-        getEmail: () => Email.fromString('signer@example.com'),
-        getFullName: () => 'John Signer'
-      } as EnvelopeSigner;
-      const testConsent = { getId: () => consentId };
-      const preparedDocument = {
-        signedDocumentKey: 's3-key-signed',
-        documentHash: 'hash-123'
-      };
-      const kmsResult = {
-        signatureHash: 'signature-hash-123',
-        kmsKeyId: 'kms-key-123',
-        algorithm: 'RS256',
-        signedAt: new Date('2023-01-01T10:00:00Z')
-      };
-      const expectedResult = {
-        success: true,
-        envelopeId: envelopeId.getValue(),
-        signatureId: 'signature-123',
-        signedAt: '2023-01-01T10:00:00Z'
-      };
+      setupSignDocumentMocks({
+        entityFactory: mockEntityFactory,
+        signatureEnvelopeService: mockSignatureEnvelopeService,
+        invitationTokenService: mockInvitationTokenService,
+        consentService: mockConsentService,
+        kmsService: mockKmsService,
+        envelopeSignerService: mockEnvelopeSignerService,
+        auditEventService: mockAuditEventService,
+        handleSignedDocumentFromFrontend: mockHandleSignedDocumentFromFrontend,
+        handleFlattenedDocument: mockHandleFlattenedDocument,
+        buildSigningResponse: mockBuildSigningResponse,
+        uuid: mockUuid
+      }, testData);
 
-      mockEntityFactory.createValueObjects.envelopeId.mockReturnValue(envelopeId);
-      mockEntityFactory.createValueObjects.signerId.mockReturnValue(signerId);
-      mockEntityFactory.createValueObjects.consentId.mockReturnValue(consentId);
-      mockSignatureEnvelopeService.validateUserAccess.mockResolvedValue(testEnvelope);
       mockInvitationTokenService.markTokenAsSigned.mockResolvedValue(undefined);
-      mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue({
-        ...testEnvelope,
-        getSigners: jest.fn().mockReturnValue([testSigner]),
-        isCompleted: jest.fn().mockReturnValue(false)
-      });
-      mockConsentService.createConsent.mockResolvedValue(testConsent);
-      (mockHandleSignedDocumentFromFrontend as any).mockResolvedValue(preparedDocument);
-      mockKmsService.sign.mockResolvedValue(kmsResult);
-      mockEnvelopeSignerService.markSignerAsSigned.mockResolvedValue(undefined);
-      mockConsentService.linkConsentWithSignature.mockResolvedValue(undefined);
-      mockSignatureEnvelopeService.updateSignedDocument.mockResolvedValue(undefined);
-      mockSignatureEnvelopeService.updateHashes.mockResolvedValue(undefined);
-      mockAuditEventService.create.mockResolvedValue(undefined);
       mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValueOnce({
-        ...testEnvelope,
+        ...testData.testEnvelope,
         isCompleted: jest.fn().mockReturnValue(false),
-        getSigners: jest.fn().mockReturnValue([testSigner])
+        getSigners: jest.fn().mockReturnValue([testData.testSigner])
       });
-      mockBuildSigningResponse.mockReturnValue(expectedResult);
-      mockUuid.mockReturnValue('uuid-123');
 
       const result = await useCase.execute(input);
 
       expect(mockEntityFactory.createValueObjects.envelopeId).toHaveBeenCalledWith(input.request.envelopeId);
       expect(mockEntityFactory.createValueObjects.signerId).toHaveBeenCalledWith(input.request.signerId);
       expect(mockSignatureEnvelopeService.validateUserAccess).toHaveBeenCalledWith(
-        envelopeId,
-        userId,
+        testData.envelopeId,
+        testData.userId,
         input.request.invitationToken
       );
       expect(mockInvitationTokenService.markTokenAsSigned).toHaveBeenCalledWith(
         input.request.invitationToken,
-        signerId.getValue(),
-        securityContext
+        testData.signerId.getValue(),
+        testData.securityContext
       );
       expect(mockConsentService.createConsent).toHaveBeenCalledWith(
         expect.objectContaining({
-          id: consentId,
-          envelopeId,
-          signerId,
+          id: testData.consentId,
+          envelopeId: testData.envelopeId,
+          signerId: testData.signerId,
           signatureId: undefined,
           consentGiven: input.request.consent.given,
           consentTimestamp: new Date(input.request.consent.timestamp),
@@ -216,162 +182,105 @@ describe('SignDocumentUseCase', () => {
           userAgent: input.request.consent.userAgent,
           country: input.request.consent.country
         }),
-        userId
+        testData.userId
       );
       expect(mockHandleSignedDocumentFromFrontend).toHaveBeenCalledWith(
         mockS3Service,
         {
-          envelopeId,
-          signerId,
+          envelopeId: testData.envelopeId,
+          signerId: testData.signerId,
           signedDocumentBase64: input.request.signedDocument
         }
       );
       expect(mockKmsService.sign).toHaveBeenCalledWith({
-        documentHash: preparedDocument.documentHash,
+        documentHash: testData.preparedDocument.documentHash,
         kmsKeyId: process.env.KMS_SIGNER_KEY_ID,
         algorithm: 'RS256'
       });
       expect(mockEnvelopeSignerService.markSignerAsSigned).toHaveBeenCalledWith(
-        signerId,
+        testData.signerId,
         {
-          documentHash: preparedDocument.documentHash,
-          signatureHash: kmsResult.signatureHash,
-          signedS3Key: preparedDocument.signedDocumentKey,
-          kmsKeyId: kmsResult.kmsKeyId,
-          algorithm: kmsResult.algorithm,
-          ipAddress: securityContext.ipAddress,
-          userAgent: securityContext.userAgent,
+          documentHash: testData.preparedDocument.documentHash,
+          signatureHash: testData.kmsResult.signatureHash,
+          signedS3Key: testData.preparedDocument.signedDocumentKey,
+          kmsKeyId: testData.kmsResult.kmsKeyId,
+          algorithm: testData.kmsResult.algorithm,
+          ipAddress: testData.securityContext.ipAddress,
+          userAgent: testData.securityContext.userAgent,
           consentText: input.request.consent.text
         }
       );
-      expect(mockConsentService.linkConsentWithSignature).toHaveBeenCalledWith(consentId, signerId);
+      expect(mockConsentService.linkConsentWithSignature).toHaveBeenCalledWith(testData.consentId, testData.signerId);
       expect(mockSignatureEnvelopeService.updateSignedDocument).toHaveBeenCalledWith(
-        envelopeId,
-        preparedDocument.signedDocumentKey,
-        kmsResult.signatureHash,
-        signerId.getValue(),
-        userId
+        testData.envelopeId,
+        testData.preparedDocument.signedDocumentKey,
+        testData.kmsResult.signatureHash,
+        testData.signerId.getValue(),
+        testData.userId
       );
       expect(mockSignatureEnvelopeService.updateHashes).toHaveBeenCalledWith(
-        envelopeId,
-        { sourceSha256: undefined, flattenedSha256: undefined, signedSha256: preparedDocument.documentHash },
-        userId
+        testData.envelopeId,
+        { sourceSha256: undefined, flattenedSha256: undefined, signedSha256: testData.preparedDocument.documentHash },
+        testData.userId
       );
       expect(mockAuditEventService.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          envelopeId: envelopeId.getValue(),
-          signerId: signerId.getValue(),
+          envelopeId: testData.envelopeId.getValue(),
+          signerId: testData.signerId.getValue(),
           eventType: AuditEventType.SIGNER_SIGNED,
-          description: `Document signed by ${testSigner.getFullName()}`,
-          userId,
-          userEmail: testSigner.getEmail()?.getValue(),
+          description: `Document signed by ${testData.testSigner.getFullName()}`,
+          userId: testData.userId,
+          userEmail: testData.testSigner.getEmail()?.getValue(),
           networkContext: expect.objectContaining({
-            ipAddress: securityContext.ipAddress,
-            userAgent: securityContext.userAgent,
-            country: securityContext.country
+            ipAddress: testData.securityContext.ipAddress,
+            userAgent: testData.securityContext.userAgent,
+            country: testData.securityContext.country
           }),
           metadata: expect.objectContaining({
-            envelopeId: envelopeId.getValue(),
-            signerId: signerId.getValue(),
+            envelopeId: testData.envelopeId.getValue(),
+            signerId: testData.signerId.getValue(),
             signatureId: 'uuid-123',
-            signedDocumentKey: preparedDocument.signedDocumentKey,
-            consentId: consentId.getValue(),
-            documentHash: preparedDocument.documentHash,
-            signatureHash: kmsResult.signatureHash,
-            kmsKeyId: kmsResult.kmsKeyId
+            signedDocumentKey: testData.preparedDocument.signedDocumentKey,
+            consentId: testData.consentId.getValue(),
+            documentHash: testData.preparedDocument.documentHash,
+            signatureHash: testData.kmsResult.signatureHash,
+            kmsKeyId: testData.kmsResult.kmsKeyId
           })
         })
       );
       expect(mockBuildSigningResponse).toHaveBeenCalledWith(
         expect.any(Object),
-        testEnvelope,
-        { id: 'uuid-123', sha256: kmsResult.signatureHash, timestamp: kmsResult.signedAt.toISOString() },
-        signerId,
-        envelopeId
+        testData.testEnvelope,
+        { id: 'uuid-123', sha256: testData.kmsResult.signatureHash, timestamp: testData.kmsResult.signedAt.toISOString() },
+        testData.signerId,
+        testData.envelopeId
       );
-      expect(result).toBe(expectedResult);
+      expect(result).toBe(testData.expectedResult);
     });
 
     it('should sign document successfully with flattened document', async () => {
-      const envelopeId = TestUtils.generateEnvelopeId();
-      const signerId = TestUtils.generateSignerId();
-      const consentId = TestUtils.generateConsentId();
-      const userId = TestUtils.generateUuid();
-      const securityContext = {
-        ipAddress: TestUtils.createTestIpAddress(),
-        userAgent: TestUtils.createTestUserAgent(),
-        country: 'US'
-      };
+      const testData = createSignDocumentTestData();
+      const input = createSignDocumentInput(testData);
 
-      const input: SignDocumentUseCaseInput = {
-        request: {
-          envelopeId: envelopeId.getValue(),
-          signerId: signerId.getValue(),
-          invitationToken: undefined,
-          consent: {
-            given: true,
-            timestamp: '2023-01-01T10:00:00Z',
-            text: 'I consent to sign this document'
-          },
-          flattenedKey: 's3-key-flattened',
-          documentHash: 'hash-123',
-          signatureHash: 'signature-hash-123',
-          s3Key: 's3-key-signed',
-          kmsKeyId: 'kms-key-123',
-          algorithm: 'RS256'
-        },
-        userId,
-        securityContext
-      };
+      setupSignDocumentMocks({
+        entityFactory: mockEntityFactory,
+        signatureEnvelopeService: mockSignatureEnvelopeService,
+        invitationTokenService: mockInvitationTokenService,
+        consentService: mockConsentService,
+        kmsService: mockKmsService,
+        envelopeSignerService: mockEnvelopeSignerService,
+        auditEventService: mockAuditEventService,
+        handleSignedDocumentFromFrontend: mockHandleSignedDocumentFromFrontend,
+        handleFlattenedDocument: mockHandleFlattenedDocument,
+        buildSigningResponse: mockBuildSigningResponse,
+        uuid: mockUuid
+      }, testData);
 
-      const testEnvelope = signatureEnvelopeEntity({ id: envelopeId.getValue(), createdBy: userId });
-      const testSigner = { 
-        getId: () => signerId, 
-        getEmail: () => Email.fromString('signer@example.com'),
-        getFullName: () => 'John Signer'
-      } as EnvelopeSigner;
-      const testConsent = { getId: () => consentId };
-      const preparedDocument = {
-        signedDocumentKey: 's3-key-signed',
-        documentHash: 'hash-123'
-      };
-      const kmsResult = {
-        signatureHash: 'signature-hash-123',
-        kmsKeyId: 'kms-key-123',
-        algorithm: 'RS256',
-        signedAt: new Date('2023-01-01T10:00:00Z')
-      };
-      const expectedResult = {
-        success: true,
-        envelopeId: envelopeId.getValue(),
-        signatureId: 'signature-123',
-        signedAt: '2023-01-01T10:00:00Z'
-      };
-
-      mockEntityFactory.createValueObjects.envelopeId.mockReturnValue(envelopeId);
-      mockEntityFactory.createValueObjects.signerId.mockReturnValue(signerId);
-      mockEntityFactory.createValueObjects.consentId.mockReturnValue(consentId);
-      mockSignatureEnvelopeService.validateUserAccess.mockResolvedValue(testEnvelope);
-      mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue({
-        ...testEnvelope,
-        getSigners: jest.fn().mockReturnValue([testSigner]),
-        isCompleted: jest.fn().mockReturnValue(false)
-      });
-      mockConsentService.createConsent.mockResolvedValue(testConsent);
-      (mockHandleFlattenedDocument as any).mockResolvedValue(preparedDocument);
-      mockKmsService.sign.mockResolvedValue(kmsResult);
-      mockEnvelopeSignerService.markSignerAsSigned.mockResolvedValue(undefined);
-      mockConsentService.linkConsentWithSignature.mockResolvedValue(undefined);
-      mockSignatureEnvelopeService.updateSignedDocument.mockResolvedValue(undefined);
-      mockSignatureEnvelopeService.updateHashes.mockResolvedValue(undefined);
-      mockAuditEventService.create.mockResolvedValue(undefined);
       mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValueOnce({
-        ...testEnvelope,
+        ...testData.testEnvelope,
         isCompleted: jest.fn().mockReturnValue(false),
-        getSigners: jest.fn().mockReturnValue([testSigner])
+        getSigners: jest.fn().mockReturnValue([testData.testSigner])
       });
-      mockBuildSigningResponse.mockReturnValue(expectedResult);
-      mockUuid.mockReturnValue('uuid-123');
 
       const result = await useCase.execute(input);
 
@@ -380,526 +289,213 @@ describe('SignDocumentUseCase', () => {
         mockSignatureEnvelopeService, // envelopeHashService
         mockS3Service,
         {
-          envelopeId,
+          envelopeId: testData.envelopeId,
           flattenedKey: input.request.flattenedKey,
-          userId
+          userId: testData.userId
         }
       );
       expect(mockInvitationTokenService.markTokenAsSigned).not.toHaveBeenCalled();
-      expect(result).toBe(expectedResult);
+      expect(result).toBe(testData.expectedResult);
     });
 
     it('should finalize envelope when all signers are complete', async () => {
-      const envelopeId = TestUtils.generateEnvelopeId();
-      const signerId = TestUtils.generateSignerId();
-      const consentId = TestUtils.generateConsentId();
-      const userId = TestUtils.generateUuid();
-      const securityContext = {
-        ipAddress: TestUtils.createTestIpAddress(),
-        userAgent: TestUtils.createTestUserAgent(),
-        country: 'US'
-      };
+      const testData = createSignDocumentTestData();
+      const input = createSignDocumentInput(testData);
+      const completedEnvelope = { ...testData.testEnvelope, isCompleted: jest.fn().mockReturnValue(true) };
 
-      const input: SignDocumentUseCaseInput = {
-        request: {
-          envelopeId: envelopeId.getValue(),
-          signerId: signerId.getValue(),
-          invitationToken: undefined,
-          consent: {
-            given: true,
-            timestamp: '2023-01-01T10:00:00Z',
-            text: 'I consent to sign this document'
-          },
-          flattenedKey: 's3-key-flattened',
-          documentHash: 'hash-123',
-          signatureHash: 'signature-hash-123',
-          s3Key: 's3-key-signed',
-          kmsKeyId: 'kms-key-123',
-          algorithm: 'RS256'
-        },
-        userId,
-        securityContext
-      };
+      setupSignDocumentMocks({
+        entityFactory: mockEntityFactory,
+        signatureEnvelopeService: mockSignatureEnvelopeService,
+        invitationTokenService: mockInvitationTokenService,
+        consentService: mockConsentService,
+        kmsService: mockKmsService,
+        envelopeSignerService: mockEnvelopeSignerService,
+        auditEventService: mockAuditEventService,
+        handleSignedDocumentFromFrontend: mockHandleSignedDocumentFromFrontend,
+        handleFlattenedDocument: mockHandleFlattenedDocument,
+        buildSigningResponse: mockBuildSigningResponse,
+        uuid: mockUuid
+      }, testData);
 
-      const testEnvelope = signatureEnvelopeEntity({ id: envelopeId.getValue(), createdBy: userId });
-      const testSigner = { 
-        getId: () => signerId, 
-        getEmail: () => Email.fromString('signer@example.com'),
-        getFullName: () => 'John Signer'
-      } as EnvelopeSigner;
-      const testConsent = { getId: () => consentId };
-      const preparedDocument = {
-        signedDocumentKey: 's3-key-signed',
-        documentHash: 'hash-123'
-      };
-      const kmsResult = {
-        signatureHash: 'signature-hash-123',
-        kmsKeyId: 'kms-key-123',
-        algorithm: 'RS256',
-        signedAt: new Date('2023-01-01T10:00:00Z')
-      };
-      const completedEnvelope = { ...testEnvelope, isCompleted: jest.fn().mockReturnValue(true) };
-      const expectedResult = {
-        success: true,
-        envelopeId: envelopeId.getValue(),
-        signatureId: 'signature-123',
-        signedAt: '2023-01-01T10:00:00Z'
-      };
-
-      mockEntityFactory.createValueObjects.envelopeId.mockReturnValue(envelopeId);
-      mockEntityFactory.createValueObjects.signerId.mockReturnValue(signerId);
-      mockEntityFactory.createValueObjects.consentId.mockReturnValue(consentId);
-      mockSignatureEnvelopeService.validateUserAccess.mockResolvedValue(testEnvelope);
       mockSignatureEnvelopeService.getEnvelopeWithSigners
-        .mockResolvedValueOnce({ ...testEnvelope, getSigners: () => [testSigner] })
+        .mockResolvedValueOnce({ ...testData.testEnvelope, getSigners: () => [testData.testSigner] })
         .mockResolvedValueOnce(completedEnvelope)
         .mockResolvedValueOnce(completedEnvelope);
-      mockConsentService.createConsent.mockResolvedValue(testConsent);
-      (mockHandleFlattenedDocument as any).mockResolvedValue(preparedDocument);
-      mockKmsService.sign.mockResolvedValue(kmsResult);
-      mockEnvelopeSignerService.markSignerAsSigned.mockResolvedValue(undefined);
-      mockConsentService.linkConsentWithSignature.mockResolvedValue(undefined);
-      mockSignatureEnvelopeService.updateSignedDocument.mockResolvedValue(undefined);
-      mockSignatureEnvelopeService.updateHashes.mockResolvedValue(undefined);
-      mockAuditEventService.create.mockResolvedValue(undefined);
       mockSignatureEnvelopeService.completeEnvelope.mockResolvedValue(undefined);
-      mockBuildSigningResponse.mockReturnValue(expectedResult);
-      mockUuid.mockReturnValue('uuid-123');
 
       const result = await useCase.execute(input);
 
-      expect(mockSignatureEnvelopeService.completeEnvelope).toHaveBeenCalledWith(envelopeId, userId);
+      expect(mockSignatureEnvelopeService.completeEnvelope).toHaveBeenCalledWith(testData.envelopeId, testData.userId);
       expect(mockSignatureEnvelopeService.getEnvelopeWithSigners).toHaveBeenCalledTimes(3);
-      expect(result).toBe(expectedResult);
+      expect(result).toBe(testData.expectedResult);
     });
 
     it('should handle consent with missing optional fields', async () => {
-      const envelopeId = TestUtils.generateEnvelopeId();
-      const signerId = TestUtils.generateSignerId();
-      const consentId = TestUtils.generateConsentId();
-      const userId = TestUtils.generateUuid();
-      const securityContext = {
-        ipAddress: TestUtils.createTestIpAddress(),
-        userAgent: TestUtils.createTestUserAgent(),
-        country: 'US'
-      };
+      const edgeCaseData = createEdgeCaseData('missing-consent-fields');
+      const input = createSignDocumentInput(edgeCaseData, edgeCaseData.inputOverrides);
 
-      const input: SignDocumentUseCaseInput = {
-        request: {
-          envelopeId: envelopeId.getValue(),
-          signerId: signerId.getValue(),
-          invitationToken: undefined,
-          consent: {
-            given: true,
-            timestamp: '2023-01-01T10:00:00Z',
-            text: 'I consent to sign this document'
-            // Missing optional fields
-          },
-          flattenedKey: 's3-key-flattened',
-          documentHash: 'hash-123',
-          signatureHash: 'signature-hash-123',
-          s3Key: 's3-key-signed',
-          kmsKeyId: 'kms-key-123',
-          algorithm: 'RS256'
-        },
-        userId,
-        securityContext
-      };
+      setupSignDocumentMocks({
+        entityFactory: mockEntityFactory,
+        signatureEnvelopeService: mockSignatureEnvelopeService,
+        invitationTokenService: mockInvitationTokenService,
+        consentService: mockConsentService,
+        kmsService: mockKmsService,
+        envelopeSignerService: mockEnvelopeSignerService,
+        auditEventService: mockAuditEventService,
+        handleSignedDocumentFromFrontend: mockHandleSignedDocumentFromFrontend,
+        handleFlattenedDocument: mockHandleFlattenedDocument,
+        buildSigningResponse: mockBuildSigningResponse,
+        uuid: mockUuid
+      }, edgeCaseData);
 
-      const testEnvelope = signatureEnvelopeEntity({ id: envelopeId.getValue(), createdBy: userId });
-      const testSigner = { 
-        getId: () => signerId, 
-        getEmail: () => Email.fromString('signer@example.com'),
-        getFullName: () => 'John Signer'
-      } as EnvelopeSigner;
-      const testConsent = { getId: () => consentId };
-      const preparedDocument = {
-        signedDocumentKey: 's3-key-signed',
-        documentHash: 'hash-123'
-      };
-      const kmsResult = {
-        signatureHash: 'signature-hash-123',
-        kmsKeyId: 'kms-key-123',
-        algorithm: 'RS256',
-        signedAt: new Date('2023-01-01T10:00:00Z')
-      };
-      const expectedResult = {
-        success: true,
-        envelopeId: envelopeId.getValue(),
-        signatureId: 'signature-123',
-        signedAt: '2023-01-01T10:00:00Z'
-      };
-
-      mockEntityFactory.createValueObjects.envelopeId.mockReturnValue(envelopeId);
-      mockEntityFactory.createValueObjects.signerId.mockReturnValue(signerId);
-      mockEntityFactory.createValueObjects.consentId.mockReturnValue(consentId);
-      mockSignatureEnvelopeService.validateUserAccess.mockResolvedValue(testEnvelope);
-      mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue({
-        ...testEnvelope,
-        getSigners: jest.fn().mockReturnValue([testSigner]),
-        isCompleted: jest.fn().mockReturnValue(false)
-      });
-      mockConsentService.createConsent.mockResolvedValue(testConsent);
-      (mockHandleFlattenedDocument as any).mockResolvedValue(preparedDocument);
-      mockKmsService.sign.mockResolvedValue(kmsResult);
-      mockEnvelopeSignerService.markSignerAsSigned.mockResolvedValue(undefined);
-      mockConsentService.linkConsentWithSignature.mockResolvedValue(undefined);
-      mockSignatureEnvelopeService.updateSignedDocument.mockResolvedValue(undefined);
-      mockSignatureEnvelopeService.updateHashes.mockResolvedValue(undefined);
-      mockAuditEventService.create.mockResolvedValue(undefined);
       mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValueOnce({
-        ...testEnvelope,
+        ...edgeCaseData.testEnvelope,
         isCompleted: jest.fn().mockReturnValue(false),
-        getSigners: jest.fn().mockReturnValue([testSigner])
+        getSigners: jest.fn().mockReturnValue([edgeCaseData.testSigner])
       });
-      mockBuildSigningResponse.mockReturnValue(expectedResult);
-      mockUuid.mockReturnValue('uuid-123');
 
       const result = await useCase.execute(input);
 
       expect(mockConsentService.createConsent).toHaveBeenCalledWith(
         expect.objectContaining({
-          ipAddress: securityContext.ipAddress,
-          userAgent: securityContext.userAgent,
-          country: securityContext.country
+          ipAddress: edgeCaseData.securityContext.ipAddress,
+          userAgent: edgeCaseData.securityContext.userAgent,
+          country: edgeCaseData.securityContext.country
         }),
-        userId
+        edgeCaseData.userId
       );
-      expect(result).toBe(expectedResult);
+      expect(result).toBe(edgeCaseData.expectedResult);
     });
 
     it('should throw error when envelope is not found', async () => {
-      const envelopeId = TestUtils.generateEnvelopeId();
-      const signerId = TestUtils.generateSignerId();
-      const userId = TestUtils.generateUuid();
-      const securityContext = {
-        ipAddress: TestUtils.createTestIpAddress(),
-        userAgent: TestUtils.createTestUserAgent(),
-        country: 'US'
-      };
+      const errorData = createErrorScenarioData('envelope');
+      const input = createSignDocumentInput(errorData);
 
-      const input: SignDocumentUseCaseInput = {
-        request: {
-          envelopeId: envelopeId.getValue(),
-          signerId: signerId.getValue(),
-          invitationToken: undefined,
-          consent: {
-            given: true,
-            timestamp: '2023-01-01T10:00:00Z',
-            text: 'I consent to sign this document'
-          },
-          flattenedKey: 's3-key-flattened',
-          documentHash: 'hash-123',
-          signatureHash: 'signature-hash-123',
-          s3Key: 's3-key-signed',
-          kmsKeyId: 'kms-key-123',
-          algorithm: 'RS256'
-        },
-        userId,
-        securityContext
-      };
-
-      mockEntityFactory.createValueObjects.envelopeId.mockReturnValue(envelopeId);
-      mockEntityFactory.createValueObjects.signerId.mockReturnValue(signerId);
-      mockSignatureEnvelopeService.validateUserAccess.mockResolvedValue(null);
+      setupSignDocumentMocks({
+        entityFactory: mockEntityFactory,
+        signatureEnvelopeService: mockSignatureEnvelopeService,
+        invitationTokenService: mockInvitationTokenService,
+        consentService: mockConsentService,
+        kmsService: mockKmsService,
+        envelopeSignerService: mockEnvelopeSignerService,
+        auditEventService: mockAuditEventService,
+        handleSignedDocumentFromFrontend: mockHandleSignedDocumentFromFrontend,
+        handleFlattenedDocument: mockHandleFlattenedDocument,
+        buildSigningResponse: mockBuildSigningResponse,
+        uuid: mockUuid
+      }, errorData, errorData.mockOverrides);
 
       await expect(useCase.execute(input)).rejects.toThrow('Envelope not found');
     });
 
     it('should throw error when signer is not found', async () => {
-      const envelopeId = TestUtils.generateEnvelopeId();
-      const signerId = TestUtils.generateSignerId();
-      const userId = TestUtils.generateUuid();
-      const securityContext = {
-        ipAddress: TestUtils.createTestIpAddress(),
-        userAgent: TestUtils.createTestUserAgent(),
-        country: 'US'
-      };
+      const errorData = createErrorScenarioData('signer');
+      const input = createSignDocumentInput(errorData);
 
-      const input: SignDocumentUseCaseInput = {
-        request: {
-          envelopeId: envelopeId.getValue(),
-          signerId: signerId.getValue(),
-          invitationToken: undefined,
-          consent: {
-            given: true,
-            timestamp: '2023-01-01T10:00:00Z',
-            text: 'I consent to sign this document'
-          },
-          flattenedKey: 's3-key-flattened',
-          documentHash: 'hash-123',
-          signatureHash: 'signature-hash-123',
-          s3Key: 's3-key-signed',
-          kmsKeyId: 'kms-key-123',
-          algorithm: 'RS256'
-        },
-        userId,
-        securityContext
-      };
-
-      const testEnvelope = signatureEnvelopeEntity({ id: envelopeId.getValue(), createdBy: userId });
-
-      mockEntityFactory.createValueObjects.envelopeId.mockReturnValue(envelopeId);
-      mockEntityFactory.createValueObjects.signerId.mockReturnValue(signerId);
-      mockSignatureEnvelopeService.validateUserAccess.mockResolvedValue(testEnvelope);
-      mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue({
-        ...testEnvelope,
-        getSigners: jest.fn().mockReturnValue([]), // No signers
-        isCompleted: jest.fn().mockReturnValue(false)
-      });
+      setupSignDocumentMocks({
+        entityFactory: mockEntityFactory,
+        signatureEnvelopeService: mockSignatureEnvelopeService,
+        invitationTokenService: mockInvitationTokenService,
+        consentService: mockConsentService,
+        kmsService: mockKmsService,
+        envelopeSignerService: mockEnvelopeSignerService,
+        auditEventService: mockAuditEventService,
+        handleSignedDocumentFromFrontend: mockHandleSignedDocumentFromFrontend,
+        handleFlattenedDocument: mockHandleFlattenedDocument,
+        buildSigningResponse: mockBuildSigningResponse,
+        uuid: mockUuid
+      }, errorData, errorData.mockOverrides);
 
       await expect(useCase.execute(input)).rejects.toThrow('Signer with ID');
     });
 
 
     it('should throw error when consent creation fails', async () => {
-      const envelopeId = TestUtils.generateEnvelopeId();
-      const signerId = TestUtils.generateSignerId();
-      const consentId = TestUtils.generateConsentId();
-      const userId = TestUtils.generateUuid();
-      const securityContext = {
-        ipAddress: TestUtils.createTestIpAddress(),
-        userAgent: TestUtils.createTestUserAgent(),
-        country: 'US'
-      };
+      const errorData = createErrorScenarioData('consent');
+      const input = createSignDocumentInput(errorData);
 
-      const input: SignDocumentUseCaseInput = {
-        request: {
-          envelopeId: envelopeId.getValue(),
-          signerId: signerId.getValue(),
-          invitationToken: undefined,
-          consent: {
-            given: true,
-            timestamp: '2023-01-01T10:00:00Z',
-            text: 'I consent to sign this document'
-          },
-          flattenedKey: 's3-key-flattened',
-          documentHash: 'hash-123',
-          signatureHash: 'signature-hash-123',
-          s3Key: 's3-key-signed',
-          kmsKeyId: 'kms-key-123',
-          algorithm: 'RS256'
-        },
-        userId,
-        securityContext
-      };
-
-      const testEnvelope = signatureEnvelopeEntity({ id: envelopeId.getValue(), createdBy: userId });
-      const testSigner = { 
-        getId: () => signerId, 
-        getEmail: () => Email.fromString('signer@example.com'),
-        getFullName: () => 'John Signer'
-      } as EnvelopeSigner;
-
-      mockEntityFactory.createValueObjects.envelopeId.mockReturnValue(envelopeId);
-      mockEntityFactory.createValueObjects.signerId.mockReturnValue(signerId);
-      mockEntityFactory.createValueObjects.consentId.mockReturnValue(consentId);
-      mockSignatureEnvelopeService.validateUserAccess.mockResolvedValue(testEnvelope);
-      mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue({
-        ...testEnvelope,
-        getSigners: jest.fn().mockReturnValue([testSigner]),
-        isCompleted: jest.fn().mockReturnValue(false)
-      });
-      mockConsentService.createConsent.mockRejectedValue(new Error('Failed to create consent'));
+      setupSignDocumentMocks({
+        entityFactory: mockEntityFactory,
+        signatureEnvelopeService: mockSignatureEnvelopeService,
+        invitationTokenService: mockInvitationTokenService,
+        consentService: mockConsentService,
+        kmsService: mockKmsService,
+        envelopeSignerService: mockEnvelopeSignerService,
+        auditEventService: mockAuditEventService,
+        handleSignedDocumentFromFrontend: mockHandleSignedDocumentFromFrontend,
+        handleFlattenedDocument: mockHandleFlattenedDocument,
+        buildSigningResponse: mockBuildSigningResponse,
+        uuid: mockUuid
+      }, errorData, errorData.mockOverrides);
 
       await expect(useCase.execute(input)).rejects.toThrow('Failed to create consent');
     });
 
     it('should throw error when document preparation fails', async () => {
-      const envelopeId = TestUtils.generateEnvelopeId();
-      const signerId = TestUtils.generateSignerId();
-      const consentId = TestUtils.generateConsentId();
-      const userId = TestUtils.generateUuid();
-      const securityContext = {
-        ipAddress: TestUtils.createTestIpAddress(),
-        userAgent: TestUtils.createTestUserAgent(),
-        country: 'US'
-      };
+      const errorData = createErrorScenarioData('document');
+      const input = createSignDocumentInput(errorData);
 
-      const input: SignDocumentUseCaseInput = {
-        request: {
-          envelopeId: envelopeId.getValue(),
-          signerId: signerId.getValue(),
-          invitationToken: undefined,
-          consent: {
-            given: true,
-            timestamp: '2023-01-01T10:00:00Z',
-            text: 'I consent to sign this document'
-          },
-          flattenedKey: 's3-key-flattened',
-          documentHash: 'hash-123',
-          signatureHash: 'signature-hash-123',
-          s3Key: 's3-key-signed',
-          kmsKeyId: 'kms-key-123',
-          algorithm: 'RS256'
-        },
-        userId,
-        securityContext
-      };
-
-      const testEnvelope = signatureEnvelopeEntity({ id: envelopeId.getValue(), createdBy: userId });
-      const testSigner = { 
-        getId: () => signerId, 
-        getEmail: () => Email.fromString('signer@example.com'),
-        getFullName: () => 'John Signer'
-      } as EnvelopeSigner;
-      const testConsent = { getId: () => consentId };
-
-      mockEntityFactory.createValueObjects.envelopeId.mockReturnValue(envelopeId);
-      mockEntityFactory.createValueObjects.signerId.mockReturnValue(signerId);
-      mockEntityFactory.createValueObjects.consentId.mockReturnValue(consentId);
-      mockSignatureEnvelopeService.validateUserAccess.mockResolvedValue(testEnvelope);
-      mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue({
-        ...testEnvelope,
-        getSigners: jest.fn().mockReturnValue([testSigner]),
-        isCompleted: jest.fn().mockReturnValue(false)
-      });
-      mockConsentService.createConsent.mockResolvedValue(testConsent);
-      (mockHandleFlattenedDocument as any).mockRejectedValue(new Error('Failed to prepare document'));
+      setupSignDocumentMocks({
+        entityFactory: mockEntityFactory,
+        signatureEnvelopeService: mockSignatureEnvelopeService,
+        invitationTokenService: mockInvitationTokenService,
+        consentService: mockConsentService,
+        kmsService: mockKmsService,
+        envelopeSignerService: mockEnvelopeSignerService,
+        auditEventService: mockAuditEventService,
+        handleSignedDocumentFromFrontend: mockHandleSignedDocumentFromFrontend,
+        handleFlattenedDocument: mockHandleFlattenedDocument,
+        buildSigningResponse: mockBuildSigningResponse,
+        uuid: mockUuid
+      }, errorData, errorData.mockOverrides);
 
       await expect(useCase.execute(input)).rejects.toThrow('Failed to prepare document');
     });
 
     it('should throw error when KMS signing fails', async () => {
-      const envelopeId = TestUtils.generateEnvelopeId();
-      const signerId = TestUtils.generateSignerId();
-      const consentId = TestUtils.generateConsentId();
-      const userId = TestUtils.generateUuid();
-      const securityContext = {
-        ipAddress: TestUtils.createTestIpAddress(),
-        userAgent: TestUtils.createTestUserAgent(),
-        country: 'US'
-      };
+      const errorData = createErrorScenarioData('kms');
+      const input = createSignDocumentInput(errorData);
 
-      const input: SignDocumentUseCaseInput = {
-        request: {
-          envelopeId: envelopeId.getValue(),
-          signerId: signerId.getValue(),
-          invitationToken: undefined,
-          consent: {
-            given: true,
-            timestamp: '2023-01-01T10:00:00Z',
-            text: 'I consent to sign this document'
-          },
-          flattenedKey: 's3-key-flattened',
-          documentHash: 'hash-123',
-          signatureHash: 'signature-hash-123',
-          s3Key: 's3-key-signed',
-          kmsKeyId: 'kms-key-123',
-          algorithm: 'RS256'
-        },
-        userId,
-        securityContext
-      };
-
-      const testEnvelope = signatureEnvelopeEntity({ id: envelopeId.getValue(), createdBy: userId });
-      const testSigner = { 
-        getId: () => signerId, 
-        getEmail: () => Email.fromString('signer@example.com'),
-        getFullName: () => 'John Signer'
-      } as EnvelopeSigner;
-      const testConsent = { getId: () => consentId };
-      const preparedDocument = {
-        signedDocumentKey: 's3-key-signed',
-        documentHash: 'hash-123'
-      };
-
-      mockEntityFactory.createValueObjects.envelopeId.mockReturnValue(envelopeId);
-      mockEntityFactory.createValueObjects.signerId.mockReturnValue(signerId);
-      mockEntityFactory.createValueObjects.consentId.mockReturnValue(consentId);
-      mockSignatureEnvelopeService.validateUserAccess.mockResolvedValue(testEnvelope);
-      mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue({
-        ...testEnvelope,
-        getSigners: jest.fn().mockReturnValue([testSigner]),
-        isCompleted: jest.fn().mockReturnValue(false)
-      });
-      mockConsentService.createConsent.mockResolvedValue(testConsent);
-      (mockHandleFlattenedDocument as any).mockResolvedValue(preparedDocument);
-      mockKmsService.sign.mockRejectedValue(new Error('KMS signing failed'));
+      setupSignDocumentMocks({
+        entityFactory: mockEntityFactory,
+        signatureEnvelopeService: mockSignatureEnvelopeService,
+        invitationTokenService: mockInvitationTokenService,
+        consentService: mockConsentService,
+        kmsService: mockKmsService,
+        envelopeSignerService: mockEnvelopeSignerService,
+        auditEventService: mockAuditEventService,
+        handleSignedDocumentFromFrontend: mockHandleSignedDocumentFromFrontend,
+        handleFlattenedDocument: mockHandleFlattenedDocument,
+        buildSigningResponse: mockBuildSigningResponse,
+        uuid: mockUuid
+      }, errorData, errorData.mockOverrides);
 
       await expect(useCase.execute(input)).rejects.toThrow('KMS signing failed');
     });
 
     it('should handle signer with missing optional fields', async () => {
-      const envelopeId = TestUtils.generateEnvelopeId();
-      const signerId = TestUtils.generateSignerId();
-      const consentId = TestUtils.generateConsentId();
-      const userId = TestUtils.generateUuid();
-      const securityContext = {
-        ipAddress: TestUtils.createTestIpAddress(),
-        userAgent: TestUtils.createTestUserAgent(),
-        country: 'US'
-      };
+      const edgeCaseData = createEdgeCaseData('missing-signer-fields');
+      const input = createSignDocumentInput(edgeCaseData);
 
-      const input: SignDocumentUseCaseInput = {
-        request: {
-          envelopeId: envelopeId.getValue(),
-          signerId: signerId.getValue(),
-          invitationToken: undefined,
-          consent: {
-            given: true,
-            timestamp: '2023-01-01T10:00:00Z',
-            text: 'I consent to sign this document'
-          },
-          flattenedKey: 's3-key-flattened',
-          documentHash: 'hash-123',
-          signatureHash: 'signature-hash-123',
-          s3Key: 's3-key-signed',
-          kmsKeyId: 'kms-key-123',
-          algorithm: 'RS256'
-        },
-        userId,
-        securityContext
-      };
+      setupSignDocumentMocks({
+        entityFactory: mockEntityFactory,
+        signatureEnvelopeService: mockSignatureEnvelopeService,
+        invitationTokenService: mockInvitationTokenService,
+        consentService: mockConsentService,
+        kmsService: mockKmsService,
+        envelopeSignerService: mockEnvelopeSignerService,
+        auditEventService: mockAuditEventService,
+        handleSignedDocumentFromFrontend: mockHandleSignedDocumentFromFrontend,
+        handleFlattenedDocument: mockHandleFlattenedDocument,
+        buildSigningResponse: mockBuildSigningResponse,
+        uuid: mockUuid
+      }, edgeCaseData);
 
-      const testEnvelope = signatureEnvelopeEntity({ id: envelopeId.getValue(), createdBy: userId });
-      const testSigner = { 
-        getId: () => signerId, 
-        getEmail: () => undefined, // Missing email
-        getFullName: () => undefined // Missing full name
-      } as EnvelopeSigner;
-      const testConsent = { getId: () => consentId };
-      const preparedDocument = {
-        signedDocumentKey: 's3-key-signed',
-        documentHash: 'hash-123'
-      };
-      const kmsResult = {
-        signatureHash: 'signature-hash-123',
-        kmsKeyId: 'kms-key-123',
-        algorithm: 'RS256',
-        signedAt: new Date('2023-01-01T10:00:00Z')
-      };
-      const expectedResult = {
-        success: true,
-        envelopeId: envelopeId.getValue(),
-        signatureId: 'signature-123',
-        signedAt: '2023-01-01T10:00:00Z'
-      };
-
-      mockEntityFactory.createValueObjects.envelopeId.mockReturnValue(envelopeId);
-      mockEntityFactory.createValueObjects.signerId.mockReturnValue(signerId);
-      mockEntityFactory.createValueObjects.consentId.mockReturnValue(consentId);
-      mockSignatureEnvelopeService.validateUserAccess.mockResolvedValue(testEnvelope);
-      mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue({
-        ...testEnvelope,
-        getSigners: jest.fn().mockReturnValue([testSigner]),
-        isCompleted: jest.fn().mockReturnValue(false)
-      });
-      mockConsentService.createConsent.mockResolvedValue(testConsent);
-      (mockHandleFlattenedDocument as any).mockResolvedValue(preparedDocument);
-      mockKmsService.sign.mockResolvedValue(kmsResult);
-      mockEnvelopeSignerService.markSignerAsSigned.mockResolvedValue(undefined);
-      mockConsentService.linkConsentWithSignature.mockResolvedValue(undefined);
-      mockSignatureEnvelopeService.updateSignedDocument.mockResolvedValue(undefined);
-      mockSignatureEnvelopeService.updateHashes.mockResolvedValue(undefined);
-      mockAuditEventService.create.mockResolvedValue(undefined);
       mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValueOnce({
-        ...testEnvelope,
+        ...edgeCaseData.testEnvelope,
         isCompleted: jest.fn().mockReturnValue(false),
-        getSigners: jest.fn().mockReturnValue([testSigner])
+        getSigners: jest.fn().mockReturnValue([edgeCaseData.testSigner])
       });
-      mockBuildSigningResponse.mockReturnValue(expectedResult);
-      mockUuid.mockReturnValue('uuid-123');
 
       const result = await useCase.execute(input);
 
@@ -909,7 +505,7 @@ describe('SignDocumentUseCase', () => {
           userEmail: undefined
         })
       );
-      expect(result).toBe(expectedResult);
+      expect(result).toBe(edgeCaseData.expectedResult);
     });
   });
 });
