@@ -1,10 +1,17 @@
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 import { DownloadDocumentUseCase } from '../../../../../src/services/orchestrators/use-cases/DownloadDocumentUseCase';
-import { DownloadDocumentInput } from '../../../../../src/domain/types/usecase/orchestrator/DownloadDocumentUseCase';
 import { TestUtils } from '../../../../helpers/testUtils';
 import { createSignatureEnvelopeServiceMock } from '../../../../helpers/mocks/services/SignatureEnvelopeService.mock';
 import { createEnvelopeAccessServiceMock } from '../../../../helpers/mocks/services/EnvelopeAccessService.mock';
 import { createAuditEventServiceMock } from '../../../../helpers/mocks/services/AuditEventService.mock';
+import { 
+  createDownloadDocumentTestData,
+  createExpectedDownloadResult,
+  setupDownloadDocumentMocks,
+  executeDownloadDocumentTest,
+  executeDownloadDocumentErrorTest,
+  createMockConfiguration
+} from '../../../../helpers/DownloadDocumentTestHelpers';
 
 describe('DownloadDocumentUseCase', () => {
   let useCase: DownloadDocumentUseCase;
@@ -27,242 +34,86 @@ describe('DownloadDocumentUseCase', () => {
   });
 
   describe('execute', () => {
+    let mockConfig: ReturnType<typeof createMockConfiguration>;
+
+    beforeEach(() => {
+      mockConfig = createMockConfiguration({
+        signatureEnvelopeService: mockSignatureEnvelopeService,
+        envelopeAccessService: mockEnvelopeAccessService,
+        auditEventService: mockAuditEventService
+      });
+    });
+
     it('should download document successfully with all parameters', async () => {
-      const envelopeId = TestUtils.generateEnvelopeId();
-      const userId = TestUtils.generateUuid();
-      const invitationToken = TestUtils.generateUuid();
-      const expiresIn = 3600;
-      
-      const input: DownloadDocumentInput = {
-        envelopeId,
-        userId,
-        invitationToken,
-        expiresIn,
-        securityContext: {
-          ipAddress: TestUtils.createTestIpAddress(),
-          userAgent: TestUtils.createTestUserAgent(),
-          country: 'US'
-        }
-      };
-
-      const expectedResult = {
-        downloadUrl: 'https://s3.amazonaws.com/bucket/signed-document.pdf?signature=abc123',
+      const testData = createDownloadDocumentTestData({
         expiresIn: 3600
-      };
-
-      mockSignatureEnvelopeService.downloadDocument.mockResolvedValue(expectedResult);
-      mockEnvelopeAccessService.validateEnvelopeAccess.mockResolvedValue(undefined);
-      mockAuditEventService.create.mockResolvedValue(undefined);
-
-      const result = await useCase.execute(input);
-
-      expect(mockSignatureEnvelopeService.downloadDocument).toHaveBeenCalledWith(
-        envelopeId,
-        expiresIn
-      );
-      expect(result).toEqual(expectedResult);
+      });
+      const expectedResult = createExpectedDownloadResult('abc123', 3600);
+      
+      setupDownloadDocumentMocks(mockConfig, testData, expectedResult);
+      await executeDownloadDocumentTest(testData, mockConfig, useCase, expectedResult);
     });
 
     it('should download document with minimal parameters', async () => {
-      const envelopeId = TestUtils.generateEnvelopeId();
-      const userId = TestUtils.generateUuid();
+      const testData = createDownloadDocumentTestData();
+      const expectedResult = createExpectedDownloadResult('def456');
       
-      const input: DownloadDocumentInput = {
-        envelopeId,
-        userId
-      };
-
-      const expectedResult = {
-        downloadUrl: 'https://s3.amazonaws.com/bucket/signed-document.pdf?signature=def456',
-        expiresIn: 1800
-      };
-
-      mockSignatureEnvelopeService.downloadDocument.mockResolvedValue(expectedResult);
-      mockEnvelopeAccessService.validateEnvelopeAccess.mockResolvedValue(undefined);
-      mockAuditEventService.create.mockResolvedValue(undefined);
-
-      const result = await useCase.execute(input);
-
-      expect(mockSignatureEnvelopeService.downloadDocument).toHaveBeenCalledWith(
-        envelopeId,
-        undefined
-      );
-      expect(result).toEqual(expectedResult);
+      setupDownloadDocumentMocks(mockConfig, testData, expectedResult);
+      await executeDownloadDocumentTest(testData, mockConfig, useCase, expectedResult);
     });
 
     it('should download document with only userId', async () => {
-      const envelopeId = TestUtils.generateEnvelopeId();
-      const userId = TestUtils.generateUuid();
+      const testData = createDownloadDocumentTestData();
+      const expectedResult = createExpectedDownloadResult('ghi789');
       
-      const input: DownloadDocumentInput = {
-        envelopeId,
-        userId
-      };
-
-      const expectedResult = {
-        downloadUrl: 'https://s3.amazonaws.com/bucket/signed-document.pdf?signature=ghi789',
-        expiresIn: 1800
-      };
-
-      mockSignatureEnvelopeService.downloadDocument.mockResolvedValue(expectedResult);
-      mockEnvelopeAccessService.validateEnvelopeAccess.mockResolvedValue(undefined);
-      mockAuditEventService.create.mockResolvedValue(undefined);
-
-      const result = await useCase.execute(input);
-
-      expect(mockSignatureEnvelopeService.downloadDocument).toHaveBeenCalledWith(
-        envelopeId,
-        undefined
-      );
-      expect(result).toEqual(expectedResult);
+      setupDownloadDocumentMocks(mockConfig, testData, expectedResult);
+      await executeDownloadDocumentTest(testData, mockConfig, useCase, expectedResult);
     });
 
     it('should download document with only invitationToken', async () => {
-      const envelopeId = TestUtils.generateEnvelopeId();
-      const invitationToken = TestUtils.generateUuid();
+      const testData = createDownloadDocumentTestData({ userId: undefined });
+      const expectedResult = createExpectedDownloadResult('jkl012');
       
-      const input: DownloadDocumentInput = {
-        envelopeId,
-        invitationToken
-      };
-
-      const expectedResult = {
-        downloadUrl: 'https://s3.amazonaws.com/bucket/signed-document.pdf?signature=jkl012',
-        expiresIn: 1800
-      };
-
-      mockSignatureEnvelopeService.downloadDocument.mockResolvedValue(expectedResult);
-      mockEnvelopeAccessService.validateEnvelopeAccess.mockResolvedValue(undefined);
-      mockAuditEventService.create.mockResolvedValue(undefined);
-
-      const result = await useCase.execute(input);
-
-      expect(mockSignatureEnvelopeService.downloadDocument).toHaveBeenCalledWith(
-        envelopeId,
-        undefined
-      );
-      expect(result).toEqual(expectedResult);
+      setupDownloadDocumentMocks(mockConfig, testData, expectedResult);
+      await executeDownloadDocumentTest(testData, mockConfig, useCase, expectedResult);
     });
 
     it('should download document with custom expiresIn', async () => {
-      const envelopeId = TestUtils.generateEnvelopeId();
-      const userId = TestUtils.generateUuid();
-      const expiresIn = 7200;
+      const testData = createDownloadDocumentTestData({ expiresIn: 7200 });
+      const expectedResult = createExpectedDownloadResult('mno345', 7200);
       
-      const input: DownloadDocumentInput = {
-        envelopeId,
-        userId,
-        expiresIn
-      };
-
-      const expectedResult = {
-        downloadUrl: 'https://s3.amazonaws.com/bucket/signed-document.pdf?signature=mno345',
-        expiresIn: 7200
-      };
-
-      mockSignatureEnvelopeService.downloadDocument.mockResolvedValue(expectedResult);
-      mockEnvelopeAccessService.validateEnvelopeAccess.mockResolvedValue(undefined);
-      mockAuditEventService.create.mockResolvedValue(undefined);
-
-      const result = await useCase.execute(input);
-
-      expect(mockSignatureEnvelopeService.downloadDocument).toHaveBeenCalledWith(
-        envelopeId,
-        expiresIn
-      );
-      expect(result).toEqual(expectedResult);
+      setupDownloadDocumentMocks(mockConfig, testData, expectedResult);
+      await executeDownloadDocumentTest(testData, mockConfig, useCase, expectedResult);
     });
 
     it('should download document with security context only', async () => {
-      const envelopeId = TestUtils.generateEnvelopeId();
-      const userId = TestUtils.generateUuid();
-      
-      const input: DownloadDocumentInput = {
-        envelopeId,
-        userId,
+      const testData = createDownloadDocumentTestData({
         securityContext: {
           ipAddress: TestUtils.createTestIpAddress(),
           userAgent: TestUtils.createTestUserAgent(),
           country: 'CA'
         }
-      };
-
-      const expectedResult = {
-        downloadUrl: 'https://s3.amazonaws.com/bucket/signed-document.pdf?signature=pqr678',
-        expiresIn: 1800
-      };
-
-      mockSignatureEnvelopeService.downloadDocument.mockResolvedValue(expectedResult);
-      mockEnvelopeAccessService.validateEnvelopeAccess.mockResolvedValue(undefined);
-      mockAuditEventService.create.mockResolvedValue(undefined);
-
-      const result = await useCase.execute(input);
-
-      expect(mockSignatureEnvelopeService.downloadDocument).toHaveBeenCalledWith(
-        envelopeId,
-        undefined
-      );
-      expect(result).toEqual(expectedResult);
+      });
+      const expectedResult = createExpectedDownloadResult('pqr678');
+      
+      setupDownloadDocumentMocks(mockConfig, testData, expectedResult);
+      await executeDownloadDocumentTest(testData, mockConfig, useCase, expectedResult);
     });
 
     it('should handle service errors and rethrow', async () => {
-      const envelopeId = TestUtils.generateEnvelopeId();
-      const userId = TestUtils.generateUuid();
-      
-      const input: DownloadDocumentInput = {
-        envelopeId,
-        userId
-      };
-
-      const serviceError = new Error('Document not found');
-      mockSignatureEnvelopeService.downloadDocument.mockRejectedValue(serviceError);
-
-      await expect(useCase.execute(input)).rejects.toThrow('Document not found');
+      await executeDownloadDocumentErrorTest('service', 'Document not found', mockConfig, useCase);
     });
 
     it('should handle access denied errors', async () => {
-      const envelopeId = TestUtils.generateEnvelopeId();
-      const userId = TestUtils.generateUuid();
-      
-      const input: DownloadDocumentInput = {
-        envelopeId,
-        userId
-      };
-
-      const accessError = new Error('Access denied');
-      mockSignatureEnvelopeService.downloadDocument.mockRejectedValue(accessError);
-
-      await expect(useCase.execute(input)).rejects.toThrow('Access denied');
+      await executeDownloadDocumentErrorTest('access', 'Access denied', mockConfig, useCase);
     });
 
     it('should handle envelope not found errors', async () => {
-      const envelopeId = TestUtils.generateEnvelopeId();
-      const userId = TestUtils.generateUuid();
-      
-      const input: DownloadDocumentInput = {
-        envelopeId,
-        userId
-      };
-
-      const notFoundError = new Error('Envelope not found');
-      mockSignatureEnvelopeService.downloadDocument.mockRejectedValue(notFoundError);
-
-      await expect(useCase.execute(input)).rejects.toThrow('Envelope not found');
+      await executeDownloadDocumentErrorTest('notFound', 'Envelope not found', mockConfig, useCase);
     });
 
     it('should throw error when neither userId nor invitationToken is provided', async () => {
-      const envelopeId = TestUtils.generateEnvelopeId();
-      
-      const input: DownloadDocumentInput = {
-        envelopeId,
-        securityContext: {
-          ipAddress: TestUtils.createTestIpAddress(),
-          userAgent: TestUtils.createTestUserAgent(),
-          country: 'US'
-        }
-      };
-
-      await expect(useCase.execute(input)).rejects.toThrow('Either userId or invitationToken must be provided');
+      await executeDownloadDocumentErrorTest('auth', 'Either userId or invitationToken must be provided', mockConfig, useCase);
     });
   });
 });
