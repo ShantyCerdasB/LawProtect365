@@ -9,8 +9,8 @@
 import { TestUtils } from './testUtils';
 import { signatureEnvelopeEntity } from './builders/signatureEnvelope';
 import { Email } from '@lawprotect/shared-ts';
-import { EnvelopeSigner } from '../../../src/domain/entities/EnvelopeSigner';
-import { SignDocumentUseCaseInput } from '../../../src/domain/types/usecase/orchestrator/SignDocumentUseCase';
+import { EnvelopeSigner } from '../../src/domain/entities/EnvelopeSigner';
+import { SignDocumentUseCaseInput } from '../../src/domain/types/usecase/orchestrator/SignDocumentUseCase';
 
 /**
  * Interface for test data overrides
@@ -169,11 +169,17 @@ export function createSignDocumentInput(
     algorithm: 'RS256'
   };
 
+  const mergedRequest = {
+    ...defaultRequest,
+    ...overrides.request,
+    consent: {
+      ...defaultRequest.consent,
+      ...overrides.request?.consent
+    }
+  };
+
   return {
-    request: {
-      ...defaultRequest,
-      ...overrides.request
-    },
+    request: mergedRequest,
     userId: testData.userId,
     securityContext: testData.securityContext
   };
@@ -212,9 +218,11 @@ export function setupSignDocumentMocks(
   mocks.entityFactory.createValueObjects.consentId.mockReturnValue(testData.consentId);
 
   // Service mocks
-  mocks.signatureEnvelopeService.validateUserAccess.mockResolvedValue(
-    overrides.validateUserAccess || testData.testEnvelope
-  );
+  if (overrides.validateUserAccess !== undefined) {
+    mocks.signatureEnvelopeService.validateUserAccess.mockResolvedValue(overrides.validateUserAccess);
+  } else {
+    mocks.signatureEnvelopeService.validateUserAccess.mockResolvedValue(testData.testEnvelope);
+  }
   
   mocks.signatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue(
     overrides.getEnvelopeWithSigners || {
@@ -271,6 +279,41 @@ export function setupSignDocumentMocks(
 }
 
 /**
+ * Creates a standardized mock configuration object for SignDocumentUseCase tests
+ * @param mocks - Mock objects from test setup
+ * @returns Standardized mock configuration object
+ * @example
+ * const mockConfig = createMockConfiguration(mocks);
+ */
+export function createMockConfiguration(mocks: {
+  entityFactory: any;
+  signatureEnvelopeService: any;
+  invitationTokenService: any;
+  consentService: any;
+  kmsService: any;
+  envelopeSignerService: any;
+  auditEventService: any;
+  handleSignedDocumentFromFrontend: any;
+  handleFlattenedDocument: any;
+  buildSigningResponse: any;
+  uuid: any;
+}) {
+  return {
+    entityFactory: mocks.entityFactory,
+    signatureEnvelopeService: mocks.signatureEnvelopeService,
+    invitationTokenService: mocks.invitationTokenService,
+    consentService: mocks.consentService,
+    kmsService: mocks.kmsService,
+    envelopeSignerService: mocks.envelopeSignerService,
+    auditEventService: mocks.auditEventService,
+    handleSignedDocumentFromFrontend: mocks.handleSignedDocumentFromFrontend,
+    handleFlattenedDocument: mocks.handleFlattenedDocument,
+    buildSigningResponse: mocks.buildSigningResponse,
+    uuid: mocks.uuid
+  };
+}
+
+/**
  * Creates test scenarios for parametrized testing
  */
 export const SIGN_DOCUMENT_TEST_SCENARIOS = {
@@ -322,7 +365,7 @@ export function createErrorScenarioData(scenario: 'envelope' | 'signer' | 'conse
       return {
         ...baseData,
         mockOverrides: {
-          validateUserAccess: null
+          validateUserAccess: Promise.resolve(null)
         }
       };
     
@@ -400,7 +443,8 @@ export function createEdgeCaseData(edgeCase: 'missing-consent-fields' | 'missing
           getId: () => baseData.signerId,
           getEmail: () => undefined, // Missing email
           getFullName: () => undefined // Missing full name
-        } as EnvelopeSigner
+        } as EnvelopeSigner,
+        inputOverrides: {}
       };
     
     default:

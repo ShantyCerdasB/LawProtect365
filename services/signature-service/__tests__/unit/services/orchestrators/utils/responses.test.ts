@@ -9,7 +9,6 @@
 import { describe, it, expect } from '@jest/globals';
 import { buildSigningResponse } from '../../../../../src/services/orchestrators/utils/responses';
 import { TestUtils } from '../../../../helpers/testUtils';
-import { signatureEnvelopeEntity } from '../../../../helpers/builders/signatureEnvelope';
 import { SigningMessages } from '../../../../../src/domain/enums/SigningMessages';
 import { 
   createTestSigningData, 

@@ -1,10 +1,7 @@
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 import { generateTestIpAddress } from '../../../../integration/helpers/testHelpers';
 import { SignDocumentUseCase } from '../../../../../src/services/orchestrators/use-cases/SignDocumentUseCase';
-import { SignDocumentUseCaseInput } from '../../../../../src/domain/types/usecase/orchestrator/SignDocumentUseCase';
-import { Email } from '@lawprotect/shared-ts';
 import { AuditEventType } from '../../../../../src/domain/enums/AuditEventType';
-import { TestUtils } from '../../../../helpers/testUtils';
 import { createSignatureEnvelopeServiceMock } from '../../../../helpers/mocks/services/SignatureEnvelopeService.mock';
 import { createEnvelopeSignerServiceMock } from '../../../../helpers/mocks/services/EnvelopeSignerService.mock';
 import { createInvitationTokenServiceMock } from '../../../../helpers/mocks/services/InvitationTokenService.mock';
@@ -12,13 +9,11 @@ import { createConsentServiceMock } from '../../../../helpers/mocks/services/Con
 import { createS3ServiceMock } from '../../../../helpers/mocks/services/S3Service.mock';
 import { createKmsServiceMock } from '../../../../helpers/mocks/services/KmsService.mock';
 import { createAuditEventServiceMock } from '../../../../helpers/mocks/services/AuditEventService.mock';
-import { signatureEnvelopeEntity } from '../../../../helpers/builders/signatureEnvelope';
-import { EnvelopeSigner } from '../../../../../src/domain/entities/EnvelopeSigner';
 import { 
   createSignDocumentTestData, 
   createSignDocumentInput, 
   setupSignDocumentMocks,
-  SIGN_DOCUMENT_TEST_SCENARIOS,
+  createMockConfiguration,
   createErrorScenarioData,
   createEdgeCaseData
 } from '../../../../helpers/SignDocumentUseCaseTestHelpers';
@@ -73,6 +68,8 @@ describe('SignDocumentUseCase', () => {
   let mockHandleFlattenedDocument: jest.Mock;
   let mockUuid: jest.Mock;
 
+  let mockConfig: ReturnType<typeof createMockConfiguration>;
+
   beforeEach(() => {
     jest.clearAllMocks();
 
@@ -90,6 +87,21 @@ describe('SignDocumentUseCase', () => {
     mockHandleSignedDocumentFromFrontend = require('../../../../../src/services/orchestrators').handleSignedDocumentFromFrontend as jest.Mock;
     mockHandleFlattenedDocument = require('../../../../../src/services/orchestrators').handleFlattenedDocument as jest.Mock;
     mockUuid = require('uuid').v4;
+
+    // Create standardized mock configuration
+    mockConfig = createMockConfiguration({
+      entityFactory: mockEntityFactory,
+      signatureEnvelopeService: mockSignatureEnvelopeService,
+      invitationTokenService: mockInvitationTokenService,
+      consentService: mockConsentService,
+      kmsService: mockKmsService,
+      envelopeSignerService: mockEnvelopeSignerService,
+      auditEventService: mockAuditEventService,
+      handleSignedDocumentFromFrontend: mockHandleSignedDocumentFromFrontend,
+      handleFlattenedDocument: mockHandleFlattenedDocument,
+      buildSigningResponse: mockBuildSigningResponse,
+      uuid: mockUuid
+    });
 
     // Reset the mock implementation for SigningFlowValidationRule
     const { SigningFlowValidationRule } = require('../../../../../src/domain/rules/SigningFlowValidationRule');
@@ -134,19 +146,7 @@ describe('SignDocumentUseCase', () => {
         }
       });
 
-      setupSignDocumentMocks({
-        entityFactory: mockEntityFactory,
-        signatureEnvelopeService: mockSignatureEnvelopeService,
-        invitationTokenService: mockInvitationTokenService,
-        consentService: mockConsentService,
-        kmsService: mockKmsService,
-        envelopeSignerService: mockEnvelopeSignerService,
-        auditEventService: mockAuditEventService,
-        handleSignedDocumentFromFrontend: mockHandleSignedDocumentFromFrontend,
-        handleFlattenedDocument: mockHandleFlattenedDocument,
-        buildSigningResponse: mockBuildSigningResponse,
-        uuid: mockUuid
-      }, testData);
+      setupSignDocumentMocks(mockConfig, testData);
 
       mockInvitationTokenService.markTokenAsSigned.mockResolvedValue(undefined);
       mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValueOnce({
@@ -262,19 +262,7 @@ describe('SignDocumentUseCase', () => {
       const testData = createSignDocumentTestData();
       const input = createSignDocumentInput(testData);
 
-      setupSignDocumentMocks({
-        entityFactory: mockEntityFactory,
-        signatureEnvelopeService: mockSignatureEnvelopeService,
-        invitationTokenService: mockInvitationTokenService,
-        consentService: mockConsentService,
-        kmsService: mockKmsService,
-        envelopeSignerService: mockEnvelopeSignerService,
-        auditEventService: mockAuditEventService,
-        handleSignedDocumentFromFrontend: mockHandleSignedDocumentFromFrontend,
-        handleFlattenedDocument: mockHandleFlattenedDocument,
-        buildSigningResponse: mockBuildSigningResponse,
-        uuid: mockUuid
-      }, testData);
+      setupSignDocumentMocks(mockConfig, testData);
 
       mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValueOnce({
         ...testData.testEnvelope,
@@ -303,19 +291,7 @@ describe('SignDocumentUseCase', () => {
       const input = createSignDocumentInput(testData);
       const completedEnvelope = { ...testData.testEnvelope, isCompleted: jest.fn().mockReturnValue(true) };
 
-      setupSignDocumentMocks({
-        entityFactory: mockEntityFactory,
-        signatureEnvelopeService: mockSignatureEnvelopeService,
-        invitationTokenService: mockInvitationTokenService,
-        consentService: mockConsentService,
-        kmsService: mockKmsService,
-        envelopeSignerService: mockEnvelopeSignerService,
-        auditEventService: mockAuditEventService,
-        handleSignedDocumentFromFrontend: mockHandleSignedDocumentFromFrontend,
-        handleFlattenedDocument: mockHandleFlattenedDocument,
-        buildSigningResponse: mockBuildSigningResponse,
-        uuid: mockUuid
-      }, testData);
+      setupSignDocumentMocks(mockConfig, testData);
 
       mockSignatureEnvelopeService.getEnvelopeWithSigners
         .mockResolvedValueOnce({ ...testData.testEnvelope, getSigners: () => [testData.testSigner] })
@@ -334,19 +310,7 @@ describe('SignDocumentUseCase', () => {
       const edgeCaseData = createEdgeCaseData('missing-consent-fields');
       const input = createSignDocumentInput(edgeCaseData, edgeCaseData.inputOverrides);
 
-      setupSignDocumentMocks({
-        entityFactory: mockEntityFactory,
-        signatureEnvelopeService: mockSignatureEnvelopeService,
-        invitationTokenService: mockInvitationTokenService,
-        consentService: mockConsentService,
-        kmsService: mockKmsService,
-        envelopeSignerService: mockEnvelopeSignerService,
-        auditEventService: mockAuditEventService,
-        handleSignedDocumentFromFrontend: mockHandleSignedDocumentFromFrontend,
-        handleFlattenedDocument: mockHandleFlattenedDocument,
-        buildSigningResponse: mockBuildSigningResponse,
-        uuid: mockUuid
-      }, edgeCaseData);
+      setupSignDocumentMocks(mockConfig, edgeCaseData);
 
       mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValueOnce({
         ...edgeCaseData.testEnvelope,
@@ -368,22 +332,13 @@ describe('SignDocumentUseCase', () => {
     });
 
     it('should throw error when envelope is not found', async () => {
-      const errorData = createErrorScenarioData('envelope');
-      const input = createSignDocumentInput(errorData);
+      const testData = createSignDocumentTestData();
+      const input = createSignDocumentInput(testData);
 
-      setupSignDocumentMocks({
-        entityFactory: mockEntityFactory,
-        signatureEnvelopeService: mockSignatureEnvelopeService,
-        invitationTokenService: mockInvitationTokenService,
-        consentService: mockConsentService,
-        kmsService: mockKmsService,
-        envelopeSignerService: mockEnvelopeSignerService,
-        auditEventService: mockAuditEventService,
-        handleSignedDocumentFromFrontend: mockHandleSignedDocumentFromFrontend,
-        handleFlattenedDocument: mockHandleFlattenedDocument,
-        buildSigningResponse: mockBuildSigningResponse,
-        uuid: mockUuid
-      }, errorData, errorData.mockOverrides);
+      // Setup mocks with null envelope to trigger error
+      mockEntityFactory.createValueObjects.envelopeId.mockReturnValue(testData.envelopeId);
+      mockEntityFactory.createValueObjects.signerId.mockReturnValue(testData.signerId);
+      mockSignatureEnvelopeService.validateUserAccess.mockResolvedValue(null);
 
       await expect(useCase.execute(input)).rejects.toThrow('Envelope not found');
     });
@@ -392,19 +347,7 @@ describe('SignDocumentUseCase', () => {
       const errorData = createErrorScenarioData('signer');
       const input = createSignDocumentInput(errorData);
 
-      setupSignDocumentMocks({
-        entityFactory: mockEntityFactory,
-        signatureEnvelopeService: mockSignatureEnvelopeService,
-        invitationTokenService: mockInvitationTokenService,
-        consentService: mockConsentService,
-        kmsService: mockKmsService,
-        envelopeSignerService: mockEnvelopeSignerService,
-        auditEventService: mockAuditEventService,
-        handleSignedDocumentFromFrontend: mockHandleSignedDocumentFromFrontend,
-        handleFlattenedDocument: mockHandleFlattenedDocument,
-        buildSigningResponse: mockBuildSigningResponse,
-        uuid: mockUuid
-      }, errorData, errorData.mockOverrides);
+      setupSignDocumentMocks(mockConfig, errorData, errorData.mockOverrides);
 
       await expect(useCase.execute(input)).rejects.toThrow('Signer with ID');
     });
@@ -414,19 +357,7 @@ describe('SignDocumentUseCase', () => {
       const errorData = createErrorScenarioData('consent');
       const input = createSignDocumentInput(errorData);
 
-      setupSignDocumentMocks({
-        entityFactory: mockEntityFactory,
-        signatureEnvelopeService: mockSignatureEnvelopeService,
-        invitationTokenService: mockInvitationTokenService,
-        consentService: mockConsentService,
-        kmsService: mockKmsService,
-        envelopeSignerService: mockEnvelopeSignerService,
-        auditEventService: mockAuditEventService,
-        handleSignedDocumentFromFrontend: mockHandleSignedDocumentFromFrontend,
-        handleFlattenedDocument: mockHandleFlattenedDocument,
-        buildSigningResponse: mockBuildSigningResponse,
-        uuid: mockUuid
-      }, errorData, errorData.mockOverrides);
+      setupSignDocumentMocks(mockConfig, errorData, errorData.mockOverrides);
 
       await expect(useCase.execute(input)).rejects.toThrow('Failed to create consent');
     });
@@ -435,19 +366,7 @@ describe('SignDocumentUseCase', () => {
       const errorData = createErrorScenarioData('document');
       const input = createSignDocumentInput(errorData);
 
-      setupSignDocumentMocks({
-        entityFactory: mockEntityFactory,
-        signatureEnvelopeService: mockSignatureEnvelopeService,
-        invitationTokenService: mockInvitationTokenService,
-        consentService: mockConsentService,
-        kmsService: mockKmsService,
-        envelopeSignerService: mockEnvelopeSignerService,
-        auditEventService: mockAuditEventService,
-        handleSignedDocumentFromFrontend: mockHandleSignedDocumentFromFrontend,
-        handleFlattenedDocument: mockHandleFlattenedDocument,
-        buildSigningResponse: mockBuildSigningResponse,
-        uuid: mockUuid
-      }, errorData, errorData.mockOverrides);
+      setupSignDocumentMocks(mockConfig, errorData, errorData.mockOverrides);
 
       await expect(useCase.execute(input)).rejects.toThrow('Failed to prepare document');
     });
@@ -456,19 +375,7 @@ describe('SignDocumentUseCase', () => {
       const errorData = createErrorScenarioData('kms');
       const input = createSignDocumentInput(errorData);
 
-      setupSignDocumentMocks({
-        entityFactory: mockEntityFactory,
-        signatureEnvelopeService: mockSignatureEnvelopeService,
-        invitationTokenService: mockInvitationTokenService,
-        consentService: mockConsentService,
-        kmsService: mockKmsService,
-        envelopeSignerService: mockEnvelopeSignerService,
-        auditEventService: mockAuditEventService,
-        handleSignedDocumentFromFrontend: mockHandleSignedDocumentFromFrontend,
-        handleFlattenedDocument: mockHandleFlattenedDocument,
-        buildSigningResponse: mockBuildSigningResponse,
-        uuid: mockUuid
-      }, errorData, errorData.mockOverrides);
+      setupSignDocumentMocks(mockConfig, errorData, errorData.mockOverrides);
 
       await expect(useCase.execute(input)).rejects.toThrow('KMS signing failed');
     });
@@ -477,19 +384,7 @@ describe('SignDocumentUseCase', () => {
       const edgeCaseData = createEdgeCaseData('missing-signer-fields');
       const input = createSignDocumentInput(edgeCaseData);
 
-      setupSignDocumentMocks({
-        entityFactory: mockEntityFactory,
-        signatureEnvelopeService: mockSignatureEnvelopeService,
-        invitationTokenService: mockInvitationTokenService,
-        consentService: mockConsentService,
-        kmsService: mockKmsService,
-        envelopeSignerService: mockEnvelopeSignerService,
-        auditEventService: mockAuditEventService,
-        handleSignedDocumentFromFrontend: mockHandleSignedDocumentFromFrontend,
-        handleFlattenedDocument: mockHandleFlattenedDocument,
-        buildSigningResponse: mockBuildSigningResponse,
-        uuid: mockUuid
-      }, edgeCaseData);
+      setupSignDocumentMocks(mockConfig, edgeCaseData);
 
       mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValueOnce({
         ...edgeCaseData.testEnvelope,

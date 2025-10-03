@@ -52,17 +52,39 @@ phases:
         rm -rf outbox-stream-handler
         echo "Created outbox-stream-handler.zip"
       - |
-        # Create appspec.yml for CodeDeploy in root directory
-        cat > appspec.yml << 'EOF'
+        # 1) Update Lambda function code and publish new version
+        echo "Updating Lambda function code..."
+        aws lambda update-function-code \
+          --function-name outbox-stream-handler \
+          --zip-file fileb://outbox-stream-handler.zip
+        
+        echo "Publishing new version..."
+        TARGET_VERSION=$(aws lambda publish-version \
+          --function-name outbox-stream-handler \
+          --query Version --output text)
+        
+        # 2) Get current version from alias
+        echo "Getting current version from alias..."
+        CURRENT_VERSION=$(aws lambda get-alias \
+          --function-name outbox-stream-handler \
+          --name outbox-stream-handler-alias \
+          --query FunctionVersion --output text)
+        
+        echo "CurrentVersion=$CURRENT_VERSION  TargetVersion=$TARGET_VERSION"
+        
+        # 3) Generate appspec.yml with both versions
+        cat > appspec.yml << EOF
         version: 0.0
         Resources:
-          - TargetService:
+          - OutboxHandler:
               Type: AWS::Lambda::Function
               Properties:
                 Name: "outbox-stream-handler"
                 Alias: "outbox-stream-handler-alias"
+                CurrentVersion: "$CURRENT_VERSION"
+                TargetVersion: "$TARGET_VERSION"
         EOF
-        echo "Created appspec.yml for CodeDeploy"
+        echo "Created appspec.yml for CodeDeploy with versions"
 
 artifacts:
   files:
