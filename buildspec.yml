@@ -86,16 +86,16 @@ phases:
         
                # 3) Generate appspec.yml with both versions
                cat > appspec.yml << EOF
-               version: 0.0
-               Resources:
-                 - OutboxHandler:
-                     Type: AWS::Lambda::Function
-                     Properties:
-                       Name: "$FUNCTION_NAME"
-                       Alias: "$ALIAS_NAME"
-                       CurrentVersion: "$CURRENT_VERSION"
-                       TargetVersion: "$TARGET_VERSION"
-               EOF
+version: 0.0
+Resources:
+  - OutboxHandler:
+      Type: AWS::Lambda::Function
+      Properties:
+        Name: "$FUNCTION_NAME"
+        Alias: "$ALIAS_NAME"
+        CurrentVersion: "$CURRENT_VERSION"
+        TargetVersion: "$TARGET_VERSION"
+EOF
                echo "Created appspec.yml for CodeDeploy with versions"
 
 artifacts:
