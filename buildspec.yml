@@ -26,12 +26,14 @@ phases:
       - 'npm ci'
       - 'DATABASE_URL="postgresql://user:pass@localhost:5432/postgres?schema=public" npx prisma generate'
       - 'npm run build'
+      - 'echo "Checking node_modules after build:" && ls -la node_modules/ | head -10'
       - 'cd -'
       - 'rm -rf /tmp/layer && mkdir -p /tmp/layer/nodejs'
       - 'cp -R packages/shared-ts/dist /tmp/layer/nodejs/'
-      - 'cp -R packages/shared-ts/node_modules /tmp/layer/nodejs/'
+      - 'echo "Copying node_modules..." && cp -R packages/shared-ts/node_modules /tmp/layer/nodejs/'
       - 'cp packages/shared-ts/package.json /tmp/layer/nodejs/'
       - 'if [ -f "packages/shared-ts/package-lock.json" ]; then cp packages/shared-ts/package-lock.json /tmp/layer/nodejs/; fi'
+      - 'echo "Layer contents after copy:" && ls -la /tmp/layer/nodejs/'
 
   build:
     commands:

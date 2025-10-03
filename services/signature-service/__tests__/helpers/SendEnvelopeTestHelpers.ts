@@ -158,7 +158,9 @@ export async function executeSendEnvelopeTest(
     testData.userId
   );
   
-  customAssertions.forEach(assertion => assertion());
+  for (const assertion of customAssertions) {
+    assertion();
+  }
 }
 
 /**
@@ -237,6 +239,47 @@ export function createSendEnvelopeErrorScenarioData(scenario: 'sendEnvelope' | '
     default:
       throw new Error(`Unknown error scenario: ${scenario}`);
   }
+}
+
+/**
+ * Creates standardized mock configuration object
+ * @param mocks - Mock objects from test setup
+ * @returns Standardized mock configuration
+ * @example
+ * const mockConfig = createMockConfiguration(mocks);
+ */
+export function createMockConfiguration(mocks: {
+  signatureEnvelopeService: any;
+  invitationTokenService: any;
+  envelopeNotificationService: any;
+  auditEventService: any;
+}) {
+  return {
+    signatureEnvelopeService: mocks.signatureEnvelopeService,
+    invitationTokenService: mocks.invitationTokenService,
+    envelopeNotificationService: mocks.envelopeNotificationService,
+    auditEventService: mocks.auditEventService
+  };
+}
+
+/**
+ * Executes error test with standardized setup
+ * @param scenario - Error scenario type
+ * @param expectedMessage - Expected error message
+ * @param mockConfig - Mock configuration object
+ * @param useCase - Use case instance to test
+ * @example
+ * await executeSendEnvelopeErrorTest('sendEnvelope', 'Send envelope failed', mockConfig, useCase);
+ */
+export async function executeSendEnvelopeErrorTest(
+  scenario: 'sendEnvelope' | 'tokenGeneration' | 'notification' | 'auditEvent',
+  expectedMessage: string,
+  mockConfig: ReturnType<typeof createMockConfiguration>,
+  useCase: any
+): Promise<void> {
+  const errorData = createSendEnvelopeErrorScenarioData(scenario);
+  setupSendEnvelopeMocks(mockConfig, errorData, errorData.mockOverrides);
+  await expect(useCase.execute(errorData.input)).rejects.toThrow(expectedMessage);
 }
 
 /**

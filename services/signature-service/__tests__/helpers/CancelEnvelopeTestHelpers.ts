@@ -123,7 +123,9 @@ export async function executeCancelEnvelopeTest(
     testData.userId
   );
   
-  customAssertions.forEach(assertion => assertion());
+  for (const assertion of customAssertions) {
+    assertion();
+  }
 }
 
 /**

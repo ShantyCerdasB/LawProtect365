@@ -7,9 +7,9 @@ import { createEnvelopeNotificationServiceMock } from '../../../../helpers/mocks
 import { 
   createSendEnvelopeTestData, 
   setupSendEnvelopeMocks,
-  executeSendEnvelopeTest,
-  createSendEnvelopeErrorScenarioData,
-  createMultiSignerTestData
+  executeSendEnvelopeErrorTest,
+  createMultiSignerTestData,
+  createMockConfiguration
 } from '../../../../helpers/SendEnvelopeTestHelpers';
 
 // Mock selectTargetSigners utility
@@ -41,6 +41,17 @@ describe('SendEnvelopeUseCase', () => {
   });
 
   describe('execute', () => {
+    let mockConfig: ReturnType<typeof createMockConfiguration>;
+
+    beforeEach(() => {
+      mockConfig = createMockConfiguration({
+        signatureEnvelopeService: mockSignatureEnvelopeService,
+        invitationTokenService: mockInvitationTokenService,
+        envelopeNotificationService: mockEnvelopeNotificationService,
+        auditEventService: mockAuditEventService
+      });
+    });
+
     it('should send envelope successfully with all operations', async () => {
       const testData = createMultiSignerTestData(2);
       const input = {
@@ -51,12 +62,7 @@ describe('SendEnvelopeUseCase', () => {
         }
       };
 
-      setupSendEnvelopeMocks({
-        signatureEnvelopeService: mockSignatureEnvelopeService,
-        invitationTokenService: mockInvitationTokenService,
-        envelopeNotificationService: mockEnvelopeNotificationService,
-        auditEventService: mockAuditEventService
-      }, testData);
+      setupSendEnvelopeMocks(mockConfig, testData);
 
       const result = await useCase.execute(input);
 
@@ -71,12 +77,7 @@ describe('SendEnvelopeUseCase', () => {
 
     it('should send envelope with minimal options', async () => {
       const testData = createSendEnvelopeTestData();
-      setupSendEnvelopeMocks({
-        signatureEnvelopeService: mockSignatureEnvelopeService,
-        invitationTokenService: mockInvitationTokenService,
-        envelopeNotificationService: mockEnvelopeNotificationService,
-        auditEventService: mockAuditEventService
-      }, testData);
+      setupSendEnvelopeMocks(mockConfig, testData);
 
       const result = await useCase.execute(testData.input);
 
@@ -89,12 +90,7 @@ describe('SendEnvelopeUseCase', () => {
       const testData = createSendEnvelopeTestData();
       testData.testEnvelope.getExternalSigners = jest.fn().mockReturnValue([]) as any;
       
-      setupSendEnvelopeMocks({
-        signatureEnvelopeService: mockSignatureEnvelopeService,
-        invitationTokenService: mockInvitationTokenService,
-        envelopeNotificationService: mockEnvelopeNotificationService,
-        auditEventService: mockAuditEventService
-      }, testData, {
+      setupSendEnvelopeMocks(mockConfig, testData, {
         selectTargetSigners: [],
         generateInvitationTokensForSigners: []
       });
@@ -115,12 +111,7 @@ describe('SendEnvelopeUseCase', () => {
         }
       });
       
-      setupSendEnvelopeMocks({
-        signatureEnvelopeService: mockSignatureEnvelopeService,
-        invitationTokenService: mockInvitationTokenService,
-        envelopeNotificationService: mockEnvelopeNotificationService,
-        auditEventService: mockAuditEventService
-      }, testData, {
+      setupSendEnvelopeMocks(mockConfig, testData, {
         generateInvitationTokensForSigners: []
       });
 
@@ -130,51 +121,19 @@ describe('SendEnvelopeUseCase', () => {
     });
 
     it('should throw error when sendEnvelope fails', async () => {
-      const errorData = createSendEnvelopeErrorScenarioData('sendEnvelope');
-      setupSendEnvelopeMocks({
-        signatureEnvelopeService: mockSignatureEnvelopeService,
-        invitationTokenService: mockInvitationTokenService,
-        envelopeNotificationService: mockEnvelopeNotificationService,
-        auditEventService: mockAuditEventService
-      }, errorData, errorData.mockOverrides);
-
-      await expect(useCase.execute(errorData.input)).rejects.toThrow('Send envelope failed');
+      await executeSendEnvelopeErrorTest('sendEnvelope', 'Send envelope failed', mockConfig, useCase);
     });
 
     it('should throw error when token generation fails', async () => {
-      const errorData = createSendEnvelopeErrorScenarioData('tokenGeneration');
-      setupSendEnvelopeMocks({
-        signatureEnvelopeService: mockSignatureEnvelopeService,
-        invitationTokenService: mockInvitationTokenService,
-        envelopeNotificationService: mockEnvelopeNotificationService,
-        auditEventService: mockAuditEventService
-      }, errorData, errorData.mockOverrides);
-
-      await expect(useCase.execute(errorData.input)).rejects.toThrow('Token generation failed');
+      await executeSendEnvelopeErrorTest('tokenGeneration', 'Token generation failed', mockConfig, useCase);
     });
 
     it('should throw error when notification sending fails', async () => {
-      const errorData = createSendEnvelopeErrorScenarioData('notification');
-      setupSendEnvelopeMocks({
-        signatureEnvelopeService: mockSignatureEnvelopeService,
-        invitationTokenService: mockInvitationTokenService,
-        envelopeNotificationService: mockEnvelopeNotificationService,
-        auditEventService: mockAuditEventService
-      }, errorData, errorData.mockOverrides);
-
-      await expect(useCase.execute(errorData.input)).rejects.toThrow('Notification failed');
+      await executeSendEnvelopeErrorTest('notification', 'Notification failed', mockConfig, useCase);
     });
 
     it('should throw error when audit event creation fails', async () => {
-      const errorData = createSendEnvelopeErrorScenarioData('auditEvent');
-      setupSendEnvelopeMocks({
-        signatureEnvelopeService: mockSignatureEnvelopeService,
-        invitationTokenService: mockInvitationTokenService,
-        envelopeNotificationService: mockEnvelopeNotificationService,
-        auditEventService: mockAuditEventService
-      }, errorData, errorData.mockOverrides);
-
-      await expect(useCase.execute(errorData.input)).rejects.toThrow('Audit event creation failed');
+      await executeSendEnvelopeErrorTest('auditEvent', 'Audit event creation failed', mockConfig, useCase);
     });
   });
 });
