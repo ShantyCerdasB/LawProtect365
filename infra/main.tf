@@ -607,6 +607,11 @@ module "shared_components_pipeline" {
       value = module.code_bucket.bucket_id
       type  = "PLAINTEXT"
     },
+    {
+      name  = "OUTBOX_FUNCTION_NAME"
+      value = module.event_publisher_service.lambda_function_name
+      type  = "PLAINTEXT"
+    },
   ]
   
   github_connection_arn = module.github_connection.connection_arn

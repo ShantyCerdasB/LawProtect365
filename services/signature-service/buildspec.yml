@@ -16,9 +16,9 @@ phases:
       - 'echo "Layer contents:" && ls -la nodejs/'
       - 'echo "Dist contents:" && ls -la nodejs/dist/'
       - 'mkdir -p node_modules/@lawprotect'
-      - 'cp -r nodejs/dist node_modules/@lawprotect/shared-ts'
+      - 'cp -r nodejs/* node_modules/@lawprotect/shared-ts'
       - 'echo "Copied layer to:" && ls -la node_modules/@lawprotect/'
-      - 'cp -r nodejs/node_modules/* node_modules/ 2>/dev/null || true'
+      - 'echo "Shared-ts contents:" && ls -la node_modules/@lawprotect/shared-ts/'
       - 'cd -'
       
   build:
