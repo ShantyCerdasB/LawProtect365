@@ -41,17 +41,18 @@ phases:
       - '[ -n "${CODE_BUCKET:-}" ] || { echo "ERROR: CODE_BUCKET env var is not set"; exit 1; }'
       - 'aws s3 cp shared-ts-layer.zip s3://$CODE_BUCKET/shared-ts-layer.zip'
       - 'echo Uploaded layer to s3://$CODE_BUCKET/shared-ts-layer.zip'
+      - 'cd -'
       - |
-        # Create outbox-stream-handler.zip
+        # Create outbox-stream-handler.zip in root directory
         echo "Creating outbox-stream-handler.zip..."
         mkdir -p outbox-stream-handler
-        cp -r nodejs/dist/lambdas/* outbox-stream-handler/
-        cp nodejs/package.json outbox-stream-handler/
+        cp -r /tmp/layer/nodejs/dist/lambdas/* outbox-stream-handler/
+        cp /tmp/layer/nodejs/package.json outbox-stream-handler/
         cd outbox-stream-handler && zip -r ../outbox-stream-handler.zip . && cd ..
         rm -rf outbox-stream-handler
         echo "Created outbox-stream-handler.zip"
       - |
-        # Create appspec.yml for CodeDeploy
+        # Create appspec.yml for CodeDeploy in root directory
         cat > appspec.yml << 'EOF'
         version: 0.0
         Resources:

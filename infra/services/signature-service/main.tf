@@ -107,7 +107,8 @@
       { name = "SERVICE_NAME",      value = "sign",                                type = "PLAINTEXT" },
       { name = "ENV",               value = var.env,                               type = "PLAINTEXT" },
       { name = "PROJECT_NAME",      value = var.project_name,                      type = "PLAINTEXT" },
-      { name = "SSM_PARAM_PREFIX",  value = "/${var.project_name}/${var.env}",     type = "PLAINTEXT" }
+      { name = "SSM_PARAM_PREFIX",  value = "/${var.project_name}/${var.env}",     type = "PLAINTEXT" },
+      { name = "CODE_BUCKET",       value = var.code_bucket,                       type = "PLAINTEXT" }
     ]
   )
 }
