@@ -85,3 +85,15 @@ resource "aws_lambda_event_source_mapping" "outbox_stream_mapping" {
     module.outbox_table
   ]
 }
+
+# Lambda Alias for CodeDeploy
+resource "aws_lambda_alias" "outbox_stream_handler_alias" {
+  name             = "outbox-stream-handler-alias"
+  description      = "Alias for outbox stream handler Lambda function"
+  function_name    = module.outbox_stream_handler.lambda_function_name
+  function_version = "$LATEST"
+  
+  lifecycle {
+    ignore_changes = [function_version]
+  }
+}

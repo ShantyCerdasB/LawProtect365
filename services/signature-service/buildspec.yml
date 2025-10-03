@@ -23,7 +23,7 @@ phases:
       - 'pwd; ls -la'
       - 'npm ci'
       - 'mkdir -p node_modules/@lawprotect'
-      - 'ln -sf ../../../packages/shared-ts node_modules/@lawprotect/shared-ts'
+      - 'ln -sf ../../packages/shared-ts node_modules/@lawprotect/shared-ts'
       - 'npx prisma generate --schema ../../packages/shared-ts/prisma/schema.prisma'
       - 'echo "Verifying shared-ts installation..."'
       - 'ls -la node_modules/@lawprotect/shared-ts/'

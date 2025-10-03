@@ -34,3 +34,8 @@ output "iam_role_arn" {
   description = "ARN of the OutboxStreamHandler IAM role"
   value       = module.outbox_stream_role.role_arn
 }
+
+output "lambda_alias_name" {
+  description = "Name of the OutboxStreamHandler Lambda alias"
+  value       = aws_lambda_alias.outbox_stream_handler_alias.name
+}

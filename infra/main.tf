@@ -612,6 +612,11 @@ module "shared_components_pipeline" {
       value = module.event_publisher_service.lambda_function_name
       type  = "PLAINTEXT"
     },
+    {
+      name  = "OUTBOX_ALIAS_NAME"
+      value = module.event_publisher_service.lambda_alias_name
+      type  = "PLAINTEXT"
+    },
   ]
   
   github_connection_arn = module.github_connection.connection_arn

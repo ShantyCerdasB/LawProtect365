@@ -60,27 +60,59 @@ phases:
         rm -rf outbox-stream-handler
         echo "Created outbox-stream-handler.zip"
       - |
-        # Use dynamic function name from Terraform
+        # Use dynamic function name and alias from Terraform
         FUNCTION_NAME="${OUTBOX_FUNCTION_NAME}"
+        ALIAS_NAME="${OUTBOX_ALIAS_NAME}"
         
         echo "Using function name: $FUNCTION_NAME"
+        echo "Using alias name: $ALIAS_NAME"
         
-        # Upload the handler ZIP to S3 (Lambda will automatically use it)
+        # Upload the handler ZIP to S3
         echo "Uploading outbox-stream-handler.zip to S3..."
         aws s3 cp outbox-stream-handler.zip s3://$CODE_BUCKET/outbox-stream-handler.zip
         
-        # Update the Lambda function to use the new code from S3
+        # Update the Lambda function code
         echo "Updating Lambda function code..."
         aws lambda update-function-code \
           --function-name "$FUNCTION_NAME" \
           --s3-bucket "$CODE_BUCKET" \
           --s3-key "outbox-stream-handler.zip"
         
-        echo "Lambda function updated successfully"
+        # Publish new version
+        echo "Publishing new version..."
+        TARGET_VERSION=$(aws lambda publish-version \
+          --function-name "$FUNCTION_NAME" \
+          --query Version --output text)
+        
+        # Get current version from alias
+        echo "Getting current version from alias..."
+        CURRENT_VERSION=$(aws lambda get-alias \
+          --function-name "$FUNCTION_NAME" \
+          --name "$ALIAS_NAME" \
+          --query FunctionVersion --output text 2>/dev/null || echo "1")
+        
+        echo "CurrentVersion=$CURRENT_VERSION  TargetVersion=$TARGET_VERSION"
+        
+        # Generate appspec.yml for CodeDeploy
+        echo "Generating appspec.yml for CodeDeploy..."
+        {
+          echo "version: 0.0"
+          echo "Resources:"
+          echo "  - OutboxHandler:"
+          echo "      Type: AWS::Lambda::Function"
+          echo "      Properties:"
+          echo "        Name: \"$FUNCTION_NAME\""
+          echo "        Alias: \"$ALIAS_NAME\""
+          echo "        CurrentVersion: \"$CURRENT_VERSION\""
+          echo "        TargetVersion: \"$TARGET_VERSION\""
+        } > appspec.yml
+        
+        echo "Created appspec.yml for CodeDeploy"
         echo "Verifying artifacts in root directory:"
-        ls -la outbox-stream-handler.zip
+        ls -la outbox-stream-handler.zip appspec.yml
 
 artifacts:
   files:
     - 'outbox-stream-handler.zip'
+    - 'appspec.yml'
   discard-paths: yes
