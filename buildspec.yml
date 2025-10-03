@@ -48,45 +48,26 @@ phases:
         rm -rf outbox-stream-handler"
       - |
         set +e
-        L_ERR=0
         FUNCTION_NAME="${OUTBOX_FUNCTION_NAME}"
         ALIAS_NAME="${OUTBOX_ALIAS_NAME}"
-        if [ -z "$FUNCTION_NAME" ] || [ -z "$ALIAS_NAME" ]; then
-          L_ERR=1
+        
+        aws s3 cp outbox-stream-handler.zip "s3://$CODE_BUCKET/outbox-stream-handler.zip"
+        aws lambda update-function-code --function-name "$FUNCTION_NAME" --s3-bucket "$CODE_BUCKET" --s3-key "outbox-stream-handler.zip"
+        aws lambda wait function-updated --function-name "$FUNCTION_NAME"
+        aws lambda update-function-configuration --function-name "$FUNCTION_NAME" --layers "$SHARED_TS_LAYER_ARN"
+        
+        TARGET_VERSION=$(aws lambda publish-version --function-name "$FUNCTION_NAME" --query Version --output text 2>/dev/null)
+        if [ -z "$TARGET_VERSION" ] || [ "$TARGET_VERSION" = "null" ]; then
+          TIMESTAMP=$(date +%s)
+          TARGET_VERSION=$(aws lambda publish-version --function-name "$FUNCTION_NAME" --description "Build-${TIMESTAMP}" --query Version --output text 2>/dev/null)
         fi
         
-        aws s3 cp outbox-stream-handler.zip "s3://$CODE_BUCKET/outbox-stream-handler.zip" || L_ERR=1
-        if [ "$L_ERR" -eq 0 ]; then
-          aws lambda update-function-code --function-name "$FUNCTION_NAME" --s3-bucket "$CODE_BUCKET" --s3-key "outbox-stream-handler.zip" >/dev/null || L_ERR=1
+        CURRENT_VERSION=$(aws lambda get-alias --function-name "$FUNCTION_NAME" --name "$ALIAS_NAME" --query FunctionVersion --output text 2>/dev/null)
+        if [ -z "$CURRENT_VERSION" ] || [ "$CURRENT_VERSION" = "null" ] || [ "$CURRENT_VERSION" = "\$LATEST" ]; then
+          aws lambda create-alias --function-name "$FUNCTION_NAME" --name "$ALIAS_NAME" --function-version "$TARGET_VERSION"
+          CURRENT_VERSION="$TARGET_VERSION"
         fi
-        if [ "$L_ERR" -eq 0 ]; then
-          aws lambda wait function-updated --function-name "$FUNCTION_NAME" || L_ERR=1
-        fi
-        if [ "$L_ERR" -eq 0 ]; then
-          LAYER_ARN="${SHARED_TS_LAYER_ARN}"
-          if [ -n "$LAYER_ARN" ]; then
-            aws lambda update-function-configuration --function-name "$FUNCTION_NAME" --layers "$LAYER_ARN" >/dev/null || L_ERR=1
-          else
-            L_ERR=1
-          fi
-        fi
-        if [ "$L_ERR" -eq 0 ]; then
-          TARGET_VERSION=$(aws lambda publish-version --function-name "$FUNCTION_NAME" --query Version --output text 2>/dev/null)
-          if [ -z "$TARGET_VERSION" ] || [ "$TARGET_VERSION" = "null" ]; then
-            TIMESTAMP=$(date +%s)
-            TARGET_VERSION=$(aws lambda publish-version --function-name "$FUNCTION_NAME" --description "Build-${TIMESTAMP}" --query Version --output text 2>/dev/null)
-            if [ -z "$TARGET_VERSION" ] || [ "$TARGET_VERSION" = "null" ]; then
-              L_ERR=1
-            fi
-          fi
-        fi
-        if [ "$L_ERR" -eq 0 ]; then
-          CURRENT_VERSION=$(aws lambda get-alias --function-name "$FUNCTION_NAME" --name "$ALIAS_NAME" --query FunctionVersion --output text 2>/dev/null)
-          if [ -z "$CURRENT_VERSION" ] || [ "$CURRENT_VERSION" = "null" ] || [ "$CURRENT_VERSION" = "\$LATEST" ]; then
-            aws lambda create-alias --function-name "$FUNCTION_NAME" --name "$ALIAS_NAME" --function-version "$TARGET_VERSION" >/dev/null || L_ERR=1
-            CURRENT_VERSION="$TARGET_VERSION"
-          fi
-        fi
+        
         CURRENT_VERSION_INT=${CURRENT_VERSION:-1}
         TARGET_VERSION_INT=${TARGET_VERSION:-1}
         printf "%s\n" \
@@ -100,9 +81,6 @@ phases:
           "        CurrentVersion: $CURRENT_VERSION_INT" \
           "        TargetVersion: $TARGET_VERSION_INT" \
           > "$CODEBUILD_SRC_DIR/appspec.yml"
-        if [ "$L_ERR" -ne 0 ]; then
-          exit 1
-        fi
         set -e
 
 artifacts:

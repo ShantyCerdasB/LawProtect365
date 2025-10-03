@@ -14,7 +14,7 @@ phases:
 
   pre_build:
     commands:
-      # 1) Construir shared-ts y generar Prisma **5.16.1**
+      # 1) Construir shared-ts y generar Prisma **5.22.x**
       - |
         bash -lc '
           set -euo pipefail
@@ -24,18 +24,24 @@ phases:
           # Instalar dependencias del paquete
           npm ci
 
-          # Comprobar versión instalada de @prisma/client
-          PRISMA_CLIENT_VERSION="$(node -e "console.log(require(\"@prisma/client/package.json\").version)")"
-          echo "[INFO] @prisma/client instalado: ${PRISMA_CLIENT_VERSION}"
+          # Detectar versión instalada de @prisma/client
+          INSTALLED_VER="$(node -e "console.log(require(\"@prisma/client/package.json\").version)")"
+          echo "[INFO] @prisma/client instalado: ${INSTALLED_VER}"
 
-          if [ "${PRISMA_CLIENT_VERSION}" != "5.16.1" ]; then
-            echo "[ERROR] Se requiere @prisma/client 5.16.1 y está ${PRISMA_CLIENT_VERSION}"
-            exit 2
+          # Si no es 5.22.x, instalamos 5.22.0 explícitamente (cliente + CLI)
+          if [ "${INSTALLED_VER%%.*}" -ne 5 ] || [ "${INSTALLED_VER#5.}" != "${INSTALLED_VER}" ] && [ "${INSTALLED_VER#5.}" != "${INSTALLED_VER}" ]; then
+            true # no-op; shell guard
+          fi
+          if [ "${INSTALLED_VER%%.*}" != "5" ] || [ "${INSTALLED_VER#5.}" = "${INSTALLED_VER}" ] || [ "${INSTALLED_VER%%.*}.${INSTALLED_VER#*.%%.*}" != "5.22" ]; then
+            echo "[INFO] Forzando @prisma/client@5.22.0 y prisma@5.22.0"
+            npm i @prisma/client@5.22.0 --no-save
+            npm i -D prisma@5.22.0 --no-save
           fi
 
-          # Generar client con la MISMA versión (5.16.1)
+          # Generar client exactamente con 5.22.0
+          echo "[INFO] prisma generate con CLI 5.22.0"
           DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}" \
-          npx -y prisma@5.16.1 generate
+          npx -y prisma@5.22.0 generate
 
           # Build del paquete
           npm run build
@@ -46,13 +52,13 @@ phases:
           cp -a dist /tmp/layer/nodejs/
           cp package.json /tmp/layer/nodejs/
 
-          # (opcional) si tenés root node_modules, lo copiamos al layer
+          # (opcional) copiar node_modules raíz al layer
           if [ -d "$CODEBUILD_SRC_DIR/node_modules" ]; then
             mkdir -p /tmp/layer/nodejs/node_modules
             cp -a "$CODEBUILD_SRC_DIR/node_modules/." /tmp/layer/nodejs/node_modules/
           fi
 
-          echo "[INFO] Prisma Client generado en shared-ts con 5.16.1"
+          echo "[INFO] Prisma Client generado en shared-ts con 5.22.0"
         '
 
       # 2) Instalar deps del servicio
@@ -83,7 +89,7 @@ phases:
 
   build:
     commands:
-      # 4) Tests con el layer y Prisma 5.16.1
+      # 4) Tests con el layer y Prisma 5.22.x
       - |
         bash -lc '
           set -euo pipefail
