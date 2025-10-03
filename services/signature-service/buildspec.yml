@@ -22,11 +22,8 @@ phases:
       - 'cd "$CODEBUILD_SRC_DIR/services/signature-service"'
       - 'pwd; ls -la'
       - 'npm ci'
-      - 'mkdir -p node_modules/@lawprotect'
-      - 'ln -sf ../../packages/shared-ts node_modules/@lawprotect/shared-ts'
+      - 'echo "Using Lambda layer for @lawprotect/shared-ts - no local symlink needed"'
       - 'npx prisma generate --schema ../../packages/shared-ts/prisma/schema.prisma'
-      - 'echo "Verifying shared-ts installation..."'
-      - 'ls -la node_modules/@lawprotect/shared-ts/'
       - 'echo "Verifying prisma client..."'
       - 'ls -la node_modules/@prisma/client/'
       
