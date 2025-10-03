@@ -50,50 +50,50 @@ phases:
         (cd outbox-stream-handler && zip -r ../outbox-stream-handler.zip .)
         rm -rf outbox-stream-handler"
       - |
-        bash -lc "set +e
+        set +e
         L_ERR=0
-        FUNCTION_NAME=\"${OUTBOX_FUNCTION_NAME}\"
-        ALIAS_NAME=\"${OUTBOX_ALIAS_NAME}\"
-        if [ -z \"$FUNCTION_NAME\" ] || [ -z \"$ALIAS_NAME\" ]; then
+        FUNCTION_NAME="${OUTBOX_FUNCTION_NAME}"
+        ALIAS_NAME="${OUTBOX_ALIAS_NAME}"
+        if [ -z "$FUNCTION_NAME" ] || [ -z "$ALIAS_NAME" ]; then
           L_ERR=1
         fi
-        aws s3 cp outbox-stream-handler.zip \"s3://$CODE_BUCKET/outbox-stream-handler.zip\" || L_ERR=1
-        if [ \"$L_ERR\" -eq 0 ]; then
-          aws lambda update-function-code --function-name \"$FUNCTION_NAME\" --s3-bucket \"$CODE_BUCKET\" --s3-key \"outbox-stream-handler.zip\" >/dev/null || L_ERR=1
+        aws s3 cp outbox-stream-handler.zip "s3://$CODE_BUCKET/outbox-stream-handler.zip" || L_ERR=1
+        if [ "$L_ERR" -eq 0 ]; then
+          aws lambda update-function-code --function-name "$FUNCTION_NAME" --s3-bucket "$CODE_BUCKET" --s3-key "outbox-stream-handler.zip" >/dev/null || L_ERR=1
         fi
-        if [ \"$L_ERR\" -eq 0 ]; then
-          aws lambda wait function-updated --function-name \"$FUNCTION_NAME\" || L_ERR=1
+        if [ "$L_ERR" -eq 0 ]; then
+          aws lambda wait function-updated --function-name "$FUNCTION_NAME" || L_ERR=1
         fi
-        if [ \"$L_ERR\" -eq 0 ]; then
-          TARGET_VERSION=\$(aws lambda publish-version --function-name \"$FUNCTION_NAME\" --query Version --output text 2>/dev/null)
-          if [ -z \"$TARGET_VERSION\" ] || [ \"$TARGET_VERSION\" = \"null\" ]; then
+        if [ "$L_ERR" -eq 0 ]; then
+          TARGET_VERSION=$(aws lambda publish-version --function-name "$FUNCTION_NAME" --query Version --output text 2>/dev/null)
+          if [ -z "$TARGET_VERSION" ] || [ "$TARGET_VERSION" = "null" ]; then
             L_ERR=1
           fi
         fi
-        if [ \"$L_ERR\" -eq 0 ]; then
-          CURR=\$(aws lambda get-alias --function-name \"$FUNCTION_NAME\" --name \"$ALIAS_NAME\" --query FunctionVersion --output text 2>/dev/null)
-          if [ -z \"$CURR\" ] || [ \"$CURR\" = \"null\" ]; then
-            aws lambda create-alias --function-name \"$FUNCTION_NAME\" --name \"$ALIAS_NAME\" --function-version \"$TARGET_VERSION\" >/dev/null || L_ERR=1
-            CURRENT_VERSION=\"$TARGET_VERSION\"
+        if [ "$L_ERR" -eq 0 ]; then
+          CURR=$(aws lambda get-alias --function-name "$FUNCTION_NAME" --name "$ALIAS_NAME" --query FunctionVersion --output text 2>/dev/null)
+          if [ -z "$CURR" ] || [ "$CURR" = "null" ]; then
+            aws lambda create-alias --function-name "$FUNCTION_NAME" --name "$ALIAS_NAME" --function-version "$TARGET_VERSION" >/dev/null || L_ERR=1
+            CURRENT_VERSION="$TARGET_VERSION"
           else
-            CURRENT_VERSION=\"$CURR\"
+            CURRENT_VERSION="$CURR"
           fi
         fi
-        printf \"%s\\n\" \\
-          \"version: 0.0\" \\
-          \"Resources:\" \\
-          \"  - OutboxHandler:\" \\
-          \"      Type: AWS::Lambda::Function\" \\
-          \"      Properties:\" \\
-          \"        Name: \\\"$FUNCTION_NAME\\\"\" \\
-          \"        Alias: \\\"$ALIAS_NAME\\\"\" \\
-          \"        CurrentVersion: \\\"\${CURRENT_VERSION:-1}\\\"\" \\
-          \"        TargetVersion: \\\"\${TARGET_VERSION:-1}\\\"\" \\
-          > \"$CODEBUILD_SRC_DIR/appspec.yml\"
-        if [ \"$L_ERR\" -ne 0 ]; then
+        printf "%s\n" \
+          "version: 0.0" \
+          "Resources:" \
+          "  - OutboxHandler:" \
+          "      Type: AWS::Lambda::Function" \
+          "      Properties:" \
+          "        Name: \"$FUNCTION_NAME\"" \
+          "        Alias: \"$ALIAS_NAME\"" \
+          "        CurrentVersion: \"${CURRENT_VERSION:-1}\"" \
+          "        TargetVersion: \"${TARGET_VERSION:-1}\"" \
+          > "$CODEBUILD_SRC_DIR/appspec.yml"
+        if [ "$L_ERR" -ne 0 ]; then
           exit 1
         fi
-        set -e"
+        set -e
 
 artifacts:
   files:

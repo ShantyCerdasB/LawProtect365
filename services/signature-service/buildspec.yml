@@ -12,41 +12,41 @@ phases:
       - echo ">>> Construyendo layer local de @lawprotect/shared-ts (para tests)..."
       - >
         bash -lc '
-        set -euo pipefail
-        cd "$CODEBUILD_SRC_DIR/packages/shared-ts"
-        npm ci
-        DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}" npx -y prisma@5.22.0 generate
-        npm run build
-        npm prune --omit=dev
-        mkdir -p /tmp/layer/nodejs
-        cp -a dist /tmp/layer/nodejs/
-        cp package.json /tmp/layer/nodejs/
+        set -euo pipefail;
+        cd "$CODEBUILD_SRC_DIR/packages/shared-ts";
+        npm ci;
+        DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}" npx -y prisma@5.22.0 generate;
+        npm run build;
+        npm prune --omit=dev;
+        mkdir -p /tmp/layer/nodejs;
+        cp -a dist /tmp/layer/nodejs/;
+        cp package.json /tmp/layer/nodejs/;
         if [ -d "$CODEBUILD_SRC_DIR/node_modules" ]; then
-          mkdir -p /tmp/layer/nodejs/node_modules
-          cp -a "$CODEBUILD_SRC_DIR/node_modules/." /tmp/layer/nodejs/node_modules/
+          mkdir -p /tmp/layer/nodejs/node_modules;
+          cp -a "$CODEBUILD_SRC_DIR/node_modules/." /tmp/layer/nodejs/node_modules/;
         else
-          echo "root node_modules not found"; exit 2
+          echo "root node_modules not found"; exit 2;
         fi
         '
       - echo ">>> Instalando dependencias de signature-service..."
       - >
         bash -lc '
-        set -euo pipefail
-        cd "$CODEBUILD_SRC_DIR/services/signature-service"
-        npm ci
+        set -euo pipefail;
+        cd "$CODEBUILD_SRC_DIR/services/signature-service";
+        npm ci;
         '
       - echo ">>> Configurando NODE_PATH para usar el layer durante tests..."
       - >
         bash -lc '
-        set -euo pipefail
-        cd "$CODEBUILD_SRC_DIR/services/signature-service"
-        export NODE_PATH="/tmp/layer/nodejs:/tmp/layer/nodejs/node_modules:$CODEBUILD_SRC_DIR/node_modules:$(npm root)"
-        node -e "require(\"module\").Module._initPaths()"
-        rm -rf node_modules/@lawprotect/shared-ts || true
-        ls -la /tmp/layer/nodejs || true
-        ls -la /tmp/layer/nodejs/node_modules/@prisma || true
-        ls -la /tmp/layer/nodejs/node_modules/@prisma/client || true
-        node -e "console.log(require.resolve(\"@lawprotect/shared-ts\")?\"resolve OK\":\"resolve FAIL\")"
+        set -euo pipefail;
+        cd "$CODEBUILD_SRC_DIR/services/signature-service";
+        export NODE_PATH="/tmp/layer/nodejs:/tmp/layer/nodejs/node_modules:$CODEBUILD_SRC_DIR/node_modules:$(npm root)";
+        node -e "require(\"module\").Module._initPaths()";
+        rm -rf node_modules/@lawprotect/shared-ts || true;
+        ls -la /tmp/layer/nodejs || true;
+        ls -la /tmp/layer/nodejs/node_modules/@prisma || true;
+        ls -la /tmp/layer/nodejs/node_modules/@prisma/client || true;
+        node -e "console.log(require.resolve(\"@lawprotect/shared-ts\")?\"resolve OK\":\"resolve FAIL\")";
         '
 
   build:
