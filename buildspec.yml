@@ -79,6 +79,10 @@ phases:
             CURRENT_VERSION="$CURR"
           fi
         fi
+        # Asegurar que las versiones sean enteros válidos
+        CURRENT_VERSION_INT=${CURRENT_VERSION:-1}
+        TARGET_VERSION_INT=${TARGET_VERSION:-1}
+        echo ">>> DEBUG: CURRENT_VERSION_INT=$CURRENT_VERSION_INT, TARGET_VERSION_INT=$TARGET_VERSION_INT"
         printf "%s\n" \
           "version: 0.0" \
           "Resources:" \
@@ -87,9 +91,11 @@ phases:
           "      Properties:" \
           "        Name: \"$FUNCTION_NAME\"" \
           "        Alias: \"$ALIAS_NAME\"" \
-          "        CurrentVersion: \"${CURRENT_VERSION:-1}\"" \
-          "        TargetVersion: \"${TARGET_VERSION:-1}\"" \
+          "        CurrentVersion: \"$CURRENT_VERSION_INT\"" \
+          "        TargetVersion: \"$TARGET_VERSION_INT\"" \
           > "$CODEBUILD_SRC_DIR/appspec.yml"
+        echo ">>> DEBUG: AppSpec generado:"
+        cat "$CODEBUILD_SRC_DIR/appspec.yml"
         if [ "$L_ERR" -ne 0 ]; then
           exit 1
         fi

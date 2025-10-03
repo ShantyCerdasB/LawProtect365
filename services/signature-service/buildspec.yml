@@ -5,7 +5,7 @@ phases:
     runtime-versions:
       nodejs: 20
     commands:
-      - 'bash -lc "set -euo pipefail; echo Using Node: $(node -v); echo Using npm: $(npm -v)"'
+      - 'bash -lc "set -euo pipefail; echo Using Node: \$(node -v); echo Using npm: \$(npm -v)"'
 
   pre_build:
     commands:
@@ -13,17 +13,17 @@ phases:
       - echo ">>> DEBUG: Estructura de carpetas antes de build shared-ts"
       - echo ">>> DEBUG: CODEBUILD_SRC_DIR = $CODEBUILD_SRC_DIR"
       - echo ">>> DEBUG: Contenido de CODEBUILD_SRC_DIR:"
-      - ls -la "$CODEBUILD_SRC_DIR" || echo "No se puede listar CODEBUILD_SRC_DIR"
+      - 'ls -la "$CODEBUILD_SRC_DIR" || echo "No se puede listar CODEBUILD_SRC_DIR"'
       - echo ">>> DEBUG: Contenido de packages:"
-      - ls -la "$CODEBUILD_SRC_DIR/packages" || echo "No se puede listar packages"
+      - 'ls -la "$CODEBUILD_SRC_DIR/packages" || echo "No se puede listar packages"'
       - echo ">>> DEBUG: Contenido de packages/shared-ts:"
-      - ls -la "$CODEBUILD_SRC_DIR/packages/shared-ts" || echo "No se puede listar packages/shared-ts"
-      - >
+      - 'ls -la "$CODEBUILD_SRC_DIR/packages/shared-ts" || echo "No se puede listar packages/shared-ts"'
+      - |
         bash -lc '
         set -euo pipefail;
         echo ">>> DEBUG: Entrando a packages/shared-ts";
         cd "$CODEBUILD_SRC_DIR/packages/shared-ts";
-        echo ">>> DEBUG: Directorio actual: $(pwd)";
+        echo ">>> DEBUG: Directorio actual: \$(pwd)";
         echo ">>> DEBUG: Contenido del directorio actual:";
         ls -la;
         npm ci;
@@ -61,15 +61,15 @@ phases:
       - echo ">>> Instalando dependencias de signature-service..."
       - echo ">>> DEBUG: Verificando estructura antes de instalar signature-service"
       - echo ">>> DEBUG: Contenido de services:"
-      - ls -la "$CODEBUILD_SRC_DIR/services" || echo "No se puede listar services"
+      - 'ls -la "$CODEBUILD_SRC_DIR/services" || echo "No se puede listar services"'
       - echo ">>> DEBUG: Contenido de services/signature-service:"
-      - ls -la "$CODEBUILD_SRC_DIR/services/signature-service" || echo "No se puede listar signature-service"
-      - >
+      - 'ls -la "$CODEBUILD_SRC_DIR/services/signature-service" || echo "No se puede listar signature-service"'
+      - |
         bash -lc '
         set -euo pipefail;
         echo ">>> DEBUG: Entrando a signature-service";
         cd "$CODEBUILD_SRC_DIR/services/signature-service";
-        echo ">>> DEBUG: Directorio actual: $(pwd)";
+        echo ">>> DEBUG: Directorio actual: \$(pwd)";
         echo ">>> DEBUG: Contenido del directorio signature-service:";
         ls -la;
         npm ci;
@@ -77,17 +77,17 @@ phases:
       - echo ">>> Configurando NODE_PATH para usar el layer durante tests..."
       - echo ">>> DEBUG: Verificando layer antes de configurar NODE_PATH"
       - echo ">>> DEBUG: Contenido de /tmp/layer:"
-      - ls -la /tmp/layer || echo "No existe /tmp/layer"
+      - 'ls -la /tmp/layer || echo "No existe /tmp/layer"'
       - echo ">>> DEBUG: Contenido de /tmp/layer/nodejs:"
-      - ls -la /tmp/layer/nodejs || echo "No existe /tmp/layer/nodejs"
-      - >
+      - 'ls -la /tmp/layer/nodejs || echo "No existe /tmp/layer/nodejs"'
+      - |
         bash -lc '
         set -euo pipefail;
         echo ">>> DEBUG: Configurando NODE_PATH";
         cd "$CODEBUILD_SRC_DIR/services/signature-service";
-        echo ">>> DEBUG: Directorio actual: $(pwd)";
+        echo ">>> DEBUG: Directorio actual: \$(pwd)";
         echo ">>> DEBUG: NODE_PATH antes: $NODE_PATH";
-        export NODE_PATH="/tmp/layer/nodejs:/tmp/layer/nodejs/node_modules:$CODEBUILD_SRC_DIR/node_modules:$(npm root)";
+        export NODE_PATH="/tmp/layer/nodejs:/tmp/layer/nodejs/node_modules:$CODEBUILD_SRC_DIR/node_modules:\$(npm root)";
         echo ">>> DEBUG: NODE_PATH después: $NODE_PATH";
         echo ">>> DEBUG: Inicializando paths de módulos...";
         node -e "require(\"module\").Module._initPaths()";
@@ -107,14 +107,13 @@ phases:
     commands:
       - echo ">>> Ejecutando tests unitarios..."
       - echo ">>> DEBUG: Verificando que shared-ts esté disponible para tests"
-      - echo ">>> DEBUG: NODE_PATH será: /tmp/layer/nodejs:/tmp/layer/nodejs/node_modules:$CODEBUILD_SRC_DIR/node_modules:$(npm root)"
-      - >
+      - |
         bash -lc '
         set -euo pipefail;
         cd "$CODEBUILD_SRC_DIR/services/signature-service";
-        echo ">>> DEBUG: Directorio actual: $(pwd)";
+        echo ">>> DEBUG: Directorio actual: \$(pwd)";
         echo ">>> DEBUG: NODE_PATH antes: $NODE_PATH";
-        export NODE_PATH="/tmp/layer/nodejs:/tmp/layer/nodejs/node_modules:$CODEBUILD_SRC_DIR/node_modules:$(npm root)";
+        export NODE_PATH="/tmp/layer/nodejs:/tmp/layer/nodejs/node_modules:$CODEBUILD_SRC_DIR/node_modules:\$(npm root)";
         echo ">>> DEBUG: NODE_PATH después: $NODE_PATH";
         echo ">>> DEBUG: Inicializando paths de módulos...";
         node -e "require(\"module\").Module._initPaths()";
@@ -124,7 +123,7 @@ phases:
         npm run test:unit:coverage;
         '
       - echo ">>> Compilando TypeScript..."
-      - >
+      - |
         bash -lc '
         set -euo pipefail;
         cd "$CODEBUILD_SRC_DIR/services/signature-service";
@@ -133,7 +132,7 @@ phases:
         rm -rf node_modules/@lawprotect/shared-ts || true;
         '
       - echo ">>> Empaquetando handlers..."
-      - >
+      - |
         bash -lc '
         set -euo pipefail;
         cd "$CODEBUILD_SRC_DIR/services/signature-service";
