@@ -125,6 +125,7 @@ data "aws_iam_policy_document" "lambda_policy" {
     actions = [
       "lambda:UpdateFunctionCode",
       "lambda:UpdateFunctionConfiguration",
+      "lambda:GetLayerVersion",
       "lambda:PublishVersion",
       "lambda:CreateAlias",
       "lambda:GetAlias",
@@ -133,6 +134,18 @@ data "aws_iam_policy_document" "lambda_policy" {
     ]
     resources = [
       "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${var.project_name}-outbox-stream-handler-${var.env}-*"
+    ]
+  }
+  
+  statement {
+    effect = "Allow"
+    actions = [
+      "lambda:GetLayerVersion",
+      "lambda:ListLayers",
+      "lambda:ListLayerVersions"
+    ]
+    resources = [
+      "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:layer:${var.project_name}-shared-ts-layer-${var.env}:*"
     ]
   }
 }

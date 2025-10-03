@@ -14,26 +14,48 @@ phases:
 
   pre_build:
     commands:
-      # 1) Construir shared-ts y generar Prisma allí
+      # 1) Construir shared-ts y generar Prisma **5.16.1**
       - |
         bash -lc '
           set -euo pipefail
           echo "[INFO] build shared-ts"
           cd "$CODEBUILD_SRC_DIR/packages/shared-ts"
+
+          # Instalar dependencias del paquete
           npm ci
-          DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}" npx -y prisma@5.22.0 generate
+
+          # Comprobar versión instalada de @prisma/client
+          PRISMA_CLIENT_VERSION="$(node -e "console.log(require(\"@prisma/client/package.json\").version)")"
+          echo "[INFO] @prisma/client instalado: ${PRISMA_CLIENT_VERSION}"
+
+          if [ "${PRISMA_CLIENT_VERSION}" != "5.16.1" ]; then
+            echo "[ERROR] Se requiere @prisma/client 5.16.1 y está ${PRISMA_CLIENT_VERSION}"
+            exit 2
+          fi
+
+          # Generar client con la MISMA versión (5.16.1)
+          DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}" \
+          npx -y prisma@5.16.1 generate
+
+          # Build del paquete
           npm run build
           npm prune --omit=dev
+
+          # Armar layer temporal
           mkdir -p /tmp/layer/nodejs
           cp -a dist /tmp/layer/nodejs/
           cp package.json /tmp/layer/nodejs/
+
+          # (opcional) si tenés root node_modules, lo copiamos al layer
           if [ -d "$CODEBUILD_SRC_DIR/node_modules" ]; then
             mkdir -p /tmp/layer/nodejs/node_modules
             cp -a "$CODEBUILD_SRC_DIR/node_modules/." /tmp/layer/nodejs/node_modules/
           fi
+
+          echo "[INFO] Prisma Client generado en shared-ts con 5.16.1"
         '
 
-      # 2) Instalar deps del servicio (SIN prisma generate aquí)
+      # 2) Instalar deps del servicio
       - |
         bash -lc '
           set -euo pipefail
@@ -42,21 +64,26 @@ phases:
           npm ci
         '
 
-      # 3) Configurar NODE_PATH para que los tests usen el layer + root node_modules
+      # 3) Configurar NODE_PATH para que Jest/Node resuelvan el layer
       - |
         bash -lc '
           set -euo pipefail
           echo "[INFO] configurar NODE_PATH para tests"
           cd "$CODEBUILD_SRC_DIR/services/signature-service"
+
           export NODE_PATH="/tmp/layer/nodejs:/tmp/layer/nodejs/node_modules:$CODEBUILD_SRC_DIR/node_modules:$(npm root)"
           node -e "require(\"module\").Module._initPaths()"
+
+          # Forzar que no tome el paquete local (usará el del layer)
           rm -rf node_modules/@lawprotect/shared-ts || true
+
           node -e "console.log(require.resolve(\"@prisma/client\") ? \"@prisma/client OK\" : \"@prisma/client NO\")"
           node -e "console.log(require.resolve(\"@lawprotect/shared-ts\") ? \"shared-ts OK\" : \"shared-ts NO\")"
         '
 
   build:
     commands:
+      # 4) Tests con el layer y Prisma 5.16.1
       - |
         bash -lc '
           set -euo pipefail
@@ -66,23 +93,27 @@ phases:
           node -e "require(\"module\").Module._initPaths()"
           npm run test:unit:coverage
         '
+
+      # 5) Compilar TS y limpiar dev deps del servicio
       - |
         bash -lc '
           set -euo pipefail
-          echo "[INFO] build TS y prune"
+          echo "[INFO] build TypeScript"
           cd "$CODEBUILD_SRC_DIR/services/signature-service"
           npm run build
           npm prune --omit=dev
           rm -rf node_modules/@lawprotect/shared-ts || true
         '
+
+      # 6) Empaquetar handlers (ajusta la lista si hace falta)
       - |
         bash -lc '
           set -euo pipefail
-          echo "[INFO] empaquetar handlers"
+          echo "[INFO] empaquetado de handlers"
           cd "$CODEBUILD_SRC_DIR/services/signature-service"
           handlers=(create-envelope get-envelope send-envelope sign-document decline-signer share-document send-notification get-audit-trail get-envelopes-by-user update-envelope cancel-envelope download-document)
           for h in "${handlers[@]}"; do
-            echo "Empaquetando sign-$h.zip"
+            echo "Packaging sign-$h.zip"
             mkdir -p "temp-$h"
             cp -a "dist/handlers/$h/." "temp-$h/"
             cp package.json "temp-$h/"
@@ -93,5 +124,5 @@ phases:
 
 artifacts:
   files:
-    - services/signature-service/sign-*.zip
+    - 'services/signature-service/sign-*.zip'
   discard-paths: yes
