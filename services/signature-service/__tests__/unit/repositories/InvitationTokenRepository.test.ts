@@ -322,7 +322,7 @@ describe('InvitationTokenRepository - Internal Methods', () => {
         tokenOps,
         expect.any(Object),
         10,
-        decoded,
+        decoded.id,
         expect.any(Object)
       );
     });

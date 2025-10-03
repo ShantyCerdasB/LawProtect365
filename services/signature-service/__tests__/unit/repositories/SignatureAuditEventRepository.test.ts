@@ -412,7 +412,7 @@ describe('SignatureAuditEventRepository - Public Methods', () => {
         auditEventOps,
         repository['whereFromSpec'](spec),
         limit,
-        { createdAt: fixedDate, id: 'id-123' },
+        'id-123',
         expect.objectContaining({
           orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
           cursorFields: ['createdAt', 'id'],

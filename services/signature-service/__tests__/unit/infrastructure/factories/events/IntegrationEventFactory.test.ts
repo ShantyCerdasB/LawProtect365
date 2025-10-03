@@ -5,7 +5,8 @@ function createMockEnvelope() {
   return {
     getId: jest.fn(() => ({ getValue: () => 'test-envelope-id' })),
     getTitle: jest.fn(() => 'Test Envelope'),
-    getCreatedBy: jest.fn(() => 'test-user-id')
+    getCreatedBy: jest.fn(() => 'test-user-id'),
+    getStatus: jest.fn(() => ({ getValue: () => 'CANCELLED' }))
   };
 }
 

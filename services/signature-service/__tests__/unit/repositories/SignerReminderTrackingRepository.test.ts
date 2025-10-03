@@ -418,7 +418,7 @@ describe('SignerReminderTrackingRepository - CRUD Operations', () => {
         trackingOps,
         expect.any(Object),
         10,
-        decoded,
+        decoded.id,
         expect.any(Object)
       );
     });
@@ -437,7 +437,7 @@ describe('SignerReminderTrackingRepository - CRUD Operations', () => {
         trackingOps,
         expect.any(Object),
         10,
-        decoded,
+        decoded.id,
         expect.any(Object)
       );
     });
@@ -456,7 +456,7 @@ describe('SignerReminderTrackingRepository - CRUD Operations', () => {
         trackingOps,
         expect.any(Object),
         10,
-        decoded,
+        decoded.id,
         expect.any(Object)
       );
     });
@@ -475,7 +475,7 @@ describe('SignerReminderTrackingRepository - CRUD Operations', () => {
         trackingOps,
         expect.any(Object),
         10,
-        decoded,
+        decoded.id,
         expect.any(Object)
       );
     });
@@ -494,7 +494,7 @@ describe('SignerReminderTrackingRepository - CRUD Operations', () => {
         trackingOps,
         expect.any(Object),
         10,
-        decoded,
+        decoded.id,
         expect.any(Object)
       );
     });

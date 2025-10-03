@@ -20,11 +20,13 @@ module.exports = {
 
   // Service-local alias without duplicating base mappers
   moduleNameMapper: {
+    // Mock AWS modules that are not available in test environment - MUST come first
+    '^@aws/lambda-invoke-store$': '<rootDir>/__tests__/mocks/@aws/lambda-invoke-store.ts',
+    // Mock uuid module to prevent ES modules issues
+    '^uuid$': '<rootDir>/__tests__/mocks/uuid.ts',
     ...baseConfig.moduleNameMapper,
     '^@/(.*)\\.js$': '<rootDir>/src/$1',
     '^@/(.*)$': '<rootDir>/src/$1',
-    // Mock AWS modules that are not available in test environment
-    '^@aws/lambda-invoke-store$': '<rootDir>/__tests__/mocks/@aws/lambda-invoke-store.ts',
   },
 };
 
