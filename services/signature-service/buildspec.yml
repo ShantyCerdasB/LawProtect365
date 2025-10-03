@@ -5,10 +5,7 @@ phases:
     runtime-versions:
       nodejs: 20
     commands:
-      - |
-        set -euo pipefail
-        echo "Using Node: $(node -v)"
-        echo "Using npm: $(npm -v)"
+      - 'bash -lc "set -euo pipefail; echo Using Node: $(node -v); echo Using npm: $(npm -v)"'
 
   pre_build:
     commands:
