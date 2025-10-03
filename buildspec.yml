@@ -5,98 +5,95 @@ phases:
     runtime-versions:
       nodejs: 20
     commands:
-      - |
-        set -euo pipefail
-        echo "Using Node: $(node -v)"
-        echo "Using npm: $(npm -v)"
+      - 'bash -lc "set -euo pipefail; echo Using Node: $(node -v); echo Using npm: $(npm -v)"'
 
   pre_build:
     commands:
       - |
-        set -euo pipefail
-        echo ">>> Building shared-ts layer..."
-        test -d "$CODEBUILD_SRC_DIR/packages/shared-ts" || { echo "shared-ts not found"; exit 2; }
-        cd "$CODEBUILD_SRC_DIR/packages/shared-ts"
+        bash -lc "set -euo pipefail
+        echo '>>> Building shared-ts layer...'
+        test -d \"$CODEBUILD_SRC_DIR/packages/shared-ts\" || { echo 'shared-ts not found'; exit 2; }
+        cd \"$CODEBUILD_SRC_DIR/packages/shared-ts\"
         npm ci
-        DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}" npx -y prisma@5.22.0 generate
+        DATABASE_URL=\"\${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}\" npx -y prisma@5.22.0 generate
         npm run build
         npm prune --omit=dev
         mkdir -p /tmp/layer/nodejs
         cp -a dist /tmp/layer/nodejs/
         cp package.json /tmp/layer/nodejs/
-        if [ -d "$CODEBUILD_SRC_DIR/node_modules" ]; then
+        if [ -d \"$CODEBUILD_SRC_DIR/node_modules\" ]; then
           mkdir -p /tmp/layer/nodejs/node_modules
-          cp -a "$CODEBUILD_SRC_DIR/node_modules/." /tmp/layer/nodejs/node_modules/
+          cp -a \"$CODEBUILD_SRC_DIR/node_modules/.\" /tmp/layer/nodejs/node_modules/
         else
-          echo "root node_modules not found"
+          echo 'root node_modules not found'
           exit 2
-        fi
+        fi"
 
   build:
     commands:
       - |
-        set -euo pipefail
+        bash -lc "set -euo pipefail
         cd /tmp/layer
         zip -r shared-ts-layer.zip .
-        aws s3 cp shared-ts-layer.zip "s3://$CODE_BUCKET/shared-ts-layer.zip"
+        aws s3 cp shared-ts-layer.zip \"s3://$CODE_BUCKET/shared-ts-layer.zip\""
       - |
-        set -euo pipefail
-        cd "$CODEBUILD_SRC_DIR"
+        bash -lc "set -euo pipefail
+        cd \"$CODEBUILD_SRC_DIR\"
         mkdir -p outbox-stream-handler
-        if [ -f "/tmp/layer/nodejs/dist/lambdas/OutboxStreamHandler.js" ]; then
+        if [ -f \"/tmp/layer/nodejs/dist/lambdas/OutboxStreamHandler.js\" ]; then
           cp /tmp/layer/nodejs/dist/lambdas/OutboxStreamHandler.js outbox-stream-handler/
         else
-          echo 'const { outboxStreamHandler } = require("@lawprotect/shared-ts");' > outbox-stream-handler/index.js
+          echo 'const { outboxStreamHandler } = require(\"@lawprotect/shared-ts\");' > outbox-stream-handler/index.js
           echo 'exports.handler = outboxStreamHandler;' >> outbox-stream-handler/index.js
         fi
         cp /tmp/layer/nodejs/package.json outbox-stream-handler/
         (cd outbox-stream-handler && zip -r ../outbox-stream-handler.zip .)
-        rm -rf outbox-stream-handler
+        rm -rf outbox-stream-handler"
       - |
-        set +e
+        bash -lc "set +e
         L_ERR=0
-        FUNCTION_NAME="${OUTBOX_FUNCTION_NAME}"
-        ALIAS_NAME="${OUTBOX_ALIAS_NAME}"
-        if [ -z "$FUNCTION_NAME" ] || [ -z "$ALIAS_NAME" ]; then
+        FUNCTION_NAME=\"${OUTBOX_FUNCTION_NAME}\"
+        ALIAS_NAME=\"${OUTBOX_ALIAS_NAME}\"
+        if [ -z \"$FUNCTION_NAME\" ] || [ -z \"$ALIAS_NAME\" ]; then
           L_ERR=1
         fi
-        aws s3 cp outbox-stream-handler.zip "s3://$CODE_BUCKET/outbox-stream-handler.zip" || L_ERR=1
-        if [ "$L_ERR" -eq 0 ]; then
-          aws lambda update-function-code --function-name "$FUNCTION_NAME" --s3-bucket "$CODE_BUCKET" --s3-key "outbox-stream-handler.zip" >/dev/null || L_ERR=1
+        aws s3 cp outbox-stream-handler.zip \"s3://$CODE_BUCKET/outbox-stream-handler.zip\" || L_ERR=1
+        if [ \"$L_ERR\" -eq 0 ]; then
+          aws lambda update-function-code --function-name \"$FUNCTION_NAME\" --s3-bucket \"$CODE_BUCKET\" --s3-key \"outbox-stream-handler.zip\" >/dev/null || L_ERR=1
         fi
-        if [ "$L_ERR" -eq 0 ]; then
-          aws lambda wait function-updated --function-name "$FUNCTION_NAME" || L_ERR=1
+        if [ \"$L_ERR\" -eq 0 ]; then
+          aws lambda wait function-updated --function-name \"$FUNCTION_NAME\" || L_ERR=1
         fi
-        if [ "$L_ERR" -eq 0 ]; then
-          TARGET_VERSION=$(aws lambda publish-version --function-name "$FUNCTION_NAME" --query Version --output text 2>/dev/null)
-          if [ -z "$TARGET_VERSION" ] || [ "$TARGET_VERSION" = "null" ]; then
+        if [ \"$L_ERR\" -eq 0 ]; then
+          TARGET_VERSION=\$(aws lambda publish-version --function-name \"$FUNCTION_NAME\" --query Version --output text 2>/dev/null)
+          if [ -z \"$TARGET_VERSION\" ] || [ \"$TARGET_VERSION\" = \"null\" ]; then
             L_ERR=1
           fi
         fi
-        if [ "$L_ERR" -eq 0 ]; then
-          CURR=$(aws lambda get-alias --function-name "$FUNCTION_NAME" --name "$ALIAS_NAME" --query FunctionVersion --output text 2>/dev/null)
-          if [ -z "$CURR" ] || [ "$CURR" = "null" ]; then
-            aws lambda create-alias --function-name "$FUNCTION_NAME" --name "$ALIAS_NAME" --function-version "$TARGET_VERSION" >/dev/null || L_ERR=1
-            CURRENT_VERSION="$TARGET_VERSION"
+        if [ \"$L_ERR\" -eq 0 ]; then
+          CURR=\$(aws lambda get-alias --function-name \"$FUNCTION_NAME\" --name \"$ALIAS_NAME\" --query FunctionVersion --output text 2>/dev/null)
+          if [ -z \"$CURR\" ] || [ \"$CURR\" = \"null\" ]; then
+            aws lambda create-alias --function-name \"$FUNCTION_NAME\" --name \"$ALIAS_NAME\" --function-version \"$TARGET_VERSION\" >/dev/null || L_ERR=1
+            CURRENT_VERSION=\"$TARGET_VERSION\"
           else
-            CURRENT_VERSION="$CURR"
+            CURRENT_VERSION=\"$CURR\"
           fi
         fi
-        printf "%s\n" \
-          "version: 0.0" \
-          "Resources:" \
-          "  - OutboxHandler:" \
-          "      Type: AWS::Lambda::Function" \
-          "      Properties:" \
-          "        Name: \"$FUNCTION_NAME\"" \
-          "        Alias: \"$ALIAS_NAME\"" \
-          "        CurrentVersion: \"${CURRENT_VERSION:-1}\"" \
-          "        TargetVersion: \"${TARGET_VERSION:-1}\"" \
-          > "$CODEBUILD_SRC_DIR/appspec.yml"
-        if [ "$L_ERR" -ne 0 ]; then
+        printf \"%s\\n\" \\
+          \"version: 0.0\" \\
+          \"Resources:\" \\
+          \"  - OutboxHandler:\" \\
+          \"      Type: AWS::Lambda::Function\" \\
+          \"      Properties:\" \\
+          \"        Name: \\\"$FUNCTION_NAME\\\"\" \\
+          \"        Alias: \\\"$ALIAS_NAME\\\"\" \\
+          \"        CurrentVersion: \\\"\${CURRENT_VERSION:-1}\\\"\" \\
+          \"        TargetVersion: \\\"\${TARGET_VERSION:-1}\\\"\" \\
+          > \"$CODEBUILD_SRC_DIR/appspec.yml\"
+        if [ \"$L_ERR\" -ne 0 ]; then
           exit 1
         fi
-        set -e
+        set -e"
 
 artifacts:
   files:

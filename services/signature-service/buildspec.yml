@@ -9,79 +9,69 @@ phases:
 
   pre_build:
     commands:
-      - echo ">>> Building in-repo layer for @lawprotect/shared-ts (for tests)..."
-      - |
+      - echo ">>> Construyendo layer local de @lawprotect/shared-ts (para tests)..."
+      - >
+        bash -lc '
         set -euo pipefail
         cd "$CODEBUILD_SRC_DIR/packages/shared-ts"
-
-        # Instala deps del paquete (los workspaces se hoistean a la raíz)
         npm ci
-
-        # Genera Prisma Client usando la misma versión de CLI que el client generado (5.22.0)
         DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}" npx -y prisma@5.22.0 generate
-
-        # Build de shared-ts y limpieza de dev deps
         npm run build
         npm prune --omit=dev
-
-        # Arma el layer temporal
         mkdir -p /tmp/layer/nodejs
         cp -a dist /tmp/layer/nodejs/
         cp package.json /tmp/layer/nodejs/
-
-        # IMPORTANTE: copiar node_modules de la RAÍZ (workspaces) al layer
         if [ -d "$CODEBUILD_SRC_DIR/node_modules" ]; then
           mkdir -p /tmp/layer/nodejs/node_modules
           cp -a "$CODEBUILD_SRC_DIR/node_modules/." /tmp/layer/nodejs/node_modules/
         else
-          echo "ERROR: root node_modules not found"; exit 2
+          echo "root node_modules not found"; exit 2
         fi
-
-      - echo ">>> Install signature-service deps..."
-      - |
+        '
+      - echo ">>> Instalando dependencias de signature-service..."
+      - >
+        bash -lc '
         set -euo pipefail
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
         npm ci
-
-      - echo ">>> Configure NODE_PATH to use shared layer during tests"
-      - |
+        '
+      - echo ">>> Configurando NODE_PATH para usar el layer durante tests..."
+      - >
+        bash -lc '
         set -euo pipefail
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
-
-        # Apunta resoluciones a: layer + node_modules del layer + node_modules raíz + node_modules del paquete
         export NODE_PATH="/tmp/layer/nodejs:/tmp/layer/nodejs/node_modules:$CODEBUILD_SRC_DIR/node_modules:$(npm root)"
-        node -e "require('module').Module._initPaths()"
-        echo "NODE_PATH=$NODE_PATH"
-
-        # Asegurar que el servicio no tome el paquete local (usará el layer)
+        node -e "require(\"module\").Module._initPaths()"
         rm -rf node_modules/@lawprotect/shared-ts || true
-
-        echo ">>> Sanity check layer"
         ls -la /tmp/layer/nodejs || true
         ls -la /tmp/layer/nodejs/node_modules/@prisma || true
         ls -la /tmp/layer/nodejs/node_modules/@prisma/client || true
-        node -e "console.log(require.resolve('@lawprotect/shared-ts') ? 'resolve OK' : 'resolve FAIL')"
+        node -e "console.log(require.resolve(\"@lawprotect/shared-ts\")?\"resolve OK\":\"resolve FAIL\")"
+        '
 
   build:
     commands:
-      - echo ">>> Running unit tests (layer-backed shared-ts + prisma)..."
-      - |
+      - echo ">>> Ejecutando tests unitarios..."
+      - >
+        bash -lc '
         set -euo pipefail
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
         export NODE_PATH="/tmp/layer/nodejs:/tmp/layer/nodejs/node_modules:$CODEBUILD_SRC_DIR/node_modules:$(npm root)"
-        node -e "require('module').Module._initPaths()"
+        node -e "require(\"module\").Module._initPaths()"
         npm run test:unit:coverage
-
-      - echo ">>> TypeScript build..."
-      - |
+        '
+      - echo ">>> Compilando TypeScript..."
+      - >
+        bash -lc '
         set -euo pipefail
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
         npm run build
         npm prune --omit=dev
         rm -rf node_modules/@lawprotect/shared-ts || true
-
-      - echo ">>> Packaging handlers..."
-      - |
+        '
+      - echo ">>> Empaquetando handlers..."
+      - >
+        bash -lc '
         set -euo pipefail
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
         handlers=(create-envelope get-envelope send-envelope sign-document decline-signer share-document send-notification get-audit-trail get-envelopes-by-user update-envelope cancel-envelope download-document)
@@ -93,6 +83,7 @@ phases:
           (cd "temp-$handler" && zip -r "../sign-$handler.zip" .)
           rm -rf "temp-$handler"
         done
+        '
 
 artifacts:
   files:
