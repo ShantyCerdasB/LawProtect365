@@ -239,7 +239,7 @@ export class SignerReminderTrackingRepository extends RepositoryBase<SignerRemin
           d ? { id: d.id, createdAt: d.createdAt instanceof Date ? d.createdAt : new Date(d.createdAt) } : undefined,
       };
 
-      const { rows, nextCursor } = await listPage(client.signerReminderTracking, where, limit, decoded, cfg);
+      const { rows, nextCursor } = await listPage(client.signerReminderTracking, where, limit, decoded?.id, cfg);
       return { items: rows.map(r => this.toDomain(r as TrackingModel)), nextCursor };
     } catch (error) {
       throw repositoryError({ operation: 'list', spec, cause: error });

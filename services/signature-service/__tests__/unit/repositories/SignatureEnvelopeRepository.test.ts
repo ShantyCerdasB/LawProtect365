@@ -606,7 +606,7 @@ describe('SignatureEnvelopeRepository - Public Methods', () => {
         envelopeOps,
         expect.any(Object), // whereFromSpec returns empty object for empty spec
         limit,
-        '1',
+        { createdAt: fixedDate, id: '1' },
         expect.objectContaining({
           orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
           cursorFields: ['createdAt', 'id'],
