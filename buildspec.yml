@@ -22,15 +22,17 @@ phases:
             echo "always-auth=true" >> ~/.npmrc
           fi
         fi
-      - 'cd packages/shared-ts'
-      - 'npm ci'
+      - '[ -d "$CODEBUILD_SRC_DIR/packages/shared-ts" ] || { echo "shared-ts not found"; exit 2; }'
+      - 'cd "$CODEBUILD_SRC_DIR/packages/shared-ts"'
+      - 'pwd; ls -la'
+      - 'npm ci --omit=dev'
       - 'DATABASE_URL="postgresql://user:pass@localhost:5432/postgres?schema=public" npx prisma generate'
       - 'npm run build'
-      - 'cd -'
-      - 'rm -rf /tmp/layer && mkdir -p /tmp/layer/nodejs'
-      - 'cp -R packages/shared-ts/dist /tmp/layer/nodejs/'
-      - 'cp -R packages/shared-ts/node_modules /tmp/layer/nodejs/'
-      - 'echo "Layer contents after npm install:" && ls -la /tmp/layer/nodejs/'
+      - 'mkdir -p /tmp/layer/nodejs'
+      - 'cp -R dist /tmp/layer/nodejs/'
+      - 'cp package.json /tmp/layer/nodejs/'
+      - '[ -d "node_modules" ] && cp -R node_modules /tmp/layer/nodejs/ || echo "No local node_modules, using hoisted deps"'
+      - 'echo "Layer contents after copy:" && ls -la /tmp/layer/nodejs/'
 
   build:
     commands:

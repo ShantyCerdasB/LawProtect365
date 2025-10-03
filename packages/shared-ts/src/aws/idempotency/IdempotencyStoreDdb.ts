@@ -87,7 +87,7 @@ export class IdempotencyStoreDdb implements IdempotencyStore {
    * @returns Full record or null when not found.
    * @throws Normalized HttpError via `mapAwsError`.
    */
-  async getRecord(key: string): Promise<import("@lawprotect/shared-ts").IdempotencyRecord | null> {
+  async getRecord(key: string): Promise<import("../../contracts/index.js").IdempotencyRecord | null> {
     try {
       const res = await this.ddb.get({
         TableName: this.tableName,

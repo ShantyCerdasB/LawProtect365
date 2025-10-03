@@ -9,44 +9,44 @@ phases:
       
   pre_build:
     commands:
-      - 'echo Building signature-service...'
-      - 'echo "Building shared-ts first..."'
-      - 'cd ../../packages/shared-ts'
+      - 'echo "Build shared-ts first..."'
+      - '[ -d "$CODEBUILD_SRC_DIR/packages/shared-ts" ] || { echo "shared-ts not found"; exit 2; }'
+      - 'cd "$CODEBUILD_SRC_DIR/packages/shared-ts"'
+      - 'pwd; ls -la'
       - 'npm ci'
       - 'DATABASE_URL="postgresql://user:pass@localhost:5432/postgres?schema=public" npx prisma generate'
       - 'npm run build'
-      - 'cd -'
-      - 'echo "Installing signature-service dependencies..."'
+      - 'cd "$CODEBUILD_SRC_DIR"'
+      - 'echo "Install signature-service deps..."'
+      - '[ -d "$CODEBUILD_SRC_DIR/services/signature-service" ] || { echo "signature-service not found"; exit 2; }'
+      - 'cd "$CODEBUILD_SRC_DIR/services/signature-service"'
+      - 'pwd; ls -la'
+      - 'npm pkg set overrides.@lawprotect/shared-ts="file:../../packages/shared-ts"'
       - 'npm ci'
-      - 'echo "Linking shared-ts as local dependency..."'
-      - 'npm pkg set dependencies.@lawprotect/shared-ts="file:../../packages/shared-ts"'
-      - 'npm install'
-      - 'echo "Creating symlink for Jest resolution..."'
-      - 'mkdir -p node_modules/@lawprotect'
-      - 'ln -sf ../../../packages/shared-ts node_modules/@lawprotect/shared-ts'
-      - 'echo "Generating Prisma Client in service..."'
       - 'npx prisma generate --schema ../../packages/shared-ts/prisma/schema.prisma'
+      - 'node -e "console.log(\"shared-ts pkg:\", require.resolve(\"@lawprotect/shared-ts/package.json\"))"'
+      - 'node -e "console.log(\"prisma client:\", require.resolve(\"@prisma/client\"))"'
       
   build:
     commands:
-      - 'cd services/signature-service'
+      - 'cd "$CODEBUILD_SRC_DIR/services/signature-service"'
       - 'npm run test:unit:coverage'
       - 'npm run build'
-      - 'echo "Cleaning up local shared-ts dependency..."'
       - 'npm prune --omit=dev'
       - 'rm -rf node_modules/@lawprotect/shared-ts'
       - 'echo "Runtime will use Lambda layer for @lawprotect/shared-ts"'
       - |
         handlers=("create-envelope" "get-envelope" "send-envelope" "sign-document" "decline-signer" "share-document" "send-notification" "get-audit-trail" "get-envelopes-by-user" "update-envelope" "cancel-envelope" "download-document")
         for handler in "${handlers[@]}"; do
-          echo "Creating sign-$handler.zip..."
+          echo "Packaging sign-$handler.zip"
           mkdir -p temp-$handler
           cp -r dist/handlers/$handler/* temp-$handler/
           cp package.json temp-$handler/
-          cd temp-$handler && zip -r ../sign-$handler.zip . && cd ..
+          (cd temp-$handler && zip -r ../sign-$handler.zip .)
           rm -rf temp-$handler
         done
 
 artifacts:
   files:
-    - 'sign-*.zip'
+    - 'services/signature-service/sign-*.zip'
+  discard-paths: yes
