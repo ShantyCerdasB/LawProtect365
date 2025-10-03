@@ -4,14 +4,11 @@ phases:
   install:
     runtime-versions:
       nodejs: 20
-    commands:
-      - 'bash -lc "set -euo pipefail; echo Using Node: $(node -v); echo Using npm: $(npm -v)"'
 
   pre_build:
     commands:
       - |
         bash -lc "set -euo pipefail
-        echo '>>> Building shared-ts layer...'
         test -d \"$CODEBUILD_SRC_DIR/packages/shared-ts\" || { echo 'shared-ts not found'; exit 2; }
         cd \"$CODEBUILD_SRC_DIR/packages/shared-ts\"
         npm ci
@@ -58,77 +55,40 @@ phases:
           L_ERR=1
         fi
         
-        # Siempre actualizar la función
-        
         aws s3 cp outbox-stream-handler.zip "s3://$CODE_BUCKET/outbox-stream-handler.zip" || L_ERR=1
         if [ "$L_ERR" -eq 0 ]; then
           aws lambda update-function-code --function-name "$FUNCTION_NAME" --s3-bucket "$CODE_BUCKET" --s3-key "outbox-stream-handler.zip" >/dev/null || L_ERR=1
         fi
         if [ "$L_ERR" -eq 0 ]; then
-          echo ">>> DEBUG: Esperando que la función termine de actualizarse..."
           aws lambda wait function-updated --function-name "$FUNCTION_NAME" || L_ERR=1
-          if [ "$L_ERR" -eq 0 ]; then
-            echo ">>> DEBUG: Función actualizada, ahora asociando layer..."
-          else
-            echo ">>> DEBUG: ERROR - Falló wait function-updated después de update-code"
-          fi
         fi
         if [ "$L_ERR" -eq 0 ]; then
-          echo ">>> DEBUG: Asociando layer shared-ts a la función Lambda..."
           LAYER_ARN="${SHARED_TS_LAYER_ARN}"
-          echo ">>> DEBUG: SHARED_TS_LAYER_ARN=$LAYER_ARN"
           if [ -n "$LAYER_ARN" ]; then
-            echo ">>> DEBUG: Ejecutando update-function-configuration..."
             aws lambda update-function-configuration --function-name "$FUNCTION_NAME" --layers "$LAYER_ARN" >/dev/null || L_ERR=1
-            if [ "$L_ERR" -eq 0 ]; then
-              echo ">>> DEBUG: Layer asociado exitosamente: $LAYER_ARN"
-            else
-              echo ">>> DEBUG: ERROR - Falló update-function-configuration"
-            fi
           else
-            echo ">>> DEBUG: ERROR - SHARED_TS_LAYER_ARN no está definido"
             L_ERR=1
           fi
-        else
-          echo ">>> DEBUG: Saltando asociación de layer - L_ERR=$L_ERR"
         fi
-        # Ya esperamos después de update-function-code, no necesitamos esperar de nuevo
         if [ "$L_ERR" -eq 0 ]; then
-          echo ">>> DEBUG: Publicando nueva versión..."
           TARGET_VERSION=$(aws lambda publish-version --function-name "$FUNCTION_NAME" --query Version --output text 2>/dev/null)
-          echo ">>> DEBUG: TARGET_VERSION=$TARGET_VERSION"
           if [ -z "$TARGET_VERSION" ] || [ "$TARGET_VERSION" = "null" ]; then
-            echo ">>> DEBUG: No se pudo publicar nueva versión, forzando publicación..."
-            # Forzar publicación con descripción única
             TIMESTAMP=$(date +%s)
             TARGET_VERSION=$(aws lambda publish-version --function-name "$FUNCTION_NAME" --description "Build-${TIMESTAMP}" --query Version --output text 2>/dev/null)
-            echo ">>> DEBUG: TARGET_VERSION forzado: $TARGET_VERSION"
             if [ -z "$TARGET_VERSION" ] || [ "$TARGET_VERSION" = "null" ]; then
-              echo ">>> DEBUG: ERROR - No se pudo publicar versión ni siquiera forzando"
               L_ERR=1
-            else
-              echo ">>> DEBUG: Versión forzada exitosamente: $TARGET_VERSION"
             fi
-          else
-            echo ">>> DEBUG: Versión publicada exitosamente: $TARGET_VERSION"
           fi
-        else
-          echo ">>> DEBUG: Saltando publish-version - L_ERR=$L_ERR"
         fi
         if [ "$L_ERR" -eq 0 ]; then
-          # Obtener la versión actual del ALIAS (no de la función)
           CURRENT_VERSION=$(aws lambda get-alias --function-name "$FUNCTION_NAME" --name "$ALIAS_NAME" --query FunctionVersion --output text 2>/dev/null)
           if [ -z "$CURRENT_VERSION" ] || [ "$CURRENT_VERSION" = "null" ] || [ "$CURRENT_VERSION" = "\$LATEST" ]; then
-            echo ">>> DEBUG: Alias no existe o es \$LATEST, creando alias con versión $TARGET_VERSION"
             aws lambda create-alias --function-name "$FUNCTION_NAME" --name "$ALIAS_NAME" --function-version "$TARGET_VERSION" >/dev/null || L_ERR=1
             CURRENT_VERSION="$TARGET_VERSION"
           fi
-          echo ">>> DEBUG: CURRENT_VERSION from alias: $CURRENT_VERSION"
         fi
-        # Asegurar que las versiones sean enteros válidos
         CURRENT_VERSION_INT=${CURRENT_VERSION:-1}
         TARGET_VERSION_INT=${TARGET_VERSION:-1}
-        echo ">>> DEBUG: CURRENT_VERSION_INT=$CURRENT_VERSION_INT, TARGET_VERSION_INT=$TARGET_VERSION_INT"
         printf "%s\n" \
           "version: 0.0" \
           "Resources:" \
@@ -140,14 +100,8 @@ phases:
           "        CurrentVersion: $CURRENT_VERSION_INT" \
           "        TargetVersion: $TARGET_VERSION_INT" \
           > "$CODEBUILD_SRC_DIR/appspec.yml"
-        echo ">>> DEBUG: AppSpec generado:"
-        cat "$CODEBUILD_SRC_DIR/appspec.yml"
-        echo ">>> DEBUG: Estado final - L_ERR=$L_ERR"
         if [ "$L_ERR" -ne 0 ]; then
-          echo ">>> DEBUG: ERROR FINAL - Saliendo con código 1"
           exit 1
-        else
-          echo ">>> DEBUG: ÉXITO - Build completado sin errores"
         fi
         set -e
 
