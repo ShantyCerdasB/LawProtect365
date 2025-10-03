@@ -62,6 +62,15 @@ phases:
           aws lambda update-function-code --function-name "$FUNCTION_NAME" --s3-bucket "$CODE_BUCKET" --s3-key "outbox-stream-handler.zip" >/dev/null || L_ERR=1
         fi
         if [ "$L_ERR" -eq 0 ]; then
+          echo ">>> DEBUG: Esperando que la función termine de actualizarse..."
+          aws lambda wait function-updated --function-name "$FUNCTION_NAME" || L_ERR=1
+          if [ "$L_ERR" -eq 0 ]; then
+            echo ">>> DEBUG: Función actualizada, ahora asociando layer..."
+          else
+            echo ">>> DEBUG: ERROR - Falló wait function-updated después de update-code"
+          fi
+        fi
+        if [ "$L_ERR" -eq 0 ]; then
           echo ">>> DEBUG: Asociando layer shared-ts a la función Lambda..."
           LAYER_ARN="${SHARED_TS_LAYER_ARN}"
           echo ">>> DEBUG: SHARED_TS_LAYER_ARN=$LAYER_ARN"
@@ -80,17 +89,7 @@ phases:
         else
           echo ">>> DEBUG: Saltando asociación de layer - L_ERR=$L_ERR"
         fi
-        if [ "$L_ERR" -eq 0 ]; then
-          echo ">>> DEBUG: Esperando que la función se actualice..."
-          aws lambda wait function-updated --function-name "$FUNCTION_NAME" || L_ERR=1
-          if [ "$L_ERR" -eq 0 ]; then
-            echo ">>> DEBUG: Función actualizada exitosamente"
-          else
-            echo ">>> DEBUG: ERROR - Falló wait function-updated"
-          fi
-        else
-          echo ">>> DEBUG: Saltando wait function-updated - L_ERR=$L_ERR"
-        fi
+        # Ya esperamos después de update-function-code, no necesitamos esperar de nuevo
         if [ "$L_ERR" -eq 0 ]; then
           echo ">>> DEBUG: Publicando nueva versión..."
           TARGET_VERSION=$(aws lambda publish-version --function-name "$FUNCTION_NAME" --query Version --output text 2>/dev/null)
