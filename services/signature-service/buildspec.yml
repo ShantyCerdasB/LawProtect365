@@ -11,7 +11,7 @@ phases:
     commands:
       - echo ">>> Construyendo layer local de @lawprotect/shared-ts (para tests)..."
       - echo ">>> DEBUG: Estructura de carpetas antes de build shared-ts"
-      - echo ">>> DEBUG: CODEBUILD_SRC_DIR = $CODEBUILD_SRC_DIR"
+      - echo ">>> DEBUG: CODEBUILD_SRC_DIR = \$CODEBUILD_SRC_DIR"
       - echo ">>> DEBUG: Contenido de CODEBUILD_SRC_DIR:"
       - 'ls -la "$CODEBUILD_SRC_DIR" || echo "No se puede listar CODEBUILD_SRC_DIR"'
       - echo ">>> DEBUG: Contenido de packages:"
@@ -86,9 +86,9 @@ phases:
         echo ">>> DEBUG: Configurando NODE_PATH";
         cd "$CODEBUILD_SRC_DIR/services/signature-service";
         echo ">>> DEBUG: Directorio actual: \$(pwd)";
-        echo ">>> DEBUG: NODE_PATH antes: $NODE_PATH";
+        echo ">>> DEBUG: NODE_PATH antes: \$NODE_PATH";
         export NODE_PATH="/tmp/layer/nodejs:/tmp/layer/nodejs/node_modules:$CODEBUILD_SRC_DIR/node_modules:\$(npm root)";
-        echo ">>> DEBUG: NODE_PATH después: $NODE_PATH";
+        echo ">>> DEBUG: NODE_PATH después: \$NODE_PATH";
         echo ">>> DEBUG: Inicializando paths de módulos...";
         node -e "require(\"module\").Module._initPaths()";
         echo ">>> DEBUG: Limpiando symlinks existentes...";
@@ -112,9 +112,9 @@ phases:
         set -euo pipefail;
         cd "$CODEBUILD_SRC_DIR/services/signature-service";
         echo ">>> DEBUG: Directorio actual: \$(pwd)";
-        echo ">>> DEBUG: NODE_PATH antes: $NODE_PATH";
+        echo ">>> DEBUG: NODE_PATH antes: \$NODE_PATH";
         export NODE_PATH="/tmp/layer/nodejs:/tmp/layer/nodejs/node_modules:$CODEBUILD_SRC_DIR/node_modules:\$(npm root)";
-        echo ">>> DEBUG: NODE_PATH después: $NODE_PATH";
+        echo ">>> DEBUG: NODE_PATH después: \$NODE_PATH";
         echo ">>> DEBUG: Inicializando paths de módulos...";
         node -e "require(\"module\").Module._initPaths()";
         echo ">>> DEBUG: Probando resolución de @lawprotect/shared-ts para tests:";
