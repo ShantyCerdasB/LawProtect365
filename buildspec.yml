@@ -52,23 +52,29 @@ phases:
         rm -rf outbox-stream-handler
         echo "Created outbox-stream-handler.zip"
       - |
-        # 1) Update Lambda function code and publish new version
-        echo "Updating Lambda function code..."
-        aws lambda update-function-code \
-          --function-name lawprotect365-outbox-stream-handler-stg-stg \
-          --zip-file fileb://outbox-stream-handler.zip
+        # 1) Check if Lambda function exists
+        echo "Checking if Lambda function exists..."
+        if aws lambda get-function --function-name lawprotect365-outbox-stream-handler-stg-stg >/dev/null 2>&1; then
+          echo "Function exists, updating code..."
+          aws lambda update-function-code \
+            --function-name lawprotect365-outbox-stream-handler-stg-stg \
+            --zip-file fileb://outbox-stream-handler.zip
+          
+          echo "Publishing new version..."
+          TARGET_VERSION=$(aws lambda publish-version \
+            --function-name lawprotect365-outbox-stream-handler-stg-stg \
+            --query Version --output text)
+        else
+          echo "Function does not exist, skipping Lambda operations"
+          TARGET_VERSION="1"
+        fi
         
-        echo "Publishing new version..."
-        TARGET_VERSION=$(aws lambda publish-version \
-          --function-name lawprotect365-outbox-stream-handler-stg-stg \
-          --query Version --output text)
-        
-        # 2) Get current version from alias
+        # 2) Get current version from alias (with error handling)
         echo "Getting current version from alias..."
         CURRENT_VERSION=$(aws lambda get-alias \
           --function-name lawprotect365-outbox-stream-handler-stg-stg \
           --name outbox-stream-handler-alias \
-          --query FunctionVersion --output text)
+          --query FunctionVersion --output text 2>/dev/null || echo "1")
         
         echo "CurrentVersion=$CURRENT_VERSION  TargetVersion=$TARGET_VERSION"
         

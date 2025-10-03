@@ -13,8 +13,11 @@ phases:
       - 'npm ci'
       - 'aws s3 cp s3://$CODE_BUCKET/shared-ts-layer.zip /tmp/shared-ts-layer.zip'
       - 'cd /tmp && unzip shared-ts-layer.zip'
+      - 'echo "Layer contents:" && ls -la nodejs/'
+      - 'echo "Dist contents:" && ls -la nodejs/dist/'
       - 'mkdir -p node_modules/@lawprotect'
       - 'cp -r nodejs/dist node_modules/@lawprotect/shared-ts'
+      - 'echo "Copied layer to:" && ls -la node_modules/@lawprotect/'
       - 'cp -r nodejs/node_modules/* node_modules/ 2>/dev/null || true'
       - 'cd -'
       
