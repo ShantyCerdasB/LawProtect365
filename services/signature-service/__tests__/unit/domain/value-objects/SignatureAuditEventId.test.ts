@@ -9,7 +9,8 @@ import { TestUtils } from '../../../helpers/testUtils';
 
 function testInvalidUuid(invalidUuid: string): void {
   expect(() => {
-    new SignatureAuditEventId(invalidUuid);
+    const id = new SignatureAuditEventId(invalidUuid);
+    id.getValue(); // Use the object to avoid useless instantiation
   }).toThrow('Invalid entity');
 }
 

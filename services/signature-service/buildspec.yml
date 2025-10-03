@@ -5,19 +5,22 @@ phases:
     runtime-versions:
       nodejs: 20
     commands:
-      - echo "Node version: $(node -v)"
-      - echo "npm version: $(npm -v)"
+      - 'bash -lc "set -euo pipefail; echo Using Node: $(node -v); echo Using npm: $(npm -v)"'
       
   pre_build:
     commands:
-      - echo "Building signature-service..."
-      - cd services/signature-service
-      - npm ci
+      - 'echo Building signature-service...'
+      - 'npm ci'
+      - 'aws s3 cp s3://$CODE_BUCKET/shared-ts-layer.zip /tmp/shared-ts-layer.zip'
+      - 'cd /tmp && unzip shared-ts-layer.zip'
+      - 'cp -r nodejs/@lawprotect/shared-ts node_modules/'
+      - 'cd -'
       
   build:
     commands:
-      - npm run build
-      - npm prune --omit=dev
+      - 'npm run test:unit:coverage'
+      - 'npm run build'
+      - 'npm prune --omit=dev'
       - |
         handlers=("create-envelope" "get-envelope" "send-envelope" "sign-document" "decline-signer" "share-document" "send-notification" "get-audit-trail" "get-envelopes-by-user" "update-envelope" "cancel-envelope" "download-document")
         for handler in "${handlers[@]}"; do
@@ -31,4 +34,4 @@ phases:
 
 artifacts:
   files:
-    - sign-*.zip
+    - 'sign-*.zip'

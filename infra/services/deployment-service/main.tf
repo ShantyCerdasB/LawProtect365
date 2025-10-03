@@ -96,7 +96,9 @@ module "codedeploy_role" {
   managed_policy_arns = [
     "arn:aws:iam::aws:policy/service-role/AWSCodeDeployRoleForLambda",
   ]
-  inline_policies = {}
+  inline_policies = {
+    "s3-artifacts-access" = data.aws_iam_policy_document.s3_artifacts_policy.json
+  }
   project_name    = var.project_name
   env             = var.env
 }

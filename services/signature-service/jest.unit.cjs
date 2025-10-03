@@ -12,6 +12,16 @@ module.exports = {
   roots: ['<rootDir>'],
   testMatch: ['<rootDir>/__tests__/unit/**/*.test.ts'],
 
+  // Coverage threshold: Custom thresholds per metric
+  coverageThreshold: {
+    global: {
+      branches: 85,
+      functions: 94,
+      lines: 95,
+      statements: 95
+    }
+  },
+
   // Unit tests: no global setup/teardown or AWS mocks
   globalSetup: undefined,
   globalTeardown: undefined,
