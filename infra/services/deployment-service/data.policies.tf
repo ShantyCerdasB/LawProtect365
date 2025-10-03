@@ -104,3 +104,16 @@ data "aws_iam_policy_document" "codeartifact_policy" {
     ]
   }
 }
+
+# Secrets Manager permissions for CodeBuild
+data "aws_iam_policy_document" "secrets_manager_policy" {
+  statement {
+    effect = "Allow"
+    actions = [
+      "secretsmanager:GetSecretValue"
+    ]
+    resources = [
+      "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:lawprotect365/database-stg-*"
+    ]
+  }
+}

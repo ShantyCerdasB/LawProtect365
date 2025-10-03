@@ -75,6 +75,7 @@ module "codebuild_role" {
   inline_policies = {
     "cloudwatch-logs-access" = data.aws_iam_policy_document.cloudwatch_logs_policy.json
     "codeartifact-access" = data.aws_iam_policy_document.codeartifact_policy.json
+    "secrets-manager-access" = data.aws_iam_policy_document.secrets_manager_policy.json
   }
   project_name    = var.project_name
   env             = var.env

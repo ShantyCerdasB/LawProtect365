@@ -41,8 +41,30 @@ phases:
       - '[ -n "${CODE_BUCKET:-}" ] || { echo "ERROR: CODE_BUCKET env var is not set"; exit 1; }'
       - 'aws s3 cp shared-ts-layer.zip s3://$CODE_BUCKET/shared-ts-layer.zip'
       - 'echo Uploaded layer to s3://$CODE_BUCKET/shared-ts-layer.zip'
+      - |
+        # Create outbox-stream-handler.zip
+        echo "Creating outbox-stream-handler.zip..."
+        mkdir -p outbox-stream-handler
+        cp -r nodejs/dist/lambdas/* outbox-stream-handler/
+        cp nodejs/package.json outbox-stream-handler/
+        cd outbox-stream-handler && zip -r ../outbox-stream-handler.zip . && cd ..
+        rm -rf outbox-stream-handler
+        echo "Created outbox-stream-handler.zip"
+      - |
+        # Create appspec.yml for CodeDeploy
+        cat > appspec.yml << 'EOF'
+        version: 0.0
+        Resources:
+          - TargetService:
+              Type: AWS::Serverless::Function
+              Properties:
+                Name: "outbox-stream-handler"
+                Alias: "outbox-stream-handler-alias"
+        EOF
+        echo "Created appspec.yml for CodeDeploy"
 
 artifacts:
   files:
-    - '**/*'
+    - 'outbox-stream-handler.zip'
+    - 'appspec.yml'
   discard-paths: yes
