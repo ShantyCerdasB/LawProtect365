@@ -12,7 +12,7 @@ phases:
         test -d \"$CODEBUILD_SRC_DIR/packages/shared-ts\" || { echo 'shared-ts not found'; exit 2; }
         cd \"$CODEBUILD_SRC_DIR/packages/shared-ts\"
         npm ci
-        DATABASE_URL=\"\${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}\" npx -y prisma@5.16.1 generate
+        DATABASE_URL=\"\${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}\" npx -y prisma@5.22.0 generate
         npm run build
         npm prune --omit=dev
         mkdir -p /tmp/layer/nodejs
