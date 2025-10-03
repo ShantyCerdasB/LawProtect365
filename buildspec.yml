@@ -11,54 +11,31 @@ phases:
     commands:
       - |
         bash -lc "set -euo pipefail
-        echo '>>> Verificando si shared-ts necesita actualización...'
+        echo '>>> Building shared-ts layer...'
         test -d \"$CODEBUILD_SRC_DIR/packages/shared-ts\" || { echo 'shared-ts not found'; exit 2; }
-        
-        # Verificar si hay cambios en shared-ts desde el último commit
-        if git diff --quiet HEAD~1 HEAD -- packages/shared-ts/; then
-          echo '>>> No hay cambios en shared-ts, saltando build del layer'
-          echo 'SKIP_LAYER_BUILD=true' > /tmp/build_flags.env
+        cd \"$CODEBUILD_SRC_DIR/packages/shared-ts\"
+        npm ci
+        DATABASE_URL=\"\${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}\" npx -y prisma@5.16.1 generate
+        npm run build
+        npm prune --omit=dev
+        mkdir -p /tmp/layer/nodejs
+        cp -a dist /tmp/layer/nodejs/
+        cp package.json /tmp/layer/nodejs/
+        if [ -d \"$CODEBUILD_SRC_DIR/node_modules\" ]; then
+          mkdir -p /tmp/layer/nodejs/node_modules
+          cp -a \"$CODEBUILD_SRC_DIR/node_modules/.\" /tmp/layer/nodejs/node_modules/
         else
-          echo '>>> Hay cambios en shared-ts, construyendo layer...'
-          echo 'SKIP_LAYER_BUILD=false' > /tmp/build_flags.env
-        fi"
-      - |
-        bash -lc "set -euo pipefail
-        source /tmp/build_flags.env
-        if [ \"$SKIP_LAYER_BUILD\" = \"false\" ]; then
-          echo '>>> Building shared-ts layer...'
-          cd \"$CODEBUILD_SRC_DIR/packages/shared-ts\"
-          npm ci
-          DATABASE_URL=\"\${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}\" npx -y prisma@5.16.1 generate
-          npm run build
-          npm prune --omit=dev
-          mkdir -p /tmp/layer/nodejs
-          cp -a dist /tmp/layer/nodejs/
-          cp package.json /tmp/layer/nodejs/
-          if [ -d \"$CODEBUILD_SRC_DIR/node_modules\" ]; then
-            mkdir -p /tmp/layer/nodejs/node_modules
-            cp -a \"$CODEBUILD_SRC_DIR/node_modules/.\" /tmp/layer/nodejs/node_modules/
-          else
-            echo 'root node_modules not found'
-            exit 2
-          fi
-        else
-          echo '>>> Saltando build del layer - no hay cambios'
+          echo 'root node_modules not found'
+          exit 2
         fi"
 
   build:
     commands:
       - |
         bash -lc "set -euo pipefail
-        source /tmp/build_flags.env
-        if [ \"$SKIP_LAYER_BUILD\" = \"false\" ]; then
-          echo '>>> Subiendo layer a S3...'
-          cd /tmp/layer
-          zip -r shared-ts-layer.zip .
-          aws s3 cp shared-ts-layer.zip \"s3://$CODE_BUCKET/shared-ts-layer.zip\"
-        else
-          echo '>>> Saltando subida del layer - no hay cambios'
-        fi"
+        cd /tmp/layer
+        zip -r shared-ts-layer.zip .
+        aws s3 cp shared-ts-layer.zip \"s3://$CODE_BUCKET/shared-ts-layer.zip\""
       - |
         bash -lc "set -euo pipefail
         cd \"$CODEBUILD_SRC_DIR\"
@@ -81,13 +58,7 @@ phases:
           L_ERR=1
         fi
         
-        # Verificar si necesitamos actualizar la función
-        source /tmp/build_flags.env
-        if [ "$SKIP_LAYER_BUILD" = "true" ]; then
-          echo ">>> DEBUG: No hay cambios en shared-ts, saltando actualización de función"
-          echo ">>> DEBUG: ÉXITO - Build completado sin cambios"
-          exit 0
-        fi
+        # Siempre actualizar la función
         
         aws s3 cp outbox-stream-handler.zip "s3://$CODE_BUCKET/outbox-stream-handler.zip" || L_ERR=1
         if [ "$L_ERR" -eq 0 ]; then
