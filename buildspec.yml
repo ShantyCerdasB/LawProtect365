@@ -55,18 +55,18 @@ phases:
         # 1) Update Lambda function code and publish new version
         echo "Updating Lambda function code..."
         aws lambda update-function-code \
-          --function-name outbox-stream-handler \
+          --function-name lawprotect365-outbox-stream-handler-stg-stg \
           --zip-file fileb://outbox-stream-handler.zip
         
         echo "Publishing new version..."
         TARGET_VERSION=$(aws lambda publish-version \
-          --function-name outbox-stream-handler \
+          --function-name lawprotect365-outbox-stream-handler-stg-stg \
           --query Version --output text)
         
         # 2) Get current version from alias
         echo "Getting current version from alias..."
         CURRENT_VERSION=$(aws lambda get-alias \
-          --function-name outbox-stream-handler \
+          --function-name lawprotect365-outbox-stream-handler-stg-stg \
           --name outbox-stream-handler-alias \
           --query FunctionVersion --output text)
         
@@ -79,7 +79,7 @@ phases:
           - OutboxHandler:
               Type: AWS::Lambda::Function
               Properties:
-                Name: "outbox-stream-handler"
+                Name: "lawprotect365-outbox-stream-handler-stg-stg"
                 Alias: "outbox-stream-handler-alias"
                 CurrentVersion: "$CURRENT_VERSION"
                 TargetVersion: "$TARGET_VERSION"

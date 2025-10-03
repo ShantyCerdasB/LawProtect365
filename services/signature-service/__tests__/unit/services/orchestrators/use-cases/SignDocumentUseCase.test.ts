@@ -14,7 +14,7 @@ import {
   createSignDocumentInput, 
   setupSignDocumentMocks,
   createMockConfiguration,
-  createErrorScenarioData,
+  executeErrorTest,
   createEdgeCaseData
 } from '../../../../helpers/SignDocumentUseCaseTestHelpers';
 
@@ -344,40 +344,20 @@ describe('SignDocumentUseCase', () => {
     });
 
     it('should throw error when signer is not found', async () => {
-      const errorData = createErrorScenarioData('signer');
-      const input = createSignDocumentInput(errorData);
-
-      setupSignDocumentMocks(mockConfig, errorData, errorData.mockOverrides);
-
-      await expect(useCase.execute(input)).rejects.toThrow('Signer with ID');
+      await executeErrorTest('signer', 'Signer with ID', mockConfig, useCase);
     });
 
 
     it('should throw error when consent creation fails', async () => {
-      const errorData = createErrorScenarioData('consent');
-      const input = createSignDocumentInput(errorData);
-
-      setupSignDocumentMocks(mockConfig, errorData, errorData.mockOverrides);
-
-      await expect(useCase.execute(input)).rejects.toThrow('Failed to create consent');
+      await executeErrorTest('consent', 'Failed to create consent', mockConfig, useCase);
     });
 
     it('should throw error when document preparation fails', async () => {
-      const errorData = createErrorScenarioData('document');
-      const input = createSignDocumentInput(errorData);
-
-      setupSignDocumentMocks(mockConfig, errorData, errorData.mockOverrides);
-
-      await expect(useCase.execute(input)).rejects.toThrow('Failed to prepare document');
+      await executeErrorTest('document', 'Failed to prepare document', mockConfig, useCase);
     });
 
     it('should throw error when KMS signing fails', async () => {
-      const errorData = createErrorScenarioData('kms');
-      const input = createSignDocumentInput(errorData);
-
-      setupSignDocumentMocks(mockConfig, errorData, errorData.mockOverrides);
-
-      await expect(useCase.execute(input)).rejects.toThrow('KMS signing failed');
+      await executeErrorTest('kms', 'KMS signing failed', mockConfig, useCase);
     });
 
     it('should handle signer with missing optional fields', async () => {

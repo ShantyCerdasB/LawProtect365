@@ -314,6 +314,29 @@ export function createMockConfiguration(mocks: {
 }
 
 /**
+ * Executes a complete error test scenario with standardized setup
+ * @param scenario - Error scenario type
+ * @param expectedMessage - Expected error message
+ * @param mockConfig - Mock configuration object
+ * @param useCase - Use case instance to test
+ * @example
+ * await executeErrorTest('envelope', 'Envelope not found', mockConfig, useCase);
+ */
+export async function executeErrorTest(
+  scenario: 'envelope' | 'signer' | 'consent' | 'document' | 'kms',
+  expectedMessage: string,
+  mockConfig: ReturnType<typeof createMockConfiguration>,
+  useCase: any
+): Promise<void> {
+  const errorData = createErrorScenarioData(scenario);
+  const input = createSignDocumentInput(errorData);
+  
+  setupSignDocumentMocks(mockConfig, errorData, errorData.mockOverrides);
+  
+  await expect(useCase.execute(input)).rejects.toThrow(expectedMessage);
+}
+
+/**
  * Creates test scenarios for parametrized testing
  */
 export const SIGN_DOCUMENT_TEST_SCENARIOS = {
@@ -337,11 +360,11 @@ export const SIGN_DOCUMENT_TEST_SCENARIOS = {
   ],
   
   errorScenarios: [
-    { name: 'envelope not found', errorType: 'envelope' as const },
-    { name: 'signer not found', errorType: 'signer' as const },
-    { name: 'consent creation fails', errorType: 'consent' as const },
-    { name: 'document preparation fails', errorType: 'document' as const },
-    { name: 'KMS signing fails', errorType: 'kms' as const }
+    { name: 'envelope not found', errorType: 'envelope' as const, message: 'Envelope not found' },
+    { name: 'signer not found', errorType: 'signer' as const, message: 'Signer with ID' },
+    { name: 'consent creation fails', errorType: 'consent' as const, message: 'Failed to create consent' },
+    { name: 'document preparation fails', errorType: 'document' as const, message: 'Failed to prepare document' },
+    { name: 'KMS signing fails', errorType: 'kms' as const, message: 'KMS signing failed' }
   ],
   
   edgeCaseScenarios: [
