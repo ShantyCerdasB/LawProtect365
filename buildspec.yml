@@ -26,11 +26,10 @@ phases:
       - 'npm ci'
       - 'DATABASE_URL="postgresql://user:pass@localhost:5432/postgres?schema=public" npx prisma generate'
       - 'npm run build'
-      - 'npm prune --omit=dev'
       - 'cd -'
       - 'rm -rf /tmp/layer && mkdir -p /tmp/layer/nodejs'
       - 'cp -R packages/shared-ts/dist /tmp/layer/nodejs/'
-      - 'if [ -d "packages/shared-ts/node_modules" ]; then cp -R packages/shared-ts/node_modules /tmp/layer/nodejs/; fi'
+      - 'cp -R packages/shared-ts/node_modules /tmp/layer/nodejs/'
       - 'cp packages/shared-ts/package.json /tmp/layer/nodejs/'
       - 'if [ -f "packages/shared-ts/package-lock.json" ]; then cp packages/shared-ts/package-lock.json /tmp/layer/nodejs/; fi'
 
@@ -51,52 +50,52 @@ phases:
         cd outbox-stream-handler && zip -r ../outbox-stream-handler.zip . && cd ..
         rm -rf outbox-stream-handler
         echo "Created outbox-stream-handler.zip"
-             - |
-               # Use dynamic function name from Terraform
-               FUNCTION_NAME="${OUTBOX_FUNCTION_NAME}"
-               ALIAS_NAME="outbox-stream-handler-alias"
-               
-               echo "Using function name: $FUNCTION_NAME"
-               
-               # 1) Check if Lambda function exists
-               echo "Checking if Lambda function exists..."
-               if aws lambda get-function --function-name "$FUNCTION_NAME" >/dev/null 2>&1; then
-                 echo "Function exists, updating code..."
-                 aws lambda update-function-code \
-                   --function-name "$FUNCTION_NAME" \
-                   --zip-file fileb://outbox-stream-handler.zip
-                 
-                 echo "Publishing new version..."
-                 TARGET_VERSION=$(aws lambda publish-version \
-                   --function-name "$FUNCTION_NAME" \
-                   --query Version --output text)
-               else
-                 echo "Function does not exist, skipping Lambda operations"
-                 TARGET_VERSION="1"
-               fi
-               
-               # 2) Get current version from alias (with error handling)
-               echo "Getting current version from alias..."
-               CURRENT_VERSION=$(aws lambda get-alias \
-                 --function-name "$FUNCTION_NAME" \
-                 --name "$ALIAS_NAME" \
-                 --query FunctionVersion --output text 2>/dev/null || echo "1")
+      - |
+        # Use dynamic function name from Terraform
+        FUNCTION_NAME="${OUTBOX_FUNCTION_NAME}"
+        ALIAS_NAME="outbox-stream-handler-alias"
+        
+        echo "Using function name: $FUNCTION_NAME"
+        
+        # 1) Check if Lambda function exists
+        echo "Checking if Lambda function exists..."
+        if aws lambda get-function --function-name "$FUNCTION_NAME" >/dev/null 2>&1; then
+          echo "Function exists, updating code..."
+          aws lambda update-function-code \
+            --function-name "$FUNCTION_NAME" \
+            --zip-file fileb://outbox-stream-handler.zip
+          
+          echo "Publishing new version..."
+          TARGET_VERSION=$(aws lambda publish-version \
+            --function-name "$FUNCTION_NAME" \
+            --query Version --output text)
+        else
+          echo "Function does not exist, skipping Lambda operations"
+          TARGET_VERSION="1"
+        fi
+        
+        # 2) Get current version from alias (with error handling)
+        echo "Getting current version from alias..."
+        CURRENT_VERSION=$(aws lambda get-alias \
+          --function-name "$FUNCTION_NAME" \
+          --name "$ALIAS_NAME" \
+          --query FunctionVersion --output text 2>/dev/null || echo "1")
         
         echo "CurrentVersion=$CURRENT_VERSION  TargetVersion=$TARGET_VERSION"
         
-               # 3) Generate appspec.yml with both versions
-               cat > appspec.yml << EOF
-version: 0.0
-Resources:
-  - OutboxHandler:
-      Type: AWS::Lambda::Function
-      Properties:
-        Name: "$FUNCTION_NAME"
-        Alias: "$ALIAS_NAME"
-        CurrentVersion: "$CURRENT_VERSION"
-        TargetVersion: "$TARGET_VERSION"
-EOF
-               echo "Created appspec.yml for CodeDeploy with versions"
+        # 3) Generate appspec.yml with both versions
+        {
+          echo "version: 0.0"
+          echo "Resources:"
+          echo "  - OutboxHandler:"
+          echo "      Type: AWS::Lambda::Function"
+          echo "      Properties:"
+          echo "        Name: \"$FUNCTION_NAME\""
+          echo "        Alias: \"$ALIAS_NAME\""
+          echo "        CurrentVersion: \"$CURRENT_VERSION\""
+          echo "        TargetVersion: \"$TARGET_VERSION\""
+        } > appspec.yml
+        echo "Created appspec.yml for CodeDeploy with versions"
 
 artifacts:
   files:
