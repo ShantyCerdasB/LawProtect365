@@ -6,110 +6,80 @@ phases:
       nodejs: 20
     commands:
       - 'bash -lc "set -euo pipefail; echo Using Node: $(node -v); echo Using npm: $(npm -v)"'
-      
+
   pre_build:
     commands:
-      - 'echo Building shared-ts layer...'
-      - |
-        if [ -n "${CODEARTIFACT_REPO_ENDPOINTS:-}" ]; then
-          NPM_ENDPOINT=$(node -e 'const j=process.env.CODEARTIFACT_REPO_ENDPOINTS?JSON.parse(process.env.CODEARTIFACT_REPO_ENDPOINTS):{}; if(!j.npm){process.exit(2)}; console.log(j.npm)')
-          NPM_HOST=$(node -e 'const u=new URL(process.env.NPM_ENDPOINT); console.log(u.host + u.pathname)')
-          CA_DOMAIN="${PROJECT_DOMAIN:-${PROJECT_NAME:-project}-domain}"
-          CA_TOKEN=$(aws codeartifact get-authorization-token --domain "$CA_DOMAIN" --query authorizationToken --output text || true)
-          if [ -n "${CA_TOKEN:-}" ]; then
-            printf "//%s:_authToken=%s\n" "$NPM_HOST" "$CA_TOKEN" > ~/.npmrc
-            echo "registry=$NPM_ENDPOINT" >> ~/.npmrc
-            echo "always-auth=true" >> ~/.npmrc
-          fi
-        fi
+      - 'echo ">>> Building shared-ts layer (official)..."'
       - '[ -d "$CODEBUILD_SRC_DIR/packages/shared-ts" ] || { echo "shared-ts not found"; exit 2; }'
       - 'cd "$CODEBUILD_SRC_DIR/packages/shared-ts"'
-      - 'pwd; ls -la'
       - 'npm ci'
-      - 'DATABASE_URL="postgresql://user:pass@localhost:5432/postgres?schema=public" npx prisma generate'
+      - 'DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}" npx -y prisma@5.16.1 generate'
       - 'npm run build'
       - 'npm prune --omit=dev'
       - 'mkdir -p /tmp/layer/nodejs'
       - 'cp -R dist /tmp/layer/nodejs/'
       - 'cp package.json /tmp/layer/nodejs/'
-      - '[ -d "node_modules" ] && cp -R node_modules /tmp/layer/nodejs/ || echo "No local node_modules, using hoisted deps"'
-      - 'echo "Layer contents after copy:" && ls -la /tmp/layer/nodejs/'
-      
+      - '[ -d "node_modules" ] && cp -R node_modules /tmp/layer/nodejs/ || echo "WARN: no node_modules in shared-ts"'
+
   build:
     commands:
       - 'cd /tmp/layer'
       - 'zip -r shared-ts-layer.zip .'
-      - '[ -n "${CODE_BUCKET:-}" ] || { echo "ERROR: CODE_BUCKET env var is not set"; exit 1; }'
       - 'aws s3 cp shared-ts-layer.zip s3://$CODE_BUCKET/shared-ts-layer.zip'
-      - 'echo Uploaded layer to s3://$CODE_BUCKET/shared-ts-layer.zip'
+
       - 'cd "$CODEBUILD_SRC_DIR"'
       - |
-        # Create outbox-stream-handler.zip in root directory
-        echo "Creating outbox-stream-handler.zip..."
+        echo ">>> Creating outbox-stream-handler.zip..."
         mkdir -p outbox-stream-handler
-        
-        # Check if outboxStreamHandler exists in the built shared-ts
         if [ -f "/tmp/layer/nodejs/dist/lambdas/OutboxStreamHandler.js" ]; then
-          echo "Found OutboxStreamHandler in shared-ts, copying..."
           cp /tmp/layer/nodejs/dist/lambdas/OutboxStreamHandler.js outbox-stream-handler/
         else
-          echo "OutboxStreamHandler not found in shared-ts, creating basic handler"
           echo 'const { outboxStreamHandler } = require("@lawprotect/shared-ts");' > outbox-stream-handler/index.js
-          echo '' >> outbox-stream-handler/index.js
           echo 'exports.handler = outboxStreamHandler;' >> outbox-stream-handler/index.js
         fi
-        
-        # Copy package.json from the layer
         cp /tmp/layer/nodejs/package.json outbox-stream-handler/
-        
-        # Create the zip file
-        cd outbox-stream-handler && zip -r ../outbox-stream-handler.zip . && cd ..
+        (cd outbox-stream-handler && zip -r ../outbox-stream-handler.zip .)
         rm -rf outbox-stream-handler
         echo "Created outbox-stream-handler.zip"
+
       - |
-        # Use dynamic function name and alias from Terraform
+        set -e
         FUNCTION_NAME="${OUTBOX_FUNCTION_NAME}"
         ALIAS_NAME="${OUTBOX_ALIAS_NAME}"
-        
-        echo "Using function name: $FUNCTION_NAME"
-        echo "Using alias name: $ALIAS_NAME"
-        
-        # Upload the handler ZIP to S3
-        echo "Uploading outbox-stream-handler.zip to S3..."
+
+        echo ">>> Uploading handler zip to S3..."
         aws s3 cp outbox-stream-handler.zip s3://$CODE_BUCKET/outbox-stream-handler.zip
-        
-        # Update the Lambda function code
-        echo "Updating Lambda function code..."
+
+        echo ">>> Updating function code..."
         aws lambda update-function-code \
           --function-name "$FUNCTION_NAME" \
           --s3-bucket "$CODE_BUCKET" \
-          --s3-key "outbox-stream-handler.zip"
-        
-        # Publish new version
-        echo "Publishing new version..."
+          --s3-key "outbox-stream-handler.zip" >/dev/null
+
+        echo ">>> Publishing new version..."
         TARGET_VERSION=$(aws lambda publish-version \
           --function-name "$FUNCTION_NAME" \
           --query Version --output text)
-        
-        # Get current version from alias (with better error handling)
-        echo "Getting current version from alias..."
+
+        echo ">>> Ensuring alias exists..."
+        set +e
         CURRENT_VERSION=$(aws lambda get-alias \
           --function-name "$FUNCTION_NAME" \
           --name "$ALIAS_NAME" \
           --query FunctionVersion --output text 2>/dev/null)
-        
-        # If alias doesn't exist or fails, use version 1
-        if [ -z "$CURRENT_VERSION" ] || [ "$CURRENT_VERSION" = "null" ]; then
-          CURRENT_VERSION="1"
-          echo "Alias not found or invalid, using version 1"
-        else
-          echo "Current alias version: $CURRENT_VERSION"
+        GET_ALIAS_RC=$?
+        set -e
+
+        if [ "$GET_ALIAS_RC" -ne 0 ] || [ -z "$CURRENT_VERSION" ] || [ "$CURRENT_VERSION" = "null" ]; then
+          echo "Alias not found. Creating alias '$ALIAS_NAME' -> version $TARGET_VERSION"
+          aws lambda create-alias \
+            --function-name "$FUNCTION_NAME" \
+            --name "$ALIAS_NAME" \
+            --function-version "$TARGET_VERSION" >/dev/null
+          CURRENT_VERSION="$TARGET_VERSION"
         fi
-        
-        echo "CurrentVersion=$CURRENT_VERSION  TargetVersion=$TARGET_VERSION"
-        
-        # Generate appspec.yml for CodeDeploy
-        echo "Generating appspec.yml for CodeDeploy..."
+
+        echo ">>> Generating appspec.yml..."
         {
           echo "version: 0.0"
           echo "Resources:"
@@ -121,10 +91,6 @@ phases:
           echo "        CurrentVersion: \"$CURRENT_VERSION\""
           echo "        TargetVersion: \"$TARGET_VERSION\""
         } > appspec.yml
-        
-        echo "Created appspec.yml for CodeDeploy"
-        echo "Verifying artifacts in root directory:"
-        ls -la outbox-stream-handler.zip appspec.yml
 
 artifacts:
   files:

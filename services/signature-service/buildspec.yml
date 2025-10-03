@@ -5,46 +5,92 @@ phases:
     runtime-versions:
       nodejs: 20
     commands:
-      - 'bash -lc "set -euo pipefail; echo Using Node: $(node -v); echo Using npm: $(npm -v)"'
-      
+      - |
+        bash -lc '
+          set -euo pipefail
+          echo "Using Node: $(node -v)"
+          echo "Using npm: $(npm -v)"
+        '
+
   pre_build:
     commands:
-      - 'echo "Build shared-ts first..."'
-      - '[ -d "$CODEBUILD_SRC_DIR/packages/shared-ts" ] || { echo "shared-ts not found"; exit 2; }'
-      - 'cd "$CODEBUILD_SRC_DIR/packages/shared-ts"'
-      - 'pwd; ls -la'
-      - 'npm ci'
-      - 'DATABASE_URL="postgresql://user:pass@localhost:5432/postgres?schema=public" npx prisma generate'
-      - 'npm run build'
-      - 'cd "$CODEBUILD_SRC_DIR"'
-      - 'echo "Install signature-service deps..."'
-      - '[ -d "$CODEBUILD_SRC_DIR/services/signature-service" ] || { echo "signature-service not found"; exit 2; }'
-      - 'cd "$CODEBUILD_SRC_DIR/services/signature-service"'
-      - 'pwd; ls -la'
-      - 'npm ci'
-      - 'echo "Using Lambda layer for @lawprotect/shared-ts - no local symlink needed"'
-      - 'npx prisma generate --schema ../../packages/shared-ts/prisma/schema.prisma'
-      - 'echo "Verifying prisma client..."'
-      - 'ls -la node_modules/@prisma/client/'
-      
+      - echo ">>> Building in-repo layer for @lawprotect/shared-ts (for tests)..."
+      - test -d "$CODEBUILD_SRC_DIR/packages/shared-ts" || { echo "shared-ts not found"; exit 2; }
+      - |
+        bash -lc '
+          set -euo pipefail
+          cd "$CODEBUILD_SRC_DIR/packages/shared-ts"
+          npm ci
+          DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}" npx -y prisma@5.16.1 generate
+          npm run build
+          npm prune --omit=dev
+          mkdir -p /tmp/layer/nodejs
+          cp -R dist /tmp/layer/nodejs/
+          cp package.json /tmp/layer/nodejs/
+          if [ -d "node_modules" ]; then
+            cp -R node_modules /tmp/layer/nodejs/
+          else
+            echo "WARN: no node_modules in shared-ts"
+          fi
+        '
+      - echo ">>> Install signature-service deps..."
+      - test -d "$CODEBUILD_SRC_DIR/services/signature-service" || { echo "signature-service not found"; exit 2; }
+      - |
+        bash -lc '
+          set -euo pipefail
+          cd "$CODEBUILD_SRC_DIR/services/signature-service"
+          npm ci
+        '
+      - echo ">>> Configure NODE_PATH to use shared layer during tests"
+      - |
+        bash -lc '
+          set -euo pipefail
+          export NODE_PATH="/tmp/layer/nodejs:/tmp/layer/nodejs/node_modules:$(npm root)"
+          node -e "require(\"module\").Module._initPaths()"
+          echo "NODE_PATH=$NODE_PATH"
+          # Opcional: garantizar que todo se resuelva desde el layer
+          rm -rf node_modules/@lawprotect/shared-ts || true
+          echo ">>> Sanity check layer"
+          ls -la /tmp/layer/nodejs || true
+          ls -la /tmp/layer/nodejs/node_modules/@prisma/client || true
+          node -e "console.log('resolve shared-ts from layer OK:', !!require.resolve('@lawprotect/shared-ts'))"
+        '
+
   build:
     commands:
-      - 'cd "$CODEBUILD_SRC_DIR/services/signature-service"'
-      - 'npm run test:unit:coverage'
-      - 'npm run build'
-      - 'npm prune --omit=dev'
-      - 'rm -rf node_modules/@lawprotect/shared-ts'
-      - 'echo "Runtime will use Lambda layer for @lawprotect/shared-ts"'
+      - echo ">>> Running unit tests (layer-backed shared-ts + prisma)..."
       - |
-        handlers=("create-envelope" "get-envelope" "send-envelope" "sign-document" "decline-signer" "share-document" "send-notification" "get-audit-trail" "get-envelopes-by-user" "update-envelope" "cancel-envelope" "download-document")
-        for handler in "${handlers[@]}"; do
-          echo "Packaging sign-$handler.zip"
-          mkdir -p temp-$handler
-          cp -r dist/handlers/$handler/* temp-$handler/
-          cp package.json temp-$handler/
-          (cd temp-$handler && zip -r ../sign-$handler.zip .)
-          rm -rf temp-$handler
-        done
+        bash -lc '
+          set -euo pipefail
+          cd "$CODEBUILD_SRC_DIR/services/signature-service"
+          export NODE_PATH="/tmp/layer/nodejs:/tmp/layer/nodejs/node_modules:$(npm root)"
+          node -e "require(\"module\").Module._initPaths()"
+          npm run test:unit:coverage
+        '
+      - echo ">>> TypeScript build..."
+      - |
+        bash -lc '
+          set -euo pipefail
+          cd "$CODEBUILD_SRC_DIR/services/signature-service"
+          npm run build
+          npm prune --omit=dev
+          rm -rf node_modules/@lawprotect/shared-ts || true
+        '
+      - echo ">>> Packaging handlers..."
+      - |
+        bash -lc '
+          set -euo pipefail
+          cd "$CODEBUILD_SRC_DIR/services/signature-service"
+          handlers=("create-envelope" "get-envelope" "send-envelope" "sign-document" "decline-signer" "share-document" "send-notification" "get-audit-trail" "get-envelopes-by-user" "update-envelope" "cancel-envelope" "download-document")
+          for handler in "${handlers[@]}"; do
+            echo "Packaging sign-$handler.zip"
+            mkdir -p "temp-$handler"
+            cp -r "dist/handlers/$handler/"* "temp-$handler/"
+            cp package.json "temp-$handler/"
+            (cd "temp-$handler" && zip -r "../sign-$handler.zip" .)
+            rm -rf "temp-$handler"
+          done
+        '
 
 artifacts:
   files:
