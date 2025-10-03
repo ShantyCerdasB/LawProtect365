@@ -10,79 +10,142 @@ phases:
   pre_build:
     commands:
       - echo ">>> Construyendo layer local de @lawprotect/shared-ts (para tests)..."
+      - echo ">>> DEBUG: Estructura de carpetas antes de build shared-ts"
+      - echo ">>> DEBUG: CODEBUILD_SRC_DIR = $CODEBUILD_SRC_DIR"
+      - echo ">>> DEBUG: Contenido de CODEBUILD_SRC_DIR:"
+      - ls -la "$CODEBUILD_SRC_DIR" || echo "No se puede listar CODEBUILD_SRC_DIR"
+      - echo ">>> DEBUG: Contenido de packages:"
+      - ls -la "$CODEBUILD_SRC_DIR/packages" || echo "No se puede listar packages"
+      - echo ">>> DEBUG: Contenido de packages/shared-ts:"
+      - ls -la "$CODEBUILD_SRC_DIR/packages/shared-ts" || echo "No se puede listar packages/shared-ts"
       - >
         bash -lc '
         set -euo pipefail;
+        echo ">>> DEBUG: Entrando a packages/shared-ts";
         cd "$CODEBUILD_SRC_DIR/packages/shared-ts";
+        echo ">>> DEBUG: Directorio actual: $(pwd)";
+        echo ">>> DEBUG: Contenido del directorio actual:";
+        ls -la;
         npm ci;
         DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}" npx -y prisma@5.22.0 generate;
         npm run build;
+        echo ">>> DEBUG: Después de npm run build - contenido de dist:";
+        ls -la dist || echo "No existe dist";
+        echo ">>> DEBUG: Contenido de dist/lambdas:";
+        ls -la dist/lambdas || echo "No existe dist/lambdas";
         npm prune --omit=dev;
+        echo ">>> DEBUG: Después de npm prune - contenido actual:";
+        ls -la;
         mkdir -p /tmp/layer/nodejs;
+        echo ">>> DEBUG: Copiando archivos al layer...";
         cp -a dist /tmp/layer/nodejs/;
         cp package.json /tmp/layer/nodejs/;
+        echo ">>> DEBUG: Contenido del layer después de copiar:";
+        ls -la /tmp/layer/nodejs/;
+        echo ">>> DEBUG: Verificando node_modules del root...";
+        echo ">>> DEBUG: CODEBUILD_SRC_DIR/node_modules existe?";
+        ls -la "$CODEBUILD_SRC_DIR/node_modules" || echo "No existe node_modules en root";
         if [ -d "$CODEBUILD_SRC_DIR/node_modules" ]; then
+          echo ">>> DEBUG: Copiando node_modules del root al layer...";
           mkdir -p /tmp/layer/nodejs/node_modules;
           cp -a "$CODEBUILD_SRC_DIR/node_modules/." /tmp/layer/nodejs/node_modules/;
+          echo ">>> DEBUG: Contenido del layer node_modules después de copiar:";
+          ls -la /tmp/layer/nodejs/node_modules/ | head -20;
         else
-          echo "root node_modules not found"; exit 2;
+          echo ">>> DEBUG: root node_modules not found - esto es un problema!";
+          echo ">>> DEBUG: Contenido del root:";
+          ls -la "$CODEBUILD_SRC_DIR" || echo "No se puede listar root";
+          exit 2;
         fi
         '
       - echo ">>> Instalando dependencias de signature-service..."
+      - echo ">>> DEBUG: Verificando estructura antes de instalar signature-service"
+      - echo ">>> DEBUG: Contenido de services:"
+      - ls -la "$CODEBUILD_SRC_DIR/services" || echo "No se puede listar services"
+      - echo ">>> DEBUG: Contenido de services/signature-service:"
+      - ls -la "$CODEBUILD_SRC_DIR/services/signature-service" || echo "No se puede listar signature-service"
       - >
         bash -lc '
         set -euo pipefail;
+        echo ">>> DEBUG: Entrando a signature-service";
         cd "$CODEBUILD_SRC_DIR/services/signature-service";
+        echo ">>> DEBUG: Directorio actual: $(pwd)";
+        echo ">>> DEBUG: Contenido del directorio signature-service:";
+        ls -la;
         npm ci;
         '
       - echo ">>> Configurando NODE_PATH para usar el layer durante tests..."
+      - echo ">>> DEBUG: Verificando layer antes de configurar NODE_PATH"
+      - echo ">>> DEBUG: Contenido de /tmp/layer:"
+      - ls -la /tmp/layer || echo "No existe /tmp/layer"
+      - echo ">>> DEBUG: Contenido de /tmp/layer/nodejs:"
+      - ls -la /tmp/layer/nodejs || echo "No existe /tmp/layer/nodejs"
       - >
         bash -lc '
         set -euo pipefail;
+        echo ">>> DEBUG: Configurando NODE_PATH";
         cd "$CODEBUILD_SRC_DIR/services/signature-service";
+        echo ">>> DEBUG: Directorio actual: $(pwd)";
+        echo ">>> DEBUG: NODE_PATH antes: $NODE_PATH";
         export NODE_PATH="/tmp/layer/nodejs:/tmp/layer/nodejs/node_modules:$CODEBUILD_SRC_DIR/node_modules:$(npm root)";
+        echo ">>> DEBUG: NODE_PATH después: $NODE_PATH";
+        echo ">>> DEBUG: Inicializando paths de módulos...";
         node -e "require(\"module\").Module._initPaths()";
+        echo ">>> DEBUG: Limpiando symlinks existentes...";
         rm -rf node_modules/@lawprotect/shared-ts || true;
+        echo ">>> DEBUG: Verificando layer después de configuración:";
         ls -la /tmp/layer/nodejs || true;
+        echo ">>> DEBUG: Verificando @prisma en el layer:";
         ls -la /tmp/layer/nodejs/node_modules/@prisma || true;
+        echo ">>> DEBUG: Verificando @prisma/client en el layer:";
         ls -la /tmp/layer/nodejs/node_modules/@prisma/client || true;
+        echo ">>> DEBUG: Probando resolución de @lawprotect/shared-ts:";
         node -e "console.log(require.resolve(\"@lawprotect/shared-ts\")?\"resolve OK\":\"resolve FAIL\")";
         '
 
   build:
     commands:
       - echo ">>> Ejecutando tests unitarios..."
+      - echo ">>> DEBUG: Verificando que shared-ts esté disponible para tests"
+      - echo ">>> DEBUG: NODE_PATH será: /tmp/layer/nodejs:/tmp/layer/nodejs/node_modules:$CODEBUILD_SRC_DIR/node_modules:$(npm root)"
       - >
         bash -lc '
-        set -euo pipefail
-        cd "$CODEBUILD_SRC_DIR/services/signature-service"
-        export NODE_PATH="/tmp/layer/nodejs:/tmp/layer/nodejs/node_modules:$CODEBUILD_SRC_DIR/node_modules:$(npm root)"
-        node -e "require(\"module\").Module._initPaths()"
-        npm run test:unit:coverage
+        set -euo pipefail;
+        cd "$CODEBUILD_SRC_DIR/services/signature-service";
+        echo ">>> DEBUG: Directorio actual: $(pwd)";
+        echo ">>> DEBUG: NODE_PATH antes: $NODE_PATH";
+        export NODE_PATH="/tmp/layer/nodejs:/tmp/layer/nodejs/node_modules:$CODEBUILD_SRC_DIR/node_modules:$(npm root)";
+        echo ">>> DEBUG: NODE_PATH después: $NODE_PATH";
+        echo ">>> DEBUG: Inicializando paths de módulos...";
+        node -e "require(\"module\").Module._initPaths()";
+        echo ">>> DEBUG: Probando resolución de @lawprotect/shared-ts para tests:";
+        node -e "console.log(require.resolve(\"@lawprotect/shared-ts\")?\"resolve OK\":\"resolve FAIL\")";
+        echo ">>> DEBUG: Ejecutando tests...";
+        npm run test:unit:coverage;
         '
       - echo ">>> Compilando TypeScript..."
       - >
         bash -lc '
-        set -euo pipefail
-        cd "$CODEBUILD_SRC_DIR/services/signature-service"
-        npm run build
-        npm prune --omit=dev
-        rm -rf node_modules/@lawprotect/shared-ts || true
+        set -euo pipefail;
+        cd "$CODEBUILD_SRC_DIR/services/signature-service";
+        npm run build;
+        npm prune --omit=dev;
+        rm -rf node_modules/@lawprotect/shared-ts || true;
         '
       - echo ">>> Empaquetando handlers..."
       - >
         bash -lc '
-        set -euo pipefail
-        cd "$CODEBUILD_SRC_DIR/services/signature-service"
-        handlers=(create-envelope get-envelope send-envelope sign-document decline-signer share-document send-notification get-audit-trail get-envelopes-by-user update-envelope cancel-envelope download-document)
+        set -euo pipefail;
+        cd "$CODEBUILD_SRC_DIR/services/signature-service";
+        handlers=(create-envelope get-envelope send-envelope sign-document decline-signer share-document send-notification get-audit-trail get-envelopes-by-user update-envelope cancel-envelope download-document);
         for handler in "${handlers[@]}"; do
-          echo "Packaging sign-$handler.zip"
-          mkdir -p "temp-$handler"
-          cp -a "dist/handlers/$handler/." "temp-$handler/"
-          cp package.json "temp-$handler/"
-          (cd "temp-$handler" && zip -r "../sign-$handler.zip" .)
-          rm -rf "temp-$handler"
-        done
+          echo "Packaging sign-$handler.zip";
+          mkdir -p "temp-$handler";
+          cp -a "dist/handlers/$handler/." "temp-$handler/";
+          cp package.json "temp-$handler/";
+          (cd "temp-$handler" && zip -r "../sign-$handler.zip" .);
+          rm -rf "temp-$handler";
+        done;
         '
 
 artifacts:
