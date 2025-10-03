@@ -29,9 +29,7 @@ phases:
       - 'cd -'
       - 'rm -rf /tmp/layer && mkdir -p /tmp/layer/nodejs'
       - 'cp -R packages/shared-ts/dist /tmp/layer/nodejs/'
-      - 'cp packages/shared-ts/package.json /tmp/layer/nodejs/'
-      - 'if [ -f "packages/shared-ts/package-lock.json" ]; then cp packages/shared-ts/package-lock.json /tmp/layer/nodejs/; fi'
-      - 'cd /tmp/layer/nodejs && npm ci --production && cd -'
+      - 'cp -R packages/shared-ts/node_modules /tmp/layer/nodejs/'
       - 'echo "Layer contents after npm install:" && ls -la /tmp/layer/nodejs/'
 
   build:

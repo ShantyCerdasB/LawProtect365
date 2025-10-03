@@ -10,23 +10,32 @@ phases:
   pre_build:
     commands:
       - 'echo Building signature-service...'
+      - 'echo "Building shared-ts first..."'
+      - 'cd ../../packages/shared-ts'
       - 'npm ci'
-      - 'aws s3 cp s3://$CODE_BUCKET/shared-ts-layer.zip /tmp/shared-ts-layer.zip'
-      - 'cd /tmp && unzip shared-ts-layer.zip'
-      - 'echo "Layer contents:" && ls -la nodejs/'
-      - 'echo "Dist contents:" && ls -la nodejs/dist/'
-      - 'mkdir -p node_modules/@lawprotect/shared-ts'
-      - 'cp -r nodejs/* node_modules/@lawprotect/shared-ts/'
-      - 'echo "Copied layer to:" && ls -la node_modules/@lawprotect/'
-      - 'echo "Shared-ts contents:" && ls -la node_modules/@lawprotect/shared-ts/'
+      - 'DATABASE_URL="postgresql://user:pass@localhost:5432/postgres?schema=public" npx prisma generate'
+      - 'npm run build'
       - 'cd -'
+      - 'echo "Installing signature-service dependencies..."'
+      - 'npm ci'
+      - 'echo "Linking shared-ts as local dependency..."'
+      - 'npm pkg set dependencies.@lawprotect/shared-ts="file:../../packages/shared-ts"'
+      - 'npm install'
+      - 'echo "Creating symlink for Jest resolution..."'
+      - 'mkdir -p node_modules/@lawprotect'
+      - 'ln -sf ../../../packages/shared-ts node_modules/@lawprotect/shared-ts'
+      - 'echo "Generating Prisma Client in service..."'
+      - 'npx prisma generate --schema ../../packages/shared-ts/prisma/schema.prisma'
       
   build:
     commands:
       - 'cd services/signature-service'
       - 'npm run test:unit:coverage'
       - 'npm run build'
+      - 'echo "Cleaning up local shared-ts dependency..."'
       - 'npm prune --omit=dev'
+      - 'rm -rf node_modules/@lawprotect/shared-ts'
+      - 'echo "Runtime will use Lambda layer for @lawprotect/shared-ts"'
       - |
         handlers=("create-envelope" "get-envelope" "send-envelope" "sign-document" "decline-signer" "share-document" "send-notification" "get-audit-trail" "get-envelopes-by-user" "update-envelope" "cancel-envelope" "download-document")
         for handler in "${handlers[@]}"; do
