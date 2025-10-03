@@ -117,3 +117,20 @@ data "aws_iam_policy_document" "secrets_manager_policy" {
     ]
   }
 }
+
+# Lambda permissions for CodeBuild (for outbox handler deployment)
+data "aws_iam_policy_document" "lambda_policy" {
+  statement {
+    effect = "Allow"
+    actions = [
+      "lambda:UpdateFunctionCode",
+      "lambda:PublishVersion",
+      "lambda:CreateAlias",
+      "lambda:GetAlias",
+      "lambda:GetFunction"
+    ]
+    resources = [
+      "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${var.project_name}-outbox-stream-handler-${var.env}-*"
+    ]
+  }
+}
