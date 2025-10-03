@@ -11,7 +11,8 @@
       "require": "./dist/cjs/index.js",
       "import": "./dist/esm/index.js",
       "types": "./dist/types/index.d.ts"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "files": [
     "dist",
@@ -26,7 +27,7 @@
     "build": "npm run clean && npm run build:cjs && npm run build:esm && npm run build:types",
     "build:cjs": "tsc -p tsconfig.cjs.json && tsc-alias -p tsconfig.cjs.json",
     "build:esm": "tsc -p tsconfig.esm.json && tsc-alias -p tsconfig.esm.json",
-    "build:types": "mkdir dist/types 2>nul & copy dist\\cjs\\*.d.ts dist\\types\\ 2>nul || echo Types copied",
+    "build:types": "mkdir -p dist/types && cp dist/cjs/*.d.ts dist/types/ 2>/dev/null || echo Types copied",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "watch": "tsc -p tsconfig.json -w",
     "test": "jest --config ./jest.config.cjs",

@@ -24,8 +24,10 @@ phases:
       - 'npm pkg set overrides.@lawprotect/shared-ts="file:../../packages/shared-ts"'
       - 'npm ci'
       - 'npx prisma generate --schema ../../packages/shared-ts/prisma/schema.prisma'
-      - 'node -e "console.log(\"shared-ts pkg:\", require.resolve(\"@lawprotect/shared-ts/package.json\"))"'
-      - 'node -e "console.log(\"prisma client:\", require.resolve(\"@prisma/client\"))"'
+      - 'echo "Verifying shared-ts installation..."'
+      - 'ls -la node_modules/@lawprotect/shared-ts/'
+      - 'echo "Verifying prisma client..."'
+      - 'ls -la node_modules/@prisma/client/'
       
   build:
     commands:
