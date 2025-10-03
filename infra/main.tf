@@ -617,6 +617,11 @@ module "shared_components_pipeline" {
       value = module.event_publisher_service.lambda_alias_name
       type  = "PLAINTEXT"
     },
+    {
+      name  = "SHARED_TS_LAYER_ARN"
+      value = module.shared_ts_layer.layer_arn
+      type  = "PLAINTEXT"
+    },
   ]
   
   github_connection_arn = module.github_connection.connection_arn

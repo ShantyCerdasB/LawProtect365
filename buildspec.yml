@@ -62,6 +62,17 @@ phases:
           aws lambda update-function-code --function-name "$FUNCTION_NAME" --s3-bucket "$CODE_BUCKET" --s3-key "outbox-stream-handler.zip" >/dev/null || L_ERR=1
         fi
         if [ "$L_ERR" -eq 0 ]; then
+          echo ">>> DEBUG: Asociando layer shared-ts a la función Lambda..."
+          LAYER_ARN="${SHARED_TS_LAYER_ARN}"
+          if [ -n "$LAYER_ARN" ]; then
+            aws lambda update-function-configuration --function-name "$FUNCTION_NAME" --layers "$LAYER_ARN" >/dev/null || L_ERR=1
+            echo ">>> DEBUG: Layer asociado: $LAYER_ARN"
+          else
+            echo ">>> DEBUG: SHARED_TS_LAYER_ARN no está definido"
+            L_ERR=1
+          fi
+        fi
+        if [ "$L_ERR" -eq 0 ]; then
           aws lambda wait function-updated --function-name "$FUNCTION_NAME" || L_ERR=1
         fi
         if [ "$L_ERR" -eq 0 ]; then
