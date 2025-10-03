@@ -95,8 +95,16 @@ phases:
           TARGET_VERSION=$(aws lambda publish-version --function-name "$FUNCTION_NAME" --query Version --output text 2>/dev/null)
           echo ">>> DEBUG: TARGET_VERSION=$TARGET_VERSION"
           if [ -z "$TARGET_VERSION" ] || [ "$TARGET_VERSION" = "null" ]; then
-            echo ">>> DEBUG: ERROR - TARGET_VERSION es nulo o vacío"
-            L_ERR=1
+            echo ">>> DEBUG: No se pudo publicar nueva versión, obteniendo versión actual..."
+            # Si no se puede publicar nueva versión, obtener la versión actual
+            TARGET_VERSION=$(aws lambda get-function --function-name "$FUNCTION_NAME" --query Configuration.Version --output text 2>/dev/null)
+            echo ">>> DEBUG: Versión actual obtenida: $TARGET_VERSION"
+            if [ -z "$TARGET_VERSION" ] || [ "$TARGET_VERSION" = "null" ]; then
+              echo ">>> DEBUG: ERROR - No se pudo obtener versión de la función"
+              L_ERR=1
+            else
+              echo ">>> DEBUG: Usando versión actual: $TARGET_VERSION"
+            fi
           else
             echo ">>> DEBUG: Versión publicada exitosamente: $TARGET_VERSION"
           fi
