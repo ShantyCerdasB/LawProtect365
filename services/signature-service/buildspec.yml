@@ -5,21 +5,25 @@ phases:
     runtime-versions:
       nodejs: 20
     commands:
-      - "bash -lc 'set -euo pipefail; printf \"[INFO] Node: %s\n\" \"$(node -v)\"; printf \"[INFO] npm: %s\n\" \"$(npm -v)\"'"
+      - "bash -lc 'set -euo pipefail; printf \"[INFO] Node: %s\\n\" \"$(node -v)\"; printf \"[INFO] npm: %s\\n\" \"$(npm -v)\"'"
 
   pre_build:
     commands:
-      - bash -lc 'set -euo pipefail; echo "[INFO] Construyendo layer local de @lawprotect/shared-ts (para tests)"; cd "$CODEBUILD_SRC_DIR/packages/shared-ts" && npm ci && DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}" npx -y prisma@5.22.0 generate && npm run build && npm prune --omit=dev && mkdir -p /tmp/layer/nodejs && cp -a dist /tmp/layer/nodejs/ && cp package.json /tmp/layer/nodejs/ && if [ -d "$CODEBUILD_SRC_DIR/node_modules" ]; then mkdir -p /tmp/layer/nodejs/node_modules && cp -a "$CODEBUILD_SRC_DIR/node_modules/." /tmp/layer/nodejs/node_modules/; else echo "[ERROR] No existe node_modules en la raíz"; exit 2; fi'
-      - bash -lc 'set -euo pipefail; echo "[INFO] Instalando dependencias de signature-service"; cd "$CODEBUILD_SRC_DIR/services/signature-service" && npm ci'
-      - bash -lc 'set -euo pipefail; echo "[INFO] Configurando NODE_PATH para usar el layer durante tests"; cd "$CODEBUILD_SRC_DIR/services/signature-service" && export NODE_PATH="/tmp/layer/nodejs:/tmp/layer/nodejs/node_modules:$CODEBUILD_SRC_DIR/node_modules:$(npm root)" && node -e "require(\"module\").Module._initPaths()" && rm -rf node_modules/@lawprotect/shared-ts || true && node -e "console.log(require.resolve(\"@lawprotect/shared-ts\")?\"resolve OK\":\"resolve FAIL\")"'
+      - "bash -lc 'set -euo pipefail; echo \"[INFO] Construyendo layer local de @lawprotect/shared-ts (para tests)\"; cd \"$CODEBUILD_SRC_DIR/packages/shared-ts\" && npm ci && DATABASE_URL=\"${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}\" npx -y prisma@5.22.0 generate && npm run build && npm prune --omit=dev && mkdir -p /tmp/layer/nodejs && cp -a dist /tmp/layer/nodejs/ && cp package.json /tmp/layer/nodejs/ && mkdir -p /tmp/layer/nodejs/node_modules && cp -a \"$CODEBUILD_SRC_DIR/node_modules/.\" /tmp/layer/nodejs/node_modules/'"
+
+      - "bash -lc 'set -euo pipefail; echo \"[INFO] Instalando dependencias de signature-service\"; cd \"$CODEBUILD_SRC_DIR/services/signature-service\" && npm ci && rm -rf node_modules/@prisma node_modules/@prisma/client'"
+
+      - "bash -lc 'set -euo pipefail; echo \"[INFO] Configurando NODE_PATH para usar el layer durante tests\"; cd \"$CODEBUILD_SRC_DIR/services/signature-service\" && export NODE_PATH=\"/tmp/layer/nodejs:/tmp/layer/nodejs/node_modules:$CODEBUILD_SRC_DIR/node_modules:$(npm root)\" && node -e \"require(\\\"module\\\").Module._initPaths()\" && rm -rf node_modules/@lawprotect/shared-ts && node -e \"console.log(require.resolve(\\\"@lawprotect/shared-ts\\\")?\\\"resolve OK\\\":\\\"resolve FAIL\\\")\" && node -e \"console.log(require.resolve(\\\"@prisma/client\\\").includes(\\\"/tmp/layer\\\")?\\\"[INFO] prisma del layer\\\":\\\"[WARN] prisma local\\\")\"'"
 
   build:
     commands:
-      - bash -lc 'set -euo pipefail; echo "[INFO] Ejecutando tests unitarios"; cd "$CODEBUILD_SRC_DIR/services/signature-service" && export NODE_PATH="/tmp/layer/nodejs:/tmp/layer/nodejs/node_modules:$CODEBUILD_SRC_DIR/node_modules:$(npm root)" && node -e "require(\"module\").Module._initPaths()" && npm run test:unit:coverage'
-      - bash -lc 'set -euo pipefail; echo "[INFO] Compilando TypeScript"; cd "$CODEBUILD_SRC_DIR/services/signature-service" && npm run build && npm prune --omit=dev && rm -rf node_modules/@lawprotect/shared-ts || true'
-      - bash -lc 'set -euo pipefail; echo "[INFO] Empaquetando handlers"; cd "$CODEBUILD_SRC_DIR/services/signature-service" && handlers=(create-envelope get-envelope send-envelope sign-document decline-signer share-document send-notification get-audit-trail get-envelopes-by-user update-envelope cancel-envelope download-document) && for h in "${handlers[@]}"; do echo "Packaging sign-$h.zip"; mkdir -p "temp-$h"; cp -a "dist/handlers/$h/." "temp-$h/"; cp package.json "temp-$h/"; (cd "temp-$h" && zip -r "../sign-$h.zip" .); rm -rf "temp-$h"; done'
+      - "bash -lc 'set -euo pipefail; echo \"[INFO] Ejecutando tests unitarios\"; cd \"$CODEBUILD_SRC_DIR/services/signature-service\" && export NODE_PATH=\"/tmp/layer/nodejs:/tmp/layer/nodejs/node_modules:$CODEBUILD_SRC_DIR/node_modules:$(npm root)\" && node -e \"require(\\\"module\\\").Module._initPaths()\" && npm run test:unit:coverage'"
+
+      - "bash -lc 'set -euo pipefail; echo \"[INFO] Compilando servicio\"; cd \"$CODEBUILD_SRC_DIR/services/signature-service\" && npm run build && npm prune --omit=dev && rm -rf node_modules/@lawprotect/shared-ts node_modules/@prisma node_modules/@prisma/client'"
+
+      - "bash -lc 'set -euo pipefail; echo \"[INFO] Empaquetando handlers\"; cd \"$CODEBUILD_SRC_DIR/services/signature-service\" && handlers=(create-envelope get-envelope send-envelope sign-document decline-signer share-document send-notification get-audit-trail get-envelopes-by-user update-envelope cancel-envelope download-document); for h in \"${handlers[@]}\"; do mkdir -p \"temp-$h\"; cp -a \"dist/handlers/$h/.\" \"temp-$h/\"; cp package.json \"temp-$h/\"; (cd \"temp-$h\" && zip -r \"../sign-$h.zip\" .); rm -rf \"temp-$h\"; done'"
 
 artifacts:
   files:
-    - 'services/signature-service/sign-*.zip'
+    - "services/signature-service/sign-*.zip"
   discard-paths: yes
