@@ -64,22 +64,45 @@ phases:
         if [ "$L_ERR" -eq 0 ]; then
           echo ">>> DEBUG: Asociando layer shared-ts a la función Lambda..."
           LAYER_ARN="${SHARED_TS_LAYER_ARN}"
+          echo ">>> DEBUG: SHARED_TS_LAYER_ARN=$LAYER_ARN"
           if [ -n "$LAYER_ARN" ]; then
+            echo ">>> DEBUG: Ejecutando update-function-configuration..."
             aws lambda update-function-configuration --function-name "$FUNCTION_NAME" --layers "$LAYER_ARN" >/dev/null || L_ERR=1
-            echo ">>> DEBUG: Layer asociado: $LAYER_ARN"
+            if [ "$L_ERR" -eq 0 ]; then
+              echo ">>> DEBUG: Layer asociado exitosamente: $LAYER_ARN"
+            else
+              echo ">>> DEBUG: ERROR - Falló update-function-configuration"
+            fi
           else
-            echo ">>> DEBUG: SHARED_TS_LAYER_ARN no está definido"
+            echo ">>> DEBUG: ERROR - SHARED_TS_LAYER_ARN no está definido"
             L_ERR=1
           fi
+        else
+          echo ">>> DEBUG: Saltando asociación de layer - L_ERR=$L_ERR"
         fi
         if [ "$L_ERR" -eq 0 ]; then
+          echo ">>> DEBUG: Esperando que la función se actualice..."
           aws lambda wait function-updated --function-name "$FUNCTION_NAME" || L_ERR=1
+          if [ "$L_ERR" -eq 0 ]; then
+            echo ">>> DEBUG: Función actualizada exitosamente"
+          else
+            echo ">>> DEBUG: ERROR - Falló wait function-updated"
+          fi
+        else
+          echo ">>> DEBUG: Saltando wait function-updated - L_ERR=$L_ERR"
         fi
         if [ "$L_ERR" -eq 0 ]; then
+          echo ">>> DEBUG: Publicando nueva versión..."
           TARGET_VERSION=$(aws lambda publish-version --function-name "$FUNCTION_NAME" --query Version --output text 2>/dev/null)
+          echo ">>> DEBUG: TARGET_VERSION=$TARGET_VERSION"
           if [ -z "$TARGET_VERSION" ] || [ "$TARGET_VERSION" = "null" ]; then
+            echo ">>> DEBUG: ERROR - TARGET_VERSION es nulo o vacío"
             L_ERR=1
+          else
+            echo ">>> DEBUG: Versión publicada exitosamente: $TARGET_VERSION"
           fi
+        else
+          echo ">>> DEBUG: Saltando publish-version - L_ERR=$L_ERR"
         fi
         if [ "$L_ERR" -eq 0 ]; then
           # Obtener la versión actual del ALIAS (no de la función)
@@ -108,8 +131,12 @@ phases:
           > "$CODEBUILD_SRC_DIR/appspec.yml"
         echo ">>> DEBUG: AppSpec generado:"
         cat "$CODEBUILD_SRC_DIR/appspec.yml"
+        echo ">>> DEBUG: Estado final - L_ERR=$L_ERR"
         if [ "$L_ERR" -ne 0 ]; then
+          echo ">>> DEBUG: ERROR FINAL - Saliendo con código 1"
           exit 1
+        else
+          echo ">>> DEBUG: ÉXITO - Build completado sin errores"
         fi
         set -e
 
