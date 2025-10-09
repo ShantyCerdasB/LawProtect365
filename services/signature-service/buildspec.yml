@@ -58,6 +58,7 @@ phases:
           set -euo pipefail
           echo "[INFO] tests unitarios con shared-ts local"
           cd "$CODEBUILD_SRC_DIR/services/signature-service"
+          export DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}"
           npm run test:unit:coverage
         '
 
