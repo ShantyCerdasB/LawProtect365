@@ -14,15 +14,17 @@ phases:
 
   pre_build:
     commands:
-      # 1) Descargar y configurar el layer existente
+      # 1) Construir shared-ts localmente con Prisma generado
       - |
         bash -lc '
           set -euo pipefail
-          echo "[INFO] Descargando layer existente de S3"
-          mkdir -p /tmp/layer
-          aws s3 cp "s3://$CODE_BUCKET/shared-ts-layer.zip" /tmp/layer/shared-ts-layer.zip
-          cd /tmp/layer && unzip shared-ts-layer.zip
-          echo "[INFO] Layer descomprimido en /tmp/layer/nodejs"
+          echo "[INFO] Construyendo shared-ts localmente"
+          cd "$CODEBUILD_SRC_DIR/packages/shared-ts"
+          npm ci
+          DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}" \
+          npx -y prisma@5.22.0 generate
+          npm run build
+          echo "[INFO] shared-ts construido con Prisma generado"
         '
 
       # 2) Instalar deps del servicio
@@ -34,74 +36,28 @@ phases:
           npm ci
         '
 
-      # 3) Configurar NODE_PATH para usar el layer existente
+      # 3) Configurar para usar shared-ts local
       - |
         bash -lc '
           set -euo pipefail
-          echo "[INFO] configurar NODE_PATH para usar layer existente"
+          echo "[INFO] Configurando para usar shared-ts local"
           cd "$CODEBUILD_SRC_DIR/services/signature-service"
 
-          # Verificar estructura del layer
-          echo "[INFO] Verificando estructura del layer:"
-          ls -la /tmp/layer/nodejs/ || echo "Layer nodejs no encontrado"
-          ls -la /tmp/layer/nodejs/node_modules/@lawprotect/ || echo "Paquete @lawprotect no encontrado en layer"
-
-          # Configurar NODE_PATH correctamente para el layer
-          export NODE_PATH="/tmp/layer/nodejs:$CODEBUILD_SRC_DIR/node_modules:$(npm root)"
-          node -e "require(\"module\").Module._initPaths()"
-
-          # Crear symlink para que TypeScript pueda resolver el módulo
-          echo "[INFO] Creando symlink para TypeScript"
-          rm -rf node_modules/@lawprotect/shared-ts || true
-          mkdir -p node_modules/@lawprotect
-          ln -sf /tmp/layer/nodejs node_modules/@lawprotect/shared-ts
-
-          # Verificar Prisma client en el layer
-          echo "[INFO] Verificando Prisma client en layer"
-          if [ -d "/tmp/layer/nodejs/node_modules/.prisma" ]; then
-            echo "[INFO] Prisma client encontrado en layer"
-            ls -la /tmp/layer/nodejs/node_modules/.prisma/ || echo "Prisma client no encontrado"
-          else
-            echo "[INFO] Prisma client no encontrado en layer, generando"
-            cd /tmp/layer/nodejs
-            DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}" \
-            npx -y prisma@5.22.0 generate
-            cd "$CODEBUILD_SRC_DIR/services/signature-service"
-          fi
-
-          # Verificar que el layer funciona correctamente
+          # Verificar que shared-ts local funciona
           node -e "console.log(require.resolve(\"@prisma/client\") ? \"@prisma/client OK\" : \"@prisma/client NO\")"
+          node -e "console.log(require.resolve(\"@lawprotect/shared-ts\") ? \"shared-ts OK\" : \"shared-ts NO\")"
           
-          # Verificar shared-ts
-          if node -e "require.resolve(\"@lawprotect/shared-ts\")" 2>/dev/null; then
-            echo "shared-ts OK"
-          else
-            echo "shared-ts NO - Verificando estructura del layer"
-            echo "[INFO] Contenido del layer:"
-            ls -la /tmp/layer/nodejs/ || echo "Layer nodejs no encontrado"
-            echo "[INFO] Package.json del layer:"
-            cat /tmp/layer/nodejs/package.json || echo "Package.json no encontrado"
-            echo "[INFO] Estructura dist:"
-            ls -la /tmp/layer/nodejs/dist/ || echo "Dist no encontrado"
-            echo "[INFO] Symlink creado:"
-            ls -la node_modules/@lawprotect/shared-ts || echo "Symlink no encontrado"
-            echo "[INFO] Prisma client:"
-            ls -la /tmp/layer/nodejs/node_modules/.prisma/ || echo "Prisma client no encontrado"
-          fi
-          
-          echo "[INFO] Layer configurado correctamente"
+          echo "[INFO] Configuración completada"
         '
 
   build:
     commands:
-      # 4) Tests con el layer existente (Prisma ya generado)
+      # 4) Tests con shared-ts local (Prisma ya generado)
       - |
         bash -lc '
           set -euo pipefail
-          echo "[INFO] tests unitarios con layer existente"
+          echo "[INFO] tests unitarios con shared-ts local"
           cd "$CODEBUILD_SRC_DIR/services/signature-service"
-          export NODE_PATH="/tmp/layer/nodejs:/tmp/layer/nodejs/node_modules:$CODEBUILD_SRC_DIR/node_modules:$(npm root)"
-          node -e "require(\"module\").Module._initPaths()"
           npm run test:unit:coverage
         '
 
