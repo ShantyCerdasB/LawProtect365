@@ -14,15 +14,15 @@ phases:
 
   pre_build:
     commands:
-      # 1) Construir shared-ts localmente con Prisma generado
+      # 1) Construir shared-ts con comandos del package.json
       - |
         bash -lc '
           set -euo pipefail
-          echo "[INFO] Construyendo shared-ts localmente"
+          echo "[INFO] Construyendo shared-ts con comandos nativos"
           cd "$CODEBUILD_SRC_DIR/packages/shared-ts"
           npm ci
           DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}" \
-          npx -y prisma@5.22.0 generate
+          npm run prisma:generate
           npm run build
           echo "[INFO] shared-ts construido con Prisma generado"
         '
@@ -36,20 +36,12 @@ phases:
           npm ci
         '
 
-      # 3) Copiar Prisma generado a signature-service
+      # 3) Verificar que shared-ts funciona correctamente
       - |
         bash -lc '
           set -euo pipefail
-          echo "[INFO] Copiando Prisma generado a signature-service"
+          echo "[INFO] Verificando que shared-ts funciona"
           cd "$CODEBUILD_SRC_DIR/services/signature-service"
-
-          # Copiar .prisma generado desde shared-ts
-          if [ -d "$CODEBUILD_SRC_DIR/node_modules/.prisma" ]; then
-            echo "[INFO] Copiando .prisma desde node_modules raíz"
-            cp -r "$CODEBUILD_SRC_DIR/node_modules/.prisma" node_modules/
-          else
-            echo "[INFO] .prisma no encontrado en node_modules raíz"
-          fi
 
           # Verificar que Prisma funciona
           node -e "console.log(require.resolve(\"@prisma/client\") ? \"@prisma/client OK\" : \"@prisma/client NO\")"
