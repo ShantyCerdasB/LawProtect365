@@ -36,14 +36,22 @@ phases:
           npm ci
         '
 
-      # 3) Configurar para usar shared-ts local
+      # 3) Copiar Prisma generado a signature-service
       - |
         bash -lc '
           set -euo pipefail
-          echo "[INFO] Configurando para usar shared-ts local"
+          echo "[INFO] Copiando Prisma generado a signature-service"
           cd "$CODEBUILD_SRC_DIR/services/signature-service"
 
-          # Verificar que shared-ts local funciona
+          # Copiar .prisma generado desde shared-ts
+          if [ -d "$CODEBUILD_SRC_DIR/node_modules/.prisma" ]; then
+            echo "[INFO] Copiando .prisma desde node_modules raíz"
+            cp -r "$CODEBUILD_SRC_DIR/node_modules/.prisma" node_modules/
+          else
+            echo "[INFO] .prisma no encontrado en node_modules raíz"
+          fi
+
+          # Verificar que Prisma funciona
           node -e "console.log(require.resolve(\"@prisma/client\") ? \"@prisma/client OK\" : \"@prisma/client NO\")"
           node -e "console.log(require.resolve(\"@lawprotect/shared-ts\") ? \"shared-ts OK\" : \"shared-ts NO\")"
           
