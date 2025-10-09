@@ -7,6 +7,26 @@ phases:
 
   pre_build:
     commands:
+      # Verificar si hay cambios relevantes en shared-ts
+      - |
+        bash -lc "set -euo pipefail
+        echo '[INFO] Verificando cambios en shared-ts...'
+        
+        # Obtener la lista de archivos cambiados en el último commit
+        CHANGED_FILES=\$(git diff --name-only HEAD~1 HEAD 2>/dev/null || git diff --name-only HEAD)
+        
+        # Verificar si hay cambios en shared-ts o buildspec
+        SHARED_TS_CHANGED=\$(echo \"\$CHANGED_FILES\" | grep -E '^packages/shared-ts/' || true)
+        BUILDSPEC_CHANGED=\$(echo \"\$CHANGED_FILES\" | grep -E '^buildspec\.yml$' || true)
+        
+        if [ -n \"\$SHARED_TS_CHANGED\" ] || [ -n \"\$BUILDSPEC_CHANGED\" ]; then
+          echo '[INFO] Cambios detectados en shared-ts o buildspec. Continuando con el build...'
+          echo \"[INFO] Archivos cambiados: \$CHANGED_FILES\"
+        else
+          echo '[INFO] No hay cambios relevantes en shared-ts. Saltando el build...'
+          echo '[INFO] Para forzar el build, incluye cambios en packages/shared-ts/ o buildspec.yml'
+          exit 0
+        fi"
       - |
         bash -lc "set -euo pipefail
         test -d \"$CODEBUILD_SRC_DIR/packages/shared-ts\" || { echo 'shared-ts not found'; exit 2; }

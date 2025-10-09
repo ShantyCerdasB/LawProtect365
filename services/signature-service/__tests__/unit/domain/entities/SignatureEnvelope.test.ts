@@ -11,7 +11,7 @@ import { EnvelopeId } from '../../../../src/domain/value-objects/EnvelopeId';
 import { 
   SignerStatus, 
   DocumentOriginType 
-} from '@lawprotect/shared-ts';
+} from '@prisma/client';
 import { EnvelopeStatus } from '../../../../src/domain/value-objects/EnvelopeStatus';
 import { DocumentOrigin } from '../../../../src/domain/value-objects/DocumentOrigin';
 import { SigningOrder } from '../../../../src/domain/value-objects/SigningOrder';
