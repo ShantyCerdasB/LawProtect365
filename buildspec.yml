@@ -12,22 +12,37 @@ phases:
         bash -lc "set -euo pipefail
         echo '[INFO] Verificando cambios en shared-ts...'
         
-        # Obtener la lista de archivos cambiados en el último commit
-        CHANGED_FILES=\$(git diff --name-only HEAD~1 HEAD 2>/dev/null || git diff --name-only HEAD)
+        # Calcular hash del código actual de shared-ts
+        CURRENT_HASH=\$(find packages/shared-ts -type f -name '*.ts' -o -name '*.js' -o -name '*.json' -o -name '*.prisma' | sort | xargs cat | sha256sum | cut -d' ' -f1)
+        echo \"[INFO] Hash actual del código: \$CURRENT_HASH\"
         
-        # Verificar si hay cambios en shared-ts o buildspec
-        SHARED_TS_CHANGED=\$(echo \"\$CHANGED_FILES\" | grep -E '^packages/shared-ts/' || true)
-        BUILDSPEC_CHANGED=\$(echo \"\$CHANGED_FILES\" | grep -E '^buildspec\.yml$' || true)
-        
-        if [ -n \"\$SHARED_TS_CHANGED\" ] || [ -n \"\$BUILDSPEC_CHANGED\" ]; then
-          echo '[INFO] Cambios detectados en shared-ts o buildspec. Continuando con el build...'
-          echo \"[INFO] Archivos cambiados: \$CHANGED_FILES\"
+        # Verificar si existe el layer anterior en S3
+        if aws s3 ls \"s3://\$CODE_BUCKET/shared-ts-layer.zip\" >/dev/null 2>&1; then
+          # Descargar y extraer el hash del build anterior
+          aws s3 cp \"s3://\$CODE_BUCKET/shared-ts-layer.zip\" /tmp/previous-layer.zip
+          mkdir -p /tmp/previous-layer
+          cd /tmp/previous-layer
+          unzip -q ../previous-layer.zip
+          
+          # Leer el hash del build anterior
+          if [ -f 'build-hash.txt' ]; then
+            PREVIOUS_HASH=\$(cat build-hash.txt)
+            echo \"[INFO] Hash del build anterior: \$PREVIOUS_HASH\"
+            
+            if [ \"\$CURRENT_HASH\" = \"\$PREVIOUS_HASH\" ]; then
+              echo '[INFO] No hay cambios en shared-ts. Saltando el build...'
+              echo '[INFO] Para forzar el build, modifica archivos en packages/shared-ts/'
+              echo 'SKIP_BUILD=true' > /tmp/skip_build.flag
+              set +e
+              exit 0
+            else
+              echo '[INFO] Cambios detectados en shared-ts. Continuando con el build...'
+            fi
+          else
+            echo '[INFO] No se encontró hash anterior. Continuando con el build...'
+          fi
         else
-          echo '[INFO] No hay cambios relevantes en shared-ts. Saltando el build...'
-          echo '[INFO] Para forzar el build, incluye cambios en packages/shared-ts/ o buildspec.yml'
-          echo 'SKIP_BUILD=true' > /tmp/skip_build.flag
-          set +e
-          exit 0
+          echo '[INFO] No existe layer anterior. Continuando con el build...'
         fi"
       - |
         bash -lc "set -euo pipefail
@@ -51,7 +66,12 @@ phases:
         else
           echo 'root node_modules not found'
           exit 2
-        fi"
+        fi
+        
+        # Guardar hash del build actual para futuras comparaciones
+        CURRENT_HASH=\$(find packages/shared-ts -type f -name '*.ts' -o -name '*.js' -o -name '*.json' -o -name '*.prisma' | sort | xargs cat | sha256sum | cut -d' ' -f1)
+        echo \"\$CURRENT_HASH\" > /tmp/layer/build-hash.txt
+        echo \"[INFO] Hash del build guardado: \$CURRENT_HASH\""
 
   build:
     commands:
