@@ -36,12 +36,24 @@ phases:
           npm ci
         '
 
-      # 3) Verificar que shared-ts funciona correctamente
+      # 3) Generar Prisma en signature-service para acceso a tipos
       - |
         bash -lc '
           set -euo pipefail
-          echo "[INFO] Verificando que shared-ts funciona"
+          echo "[INFO] Generando Prisma en signature-service para tipos"
           cd "$CODEBUILD_SRC_DIR/services/signature-service"
+
+          # Copiar schema de Prisma desde shared-ts
+          if [ -d "$CODEBUILD_SRC_DIR/packages/shared-ts/prisma" ]; then
+            echo "[INFO] Copiando schema de Prisma desde shared-ts"
+            mkdir -p prisma
+            cp -r "$CODEBUILD_SRC_DIR/packages/shared-ts/prisma/"* prisma/
+          fi
+
+          # Generar Prisma client en signature-service
+          echo "[INFO] Generando Prisma client en signature-service"
+          DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}" \
+          npx -y prisma@5.22.0 generate
 
           # Verificar que Prisma funciona
           node -e "console.log(require.resolve(\"@prisma/client\") ? \"@prisma/client OK\" : \"@prisma/client NO\")"
