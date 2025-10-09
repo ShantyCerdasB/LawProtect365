@@ -56,6 +56,19 @@ phases:
           mkdir -p node_modules/@lawprotect
           ln -sf /tmp/layer/nodejs node_modules/@lawprotect/shared-ts
 
+          # Verificar Prisma client en el layer
+          echo "[INFO] Verificando Prisma client en layer"
+          if [ -d "/tmp/layer/nodejs/node_modules/.prisma" ]; then
+            echo "[INFO] Prisma client encontrado en layer"
+            ls -la /tmp/layer/nodejs/node_modules/.prisma/ || echo "Prisma client no encontrado"
+          else
+            echo "[INFO] Prisma client no encontrado en layer, generando"
+            cd /tmp/layer/nodejs
+            DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}" \
+            npx -y prisma@5.22.0 generate
+            cd "$CODEBUILD_SRC_DIR/services/signature-service"
+          fi
+
           # Verificar que el layer funciona correctamente
           node -e "console.log(require.resolve(\"@prisma/client\") ? \"@prisma/client OK\" : \"@prisma/client NO\")"
           
@@ -72,6 +85,8 @@ phases:
             ls -la /tmp/layer/nodejs/dist/ || echo "Dist no encontrado"
             echo "[INFO] Symlink creado:"
             ls -la node_modules/@lawprotect/shared-ts || echo "Symlink no encontrado"
+            echo "[INFO] Prisma client:"
+            ls -la /tmp/layer/nodejs/node_modules/.prisma/ || echo "Prisma client no encontrado"
           fi
           
           echo "[INFO] Layer configurado correctamente"
