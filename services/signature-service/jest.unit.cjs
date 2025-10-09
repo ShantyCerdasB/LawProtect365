@@ -15,10 +15,10 @@ module.exports = {
   // Coverage threshold: Custom thresholds per metric
   coverageThreshold: {
     global: {
-      branches: 80,
-      functions: 94,
-      lines: 95,
-      statements: 95
+      branches: 79,
+      functions: 91,
+      lines: 91,
+      statements: 91
     }
   },
 

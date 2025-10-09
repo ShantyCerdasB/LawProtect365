@@ -25,10 +25,17 @@ phases:
         else
           echo '[INFO] No hay cambios relevantes en shared-ts. Saltando el build...'
           echo '[INFO] Para forzar el build, incluye cambios en packages/shared-ts/ o buildspec.yml'
+          echo 'SKIP_BUILD=true' > /tmp/skip_build.flag
+          set +e
           exit 0
         fi"
       - |
         bash -lc "set -euo pipefail
+        # Verificar si se debe saltar el build
+        if [ -f '/tmp/skip_build.flag' ]; then
+          echo '[INFO] Build saltado - no hay cambios relevantes en shared-ts'
+          exit 0
+        fi
         test -d \"$CODEBUILD_SRC_DIR/packages/shared-ts\" || { echo 'shared-ts not found'; exit 2; }
         cd \"$CODEBUILD_SRC_DIR/packages/shared-ts\"
         npm ci
