@@ -14,51 +14,15 @@ phases:
 
   pre_build:
     commands:
-      # 1) Construir shared-ts y generar Prisma **5.22.x**
+      # 1) Descargar y configurar el layer existente
       - |
         bash -lc '
           set -euo pipefail
-          echo "[INFO] build shared-ts"
-          cd "$CODEBUILD_SRC_DIR/packages/shared-ts"
-
-          # Instalar dependencias del paquete
-          npm ci
-
-          # Detectar versión instalada de @prisma/client
-          INSTALLED_VER="$(node -e "console.log(require(\"@prisma/client/package.json\").version)")"
-          echo "[INFO] @prisma/client instalado: ${INSTALLED_VER}"
-
-          # Si no es 5.22.x, instalamos 5.22.0 explícitamente (cliente + CLI)
-          if [ "${INSTALLED_VER%%.*}" -ne 5 ] || [ "${INSTALLED_VER#5.}" != "${INSTALLED_VER}" ] && [ "${INSTALLED_VER#5.}" != "${INSTALLED_VER}" ]; then
-            true # no-op; shell guard
-          fi
-          if [ "${INSTALLED_VER%%.*}" != "5" ] || [ "${INSTALLED_VER#5.}" = "${INSTALLED_VER}" ] || [ "${INSTALLED_VER%%.*}.${INSTALLED_VER#*.%%.*}" != "5.22" ]; then
-            echo "[INFO] Forzando @prisma/client@5.22.0 y prisma@5.22.0"
-            npm i @prisma/client@5.22.0 --no-save
-            npm i -D prisma@5.22.0 --no-save
-          fi
-
-          # Generar client exactamente con 5.22.0
-          echo "[INFO] prisma generate con CLI 5.22.0"
-          DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}" \
-          npx -y prisma@5.22.0 generate
-
-          # Build del paquete
-          npm run build
-          npm prune --omit=dev
-
-          # Armar layer temporal
-          mkdir -p /tmp/layer/nodejs
-          cp -a dist /tmp/layer/nodejs/
-          cp package.json /tmp/layer/nodejs/
-
-          # (opcional) copiar node_modules raíz al layer
-          if [ -d "$CODEBUILD_SRC_DIR/node_modules" ]; then
-            mkdir -p /tmp/layer/nodejs/node_modules
-            cp -a "$CODEBUILD_SRC_DIR/node_modules/." /tmp/layer/nodejs/node_modules/
-          fi
-
-          echo "[INFO] Prisma Client generado en shared-ts con 5.22.0"
+          echo "[INFO] Descargando layer existente de S3"
+          mkdir -p /tmp/layer
+          aws s3 cp "s3://$CODE_BUCKET/shared-ts-layer.zip" /tmp/layer/shared-ts-layer.zip
+          cd /tmp/layer && unzip shared-ts-layer.zip
+          echo "[INFO] Layer descomprimido en /tmp/layer/nodejs"
         '
 
       # 2) Instalar deps del servicio
@@ -70,11 +34,11 @@ phases:
           npm ci
         '
 
-      # 3) Configurar NODE_PATH para que Jest/Node resuelvan el layer
+      # 3) Configurar NODE_PATH para usar el layer existente
       - |
         bash -lc '
           set -euo pipefail
-          echo "[INFO] configurar NODE_PATH para tests"
+          echo "[INFO] configurar NODE_PATH para usar layer existente"
           cd "$CODEBUILD_SRC_DIR/services/signature-service"
 
           export NODE_PATH="/tmp/layer/nodejs:/tmp/layer/nodejs/node_modules:$CODEBUILD_SRC_DIR/node_modules:$(npm root)"
@@ -83,17 +47,19 @@ phases:
           # Forzar que no tome el paquete local (usará el del layer)
           rm -rf node_modules/@lawprotect/shared-ts || true
 
+          # Verificar que el layer funciona correctamente
           node -e "console.log(require.resolve(\"@prisma/client\") ? \"@prisma/client OK\" : \"@prisma/client NO\")"
           node -e "console.log(require.resolve(\"@lawprotect/shared-ts\") ? \"shared-ts OK\" : \"shared-ts NO\")"
+          echo "[INFO] Layer configurado correctamente"
         '
 
   build:
     commands:
-      # 4) Tests con el layer y Prisma 5.22.x
+      # 4) Tests con el layer existente (Prisma ya generado)
       - |
         bash -lc '
           set -euo pipefail
-          echo "[INFO] tests unitarios"
+          echo "[INFO] tests unitarios con layer existente"
           cd "$CODEBUILD_SRC_DIR/services/signature-service"
           export NODE_PATH="/tmp/layer/nodejs:/tmp/layer/nodejs/node_modules:$CODEBUILD_SRC_DIR/node_modules:$(npm root)"
           node -e "require(\"module\").Module._initPaths()"
