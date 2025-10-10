@@ -12,11 +12,11 @@ jobs:
       shared-ts: ${{ steps.changes.outputs.shared-ts }}
       signature-service: ${{ steps.changes.outputs.signature-service }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       
-      - uses: dorny/paths-filter@v2
+      - uses: dorny/paths-filter@v3
         id: changes
         with:
           filters: |
@@ -34,16 +34,15 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: us-east-1
           role-session-name: GitHubActions
       
-      - name: Trigger shared-ts pipeline
-        run: |
-          aws codepipeline start-pipeline-execution --name lawprotect365-shared-components-pipeline-stg
+      - name: Start CodePipeline (shared components)
+        run: aws codepipeline start-pipeline-execution --name lawprotect365-shared-components-pipeline-stg
 
   trigger-signature-service:
     needs: detect-changes
@@ -53,16 +52,15 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: us-east-1
           role-session-name: GitHubActions
       
-      - name: Trigger signature-service pipeline
-        run: |
-          aws codepipeline start-pipeline-execution --name lawprotect365-sign-pipeline-stg
+      - name: Start CodePipeline (signature service)
+        run: aws codepipeline start-pipeline-execution --name lawprotect365-sign-pipeline-stg
 
   no-changes:
     needs: detect-changes
