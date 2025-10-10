@@ -5,7 +5,7 @@ data "aws_iam_policy_document" "github_actions_assume" {
       type        = "Federated"
       identifiers = [aws_iam_openid_connect_provider.github_actions.arn]
     }
-    actions = ["sts:AssumeRole"]
+    actions = ["sts:AssumeRole", "sts:AssumeRoleWithWebIdentity"]
     condition {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:aud"
@@ -29,8 +29,7 @@ data "aws_iam_policy_document" "github_actions_policy" {
       "codepipeline:ListPipelines"
     ]
     resources = [
-      "arn:aws:codepipeline:${var.region}:${var.account_id}:pipeline/${var.project_name}-shared-components-pipeline-${var.env}",
-      "arn:aws:codepipeline:${var.region}:${var.account_id}:pipeline/${var.project_name}-sign-pipeline-${var.env}"
+      "arn:aws:codepipeline:${var.region}:${var.account_id}:pipeline/*"
     ]
   }
 }
