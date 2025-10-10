@@ -33,6 +33,9 @@ phases:
               echo '[INFO] No hay cambios en shared-ts. Saltando el build...'
               echo '[INFO] Para forzar el build, modifica archivos en packages/shared-ts/'
               echo 'SKIP_BUILD=true' > /tmp/skip_build.flag
+              # Crear un artifact vacío para que CodeBuild no falle
+              mkdir -p /tmp/empty-build
+              touch /tmp/empty-build/.gitkeep
               set +e
               exit 0
             else
@@ -134,4 +137,5 @@ artifacts:
   files:
     - 'outbox-stream-handler.zip'
     - 'appspec.yml'
+    - '/tmp/empty-build/.gitkeep'
   discard-paths: yes

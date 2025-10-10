@@ -134,7 +134,7 @@ phases:
                 cd "$CODEBUILD_SRC_DIR/services/signature-service"
                 
                 # Crear AppSpec básico para CodeDeploy
-                cat > appspec.yml << EOF
+                cat > appspec.yml << 'EOF'
 version: 0.0
 Resources:
   - SignatureService:
