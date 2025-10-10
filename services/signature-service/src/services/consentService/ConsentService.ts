@@ -3,7 +3,7 @@
  * @summary Provides business logic for consent management using new architecture
  * @description This service handles all business logic for consent operations
  * including creation, validation, and coordination with other services using
- * the new Prisma-based architecture with proper separation of concerns.
+ * the new Prisma-based architecture with proper separation of concerns..
  */
 
 import { Consent } from '@/domain/entities/Consent';

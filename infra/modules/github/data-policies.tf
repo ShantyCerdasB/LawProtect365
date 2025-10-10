@@ -26,10 +26,33 @@ data "aws_iam_policy_document" "github_actions_policy" {
       "codepipeline:StartPipelineExecution",
       "codepipeline:GetPipeline",
       "codepipeline:GetPipelineState",
-      "codepipeline:ListPipelines"
+      "codepipeline:ListPipelines",
+      "codepipeline:GetPipelineExecution",
+      "codepipeline:ListPipelineExecutions"
     ]
     resources = [
       "arn:aws:codepipeline:${var.region}:${var.account_id}:pipeline/*"
+    ]
+  }
+  
+  statement {
+    effect = "Allow"
+    actions = [
+      "codepipeline:StartPipelineExecution"
+    ]
+    resources = [
+      "arn:aws:codepipeline:${var.region}:${var.account_id}:pipeline/lawprotect365-shared-components-pipeline-${var.env}",
+      "arn:aws:codepipeline:${var.region}:${var.account_id}:pipeline/lawprotect365-sign-pipeline-${var.env}"
+    ]
+  }
+  
+  statement {
+    effect = "Allow"
+    actions = [
+      "iam:PassRole"
+    ]
+    resources = [
+      "arn:aws:iam::${var.account_id}:role/*"
     ]
   }
 }
