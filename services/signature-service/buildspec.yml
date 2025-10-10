@@ -129,11 +129,11 @@ phases:
           fi
         done
         
-        # Create a basic appspec.yml for CodeDeploy (even though we updated directly)
-        echo "[INFO] Creating basic appspec.yml for CodeDeploy"
+        # Create a dummy appspec.yml for CodeDeploy (functions already updated directly)
+        echo "[INFO] Creating dummy appspec.yml for CodeDeploy compatibility"
         echo "version: 0.0" > appspec.yml
         echo "Resources:" >> appspec.yml
-        echo "  - SignatureService:" >> appspec.yml
+        echo "  - DummyFunction:" >> appspec.yml
         echo "      Type: AWS::Lambda::Function" >> appspec.yml
         echo "      Properties:" >> appspec.yml
         echo "        Name: lawprotect365-sign-service-create-envelope-stg" >> appspec.yml
