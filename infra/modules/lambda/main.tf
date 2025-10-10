@@ -26,6 +26,7 @@ resource "aws_iam_role" "lambda_exec" {
   }
 }
 
+
 /**
  * Attaches the AWS managed policy for basic Lambda execution (CloudWatch Logs).
  */
@@ -80,4 +81,14 @@ resource "aws_lambda_function" "func" {
     Env       = var.env
     ManagedBy = "Terraform"
   }
+}
+
+/**
+ * Creates a 'live' alias for the Lambda function for CodeDeploy compatibility.
+ */
+resource "aws_lambda_alias" "live" {
+  name             = "live"
+  description      = "Live alias for CodeDeploy deployments"
+  function_name    = aws_lambda_function.func.function_name
+  function_version = "$LATEST"
 }

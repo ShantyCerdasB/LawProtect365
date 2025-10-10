@@ -129,7 +129,7 @@ phases:
           fi
         done
         
-        # Create a dummy appspec.yml for CodeDeploy (functions already updated directly)
+        # Create a dummy appspec.yml for CodeDeploy (functions already updated directl)
         echo "[INFO] Creating dummy appspec.yml for CodeDeploy compatibility"
         echo "version: 0.0" > appspec.yml
         echo "Resources:" >> appspec.yml
