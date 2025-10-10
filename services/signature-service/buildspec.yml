@@ -94,71 +94,41 @@ phases:
       - |
         bash -lc '
         set -euo pipefail
-        echo "[INFO] Update Lambda functions directly + create basic appspec.yml"
+        echo "[INFO] Create appspec.yml with all Lambda functions"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
         
-        # Update each Lambda function with its corresponding zip
-        handlers=(
-          "create-envelope:lawprotect365-sign-service-create-envelope-stg"
-          "get-envelope:lawprotect365-sign-service-get-envelope-stg"
-          "send-envelope:lawprotect365-sign-service-send-envelope-stg"
-          "sign-document:lawprotect365-sign-service-sign-document-stg"
-          "get-envelopes-by-user:lawprotect365-sign-service-get-envelopes-by-user-stg"
-          "update-envelope:lawprotect365-sign-service-update-envelope-stg"
-          "cancel-envelope:lawprotect365-sign-service-cancel-envelope-stg"
-          "download-document:lawprotect365-sign-service-download-document-stg"
-          "share-document:lawprotect365-sign-service-share-document-stg"
-          "decline-signer:lawprotect365-sign-service-decline-signer-stg"
-          "send-notification:lawprotect365-sign-service-send-notification-stg"
-          "get-audit-trail:lawprotect365-sign-service-get-audit-trail-stg"
-        )
-        
-        for handler in "${handlers[@]}"; do
-          name="${handler%%:*}"
-          function_name="${handler##*:}"
-          zip_file="sign-${name}.zip"
-          
-          if [ -f "$zip_file" ]; then
-            echo "[INFO] Updating Lambda function: $function_name"
-            aws lambda update-function-code \
-              --function-name "$function_name" \
-              --zip-file "fileb://$zip_file" \
-              --region us-east-1 || echo "Warning: Failed to update $function_name"
-            
-            # Wait for function to be updated
-            aws lambda wait function-updated --function-name "$function_name"
-            
-            # Publish new version
-            TARGET_VERSION=$(aws lambda publish-version --function-name "$function_name" --query Version --output text 2>/dev/null)
-            if [ -z "$TARGET_VERSION" ] || [ "$TARGET_VERSION" = "null" ]; then
-              TIMESTAMP=$(date +%s)
-              TARGET_VERSION=$(aws lambda publish-version --function-name "$function_name" --description "Build-${TIMESTAMP}" --query Version --output text 2>/dev/null)
-            fi
-            
-            # Update alias to point to new version
-            if aws lambda get-alias --function-name "$function_name" --name "live" >/dev/null 2>&1; then
-              aws lambda update-alias --function-name "$function_name" --name "live" --function-version "$TARGET_VERSION"
-            else
-              aws lambda create-alias --function-name "$function_name" --name "live" --function-version "$TARGET_VERSION"
-            fi
-          else
-            echo "Warning: Zip file $zip_file not found"
-          fi
-        done
-        
-        # Create appspec.yml for CodeDeploy compatibility
-        echo "[INFO] Creating appspec.yml for CodeDeploy"
-        FUNCTION_NAME="lawprotect365-sign-service-create-envelope-stg"
-        
+        # Create appspec.yml with all Lambda functions
         echo "version: 0.0" > appspec.yml
         echo "Resources:" >> appspec.yml
-        echo "  - SignatureService:" >> appspec.yml
-        echo "      Type: AWS::Lambda::Function" >> appspec.yml
-        echo "      Properties:" >> appspec.yml
-        echo "        Name: $FUNCTION_NAME" >> appspec.yml
-        echo "        Alias: live" >> appspec.yml
-        echo "        CurrentVersion: 1" >> appspec.yml
-        echo "        TargetVersion: 1" >> appspec.yml
+        
+        # Add all Lambda functions to appspec.yml
+        functions=(
+          "CreateEnvelope:lawprotect365-sign-service-create-envelope-stg"
+          "GetEnvelope:lawprotect365-sign-service-get-envelope-stg"
+          "SendEnvelope:lawprotect365-sign-service-send-envelope-stg"
+          "SignDocument:lawprotect365-sign-service-sign-document-stg"
+          "GetEnvelopesByUser:lawprotect365-sign-service-get-envelopes-by-user-stg"
+          "UpdateEnvelope:lawprotect365-sign-service-update-envelope-stg"
+          "CancelEnvelope:lawprotect365-sign-service-cancel-envelope-stg"
+          "DownloadDocument:lawprotect365-sign-service-download-document-stg"
+          "ShareDocument:lawprotect365-sign-service-share-document-stg"
+          "DeclineSigner:lawprotect365-sign-service-decline-signer-stg"
+          "SendNotification:lawprotect365-sign-service-send-notification-stg"
+          "GetAuditTrail:lawprotect365-sign-service-get-audit-trail-stg"
+        )
+        
+        for func in "${functions[@]}"; do
+          name="${func%%:*}"
+          function_name="${func##*:}"
+          
+          echo "  - ${name}:" >> appspec.yml
+          echo "      Type: AWS::Lambda::Function" >> appspec.yml
+          echo "      Properties:" >> appspec.yml
+          echo "        Name: ${function_name}" >> appspec.yml
+          echo "        Alias: live" >> appspec.yml
+          echo "        CurrentVersion: 1" >> appspec.yml
+          echo "        TargetVersion: 1" >> appspec.yml
+        done
         '
 
 artifacts:
