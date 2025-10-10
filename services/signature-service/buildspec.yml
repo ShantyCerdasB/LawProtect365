@@ -18,94 +18,83 @@ phases:
         export DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}"
         npm run prisma:generate
         npm run build
-        echo "[INFO] shared-ts built"
-
       - |
         set -euo pipefail
         echo "[INFO] Installing deps in services/signature-service"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
         npm ci
-
       - |
         set -euo pipefail
-        echo "[INFO] Preparing Prisma client in signature-service"
+        echo "[INFO] Preparing Prisma client"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
         if [ -d "$CODEBUILD_SRC_DIR/packages/shared-ts/prisma" ]; then
-          echo "[INFO] Copying Prisma schema from shared-ts"
           mkdir -p prisma
           cp -r "$CODEBUILD_SRC_DIR/packages/shared-ts/prisma/"* prisma/
         fi
         export DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}"
         npx -y prisma@5.22.0 generate
-        node -e 'try{require.resolve("@prisma/client");console.log("@prisma/client OK")}catch(e){console.log("@prisma/client NO");process.exit(1)}'
-        node -e 'try{require.resolve("@lawprotect/shared-ts");console.log("shared-ts OK")}catch(e){console.log("shared-ts NO");process.exit(1)}'
-        echo "[INFO] Prisma ready"
+        node -e 'try{require.resolve("@prisma/client");console.log("@prisma/client OK")}catch(e){process.exit(1)}'
+        node -e 'try{require.resolve("@lawprotect/shared-ts");console.log("shared-ts OK")}catch(e){process.exit(1)}'
 
   build:
     commands:
       - |
         set -euo pipefail
-        echo "[INFO] Running unit tests"
+        echo "[INFO] Tests"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
         export DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}"
         npm run test:unit:coverage
-
       - |
         set -euo pipefail
-        echo "[INFO] Building TypeScript and pruning dev deps"
+        echo "[INFO] Build + prune"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
         npm run build
         npm prune --omit=dev
         rm -rf node_modules/@lawprotect/shared-ts || true
-
       - |
         set -euo pipefail
-        echo "[INFO] Packaging Lambda handlers"
+        echo "[INFO] Package handlers"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
-        declare -A HANDLERS=(
-          ["create-envelope"]="dist/src/handlers/envelopes/CreateEnvelopeHandler.js"
-          ["get-envelope"]="dist/src/handlers/envelopes/GetEnvelopeHandler.js"
-          ["send-envelope"]="dist/src/handlers/envelopes/SendEnvelopeHandler.js"
-          ["sign-document"]="dist/src/handlers/signing/SignDocumentHandler.js"
-          ["decline-signer"]="dist/src/handlers/signing/DeclineSignerHandler.js"
-          ["share-document"]="dist/src/handlers/signing/ShareDocumentViewHandler.js"
-          ["send-notification"]="dist/src/handlers/notifications/SendNotificationHandler.js"
-          ["get-audit-trail"]="dist/src/handlers/audit/GetAuditTrailHandler.js"
-          ["get-envelopes-by-user"]="dist/src/handlers/envelopes/GetEnvelopesByUserHandler.js"
-          ["update-envelope"]="dist/src/handlers/envelopes/UpdateEnvelopeHandler.js"
-          ["cancel-envelope"]="dist/src/handlers/envelopes/CancelEnvelopeHandler.js"
-          ["download-document"]="dist/src/handlers/envelopes/DownloadDocumentHandler.js"
+        
+        # Handler mapping
+        handlers=(
+          "create-envelope:dist/src/handlers/envelopes/CreateEnvelopeHandler.js"
+          "get-envelope:dist/src/handlers/envelopes/GetEnvelopeHandler.js"
+          "send-envelope:dist/src/handlers/envelopes/SendEnvelopeHandler.js"
+          "sign-document:dist/src/handlers/signing/SignDocumentHandler.js"
+          "decline-signer:dist/src/handlers/signing/DeclineSignerHandler.js"
+          "share-document:dist/src/handlers/signing/ShareDocumentViewHandler.js"
+          "send-notification:dist/src/handlers/notifications/SendNotificationHandler.js"
+          "get-audit-trail:dist/src/handlers/audit/GetAuditTrailHandler.js"
+          "get-envelopes-by-user:dist/src/handlers/envelopes/GetEnvelopesByUserHandler.js"
+          "update-envelope:dist/src/handlers/envelopes/UpdateEnvelopeHandler.js"
+          "cancel-envelope:dist/src/handlers/envelopes/CancelEnvelopeHandler.js"
+          "download-document:dist/src/handlers/envelopes/DownloadDocumentHandler.js"
         )
-        for name in "${!HANDLERS[@]}"; do
-          src="${HANDLERS[$name]}"
-          echo "→ Packaging sign-$name.zip from $src"
-          [ -f "$src" ] || { echo "❌ Missing handler: $src"; exit 1; }
+        
+        for handler in "${handlers[@]}"; do
+          name="${handler%%:*}"
+          src="${handler##*:}"
+          [ -f "$src" ] || { echo "Missing handler $src"; exit 1; }
           work="pkg-$name"
-          rm -rf "$work"
-          mkdir -p "$work"
-          cp "$src" "$work/"
-          cp package.json "$work/"
+          rm -rf "$work"; mkdir -p "$work"
+          cp "$src" package.json "$work/"
           (cd "$work" && zip -qr "../sign-$name.zip" .)
           rm -rf "$work"
-          echo "✅ sign-$name.zip created"
         done
-
       - |
         set -euo pipefail
-        echo "[INFO] Creating appspec.yml for CodeDeploy"
+        echo "[INFO] Write appspec.yml"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
-        cat > appspec.yml <<'YAML'
-version: 0.0
-Resources:
-  - SignatureService:
-      Type: AWS::Lambda::Function
-      Properties:
-        Name: signature-service
-        Alias: live
-        CurrentVersion: 1
-        TargetVersion: 1
-YAML
-        echo "[INFO] appspec.yml ready"
+        echo "version: 0.0" > appspec.yml
+        echo "Resources:" >> appspec.yml
+        echo "  - SignatureService:" >> appspec.yml
+        echo "      Type: AWS::Lambda::Function" >> appspec.yml
+        echo "      Properties:" >> appspec.yml
+        echo "        Name: signature-service" >> appspec.yml
+        echo "        Alias: live" >> appspec.yml
+        echo "        CurrentVersion: 1" >> appspec.yml
+        echo "        TargetVersion: 1" >> appspec.yml
 
 artifacts:
   files:
