@@ -126,7 +126,30 @@ phases:
                 done
               '
 
+            # 7) Crear AppSpec para CodeDeploy
+            - |
+              bash -lc '
+                set -euo pipefail
+                echo "[INFO] Creando AppSpec para CodeDeploy"
+                cd "$CODEBUILD_SRC_DIR/services/signature-service"
+                
+                # Crear AppSpec básico para CodeDeploy
+                cat > appspec.yml << EOF
+version: 0.0
+Resources:
+  - SignatureService:
+      Type: AWS::Lambda::Function
+      Properties:
+        Name: "signature-service"
+        Alias: "live"
+        CurrentVersion: 1
+        TargetVersion: 1
+EOF
+                echo "[INFO] AppSpec creado: appspec.yml"
+              '
+
 artifacts:
   files:
     - 'services/signature-service/sign-*.zip'
+    - 'services/signature-service/appspec.yml'
   discard-paths: yes
