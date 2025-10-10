@@ -41,6 +41,7 @@ resource "aws_codepipeline" "pipeline" {
         ConnectionArn    = var.github_connection_arn
         FullRepositoryId = "${var.github_owner}/${var.github_repo}"
         BranchName       = var.github_branch
+        DetectChanges    = "false"
       }
     }
   }

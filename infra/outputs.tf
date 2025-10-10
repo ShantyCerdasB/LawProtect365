@@ -764,3 +764,14 @@ output "shared_components_pipeline_console_url" {
   value       = module.shared_components_pipeline.pipeline_console_url
 }
 
+# GitHub Actions Role Output
+output "github_actions_role_arn" {
+  description = "ARN of the GitHub Actions IAM role"
+  value       = module.github_connection.github_actions_role_arn
+}
+
+output "github_actions_role_name" {
+  description = "Name of the GitHub Actions IAM role"
+  value       = module.github_connection.github_actions_role_name
+}
+

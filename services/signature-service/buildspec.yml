@@ -5,124 +5,110 @@ phases:
     runtime-versions:
       nodejs: 20
     commands:
-      - |
-        bash -lc '
-          set -euo pipefail
-          echo "[INFO] Node: $(node -v)"
-          echo "[INFO] npm:  $(npm -v)"
-        '
+      - echo "[INFO] Node: $(node -v)"
+      - echo "[INFO] npm:  $(npm -v)"
 
   pre_build:
     commands:
       - |
-        bash -lc '
-          set -euo pipefail
-          echo "[INFO] Construyendo shared-ts con comandos nativos"
-          cd "$CODEBUILD_SRC_DIR/packages/shared-ts"
-          npm ci
-          DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}" \
-          npm run prisma:generate
-          npm run build
-          echo "[INFO] shared-ts construido con Prisma generado"
-        '
+        set -euo pipefail
+        echo "[INFO] Building packages/shared-ts"
+        cd "$CODEBUILD_SRC_DIR/packages/shared-ts"
+        npm ci
+        export DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}"
+        npm run prisma:generate
+        npm run build
+        echo "[INFO] shared-ts built"
+
       - |
-        bash -lc '
-          set -euo pipefail
-          echo "[INFO] deps en signature-service"
-          cd "$CODEBUILD_SRC_DIR/services/signature-service"
-          npm ci
-        '
+        set -euo pipefail
+        echo "[INFO] Installing deps in services/signature-service"
+        cd "$CODEBUILD_SRC_DIR/services/signature-service"
+        npm ci
+
       - |
-        bash -lc '
-          set -euo pipefail
-          echo "[INFO] Generando Prisma en signature-service para tipos"
-          cd "$CODEBUILD_SRC_DIR/services/signature-service"
-          if [ -d "$CODEBUILD_SRC_DIR/packages/shared-ts/prisma" ]; then
-            echo "[INFO] Copiando schema de Prisma desde shared-ts"
-            mkdir -p prisma
-            cp -r "$CODEBUILD_SRC_DIR/packages/shared-ts/prisma/"* prisma/
-          fi
-          echo "[INFO] Generando Prisma client en signature-service"
-          DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}" \
-          npx -y prisma@5.22.0 generate
-          node -e "console.log(require.resolve('@prisma/client') ? '@prisma/client OK' : '@prisma/client NO')"
-          node -e "console.log(require.resolve('@lawprotect/shared-ts') ? 'shared-ts OK' : 'shared-ts NO')"
-          echo "[INFO] Configuración completada"
-        '
+        set -euo pipefail
+        echo "[INFO] Preparing Prisma client in signature-service"
+        cd "$CODEBUILD_SRC_DIR/services/signature-service"
+        if [ -d "$CODEBUILD_SRC_DIR/packages/shared-ts/prisma" ]; then
+          echo "[INFO] Copying Prisma schema from shared-ts"
+          mkdir -p prisma
+          cp -r "$CODEBUILD_SRC_DIR/packages/shared-ts/prisma/"* prisma/
+        fi
+        export DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}"
+        npx -y prisma@5.22.0 generate
+        node -e 'try{require.resolve("@prisma/client");console.log("@prisma/client OK")}catch(e){console.log("@prisma/client NO");process.exit(1)}'
+        node -e 'try{require.resolve("@lawprotect/shared-ts");console.log("shared-ts OK")}catch(e){console.log("shared-ts NO");process.exit(1)}'
+        echo "[INFO] Prisma ready"
 
   build:
     commands:
       - |
-        bash -lc '
-          set -euo pipefail
-          echo "[INFO] tests unitarios con shared-ts local"
-          cd "$CODEBUILD_SRC_DIR/services/signature-service"
-          export DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}"
-          npm run test:unit:coverage
-        '
+        set -euo pipefail
+        echo "[INFO] Running unit tests"
+        cd "$CODEBUILD_SRC_DIR/services/signature-service"
+        export DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}"
+        npm run test:unit:coverage
+
       - |
-        bash -lc '
-          set -euo pipefail
-          echo "[INFO] build TypeScript"
-          cd "$CODEBUILD_SRC_DIR/services/signature-service"
-          npm run build
-          npm prune --omit=dev
-          rm -rf node_modules/@lawprotect/shared-ts || true
-        '
+        set -euo pipefail
+        echo "[INFO] Building TypeScript and pruning dev deps"
+        cd "$CODEBUILD_SRC_DIR/services/signature-service"
+        npm run build
+        npm prune --omit=dev
+        rm -rf node_modules/@lawprotect/shared-ts || true
+
       - |
-        bash -lc '
-          set -euo pipefail
-          echo "[INFO] empaquetado de handlers"
-          cd "$CODEBUILD_SRC_DIR/services/signature-service"
-          declare -A handler_map=(
-            ["create-envelope"]="dist/src/handlers/envelopes/CreateEnvelopeHandler.js"
-            ["get-envelope"]="dist/src/handlers/envelopes/GetEnvelopeHandler.js"
-            ["send-envelope"]="dist/src/handlers/envelopes/SendEnvelopeHandler.js"
-            ["sign-document"]="dist/src/handlers/signing/SignDocumentHandler.js"
-            ["decline-signer"]="dist/src/handlers/signing/DeclineSignerHandler.js"
-            ["share-document"]="dist/src/handlers/signing/ShareDocumentViewHandler.js"
-            ["send-notification"]="dist/src/handlers/notifications/SendNotificationHandler.js"
-            ["get-audit-trail"]="dist/src/handlers/audit/GetAuditTrailHandler.js"
-            ["get-envelopes-by-user"]="dist/src/handlers/envelopes/GetEnvelopesByUserHandler.js"
-            ["update-envelope"]="dist/src/handlers/envelopes/UpdateEnvelopeHandler.js"
-            ["cancel-envelope"]="dist/src/handlers/envelopes/CancelEnvelopeHandler.js"
-            ["download-document"]="dist/src/handlers/envelopes/DownloadDocumentHandler.js"
-          )
-          for handler_name in "${!handler_map[@]}"; do
-            handler_path="${handler_map[$handler_name]}"
-            echo "Packaging sign-$handler_name.zip from $handler_path"
-            if [ -f "$handler_path" ]; then
-              mkdir -p "temp-$handler_name"
-              cp "$handler_path" "temp-$handler_name/"
-              cp package.json "temp-$handler_name/"
-              (cd "temp-$handler_name" && zip -r "../sign-$handler_name.zip" .)
-              rm -rf "temp-$handler_name"
-              echo "✅ sign-$handler_name.zip created"
-            else
-              echo "❌ Handler not found: $handler_path"
-              exit 1
-            fi
-          done
-        '
+        set -euo pipefail
+        echo "[INFO] Packaging Lambda handlers"
+        cd "$CODEBUILD_SRC_DIR/services/signature-service"
+        declare -A HANDLERS=(
+          ["create-envelope"]="dist/src/handlers/envelopes/CreateEnvelopeHandler.js"
+          ["get-envelope"]="dist/src/handlers/envelopes/GetEnvelopeHandler.js"
+          ["send-envelope"]="dist/src/handlers/envelopes/SendEnvelopeHandler.js"
+          ["sign-document"]="dist/src/handlers/signing/SignDocumentHandler.js"
+          ["decline-signer"]="dist/src/handlers/signing/DeclineSignerHandler.js"
+          ["share-document"]="dist/src/handlers/signing/ShareDocumentViewHandler.js"
+          ["send-notification"]="dist/src/handlers/notifications/SendNotificationHandler.js"
+          ["get-audit-trail"]="dist/src/handlers/audit/GetAuditTrailHandler.js"
+          ["get-envelopes-by-user"]="dist/src/handlers/envelopes/GetEnvelopesByUserHandler.js"
+          ["update-envelope"]="dist/src/handlers/envelopes/UpdateEnvelopeHandler.js"
+          ["cancel-envelope"]="dist/src/handlers/envelopes/CancelEnvelopeHandler.js"
+          ["download-document"]="dist/src/handlers/envelopes/DownloadDocumentHandler.js"
+        )
+        for name in "${!HANDLERS[@]}"; do
+          src="${HANDLERS[$name]}"
+          echo "→ Packaging sign-$name.zip from $src"
+          [ -f "$src" ] || { echo "❌ Missing handler: $src"; exit 1; }
+          work="pkg-$name"
+          rm -rf "$work"
+          mkdir -p "$work"
+          cp "$src" "$work/"
+          cp package.json "$work/"
+          (cd "$work" && zip -qr "../sign-$name.zip" .)
+          rm -rf "$work"
+          echo "✅ sign-$name.zip created"
+        done
+
       - |
-        bash -lc '
-          set -euo pipefail
-          echo "[INFO] Creando AppSpec para CodeDeploy"
-          cd "$CODEBUILD_SRC_DIR/services/signature-service"
-          echo "version: 0.0" > appspec.yml
-          echo "Resources:" >> appspec.yml
-          echo "  - SignatureService:" >> appspec.yml
-          echo "      Type: AWS::Lambda::Function" >> appspec.yml
-          echo "      Properties:" >> appspec.yml
-          echo "        Name: \"signature-service\"" >> appspec.yml
-          echo "        Alias: \"live\"" >> appspec.yml
-          echo "        CurrentVersion: 1" >> appspec.yml
-          echo "        TargetVersion: 1" >> appspec.yml
-          echo "[INFO] AppSpec creado: appspec.yml"
-        '
+        set -euo pipefail
+        echo "[INFO] Creating appspec.yml for CodeDeploy"
+        cd "$CODEBUILD_SRC_DIR/services/signature-service"
+        cat > appspec.yml <<'YAML'
+version: 0.0
+Resources:
+  - SignatureService:
+      Type: AWS::Lambda::Function
+      Properties:
+        Name: signature-service
+        Alias: live
+        CurrentVersion: 1
+        TargetVersion: 1
+YAML
+        echo "[INFO] appspec.yml ready"
 
 artifacts:
   files:
-    - 'services/signature-service/sign-*.zip'
-    - 'services/signature-service/appspec.yml'
+    - services/signature-service/sign-*.zip
+    - services/signature-service/appspec.yml
   discard-paths: yes

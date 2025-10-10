@@ -42,7 +42,7 @@ jobs:
       
       - name: Trigger shared-ts pipeline
         run: |
-          aws codepipeline start-pipeline-execution --name shared-ts-pipeline
+          aws codepipeline start-pipeline-execution --name lawprotect365-shared-components-pipeline-stg
 
   trigger-signature-service:
     needs: detect-changes
@@ -60,7 +60,7 @@ jobs:
       
       - name: Trigger signature-service pipeline
         run: |
-          aws codepipeline start-pipeline-execution --name signature-service-pipeline
+          aws codepipeline start-pipeline-execution --name lawprotect365-sign-pipeline-stg
 
   no-changes:
     needs: detect-changes
