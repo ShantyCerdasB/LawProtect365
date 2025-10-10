@@ -94,7 +94,7 @@ phases:
       - |
         bash -lc '
         set -euo pipefail
-        echo "[INFO] Update Lambda functions directly (bypassing CodeDeploy)"
+        echo "[INFO] Update Lambda functions directly + create basic appspec.yml"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
         
         # Update each Lambda function with its corresponding zip
@@ -128,9 +128,22 @@ phases:
             echo "Warning: Zip file $zip_file not found"
           fi
         done
+        
+        # Create a basic appspec.yml for CodeDeploy (even though we updated directly)
+        echo "[INFO] Creating basic appspec.yml for CodeDeploy"
+        echo "version: 0.0" > appspec.yml
+        echo "Resources:" >> appspec.yml
+        echo "  - SignatureService:" >> appspec.yml
+        echo "      Type: AWS::Lambda::Function" >> appspec.yml
+        echo "      Properties:" >> appspec.yml
+        echo "        Name: lawprotect365-sign-service-create-envelope-stg" >> appspec.yml
+        echo "        Alias: live" >> appspec.yml
+        echo "        CurrentVersion: 1" >> appspec.yml
+        echo "        TargetVersion: 1" >> appspec.yml
         '
 
 artifacts:
   files:
     - services/signature-service/sign-*.zip
+    - services/signature-service/appspec.yml
   discard-paths: yes
