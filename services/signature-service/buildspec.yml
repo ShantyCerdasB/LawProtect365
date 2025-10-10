@@ -136,18 +136,19 @@ phases:
             fi
             
             # Update alias to point to new version
-            aws lambda update-alias --function-name "$function_name" --name "live" --function-version "$TARGET_VERSION" 2>/dev/null || \
-            aws lambda create-alias --function-name "$function_name" --name "live" --function-version "$TARGET_VERSION"
+            if aws lambda get-alias --function-name "$function_name" --name "live" >/dev/null 2>&1; then
+              aws lambda update-alias --function-name "$function_name" --name "live" --function-version "$TARGET_VERSION"
+            else
+              aws lambda create-alias --function-name "$function_name" --name "live" --function-version "$TARGET_VERSION"
+            fi
           else
             echo "Warning: Zip file $zip_file not found"
           fi
         done
         
-        # Create appspec.yml with correct versions for CodeDeploy
-        echo "[INFO] Creating appspec.yml with correct versions"
+        # Create appspec.yml for CodeDeploy compatibility
+        echo "[INFO] Creating appspec.yml for CodeDeploy"
         FUNCTION_NAME="lawprotect365-sign-service-create-envelope-stg"
-        CURRENT_VERSION=$(aws lambda get-alias --function-name "$FUNCTION_NAME" --name "live" --query FunctionVersion --output text 2>/dev/null)
-        TARGET_VERSION=$(aws lambda get-alias --function-name "$FUNCTION_NAME" --name "live" --query FunctionVersion --output text 2>/dev/null)
         
         echo "version: 0.0" > appspec.yml
         echo "Resources:" >> appspec.yml
@@ -156,8 +157,8 @@ phases:
         echo "      Properties:" >> appspec.yml
         echo "        Name: $FUNCTION_NAME" >> appspec.yml
         echo "        Alias: live" >> appspec.yml
-        echo "        CurrentVersion: ${CURRENT_VERSION:-1}" >> appspec.yml
-        echo "        TargetVersion: ${TARGET_VERSION:-1}" >> appspec.yml
+        echo "        CurrentVersion: 1" >> appspec.yml
+        echo "        TargetVersion: 1" >> appspec.yml
         '
 
 artifacts:
