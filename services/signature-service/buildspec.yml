@@ -124,22 +124,40 @@ phases:
               --function-name "$function_name" \
               --zip-file "fileb://$zip_file" \
               --region us-east-1 || echo "Warning: Failed to update $function_name"
+            
+            # Wait for function to be updated
+            aws lambda wait function-updated --function-name "$function_name"
+            
+            # Publish new version
+            TARGET_VERSION=$(aws lambda publish-version --function-name "$function_name" --query Version --output text 2>/dev/null)
+            if [ -z "$TARGET_VERSION" ] || [ "$TARGET_VERSION" = "null" ]; then
+              TIMESTAMP=$(date +%s)
+              TARGET_VERSION=$(aws lambda publish-version --function-name "$function_name" --description "Build-${TIMESTAMP}" --query Version --output text 2>/dev/null)
+            fi
+            
+            # Update alias to point to new version
+            aws lambda update-alias --function-name "$function_name" --name "live" --function-version "$TARGET_VERSION" 2>/dev/null || \
+            aws lambda create-alias --function-name "$function_name" --name "live" --function-version "$TARGET_VERSION"
           else
             echo "Warning: Zip file $zip_file not found"
           fi
         done
         
-        # Create a dummy appspec.yml for CodeDeploy (functions already updated directl)
-        echo "[INFO] Creating dummy appspec.yml for CodeDeploy compatibility"
+        # Create appspec.yml with correct versions for CodeDeploy
+        echo "[INFO] Creating appspec.yml with correct versions"
+        FUNCTION_NAME="lawprotect365-sign-service-create-envelope-stg"
+        CURRENT_VERSION=$(aws lambda get-alias --function-name "$FUNCTION_NAME" --name "live" --query FunctionVersion --output text 2>/dev/null)
+        TARGET_VERSION=$(aws lambda get-alias --function-name "$FUNCTION_NAME" --name "live" --query FunctionVersion --output text 2>/dev/null)
+        
         echo "version: 0.0" > appspec.yml
         echo "Resources:" >> appspec.yml
-        echo "  - DummyFunction:" >> appspec.yml
+        echo "  - SignatureService:" >> appspec.yml
         echo "      Type: AWS::Lambda::Function" >> appspec.yml
         echo "      Properties:" >> appspec.yml
-        echo "        Name: lawprotect365-sign-service-create-envelope-stg" >> appspec.yml
+        echo "        Name: $FUNCTION_NAME" >> appspec.yml
         echo "        Alias: live" >> appspec.yml
-        echo "        CurrentVersion: 1" >> appspec.yml
-        echo "        TargetVersion: 1" >> appspec.yml
+        echo "        CurrentVersion: ${CURRENT_VERSION:-1}" >> appspec.yml
+        echo "        TargetVersion: ${TARGET_VERSION:-1}" >> appspec.yml
         '
 
 artifacts:
