@@ -1,0 +1,71 @@
+name: Smart Pipeline
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      shared-ts: ${{ steps.changes.outputs.shared-ts }}
+      signature-service: ${{ steps.changes.outputs.signature-service }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            shared-ts:
+              - 'packages/shared-ts/**'
+              - 'buildspec.yml'
+            signature-service:
+              - 'services/signature-service/**'
+
+  trigger-shared-ts:
+    needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.shared-ts == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+      
+      - name: Trigger shared-ts pipeline
+        run: |
+          aws codepipeline start-pipeline-execution --name shared-ts-pipeline
+
+  trigger-signature-service:
+    needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.signature-service == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+      
+      - name: Trigger signature-service pipeline
+        run: |
+          aws codepipeline start-pipeline-execution --name signature-service-pipeline
+
+  no-changes:
+    needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.shared-ts == 'false' && needs.detect-changes.outputs.signature-service == 'false' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: No changes detected
+        run: echo "No changes detected in shared-ts or signature-service"

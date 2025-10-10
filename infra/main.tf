@@ -573,6 +573,9 @@ module "github_connection" {
   github_branch = var.github_branch
   provider_type = var.provider_type
   tags          = local.common_tags
+  account_id    = data.aws_caller_identity.current.account_id
+  region        = var.region
+  env           = var.env
 }
 
 # Shared Components Pipeline (shared-ts layer + outbox handler)

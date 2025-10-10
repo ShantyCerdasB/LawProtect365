@@ -57,3 +57,18 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "env" {
+  description = "Environment"
+  type        = string
+}
+
+variable "account_id" {
+  description = "AWS Account ID"
+  type        = string
+}
+
+variable "region" {
+  description = "AWS Region"
+  type        = string
+}
