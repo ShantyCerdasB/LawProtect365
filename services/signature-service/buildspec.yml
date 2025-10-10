@@ -92,20 +92,20 @@ phases:
                 echo "[INFO] empaquetado de handlers"
                 cd "$CODEBUILD_SRC_DIR/services/signature-service"
                 
-                # Mapeo de handlers a su ubicación real
+                # Mapeo de handlers a su ubicación real (dist/src/handlers/)
                 declare -A handler_map=(
-                  ["create-envelope"]="dist/handlers/envelopes/CreateEnvelopeHandler.js"
-                  ["get-envelope"]="dist/handlers/envelopes/GetEnvelopeHandler.js"
-                  ["send-envelope"]="dist/handlers/envelopes/SendEnvelopeHandler.js"
-                  ["sign-document"]="dist/handlers/signing/SignDocumentHandler.js"
-                  ["decline-signer"]="dist/handlers/signing/DeclineSignerHandler.js"
-                  ["share-document"]="dist/handlers/signing/ShareDocumentViewHandler.js"
-                  ["send-notification"]="dist/handlers/notifications/SendNotificationHandler.js"
-                  ["get-audit-trail"]="dist/handlers/audit/GetAuditTrailHandler.js"
-                  ["get-envelopes-by-user"]="dist/handlers/envelopes/GetEnvelopesByUserHandler.js"
-                  ["update-envelope"]="dist/handlers/envelopes/UpdateEnvelopeHandler.js"
-                  ["cancel-envelope"]="dist/handlers/envelopes/CancelEnvelopeHandler.js"
-                  ["download-document"]="dist/handlers/envelopes/DownloadDocumentHandler.js"
+                  ["create-envelope"]="dist/src/handlers/envelopes/CreateEnvelopeHandler.js"
+                  ["get-envelope"]="dist/src/handlers/envelopes/GetEnvelopeHandler.js"
+                  ["send-envelope"]="dist/src/handlers/envelopes/SendEnvelopeHandler.js"
+                  ["sign-document"]="dist/src/handlers/signing/SignDocumentHandler.js"
+                  ["decline-signer"]="dist/src/handlers/signing/DeclineSignerHandler.js"
+                  ["share-document"]="dist/src/handlers/signing/ShareDocumentViewHandler.js"
+                  ["send-notification"]="dist/src/handlers/notifications/SendNotificationHandler.js"
+                  ["get-audit-trail"]="dist/src/handlers/audit/GetAuditTrailHandler.js"
+                  ["get-envelopes-by-user"]="dist/src/handlers/envelopes/GetEnvelopesByUserHandler.js"
+                  ["update-envelope"]="dist/src/handlers/envelopes/UpdateEnvelopeHandler.js"
+                  ["cancel-envelope"]="dist/src/handlers/envelopes/CancelEnvelopeHandler.js"
+                  ["download-document"]="dist/src/handlers/envelopes/DownloadDocumentHandler.js"
                 )
                 
                 for handler_name in "${!handler_map[@]}"; do

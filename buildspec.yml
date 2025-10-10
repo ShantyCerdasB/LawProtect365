@@ -13,7 +13,7 @@ phases:
         echo '[INFO] Verificando cambios en shared-ts...'
         
         # Calcular hash del código actual de shared-ts
-        CURRENT_HASH=\$(find packages/shared-ts -type f -name '*.ts' -o -name '*.js' -o -name '*.json' -o -name '*.prisma' | sort | xargs cat | sha256sum | cut -d' ' -f1)
+        CURRENT_HASH=\$(find \"$CODEBUILD_SRC_DIR/packages/shared-ts\" -type f -name '*.ts' -o -name '*.js' -o -name '*.json' -o -name '*.prisma' | sort | xargs cat | sha256sum | cut -d' ' -f1)
         echo \"[INFO] Hash actual del código: \$CURRENT_HASH\"
         
         # Verificar si existe el layer anterior en S3
@@ -69,7 +69,7 @@ phases:
         fi
         
         # Guardar hash del build actual para futuras comparaciones
-        CURRENT_HASH=\$(find packages/shared-ts -type f -name '*.ts' -o -name '*.js' -o -name '*.json' -o -name '*.prisma' | sort | xargs cat | sha256sum | cut -d' ' -f1)
+        CURRENT_HASH=\$(find \"$CODEBUILD_SRC_DIR/packages/shared-ts\" -type f -name '*.ts' -o -name '*.js' -o -name '*.json' -o -name '*.prisma' | sort | xargs cat | sha256sum | cut -d' ' -f1)
         echo \"\$CURRENT_HASH\" > /tmp/layer/build-hash.txt
         echo \"[INFO] Hash del build guardado: \$CURRENT_HASH\""
 
