@@ -94,10 +94,10 @@ phases:
       - |
         bash -lc '
         set -euo pipefail
-        echo "[INFO] Create individual appspec.yml for each function"
+        echo "[INFO] Update Lambda functions directly (bypassing CodeDeploy)"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
         
-        # Create appspec.yml for each function
+        # Update each Lambda function with its corresponding zip
         handlers=(
           "create-envelope:lawprotect365-sign-service-create-envelope-stg"
           "get-envelope:lawprotect365-sign-service-get-envelope-stg"
@@ -116,22 +116,21 @@ phases:
         for handler in "${handlers[@]}"; do
           name="${handler%%:*}"
           function_name="${handler##*:}"
+          zip_file="sign-${name}.zip"
           
-          echo "[INFO] Creating appspec for $name -> $function_name"
-          echo "version: 0.0" > "appspec-${name}.yml"
-          echo "Resources:" >> "appspec-${name}.yml"
-          echo "  - ${name^}Lambda:" >> "appspec-${name}.yml"
-          echo "      Type: AWS::Lambda::Function" >> "appspec-${name}.yml"
-          echo "      Properties:" >> "appspec-${name}.yml"
-          echo "        Name: ${function_name}" >> "appspec-${name}.yml"
-          echo "        Alias: live" >> "appspec-${name}.yml"
-          echo "        CurrentVersion: 1" >> "appspec-${name}.yml"
-          echo "        TargetVersion: 1" >> "appspec-${name}.yml"
+          if [ -f "$zip_file" ]; then
+            echo "[INFO] Updating Lambda function: $function_name"
+            aws lambda update-function-code \
+              --function-name "$function_name" \
+              --zip-file "fileb://$zip_file" \
+              --region us-east-1 || echo "Warning: Failed to update $function_name"
+          else
+            echo "Warning: Zip file $zip_file not found"
+          fi
         done
         '
 
 artifacts:
   files:
     - services/signature-service/sign-*.zip
-    - services/signature-service/appspec-*.yml
   discard-paths: yes
