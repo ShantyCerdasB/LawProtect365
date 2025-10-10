@@ -4,9 +4,6 @@ phases:
   install:
     runtime-versions:
       nodejs: 20
-    commands:
-      - echo "[INFO] Node: $(node -v)"
-      - echo "[INFO] npm:  $(npm -v)"
 
   pre_build:
     commands:
