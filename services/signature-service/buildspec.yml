@@ -94,98 +94,44 @@ phases:
       - |
         bash -lc '
         set -euo pipefail
-        echo "[INFO] Write appspec.yml"
+        echo "[INFO] Create individual appspec.yml for each function"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
-        echo "version: 0.0" > appspec.yml
-        echo "Resources:" >> appspec.yml
-        echo "  - CreateEnvelopeLambda:" >> appspec.yml
-        echo "      Type: AWS::Lambda::Function" >> appspec.yml
-        echo "      Properties:" >> appspec.yml
-        echo "        Name: lawprotect365-sign-service-create-envelope-stg" >> appspec.yml
-        echo "        Alias: live" >> appspec.yml
-        echo "        CurrentVersion: 1" >> appspec.yml
-        echo "        TargetVersion: 1" >> appspec.yml
-        echo "  - GetEnvelopeLambda:" >> appspec.yml
-        echo "      Type: AWS::Lambda::Function" >> appspec.yml
-        echo "      Properties:" >> appspec.yml
-        echo "        Name: lawprotect365-sign-service-get-envelope-stg" >> appspec.yml
-        echo "        Alias: live" >> appspec.yml
-        echo "        CurrentVersion: 1" >> appspec.yml
-        echo "        TargetVersion: 1" >> appspec.yml
-        echo "  - SendEnvelopeLambda:" >> appspec.yml
-        echo "      Type: AWS::Lambda::Function" >> appspec.yml
-        echo "      Properties:" >> appspec.yml
-        echo "        Name: lawprotect365-sign-service-send-envelope-stg" >> appspec.yml
-        echo "        Alias: live" >> appspec.yml
-        echo "        CurrentVersion: 1" >> appspec.yml
-        echo "        TargetVersion: 1" >> appspec.yml
-        echo "  - SignDocumentLambda:" >> appspec.yml
-        echo "      Type: AWS::Lambda::Function" >> appspec.yml
-        echo "      Properties:" >> appspec.yml
-        echo "        Name: lawprotect365-sign-service-sign-document-stg" >> appspec.yml
-        echo "        Alias: live" >> appspec.yml
-        echo "        CurrentVersion: 1" >> appspec.yml
-        echo "        TargetVersion: 1" >> appspec.yml
-        echo "  - GetEnvelopesByUserLambda:" >> appspec.yml
-        echo "      Type: AWS::Lambda::Function" >> appspec.yml
-        echo "      Properties:" >> appspec.yml
-        echo "        Name: lawprotect365-sign-service-get-envelopes-by-user-stg" >> appspec.yml
-        echo "        Alias: live" >> appspec.yml
-        echo "        CurrentVersion: 1" >> appspec.yml
-        echo "        TargetVersion: 1" >> appspec.yml
-        echo "  - UpdateEnvelopeLambda:" >> appspec.yml
-        echo "      Type: AWS::Lambda::Function" >> appspec.yml
-        echo "      Properties:" >> appspec.yml
-        echo "        Name: lawprotect365-sign-service-update-envelope-stg" >> appspec.yml
-        echo "        Alias: live" >> appspec.yml
-        echo "        CurrentVersion: 1" >> appspec.yml
-        echo "        TargetVersion: 1" >> appspec.yml
-        echo "  - CancelEnvelopeLambda:" >> appspec.yml
-        echo "      Type: AWS::Lambda::Function" >> appspec.yml
-        echo "      Properties:" >> appspec.yml
-        echo "        Name: lawprotect365-sign-service-cancel-envelope-stg" >> appspec.yml
-        echo "        Alias: live" >> appspec.yml
-        echo "        CurrentVersion: 1" >> appspec.yml
-        echo "        TargetVersion: 1" >> appspec.yml
-        echo "  - DownloadDocumentLambda:" >> appspec.yml
-        echo "      Type: AWS::Lambda::Function" >> appspec.yml
-        echo "      Properties:" >> appspec.yml
-        echo "        Name: lawprotect365-sign-service-download-document-stg" >> appspec.yml
-        echo "        Alias: live" >> appspec.yml
-        echo "        CurrentVersion: 1" >> appspec.yml
-        echo "        TargetVersion: 1" >> appspec.yml
-        echo "  - ShareDocumentLambda:" >> appspec.yml
-        echo "      Type: AWS::Lambda::Function" >> appspec.yml
-        echo "      Properties:" >> appspec.yml
-        echo "        Name: lawprotect365-sign-service-share-document-stg" >> appspec.yml
-        echo "        Alias: live" >> appspec.yml
-        echo "        CurrentVersion: 1" >> appspec.yml
-        echo "        TargetVersion: 1" >> appspec.yml
-        echo "  - DeclineSignerLambda:" >> appspec.yml
-        echo "      Type: AWS::Lambda::Function" >> appspec.yml
-        echo "      Properties:" >> appspec.yml
-        echo "        Name: lawprotect365-sign-service-decline-signer-stg" >> appspec.yml
-        echo "        Alias: live" >> appspec.yml
-        echo "        CurrentVersion: 1" >> appspec.yml
-        echo "        TargetVersion: 1" >> appspec.yml
-        echo "  - SendNotificationLambda:" >> appspec.yml
-        echo "      Type: AWS::Lambda::Function" >> appspec.yml
-        echo "      Properties:" >> appspec.yml
-        echo "        Name: lawprotect365-sign-service-send-notification-stg" >> appspec.yml
-        echo "        Alias: live" >> appspec.yml
-        echo "        CurrentVersion: 1" >> appspec.yml
-        echo "        TargetVersion: 1" >> appspec.yml
-        echo "  - GetAuditTrailLambda:" >> appspec.yml
-        echo "      Type: AWS::Lambda::Function" >> appspec.yml
-        echo "      Properties:" >> appspec.yml
-        echo "        Name: lawprotect365-sign-service-get-audit-trail-stg" >> appspec.yml
-        echo "        Alias: live" >> appspec.yml
-        echo "        CurrentVersion: 1" >> appspec.yml
-        echo "        TargetVersion: 1" >> appspec.yml
+        
+        # Create appspec.yml for each function
+        handlers=(
+          "create-envelope:lawprotect365-sign-service-create-envelope-stg"
+          "get-envelope:lawprotect365-sign-service-get-envelope-stg"
+          "send-envelope:lawprotect365-sign-service-send-envelope-stg"
+          "sign-document:lawprotect365-sign-service-sign-document-stg"
+          "get-envelopes-by-user:lawprotect365-sign-service-get-envelopes-by-user-stg"
+          "update-envelope:lawprotect365-sign-service-update-envelope-stg"
+          "cancel-envelope:lawprotect365-sign-service-cancel-envelope-stg"
+          "download-document:lawprotect365-sign-service-download-document-stg"
+          "share-document:lawprotect365-sign-service-share-document-stg"
+          "decline-signer:lawprotect365-sign-service-decline-signer-stg"
+          "send-notification:lawprotect365-sign-service-send-notification-stg"
+          "get-audit-trail:lawprotect365-sign-service-get-audit-trail-stg"
+        )
+        
+        for handler in "${handlers[@]}"; do
+          name="${handler%%:*}"
+          function_name="${handler##*:}"
+          
+          echo "[INFO] Creating appspec for $name -> $function_name"
+          echo "version: 0.0" > "appspec-${name}.yml"
+          echo "Resources:" >> "appspec-${name}.yml"
+          echo "  - ${name^}Lambda:" >> "appspec-${name}.yml"
+          echo "      Type: AWS::Lambda::Function" >> "appspec-${name}.yml"
+          echo "      Properties:" >> "appspec-${name}.yml"
+          echo "        Name: ${function_name}" >> "appspec-${name}.yml"
+          echo "        Alias: live" >> "appspec-${name}.yml"
+          echo "        CurrentVersion: 1" >> "appspec-${name}.yml"
+          echo "        TargetVersion: 1" >> "appspec-${name}.yml"
+        done
         '
 
 artifacts:
   files:
     - services/signature-service/sign-*.zip
-    - services/signature-service/appspec.yml
+    - services/signature-service/appspec-*.yml
   discard-paths: yes
