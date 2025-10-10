@@ -8,6 +8,7 @@ phases:
   pre_build:
     commands:
       - |
+        bash -lc '
         set -euo pipefail
         echo "[INFO] Building packages/shared-ts"
         cd "$CODEBUILD_SRC_DIR/packages/shared-ts"
@@ -15,12 +16,16 @@ phases:
         export DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}"
         npm run prisma:generate
         npm run build
+        '
       - |
+        bash -lc '
         set -euo pipefail
         echo "[INFO] Installing deps in services/signature-service"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
         npm ci
+        '
       - |
+        bash -lc '
         set -euo pipefail
         echo "[INFO] Preparing Prisma client"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
@@ -30,25 +35,31 @@ phases:
         fi
         export DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}"
         npx -y prisma@5.22.0 generate
-        node -e 'try{require.resolve("@prisma/client");console.log("@prisma/client OK")}catch(e){process.exit(1)}'
-        node -e 'try{require.resolve("@lawprotect/shared-ts");console.log("shared-ts OK")}catch(e){process.exit(1)}'
+        node -e "try{require.resolve(\"@prisma/client\");console.log(\"@prisma/client OK\")}catch(e){process.exit(1)}"
+        node -e "try{require.resolve(\"@lawprotect/shared-ts\");console.log(\"shared-ts OK\")}catch(e){process.exit(1)}"
+        '
 
   build:
     commands:
       - |
+        bash -lc '
         set -euo pipefail
         echo "[INFO] Tests"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
         export DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}"
         npm run test:unit:coverage
+        '
       - |
+        bash -lc '
         set -euo pipefail
         echo "[INFO] Build + prune"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
         npm run build
         npm prune --omit=dev
         rm -rf node_modules/@lawprotect/shared-ts || true
+        '
       - |
+        bash -lc '
         set -euo pipefail
         echo "[INFO] Package handlers"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
@@ -79,7 +90,9 @@ phases:
           (cd "$work" && zip -qr "../sign-$name.zip" .)
           rm -rf "$work"
         done
+        '
       - |
+        bash -lc '
         set -euo pipefail
         echo "[INFO] Write appspec.yml"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
@@ -92,6 +105,7 @@ phases:
         echo "        Alias: live" >> appspec.yml
         echo "        CurrentVersion: 1" >> appspec.yml
         echo "        TargetVersion: 1" >> appspec.yml
+        '
 
 artifacts:
   files:
