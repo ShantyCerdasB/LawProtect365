@@ -47,114 +47,141 @@ phases:
         echo "[INFO] Package handlers"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
         
-        # Handler mapping
-        handlers=(
-          "create-envelope:dist/src/handlers/envelopes/CreateEnvelopeHandler.js"
-          "get-envelope:dist/src/handlers/envelopes/GetEnvelopeHandler.js"
-          "send-envelope:dist/src/handlers/envelopes/SendEnvelopeHandler.js"
-          "sign-document:dist/src/handlers/signing/SignDocumentHandler.js"
-          "decline-signer:dist/src/handlers/signing/DeclineSignerHandler.js"
-          "share-document:dist/src/handlers/signing/ShareDocumentViewHandler.js"
-          "send-notification:dist/src/handlers/notifications/SendNotificationHandler.js"
-          "get-audit-trail:dist/src/handlers/audit/GetAuditTrailHandler.js"
-          "get-envelopes-by-user:dist/src/handlers/envelopes/GetEnvelopesByUserHandler.js"
-          "update-envelope:dist/src/handlers/envelopes/UpdateEnvelopeHandler.js"
-          "cancel-envelope:dist/src/handlers/envelopes/CancelEnvelopeHandler.js"
-          "download-document:dist/src/handlers/envelopes/DownloadDocumentHandler.js"
-        )
+        # Package each handler individually
+        echo "[INFO] Packaging create-envelope"
+        cp "dist/src/handlers/envelopes/CreateEnvelopeHandler.js" package.json "pkg-create-envelope/"
+        (cd "pkg-create-envelope" && zip -qr "../sign-create-envelope.zip" .)
+        rm -rf "pkg-create-envelope"
         
-        for handler in "${handlers[@]}"; do
-          name="${handler%%:*}"
-          src="${handler##*:}"
-          [ -f "$src" ] || { echo "Missing handler $src"; exit 1; }
-          work="pkg-$name"
-          rm -rf "$work"; mkdir -p "$work"
-          cp "$src" package.json "$work/"
-          (cd "$work" && zip -qr "../sign-$name.zip" .)
-          rm -rf "$work"
-        done
+        echo "[INFO] Packaging get-envelope"
+        cp "dist/src/handlers/envelopes/GetEnvelopeHandler.js" package.json "pkg-get-envelope/"
+        (cd "pkg-get-envelope" && zip -qr "../sign-get-envelope.zip" .)
+        rm -rf "pkg-get-envelope"
+        
+        echo "[INFO] Packaging send-envelope"
+        cp "dist/src/handlers/envelopes/SendEnvelopeHandler.js" package.json "pkg-send-envelope/"
+        (cd "pkg-send-envelope" && zip -qr "../sign-send-envelope.zip" .)
+        rm -rf "pkg-send-envelope"
+        
+        echo "[INFO] Packaging sign-document"
+        cp "dist/src/handlers/signing/SignDocumentHandler.js" package.json "pkg-sign-document/"
+        (cd "pkg-sign-document" && zip -qr "../sign-sign-document.zip" .)
+        rm -rf "pkg-sign-document"
+        
+        echo "[INFO] Packaging decline-signer"
+        cp "dist/src/handlers/signing/DeclineSignerHandler.js" package.json "pkg-decline-signer/"
+        (cd "pkg-decline-signer" && zip -qr "../sign-decline-signer.zip" .)
+        rm -rf "pkg-decline-signer"
+        
+        echo "[INFO] Packaging share-document"
+        cp "dist/src/handlers/signing/ShareDocumentViewHandler.js" package.json "pkg-share-document/"
+        (cd "pkg-share-document" && zip -qr "../sign-share-document.zip" .)
+        rm -rf "pkg-share-document"
+        
+        echo "[INFO] Packaging send-notification"
+        cp "dist/src/handlers/notifications/SendNotificationHandler.js" package.json "pkg-send-notification/"
+        (cd "pkg-send-notification" && zip -qr "../sign-send-notification.zip" .)
+        rm -rf "pkg-send-notification"
+        
+        echo "[INFO] Packaging get-audit-trail"
+        cp "dist/src/handlers/audit/GetAuditTrailHandler.js" package.json "pkg-get-audit-trail/"
+        (cd "pkg-get-audit-trail" && zip -qr "../sign-get-audit-trail.zip" .)
+        rm -rf "pkg-get-audit-trail"
+        
+        echo "[INFO] Packaging get-envelopes-by-user"
+        cp "dist/src/handlers/envelopes/GetEnvelopesByUserHandler.js" package.json "pkg-get-envelopes-by-user/"
+        (cd "pkg-get-envelopes-by-user" && zip -qr "../sign-get-envelopes-by-user.zip" .)
+        rm -rf "pkg-get-envelopes-by-user"
+        
+        echo "[INFO] Packaging update-envelope"
+        cp "dist/src/handlers/envelopes/UpdateEnvelopeHandler.js" package.json "pkg-update-envelope/"
+        (cd "pkg-update-envelope" && zip -qr "../sign-update-envelope.zip" .)
+        rm -rf "pkg-update-envelope"
+        
+        echo "[INFO] Packaging cancel-envelope"
+        cp "dist/src/handlers/envelopes/CancelEnvelopeHandler.js" package.json "pkg-cancel-envelope/"
+        (cd "pkg-cancel-envelope" && zip -qr "../sign-cancel-envelope.zip" .)
+        rm -rf "pkg-cancel-envelope"
+        
+        echo "[INFO] Packaging download-document"
+        cp "dist/src/handlers/envelopes/DownloadDocumentHandler.js" package.json "pkg-download-document/"
+        (cd "pkg-download-document" && zip -qr "../sign-download-document.zip" .)
+        rm -rf "pkg-download-document"
       - |
         echo "[INFO] Deploy all Lambda functions"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
 
-        # Function mapping
-        functions=(
-          "create-envelope:lawprotect365-sign-service-create-envelope-stg"
-          "get-envelope:lawprotect365-sign-service-get-envelope-stg"
-          "send-envelope:lawprotect365-sign-service-send-envelope-stg"
-          "sign-document:lawprotect365-sign-service-sign-document-stg"
-          "decline-signer:lawprotect365-sign-service-decline-signer-stg"
-          "share-document:lawprotect365-sign-service-share-document-stg"
-          "send-notification:lawprotect365-sign-service-send-notification-stg"
-          "get-audit-trail:lawprotect365-sign-service-get-audit-trail-stg"
-          "get-envelopes-by-user:lawprotect365-sign-service-get-envelopes-by-user-stg"
-          "update-envelope:lawprotect365-sign-service-update-envelope-stg"
-          "cancel-envelope:lawprotect365-sign-service-cancel-envelope-stg"
-          "download-document:lawprotect365-sign-service-download-document-stg"
-        )
-
-        for func in "${functions[@]}"; do
-          name="${func%%:*}"
-          function_name="${func##*:}"
-          
-          echo "[INFO] Processing function: $name ($function_name)"
-          
-          # Upload zip to S3
-          echo "[INFO] Uploading sign-${name}.zip to S3"
-          aws s3 cp "sign-${name}.zip" "s3://$CODE_BUCKET/sign-${name}.zip"
-          
-          # Update function code
-          echo "[INFO] Updating function code for $function_name"
-          aws lambda update-function-code --function-name "$function_name" --s3-bucket "$CODE_BUCKET" --s3-key "sign-${name}.zip"
-          aws lambda wait function-updated --function-name "$function_name"
-          
-          # Publish new version
-          echo "[INFO] Publishing new version for $function_name"
-          TARGET_VERSION=$(aws lambda publish-version --function-name "$function_name" --query Version --output text 2>/dev/null)
-          if [ -z "$TARGET_VERSION" ] || [ "$TARGET_VERSION" = "null" ]; then
-            TIMESTAMP=$(date +%s)
-            TARGET_VERSION=$(aws lambda publish-version --function-name "$function_name" --description "Build-${TIMESTAMP}" --query Version --output text 2>/dev/null)
-          fi
-          
-          # Get current version from alias
-          CURRENT_VERSION=$(aws lambda get-alias --function-name "$function_name" --name "live" --query FunctionVersion --output text 2>/dev/null || echo "1")
-          if [ "$CURRENT_VERSION" = "\$LATEST" ] || [ -z "$CURRENT_VERSION" ] || [ "$CURRENT_VERSION" = "null" ]; then
-            CURRENT_VERSION="1"
-          fi
-          
-          echo "[INFO] Function: $function_name, Current: $CURRENT_VERSION, Target: $TARGET_VERSION"
-          
-          # Create appspec with dynamic versions
-          echo "version: 0.0" > "appspec-${name}.yml"
-          echo "Resources:" >> "appspec-${name}.yml"
-          echo "  - CreateEnvelope:" >> "appspec-${name}.yml"
-          echo "      Type: AWS::Lambda::Function" >> "appspec-${name}.yml"
-          echo "      Properties:" >> "appspec-${name}.yml"
-          echo "        Name: \"$function_name\"" >> "appspec-${name}.yml"
-          echo "        Alias: \"live\"" >> "appspec-${name}.yml"
-          echo "        CurrentVersion: $CURRENT_VERSION" >> "appspec-${name}.yml"
-          echo "        TargetVersion: $TARGET_VERSION" >> "appspec-${name}.yml"
-        done
+        # Deploy each function individually
+        echo "[INFO] Deploying create-envelope"
+        aws s3 cp "sign-create-envelope.zip" "s3://$CODE_BUCKET/sign-create-envelope.zip"
+        aws lambda update-function-code --function-name "lawprotect365-sign-service-create-envelope-stg" --s3-bucket "$CODE_BUCKET" --s3-key "sign-create-envelope.zip"
+        aws lambda wait function-updated --function-name "lawprotect365-sign-service-create-envelope-stg"
+        
+        echo "[INFO] Deploying get-envelope"
+        aws s3 cp "sign-get-envelope.zip" "s3://$CODE_BUCKET/sign-get-envelope.zip"
+        aws lambda update-function-code --function-name "lawprotect365-sign-service-get-envelope-stg" --s3-bucket "$CODE_BUCKET" --s3-key "sign-get-envelope.zip"
+        aws lambda wait function-updated --function-name "lawprotect365-sign-service-get-envelope-stg"
+        
+        echo "[INFO] Deploying send-envelope"
+        aws s3 cp "sign-send-envelope.zip" "s3://$CODE_BUCKET/sign-send-envelope.zip"
+        aws lambda update-function-code --function-name "lawprotect365-sign-service-send-envelope-stg" --s3-bucket "$CODE_BUCKET" --s3-key "sign-send-envelope.zip"
+        aws lambda wait function-updated --function-name "lawprotect365-sign-service-send-envelope-stg"
+        
+        echo "[INFO] Deploying sign-document"
+        aws s3 cp "sign-sign-document.zip" "s3://$CODE_BUCKET/sign-sign-document.zip"
+        aws lambda update-function-code --function-name "lawprotect365-sign-service-sign-document-stg" --s3-bucket "$CODE_BUCKET" --s3-key "sign-sign-document.zip"
+        aws lambda wait function-updated --function-name "lawprotect365-sign-service-sign-document-stg"
+        
+        echo "[INFO] Deploying decline-signer"
+        aws s3 cp "sign-decline-signer.zip" "s3://$CODE_BUCKET/sign-decline-signer.zip"
+        aws lambda update-function-code --function-name "lawprotect365-sign-service-decline-signer-stg" --s3-bucket "$CODE_BUCKET" --s3-key "sign-decline-signer.zip"
+        aws lambda wait function-updated --function-name "lawprotect365-sign-service-decline-signer-stg"
+        
+        echo "[INFO] Deploying share-document"
+        aws s3 cp "sign-share-document.zip" "s3://$CODE_BUCKET/sign-share-document.zip"
+        aws lambda update-function-code --function-name "lawprotect365-sign-service-share-document-stg" --s3-bucket "$CODE_BUCKET" --s3-key "sign-share-document.zip"
+        aws lambda wait function-updated --function-name "lawprotect365-sign-service-share-document-stg"
+        
+        echo "[INFO] Deploying send-notification"
+        aws s3 cp "sign-send-notification.zip" "s3://$CODE_BUCKET/sign-send-notification.zip"
+        aws lambda update-function-code --function-name "lawprotect365-sign-service-send-notification-stg" --s3-bucket "$CODE_BUCKET" --s3-key "sign-send-notification.zip"
+        aws lambda wait function-updated --function-name "lawprotect365-sign-service-send-notification-stg"
+        
+        echo "[INFO] Deploying get-audit-trail"
+        aws s3 cp "sign-get-audit-trail.zip" "s3://$CODE_BUCKET/sign-get-audit-trail.zip"
+        aws lambda update-function-code --function-name "lawprotect365-sign-service-get-audit-trail-stg" --s3-bucket "$CODE_BUCKET" --s3-key "sign-get-audit-trail.zip"
+        aws lambda wait function-updated --function-name "lawprotect365-sign-service-get-audit-trail-stg"
+        
+        echo "[INFO] Deploying get-envelopes-by-user"
+        aws s3 cp "sign-get-envelopes-by-user.zip" "s3://$CODE_BUCKET/sign-get-envelopes-by-user.zip"
+        aws lambda update-function-code --function-name "lawprotect365-sign-service-get-envelopes-by-user-stg" --s3-bucket "$CODE_BUCKET" --s3-key "sign-get-envelopes-by-user.zip"
+        aws lambda wait function-updated --function-name "lawprotect365-sign-service-get-envelopes-by-user-stg"
+        
+        echo "[INFO] Deploying update-envelope"
+        aws s3 cp "sign-update-envelope.zip" "s3://$CODE_BUCKET/sign-update-envelope.zip"
+        aws lambda update-function-code --function-name "lawprotect365-sign-service-update-envelope-stg" --s3-bucket "$CODE_BUCKET" --s3-key "sign-update-envelope.zip"
+        aws lambda wait function-updated --function-name "lawprotect365-sign-service-update-envelope-stg"
+        
+        echo "[INFO] Deploying cancel-envelope"
+        aws s3 cp "sign-cancel-envelope.zip" "s3://$CODE_BUCKET/sign-cancel-envelope.zip"
+        aws lambda update-function-code --function-name "lawprotect365-sign-service-cancel-envelope-stg" --s3-bucket "$CODE_BUCKET" --s3-key "sign-cancel-envelope.zip"
+        aws lambda wait function-updated --function-name "lawprotect365-sign-service-cancel-envelope-stg"
+        
+        echo "[INFO] Deploying download-document"
+        aws s3 cp "sign-download-document.zip" "s3://$CODE_BUCKET/sign-download-document.zip"
+        aws lambda update-function-code --function-name "lawprotect365-sign-service-download-document-stg" --s3-bucket "$CODE_BUCKET" --s3-key "sign-download-document.zip"
+        aws lambda wait function-updated --function-name "lawprotect365-sign-service-download-document-stg"
         
         # Create a default appspec.yml for the main function
-        MAIN_FUNCTION="lawprotect365-sign-service-create-envelope-stg"
-        CURRENT_VERSION=$(aws lambda get-alias --function-name "$MAIN_FUNCTION" --name "live" --query FunctionVersion --output text 2>/dev/null || echo "1")
-        if [ "$CURRENT_VERSION" = "\$LATEST" ] || [ -z "$CURRENT_VERSION" ] || [ "$CURRENT_VERSION" = "null" ]; then
-          CURRENT_VERSION="1"
-        fi
-        TARGET_VERSION=$((CURRENT_VERSION + 1))
-        
-        echo "[INFO] Main function: $MAIN_FUNCTION, Current: $CURRENT_VERSION, Target: $TARGET_VERSION"
-        
         echo "version: 0.0" > "appspec.yml"
         echo "Resources:" >> "appspec.yml"
         echo "  - CreateEnvelope:" >> "appspec.yml"
         echo "      Type: AWS::Lambda::Function" >> "appspec.yml"
         echo "      Properties:" >> "appspec.yml"
-        echo "        Name: \"$MAIN_FUNCTION\"" >> "appspec.yml"
+        echo "        Name: \"lawprotect365-sign-service-create-envelope-stg\"" >> "appspec.yml"
         echo "        Alias: \"live\"" >> "appspec.yml"
-        echo "        CurrentVersion: $CURRENT_VERSION" >> "appspec.yml"
-        echo "        TargetVersion: $TARGET_VERSION" >> "appspec.yml"
+        echo "        CurrentVersion: 1" >> "appspec.yml"
+        echo "        TargetVersion: 1" >> "appspec.yml"
         '
 
 artifacts:
