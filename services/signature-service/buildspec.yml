@@ -112,25 +112,32 @@ phases:
           name="${func%%:*}"
           function_name="${func##*:}"
           
-          echo "[INFO] Creating appspec for $name with dynamic versions"
+          echo "[INFO] Processing function: $name ($function_name)"
+          
+          # Upload zip to S3
+          echo "[INFO] Uploading sign-${name}.zip to S3"
+          aws s3 cp "sign-${name}.zip" "s3://$CODE_BUCKET/sign-${name}.zip"
+          
+          # Update function code
+          echo "[INFO] Updating function code for $function_name"
+          aws lambda update-function-code --function-name "$function_name" --s3-bucket "$CODE_BUCKET" --s3-key "sign-${name}.zip"
+          aws lambda wait function-updated --function-name "$function_name"
+          
+          # Publish new version
+          echo "[INFO] Publishing new version for $function_name"
+          TARGET_VERSION=$(aws lambda publish-version --function-name "$function_name" --query Version --output text 2>/dev/null)
+          if [ -z "$TARGET_VERSION" ] || [ "$TARGET_VERSION" = "null" ]; then
+            TIMESTAMP=$(date +%s)
+            TARGET_VERSION=$(aws lambda publish-version --function-name "$function_name" --description "Build-${TIMESTAMP}" --query Version --output text 2>/dev/null)
+          fi
           
           # Get current version from alias
-          CURRENT_VERSION=$(aws lambda get-alias --function-name "$function_name" --name "live" --query FunctionVersion --output text 2>/dev/null || echo "")
-          if [ -z "$CURRENT_VERSION" ] || [ "$CURRENT_VERSION" = "null" ]; then
-            echo "[INFO] Alias 'live' does not exist for $function_name, creating it"
-            # Get the latest version of the function
-            LATEST_VERSION=$(aws lambda get-function --function-name "$function_name" --query Configuration.Version --output text 2>/dev/null || echo "1")
-            # Create the alias pointing to the latest version
-            aws lambda create-alias --function-name "$function_name" --name "live" --function-version "$LATEST_VERSION" 2>/dev/null || true
-            CURRENT_VERSION="$LATEST_VERSION"
+          CURRENT_VERSION=$(aws lambda get-alias --function-name "$function_name" --name "live" --query FunctionVersion --output text 2>/dev/null)
+          if [ -z "$CURRENT_VERSION" ] || [ "$CURRENT_VERSION" = "null" ] || [ "$CURRENT_VERSION" = "\$LATEST" ]; then
+            # Create alias if it doesn't exist
+            aws lambda create-alias --function-name "$function_name" --name "live" --function-version "$TARGET_VERSION" 2>/dev/null || true
+            CURRENT_VERSION="$TARGET_VERSION"
           fi
-          
-          if [ "$CURRENT_VERSION" = "\$LATEST" ]; then
-            CURRENT_VERSION="1"
-          fi
-          
-          # Target version will be current + 1
-          TARGET_VERSION=$((CURRENT_VERSION + 1))
           
           echo "[INFO] Function: $function_name, Current: $CURRENT_VERSION, Target: $TARGET_VERSION"
           
@@ -146,19 +153,10 @@ phases:
           echo "        TargetVersion: $TARGET_VERSION" >> "appspec-${name}.yml"
         done
         
-        # Create a default appspec.yml for the main function with dynamic versions
+        # Create a default appspec.yml for the main function
         MAIN_FUNCTION="lawprotect365-sign-service-create-envelope-stg"
-        CURRENT_VERSION=$(aws lambda get-alias --function-name "$MAIN_FUNCTION" --name "live" --query FunctionVersion --output text 2>/dev/null || echo "")
-        if [ -z "$CURRENT_VERSION" ] || [ "$CURRENT_VERSION" = "null" ]; then
-          echo "[INFO] Alias 'live' does not exist for $MAIN_FUNCTION, creating it"
-          # Get the latest version of the function
-          LATEST_VERSION=$(aws lambda get-function --function-name "$MAIN_FUNCTION" --query Configuration.Version --output text 2>/dev/null || echo "1")
-          # Create the alias pointing to the latest version
-          aws lambda create-alias --function-name "$MAIN_FUNCTION" --name "live" --function-version "$LATEST_VERSION" 2>/dev/null || true
-          CURRENT_VERSION="$LATEST_VERSION"
-        fi
-        
-        if [ "$CURRENT_VERSION" = "\$LATEST" ]; then
+        CURRENT_VERSION=$(aws lambda get-alias --function-name "$MAIN_FUNCTION" --name "live" --query FunctionVersion --output text 2>/dev/null || echo "1")
+        if [ "$CURRENT_VERSION" = "\$LATEST" ] || [ -z "$CURRENT_VERSION" ] || [ "$CURRENT_VERSION" = "null" ]; then
           CURRENT_VERSION="1"
         fi
         TARGET_VERSION=$((CURRENT_VERSION + 1))
