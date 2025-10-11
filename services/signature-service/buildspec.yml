@@ -74,22 +74,92 @@ phases:
           rm -rf "$work"
         done
       - |
-        echo "[INFO] Create appspec.yml files"
+        echo "[INFO] Deploy all Lambda functions"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
+
+        # Function mapping
+        functions=(
+          "create-envelope:lawprotect365-sign-service-create-envelope-stg"
+          "get-envelope:lawprotect365-sign-service-get-envelope-stg"
+          "send-envelope:lawprotect365-sign-service-send-envelope-stg"
+          "sign-document:lawprotect365-sign-service-sign-document-stg"
+          "decline-signer:lawprotect365-sign-service-decline-signer-stg"
+          "share-document:lawprotect365-sign-service-share-document-stg"
+          "send-notification:lawprotect365-sign-service-send-notification-stg"
+          "get-audit-trail:lawprotect365-sign-service-get-audit-trail-stg"
+          "get-envelopes-by-user:lawprotect365-sign-service-get-envelopes-by-user-stg"
+          "update-envelope:lawprotect365-sign-service-update-envelope-stg"
+          "cancel-envelope:lawprotect365-sign-service-cancel-envelope-stg"
+          "download-document:lawprotect365-sign-service-download-document-stg"
+        )
+
+        for func in "${functions[@]}"; do
+          name="${func%%:*}"
+          function_name="${func##*:}"
+          
+          echo "[INFO] Processing function: $name ($function_name)"
+          
+          # Upload zip to S3
+          echo "[INFO] Uploading sign-${name}.zip to S3"
+          aws s3 cp "sign-${name}.zip" "s3://$CODE_BUCKET/sign-${name}.zip"
+          
+          # Update function code
+          echo "[INFO] Updating function code for $function_name"
+          aws lambda update-function-code --function-name "$function_name" --s3-bucket "$CODE_BUCKET" --s3-key "sign-${name}.zip"
+          aws lambda wait function-updated --function-name "$function_name"
+          
+          # Publish new version
+          echo "[INFO] Publishing new version for $function_name"
+          TARGET_VERSION=$(aws lambda publish-version --function-name "$function_name" --query Version --output text 2>/dev/null)
+          if [ -z "$TARGET_VERSION" ] || [ "$TARGET_VERSION" = "null" ]; then
+            TIMESTAMP=$(date +%s)
+            TARGET_VERSION=$(aws lambda publish-version --function-name "$function_name" --description "Build-${TIMESTAMP}" --query Version --output text 2>/dev/null)
+          fi
+          
+          # Get current version from alias
+          CURRENT_VERSION=$(aws lambda get-alias --function-name "$function_name" --name "live" --query FunctionVersion --output text 2>/dev/null || echo "1")
+          if [ "$CURRENT_VERSION" = "\$LATEST" ] || [ -z "$CURRENT_VERSION" ] || [ "$CURRENT_VERSION" = "null" ]; then
+            CURRENT_VERSION="1"
+          fi
+          
+          echo "[INFO] Function: $function_name, Current: $CURRENT_VERSION, Target: $TARGET_VERSION"
+          
+          # Create appspec with dynamic versions
+          echo "version: 0.0" > "appspec-${name}.yml"
+          echo "Resources:" >> "appspec-${name}.yml"
+          echo "  - CreateEnvelope:" >> "appspec-${name}.yml"
+          echo "      Type: AWS::Lambda::Function" >> "appspec-${name}.yml"
+          echo "      Properties:" >> "appspec-${name}.yml"
+          echo "        Name: \"$function_name\"" >> "appspec-${name}.yml"
+          echo "        Alias: \"live\"" >> "appspec-${name}.yml"
+          echo "        CurrentVersion: $CURRENT_VERSION" >> "appspec-${name}.yml"
+          echo "        TargetVersion: $TARGET_VERSION" >> "appspec-${name}.yml"
+        done
         
-        # Create appspec.yml for main function
-        echo "version: 0.0" > appspec.yml
-        echo "Resources:" >> appspec.yml
-        echo "  - CreateEnvelope:" >> appspec.yml
-        echo "      Type: AWS::Lambda::Function" >> appspec.yml
-        echo "      Properties:" >> appspec.yml
-        echo "        Name: \"lawprotect365-sign-service-create-envelope-stg\"" >> appspec.yml
-        echo "        Alias: \"live\"" >> appspec.yml
-        echo "        CurrentVersion: 1" >> appspec.yml
-        echo "        TargetVersion: 1" >> appspec.yml
+        # Create a default appspec.yml for the main function
+        MAIN_FUNCTION="lawprotect365-sign-service-create-envelope-stg"
+        CURRENT_VERSION=$(aws lambda get-alias --function-name "$MAIN_FUNCTION" --name "live" --query FunctionVersion --output text 2>/dev/null || echo "1")
+        if [ "$CURRENT_VERSION" = "\$LATEST" ] || [ -z "$CURRENT_VERSION" ] || [ "$CURRENT_VERSION" = "null" ]; then
+          CURRENT_VERSION="1"
+        fi
+        TARGET_VERSION=$((CURRENT_VERSION + 1))
+        
+        echo "[INFO] Main function: $MAIN_FUNCTION, Current: $CURRENT_VERSION, Target: $TARGET_VERSION"
+        
+        echo "version: 0.0" > "appspec.yml"
+        echo "Resources:" >> "appspec.yml"
+        echo "  - CreateEnvelope:" >> "appspec.yml"
+        echo "      Type: AWS::Lambda::Function" >> "appspec.yml"
+        echo "      Properties:" >> "appspec.yml"
+        echo "        Name: \"$MAIN_FUNCTION\"" >> "appspec.yml"
+        echo "        Alias: \"live\"" >> "appspec.yml"
+        echo "        CurrentVersion: $CURRENT_VERSION" >> "appspec.yml"
+        echo "        TargetVersion: $TARGET_VERSION" >> "appspec.yml"
+        '
 
 artifacts:
   files:
     - services/signature-service/sign-*.zip
     - services/signature-service/appspec.yml
+    - services/signature-service/appspec-*.yml
   discard-paths: yes
