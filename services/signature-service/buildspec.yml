@@ -94,7 +94,7 @@ phases:
       - |
         bash -lc '
         set -euo pipefail
-        echo "[INFO] Create appspec.yml files for CodeDeploy"
+        echo "[INFO] Create appspec.yml files with current alias versions"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
         
         # Create individual appspec.yml for each function
@@ -119,7 +119,18 @@ phases:
           
           echo "[INFO] Creating appspec for $name"
           
-          # Create appspec with fixed versions (CodeDeploy will handle versioning)
+          # Get current version from alias (READ ONLY - no permissions needed)
+          CURRENT_VERSION=$(aws lambda get-alias --function-name "$function_name" --name "live" --query FunctionVersion --output text 2>/dev/null || echo "1")
+          if [ "$CURRENT_VERSION" = "\$LATEST" ] || [ -z "$CURRENT_VERSION" ] || [ "$CURRENT_VERSION" = "null" ]; then
+            CURRENT_VERSION="1"
+          fi
+          
+          # Target version will be current + 1 (CodeDeploy will handle this)
+          TARGET_VERSION=$((CURRENT_VERSION + 1))
+          
+          echo "[INFO] Function: $function_name, Current: $CURRENT_VERSION, Target: $TARGET_VERSION"
+          
+          # Create appspec with current alias version
           printf "%s\n" \
             "version: 0.0" \
             "Resources:" \
@@ -128,13 +139,19 @@ phases:
             "      Properties:" \
             "        Name: \"$function_name\"" \
             "        Alias: \"live\"" \
-            "        CurrentVersion: 1" \
-            "        TargetVersion: 1" \
+            "        CurrentVersion: $CURRENT_VERSION" \
+            "        TargetVersion: $TARGET_VERSION" \
             > "appspec-${name}.yml"
         done
         
         # Create a default appspec.yml for the main function
         MAIN_FUNCTION="lawprotect365-sign-service-create-envelope-stg"
+        CURRENT_VERSION=$(aws lambda get-alias --function-name "$MAIN_FUNCTION" --name "live" --query FunctionVersion --output text 2>/dev/null || echo "1")
+        if [ "$CURRENT_VERSION" = "\$LATEST" ] || [ -z "$CURRENT_VERSION" ] || [ "$CURRENT_VERSION" = "null" ]; then
+          CURRENT_VERSION="1"
+        fi
+        TARGET_VERSION=$((CURRENT_VERSION + 1))
+        
         printf "%s\n" \
           "version: 0.0" \
           "Resources:" \
@@ -143,8 +160,8 @@ phases:
           "      Properties:" \
           "        Name: \"$MAIN_FUNCTION\"" \
           "        Alias: \"live\"" \
-          "        CurrentVersion: 1" \
-          "        TargetVersion: 1" \
+          "        CurrentVersion: $CURRENT_VERSION" \
+          "        TargetVersion: $TARGET_VERSION" \
           > "appspec.yml"
         '
 
