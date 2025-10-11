@@ -94,7 +94,7 @@ phases:
       - |
         bash -lc '
         set -euo pipefail
-        echo "[INFO] Create individual appspec.yml for each function"
+        echo "[INFO] Create individual appspec.yml for each function with dynamic versions"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
         
         # Create individual appspec.yml for each function
@@ -117,7 +117,23 @@ phases:
           name="${func%%:*}"
           function_name="${func##*:}"
           
-          echo "[INFO] Creating appspec for $name"
+          echo "[INFO] Creating appspec for $name with dynamic versions"
+          
+          # Get current version from alias
+          CURRENT_VERSION=$(aws lambda get-alias --function-name "$function_name" --name "live" --query FunctionVersion --output text 2>/dev/null || echo "1")
+          if [ "$CURRENT_VERSION" = "\$LATEST" ] || [ -z "$CURRENT_VERSION" ] || [ "$CURRENT_VERSION" = "null" ]; then
+            CURRENT_VERSION="1"
+          fi
+          
+          # Publish new version
+          TARGET_VERSION=$(aws lambda publish-version --function-name "$function_name" --query Version --output text 2>/dev/null || echo "1")
+          if [ -z "$TARGET_VERSION" ] || [ "$TARGET_VERSION" = "null" ]; then
+            TARGET_VERSION="1"
+          fi
+          
+          echo "[INFO] Function: $function_name, Current: $CURRENT_VERSION, Target: $TARGET_VERSION"
+          
+          # Create appspec with dynamic versions
           echo "version: 0.0" > "appspec-${name}.yml"
           echo "Resources:" >> "appspec-${name}.yml"
           echo "  - ${name^}:" >> "appspec-${name}.yml"
@@ -125,20 +141,33 @@ phases:
           echo "      Properties:" >> "appspec-${name}.yml"
           echo "        Name: ${function_name}" >> "appspec-${name}.yml"
           echo "        Alias: live" >> "appspec-${name}.yml"
-          echo "        CurrentVersion: 1" >> "appspec-${name}.yml"
-          echo "        TargetVersion: 1" >> "appspec-${name}.yml"
+          echo "        CurrentVersion: $CURRENT_VERSION" >> "appspec-${name}.yml"
+          echo "        TargetVersion: $TARGET_VERSION" >> "appspec-${name}.yml"
         done
         
-        # Create a default appspec.yml for the main function
+        # Create a default appspec.yml for the main function with dynamic versions
+        MAIN_FUNCTION="lawprotect365-sign-service-create-envelope-stg"
+        CURRENT_VERSION=$(aws lambda get-alias --function-name "$MAIN_FUNCTION" --name "live" --query FunctionVersion --output text 2>/dev/null || echo "1")
+        if [ "$CURRENT_VERSION" = "\$LATEST" ] || [ -z "$CURRENT_VERSION" ] || [ "$CURRENT_VERSION" = "null" ]; then
+          CURRENT_VERSION="1"
+        fi
+        
+        TARGET_VERSION=$(aws lambda publish-version --function-name "$MAIN_FUNCTION" --query Version --output text 2>/dev/null || echo "1")
+        if [ -z "$TARGET_VERSION" ] || [ "$TARGET_VERSION" = "null" ]; then
+          TARGET_VERSION="1"
+        fi
+        
+        echo "[INFO] Main function: $MAIN_FUNCTION, Current: $CURRENT_VERSION, Target: $TARGET_VERSION"
+        
         echo "version: 0.0" > appspec.yml
         echo "Resources:" >> appspec.yml
         echo "  - CreateEnvelope:" >> appspec.yml
         echo "      Type: AWS::Lambda::Function" >> appspec.yml
         echo "      Properties:" >> appspec.yml
-        echo "        Name: lawprotect365-sign-service-create-envelope-stg" >> appspec.yml
+        echo "        Name: $MAIN_FUNCTION" >> appspec.yml
         echo "        Alias: live" >> appspec.yml
-        echo "        CurrentVersion: 1" >> appspec.yml
-        echo "        TargetVersion: 1" >> appspec.yml
+        echo "        CurrentVersion: $CURRENT_VERSION" >> appspec.yml
+        echo "        TargetVersion: $TARGET_VERSION" >> appspec.yml
         '
 
 artifacts:
