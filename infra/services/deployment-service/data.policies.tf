@@ -133,7 +133,8 @@ data "aws_iam_policy_document" "lambda_policy" {
       "lambda:GetFunctionConfiguration"
     ]
     resources = [
-      "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${var.project_name}-outbox-stream-handler-${var.env}-*"
+      "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${var.project_name}-outbox-stream-handler-${var.env}-*",
+      "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${var.project_name}-sign-service-*-${var.env}"
     ]
   }
   
