@@ -72,6 +72,12 @@ variable "codedeploy_deployment_group_name" {
   type        = string
 }
 
+variable "enable_codedeploy_stage" {
+  description = "Enable CodeDeploy stage in pipeline (false for multiple Lambdas)"
+  type        = bool
+  default     = true
+}
+
 ########################################
 # Tags
 ########################################

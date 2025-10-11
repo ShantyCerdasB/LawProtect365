@@ -158,19 +158,39 @@ module "build" {
 }
 
 ################################################################
-# 5) CodeDeploy Application & Deployment Group
+# 5) CodeDeploy Applications & Deployment Groups
 #
-# Creates a CodeDeploy application and deployment group
+# Creates CodeDeploy applications and deployment groups
 # for Lambda-based blue/green or all-at-once deployments.
+# Supports both single Lambda and multiple Lambdas per service.
 #
 # Outputs:
 #   - codedeploy_application_name       : Name of the CodeDeploy application.
 #   - codedeploy_deployment_group_name  : Name of the CodeDeploy deployment group.
 ################################################################
+
+# Single Lambda deployment (backward compatibility)
 module "codedeploy" {
+  count = length(var.lambda_functions) == 0 ? 1 : 0
+  
   source                               = "../../modules/codedeploy"
   application_name                     = "${var.project_name}-${var.service_name}-app-${var.env}"
   deployment_group_name                = "${var.project_name}-${var.service_name}-dg-${var.env}"
+  service_role_arn                     = module.codedeploy_role.role_arn
+  deployment_config_name               = var.deployment_config_name
+  auto_rollback                        = var.auto_rollback
+  blue_green_termination_wait_minutes  = var.blue_green_termination_wait_minutes
+  blue_green_ready_wait_minutes        = var.blue_green_ready_wait_minutes
+  tags                                 = var.tags
+}
+
+# Multiple Lambda deployments
+module "codedeploy_multi" {
+  for_each = length(var.lambda_functions) > 0 ? toset(var.lambda_functions) : []
+  
+  source                               = "../../modules/codedeploy"
+  application_name                     = "${var.project_name}-${var.service_name}-${each.key}-${var.env}"
+  deployment_group_name                = "${var.project_name}-${var.service_name}-${each.key}-${var.env}"
   service_role_arn                     = module.codedeploy_role.role_arn
   deployment_config_name               = var.deployment_config_name
   auto_rollback                        = var.auto_rollback
@@ -202,7 +222,10 @@ module "pipeline" {
   github_branch                    = var.branch
   codebuild_project_name           = module.build.codebuild_project_name
   build_output_artifact            = "${var.service_name}_build_output"
-  codedeploy_app_name              = module.codedeploy.codedeploy_application_name
-  codedeploy_deployment_group_name = module.codedeploy.codedeploy_deployment_group_name
+  # For multiple Lambdas, we don't use CodeDeploy in the pipeline
+  # The buildspec handles all deployments directly
+  codedeploy_app_name              = length(var.lambda_functions) == 0 ? module.codedeploy[0].codedeploy_application_name : ""
+  codedeploy_deployment_group_name   = length(var.lambda_functions) == 0 ? module.codedeploy[0].codedeploy_deployment_group_name : ""
+  enable_codedeploy_stage            = length(var.lambda_functions) == 0
   tags                             = var.tags
 }

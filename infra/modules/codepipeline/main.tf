@@ -68,22 +68,25 @@ resource "aws_codepipeline" "pipeline" {
   }
 
   ########################################
-  # Stage 3 — Deploy (CodeDeploy Lambda)
+  # Stage 3 — Deploy (CodeDeploy Lambda) - Conditional
   ########################################
-  stage {
-    name = "Deploy"
+  dynamic "stage" {
+    for_each = var.enable_codedeploy_stage ? [1] : []
+    content {
+      name = "Deploy"
 
-    action {
-      name            = "Deploy"
-      category        = "Deploy"
-      owner           = "AWS"
-      provider        = "CodeDeploy"
-      version         = "1"
-      input_artifacts = [var.build_output_artifact]
+      action {
+        name            = "Deploy"
+        category        = "Deploy"
+        owner           = "AWS"
+        provider        = "CodeDeploy"
+        version         = "1"
+        input_artifacts = [var.build_output_artifact]
 
-      configuration = {
-        ApplicationName     = var.codedeploy_app_name
-        DeploymentGroupName = var.codedeploy_deployment_group_name
+        configuration = {
+          ApplicationName     = var.codedeploy_app_name
+          DeploymentGroupName = var.codedeploy_deployment_group_name
+        }
       }
     }
   }

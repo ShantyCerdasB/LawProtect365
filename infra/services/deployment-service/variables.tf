@@ -13,6 +13,12 @@ variable "service_name" {
   type        = string
 }
 
+variable "lambda_functions" {
+  description = "List of Lambda function names for CodeDeploy (empty for single Lambda)"
+  type        = list(string)
+  default     = []
+}
+
 variable "artifacts_bucket" {
   description = "S3 bucket for pipeline artifacts"
   type        = string

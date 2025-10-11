@@ -108,7 +108,10 @@
       { name = "ENV",               value = var.env,                               type = "PLAINTEXT" },
       { name = "PROJECT_NAME",      value = var.project_name,                      type = "PLAINTEXT" },
       { name = "SSM_PARAM_PREFIX",  value = "/${var.project_name}/${var.env}",     type = "PLAINTEXT" },
-      { name = "CODE_BUCKET",       value = var.code_bucket,                       type = "PLAINTEXT" }
+      { name = "CODE_BUCKET",       value = var.code_bucket,                       type = "PLAINTEXT" },
+      { name = "CODEDEPLOY_APP_PREFIX", value = "${var.project_name}-sign-${var.env}", type = "PLAINTEXT" },
+      { name = "CODEDEPLOY_DG_PREFIX", value = "${var.project_name}-sign-${var.env}", type = "PLAINTEXT" },
+      { name = "AWS_REGION",         value = var.aws_region,                          type = "PLAINTEXT" }
     ]
   )
 }
@@ -711,6 +714,22 @@ module "sign_deployment" {
   compute_type          = var.compute_type
   environment_image     = var.environment_image
   environment_variables = local.codebuild_env_vars
+  
+  # Multiple Lambda functions for CodeDeploy
+  lambda_functions = [
+    "create-envelope",
+    "get-envelope", 
+    "send-envelope",
+    "sign-document",
+    "decline-signer",
+    "share-document",
+    "send-notification",
+    "get-audit-trail",
+    "get-envelopes-by-user",
+    "update-envelope",
+    "cancel-envelope",
+    "download-document"
+  ]
  
   github_connection_arn = var.github_connection_arn
   github_owner          = var.github_owner
