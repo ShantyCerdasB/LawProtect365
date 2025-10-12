@@ -49,61 +49,73 @@ phases:
         
         # Package each handler individually
         echo "[INFO] Packaging create-envelope"
+        mkdir -p "pkg-create-envelope"
         cp "dist/src/handlers/envelopes/CreateEnvelopeHandler.js" package.json "pkg-create-envelope/"
         (cd "pkg-create-envelope" && zip -qr "../sign-create-envelope.zip" .)
         rm -rf "pkg-create-envelope"
         
         echo "[INFO] Packaging get-envelope"
+        mkdir -p "pkg-get-envelope"
         cp "dist/src/handlers/envelopes/GetEnvelopeHandler.js" package.json "pkg-get-envelope/"
         (cd "pkg-get-envelope" && zip -qr "../sign-get-envelope.zip" .)
         rm -rf "pkg-get-envelope"
         
         echo "[INFO] Packaging send-envelope"
+        mkdir -p "pkg-send-envelope"
         cp "dist/src/handlers/envelopes/SendEnvelopeHandler.js" package.json "pkg-send-envelope/"
         (cd "pkg-send-envelope" && zip -qr "../sign-send-envelope.zip" .)
         rm -rf "pkg-send-envelope"
         
         echo "[INFO] Packaging sign-document"
+        mkdir -p "pkg-sign-document"
         cp "dist/src/handlers/signing/SignDocumentHandler.js" package.json "pkg-sign-document/"
         (cd "pkg-sign-document" && zip -qr "../sign-sign-document.zip" .)
         rm -rf "pkg-sign-document"
         
         echo "[INFO] Packaging decline-signer"
+        mkdir -p "pkg-decline-signer"
         cp "dist/src/handlers/signing/DeclineSignerHandler.js" package.json "pkg-decline-signer/"
         (cd "pkg-decline-signer" && zip -qr "../sign-decline-signer.zip" .)
         rm -rf "pkg-decline-signer"
         
         echo "[INFO] Packaging share-document"
+        mkdir -p "pkg-share-document"
         cp "dist/src/handlers/signing/ShareDocumentViewHandler.js" package.json "pkg-share-document/"
         (cd "pkg-share-document" && zip -qr "../sign-share-document.zip" .)
         rm -rf "pkg-share-document"
         
         echo "[INFO] Packaging send-notification"
+        mkdir -p "pkg-send-notification"
         cp "dist/src/handlers/notifications/SendNotificationHandler.js" package.json "pkg-send-notification/"
         (cd "pkg-send-notification" && zip -qr "../sign-send-notification.zip" .)
         rm -rf "pkg-send-notification"
         
         echo "[INFO] Packaging get-audit-trail"
+        mkdir -p "pkg-get-audit-trail"
         cp "dist/src/handlers/audit/GetAuditTrailHandler.js" package.json "pkg-get-audit-trail/"
         (cd "pkg-get-audit-trail" && zip -qr "../sign-get-audit-trail.zip" .)
         rm -rf "pkg-get-audit-trail"
         
         echo "[INFO] Packaging get-envelopes-by-user"
+        mkdir -p "pkg-get-envelopes-by-user"
         cp "dist/src/handlers/envelopes/GetEnvelopesByUserHandler.js" package.json "pkg-get-envelopes-by-user/"
         (cd "pkg-get-envelopes-by-user" && zip -qr "../sign-get-envelopes-by-user.zip" .)
         rm -rf "pkg-get-envelopes-by-user"
         
         echo "[INFO] Packaging update-envelope"
+        mkdir -p "pkg-update-envelope"
         cp "dist/src/handlers/envelopes/UpdateEnvelopeHandler.js" package.json "pkg-update-envelope/"
         (cd "pkg-update-envelope" && zip -qr "../sign-update-envelope.zip" .)
         rm -rf "pkg-update-envelope"
         
         echo "[INFO] Packaging cancel-envelope"
+        mkdir -p "pkg-cancel-envelope"
         cp "dist/src/handlers/envelopes/CancelEnvelopeHandler.js" package.json "pkg-cancel-envelope/"
         (cd "pkg-cancel-envelope" && zip -qr "../sign-cancel-envelope.zip" .)
         rm -rf "pkg-cancel-envelope"
         
         echo "[INFO] Packaging download-document"
+        mkdir -p "pkg-download-document"
         cp "dist/src/handlers/envelopes/DownloadDocumentHandler.js" package.json "pkg-download-document/"
         (cd "pkg-download-document" && zip -qr "../sign-download-document.zip" .)
         rm -rf "pkg-download-document"
@@ -182,7 +194,6 @@ phases:
         echo "        Alias: \"live\"" >> "appspec.yml"
         echo "        CurrentVersion: 1" >> "appspec.yml"
         echo "        TargetVersion: 1" >> "appspec.yml"
-        '
 
 artifacts:
   files:
