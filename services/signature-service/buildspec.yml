@@ -9,18 +9,18 @@ phases:
     commands:
       - |
         echo "[INFO] Building packages/shared-ts"
-        cd "$CODEBUILD_SRC_DIR/packages/shared-ts"
-        npm ci
+          cd "$CODEBUILD_SRC_DIR/packages/shared-ts"
+          npm ci
         export DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}"
         npm run prisma:generate
-        npm run build
+          npm run build
       - |
         echo "[INFO] Installing deps in services/signature-service"
-        cd "$CODEBUILD_SRC_DIR/services/signature-service"
-        npm ci
+          cd "$CODEBUILD_SRC_DIR/services/signature-service"
+          npm ci
       - |
         echo "[INFO] Preparing Prisma client"
-        cd "$CODEBUILD_SRC_DIR/services/signature-service"
+          cd "$CODEBUILD_SRC_DIR/services/signature-service"
         if [ -d "$CODEBUILD_SRC_DIR/packages/shared-ts/prisma" ]; then
           mkdir -p prisma
           cp -r "$CODEBUILD_SRC_DIR/packages/shared-ts/prisma/"* prisma/
@@ -34,25 +34,143 @@ phases:
     commands:
       - |
         echo "[INFO] Tests"
-        cd "$CODEBUILD_SRC_DIR/services/signature-service"
+          cd "$CODEBUILD_SRC_DIR/services/signature-service"
         export DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}"
-        npm run test:unit:coverage
+          npm run test:unit:coverage
       - |
         echo "[INFO] Build + prune"
-        cd "$CODEBUILD_SRC_DIR/services/signature-service"
-        npm run build
-        npm prune --omit=dev
-        rm -rf node_modules/@lawprotect/shared-ts || true
+          cd "$CODEBUILD_SRC_DIR/services/signature-service"
+          npm run build
+          npm prune --omit=dev
+          rm -rf node_modules/@lawprotect/shared-ts || true
       - |
-        echo "[INFO] Package handlers"
+        echo "[INFO] Create sign-core layer"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
         
-        # Package each handler individually
-        echo "[INFO] Packaging create-envelope"
-        mkdir -p "pkg-create-envelope"
-        cp "dist/src/handlers/envelopes/CreateEnvelopeHandler.js" package.json "pkg-create-envelope/"
-        (cd "pkg-create-envelope" && zip -qr "../sign-create-envelope.zip" .)
-        rm -rf "pkg-create-envelope"
+        # Create layer structure
+        mkdir -p "layer-core/nodejs/node_modules/@lawprotect/sign-core"
+        
+        # Copy compiled code to layer
+        cp -r "dist" "layer-core/nodejs/node_modules/@lawprotect/sign-core/"
+        
+        # Create package.json for the core module
+        cat > "layer-core/nodejs/node_modules/@lawprotect/sign-core/package.json" << EOF
+        {
+          "name": "@lawprotect/sign-core",
+          "version": "1.0.0",
+          "main": "index.js",
+          "type": "commonjs"
+        }
+        EOF
+        
+        # Create index.js that re-exports all handlers
+        cat > "layer-core/nodejs/node_modules/@lawprotect/sign-core/index.js" << EOF
+        // Re-export all handlers
+        module.exports = {
+          handlers: {
+            createEnvelope: require('./dist/src/handlers/envelopes/CreateEnvelopeHandler').createEnvelopeHandler,
+            getEnvelope: require('./dist/src/handlers/envelopes/GetEnvelopeHandler').getEnvelopeHandler,
+            sendEnvelope: require('./dist/src/handlers/envelopes/SendEnvelopeHandler').sendEnvelopeHandler,
+            updateEnvelope: require('./dist/src/handlers/envelopes/UpdateEnvelopeHandler').updateEnvelopeHandler,
+            cancelEnvelope: require('./dist/src/handlers/envelopes/CancelEnvelopeHandler').cancelEnvelopeHandler,
+            getEnvelopesByUser: require('./dist/src/handlers/envelopes/GetEnvelopesByUserHandler').getEnvelopesByUserHandler,
+            downloadDocument: require('./dist/src/handlers/envelopes/DownloadDocumentHandler').downloadDocumentHandler,
+            signDocument: require('./dist/src/handlers/signing/SignDocumentHandler').signDocumentHandler,
+            declineSigner: require('./dist/src/handlers/signing/DeclineSignerHandler').declineSignerHandler,
+            shareDocument: require('./dist/src/handlers/signing/ShareDocumentViewHandler').shareDocumentViewHandler,
+            sendNotification: require('./dist/src/handlers/notifications/SendNotificationHandler').sendNotificationHandler,
+            getAuditTrail: require('./dist/src/handlers/audit/GetAuditTrailHandler').getAuditTrailHandler
+          }
+        };
+        EOF
+        
+        # Create ZIP of the layer
+        cd "layer-core"
+        zip -qr "../sign-core-layer.zip" .
+        cd ..
+        rm -rf "layer-core"
+        
+        echo "[INFO] Create minimal Lambda ZIPs"
+        
+        # Create minimal ZIPs for each Lambda
+        echo "[INFO] Creating create-envelope ZIP"
+        echo "exports.handler = require('@lawprotect/sign-core').handlers.createEnvelope;" > "index-create-envelope.js"
+        zip -q "sign-create-envelope.zip" "index-create-envelope.js"
+        rm "index-create-envelope.js"
+        
+        echo "[INFO] Creating get-envelope ZIP"
+        echo "exports.handler = require('@lawprotect/sign-core').handlers.getEnvelope;" > "index-get-envelope.js"
+        zip -q "sign-get-envelope.zip" "index-get-envelope.js"
+        rm "index-get-envelope.js"
+        
+        echo "[INFO] Creating send-envelope ZIP"
+        echo "exports.handler = require('@lawprotect/sign-core').handlers.sendEnvelope;" > "index-send-envelope.js"
+        zip -q "sign-send-envelope.zip" "index-send-envelope.js"
+        rm "index-send-envelope.js"
+        
+        echo "[INFO] Creating sign-document ZIP"
+        echo "exports.handler = require('@lawprotect/sign-core').handlers.signDocument;" > "index-sign-document.js"
+        zip -q "sign-sign-document.zip" "index-sign-document.js"
+        rm "index-sign-document.js"
+        
+        echo "[INFO] Creating decline-signer ZIP"
+        echo "exports.handler = require('@lawprotect/sign-core').handlers.declineSigner;" > "index-decline-signer.js"
+        zip -q "sign-decline-signer.zip" "index-decline-signer.js"
+        rm "index-decline-signer.js"
+        
+        echo "[INFO] Creating share-document ZIP"
+        echo "exports.handler = require('@lawprotect/sign-core').handlers.shareDocument;" > "index-share-document.js"
+        zip -q "sign-share-document.zip" "index-share-document.js"
+        rm "index-share-document.js"
+        
+        echo "[INFO] Creating send-notification ZIP"
+        echo "exports.handler = require('@lawprotect/sign-core').handlers.sendNotification;" > "index-send-notification.js"
+        zip -q "sign-send-notification.zip" "index-send-notification.js"
+        rm "index-send-notification.js"
+        
+        echo "[INFO] Creating get-audit-trail ZIP"
+        echo "exports.handler = require('@lawprotect/sign-core').handlers.getAuditTrail;" > "index-get-audit-trail.js"
+        zip -q "sign-get-audit-trail.zip" "index-get-audit-trail.js"
+        rm "index-get-audit-trail.js"
+        
+        echo "[INFO] Creating get-envelopes-by-user ZIP"
+        echo "exports.handler = require('@lawprotect/sign-core').handlers.getEnvelopesByUser;" > "index-get-envelopes-by-user.js"
+        zip -q "sign-get-envelopes-by-user.zip" "index-get-envelopes-by-user.js"
+        rm "index-get-envelopes-by-user.js"
+        
+        echo "[INFO] Creating update-envelope ZIP"
+        echo "exports.handler = require('@lawprotect/sign-core').handlers.updateEnvelope;" > "index-update-envelope.js"
+        zip -q "sign-update-envelope.zip" "index-update-envelope.js"
+        rm "index-update-envelope.js"
+        
+        echo "[INFO] Creating cancel-envelope ZIP"
+        echo "exports.handler = require('@lawprotect/sign-core').handlers.cancelEnvelope;" > "index-cancel-envelope.js"
+        zip -q "sign-cancel-envelope.zip" "index-cancel-envelope.js"
+        rm "index-cancel-envelope.js"
+        
+        echo "[INFO] Creating download-document ZIP"
+        echo "exports.handler = require('@lawprotect/sign-core').handlers.downloadDocument;" > "index-download-document.js"
+        zip -q "sign-download-document.zip" "index-download-document.js"
+        rm "index-download-document.js"
+        
+        # Create Lambda layer versions
+        echo "[INFO] Creating Lambda layer versions"
+        DEPS_LAYER_VERSION=$(aws lambda publish-layer-version \
+          --layer-name "lawprotect365-sign-deps-stg" \
+          --description "Signature service dependencies" \
+          --zip-file fileb://sign-deps-layer.zip \
+          --compatible-runtimes nodejs20.x \
+          --query LayerVersionArn --output text)
+        
+        CORE_LAYER_VERSION=$(aws lambda publish-layer-version \
+          --layer-name "lawprotect365-sign-core-stg" \
+          --description "Signature service core code" \
+          --zip-file fileb://sign-core-layer.zip \
+          --compatible-runtimes nodejs20.x \
+          --query LayerVersionArn --output text)
+        
+        echo "[INFO] Dependencies layer: $DEPS_LAYER_VERSION"
+        echo "[INFO] Core layer: $CORE_LAYER_VERSION"
         
         echo "[INFO] Packaging get-envelope"
         mkdir -p "pkg-get-envelope"
@@ -121,7 +239,7 @@ phases:
         rm -rf "pkg-download-document"
       - |
         echo "[INFO] Deploy all Lambda functions"
-        cd "$CODEBUILD_SRC_DIR/services/signature-service"
+          cd "$CODEBUILD_SRC_DIR/services/signature-service"
 
         # Deploy each function individually
         echo "[INFO] Deploying create-envelope"
@@ -198,6 +316,7 @@ phases:
 artifacts:
   files:
     - services/signature-service/sign-*.zip
+    - services/signature-service/sign-core-layer.zip
     - services/signature-service/appspec.yml
     - services/signature-service/appspec-*.yml
   discard-paths: yes

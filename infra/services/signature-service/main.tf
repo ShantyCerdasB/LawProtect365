@@ -92,6 +92,9 @@
   # Shared layer ARN for all Lambda functions
   shared_layer_arn = var.shared_ts_layer_arn
 
+  # Sign core layer ARN (will be created below)
+  sign_core_layer_arn = aws_lambda_layer_version.sign_core_layer.arn
+
   # ---------- CODEBUILD/PIPELINE ENVS ----------
   codebuild_env_vars = concat(
     var.environment_variables,
@@ -117,6 +120,18 @@
 }
 
 
+
+############################################################
+# Sign Core Layer
+# Contains compiled signature service code
+############################################################
+resource "aws_lambda_layer_version" "sign_core_layer" {
+  s3_bucket           = var.code_bucket
+  s3_key              = "sign-core-layer.zip"
+  layer_name          = "${var.project_name}-sign-core-${var.env}"
+  compatible_runtimes = ["nodejs20.x"]
+  description         = "Signature service core code layer"
+}
 
 ############################################################
 # Evidence S3 Bucket
@@ -183,7 +198,7 @@ module "lambda_create_envelope" {
   project_name = var.project_name
   env          = var.env
 
-  function_name = "${var.project_name}-${local.service_name}-create-envelope"
+  function_name = "${var.project_name}-${local.service_name}-create-envelope-${var.env}"
   s3_bucket     = var.code_bucket
   s3_key        = "sign-create-envelope.zip"
   handler       = "index.handler"
@@ -193,7 +208,7 @@ module "lambda_create_envelope" {
   role_arn      = module.sign_lambda_role.role_arn
 
   environment_variables = local.lambda_env_common
-  layers = [local.shared_layer_arn]
+  layers = [local.shared_layer_arn, local.sign_core_layer_arn]
 
   xray_tracing = true
 }
@@ -213,7 +228,7 @@ module "lambda_get_envelope" {
   project_name = var.project_name
   env          = var.env
 
-  function_name = "${var.project_name}-${local.service_name}-get-envelope"
+  function_name = "${var.project_name}-${local.service_name}-get-envelope-${var.env}"
   s3_bucket     = var.code_bucket
   s3_key        = "sign-get-envelope.zip"
   handler       = "index.handler"
@@ -223,7 +238,7 @@ module "lambda_get_envelope" {
   role_arn      = module.sign_lambda_role.role_arn
 
   environment_variables = local.lambda_env_common
-  layers = [local.shared_layer_arn]
+  layers = [local.shared_layer_arn, local.sign_core_layer_arn]
 
   xray_tracing = true
 }
@@ -243,7 +258,7 @@ module "lambda_send_envelope" {
   project_name = var.project_name
   env          = var.env
 
-  function_name = "${var.project_name}-${local.service_name}-send-envelope"
+  function_name = "${var.project_name}-${local.service_name}-send-envelope-${var.env}"
   s3_bucket     = var.code_bucket
   s3_key        = "sign-send-envelope.zip"
   handler       = "index.handler"
@@ -253,7 +268,7 @@ module "lambda_send_envelope" {
   role_arn      = module.sign_lambda_role.role_arn
 
   environment_variables = local.lambda_env_common
-  layers = [local.shared_layer_arn]
+  layers = [local.shared_layer_arn, local.sign_core_layer_arn]
 
   xray_tracing = true
 }
@@ -274,7 +289,7 @@ module "lambda_sign_document" {
   source         = "../../modules/lambda"
   project_name   = var.project_name
   env            = var.env
-  function_name  = "${var.project_name}-${local.service_name}-sign-document"
+  function_name  = "${var.project_name}-${local.service_name}-sign-document-${var.env}"
   s3_bucket      = var.code_bucket
   s3_key         = "sign-sign-document.zip"
   handler        = "index.handler"
@@ -283,6 +298,7 @@ module "lambda_sign_document" {
   timeout        = 15
   role_arn       = module.sign_lambda_role.role_arn
   environment_variables = local.lambda_env_common
+  layers = [local.shared_layer_arn, local.sign_core_layer_arn]
   xray_tracing   = true
 }
 
@@ -300,7 +316,7 @@ module "lambda_decline_signer" {
   source         = "../../modules/lambda"
   project_name   = var.project_name
   env            = var.env
-  function_name  = "${var.project_name}-${local.service_name}-decline-signer"
+  function_name  = "${var.project_name}-${local.service_name}-decline-signer-${var.env}"
   s3_bucket      = var.code_bucket
   s3_key         = "sign-decline-signer.zip"
   handler        = "index.handler"
@@ -309,6 +325,7 @@ module "lambda_decline_signer" {
   timeout        = 10
   role_arn       = module.sign_lambda_role.role_arn
   environment_variables = local.lambda_env_common
+  layers = [local.shared_layer_arn, local.sign_core_layer_arn]
   xray_tracing   = true
 }
 
@@ -326,7 +343,7 @@ module "lambda_share_document" {
   source         = "../../modules/lambda"
   project_name   = var.project_name
   env            = var.env
-  function_name  = "${var.project_name}-${local.service_name}-share-document"
+  function_name  = "${var.project_name}-${local.service_name}-share-document-${var.env}"
   s3_bucket      = var.code_bucket
   s3_key         = "sign-share-document.zip"
   handler        = "index.handler"
@@ -335,6 +352,7 @@ module "lambda_share_document" {
   timeout        = 10
   role_arn       = module.sign_lambda_role.role_arn
   environment_variables = local.lambda_env_common
+  layers = [local.shared_layer_arn, local.sign_core_layer_arn]
   xray_tracing   = true
 }
 
@@ -352,7 +370,7 @@ module "lambda_send_notification" {
   source         = "../../modules/lambda"
   project_name   = var.project_name
   env            = var.env
-  function_name  = "${var.project_name}-${local.service_name}-send-notification"
+  function_name  = "${var.project_name}-${local.service_name}-send-notification-${var.env}"
   s3_bucket      = var.code_bucket
   s3_key         = "sign-send-notification.zip"
   handler        = "index.handler"
@@ -361,6 +379,7 @@ module "lambda_send_notification" {
   timeout        = 10
   role_arn       = module.sign_lambda_role.role_arn
   environment_variables = local.lambda_env_common
+  layers = [local.shared_layer_arn, local.sign_core_layer_arn]
   xray_tracing   = true
 }
 
@@ -377,7 +396,7 @@ module "lambda_get_audit_trail" {
   source         = "../../modules/lambda"
   project_name   = var.project_name
   env            = var.env
-  function_name  = "${var.project_name}-${local.service_name}-get-audit-trail"
+  function_name  = "${var.project_name}-${local.service_name}-get-audit-trail-${var.env}"
   s3_bucket     = var.code_bucket
   s3_key         = "sign-get-audit-trail.zip"
   handler        = "index.handler"
@@ -386,6 +405,7 @@ module "lambda_get_audit_trail" {
   timeout        = 10
   role_arn       = module.sign_lambda_role.role_arn
   environment_variables = local.lambda_env_common
+  layers = [local.shared_layer_arn, local.sign_core_layer_arn]
   xray_tracing   = true
 }
 
@@ -402,7 +422,7 @@ module "lambda_get_envelopes_by_user" {
   source         = "../../modules/lambda"
   project_name   = var.project_name
   env            = var.env
-  function_name  = "${var.project_name}-${local.service_name}-get-envelopes-by-user"
+  function_name  = "${var.project_name}-${local.service_name}-get-envelopes-by-user-${var.env}"
   s3_bucket     = var.code_bucket
   s3_key         = "sign-get-envelopes-by-user.zip"
   handler        = "index.handler"
@@ -411,6 +431,7 @@ module "lambda_get_envelopes_by_user" {
   timeout        = 10
   role_arn       = module.sign_lambda_role.role_arn
   environment_variables = local.lambda_env_common
+  layers = [local.shared_layer_arn, local.sign_core_layer_arn]
   xray_tracing   = true
 }
 
@@ -427,7 +448,7 @@ module "lambda_update_envelope" {
   source         = "../../modules/lambda"
   project_name   = var.project_name
   env            = var.env
-  function_name  = "${var.project_name}-${local.service_name}-update-envelope"
+  function_name  = "${var.project_name}-${local.service_name}-update-envelope-${var.env}"
   s3_bucket     = var.code_bucket
   s3_key         = "sign-update-envelope.zip"
   handler        = "index.handler"
@@ -436,6 +457,7 @@ module "lambda_update_envelope" {
   timeout        = 10
   role_arn       = module.sign_lambda_role.role_arn
   environment_variables = local.lambda_env_common
+  layers = [local.shared_layer_arn, local.sign_core_layer_arn]
   xray_tracing   = true
 }
 
@@ -453,7 +475,7 @@ module "lambda_cancel_envelope" {
   source         = "../../modules/lambda"
   project_name   = var.project_name
   env            = var.env
-  function_name  = "${var.project_name}-${local.service_name}-cancel-envelope"
+  function_name  = "${var.project_name}-${local.service_name}-cancel-envelope-${var.env}"
   s3_bucket     = var.code_bucket
   s3_key         = "sign-cancel-envelope.zip"
   handler        = "index.handler"
@@ -462,6 +484,7 @@ module "lambda_cancel_envelope" {
   timeout        = 10
   role_arn       = module.sign_lambda_role.role_arn
   environment_variables = local.lambda_env_common
+  layers = [local.shared_layer_arn, local.sign_core_layer_arn]
   xray_tracing   = true
 }
 
@@ -479,7 +502,7 @@ module "lambda_download_document" {
   source         = "../../modules/lambda"
   project_name   = var.project_name
   env            = var.env
-  function_name  = "${var.project_name}-${local.service_name}-download-document"
+  function_name  = "${var.project_name}-${local.service_name}-download-document-${var.env}"
   s3_bucket     = var.code_bucket
   s3_key         = "sign-download-document.zip"
   handler        = "index.handler"
@@ -488,6 +511,7 @@ module "lambda_download_document" {
   timeout        = 10
   role_arn       = module.sign_lambda_role.role_arn
   environment_variables = local.lambda_env_common
+  layers = [local.shared_layer_arn, local.sign_core_layer_arn]
   xray_tracing   = true
 }
 
