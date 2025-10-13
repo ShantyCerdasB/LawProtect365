@@ -47,7 +47,26 @@ phases:
         echo "[INFO] Create sign-core layer"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
         
-        # Create layer structure
+        # Create dependencies layer structure
+        echo "[INFO] Creating dependencies layer"
+        mkdir -p "layer-deps/nodejs/node_modules"
+        
+        #  Copy production dependencies to layer
+        cp -r "node_modules/@aws-sdk" "layer-deps/nodejs/node_modules/" || true
+        cp -r "node_modules/@types" "layer-deps/nodejs/node_modules/" || true
+        cp -r "node_modules/dotenv" "layer-deps/nodejs/node_modules/" || true
+        cp -r "node_modules/jsonwebtoken" "layer-deps/nodejs/node_modules/" || true
+        cp -r "node_modules/pdf-lib" "layer-deps/nodejs/node_modules/" || true
+        cp -r "node_modules/uuid" "layer-deps/nodejs/node_modules/" || true
+        
+        # Create ZIP of dependencies layer
+        cd "layer-deps"
+        zip -qr "../sign-deps-layer.zip" .
+        cd ..
+        rm -rf "layer-deps"
+        
+        # Create core layer structure
+        echo "[INFO] Creating core layer"
         mkdir -p "layer-core/nodejs/node_modules/@lawprotect/sign-core"
         
         # Copy compiled code to layer
@@ -153,7 +172,10 @@ phases:
         zip -q "sign-download-document.zip" "index.js"
         rm "index.js"
         
-        # Upload core layer to S3
+        # Upload both layers to S3
+        echo "[INFO] Uploading dependencies layer to S3"
+        aws s3 cp "sign-deps-layer.zip" "s3://$CODE_BUCKET/sign-deps-layer.zip"
+        
         echo "[INFO] Uploading core layer to S3"
         aws s3 cp "sign-core-layer.zip" "s3://$CODE_BUCKET/sign-core-layer.zip"
         
@@ -236,6 +258,7 @@ phases:
 artifacts:
   files:
     - services/signature-service/sign-*.zip
+    - services/signature-service/sign-deps-layer.zip
     - services/signature-service/sign-core-layer.zip
     - services/signature-service/appspec.yml
     - services/signature-service/appspec-*.yml

@@ -94,6 +94,9 @@
 
   # Sign core layer ARN (will be created below)
   sign_core_layer_arn = aws_lambda_layer_version.sign_core_layer.arn
+  
+  # Sign dependencies layer ARN (will be created below)
+  sign_deps_layer_arn = aws_lambda_layer_version.sign_deps_layer.arn
 
   # ---------- CODEBUILD/PIPELINE ENVS ----------
   codebuild_env_vars = concat(
@@ -125,6 +128,14 @@
 # Sign Core Layer
 # Contains compiled signature service code
 ############################################################
+resource "aws_lambda_layer_version" "sign_deps_layer" {
+  s3_bucket           = var.code_bucket
+  s3_key              = "sign-deps-layer.zip"
+  layer_name          = "${var.project_name}-sign-deps-${var.env}"
+  compatible_runtimes = ["nodejs20.x"]
+  description         = "Signature service dependencies layer"
+}
+
 resource "aws_lambda_layer_version" "sign_core_layer" {
   s3_bucket           = var.code_bucket
   s3_key              = "sign-core-layer.zip"
@@ -208,7 +219,7 @@ module "lambda_create_envelope" {
   role_arn      = module.sign_lambda_role.role_arn
 
   environment_variables = local.lambda_env_common
-  layers = [local.shared_layer_arn, local.sign_core_layer_arn]
+  layers = [local.shared_layer_arn, local.sign_deps_layer_arn, local.sign_core_layer_arn]
 
   xray_tracing = true
 }
@@ -238,7 +249,7 @@ module "lambda_get_envelope" {
   role_arn      = module.sign_lambda_role.role_arn
 
   environment_variables = local.lambda_env_common
-  layers = [local.shared_layer_arn, local.sign_core_layer_arn]
+  layers = [local.shared_layer_arn, local.sign_deps_layer_arn, local.sign_core_layer_arn]
 
   xray_tracing = true
 }
@@ -268,7 +279,7 @@ module "lambda_send_envelope" {
   role_arn      = module.sign_lambda_role.role_arn
 
   environment_variables = local.lambda_env_common
-  layers = [local.shared_layer_arn, local.sign_core_layer_arn]
+  layers = [local.shared_layer_arn, local.sign_deps_layer_arn, local.sign_core_layer_arn]
 
   xray_tracing = true
 }
@@ -298,7 +309,7 @@ module "lambda_sign_document" {
   timeout        = 15
   role_arn       = module.sign_lambda_role.role_arn
   environment_variables = local.lambda_env_common
-  layers = [local.shared_layer_arn, local.sign_core_layer_arn]
+  layers = [local.shared_layer_arn, local.sign_deps_layer_arn, local.sign_core_layer_arn]
   xray_tracing   = true
 }
 
@@ -325,7 +336,7 @@ module "lambda_decline_signer" {
   timeout        = 10
   role_arn       = module.sign_lambda_role.role_arn
   environment_variables = local.lambda_env_common
-  layers = [local.shared_layer_arn, local.sign_core_layer_arn]
+  layers = [local.shared_layer_arn, local.sign_deps_layer_arn, local.sign_core_layer_arn]
   xray_tracing   = true
 }
 
@@ -352,7 +363,7 @@ module "lambda_share_document" {
   timeout        = 10
   role_arn       = module.sign_lambda_role.role_arn
   environment_variables = local.lambda_env_common
-  layers = [local.shared_layer_arn, local.sign_core_layer_arn]
+  layers = [local.shared_layer_arn, local.sign_deps_layer_arn, local.sign_core_layer_arn]
   xray_tracing   = true
 }
 
@@ -379,7 +390,7 @@ module "lambda_send_notification" {
   timeout        = 10
   role_arn       = module.sign_lambda_role.role_arn
   environment_variables = local.lambda_env_common
-  layers = [local.shared_layer_arn, local.sign_core_layer_arn]
+  layers = [local.shared_layer_arn, local.sign_deps_layer_arn, local.sign_core_layer_arn]
   xray_tracing   = true
 }
 
@@ -405,7 +416,7 @@ module "lambda_get_audit_trail" {
   timeout        = 10
   role_arn       = module.sign_lambda_role.role_arn
   environment_variables = local.lambda_env_common
-  layers = [local.shared_layer_arn, local.sign_core_layer_arn]
+  layers = [local.shared_layer_arn, local.sign_deps_layer_arn, local.sign_core_layer_arn]
   xray_tracing   = true
 }
 
@@ -431,7 +442,7 @@ module "lambda_get_envelopes_by_user" {
   timeout        = 10
   role_arn       = module.sign_lambda_role.role_arn
   environment_variables = local.lambda_env_common
-  layers = [local.shared_layer_arn, local.sign_core_layer_arn]
+  layers = [local.shared_layer_arn, local.sign_deps_layer_arn, local.sign_core_layer_arn]
   xray_tracing   = true
 }
 
@@ -457,7 +468,7 @@ module "lambda_update_envelope" {
   timeout        = 10
   role_arn       = module.sign_lambda_role.role_arn
   environment_variables = local.lambda_env_common
-  layers = [local.shared_layer_arn, local.sign_core_layer_arn]
+  layers = [local.shared_layer_arn, local.sign_deps_layer_arn, local.sign_core_layer_arn]
   xray_tracing   = true
 }
 
@@ -484,7 +495,7 @@ module "lambda_cancel_envelope" {
   timeout        = 10
   role_arn       = module.sign_lambda_role.role_arn
   environment_variables = local.lambda_env_common
-  layers = [local.shared_layer_arn, local.sign_core_layer_arn]
+  layers = [local.shared_layer_arn, local.sign_deps_layer_arn, local.sign_core_layer_arn]
   xray_tracing   = true
 }
 
@@ -511,7 +522,7 @@ module "lambda_download_document" {
   timeout        = 10
   role_arn       = module.sign_lambda_role.role_arn
   environment_variables = local.lambda_env_common
-  layers = [local.shared_layer_arn, local.sign_core_layer_arn]
+  layers = [local.shared_layer_arn, local.sign_deps_layer_arn, local.sign_core_layer_arn]
   xray_tracing   = true
 }
 
