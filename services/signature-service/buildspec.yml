@@ -94,152 +94,72 @@ phases:
         
         # Create minimal ZIPs for each Lambda
         echo "[INFO] Creating create-envelope ZIP"
-        echo "exports.handler = require('@lawprotect/sign-core').handlers.createEnvelope;" > "index-create-envelope.js"
-        zip -q "sign-create-envelope.zip" "index-create-envelope.js"
-        rm "index-create-envelope.js"
+        echo "exports.handler = require('@lawprotect/sign-core').handlers.createEnvelope;" > "index.js"
+        zip -q "sign-create-envelope.zip" "index.js"
+        rm "index.js"
         
         echo "[INFO] Creating get-envelope ZIP"
-        echo "exports.handler = require('@lawprotect/sign-core').handlers.getEnvelope;" > "index-get-envelope.js"
-        zip -q "sign-get-envelope.zip" "index-get-envelope.js"
-        rm "index-get-envelope.js"
+        echo "exports.handler = require('@lawprotect/sign-core').handlers.getEnvelope;" > "index.js"
+        zip -q "sign-get-envelope.zip" "index.js"
+        rm "index.js"
         
         echo "[INFO] Creating send-envelope ZIP"
-        echo "exports.handler = require('@lawprotect/sign-core').handlers.sendEnvelope;" > "index-send-envelope.js"
-        zip -q "sign-send-envelope.zip" "index-send-envelope.js"
-        rm "index-send-envelope.js"
+        echo "exports.handler = require('@lawprotect/sign-core').handlers.sendEnvelope;" > "index.js"
+        zip -q "sign-send-envelope.zip" "index.js"
+        rm "index.js"
         
         echo "[INFO] Creating sign-document ZIP"
-        echo "exports.handler = require('@lawprotect/sign-core').handlers.signDocument;" > "index-sign-document.js"
-        zip -q "sign-sign-document.zip" "index-sign-document.js"
-        rm "index-sign-document.js"
+        echo "exports.handler = require('@lawprotect/sign-core').handlers.signDocument;" > "index.js"
+        zip -q "sign-sign-document.zip" "index.js"
+        rm "index.js"
         
         echo "[INFO] Creating decline-signer ZIP"
-        echo "exports.handler = require('@lawprotect/sign-core').handlers.declineSigner;" > "index-decline-signer.js"
-        zip -q "sign-decline-signer.zip" "index-decline-signer.js"
-        rm "index-decline-signer.js"
+        echo "exports.handler = require('@lawprotect/sign-core').handlers.declineSigner;" > "index.js"
+        zip -q "sign-decline-signer.zip" "index.js"
+        rm "index.js"
         
         echo "[INFO] Creating share-document ZIP"
-        echo "exports.handler = require('@lawprotect/sign-core').handlers.shareDocument;" > "index-share-document.js"
-        zip -q "sign-share-document.zip" "index-share-document.js"
-        rm "index-share-document.js"
+        echo "exports.handler = require('@lawprotect/sign-core').handlers.shareDocument;" > "index.js"
+        zip -q "sign-share-document.zip" "index.js"
+        rm "index.js"
         
         echo "[INFO] Creating send-notification ZIP"
-        echo "exports.handler = require('@lawprotect/sign-core').handlers.sendNotification;" > "index-send-notification.js"
-        zip -q "sign-send-notification.zip" "index-send-notification.js"
-        rm "index-send-notification.js"
+        echo "exports.handler = require('@lawprotect/sign-core').handlers.sendNotification;" > "index.js"
+        zip -q "sign-send-notification.zip" "index.js"
+        rm "index.js"
         
         echo "[INFO] Creating get-audit-trail ZIP"
-        echo "exports.handler = require('@lawprotect/sign-core').handlers.getAuditTrail;" > "index-get-audit-trail.js"
-        zip -q "sign-get-audit-trail.zip" "index-get-audit-trail.js"
-        rm "index-get-audit-trail.js"
+        echo "exports.handler = require('@lawprotect/sign-core').handlers.getAuditTrail;" > "index.js"
+        zip -q "sign-get-audit-trail.zip" "index.js"
+        rm "index.js"
         
         echo "[INFO] Creating get-envelopes-by-user ZIP"
-        echo "exports.handler = require('@lawprotect/sign-core').handlers.getEnvelopesByUser;" > "index-get-envelopes-by-user.js"
-        zip -q "sign-get-envelopes-by-user.zip" "index-get-envelopes-by-user.js"
-        rm "index-get-envelopes-by-user.js"
+        echo "exports.handler = require('@lawprotect/sign-core').handlers.getEnvelopesByUser;" > "index.js"
+        zip -q "sign-get-envelopes-by-user.zip" "index.js"
+        rm "index.js"
         
         echo "[INFO] Creating update-envelope ZIP"
-        echo "exports.handler = require('@lawprotect/sign-core').handlers.updateEnvelope;" > "index-update-envelope.js"
-        zip -q "sign-update-envelope.zip" "index-update-envelope.js"
-        rm "index-update-envelope.js"
+        echo "exports.handler = require('@lawprotect/sign-core').handlers.updateEnvelope;" > "index.js"
+        zip -q "sign-update-envelope.zip" "index.js"
+        rm "index.js"
         
         echo "[INFO] Creating cancel-envelope ZIP"
-        echo "exports.handler = require('@lawprotect/sign-core').handlers.cancelEnvelope;" > "index-cancel-envelope.js"
-        zip -q "sign-cancel-envelope.zip" "index-cancel-envelope.js"
-        rm "index-cancel-envelope.js"
+        echo "exports.handler = require('@lawprotect/sign-core').handlers.cancelEnvelope;" > "index.js"
+        zip -q "sign-cancel-envelope.zip" "index.js"
+        rm "index.js"
         
         echo "[INFO] Creating download-document ZIP"
-        echo "exports.handler = require('@lawprotect/sign-core').handlers.downloadDocument;" > "index-download-document.js"
-        zip -q "sign-download-document.zip" "index-download-document.js"
-        rm "index-download-document.js"
+        echo "exports.handler = require('@lawprotect/sign-core').handlers.downloadDocument;" > "index.js"
+        zip -q "sign-download-document.zip" "index.js"
+        rm "index.js"
         
-        # Create Lambda layer versions
-        echo "[INFO] Creating Lambda layer versions"
-        DEPS_LAYER_VERSION=$(aws lambda publish-layer-version \
-          --layer-name "lawprotect365-sign-deps-stg" \
-          --description "Signature service dependencies" \
-          --zip-file fileb://sign-deps-layer.zip \
-          --compatible-runtimes nodejs20.x \
-          --query LayerVersionArn --output text)
+        # Upload core layer to S3
+        echo "[INFO] Uploading core layer to S3"
+        aws s3 cp "sign-core-layer.zip" "s3://$CODE_BUCKET/sign-core-layer.zip"
         
-        CORE_LAYER_VERSION=$(aws lambda publish-layer-version \
-          --layer-name "lawprotect365-sign-core-stg" \
-          --description "Signature service core code" \
-          --zip-file fileb://sign-core-layer.zip \
-          --compatible-runtimes nodejs20.x \
-          --query LayerVersionArn --output text)
-        
-        echo "[INFO] Dependencies layer: $DEPS_LAYER_VERSION"
-        echo "[INFO] Core layer: $CORE_LAYER_VERSION"
-        
-        echo "[INFO] Packaging get-envelope"
-        mkdir -p "pkg-get-envelope"
-        cp "dist/src/handlers/envelopes/GetEnvelopeHandler.js" package.json "pkg-get-envelope/"
-        (cd "pkg-get-envelope" && zip -qr "../sign-get-envelope.zip" .)
-        rm -rf "pkg-get-envelope"
-        
-        echo "[INFO] Packaging send-envelope"
-        mkdir -p "pkg-send-envelope"
-        cp "dist/src/handlers/envelopes/SendEnvelopeHandler.js" package.json "pkg-send-envelope/"
-        (cd "pkg-send-envelope" && zip -qr "../sign-send-envelope.zip" .)
-        rm -rf "pkg-send-envelope"
-        
-        echo "[INFO] Packaging sign-document"
-        mkdir -p "pkg-sign-document"
-        cp "dist/src/handlers/signing/SignDocumentHandler.js" package.json "pkg-sign-document/"
-        (cd "pkg-sign-document" && zip -qr "../sign-sign-document.zip" .)
-        rm -rf "pkg-sign-document"
-        
-        echo "[INFO] Packaging decline-signer"
-        mkdir -p "pkg-decline-signer"
-        cp "dist/src/handlers/signing/DeclineSignerHandler.js" package.json "pkg-decline-signer/"
-        (cd "pkg-decline-signer" && zip -qr "../sign-decline-signer.zip" .)
-        rm -rf "pkg-decline-signer"
-        
-        echo "[INFO] Packaging share-document"
-        mkdir -p "pkg-share-document"
-        cp "dist/src/handlers/signing/ShareDocumentViewHandler.js" package.json "pkg-share-document/"
-        (cd "pkg-share-document" && zip -qr "../sign-share-document.zip" .)
-        rm -rf "pkg-share-document"
-        
-        echo "[INFO] Packaging send-notification"
-        mkdir -p "pkg-send-notification"
-        cp "dist/src/handlers/notifications/SendNotificationHandler.js" package.json "pkg-send-notification/"
-        (cd "pkg-send-notification" && zip -qr "../sign-send-notification.zip" .)
-        rm -rf "pkg-send-notification"
-        
-        echo "[INFO] Packaging get-audit-trail"
-        mkdir -p "pkg-get-audit-trail"
-        cp "dist/src/handlers/audit/GetAuditTrailHandler.js" package.json "pkg-get-audit-trail/"
-        (cd "pkg-get-audit-trail" && zip -qr "../sign-get-audit-trail.zip" .)
-        rm -rf "pkg-get-audit-trail"
-        
-        echo "[INFO] Packaging get-envelopes-by-user"
-        mkdir -p "pkg-get-envelopes-by-user"
-        cp "dist/src/handlers/envelopes/GetEnvelopesByUserHandler.js" package.json "pkg-get-envelopes-by-user/"
-        (cd "pkg-get-envelopes-by-user" && zip -qr "../sign-get-envelopes-by-user.zip" .)
-        rm -rf "pkg-get-envelopes-by-user"
-        
-        echo "[INFO] Packaging update-envelope"
-        mkdir -p "pkg-update-envelope"
-        cp "dist/src/handlers/envelopes/UpdateEnvelopeHandler.js" package.json "pkg-update-envelope/"
-        (cd "pkg-update-envelope" && zip -qr "../sign-update-envelope.zip" .)
-        rm -rf "pkg-update-envelope"
-        
-        echo "[INFO] Packaging cancel-envelope"
-        mkdir -p "pkg-cancel-envelope"
-        cp "dist/src/handlers/envelopes/CancelEnvelopeHandler.js" package.json "pkg-cancel-envelope/"
-        (cd "pkg-cancel-envelope" && zip -qr "../sign-cancel-envelope.zip" .)
-        rm -rf "pkg-cancel-envelope"
-        
-        echo "[INFO] Packaging download-document"
-        mkdir -p "pkg-download-document"
-        cp "dist/src/handlers/envelopes/DownloadDocumentHandler.js" package.json "pkg-download-document/"
-        (cd "pkg-download-document" && zip -qr "../sign-download-document.zip" .)
-        rm -rf "pkg-download-document"
       - |
         echo "[INFO] Deploy all Lambda functions"
-          cd "$CODEBUILD_SRC_DIR/services/signature-service"
+        cd "$CODEBUILD_SRC_DIR/services/signature-service"
 
         # Deploy each function individually
         echo "[INFO] Deploying create-envelope"

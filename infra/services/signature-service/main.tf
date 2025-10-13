@@ -198,7 +198,7 @@ module "lambda_create_envelope" {
   project_name = var.project_name
   env          = var.env
 
-  function_name = "${var.project_name}-${local.service_name}-create-envelope-${var.env}"
+  function_name = "${var.project_name}-${local.service_name}-create-envelope"
   s3_bucket     = var.code_bucket
   s3_key        = "sign-create-envelope.zip"
   handler       = "index.handler"
@@ -228,7 +228,7 @@ module "lambda_get_envelope" {
   project_name = var.project_name
   env          = var.env
 
-  function_name = "${var.project_name}-${local.service_name}-get-envelope-${var.env}"
+  function_name = "${var.project_name}-${local.service_name}-get-envelope"
   s3_bucket     = var.code_bucket
   s3_key        = "sign-get-envelope.zip"
   handler       = "index.handler"
@@ -258,7 +258,7 @@ module "lambda_send_envelope" {
   project_name = var.project_name
   env          = var.env
 
-  function_name = "${var.project_name}-${local.service_name}-send-envelope-${var.env}"
+  function_name = "${var.project_name}-${local.service_name}-send-envelope"
   s3_bucket     = var.code_bucket
   s3_key        = "sign-send-envelope.zip"
   handler       = "index.handler"
@@ -289,7 +289,7 @@ module "lambda_sign_document" {
   source         = "../../modules/lambda"
   project_name   = var.project_name
   env            = var.env
-  function_name  = "${var.project_name}-${local.service_name}-sign-document-${var.env}"
+  function_name  = "${var.project_name}-${local.service_name}-sign-document"
   s3_bucket      = var.code_bucket
   s3_key         = "sign-sign-document.zip"
   handler        = "index.handler"
@@ -316,7 +316,7 @@ module "lambda_decline_signer" {
   source         = "../../modules/lambda"
   project_name   = var.project_name
   env            = var.env
-  function_name  = "${var.project_name}-${local.service_name}-decline-signer-${var.env}"
+  function_name  = "${var.project_name}-${local.service_name}-decline-signer"
   s3_bucket      = var.code_bucket
   s3_key         = "sign-decline-signer.zip"
   handler        = "index.handler"
@@ -343,7 +343,7 @@ module "lambda_share_document" {
   source         = "../../modules/lambda"
   project_name   = var.project_name
   env            = var.env
-  function_name  = "${var.project_name}-${local.service_name}-share-document-${var.env}"
+  function_name  = "${var.project_name}-${local.service_name}-share-document"
   s3_bucket      = var.code_bucket
   s3_key         = "sign-share-document.zip"
   handler        = "index.handler"
@@ -370,7 +370,7 @@ module "lambda_send_notification" {
   source         = "../../modules/lambda"
   project_name   = var.project_name
   env            = var.env
-  function_name  = "${var.project_name}-${local.service_name}-send-notification-${var.env}"
+  function_name  = "${var.project_name}-${local.service_name}-send-notification"
   s3_bucket      = var.code_bucket
   s3_key         = "sign-send-notification.zip"
   handler        = "index.handler"
@@ -396,7 +396,7 @@ module "lambda_get_audit_trail" {
   source         = "../../modules/lambda"
   project_name   = var.project_name
   env            = var.env
-  function_name  = "${var.project_name}-${local.service_name}-get-audit-trail-${var.env}"
+  function_name  = "${var.project_name}-${local.service_name}-get-audit-trail"
   s3_bucket     = var.code_bucket
   s3_key         = "sign-get-audit-trail.zip"
   handler        = "index.handler"
@@ -422,7 +422,7 @@ module "lambda_get_envelopes_by_user" {
   source         = "../../modules/lambda"
   project_name   = var.project_name
   env            = var.env
-  function_name  = "${var.project_name}-${local.service_name}-get-envelopes-by-user-${var.env}"
+  function_name  = "${var.project_name}-${local.service_name}-get-envelopes-by-user"
   s3_bucket     = var.code_bucket
   s3_key         = "sign-get-envelopes-by-user.zip"
   handler        = "index.handler"
@@ -448,7 +448,7 @@ module "lambda_update_envelope" {
   source         = "../../modules/lambda"
   project_name   = var.project_name
   env            = var.env
-  function_name  = "${var.project_name}-${local.service_name}-update-envelope-${var.env}"
+  function_name  = "${var.project_name}-${local.service_name}-update-envelope"
   s3_bucket     = var.code_bucket
   s3_key         = "sign-update-envelope.zip"
   handler        = "index.handler"
@@ -475,7 +475,7 @@ module "lambda_cancel_envelope" {
   source         = "../../modules/lambda"
   project_name   = var.project_name
   env            = var.env
-  function_name  = "${var.project_name}-${local.service_name}-cancel-envelope-${var.env}"
+  function_name  = "${var.project_name}-${local.service_name}-cancel-envelope"
   s3_bucket     = var.code_bucket
   s3_key         = "sign-cancel-envelope.zip"
   handler        = "index.handler"
@@ -502,7 +502,7 @@ module "lambda_download_document" {
   source         = "../../modules/lambda"
   project_name   = var.project_name
   env            = var.env
-  function_name  = "${var.project_name}-${local.service_name}-download-document-${var.env}"
+  function_name  = "${var.project_name}-${local.service_name}-download-document"
   s3_bucket     = var.code_bucket
   s3_key         = "sign-download-document.zip"
   handler        = "index.handler"
