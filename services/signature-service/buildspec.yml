@@ -66,8 +66,8 @@ phases:
         echo "[INFO] Production dependencies: $PROD_DEPS"
         
         # Validate critical dependencies
-        CRITICAL_DEPS=("@aws-sdk" "dotenv" "jsonwebtoken" "pdf-lib" "uuid")
-        for critical in "${CRITICAL_DEPS[@]}"; do
+        CRITICAL_DEPS="@aws-sdk dotenv jsonwebtoken pdf-lib uuid"
+        for critical in $CRITICAL_DEPS; do
           if [[ ! "$PROD_DEPS" =~ $critical ]]; then
             echo "[ERROR] Critical dependency $critical not found in package.json"
             exit 1
