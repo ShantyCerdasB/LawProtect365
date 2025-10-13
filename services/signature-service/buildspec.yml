@@ -51,13 +51,38 @@ phases:
         echo "[INFO] Creating dependencies layer"
         mkdir -p "layer-deps/nodejs/node_modules"
         
-        #  Copy production dependencies to layer
-        cp -r "node_modules/@aws-sdk" "layer-deps/nodejs/node_modules/" || true
-        cp -r "node_modules/@types" "layer-deps/nodejs/node_modules/" || true
-        cp -r "node_modules/dotenv" "layer-deps/nodejs/node_modules/" || true
-        cp -r "node_modules/jsonwebtoken" "layer-deps/nodejs/node_modules/" || true
-        cp -r "node_modules/pdf-lib" "layer-deps/nodejs/node_modules/" || true
-        cp -r "node_modules/uuid" "layer-deps/nodejs/node_modules/" || true
+        # Copy production dependencies to layer (read from package.json)
+        echo "[INFO] Reading production dependencies from package.json"
+        
+        # Get production dependencies from package.json (exclude dev dependencies)
+        PROD_DEPS=$(node -e "
+          const pkg = require('./package.json');
+          const deps = {...pkg.dependencies, ...pkg.peerDependencies};
+          const excludeDeps = ['@lawprotect/shared-ts', 'typescript', 'jest', 'eslint'];
+          const filteredDeps = Object.keys(deps).filter(dep => !excludeDeps.includes(dep));
+          console.log(filteredDeps.join(' '));
+        ")
+        
+        echo "[INFO] Production dependencies: $PROD_DEPS"
+        
+        # Validate critical dependencies
+        CRITICAL_DEPS=("@aws-sdk" "dotenv" "jsonwebtoken" "pdf-lib" "uuid")
+        for critical in "${CRITICAL_DEPS[@]}"; do
+          if [[ ! "$PROD_DEPS" =~ $critical ]]; then
+            echo "[ERROR] Critical dependency $critical not found in package.json"
+            exit 1
+          fi
+        done
+        
+        # Copy each dependency to layer
+        for dep in $PROD_DEPS; do
+          if [ -d "node_modules/$dep" ]; then
+            echo "[INFO] Copying $dep to layer"
+            cp -r "node_modules/$dep" "layer-deps/nodejs/node_modules/" || true
+          else
+            echo "[WARNING] Dependency $dep not found in node_modules"
+          fi
+        done
         
         # Create ZIP of dependencies layer
         cd "layer-deps"
@@ -179,19 +204,41 @@ phases:
         echo "[INFO] Uploading core layer to S3"
         aws s3 cp "sign-core-layer.zip" "s3://$CODE_BUCKET/sign-core-layer.zip"
         
+        # Publish layer versions
+        echo "[INFO] Publishing dependencies layer"
+        DEPS_LAYER_VERSION=$(aws lambda publish-layer-version \
+          --layer-name "lawprotect365-sign-deps-stg" \
+          --description "Signature service dependencies" \
+          --zip-file fileb://sign-deps-layer.zip \
+          --compatible-runtimes nodejs20.x \
+          --query LayerVersionArn --output text)
+        
+        echo "[INFO] Publishing core layer"
+        CORE_LAYER_VERSION=$(aws lambda publish-layer-version \
+          --layer-name "lawprotect365-sign-core-stg" \
+          --description "Signature service core code" \
+          --zip-file fileb://sign-core-layer.zip \
+          --compatible-runtimes nodejs20.x \
+          --query LayerVersionArn --output text)
+        
+        echo "[INFO] Dependencies layer: $DEPS_LAYER_VERSION"
+        echo "[INFO] Core layer: $CORE_LAYER_VERSION"
+        
       - |
         echo "[INFO] Deploy all Lambda functions"
-        cd "$CODEBUILD_SRC_DIR/services/signature-service"
+          cd "$CODEBUILD_SRC_DIR/services/signature-service"
 
         # Deploy each function individually
         echo "[INFO] Deploying create-envelope"
         aws s3 cp "sign-create-envelope.zip" "s3://$CODE_BUCKET/sign-create-envelope.zip"
         aws lambda update-function-code --function-name "lawprotect365-sign-service-create-envelope-stg" --s3-bucket "$CODE_BUCKET" --s3-key "sign-create-envelope.zip"
+        aws lambda update-function-configuration --function-name "lawprotect365-sign-service-create-envelope-stg" --layers "$DEPS_LAYER_VERSION" "$CORE_LAYER_VERSION"
         aws lambda wait function-updated --function-name "lawprotect365-sign-service-create-envelope-stg"
         
         echo "[INFO] Deploying get-envelope"
         aws s3 cp "sign-get-envelope.zip" "s3://$CODE_BUCKET/sign-get-envelope.zip"
         aws lambda update-function-code --function-name "lawprotect365-sign-service-get-envelope-stg" --s3-bucket "$CODE_BUCKET" --s3-key "sign-get-envelope.zip"
+        aws lambda update-function-configuration --function-name "lawprotect365-sign-service-get-envelope-stg" --layers "$DEPS_LAYER_VERSION" "$CORE_LAYER_VERSION"
         aws lambda wait function-updated --function-name "lawprotect365-sign-service-get-envelope-stg"
         
         echo "[INFO] Deploying send-envelope"
