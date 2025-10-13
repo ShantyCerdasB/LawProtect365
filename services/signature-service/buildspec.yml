@@ -103,28 +103,39 @@ phases:
           "name": "@lawprotect/sign-core",
           "version": "1.0.0",
           "main": "index.js",
-          "type": "commonjs"
+          "type": "module"
         }
         EOF
         
-        # Create index.js that re-exports all handlers
+        # Create index.js that re-exports all handlers (ES modules)
         cat > "layer-core/nodejs/node_modules/@lawprotect/sign-core/index.js" << EOF
-        // Re-export all handlers
-        module.exports = {
-          handlers: {
-            createEnvelope: require('./dist/src/handlers/envelopes/CreateEnvelopeHandler').createEnvelopeHandler,
-            getEnvelope: require('./dist/src/handlers/envelopes/GetEnvelopeHandler').getEnvelopeHandler,
-            sendEnvelope: require('./dist/src/handlers/envelopes/SendEnvelopeHandler').sendEnvelopeHandler,
-            updateEnvelope: require('./dist/src/handlers/envelopes/UpdateEnvelopeHandler').updateEnvelopeHandler,
-            cancelEnvelope: require('./dist/src/handlers/envelopes/CancelEnvelopeHandler').cancelEnvelopeHandler,
-            getEnvelopesByUser: require('./dist/src/handlers/envelopes/GetEnvelopesByUserHandler').getEnvelopesByUserHandler,
-            downloadDocument: require('./dist/src/handlers/envelopes/DownloadDocumentHandler').downloadDocumentHandler,
-            signDocument: require('./dist/src/handlers/signing/SignDocumentHandler').signDocumentHandler,
-            declineSigner: require('./dist/src/handlers/signing/DeclineSignerHandler').declineSignerHandler,
-            shareDocument: require('./dist/src/handlers/signing/ShareDocumentViewHandler').shareDocumentViewHandler,
-            sendNotification: require('./dist/src/handlers/notifications/SendNotificationHandler').sendNotificationHandler,
-            getAuditTrail: require('./dist/src/handlers/audit/GetAuditTrailHandler').getAuditTrailHandler
-          }
+        // Re-export all handlers (ES modules)
+        import { createEnvelopeHandler } from './dist/src/handlers/envelopes/CreateEnvelopeHandler.js';
+        import { getEnvelopeHandler } from './dist/src/handlers/envelopes/GetEnvelopeHandler.js';
+        import { sendEnvelopeHandler } from './dist/src/handlers/envelopes/SendEnvelopeHandler.js';
+        import { updateEnvelopeHandler } from './dist/src/handlers/envelopes/UpdateEnvelopeHandler.js';
+        import { cancelEnvelopeHandler } from './dist/src/handlers/envelopes/CancelEnvelopeHandler.js';
+        import { getEnvelopesByUserHandler } from './dist/src/handlers/envelopes/GetEnvelopesByUserHandler.js';
+        import { downloadDocumentHandler } from './dist/src/handlers/envelopes/DownloadDocumentHandler.js';
+        import { signDocumentHandler } from './dist/src/handlers/signing/SignDocumentHandler.js';
+        import { declineSignerHandler } from './dist/src/handlers/signing/DeclineSignerHandler.js';
+        import { shareDocumentViewHandler } from './dist/src/handlers/signing/ShareDocumentViewHandler.js';
+        import { sendNotificationHandler } from './dist/src/handlers/notifications/SendNotificationHandler.js';
+        import { getAuditTrailHandler } from './dist/src/handlers/audit/GetAuditTrailHandler.js';
+
+        export const handlers = {
+          createEnvelope: createEnvelopeHandler,
+          getEnvelope: getEnvelopeHandler,
+          sendEnvelope: sendEnvelopeHandler,
+          updateEnvelope: updateEnvelopeHandler,
+          cancelEnvelope: cancelEnvelopeHandler,
+          getEnvelopesByUser: getEnvelopesByUserHandler,
+          downloadDocument: downloadDocumentHandler,
+          signDocument: signDocumentHandler,
+          declineSigner: declineSignerHandler,
+          shareDocument: shareDocumentViewHandler,
+          sendNotification: sendNotificationHandler,
+          getAuditTrail: getAuditTrailHandler
         };
         EOF
         
@@ -145,64 +156,76 @@ phases:
         
         echo "[INFO] Create minimal Lambda ZIPs"
         
-        # Create minimal ZIPs for each Lambda
+        # Create minimal ZIPs for each Lambda (ES modules)
         echo "[INFO] Creating create-envelope ZIP"
-        echo "exports.handler = require('@lawprotect/sign-core').handlers.createEnvelope;" > "index.js"
+        echo "import { handlers } from '@lawprotect/sign-core';" > "index.js"
+        echo "export const handler = handlers.createEnvelope;" >> "index.js"
         zip -q "sign-create-envelope.zip" "index.js"
         rm "index.js"
         
         echo "[INFO] Creating get-envelope ZIP"
-        echo "exports.handler = require('@lawprotect/sign-core').handlers.getEnvelope;" > "index.js"
+        echo "import { handlers } from '@lawprotect/sign-core';" > "index.js"
+        echo "export const handler = handlers.getEnvelope;" >> "index.js"
         zip -q "sign-get-envelope.zip" "index.js"
         rm "index.js"
         
         echo "[INFO] Creating send-envelope ZIP"
-        echo "exports.handler = require('@lawprotect/sign-core').handlers.sendEnvelope;" > "index.js"
+        echo "import { handlers } from '@lawprotect/sign-core';" > "index.js"
+        echo "export const handler = handlers.sendEnvelope;" >> "index.js"
         zip -q "sign-send-envelope.zip" "index.js"
         rm "index.js"
         
         echo "[INFO] Creating sign-document ZIP"
-        echo "exports.handler = require('@lawprotect/sign-core').handlers.signDocument;" > "index.js"
+        echo "import { handlers } from '@lawprotect/sign-core';" > "index.js"
+        echo "export const handler = handlers.signDocument;" >> "index.js"
         zip -q "sign-sign-document.zip" "index.js"
         rm "index.js"
         
         echo "[INFO] Creating decline-signer ZIP"
-        echo "exports.handler = require('@lawprotect/sign-core').handlers.declineSigner;" > "index.js"
+        echo "import { handlers } from '@lawprotect/sign-core';" > "index.js"
+        echo "export const handler = handlers.declineSigner;" >> "index.js"
         zip -q "sign-decline-signer.zip" "index.js"
         rm "index.js"
         
         echo "[INFO] Creating share-document ZIP"
-        echo "exports.handler = require('@lawprotect/sign-core').handlers.shareDocument;" > "index.js"
+        echo "import { handlers } from '@lawprotect/sign-core';" > "index.js"
+        echo "export const handler = handlers.shareDocument;" >> "index.js"
         zip -q "sign-share-document.zip" "index.js"
         rm "index.js"
         
         echo "[INFO] Creating send-notification ZIP"
-        echo "exports.handler = require('@lawprotect/sign-core').handlers.sendNotification;" > "index.js"
+        echo "import { handlers } from '@lawprotect/sign-core';" > "index.js"
+        echo "export const handler = handlers.sendNotification;" >> "index.js"
         zip -q "sign-send-notification.zip" "index.js"
         rm "index.js"
         
         echo "[INFO] Creating get-audit-trail ZIP"
-        echo "exports.handler = require('@lawprotect/sign-core').handlers.getAuditTrail;" > "index.js"
+        echo "import { handlers } from '@lawprotect/sign-core';" > "index.js"
+        echo "export const handler = handlers.getAuditTrail;" >> "index.js"
         zip -q "sign-get-audit-trail.zip" "index.js"
         rm "index.js"
         
         echo "[INFO] Creating get-envelopes-by-user ZIP"
-        echo "exports.handler = require('@lawprotect/sign-core').handlers.getEnvelopesByUser;" > "index.js"
+        echo "import { handlers } from '@lawprotect/sign-core';" > "index.js"
+        echo "export const handler = handlers.getEnvelopesByUser;" >> "index.js"
         zip -q "sign-get-envelopes-by-user.zip" "index.js"
         rm "index.js"
         
         echo "[INFO] Creating update-envelope ZIP"
-        echo "exports.handler = require('@lawprotect/sign-core').handlers.updateEnvelope;" > "index.js"
+        echo "import { handlers } from '@lawprotect/sign-core';" > "index.js"
+        echo "export const handler = handlers.updateEnvelope;" >> "index.js"
         zip -q "sign-update-envelope.zip" "index.js"
         rm "index.js"
         
         echo "[INFO] Creating cancel-envelope ZIP"
-        echo "exports.handler = require('@lawprotect/sign-core').handlers.cancelEnvelope;" > "index.js"
+        echo "import { handlers } from '@lawprotect/sign-core';" > "index.js"
+        echo "export const handler = handlers.cancelEnvelope;" >> "index.js"
         zip -q "sign-cancel-envelope.zip" "index.js"
         rm "index.js"
         
         echo "[INFO] Creating download-document ZIP"
-        echo "exports.handler = require('@lawprotect/sign-core').handlers.downloadDocument;" > "index.js"
+        echo "import { handlers } from '@lawprotect/sign-core';" > "index.js"
+        echo "export const handler = handlers.downloadDocument;" >> "index.js"
         zip -q "sign-download-document.zip" "index.js"
         rm "index.js"
         
