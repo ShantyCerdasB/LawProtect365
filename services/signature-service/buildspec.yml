@@ -132,6 +132,15 @@ phases:
         cd "layer-core"
         zip -qr "../sign-core-layer.zip" .
         cd ..
+        
+        # Smoke test del layer (simula el NODE_PATH de Lambda)
+        echo "[INFO] Testing layer before deployment..."
+        NODE_PATH="$CODEBUILD_SRC_DIR/services/signature-service/layer-core/nodejs/node_modules" \
+        node -e "require('module').Module._initPaths(); require('@lawprotect/sign-core'); console.log('sign-core OK')" || {
+          echo "[ERROR] Layer smoke test failed - layer is malformed"
+          exit 1
+        }
+        
         rm -rf "layer-core"
         
         echo "[INFO] Create minimal Lambda ZIPs"
@@ -224,81 +233,90 @@ phases:
         echo "[INFO] Dependencies layer: $DEPS_LAYER_VERSION"
         echo "[INFO] Core layer: $CORE_LAYER_VERSION"
         
+        # Verifica que realmente existe la versión publicada
+        echo "[INFO] Verifying published layers..."
+        aws lambda list-layer-versions --layer-name "lawprotect365-sign-core-stg" --max-items 5
+        aws lambda list-layer-versions --layer-name "lawprotect365-sign-deps-stg" --max-items 5
+        
       - |
         echo "[INFO] Deploy all Lambda functions"
           cd "$CODEBUILD_SRC_DIR/services/signature-service"
+        
+        # ARN del shared layer fijo (el que ya tienes)
+        SHARED_TS_LAYER_ARN="arn:aws:lambda:us-east-1:088609649600:layer:lawprotect365-shared-ts-layer-stg:1"
+        echo "[INFO] Using shared layer: $SHARED_TS_LAYER_ARN"
 
         # Deploy each function individually
         echo "[INFO] Deploying create-envelope"
         aws s3 cp "sign-create-envelope.zip" "s3://$CODE_BUCKET/sign-create-envelope.zip"
         aws lambda update-function-code --function-name "lawprotect365-sign-service-create-envelope-stg" --s3-bucket "$CODE_BUCKET" --s3-key "sign-create-envelope.zip"
-        aws lambda update-function-configuration --function-name "lawprotect365-sign-service-create-envelope-stg" --layers "$DEPS_LAYER_VERSION" "$CORE_LAYER_VERSION"
+        aws lambda update-function-configuration --function-name "lawprotect365-sign-service-create-envelope-stg" --layers "$SHARED_TS_LAYER_ARN" "$DEPS_LAYER_VERSION" "$CORE_LAYER_VERSION"
         aws lambda wait function-updated --function-name "lawprotect365-sign-service-create-envelope-stg"
         
         echo "[INFO] Deploying get-envelope"
         aws s3 cp "sign-get-envelope.zip" "s3://$CODE_BUCKET/sign-get-envelope.zip"
         aws lambda update-function-code --function-name "lawprotect365-sign-service-get-envelope-stg" --s3-bucket "$CODE_BUCKET" --s3-key "sign-get-envelope.zip"
-        aws lambda update-function-configuration --function-name "lawprotect365-sign-service-get-envelope-stg" --layers "$DEPS_LAYER_VERSION" "$CORE_LAYER_VERSION"
+        aws lambda update-function-configuration --function-name "lawprotect365-sign-service-get-envelope-stg" --layers "$SHARED_TS_LAYER_ARN" "$DEPS_LAYER_VERSION" "$CORE_LAYER_VERSION"
         aws lambda wait function-updated --function-name "lawprotect365-sign-service-get-envelope-stg"
         
         echo "[INFO] Deploying send-envelope"
         aws s3 cp "sign-send-envelope.zip" "s3://$CODE_BUCKET/sign-send-envelope.zip"
         aws lambda update-function-code --function-name "lawprotect365-sign-service-send-envelope-stg" --s3-bucket "$CODE_BUCKET" --s3-key "sign-send-envelope.zip"
-        aws lambda update-function-configuration --function-name "lawprotect365-sign-service-send-envelope-stg" --layers "$DEPS_LAYER_VERSION" "$CORE_LAYER_VERSION"
+        aws lambda update-function-configuration --function-name "lawprotect365-sign-service-send-envelope-stg" --layers "$SHARED_TS_LAYER_ARN" "$DEPS_LAYER_VERSION" "$CORE_LAYER_VERSION"
         aws lambda wait function-updated --function-name "lawprotect365-sign-service-send-envelope-stg"
         
         echo "[INFO] Deploying sign-document"
         aws s3 cp "sign-sign-document.zip" "s3://$CODE_BUCKET/sign-sign-document.zip"
         aws lambda update-function-code --function-name "lawprotect365-sign-service-sign-document-stg" --s3-bucket "$CODE_BUCKET" --s3-key "sign-sign-document.zip"
-        aws lambda update-function-configuration --function-name "lawprotect365-sign-service-sign-document-stg" --layers "$DEPS_LAYER_VERSION" "$CORE_LAYER_VERSION"
+        aws lambda update-function-configuration --function-name "lawprotect365-sign-service-sign-document-stg" --layers "$SHARED_TS_LAYER_ARN" "$DEPS_LAYER_VERSION" "$CORE_LAYER_VERSION"
         aws lambda wait function-updated --function-name "lawprotect365-sign-service-sign-document-stg"
         
         echo "[INFO] Deploying decline-signer"
         aws s3 cp "sign-decline-signer.zip" "s3://$CODE_BUCKET/sign-decline-signer.zip"
         aws lambda update-function-code --function-name "lawprotect365-sign-service-decline-signer-stg" --s3-bucket "$CODE_BUCKET" --s3-key "sign-decline-signer.zip"
-        aws lambda update-function-configuration --function-name "lawprotect365-sign-service-decline-signer-stg" --layers "$DEPS_LAYER_VERSION" "$CORE_LAYER_VERSION"
+        aws lambda update-function-configuration --function-name "lawprotect365-sign-service-decline-signer-stg" --layers "$SHARED_TS_LAYER_ARN" "$DEPS_LAYER_VERSION" "$CORE_LAYER_VERSION"
         aws lambda wait function-updated --function-name "lawprotect365-sign-service-decline-signer-stg"
         
         echo "[INFO] Deploying share-document"
         aws s3 cp "sign-share-document.zip" "s3://$CODE_BUCKET/sign-share-document.zip"
         aws lambda update-function-code --function-name "lawprotect365-sign-service-share-document-stg" --s3-bucket "$CODE_BUCKET" --s3-key "sign-share-document.zip"
-        aws lambda update-function-configuration --function-name "lawprotect365-sign-service-share-document-stg" --layers "$DEPS_LAYER_VERSION" "$CORE_LAYER_VERSION"
+        aws lambda update-function-configuration --function-name "lawprotect365-sign-service-share-document-stg" --layers "$SHARED_TS_LAYER_ARN" "$DEPS_LAYER_VERSION" "$CORE_LAYER_VERSION"
         aws lambda wait function-updated --function-name "lawprotect365-sign-service-share-document-stg"
         
         echo "[INFO] Deploying send-notification"
         aws s3 cp "sign-send-notification.zip" "s3://$CODE_BUCKET/sign-send-notification.zip"
         aws lambda update-function-code --function-name "lawprotect365-sign-service-send-notification-stg" --s3-bucket "$CODE_BUCKET" --s3-key "sign-send-notification.zip"
-        aws lambda update-function-configuration --function-name "lawprotect365-sign-service-send-notification-stg" --layers "$DEPS_LAYER_VERSION" "$CORE_LAYER_VERSION"
+        aws lambda update-function-configuration --function-name "lawprotect365-sign-service-send-notification-stg" --layers "$SHARED_TS_LAYER_ARN" "$DEPS_LAYER_VERSION" "$CORE_LAYER_VERSION"
         aws lambda wait function-updated --function-name "lawprotect365-sign-service-send-notification-stg"
         
         echo "[INFO] Deploying get-audit-trail"
         aws s3 cp "sign-get-audit-trail.zip" "s3://$CODE_BUCKET/sign-get-audit-trail.zip"
         aws lambda update-function-code --function-name "lawprotect365-sign-service-get-audit-trail-stg" --s3-bucket "$CODE_BUCKET" --s3-key "sign-get-audit-trail.zip"
-        aws lambda update-function-configuration --function-name "lawprotect365-sign-service-get-audit-trail-stg" --layers "$DEPS_LAYER_VERSION" "$CORE_LAYER_VERSION"
+        aws lambda update-function-configuration --function-name "lawprotect365-sign-service-get-audit-trail-stg" --layers "$SHARED_TS_LAYER_ARN" "$DEPS_LAYER_VERSION" "$CORE_LAYER_VERSION"
         aws lambda wait function-updated --function-name "lawprotect365-sign-service-get-audit-trail-stg"
         
         echo "[INFO] Deploying get-envelopes-by-user"
         aws s3 cp "sign-get-envelopes-by-user.zip" "s3://$CODE_BUCKET/sign-get-envelopes-by-user.zip"
         aws lambda update-function-code --function-name "lawprotect365-sign-service-get-envelopes-by-user-stg" --s3-bucket "$CODE_BUCKET" --s3-key "sign-get-envelopes-by-user.zip"
-        aws lambda update-function-configuration --function-name "lawprotect365-sign-service-get-envelopes-by-user-stg" --layers "$DEPS_LAYER_VERSION" "$CORE_LAYER_VERSION"
+        aws lambda update-function-configuration --function-name "lawprotect365-sign-service-get-envelopes-by-user-stg" --layers "$SHARED_TS_LAYER_ARN" "$DEPS_LAYER_VERSION" "$CORE_LAYER_VERSION"
         aws lambda wait function-updated --function-name "lawprotect365-sign-service-get-envelopes-by-user-stg"
         
         echo "[INFO] Deploying update-envelope"
         aws s3 cp "sign-update-envelope.zip" "s3://$CODE_BUCKET/sign-update-envelope.zip"
         aws lambda update-function-code --function-name "lawprotect365-sign-service-update-envelope-stg" --s3-bucket "$CODE_BUCKET" --s3-key "sign-update-envelope.zip"
-        aws lambda update-function-configuration --function-name "lawprotect365-sign-service-update-envelope-stg" --layers "$DEPS_LAYER_VERSION" "$CORE_LAYER_VERSION"
+        aws lambda update-function-configuration --function-name "lawprotect365-sign-service-update-envelope-stg" --layers "$SHARED_TS_LAYER_ARN" "$DEPS_LAYER_VERSION" "$CORE_LAYER_VERSION"
         aws lambda wait function-updated --function-name "lawprotect365-sign-service-update-envelope-stg"
         
         echo "[INFO] Deploying cancel-envelope"
         aws s3 cp "sign-cancel-envelope.zip" "s3://$CODE_BUCKET/sign-cancel-envelope.zip"
         aws lambda update-function-code --function-name "lawprotect365-sign-service-cancel-envelope-stg" --s3-bucket "$CODE_BUCKET" --s3-key "sign-cancel-envelope.zip"
-        aws lambda update-function-configuration --function-name "lawprotect365-sign-service-cancel-envelope-stg" --layers "$DEPS_LAYER_VERSION" "$CORE_LAYER_VERSION"
+        aws lambda update-function-configuration --function-name "lawprotect365-sign-service-cancel-envelope-stg" --layers "$SHARED_TS_LAYER_ARN" "$DEPS_LAYER_VERSION" "$CORE_LAYER_VERSION"
         aws lambda wait function-updated --function-name "lawprotect365-sign-service-cancel-envelope-stg"
         
         echo "[INFO] Deploying download-document"
         aws s3 cp "sign-download-document.zip" "s3://$CODE_BUCKET/sign-download-document.zip"
         aws lambda update-function-code --function-name "lawprotect365-sign-service-download-document-stg" --s3-bucket "$CODE_BUCKET" --s3-key "sign-download-document.zip"
-        aws lambda update-function-configuration --function-name "lawprotect365-sign-service-download-document-stg" --layers "$DEPS_LAYER_VERSION" "$CORE_LAYER_VERSION"
+        aws lambda update-function-configuration --function-name "lawprotect365-sign-service-download-document-stg" --layers "$SHARED_TS_LAYER_ARN" "$DEPS_LAYER_VERSION" "$CORE_LAYER_VERSION"
         aws lambda wait function-updated --function-name "lawprotect365-sign-service-download-document-stg"
         
         # Create a default appspec.yml for the main function
