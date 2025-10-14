@@ -6,6 +6,8 @@
  */
 
 export enum UserRole {
+  /** User who hasn't selected a role yet */
+  UNASSIGNED = 'UNASSIGNED',
   /** Regular customer user */
   CUSTOMER = 'CUSTOMER',
   /** Lawyer user with legal practice access */

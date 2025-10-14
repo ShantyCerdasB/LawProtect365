@@ -1,30 +1,29 @@
 /**
- * @fileoverview UserAuditEvent entity - Represents an audit event for user operations
- * @summary Manages user audit trail and compliance tracking
- * @description The UserAuditEvent entity encapsulates audit information for user operations,
- * including authentication events, role changes, and profile updates.
+ * @fileoverview UserAuditEvent entity - Audit trail for user actions
+ * @summary Manages user audit events and compliance tracking
+ * @description The UserAuditEvent entity handles audit trail creation and management
+ * for user-related actions, ensuring compliance and security monitoring.
  */
 
 import { UserId } from '../value-objects/UserId';
 import { UserAuditAction } from '../enums/UserAuditAction';
-import { NetworkSecurityContext } from '@lawprotect/shared-ts';
 
 /**
- * UserAuditEvent entity representing a user audit event
+ * UserAuditEvent entity representing an audit trail entry
  * 
- * Manages audit trail information for user operations and compliance tracking.
+ * Manages audit events for user actions and system changes.
  */
 export class UserAuditEvent {
   constructor(
     private readonly id: string,
     private readonly userId: UserId,
     private readonly action: UserAuditAction,
-    private readonly description: string,
-    private readonly actorUserId: string,
-    private readonly actorEmail: string,
-    private readonly networkContext: NetworkSecurityContext,
+    private readonly description: string | undefined,
+    private readonly actorId: string | undefined,
+    private readonly ipAddress: string | undefined,
+    private readonly userAgent: string | undefined,
     private readonly metadata: Record<string, unknown> | undefined,
-    private readonly timestamp: Date
+    private readonly createdAt: Date
   ) {}
 
   /**
@@ -38,41 +37,37 @@ export class UserAuditEvent {
       UserId.fromString(data.userId),
       data.action as UserAuditAction,
       data.description,
-      data.actorUserId,
-      data.actorEmail,
-      {
-        ipAddress: data.ipAddress,
-        userAgent: data.userAgent,
-        country: data.country,
-      },
+      data.actorId,
+      data.ipAddress,
+      data.userAgent,
       data.metadata,
-      data.timestamp
+      data.createdAt
     );
   }
 
   /**
    * Creates a new UserAuditEvent
-   * @param config - Audit event configuration
+   * @param params - Audit event parameters
    * @returns UserAuditEvent instance
    */
-  static create(config: {
+  static create(params: {
     userId: string;
     action: UserAuditAction;
-    description: string;
-    actorUserId: string;
-    actorEmail: string;
-    networkContext: NetworkSecurityContext;
+    description?: string;
+    actorId?: string;
+    ipAddress?: string;
+    userAgent?: string;
     metadata?: Record<string, unknown>;
   }): UserAuditEvent {
     return new UserAuditEvent(
       crypto.randomUUID(),
-      UserId.fromString(config.userId),
-      config.action,
-      config.description,
-      config.actorUserId,
-      config.actorEmail,
-      config.networkContext,
-      config.metadata,
+      UserId.fromString(params.userId),
+      params.action,
+      params.description,
+      params.actorId,
+      params.ipAddress,
+      params.userAgent,
+      params.metadata,
       new Date()
     );
   }
@@ -86,7 +81,7 @@ export class UserAuditEvent {
   }
 
   /**
-   * Gets the user ID this event relates to
+   * Gets the user ID this audit event belongs to
    * @returns The user ID value object
    */
   getUserId(): UserId {
@@ -102,50 +97,50 @@ export class UserAuditEvent {
   }
 
   /**
-   * Gets the event description
-   * @returns The event description
+   * Gets the audit description
+   * @returns The audit description or undefined
    */
-  getDescription(): string {
+  getDescription(): string | undefined {
     return this.description;
   }
 
   /**
-   * Gets the actor user ID
-   * @returns The actor user ID
+   * Gets the actor ID who performed the action
+   * @returns The actor ID or undefined
    */
-  getActorUserId(): string {
-    return this.actorUserId;
+  getActorId(): string | undefined {
+    return this.actorId;
   }
 
   /**
-   * Gets the actor email
-   * @returns The actor email
+   * Gets the IP address
+   * @returns The IP address or undefined
    */
-  getActorEmail(): string {
-    return this.actorEmail;
+  getIpAddress(): string | undefined {
+    return this.ipAddress;
   }
 
   /**
-   * Gets the network security context
-   * @returns The network context
+   * Gets the user agent
+   * @returns The user agent or undefined
    */
-  getNetworkContext(): NetworkSecurityContext {
-    return this.networkContext;
+  getUserAgent(): string | undefined {
+    return this.userAgent;
   }
 
   /**
-   * Gets the event metadata
-   * @returns The event metadata or undefined
+   * Gets the metadata
+   * @returns The metadata or undefined
    */
   getMetadata(): Record<string, unknown> | undefined {
     return this.metadata;
   }
 
   /**
-   * Gets the event timestamp
-   * @returns The event timestamp
+   * Gets the creation timestamp
+   * @returns The creation timestamp
    */
-  getTimestamp(): Date {
-    return this.timestamp;
+  getCreatedAt(): Date {
+    return this.createdAt;
   }
 }

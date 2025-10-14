@@ -49,6 +49,7 @@ enum SignerStatus {
 }
 
 enum UserRole {
+  UNASSIGNED
   LAWYER
   CUSTOMER
   ADMIN

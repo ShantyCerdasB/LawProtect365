@@ -1,146 +1,80 @@
 /**
- * @fileoverview MfaPolicyRules - Domain rules for MFA policy enforcement
- * @summary Validates MFA policy business rules and compliance requirements
- * @description This domain rule encapsulates all business validation logic for MFA policies,
- * ensuring compliance with security requirements and business constraints.
+ * @fileoverview MfaPolicyRules - MFA policy evaluation rules
+ * @summary Defines MFA policy rules and evaluation logic
+ * @description Provides business rules for MFA policy evaluation, including
+ * MFA requirement determination and policy compliance checking.
  */
 
 import { UserRole } from '../enums/UserRole';
-import { UserAccountStatus } from '../enums/UserAccountStatus';
-import { 
-  mfaRequired,
-  mfaPolicyViolation,
-  invalidMfaConfiguration
-} from '../../auth-errors';
 
 /**
- * MfaPolicyRules - Domain rule for MFA policy validation
+ * MFA policy rules for determining MFA requirements
  * 
- * Encapsulates business validation logic for MFA policies including:
- * - MFA requirement validation
- * - Policy compliance checking
- * - Security rule enforcement
+ * Provides business rules for MFA policy evaluation and compliance.
  */
 export class MfaPolicyRules {
   /**
-   * Validates if MFA is required for a specific role
-   * @param role - User role to check
-   * @param isMfaEnabled - Current MFA status
-   * @param isOptional - Whether MFA is optional for this role
-   * @throws mfaRequired when MFA is required but not enabled
+   * Roles that require MFA
    */
-  static validateMfaRequirement(
-    role: UserRole,
-    isMfaEnabled: boolean,
-    isOptional: boolean = false
-  ): void {
-    const mfaRequiredRoles = [UserRole.ADMIN, UserRole.SUPER_ADMIN];
-    
-    if (mfaRequiredRoles.includes(role) && !isMfaEnabled && !isOptional) {
-      throw mfaRequired(`MFA is required for role ${role}`);
-    }
-  }
+  private static readonly MFA_REQUIRED_ROLES = [
+    UserRole.SUPER_ADMIN,
+    UserRole.ADMIN
+  ];
 
   /**
-   * Validates MFA policy compliance for user status changes
-   * @param currentStatus - Current user status
-   * @param newStatus - New user status
-   * @param role - User role
-   * @param isMfaEnabled - Current MFA status
-   * @throws mfaPolicyViolation when status change violates MFA policy
+   * Determines if MFA is enabled from Cognito data
+   * @param userMFASettingList - List of MFA settings from Cognito
+   * @param preferredMfaSetting - Preferred MFA setting from Cognito
+   * @returns True if MFA is enabled
    */
-  static validateMfaPolicyForStatusChange(
-    currentStatus: UserAccountStatus,
-    newStatus: UserAccountStatus,
-    role: UserRole,
-    isMfaEnabled: boolean
-  ): void {
-    // If activating a user with MFA-required role, ensure MFA is enabled
-    if (currentStatus === UserAccountStatus.PENDING_VERIFICATION && 
-        newStatus === UserAccountStatus.ACTIVE) {
-      MfaPolicyRules.validateMfaRequirement(role, isMfaEnabled);
-    }
-  }
-
-  /**
-   * Validates MFA policy compliance for role changes
-   * @param currentRoles - Current user roles
-   * @param newRoles - New user roles
-   * @param isMfaEnabled - Current MFA status
-   * @throws mfaPolicyViolation when role change violates MFA policy
-   */
-  static validateMfaPolicyForRoleChange(
-    currentRoles: UserRole[],
-    newRoles: UserRole[],
-    isMfaEnabled: boolean
-  ): void {
-    const mfaRequiredRoles = [UserRole.ADMIN, UserRole.SUPER_ADMIN];
-    
-    // Check if user is gaining a MFA-required role
-    const gainingMfaRequiredRole = newRoles.some(role => 
-      mfaRequiredRoles.includes(role) && !currentRoles.includes(role)
+  static isMfaEnabledFromCognito(
+    userMFASettingList?: string[], 
+    preferredMfaSetting?: string
+  ): boolean {
+    return Boolean(
+      userMFASettingList?.includes('SOFTWARE_TOKEN_MFA') || 
+      preferredMfaSetting
     );
-
-    if (gainingMfaRequiredRole && !isMfaEnabled) {
-      throw mfaPolicyViolation(
-        'MFA must be enabled before assigning ADMIN or SUPER_ADMIN roles'
-      );
-    }
   }
 
   /**
-   * Checks if MFA is required for a specific role
+   * Determines if MFA is required for a specific role
    * @param role - User role to check
-   * @returns True if MFA is required for the role
+   * @returns True if MFA is required for this role
    */
   static isMfaRequiredForRole(role: UserRole): boolean {
-    const mfaRequiredRoles = [UserRole.ADMIN, UserRole.SUPER_ADMIN];
-    return mfaRequiredRoles.includes(role);
+    return this.MFA_REQUIRED_ROLES.includes(role);
   }
 
   /**
-   * Validates MFA configuration
-   * @param isMfaEnabled - MFA enabled status
+   * Evaluates MFA policy compliance
    * @param role - User role
-   * @param isOptional - Whether MFA is optional
-   * @throws invalidMfaConfiguration when MFA configuration is invalid
+   * @param mfaEnabled - Current MFA status
+   * @returns True if MFA policy is compliant
    */
-  static validateMfaConfiguration(
-    isMfaEnabled: boolean,
-    role: UserRole,
-    isOptional: boolean
-  ): void {
-    if (isOptional && MfaPolicyRules.isMfaRequiredForRole(role)) {
-      throw invalidMfaConfiguration(
-        `MFA cannot be optional for role ${role}`
-      );
-    }
+  static evaluateMfaCompliance(role: UserRole, mfaEnabled: boolean): boolean {
+    const mfaRequired = this.isMfaRequiredForRole(role);
+    return !mfaRequired || mfaEnabled;
   }
 
   /**
-   * Gets MFA policy requirements for a role
-   * @param role - User role
-   * @returns MFA policy requirements
+   * Gets roles that require MFA
+   * @returns Array of roles that require MFA
    */
-  static getMfaPolicyRequirements(role: UserRole): {
-    required: boolean;
-    optional: boolean;
-    description: string;
-  } {
-    const mfaRequiredRoles = [UserRole.ADMIN, UserRole.SUPER_ADMIN];
+  static getMfaRequiredRoles(): UserRole[] {
+    return [...this.MFA_REQUIRED_ROLES];
+  }
+
+  /**
+   * Checks if a role change requires MFA status update
+   * @param oldRole - Previous role
+   * @param newRole - New role
+   * @returns True if MFA status should be updated
+   */
+  static requiresMfaStatusUpdate(oldRole: UserRole, newRole: UserRole): boolean {
+    const oldRoleRequiresMfa = this.isMfaRequiredForRole(oldRole);
+    const newRoleRequiresMfa = this.isMfaRequiredForRole(newRole);
     
-    if (mfaRequiredRoles.includes(role)) {
-      return {
-        required: true,
-        optional: false,
-        description: `MFA is required for ${role} role`
-      };
-    }
-
-    return {
-      required: false,
-      optional: true,
-      description: `MFA is optional for ${role} role`
-    };
+    return oldRoleRequiresMfa !== newRoleRequiresMfa;
   }
 }

@@ -5,12 +5,13 @@
  * authentication settings, and feature toggles for the auth service.
  */
 
-import { loadConfig as loadSharedConfig } from '@lawprotect/shared-ts';
+import { buildAppConfig } from '@lawprotect/shared-ts';
+import type { AppConfig } from '@lawprotect/shared-ts';
 
 /**
- * Auth service specific configuration
+ * Auth service specific configuration extending shared-ts AppConfig
  */
-export interface AuthConfig {
+export interface AuthServiceConfig extends AppConfig {
   // AWS Configuration
   aws: {
     region: string;
@@ -54,6 +55,20 @@ export interface AuthConfig {
     lockoutDuration: number;
     sessionTimeout: number;
   };
+  
+  // EventBridge Configuration
+  eventbridge: {
+    busName: string;
+    source: string;
+  };
+  
+  // Outbox Configuration
+  outbox: {
+    tableName: string;
+  };
+  
+  // Default Role Configuration
+  defaultRole: string;
 }
 
 /**
@@ -61,10 +76,11 @@ export interface AuthConfig {
  * @returns Validated configuration object
  * @throws Error if required configuration is missing
  */
-export function loadConfig(): AuthConfig {
-  const sharedConfig = loadSharedConfig();
+export const loadConfig = (): AuthServiceConfig => {
+  const base = buildAppConfig();
   
   return {
+    ...base,
     aws: {
       region: process.env.AWS_REGION || 'us-east-1',
       cognito: {
@@ -103,5 +119,16 @@ export function loadConfig(): AuthConfig {
       lockoutDuration: parseInt(process.env.LOCKOUT_DURATION || '900'), // 15 minutes
       sessionTimeout: parseInt(process.env.SESSION_TIMEOUT || '3600'), // 1 hour
     },
+    
+    eventbridge: {
+      busName: process.env.EVENTBRIDGE_BUS_NAME || '',
+      source: process.env.EVENTBRIDGE_SOURCE || `${base.projectName}.${base.serviceName}`,
+    },
+    
+    outbox: {
+      tableName: process.env.OUTBOX_TABLE_NAME || '',
+    },
+    
+    defaultRole: process.env.DEFAULT_ROLE || 'UNASSIGNED',
   };
 }
