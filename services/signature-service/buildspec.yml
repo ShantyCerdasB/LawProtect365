@@ -38,9 +38,12 @@ phases:
         export DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}"
           npm run test:unit:coverage
       - |
+        echo "[INFO] Install dependencies"
+          cd "$CODEBUILD_SRC_DIR/services/signature-service"
+        npm install
+        
         echo "[INFO] Build + prune"
-        cd "$CODEBUILD_SRC_DIR/services/signature-service"
-        npm run build
+          npm run build
         
         # Copy dependencies BEFORE pruning
         echo "[INFO] Copying dependencies before pruning"
@@ -52,8 +55,8 @@ phases:
         ls -la "temp-deps/" || echo "[WARNING] temp-deps directory not found"
         ls -la "temp-deps/node_modules/" | head -10 || echo "[WARNING] temp-deps/node_modules not found"
         
-        npm prune --omit=dev
-        rm -rf node_modules/@lawprotect/shared-ts || true
+          npm prune --omit=dev
+          rm -rf node_modules/@lawprotect/shared-ts || true
       - |
         echo "[INFO] Create sign-core layer"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
