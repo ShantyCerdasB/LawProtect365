@@ -8,10 +8,10 @@ phases:
   pre_build:
     commands:
       - |
-        set -euo pipefail
+        set -eu
         echo "[INFO] ===== Pre-build ====="
 
-      # ---- Build shared-ts (genera Prisma y compila) ----
+      # 1) Build packages/shared-ts (genera Prisma y compila)
       - |
         echo "[INFO] Building packages/shared-ts"
         cd "$CODEBUILD_SRC_DIR/packages/shared-ts"
@@ -20,13 +20,13 @@ phases:
         npm run prisma:generate
         npm run build
 
-      # ---- Instalar deps del servicio (con dev) para compilar y testear) ----
+      # 2) Instalar deps del servicio (con dev) para compilar y testear
       - |
         echo "[INFO] Installing deps in services/signature-service"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
         npm ci
 
-      # ---- Preparar Prisma client dentro del servicio ----
+      # 3) Preparar Prisma client dentro del servicio
       - |
         echo "[INFO] Preparing Prisma client"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
@@ -42,23 +42,23 @@ phases:
   build:
     commands:
       - |
-        set -euo pipefail
+        set -eu
         echo "[INFO] ===== Build & Package ====="
 
-      # ---- Tests ----
+      # 4) Tests
       - |
         echo "[INFO] Running unit tests"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
         export DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}"
         npm run test:unit:coverage
 
-      # ---- Build del servicio (TS → JS) ----
+      # 5) Build del servicio (TS → JS)
       - |
         echo "[INFO] Building service"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
         npm run build
 
-      # ---- DEPS LAYER: construir en un folder limpio con prod deps ----
+      # 6) DEPS LAYER: construir en un folder limpio con prod deps
       - |
         echo "[INFO] Building dependencies layer (clean env)"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
@@ -74,7 +74,7 @@ phases:
         rm -rf deps-build layer-deps
         echo "[INFO] Dependencies layer ZIP created"
 
-      # ---- CORE LAYER: empaquetar dist como paquete CJS @lawprotect/sign-core ----
+      # 7) CORE LAYER: empaquetar dist como paquete CJS @lawprotect/sign-core
       - |
         echo "[INFO] Building core layer"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
@@ -116,28 +116,36 @@ phases:
         rm -rf layer-core
         echo "[INFO] Core layer ZIP created"
 
-      # ---- ZIPs mínimos por Lambda (CommonJS) ----
+      # 8) ZIPs mínimos por Lambda (CommonJS)
       - |
         echo "[INFO] Creating minimal function ZIPs"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
         make_zip () { echo "exports.handler = require('@lawprotect/sign-core').handlers.$2;" > index.js; zip -q "$1" index.js; rm index.js; }
-        make_zip "sign-create-envelope.zip"      "createEnvelope"
-        make_zip "sign-get-envelope.zip"         "getEnvelope"
-        make_zip "sign-send-envelope.zip"        "sendEnvelope"
-        make_zip "sign-sign-document.zip"        "signDocument"
-        make_zip "sign-decline-signer.zip"       "declineSigner"
-        make_zip "sign-share-document.zip"       "shareDocument"
-        make_zip "sign-send-notification.zip"    "sendNotification"
-        make_zip "sign-get-audit-trail.zip"      "getAuditTrail"
+        make_zip "sign-create-envelope.zip"       "createEnvelope"
+        make_zip "sign-get-envelope.zip"          "getEnvelope"
+        make_zip "sign-send-envelope.zip"         "sendEnvelope"
+        make_zip "sign-sign-document.zip"         "signDocument"
+        make_zip "sign-decline-signer.zip"        "declineSigner"
+        make_zip "sign-share-document.zip"        "shareDocument"
+        make_zip "sign-send-notification.zip"     "sendNotification"
+        make_zip "sign-get-audit-trail.zip"       "getAuditTrail"
         make_zip "sign-get-envelopes-by-user.zip" "getEnvelopesByUser"
-        make_zip "sign-update-envelope.zip"      "updateEnvelope"
-        make_zip "sign-cancel-envelope.zip"      "cancelEnvelope"
-        make_zip "sign-download-document.zip"    "downloadDocument"
+        make_zip "sign-update-envelope.zip"       "updateEnvelope"
+        make_zip "sign-cancel-envelope.zip"       "cancelEnvelope"
+        make_zip "sign-download-document.zip"     "downloadDocument"
 
-      # ---- Subir y publicar layers ----
+      # 9) Subir y publicar layers
       - |
         echo "[INFO] Uploading layers to S3 & publishing versions"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
+
+        # Validaciones / helpers
+        if [ -z "${CODE_BUCKET:-}" ]; then
+          echo "[ERROR] CODE_BUCKET no está definido en las variables de entorno de CodeBuild"
+          exit 1
+        fi
+        AWS_ACCOUNT_ID="${AWS_ACCOUNT_ID:-$(aws sts get-caller-identity --query Account --output text)}"
+
         aws s3 cp "sign-deps-layer.zip" "s3://$CODE_BUCKET/sign-deps-layer.zip"
         aws s3 cp "sign-core-layer.zip" "s3://$CODE_BUCKET/sign-core-layer.zip"
 
@@ -162,14 +170,16 @@ phases:
         aws lambda list-layer-versions --layer-name "lawprotect365-sign-core-stg" --max-items 5 || true
         aws lambda list-layer-versions --layer-name "lawprotect365-sign-deps-stg" --max-items 5 || true
 
-      # ---- Deploy de todas las Lambdas con 3 layers: shared + deps + core ----
+      # 10) Deploy de todas las Lambdas con 3 layers: shared + deps + core
       - |
         echo "[INFO] Deploying Lambda functions"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
-        SHARED_TS_LAYER_ARN="arn:aws:lambda:us-east-1:${AWS_ACCOUNT_ID:-088609649600}:layer:lawprotect365-shared-ts-layer-stg:1"
+
+        AWS_ACCOUNT_ID="${AWS_ACCOUNT_ID:-$(aws sts get-caller-identity --query Account --output text)}"
+        SHARED_TS_LAYER_ARN="arn:aws:lambda:us-east-1:${AWS_ACCOUNT_ID}:layer:lawprotect365-shared-ts-layer-stg:1"
 
         deploy_fn () {
-          local FN="$1"; local ZIP="$2"
+          FN="$1"; ZIP="$2"
           echo "[INFO] Deploying $FN"
           aws s3 cp "$ZIP" "s3://$CODE_BUCKET/$ZIP"
           aws lambda update-function-code --function-name "$FN" --s3-bucket "$CODE_BUCKET" --s3-key "$ZIP" >/dev/null
@@ -177,20 +187,20 @@ phases:
           aws lambda wait function-updated --function-name "$FN"
         }
 
-        deploy_fn "lawprotect365-sign-service-create-envelope-stg"   "sign-create-envelope.zip"
-        deploy_fn "lawprotect365-sign-service-get-envelope-stg"      "sign-get-envelope.zip"
-        deploy_fn "lawprotect365-sign-service-send-envelope-stg"     "sign-send-envelope.zip"
-        deploy_fn "lawprotect365-sign-service-sign-document-stg"     "sign-sign-document.zip"
-        deploy_fn "lawprotect365-sign-service-decline-signer-stg"    "sign-decline-signer.zip"
-        deploy_fn "lawprotect365-sign-service-share-document-stg"    "sign-share-document.zip"
-        deploy_fn "lawprotect365-sign-service-send-notification-stg" "sign-send-notification.zip"
-        deploy_fn "lawprotect365-sign-service-get-audit-trail-stg"   "sign-get-audit-trail.zip"
-        deploy_fn "lawprotect365-sign-service-get-envelopes-by-user-stg" "sign-get-envelopes-by-user.zip"
-        deploy_fn "lawprotect365-sign-service-update-envelope-stg"   "sign-update-envelope.zip"
-        deploy_fn "lawprotect365-sign-service-cancel-envelope-stg"   "sign-cancel-envelope.zip"
-        deploy_fn "lawprotect365-sign-service-download-document-stg" "sign-download-document.zip"
+        deploy_fn "lawprotect365-sign-service-create-envelope-stg"        "sign-create-envelope.zip"
+        deploy_fn "lawprotect365-sign-service-get-envelope-stg"           "sign-get-envelope.zip"
+        deploy_fn "lawprotect365-sign-service-send-envelope-stg"          "sign-send-envelope.zip"
+        deploy_fn "lawprotect365-sign-service-sign-document-stg"          "sign-sign-document.zip"
+        deploy_fn "lawprotect365-sign-service-decline-signer-stg"         "sign-decline-signer.zip"
+        deploy_fn "lawprotect365-sign-service-share-document-stg"         "sign-share-document.zip"
+        deploy_fn "lawprotect365-sign-service-send-notification-stg"      "sign-send-notification.zip"
+        deploy_fn "lawprotect365-sign-service-get-audit-trail-stg"        "sign-get-audit-trail.zip"
+        deploy_fn "lawprotect365-sign-service-get-envelopes-by-user-stg"  "sign-get-envelopes-by-user.zip"
+        deploy_fn "lawprotect365-sign-service-update-envelope-stg"        "sign-update-envelope.zip"
+        deploy_fn "lawprotect365-sign-service-cancel-envelope-stg"        "sign-cancel-envelope.zip"
+        deploy_fn "lawprotect365-sign-service-download-document-stg"      "sign-download-document.zip"
 
-      # ---- appspec de cortesía (no usado si despliegas directo) ----
+      # 11) appspec de cortesía (no usado si despliegas directo)
       - |
         echo "[INFO] Writing default appspec.yml"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
