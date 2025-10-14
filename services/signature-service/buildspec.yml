@@ -47,6 +47,11 @@ phases:
         mkdir -p "temp-deps"
         cp -r "node_modules" "temp-deps/" || true
         
+        # Verify temp-deps was created
+        echo "[INFO] Verifying temp-deps creation"
+        ls -la "temp-deps/" || echo "[WARNING] temp-deps directory not found"
+        ls -la "temp-deps/node_modules/" | head -10 || echo "[WARNING] temp-deps/node_modules not found"
+        
         npm prune --omit=dev
         rm -rf node_modules/@lawprotect/shared-ts || true
       - |
@@ -80,6 +85,11 @@ phases:
           fi
         done
         
+        # Debug temp-deps structure
+        echo "[INFO] Debugging temp-deps structure"
+        ls -la "temp-deps/" || echo "[ERROR] temp-deps directory missing"
+        ls -la "temp-deps/node_modules/" | head -5 || echo "[ERROR] temp-deps/node_modules missing"
+        
         # Copy each dependency to layer (from temp-deps)
         for dep in $PROD_DEPS; do
           if [ -d "temp-deps/node_modules/$dep" ]; then
@@ -87,6 +97,8 @@ phases:
             cp -r "temp-deps/node_modules/$dep" "layer-deps/nodejs/node_modules/" || true
           else
             echo "[WARNING] Dependency $dep not found in temp-deps/node_modules"
+            echo "[DEBUG] Available in temp-deps:"
+            ls -la "temp-deps/node_modules/" | grep "$dep" || echo "Not found"
           fi
         done
         
