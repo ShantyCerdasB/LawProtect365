@@ -1,0 +1,31 @@
+{
+  "_comment": "TypeScript configuration for auth-service Jest tests",
+  "_description": "Jest-specific TypeScript configuration with comprehensive path mapping and test environment settings",
+  
+  "extends": "./tsconfig.json",
+  
+  "compilerOptions": {
+    // Test environment specific settings
+    "types": ["node", "jest"],
+    
+    // Comprehensive path mapping for test imports
+    "baseUrl": ".",
+    "paths": {
+      // Service-specific aliases (with .js variants first for ESM compatibility)
+      "^@/(.*)\\.js$": ["src/$1"],
+      "^@/(.*)$": ["src/$1"],
+      
+      // Test-specific aliases
+      "^@tests/(.*)$": ["__tests__/$1"],
+      "^@mocks/(.*)$": ["__tests__/mocks/$1"],
+      "^@helpers/(.*)$": ["__tests__/helpers/$1"]
+    }
+  },
+  
+  // Include test files in compilation
+  "include": [
+    "src/**/*",
+    "__tests__/**/*",
+    "jest.setup.ts"
+  ]
+}

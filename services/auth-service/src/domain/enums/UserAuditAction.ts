@@ -1,0 +1,50 @@
+/**
+ * @fileoverview UserAuditAction - Enum for user audit actions
+ * @summary Defines all possible user audit actions for compliance tracking
+ * @description This enum provides type-safe audit action values for tracking
+ * user operations and maintaining audit trails.
+ */
+
+export enum UserAuditAction {
+  // User lifecycle events
+  USER_REGISTERED = 'USER_REGISTERED',
+  USER_ACTIVATED = 'USER_ACTIVATED',
+  USER_SUSPENDED = 'USER_SUSPENDED',
+  USER_DELETED = 'USER_DELETED',
+  USER_VERIFIED = 'USER_VERIFIED',
+  
+  // Authentication events
+  USER_LOGIN = 'USER_LOGIN',
+  USER_LOGOUT = 'USER_LOGOUT',
+  USER_LOGIN_FAILED = 'USER_LOGIN_FAILED',
+  USER_PASSWORD_CHANGED = 'USER_PASSWORD_CHANGED',
+  USER_PASSWORD_RESET = 'USER_PASSWORD_RESET',
+  
+  // MFA events
+  MFA_ENABLED = 'MFA_ENABLED',
+  MFA_DISABLED = 'MFA_DISABLED',
+  MFA_VERIFIED = 'MFA_VERIFIED',
+  MFA_FAILED = 'MFA_FAILED',
+  
+  // Role and permission events
+  ROLE_ASSIGNED = 'ROLE_ASSIGNED',
+  ROLE_REMOVED = 'ROLE_REMOVED',
+  PERMISSION_GRANTED = 'PERMISSION_GRANTED',
+  PERMISSION_REVOKED = 'PERMISSION_REVOKED',
+  
+  // Profile events
+  PROFILE_UPDATED = 'PROFILE_UPDATED',
+  EMAIL_CHANGED = 'EMAIL_CHANGED',
+  NAME_CHANGED = 'NAME_CHANGED',
+  
+  // OAuth events
+  OAUTH_ACCOUNT_LINKED = 'OAUTH_ACCOUNT_LINKED',
+  OAUTH_ACCOUNT_UNLINKED = 'OAUTH_ACCOUNT_UNLINKED',
+  OAUTH_LOGIN = 'OAUTH_LOGIN',
+  
+  // Security events
+  ACCOUNT_LOCKED = 'ACCOUNT_LOCKED',
+  ACCOUNT_UNLOCKED = 'ACCOUNT_UNLOCKED',
+  SUSPICIOUS_ACTIVITY = 'SUSPICIOUS_ACTIVITY',
+  SECURITY_ALERT = 'SECURITY_ALERT'
+}

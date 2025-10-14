@@ -10,8 +10,6 @@ phases:
       - |
         set -eu
         echo "[INFO] ===== Pre-build ====="
-
-      # 1) Build packages/shared-ts (Prisma + build)
       - |
         echo "[INFO] Building packages/shared-ts"
         cd "$CODEBUILD_SRC_DIR/packages/shared-ts"
@@ -19,14 +17,10 @@ phases:
         export DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}"
         npm run prisma:generate
         npm run build
-
-      # 2) Instalar deps del servicio (con dev) para compilar y testear
       - |
         echo "[INFO] Installing deps in services/signature-service"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
         npm ci
-
-      # 3) Preparar Prisma client dentro del servicio
       - |
         echo "[INFO] Preparing Prisma client"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
@@ -44,21 +38,17 @@ phases:
       - |
         set -eu
         echo "[INFO] ===== Build & Package ====="
-
-      # 4) Tests
       - |
         echo "[INFO] Running unit tests"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
         export DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}"
         npm run test:unit:coverage
-
-      # 5) Build del servicio (ESM)
       - |
         echo "[INFO] Building service (ESM)"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
         npm run build
 
-      # 6) DEPS LAYER: prod deps con fallback si no hay lockfile
+      # ===== Deps layer (prod deps) =====
       - |
         echo "[INFO] Building dependencies layer (clean env)"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
@@ -83,7 +73,7 @@ phases:
         rm -rf deps-build layer-deps
         echo "[INFO] Dependencies layer ZIP created"
 
-      # 7) CORE LAYER (ESM): empaquetar dist (ESM) como @lawprotect/sign-core
+      # ===== Core layer (ESM) =====
       - |
         echo "[INFO] Building core layer (ESM)"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
@@ -91,7 +81,7 @@ phases:
         mkdir -p "layer-core/nodejs/node_modules/@lawprotect/sign-core/dist"
         cp -r "dist" "layer-core/nodejs/node_modules/@lawprotect/sign-core/dist"
 
-        # package.json ESM
+        # package.json del módulo ESM
         cat > "layer-core/nodejs/node_modules/@lawprotect/sign-core/package.json" << 'EOF'
         {
           "name": "@lawprotect/sign-core",
@@ -101,7 +91,7 @@ phases:
         }
         EOF
 
-        # index.js ESM: re-exporta handlers con extensión .js
+        # index.js ESM: importa con extensión .js
         cat > "layer-core/nodejs/node_modules/@lawprotect/sign-core/index.js" << 'EOF'
         import { createEnvelopeHandler } from './dist/src/handlers/envelopes/CreateEnvelopeHandler.js';
         import { getEnvelopeHandler } from './dist/src/handlers/envelopes/GetEnvelopeHandler.js';
@@ -115,7 +105,6 @@ phases:
         import { shareDocumentViewHandler } from './dist/src/handlers/signing/ShareDocumentViewHandler.js';
         import { sendNotificationHandler } from './dist/src/handlers/notifications/SendNotificationHandler.js';
         import { getAuditTrailHandler } from './dist/src/handlers/audit/GetAuditTrailHandler.js';
-
         export const handlers = {
           createEnvelope: createEnvelopeHandler,
           getEnvelope: getEnvelopeHandler,
@@ -137,7 +126,7 @@ phases:
         rm -rf layer-core
         echo "[INFO] Core layer ZIP created"
 
-      # 8) ZIPs mínimos por Lambda (ESM): index.js + package.json "type":"module"
+      # ===== Zips de funciones (ESM) =====
       - |
         echo "[INFO] Creating minimal ESM function ZIPs"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
@@ -145,6 +134,7 @@ phases:
         make_zip() {
           local zip="$1"
           local exp="$2"
+          rm -rf __tmp_fn
           mkdir -p __tmp_fn
           cat > __tmp_fn/index.js << 'EOF'
         import { handlers } from '@lawprotect/sign-core';
@@ -157,20 +147,20 @@ phases:
           rm -rf __tmp_fn
         }
 
-        make_zip "sign-create-envelope.zip" "createEnvelope"
-        make_zip "sign-get-envelope.zip" "getEnvelope"
-        make_zip "sign-send-envelope.zip" "sendEnvelope"
-        make_zip "sign-sign-document.zip" "signDocument"
-        make_zip "sign-decline-signer.zip" "declineSigner"
-        make_zip "sign-share-document.zip" "shareDocument"
-        make_zip "sign-send-notification.zip" "sendNotification"
-        make_zip "sign-get-audit-trail.zip" "getAuditTrail"
-        make_zip "sign-get-envelopes-by-user.zip" "getEnvelopesByUser"
-        make_zip "sign-update-envelope.zip" "updateEnvelope"
-        make_zip "sign-cancel-envelope.zip" "cancelEnvelope"
-        make_zip "sign-download-document.zip" "downloadDocument"
+        make_zip "sign-create-envelope.zip"        "createEnvelope"
+        make_zip "sign-get-envelope.zip"           "getEnvelope"
+        make_zip "sign-send-envelope.zip"          "sendEnvelope"
+        make_zip "sign-sign-document.zip"          "signDocument"
+        make_zip "sign-decline-signer.zip"         "declineSigner"
+        make_zip "sign-share-document.zip"         "shareDocument"
+        make_zip "sign-send-notification.zip"      "sendNotification"
+        make_zip "sign-get-audit-trail.zip"        "getAuditTrail"
+        make_zip "sign-get-envelopes-by-user.zip"  "getEnvelopesByUser"
+        make_zip "sign-update-envelope.zip"        "updateEnvelope"
+        make_zip "sign-cancel-envelope.zip"        "cancelEnvelope"
+        make_zip "sign-download-document.zip"      "downloadDocument"
 
-      # 9) Subir y publicar layers (con fallback a última versión si falla publish)
+      # ===== Publicar layers (con fallback a última versión) =====
       - |
         echo "[INFO] Uploading layers to S3 & publishing versions"
         set -e
@@ -224,7 +214,7 @@ phases:
         aws lambda list-layer-versions --layer-name "$CORE_LAYER_NAME" --max-items 5 || true
         aws lambda list-layer-versions --layer-name "$DEPS_LAYER_NAME" --max-items 5 || true
 
-      # 10) Deploy de todas las Lambdas con 3 layers: shared + deps + core (solo ARNs no vacíos)
+      # ===== Deploy de funciones =====
       - |
         echo "[INFO] Deploying Lambda functions"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
@@ -255,24 +245,23 @@ phases:
           aws lambda wait function-updated --function-name "$FN"
         }
 
-        deploy_fn "lawprotect365-sign-service-create-envelope-stg" "sign-create-envelope.zip"
-        deploy_fn "lawprotect365-sign-service-get-envelope-stg" "sign-get-envelope.zip"
-        deploy_fn "lawprotect365-sign-service-send-envelope-stg" "sign-send-envelope.zip"
-        deploy_fn "lawprotect365-sign-service-sign-document-stg" "sign-sign-document.zip"
-        deploy_fn "lawprotect365-sign-service-decline-signer-stg" "sign-decline-signer.zip"
-        deploy_fn "lawprotect365-sign-service-share-document-stg" "sign-share-document.zip"
-        deploy_fn "lawprotect365-sign-service-send-notification-stg" "sign-send-notification.zip"
-        deploy_fn "lawprotect365-sign-service-get-audit-trail-stg" "sign-get-audit-trail.zip"
-        deploy_fn "lawprotect365-sign-service-get-envelopes-by-user-stg" "sign-get-envelopes-by-user.zip"
-        deploy_fn "lawprotect365-sign-service-update-envelope-stg" "sign-update-envelope.zip"
-        deploy_fn "lawprotect365-sign-service-cancel-envelope-stg" "sign-cancel-envelope.zip"
-        deploy_fn "lawprotect365-sign-service-download-document-stg" "sign-download-document.zip"
+        deploy_fn "lawprotect365-sign-service-create-envelope-stg"        "sign-create-envelope.zip"
+        deploy_fn "lawprotect365-sign-service-get-envelope-stg"           "sign-get-envelope.zip"
+        deploy_fn "lawprotect365-sign-service-send-envelope-stg"          "sign-send-envelope.zip"
+        deploy_fn "lawprotect365-sign-service-sign-document-stg"          "sign-sign-document.zip"
+        deploy_fn "lawprotect365-sign-service-decline-signer-stg"         "sign-decline-signer.zip"
+        deploy_fn "lawprotect365-sign-service-share-document-stg"         "sign-share-document.zip"
+        deploy_fn "lawprotect365-sign-service-send-notification-stg"      "sign-send-notification.zip"
+        deploy_fn "lawprotect365-sign-service-get-audit-trail-stg"        "sign-get-audit-trail.zip"
+        deploy_fn "lawprotect365-sign-service-get-envelopes-by-user-stg"  "sign-get-envelopes-by-user.zip"
+        deploy_fn "lawprotect365-sign-service-update-envelope-stg"        "sign-update-envelope.zip"
+        deploy_fn "lawprotect365-sign-service-cancel-envelope-stg"        "sign-cancel-envelope.zip"
+        deploy_fn "lawprotect365-sign-service-download-document-stg"      "sign-download-document.zip"
 
-      # 11) appspec de cortesía
       - |
         echo "[INFO] Writing default appspec.yml"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
-        cat > appspec.yml <<'EOF'
+        cat > appspec.yml << 'EOF'
         version: 0.0
         Resources:
           - CreateEnvelope:

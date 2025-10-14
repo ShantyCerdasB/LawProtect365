@@ -16,6 +16,7 @@ enum UserAccountStatus {
   INACTIVE
   SUSPENDED
   DELETED
+  PENDING_VERIFICATION
 }
 
 enum UserAuditAction {
@@ -77,11 +78,14 @@ enum OAuthProvider {
   GOOGLE
   MICROSOFT_365
   APPLE
+  COGNITO
 }
 
 model User {
   /// Primary identity for internal users.
   id                 String            @id @default(uuid()) @db.Uuid
+  /// Cognito identity (unique).
+  cognitoSub         String            @unique
   /// Login and contact address (case-insensitive, unique).
   email              String            @unique @db.Citext
   /// Display name.
@@ -110,10 +114,26 @@ model User {
   createdEnvelopes  SignatureEnvelope[] @relation("EnvelopeCreator")
   envelopeSigners   EnvelopeSigner[]
   userAuditEvents   UserAuditEvent[]
+  personalInfo      UserPersonalInfo?
 
-  @@index([status])
+  @@index([email, status])
+  @@index([status, createdAt])
   @@index([role])
-  @@index([createdAt])
+}
+
+model UserPersonalInfo {
+  /// Personal information for users (phone, locale, timezone, etc.)
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @unique @db.Uuid
+  phone     String?
+  locale    String?
+  timeZone  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model OAuthAccount {

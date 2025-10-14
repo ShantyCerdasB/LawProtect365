@@ -1,27 +1,36 @@
 {
-  "name": "user-service",
+  "name": "@lawprotect/auth-service",
   "version": "0.1.0",
   "private": true,
-  "workspaces": [
-    "services/*",
-    "packages/*",
-    "web-frontend",
-    "mobile-android",
-    "mobile-ios"
-  ],
+  "type": "commonjs",
+  "main": "dist/index.js",
   "scripts": {
-    "dev": "turbo run dev",
-    "build": "turbo run build",
-    "lint": "turbo run lint",
-    "test": "turbo run test",
-    "clean": "turbo run clean",
-    "format": "prettier --write ."
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx watch serverless.local.ts",
+    "test": "npm run test:unit && npm run test:integration",
+    "test:unit": "jest --config ./jest.unit.cjs",
+    "test:unit:coverage": "jest --coverage --config ./jest.unit.cjs",
+    "test:integration": "jest --config ./jest.integration.cjs",
+    "test:integration:coverage": "jest --coverage --config ./jest.integration.cjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@aws-sdk/client-cognito-identity-provider": "^3.883.0",
+    "@aws-sdk/client-eventbridge": "^3.864.0",
+    "@aws-sdk/client-ssm": "^3.864.0",
+    "@lawprotect/shared-ts": "^0.1.0",
+    "@types/jsonwebtoken": "^9.0.10",
+    "dotenv": "^16.4.5",
+    "jsonwebtoken": "^9.0.2"
+  },
   "devDependencies": {
-    "turbo": "^1.8.4",
-    "typescript": "^4.9.5",
-    "eslint": "^8.23.1",
-    "prettier": "^2.7.1"
+    "@types/express": "^5.0.3",
+    "@types/jest": "^29.5.12",
+    "express": "^5.1.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.2",
+    "tsconfig-paths": "^4.2.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.5.4"
   }
 }
