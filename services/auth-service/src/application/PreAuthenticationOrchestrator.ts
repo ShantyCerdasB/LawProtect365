@@ -9,9 +9,10 @@ import { User } from '../domain/entities/User';
 import { UserService } from '../services/UserService';
 import { CognitoService } from '../services/CognitoService';
 import { PreAuthEvent, PreAuthResult } from '../types/cognito/PreAuthEvent';
-import { MfaPolicyRules, CognitoMfaSettings } from '../domain/rules/MfaPolicyRules';
+import { MfaPolicyRules } from '../domain/rules/MfaPolicyRules';
+import { CognitoMfaSettings } from '../domain/interfaces';
 import { UserAccessRules } from '../domain/rules/UserAccessRules';
-import { UserRole, UserAccountStatus } from '../domain/enums';
+import { UserRole, UserAccountStatus, CognitoAttribute } from '../domain/enums';
 import { authenticationFailed } from '../auth-errors/factories';
 
 /**
@@ -153,7 +154,7 @@ export class PreAuthenticationOrchestrator {
     }
     
     // Fallback to attributes
-    const roleFromAttributes = userAttributes['custom:role'];
+    const roleFromAttributes = userAttributes[CognitoAttribute.CUSTOM_ROLE];
     if (roleFromAttributes && Object.values(UserRole).includes(roleFromAttributes as UserRole)) {
       return roleFromAttributes as UserRole;
     }
@@ -164,10 +165,10 @@ export class PreAuthenticationOrchestrator {
   /**
    * Get user status from database or default
    * @param user - User entity (if exists)
-   * @param userAttributes - User attributes from event
+   * @param _userAttributes - User attributes from event (unused for now)
    * @returns User account status
    */
-  private getUserStatus(user: User | null, userAttributes: Record<string, string | undefined>): UserAccountStatus {
+  private getUserStatus(user: User | null, _userAttributes: Record<string, string | undefined>): UserAccountStatus {
     if (user) {
       return user.getStatus();
     }
@@ -182,7 +183,7 @@ export class PreAuthenticationOrchestrator {
    * @returns Custom MFA requirement or undefined
    */
   private getCustomMfaRequired(userAttributes: Record<string, string | undefined>): boolean | undefined {
-    const customMfaRequired = userAttributes['custom:is_mfa_required'];
+    const customMfaRequired = userAttributes[CognitoAttribute.CUSTOM_MFA_REQUIRED];
     if (customMfaRequired === 'true') return true;
     if (customMfaRequired === 'false') return false;
     return undefined;

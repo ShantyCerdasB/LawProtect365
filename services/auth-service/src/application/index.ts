@@ -7,3 +7,4 @@
 
 export * from './PostAuthenticationOrchestrator';
 export * from './PreAuthenticationOrchestrator';
+export * from './PreTokenGenerationOrchestrator';

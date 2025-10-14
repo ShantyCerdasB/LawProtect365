@@ -143,7 +143,7 @@ phases:
           local exp="$2"
           rm -rf __tmp_fn
           mkdir -p __tmp_fn
-          cat > __tmp_fn/index.mjs << 'EOF'
+          cat > __tmp_fn/index.mjs << EOF
         import { handlers } from '@lawprotect/sign-core';
         export const handler = handlers.${exp};
         EOF
@@ -250,6 +250,7 @@ phases:
           echo "[INFO] Deploying $FN"
           aws s3 cp "$ZIP" "s3://$CODE_BUCKET/$ZIP"
           aws lambda update-function-code --function-name "$FN" --s3-bucket "$CODE_BUCKET" --s3-key "$ZIP" >/dev/null
+          aws lambda wait function-updated --function-name "$FN"
           aws lambda update-function-configuration --function-name "$FN" --runtime nodejs20.x --handler index.handler --layers $LAYERS_ARGS >/dev/null
           aws lambda wait function-updated --function-name "$FN"
         }

@@ -8,3 +8,6 @@
 export * from './UserSpec';
 export * from './OAuthAccountSpec';
 export * from './UserAuditEventSpec';
+export * from './MfaPolicyResult';
+export * from './CognitoMfaSettings';
+export * from './UserAccessResult';

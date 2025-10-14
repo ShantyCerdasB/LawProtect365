@@ -50,6 +50,12 @@ export interface AuthServiceConfig extends AppConfig {
     mfaEnforceForSuperAdmins: boolean;
     allowLoginWhenPendingVerification: boolean;
     mfaBypassClientIds: string[];
+    // PreTokenGeneration features
+    tokenIncludeAccountStatus: boolean;
+    tokenIncludeMfaFlags: boolean;
+    tokenIncludeInternalUserId: boolean;
+    tokenAddToAccessOnly: boolean;
+    tokenAddToIdOnly: boolean;
   };
   
   // Security Configuration
@@ -115,9 +121,15 @@ export const loadConfig = (): AuthServiceConfig => {
       mfaOptional: process.env.MFA_OPTIONAL === 'true',
       socialLoginEnabled: process.env.SOCIAL_LOGIN_ENABLED === 'true',
       adminUserManagement: process.env.ADMIN_USER_MANAGEMENT === 'true',
-      mfaEnforceForSuperAdmins: process.env.MFA_ENFORCE_FOR_SUPERADMINS !== 'false', // Default true
-      allowLoginWhenPendingVerification: process.env.ALLOW_LOGIN_WHEN_PENDING_VERIFICATION !== 'false', // Default true
-      mfaBypassClientIds: process.env.MFA_BYPASS_CLIENT_IDS ? process.env.MFA_BYPASS_CLIENT_IDS.split(',') : [],
+    mfaEnforceForSuperAdmins: process.env.MFA_ENFORCE_FOR_SUPERADMINS !== 'false', // Default true
+    allowLoginWhenPendingVerification: process.env.ALLOW_LOGIN_WHEN_PENDING_VERIFICATION !== 'false', // Default true
+    mfaBypassClientIds: process.env.MFA_BYPASS_CLIENT_IDS ? process.env.MFA_BYPASS_CLIENT_IDS.split(',') : [],
+    // PreTokenGeneration features
+    tokenIncludeAccountStatus: process.env.TOKEN_INCLUDE_ACCOUNT_STATUS !== 'false', // Default true
+    tokenIncludeMfaFlags: process.env.TOKEN_INCLUDE_MFA_FLAGS !== 'false', // Default true
+    tokenIncludeInternalUserId: process.env.TOKEN_INCLUDE_INTERNAL_USER_ID !== 'false', // Default true
+    tokenAddToAccessOnly: process.env.TOKEN_ADD_TO_ACCESS_ONLY === 'true', // Default false
+    tokenAddToIdOnly: process.env.TOKEN_ADD_TO_ID_ONLY === 'true', // Default false
     },
     
     security: {

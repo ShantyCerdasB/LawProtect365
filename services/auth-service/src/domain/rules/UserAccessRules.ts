@@ -6,23 +6,13 @@
  */
 
 import { UserAccountStatus } from '../enums/UserAccountStatus';
+import { AccessErrorCode } from '../enums/AccessErrorCode';
+import { UserAccessResult } from '../interfaces';
 import { 
   accountSuspended, 
   accountDeleted, 
   userLifecycleViolation 
 } from '../../auth-errors';
-
-/**
- * User access evaluation result
- */
-export interface UserAccessResult {
-  /** Whether user can sign in */
-  canSignIn: boolean;
-  /** Reason for denial if applicable */
-  denyReason?: string;
-  /** Error code for denial */
-  errorCode?: string;
-}
 
 /**
  * UserAccessRules - Domain rule for user access validation
@@ -51,35 +41,35 @@ export class UserAccessRules {
         return {
           canSignIn: allowPendingVerification,
           denyReason: allowPendingVerification ? undefined : 'Account pending verification',
-          errorCode: allowPendingVerification ? undefined : 'PENDING_VERIFICATION_BLOCKED'
+          errorCode: allowPendingVerification ? undefined : AccessErrorCode.PENDING_VERIFICATION_BLOCKED
         };
         
       case UserAccountStatus.INACTIVE:
         return {
           canSignIn: false,
           denyReason: 'Account is inactive',
-          errorCode: 'ACCOUNT_INACTIVE'
+          errorCode: AccessErrorCode.ACCOUNT_INACTIVE
         };
         
       case UserAccountStatus.SUSPENDED:
         return {
           canSignIn: false,
           denyReason: 'Account is suspended',
-          errorCode: 'ACCOUNT_SUSPENDED'
+          errorCode: AccessErrorCode.ACCOUNT_SUSPENDED
         };
         
       case UserAccountStatus.DELETED:
         return {
           canSignIn: false,
           denyReason: 'Account is deleted',
-          errorCode: 'ACCOUNT_DELETED'
+          errorCode: AccessErrorCode.ACCOUNT_DELETED
         };
         
       default:
         return {
           canSignIn: false,
           denyReason: 'Unknown account status',
-          errorCode: 'UNKNOWN_STATUS'
+          errorCode: AccessErrorCode.UNKNOWN_STATUS
         };
     }
   }
@@ -98,21 +88,21 @@ export class UserAccessRules {
     
     if (!result.canSignIn) {
       switch (result.errorCode) {
-        case 'ACCOUNT_SUSPENDED':
+        case AccessErrorCode.ACCOUNT_SUSPENDED:
           throw accountSuspended({
             status,
             reason: result.denyReason
           });
           
-        case 'ACCOUNT_DELETED':
+        case AccessErrorCode.ACCOUNT_DELETED:
           throw accountDeleted({
             status,
             reason: result.denyReason
           });
           
-        case 'PENDING_VERIFICATION_BLOCKED':
-        case 'ACCOUNT_INACTIVE':
-        case 'UNKNOWN_STATUS':
+        case AccessErrorCode.PENDING_VERIFICATION_BLOCKED:
+        case AccessErrorCode.ACCOUNT_INACTIVE:
+        case AccessErrorCode.UNKNOWN_STATUS:
         default:
           throw userLifecycleViolation({
             status,
@@ -184,7 +174,7 @@ export class UserAccessRules {
     targetStatus: UserAccountStatus
   ): boolean {
     // Define allowed transitions for authentication context
-    const allowedTransitions = {
+    const allowedTransitions: Record<UserAccountStatus, UserAccountStatus[]> = {
       [UserAccountStatus.PENDING_VERIFICATION]: [UserAccountStatus.ACTIVE],
       [UserAccountStatus.ACTIVE]: [UserAccountStatus.INACTIVE, UserAccountStatus.SUSPENDED],
       [UserAccountStatus.INACTIVE]: [UserAccountStatus.ACTIVE],
@@ -201,11 +191,12 @@ export class UserAccessRules {
    * @returns Array of statuses that block authentication
    */
   static getBlockedStatuses(): UserAccountStatus[] {
-    return [
+    const blocked: UserAccountStatus[] = [
       UserAccountStatus.INACTIVE,
       UserAccountStatus.SUSPENDED,
       UserAccountStatus.DELETED
     ];
+    return blocked;
   }
 
   /**

@@ -9,3 +9,8 @@ export * from './UserAccountStatus';
 export * from './UserAuditAction';
 export * from './UserRole';
 export * from './OAuthProvider';
+export * from './MfaDecision';
+export * from './MfaReason';
+export * from './MfaSetting';
+export * from './AccessErrorCode';
+export * from './CognitoAttribute';

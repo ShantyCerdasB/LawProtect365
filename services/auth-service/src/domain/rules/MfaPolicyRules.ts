@@ -6,35 +6,9 @@
  */
 
 import { UserRole } from '../enums/UserRole';
+import { MfaDecision, MfaReason, MfaSetting } from '../enums';
+import { MfaPolicyResult, CognitoMfaSettings } from '../interfaces';
 import { mfaRequired } from '../../auth-errors';
-
-/**
- * MFA policy evaluation result
- */
-export interface MfaPolicyResult {
-  /** Whether MFA is required for this user */
-  required: boolean;
-  /** Whether MFA is satisfied (user has MFA enabled) */
-  satisfied: boolean;
-  /** Final decision: ALLOW or DENY */
-  decision: 'ALLOW' | 'DENY';
-  /** Reason for denial if applicable */
-  reason?: string;
-}
-
-/**
- * Cognito MFA settings from AdminGetUser response
- */
-export interface CognitoMfaSettings {
-  /** Whether MFA is enabled in Cognito */
-  mfaEnabled: boolean;
-  /** Whether MFA is required by custom attribute */
-  isMfaRequiredAttr: boolean;
-  /** Preferred MFA setting */
-  preferredMfaSetting?: string;
-  /** Available MFA settings */
-  userMfaSettingList?: string[];
-}
 
 /**
  * MfaPolicyRules - Domain rule for MFA policy validation
@@ -66,7 +40,7 @@ export class MfaPolicyRules {
       required,
       satisfied,
       decision,
-      reason: decision === 'DENY' ? 'MFA_REQUIRED' : undefined
+      reason: decision === MfaDecision.DENY ? MfaReason.MFA_REQUIRED : undefined
     };
   }
 
@@ -100,14 +74,14 @@ export class MfaPolicyRules {
     }
     
     // Check for preferred MFA setting
-    if (preferredMfaSetting && preferredMfaSetting !== 'NOMFA') {
+    if (preferredMfaSetting && preferredMfaSetting !== MfaSetting.NOMFA) {
       return true;
     }
     
     // Check for available MFA settings
     if (userMfaSettingList && userMfaSettingList.length > 0) {
       return userMfaSettingList.some(setting => 
-        setting === 'SOFTWARE_TOKEN_MFA' || setting === 'SMS_MFA'
+        setting === MfaSetting.SOFTWARE_TOKEN_MFA || setting === MfaSetting.SMS_MFA
       );
     }
     
@@ -120,12 +94,12 @@ export class MfaPolicyRules {
    * @param satisfied - Whether MFA is satisfied
    * @returns Final decision
    */
-  static evaluateMfaDecision(required: boolean, satisfied: boolean): 'ALLOW' | 'DENY' {
+  static evaluateMfaDecision(required: boolean, satisfied: boolean): MfaDecision {
     if (required && !satisfied) {
-      return 'DENY';
+      return MfaDecision.DENY;
     }
     
-    return 'ALLOW';
+    return MfaDecision.ALLOW;
   }
 
   /**
@@ -142,7 +116,7 @@ export class MfaPolicyRules {
   ): void {
     const result = this.evaluateMfaPolicy(userRole, cognitoMfaSettings, customMfaRequired);
     
-    if (result.decision === 'DENY') {
+    if (result.decision === MfaDecision.DENY) {
       throw mfaRequired({
         userRole,
         required: result.required,
@@ -182,7 +156,7 @@ export class MfaPolicyRules {
       return 'MFA not enabled';
     }
     
-    if (preferredMfaSetting && preferredMfaSetting !== 'NOMFA') {
+    if (preferredMfaSetting && preferredMfaSetting !== MfaSetting.NOMFA) {
       return `MFA enabled with ${preferredMfaSetting}`;
     }
     

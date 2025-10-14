@@ -8,8 +8,9 @@
 import { CognitoIdentityProviderClient, AdminGetUserCommand } from '@aws-sdk/client-cognito-identity-provider';
 import type { AdminGetUserCommandOutput } from '@aws-sdk/client-cognito-identity-provider';
 import { OAuthProvider } from '../domain/enums/OAuthProvider';
+import { CognitoAttribute } from '../domain/enums/CognitoAttribute';
 import { cognitoUserNotFound, cognitoUserCreationFailed } from '../auth-errors/factories';
-import { CognitoMfaSettings } from '../domain/rules/MfaPolicyRules';
+import { CognitoMfaSettings } from '../domain/interfaces';
 
 /**
  * Service for AWS Cognito integration
@@ -66,7 +67,7 @@ export class CognitoService {
     );
 
     // Parse social identities
-    const identitiesRaw = attrs.get('identities');
+    const identitiesRaw = attrs.get(CognitoAttribute.IDENTITIES);
     const identitiesParsed = identitiesRaw ? JSON.parse(identitiesRaw) as Array<any> : [];
     
     const identities = identitiesParsed
@@ -90,8 +91,8 @@ export class CognitoService {
   parseMfaSettings(user: AdminGetUserCommandOutput): CognitoMfaSettings {
     const attrs = new Map((user.UserAttributes || []).map(a => [a.Name!, a.Value!]));
     const userMFASettingList = user.UserMFASettingList || [];
-    const preferredMfaSetting = user.PreferredMfaSetting || attrs.get('preferred_mfa_setting');
-    const customMfaRequired = attrs.get('custom:is_mfa_required');
+    const preferredMfaSetting = user.PreferredMfaSetting || attrs.get(CognitoAttribute.PREFERRED_MFA_SETTING);
+    const customMfaRequired = attrs.get(CognitoAttribute.CUSTOM_MFA_REQUIRED);
 
     // Determine MFA status
     const mfaEnabled = Boolean(
