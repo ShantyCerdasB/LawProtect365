@@ -47,6 +47,9 @@ export interface AuthServiceConfig extends AppConfig {
     mfaOptional: boolean;
     socialLoginEnabled: boolean;
     adminUserManagement: boolean;
+    mfaEnforceForSuperAdmins: boolean;
+    allowLoginWhenPendingVerification: boolean;
+    mfaBypassClientIds: string[];
   };
   
   // Security Configuration
@@ -112,6 +115,9 @@ export const loadConfig = (): AuthServiceConfig => {
       mfaOptional: process.env.MFA_OPTIONAL === 'true',
       socialLoginEnabled: process.env.SOCIAL_LOGIN_ENABLED === 'true',
       adminUserManagement: process.env.ADMIN_USER_MANAGEMENT === 'true',
+      mfaEnforceForSuperAdmins: process.env.MFA_ENFORCE_FOR_SUPERADMINS !== 'false', // Default true
+      allowLoginWhenPendingVerification: process.env.ALLOW_LOGIN_WHEN_PENDING_VERIFICATION !== 'false', // Default true
+      mfaBypassClientIds: process.env.MFA_BYPASS_CLIENT_IDS ? process.env.MFA_BYPASS_CLIENT_IDS.split(',') : [],
     },
     
     security: {

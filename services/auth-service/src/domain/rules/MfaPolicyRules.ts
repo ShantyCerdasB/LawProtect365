@@ -1,80 +1,195 @@
 /**
- * @fileoverview MfaPolicyRules - MFA policy evaluation rules
- * @summary Defines MFA policy rules and evaluation logic
- * @description Provides business rules for MFA policy evaluation, including
- * MFA requirement determination and policy compliance checking.
+ * @fileoverview MfaPolicyRules - Domain rules for MFA policy evaluation
+ * @summary Validates MFA requirements and satisfaction for authentication
+ * @description This domain rule encapsulates all business validation logic for MFA policies,
+ * ensuring proper MFA enforcement and compliance with security requirements.
  */
 
 import { UserRole } from '../enums/UserRole';
+import { mfaRequired } from '../../auth-errors';
 
 /**
- * MFA policy rules for determining MFA requirements
+ * MFA policy evaluation result
+ */
+export interface MfaPolicyResult {
+  /** Whether MFA is required for this user */
+  required: boolean;
+  /** Whether MFA is satisfied (user has MFA enabled) */
+  satisfied: boolean;
+  /** Final decision: ALLOW or DENY */
+  decision: 'ALLOW' | 'DENY';
+  /** Reason for denial if applicable */
+  reason?: string;
+}
+
+/**
+ * Cognito MFA settings from AdminGetUser response
+ */
+export interface CognitoMfaSettings {
+  /** Whether MFA is enabled in Cognito */
+  mfaEnabled: boolean;
+  /** Whether MFA is required by custom attribute */
+  isMfaRequiredAttr: boolean;
+  /** Preferred MFA setting */
+  preferredMfaSetting?: string;
+  /** Available MFA settings */
+  userMfaSettingList?: string[];
+}
+
+/**
+ * MfaPolicyRules - Domain rule for MFA policy validation
  * 
- * Provides business rules for MFA policy evaluation and compliance.
+ * Encapsulates business validation logic for MFA policies including:
+ * - MFA requirement evaluation
+ * - MFA satisfaction checking
+ * - Policy decision making
  */
 export class MfaPolicyRules {
   /**
-   * Roles that require MFA
+   * Evaluates MFA policy for a user
+   * @param userRole - User's role
+   * @param cognitoMfaSettings - MFA settings from Cognito
+   * @param customMfaRequired - Custom MFA requirement from attributes
+   * @returns MFA policy evaluation result
    */
-  private static readonly MFA_REQUIRED_ROLES = [
-    UserRole.SUPER_ADMIN,
-    UserRole.ADMIN
-  ];
-
-  /**
-   * Determines if MFA is enabled from Cognito data
-   * @param userMFASettingList - List of MFA settings from Cognito
-   * @param preferredMfaSetting - Preferred MFA setting from Cognito
-   * @returns True if MFA is enabled
-   */
-  static isMfaEnabledFromCognito(
-    userMFASettingList?: string[], 
-    preferredMfaSetting?: string
-  ): boolean {
-    return Boolean(
-      userMFASettingList?.includes('SOFTWARE_TOKEN_MFA') || 
-      preferredMfaSetting
-    );
-  }
-
-  /**
-   * Determines if MFA is required for a specific role
-   * @param role - User role to check
-   * @returns True if MFA is required for this role
-   */
-  static isMfaRequiredForRole(role: UserRole): boolean {
-    return this.MFA_REQUIRED_ROLES.includes(role);
-  }
-
-  /**
-   * Evaluates MFA policy compliance
-   * @param role - User role
-   * @param mfaEnabled - Current MFA status
-   * @returns True if MFA policy is compliant
-   */
-  static evaluateMfaCompliance(role: UserRole, mfaEnabled: boolean): boolean {
-    const mfaRequired = this.isMfaRequiredForRole(role);
-    return !mfaRequired || mfaEnabled;
-  }
-
-  /**
-   * Gets roles that require MFA
-   * @returns Array of roles that require MFA
-   */
-  static getMfaRequiredRoles(): UserRole[] {
-    return [...this.MFA_REQUIRED_ROLES];
-  }
-
-  /**
-   * Checks if a role change requires MFA status update
-   * @param oldRole - Previous role
-   * @param newRole - New role
-   * @returns True if MFA status should be updated
-   */
-  static requiresMfaStatusUpdate(oldRole: UserRole, newRole: UserRole): boolean {
-    const oldRoleRequiresMfa = this.isMfaRequiredForRole(oldRole);
-    const newRoleRequiresMfa = this.isMfaRequiredForRole(newRole);
+  static evaluateMfaPolicy(
+    userRole: UserRole,
+    cognitoMfaSettings: CognitoMfaSettings,
+    customMfaRequired?: boolean
+  ): MfaPolicyResult {
+    const required = this.isMfaRequired(userRole, customMfaRequired);
+    const satisfied = this.isMfaSatisfied(cognitoMfaSettings);
     
-    return oldRoleRequiresMfa !== newRoleRequiresMfa;
+    const decision = this.evaluateMfaDecision(required, satisfied);
+    
+    return {
+      required,
+      satisfied,
+      decision,
+      reason: decision === 'DENY' ? 'MFA_REQUIRED' : undefined
+    };
+  }
+
+  /**
+   * Determines if MFA is required for a user
+   * @param userRole - User's role
+   * @param customMfaRequired - Custom MFA requirement from attributes
+   * @returns True if MFA is required
+   */
+  static isMfaRequired(userRole: UserRole, customMfaRequired?: boolean): boolean {
+    // Primary source: custom attribute
+    if (customMfaRequired !== undefined) {
+      return customMfaRequired;
+    }
+    
+    // Fallback: role-based requirement
+    return userRole === UserRole.SUPER_ADMIN;
+  }
+
+  /**
+   * Determines if MFA is satisfied (user has MFA enabled)
+   * @param cognitoMfaSettings - MFA settings from Cognito
+   * @returns True if MFA is satisfied
+   */
+  static isMfaSatisfied(cognitoMfaSettings: CognitoMfaSettings): boolean {
+    const { mfaEnabled, preferredMfaSetting, userMfaSettingList } = cognitoMfaSettings;
+    
+    // Check if MFA is enabled
+    if (!mfaEnabled) {
+      return false;
+    }
+    
+    // Check for preferred MFA setting
+    if (preferredMfaSetting && preferredMfaSetting !== 'NOMFA') {
+      return true;
+    }
+    
+    // Check for available MFA settings
+    if (userMfaSettingList && userMfaSettingList.length > 0) {
+      return userMfaSettingList.some(setting => 
+        setting === 'SOFTWARE_TOKEN_MFA' || setting === 'SMS_MFA'
+      );
+    }
+    
+    return false;
+  }
+
+  /**
+   * Evaluates the final MFA decision
+   * @param required - Whether MFA is required
+   * @param satisfied - Whether MFA is satisfied
+   * @returns Final decision
+   */
+  static evaluateMfaDecision(required: boolean, satisfied: boolean): 'ALLOW' | 'DENY' {
+    if (required && !satisfied) {
+      return 'DENY';
+    }
+    
+    return 'ALLOW';
+  }
+
+  /**
+   * Validates MFA policy and throws error if violated
+   * @param userRole - User's role
+   * @param cognitoMfaSettings - MFA settings from Cognito
+   * @param customMfaRequired - Custom MFA requirement from attributes
+   * @throws mfaRequired when MFA is required but not satisfied
+   */
+  static validateMfaPolicy(
+    userRole: UserRole,
+    cognitoMfaSettings: CognitoMfaSettings,
+    customMfaRequired?: boolean
+  ): void {
+    const result = this.evaluateMfaPolicy(userRole, cognitoMfaSettings, customMfaRequired);
+    
+    if (result.decision === 'DENY') {
+      throw mfaRequired({
+        userRole,
+        required: result.required,
+        satisfied: result.satisfied,
+        reason: result.reason
+      });
+    }
+  }
+
+  /**
+   * Gets MFA requirement reason for logging
+   * @param userRole - User's role
+   * @param customMfaRequired - Custom MFA requirement from attributes
+   * @returns Human-readable reason
+   */
+  static getMfaRequirementReason(userRole: UserRole, customMfaRequired?: boolean): string {
+    if (customMfaRequired !== undefined) {
+      return customMfaRequired ? 'Custom attribute requires MFA' : 'Custom attribute allows no MFA';
+    }
+    
+    if (userRole === UserRole.SUPER_ADMIN) {
+      return 'SUPER_ADMIN role requires MFA';
+    }
+    
+    return 'MFA not required for this role';
+  }
+
+  /**
+   * Gets MFA satisfaction status for logging
+   * @param cognitoMfaSettings - MFA settings from Cognito
+   * @returns Human-readable status
+   */
+  static getMfaSatisfactionStatus(cognitoMfaSettings: CognitoMfaSettings): string {
+    const { mfaEnabled, preferredMfaSetting, userMfaSettingList } = cognitoMfaSettings;
+    
+    if (!mfaEnabled) {
+      return 'MFA not enabled';
+    }
+    
+    if (preferredMfaSetting && preferredMfaSetting !== 'NOMFA') {
+      return `MFA enabled with ${preferredMfaSetting}`;
+    }
+    
+    if (userMfaSettingList && userMfaSettingList.length > 0) {
+      return `MFA enabled with settings: ${userMfaSettingList.join(', ')}`;
+    }
+    
+    return 'MFA enabled but no specific settings found';
   }
 }

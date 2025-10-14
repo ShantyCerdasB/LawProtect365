@@ -6,3 +6,4 @@
  */
 
 export * from './UserServiceTypes';
+export * from './cognito';

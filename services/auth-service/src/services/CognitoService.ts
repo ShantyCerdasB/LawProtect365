@@ -9,6 +9,7 @@ import { CognitoIdentityProviderClient, AdminGetUserCommand } from '@aws-sdk/cli
 import type { AdminGetUserCommandOutput } from '@aws-sdk/client-cognito-identity-provider';
 import { OAuthProvider } from '../domain/enums/OAuthProvider';
 import { cognitoUserNotFound, cognitoUserCreationFailed } from '../auth-errors/factories';
+import { CognitoMfaSettings } from '../domain/rules/MfaPolicyRules';
 
 /**
  * Service for AWS Cognito integration
@@ -79,6 +80,58 @@ export class CognitoService {
       .filter(identity => identity.providerAccountId);
 
     return { mfaEnabled, identities };
+  }
+
+  /**
+   * Parses AdminGetUser output to extract detailed MFA settings for policy evaluation
+   * @param user - AdminGetUser command output
+   * @returns Detailed MFA settings for policy evaluation
+   */
+  parseMfaSettings(user: AdminGetUserCommandOutput): CognitoMfaSettings {
+    const attrs = new Map((user.UserAttributes || []).map(a => [a.Name!, a.Value!]));
+    const userMFASettingList = user.UserMFASettingList || [];
+    const preferredMfaSetting = user.PreferredMfaSetting || attrs.get('preferred_mfa_setting');
+    const customMfaRequired = attrs.get('custom:is_mfa_required');
+
+    // Determine MFA status
+    const mfaEnabled = Boolean(
+      userMFASettingList.includes('SOFTWARE_TOKEN_MFA') || 
+      preferredMfaSetting
+    );
+
+    return {
+      mfaEnabled,
+      isMfaRequiredAttr: customMfaRequired === 'true',
+      preferredMfaSetting: preferredMfaSetting || undefined,
+      userMfaSettingList: userMFASettingList.length > 0 ? userMFASettingList : undefined
+    };
+  }
+
+  /**
+   * Gets user attributes from AdminGetUser output
+   * @param user - AdminGetUser command output
+   * @returns Map of user attributes
+   */
+  getUserAttributes(user: AdminGetUserCommandOutput): Map<string, string> {
+    return new Map((user.UserAttributes || []).map(a => [a.Name!, a.Value!]));
+  }
+
+  /**
+   * Gets custom attributes from AdminGetUser output
+   * @param user - AdminGetUser command output
+   * @returns Map of custom attributes
+   */
+  getCustomAttributes(user: AdminGetUserCommandOutput): Map<string, string> {
+    const attrs = this.getUserAttributes(user);
+    const customAttrs = new Map<string, string>();
+    
+    for (const [key, value] of attrs) {
+      if (key.startsWith('custom:')) {
+        customAttrs.set(key, value);
+      }
+    }
+    
+    return customAttrs;
   }
 
   /**

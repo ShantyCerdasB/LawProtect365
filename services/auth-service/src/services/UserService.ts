@@ -105,6 +105,15 @@ export class UserService {
   }
 
   /**
+   * Finds user by Cognito sub for PreAuthentication validation
+   * @param cognitoSub - Cognito user sub
+   * @returns User entity or null if not found
+   */
+  async findByCognitoSub(cognitoSub: string): Promise<User | null> {
+    return await this.userRepository.findByCognitoSub(cognitoSub);
+  }
+
+  /**
    * Determines user status based on role
    * @param role - User role
    * @returns Appropriate user status

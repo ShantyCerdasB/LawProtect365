@@ -8,3 +8,4 @@
 export * from './RoleAssignmentRules';
 export * from './MfaPolicyRules';
 export * from './UserLifecycleRules';
+export * from './UserAccessRules';
