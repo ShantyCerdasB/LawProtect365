@@ -15,7 +15,7 @@ import { UseCaseFactory } from './use-cases';
 
 /**
  * Main composition root that assembles the complete object graph for the signature service.
- * Follows the Composition Root pattern by centralizing all dependency creation and wiring.
+ * Follows the Composition Root pattern by centralizing all depensdency creation and wiring.
  */
 export class CompositionRoot {
   /**
