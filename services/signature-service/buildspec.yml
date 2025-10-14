@@ -9,18 +9,18 @@ phases:
     commands:
       - |
         echo "[INFO] Building packages/shared-ts"
-          cd "$CODEBUILD_SRC_DIR/packages/shared-ts"
-          npm ci
+        cd "$CODEBUILD_SRC_DIR/packages/shared-ts"
+        npm ci
         export DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}"
         npm run prisma:generate
-          npm run build
+        npm run build
       - |
         echo "[INFO] Installing deps in services/signature-service"
-          cd "$CODEBUILD_SRC_DIR/services/signature-service"
-          npm ci
+        cd "$CODEBUILD_SRC_DIR/services/signature-service"
+        npm ci
       - |
         echo "[INFO] Preparing Prisma client"
-          cd "$CODEBUILD_SRC_DIR/services/signature-service"
+        cd "$CODEBUILD_SRC_DIR/services/signature-service"
         if [ -d "$CODEBUILD_SRC_DIR/packages/shared-ts/prisma" ]; then
           mkdir -p prisma
           cp -r "$CODEBUILD_SRC_DIR/packages/shared-ts/prisma/"* prisma/
@@ -34,16 +34,13 @@ phases:
     commands:
       - |
         echo "[INFO] Tests"
-          cd "$CODEBUILD_SRC_DIR/services/signature-service"
+        cd "$CODEBUILD_SRC_DIR/services/signature-service"
         export DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}"
-          npm run test:unit:coverage
+        npm run test:unit:coverage
       - |
         echo "[INFO] Install dependencies"
-          cd "$CODEBUILD_SRC_DIR/services/signature-service"
+        cd "$CODEBUILD_SRC_DIR/services/signature-service"
         npm install
-        
-        echo "[INFO] Build + prune"
-          npm run build
         
         # Copy dependencies BEFORE pruning
         echo "[INFO] Copying dependencies before pruning"
@@ -55,8 +52,10 @@ phases:
         ls -la "temp-deps/" || echo "[WARNING] temp-deps directory not found"
         ls -la "temp-deps/node_modules/" | head -10 || echo "[WARNING] temp-deps/node_modules not found"
         
-          npm prune --omit=dev
-          rm -rf node_modules/@lawprotect/shared-ts || true
+        echo "[INFO] Build + prune"
+        npm run build
+        npm prune --omit=dev
+        rm -rf node_modules/@lawprotect/shared-ts || true
       - |
         echo "[INFO] Create sign-core layer"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
@@ -286,7 +285,7 @@ phases:
         
       - |
         echo "[INFO] Deploy all Lambda functions"
-          cd "$CODEBUILD_SRC_DIR/services/signature-service"
+        cd "$CODEBUILD_SRC_DIR/services/signature-service"
         
         # ARN del shared layer fijo (el que ya tienes)
         SHARED_TS_LAYER_ARN="arn:aws:lambda:us-east-1:088609649600:layer:lawprotect365-shared-ts-layer-stg:1"
