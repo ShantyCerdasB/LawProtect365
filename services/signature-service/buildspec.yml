@@ -1,5 +1,8 @@
 version: 0.2
 
+env:
+  shell: bash
+
 phases:
   install:
     runtime-versions:
@@ -8,7 +11,7 @@ phases:
   pre_build:
     commands:
       - |
-        set -eu
+        set -euo pipefail
         echo "[INFO] ===== Pre-build ====="
       - |
         echo "[INFO] Building packages/shared-ts"
@@ -36,7 +39,7 @@ phases:
   build:
     commands:
       - |
-        set -eu
+        set -euo pipefail
         echo "[INFO] ===== Build & Package ====="
       - |
         echo "[INFO] Running unit tests"
@@ -53,18 +56,13 @@ phases:
         echo "[INFO] Building dependencies layer (using existing node_modules)"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
         rm -rf layer-deps sign-deps-layer.zip
-        
-        # Create layer structure
+
         mkdir -p layer-deps/nodejs
-        
-        # Copy production dependencies from existing node_modules
+
         echo "[INFO] Copying production dependencies from existing node_modules"
-        
-        # Copy all dependencies except excluded ones
         for dep_dir in node_modules/*; do
           if [ -d "$dep_dir" ]; then
             dep_name=$(basename "$dep_dir")
-            # Skip excluded dependencies
             if [[ "$dep_name" != "@lawprotect" && "$dep_name" != "typescript" && "$dep_name" != "jest" && "$dep_name" != "eslint" && "$dep_name" != "@types" ]]; then
               echo "[INFO] Copying $dep_name to layer"
               cp -r "$dep_dir" "layer-deps/nodejs/" || true
@@ -73,8 +71,7 @@ phases:
             fi
           fi
         done
-        
-        # Create ZIP of dependencies layer
+
         (cd layer-deps && zip -qr ../sign-deps-layer.zip .)
         test -s sign-deps-layer.zip || { echo "[ERROR] sign-deps-layer.zip is empty"; exit 1; }
         rm -rf layer-deps
@@ -85,48 +82,49 @@ phases:
         echo "[INFO] Building core layer (ESM)"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
         rm -rf layer-core sign-core-layer.zip
-        mkdir -p "layer-core/nodejs/node_modules/@lawprotect/sign-core/dist"
-        cp -r "dist" "layer-core/nodejs/node_modules/@lawprotect/sign-core/dist"
+
+        mkdir -p "layer-core/nodejs/node_modules/@lawprotect/sign-core"
+        cp -r "dist" "layer-core/nodejs/node_modules/@lawprotect/sign-core/"
 
         # package.json del módulo ESM
         cat > "layer-core/nodejs/node_modules/@lawprotect/sign-core/package.json" << 'EOF'
-        {
-          "name": "@lawprotect/sign-core",
-          "version": "1.0.0",
-          "main": "index.js",
-          "type": "module"
-        }
-        EOF
+{
+  "name": "@lawprotect/sign-core",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "module"
+}
+EOF
 
-        # index.js ESM: importa con extensión .js
+        # index.js ESM (importa .js de dist)
         cat > "layer-core/nodejs/node_modules/@lawprotect/sign-core/index.js" << 'EOF'
-        import { createEnvelopeHandler } from './dist/src/handlers/envelopes/CreateEnvelopeHandler.js';
-        import { getEnvelopeHandler } from './dist/src/handlers/envelopes/GetEnvelopeHandler.js';
-        import { sendEnvelopeHandler } from './dist/src/handlers/envelopes/SendEnvelopeHandler.js';
-        import { updateEnvelopeHandler } from './dist/src/handlers/envelopes/UpdateEnvelopeHandler.js';
-        import { cancelEnvelopeHandler } from './dist/src/handlers/envelopes/CancelEnvelopeHandler.js';
-        import { getEnvelopesByUserHandler } from './dist/src/handlers/envelopes/GetEnvelopesByUserHandler.js';
-        import { downloadDocumentHandler } from './dist/src/handlers/envelopes/DownloadDocumentHandler.js';
-        import { signDocumentHandler } from './dist/src/handlers/signing/SignDocumentHandler.js';
-        import { declineSignerHandler } from './dist/src/handlers/signing/DeclineSignerHandler.js';
-        import { shareDocumentViewHandler } from './dist/src/handlers/signing/ShareDocumentViewHandler.js';
-        import { sendNotificationHandler } from './dist/src/handlers/notifications/SendNotificationHandler.js';
-        import { getAuditTrailHandler } from './dist/src/handlers/audit/GetAuditTrailHandler.js';
-        export const handlers = {
-          createEnvelope: createEnvelopeHandler,
-          getEnvelope: getEnvelopeHandler,
-          sendEnvelope: sendEnvelopeHandler,
-          updateEnvelope: updateEnvelopeHandler,
-          cancelEnvelope: cancelEnvelopeHandler,
-          getEnvelopesByUser: getEnvelopesByUserHandler,
-          downloadDocument: downloadDocumentHandler,
-          signDocument: signDocumentHandler,
-          declineSigner: declineSignerHandler,
-          shareDocument: shareDocumentViewHandler,
-          sendNotification: sendNotificationHandler,
-          getAuditTrail: getAuditTrailHandler
-        };
-        EOF
+import { createEnvelopeHandler } from './dist/src/handlers/envelopes/CreateEnvelopeHandler.js';
+import { getEnvelopeHandler } from './dist/src/handlers/envelopes/GetEnvelopeHandler.js';
+import { sendEnvelopeHandler } from './dist/src/handlers/envelopes/SendEnvelopeHandler.js';
+import { updateEnvelopeHandler } from './dist/src/handlers/envelopes/UpdateEnvelopeHandler.js';
+import { cancelEnvelopeHandler } from './dist/src/handlers/envelopes/CancelEnvelopeHandler.js';
+import { getEnvelopesByUserHandler } from './dist/src/handlers/envelopes/GetEnvelopesByUserHandler.js';
+import { downloadDocumentHandler } from './dist/src/handlers/envelopes/DownloadDocumentHandler.js';
+import { signDocumentHandler } from './dist/src/handlers/signing/SignDocumentHandler.js';
+import { declineSignerHandler } from './dist/src/handlers/signing/DeclineSignerHandler.js';
+import { shareDocumentViewHandler } from './dist/src/handlers/signing/ShareDocumentViewHandler.js';
+import { sendNotificationHandler } from './dist/src/handlers/notifications/SendNotificationHandler.js';
+import { getAuditTrailHandler } from './dist/src/handlers/audit/GetAuditTrailHandler.js';
+export const handlers = {
+  createEnvelope: createEnvelopeHandler,
+  getEnvelope: getEnvelopeHandler,
+  sendEnvelope: sendEnvelopeHandler,
+  updateEnvelope: updateEnvelopeHandler,
+  cancelEnvelope: cancelEnvelopeHandler,
+  getEnvelopesByUser: getEnvelopesByUserHandler,
+  downloadDocument: downloadDocumentHandler,
+  signDocument: signDocumentHandler,
+  declineSigner: declineSignerHandler,
+  shareDocument: shareDocumentViewHandler,
+  sendNotification: sendNotificationHandler,
+  getAuditTrail: getAuditTrailHandler
+};
+EOF
 
         (cd layer-core && zip -qr ../sign-core-layer.zip .)
         test -s sign-core-layer.zip || { echo "[ERROR] sign-core-layer.zip is empty"; exit 1; }
@@ -143,13 +141,15 @@ phases:
           local exp="$2"
           rm -rf __tmp_fn
           mkdir -p __tmp_fn
-          cat > __tmp_fn/index.js << 'EOF'
-        import { handlers } from '@lawprotect/sign-core';
-        export const handler = handlers.${exp};
-        EOF
+
+          # Forzar ESM: entrypoint .mjs + package.json en la raíz
+          cat > __tmp_fn/index.mjs <<EOF
+import { handlers } from '@lawprotect/sign-core';
+export const handler = handlers.${exp};
+EOF
           cat > __tmp_fn/package.json << 'EOF'
-        { "type": "module" }
-        EOF
+{ "type": "module" }
+EOF
           (cd __tmp_fn && zip -qr "../$zip" .)
           rm -rf __tmp_fn
         }
@@ -170,7 +170,7 @@ phases:
       # ===== Publicar layers (con fallback a última versión) =====
       - |
         echo "[INFO] Uploading layers to S3 & publishing versions"
-        set -e
+        set -euo pipefail
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
 
         if [ -z "${CODE_BUCKET:-}" ]; then
@@ -206,8 +206,16 @@ phases:
             echo "[WARN] publish-layer-version failed for $NAME, getting latest..." >&2
             ARN="$(get_latest_layer_arn "$NAME")"
           fi
-          # Only output the ARN, not warnings
           echo "$ARN"
+        }
+
+        # Helper para asegurar NO usar una versión vieja
+        latest_or_fail() {
+          local NAME="$1"
+          local ARN
+          ARN="$(aws lambda list-layer-versions --layer-name "$NAME" --max-items 1 \
+                --query "LayerVersions[0].LayerVersionArn" --output text 2>/dev/null || true)"
+          echo "${ARN:-}"
         }
 
         DEPS_LAYER_NAME="lawprotect365-sign-deps-stg"
@@ -215,6 +223,10 @@ phases:
 
         DEPS_LAYER_VERSION="$(publish_or_latest "$DEPS_LAYER_NAME" "sign-deps-layer.zip" "Signature service dependencies")"
         CORE_LAYER_VERSION="$(publish_or_latest "$CORE_LAYER_NAME" "sign-core-layer.zip" "Signature service core code")"
+
+        # Refuerza tomar la última versión publicada
+        DEPS_LAYER_VERSION="$(latest_or_fail "$DEPS_LAYER_NAME" || echo "$DEPS_LAYER_VERSION")"
+        CORE_LAYER_VERSION="$(latest_or_fail "$CORE_LAYER_NAME" || echo "$CORE_LAYER_VERSION")"
 
         echo "[INFO] Dependencies layer ARN: ${DEPS_LAYER_VERSION:-<empty>}"
         echo "[INFO] Core layer ARN:         ${CORE_LAYER_VERSION:-<empty>}"
@@ -228,16 +240,16 @@ phases:
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
 
         AWS_ACCOUNT_ID="${AWS_ACCOUNT_ID:-$(aws sts get-caller-identity --query Account --output text)}"
-        SHARED_TS_LAYER_ARN="arn:aws:lambda:us-east-1:${AWS_ACCOUNT_ID}:layer:lawprotect365-shared-ts-layer-stg:1"
+
+        # Resolver SIEMPRE última versión del shared-ts (sin hardcodear :1)
+        SHARED_TS_LAYER_NAME="lawprotect365-shared-ts-layer-stg"
+        SHARED_TS_LAYER_ARN="$(aws lambda list-layer-versions --layer-name "$SHARED_TS_LAYER_NAME" --max-items 1 --query "LayerVersions[0].LayerVersionArn" --output text 2>/dev/null || true)"
 
         build_layers_args() {
-          local args="$SHARED_TS_LAYER_ARN"
-          if [ -n "${DEPS_LAYER_VERSION:-}" ] && [ "${DEPS_LAYER_VERSION}" != "None" ]; then
-            args="$args ${DEPS_LAYER_VERSION}"
-          fi
-          if [ -n "${CORE_LAYER_VERSION:-}" ] && [ "${CORE_LAYER_VERSION}" != "None" ]; then
-            args="$args ${CORE_LAYER_VERSION}"
-          fi
+          local args=""
+          [ -n "${SHARED_TS_LAYER_ARN:-}" ] && args="$args ${SHARED_TS_LAYER_ARN}"
+          [ -n "${DEPS_LAYER_VERSION:-}" ] && [ "${DEPS_LAYER_VERSION}" != "None" ] && args="$args ${DEPS_LAYER_VERSION}"
+          [ -n "${CORE_LAYER_VERSION:-}" ] && [ "${CORE_LAYER_VERSION}" != "None" ] && args="$args ${CORE_LAYER_VERSION}"
           echo "$args"
         }
 
@@ -247,10 +259,22 @@ phases:
           local LAYERS_ARGS
           LAYERS_ARGS="$(build_layers_args)"
           echo "[INFO] Deploying $FN"
+
           aws s3 cp "$ZIP" "s3://$CODE_BUCKET/$ZIP"
+
+          # Código
           aws lambda update-function-code --function-name "$FN" --s3-bucket "$CODE_BUCKET" --s3-key "$ZIP" >/dev/null
-          aws lambda update-function-configuration --function-name "$FN" --layers $LAYERS_ARGS >/dev/null
           aws lambda wait function-updated --function-name "$FN"
+
+          # Configuración: runtime + handler ESM + capas
+          aws lambda update-function-configuration \
+            --function-name "$FN" \
+            --runtime nodejs20.x \
+            --handler index.handler \
+            --layers $LAYERS_ARGS >/dev/null
+
+          aws lambda wait function-updated --function-name "$FN"
+          sleep 2
         }
 
         deploy_fn "lawprotect365-sign-service-create-envelope-stg"        "sign-create-envelope.zip"
@@ -270,22 +294,22 @@ phases:
         echo "[INFO] Writing default appspec.yml"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
         cat > appspec.yml << 'EOF'
-        version: 0.0
-        Resources:
-          - CreateEnvelope:
-              Type: AWS::Lambda::Function
-              Properties:
-                Name: "lawprotect365-sign-service-create-envelope-stg"
-                Alias: "live"
-                CurrentVersion: 1
-                TargetVersion: 1
-        EOF
+version: 0.0
+Resources:
+  - CreateEnvelope:
+      Type: AWS::Lambda::Function
+      Properties:
+        Name: "lawprotect365-sign-service-create-envelope-stg"
+        Alias: "live"
+        CurrentVersion: 1
+        TargetVersion: 1
+EOF
 
 artifacts:
   files:
-    - services/signature-service/sign-*.zip
-    - services/signature-service/sign-deps-layer.zip
-    - services/signature-service/sign-core-layer.zip
-    - services/signature-service/appspec.yml
-    - services/signature-service/appspec-*.yml
+    - "services/signature-service/sign-*.zip"
+    - "services/signature-service/sign-deps-layer.zip"
+    - "services/signature-service/sign-core-layer.zip"
+    - "services/signature-service/appspec.yml"
+    - "services/signature-service/appspec-*.yml"
   discard-paths: yes

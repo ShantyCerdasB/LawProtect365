@@ -9,6 +9,8 @@
 import { UserService } from '../../services/UserService';
 import { CognitoService } from '../../services/CognitoService';
 import { AuditService } from '../../services/AuditService';
+import { EventPublishingService } from '../../services/EventPublishingService';
+import { EventPublisherService, EventServiceFactory, OutboxEventPublisher } from '@lawprotect/shared-ts';
 import { UserRepository } from '../../repositories/UserRepository';
 import { OAuthAccountRepository } from '../../repositories/OAuthAccountRepository';
 import { UserAuditEventRepository } from '../../repositories/UserAuditEventRepository';
@@ -54,6 +56,37 @@ export class ServiceFactory {
   }
 
   /**
+   * Creates EventPublisherService instance using Outbox pattern
+   * @param outboxRepository - Outbox repository instance
+   * @param eventBridgeAdapter - EventBridge adapter instance
+   * @returns Configured EventPublisherService instance
+   */
+  static createEventPublisherService(outboxRepository: any, eventBridgeAdapter: any): EventPublisherService {
+    return EventServiceFactory.createEventPublisherService({
+      outboxRepository,
+      eventBridgeAdapter,
+    });
+  }
+
+  /**
+   * Creates IntegrationEventPublisher instance using Outbox pattern
+   * @param outboxRepository - Outbox repository instance
+   * @returns Configured IntegrationEventPublisher instance
+   */
+  static createIntegrationEventPublisher(outboxRepository: any): OutboxEventPublisher {
+    return new OutboxEventPublisher(outboxRepository);
+  }
+
+  /**
+   * Creates EventPublishingService instance
+   * @param integrationEventPublisher - Integration event publisher instance
+   * @returns Configured EventPublishingService instance
+   */
+  static createEventPublishingService(integrationEventPublisher: OutboxEventPublisher): EventPublishingService {
+    return new EventPublishingService(integrationEventPublisher);
+  }
+
+  /**
    * Creates all services in a single operation
    * @param repositories - Repository instances
    * @param infrastructure - Infrastructure services
@@ -67,6 +100,9 @@ export class ServiceFactory {
       ),
       cognitoService: this.createCognitoService(infrastructure.cognitoClient),
       auditService: this.createAuditService(repositories.userAuditEventRepository),
+      eventPublisherService: infrastructure.eventPublisherService,
+      integrationEventPublisher: this.createIntegrationEventPublisher(infrastructure.outboxRepository),
+      eventPublishingService: this.createEventPublishingService(this.createIntegrationEventPublisher(infrastructure.outboxRepository)),
     };
   }
 }

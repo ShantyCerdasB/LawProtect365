@@ -8,30 +8,12 @@
 import { UserRepository } from '../repositories/UserRepository';
 import { OAuthAccountRepository } from '../repositories/OAuthAccountRepository';
 import { UserRole, UserAccountStatus } from '../domain/enums';
+import { User } from '../domain/entities/User';
+import { UserId } from '../domain/value-objects/UserId';
 import { Email } from '@lawprotect/shared-ts';
 import { userCreationFailed, userUpdateFailed } from '../auth-errors/factories';
 import { OAuthProvider } from '../domain/enums/OAuthProvider';
-
-/**
- * Input for upsertOnPostAuth operation
- */
-type UpsertOnPostAuthInput = {
-  cognitoSub: string;
-  email?: string;
-  givenName?: string;
-  familyName?: string;
-  mfaEnabled: boolean;
-  intendedRole?: UserRole;
-};
-
-/**
- * Result of upsertOnPostAuth operation
- */
-type UpsertOnPostAuthResult = {
-  user: any;
-  created: boolean;
-  mfaChanged: boolean;
-};
+import { UpsertOnPostAuthInput, UpsertOnPostAuthResult } from '../types/UserServiceTypes';
 
 /**
  * Service for user business logic orchestration
@@ -57,32 +39,43 @@ export class UserService {
       const role = input.intendedRole ?? UserRole.UNASSIGNED;
       const status = this.determineUserStatus(role);
 
-      const user = await this.userRepository.create({
+      // Create User entity using fromPersistence
+      const userData = {
+        id: UserId.generate(),
         cognitoSub: input.cognitoSub,
-        email: input.email ? Email.fromString(input.email).getValue() : undefined,
+        email: input.email ? Email.fromString(input.email) : undefined,
         givenName: input.givenName,
         lastName: input.familyName,
         role,
         status,
         mfaEnabled: input.mfaEnabled,
-        lastLoginAt: new Date()
-      }).catch(err => { 
+        lastLoginAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      const user = User.fromPersistence(userData);
+      const createdUser = await this.userRepository.create(user).catch(err => { 
         throw userCreationFailed({ cause: err.message }); 
       });
 
-      return { user, created: true, mfaChanged: false };
+      return { user: createdUser, created: true, mfaChanged: false };
     }
 
     // Update existing user
     const mfaChanged = existing.isMfaEnabled() !== input.mfaEnabled;
 
-    const updated = await this.userRepository.update(existing.getId().getValue(), {
-      email: input.email ? Email.fromString(input.email).getValue() : existing.getEmail().getValue(),
-      givenName: input.givenName ?? existing.getFirstName(),
-      lastName: input.familyName ?? existing.getLastName(),
-      mfaEnabled: input.mfaEnabled,
-      lastLoginAt: new Date()
-    }).catch(err => { 
+    // Update user properties
+    existing.updateProfile(
+      input.givenName ?? existing.getFirstName(),
+      input.familyName ?? existing.getLastName()
+    );
+    
+    // Update MFA and last login separately
+    existing.updateMfaEnabled(input.mfaEnabled);
+    existing.updateLastLogin();
+
+    const updated = await this.userRepository.update(existing.getId(), existing).catch(err => { 
       throw userUpdateFailed({ cause: err.message }); 
     });
 

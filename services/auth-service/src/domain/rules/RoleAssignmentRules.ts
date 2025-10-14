@@ -63,6 +63,7 @@ export class RoleAssignmentRules {
     newRole: UserRole
   ): void {
     const roleHierarchy = {
+      [UserRole.UNASSIGNED]: 0,
       [UserRole.CUSTOMER]: 1,
       [UserRole.LAWYER]: 2,
       [UserRole.ADMIN]: 3,
@@ -128,6 +129,7 @@ export class RoleAssignmentRules {
    */
   static getMinimumRoleLevel(role: UserRole): UserRole {
     const roleRequirements = {
+      [UserRole.UNASSIGNED]: UserRole.ADMIN,
       [UserRole.CUSTOMER]: UserRole.ADMIN,
       [UserRole.LAWYER]: UserRole.ADMIN,
       [UserRole.ADMIN]: UserRole.SUPER_ADMIN,

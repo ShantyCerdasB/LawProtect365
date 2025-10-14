@@ -16,3 +16,6 @@ export * from './value-objects';
 
 // Rules
 export * from './rules';
+
+// Interfaces
+export * from './interfaces';

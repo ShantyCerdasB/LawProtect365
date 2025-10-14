@@ -97,7 +97,7 @@ export class OAuthAccount {
    * Checks if this is the primary OAuth account
    * @returns True if this is the primary account
    */
-  isPrimary(): boolean {
+  getIsPrimary(): boolean {
     return this.isPrimary;
   }
 

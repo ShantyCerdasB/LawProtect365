@@ -15,21 +15,8 @@ import {
 } from '@lawprotect/shared-ts';
 import { UserAuditEvent } from '../domain/entities/UserAuditEvent';
 import { UserAuditEventId } from '../domain/value-objects/UserAuditEventId';
+import { UserAuditEventSpec } from '../domain/interfaces/UserAuditEventSpec';
 import { repositoryError } from '../auth-errors/factories';
-
-/**
- * Query specification for UserAuditEvent searches
- */
-export interface UserAuditEventSpec {
-  userId?: string;
-  action?: PrismaUserAuditAction;
-  description?: string;
-  actorId?: string;
-  ipAddress?: string;
-  userAgent?: string;
-  createdBefore?: Date;
-  createdAfter?: Date;
-}
 
 type AuditRow = Prisma.UserAuditEventGetPayload<{}>;
 

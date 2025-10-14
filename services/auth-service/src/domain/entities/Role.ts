@@ -104,7 +104,7 @@ export class Role {
    * Checks if this is a system role
    * @returns True if this is a system role
    */
-  isSystemRole(): boolean {
+  getIsSystemRole(): boolean {
     return this.isSystemRole;
   }
 

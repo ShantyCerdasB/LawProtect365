@@ -38,9 +38,15 @@ export class UserLifecycleRules {
     const allowedTransitions = {
       [UserAccountStatus.PENDING_VERIFICATION]: [
         UserAccountStatus.ACTIVE,
+        UserAccountStatus.INACTIVE,
+        UserAccountStatus.DELETED
+      ],
+      [UserAccountStatus.INACTIVE]: [
+        UserAccountStatus.ACTIVE,
         UserAccountStatus.DELETED
       ],
       [UserAccountStatus.ACTIVE]: [
+        UserAccountStatus.INACTIVE,
         UserAccountStatus.SUSPENDED,
         UserAccountStatus.DELETED
       ],
@@ -51,7 +57,7 @@ export class UserLifecycleRules {
       [UserAccountStatus.DELETED]: [] // No transitions from DELETED
     };
 
-    const allowed = allowedTransitions[currentStatus] || [];
+    const allowed = (allowedTransitions as Record<UserAccountStatus, UserAccountStatus[]>)[currentStatus] ?? [];
     if (!allowed.includes(newStatus)) {
       throw invalidUserStateTransition(
         `Cannot transition from ${currentStatus} to ${newStatus}`
@@ -70,7 +76,7 @@ export class UserLifecycleRules {
    * @throws insufficientPermissions when actor lacks permission
    */
   private static validateActorPermissions(
-    currentStatus: UserAccountStatus,
+    _currentStatus: UserAccountStatus, // Currently not used but kept for future extensibility
     newStatus: UserAccountStatus,
     actorRole: UserRole
   ): void {
