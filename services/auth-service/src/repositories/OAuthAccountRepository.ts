@@ -238,6 +238,29 @@ export class OAuthAccountRepository extends RepositoryBase<OAuthAccount, OAuthAc
   }
 
   /**
+   * List OAuth accounts by user ID for GET /me
+   * @param userId - User ID
+   * @param tx - Optional transactional context
+   * @returns Array of OAuthAccount entities ordered by creation date
+   */
+  async listByUserId(userId: string, tx?: any): Promise<OAuthAccount[]> {
+    try {
+      const accounts = await (tx || this.prisma).oAuthAccount.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'asc' }
+      });
+
+      return accounts.map((account: any) => this.toDomain(account));
+    } catch (error) {
+      throw repositoryError({
+        operation: 'listByUserId',
+        userId,
+        cause: error
+      });
+    }
+  }
+
+  /**
    * Finds OAuth account by provider and provider account ID
    * @param provider - OAuth provider
    * @param providerAccountId - Provider account ID

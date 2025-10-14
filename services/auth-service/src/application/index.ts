@@ -9,3 +9,5 @@ export * from './PostAuthenticationOrchestrator';
 export * from './PreAuthenticationOrchestrator';
 export * from './PreTokenGenerationOrchestrator';
 export * from './PostConfirmationOrchestrator';
+export * from './GetMeUseCase';
+export * from './LinkProviderUseCase';

@@ -11,3 +11,5 @@ export * from './UserLifecycleRules';
 export * from './UserAccessRules';
 export * from './ClaimsMappingRules';
 export * from './UserRegistrationRules';
+export * from './UserVisibilityRules';
+export * from './ProviderLinkingRules';

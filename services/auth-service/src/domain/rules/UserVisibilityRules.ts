@@ -7,59 +7,13 @@
 
 import { User } from '../entities/User';
 import { UserRole } from '../enums';
-import { UserId } from '../value-objects/UserId';
-
-/**
- * Interface for MFA status information
- */
-export interface MfaStatus {
-  required: boolean;
-  enabled: boolean;
-}
-
-/**
- * Interface for identity information
- */
-export interface IdentityInfo {
-  cognitoSub: string;
-}
-
-/**
- * Interface for personal information
- */
-export interface PersonalInfo {
-  phone: string | null;
-  locale: string | null;
-  timeZone: string | null;
-}
-
-/**
- * Interface for provider information
- */
-export interface ProviderInfo {
-  provider: string;
-  linkedAt: string;
-}
-
-/**
- * Interface for metadata information
- */
-export interface MetaInfo {
-  lastLoginAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-/**
- * Interface for claims information
- */
-export interface ClaimsInfo {
-  role: string;
-  account_status: string;
-  is_mfa_required: boolean;
-  mfa_enabled: boolean;
-  user_id: string;
-}
+import { 
+  MfaStatus, 
+  IdentityInfo, 
+  PersonalInfo, 
+  MetaInfo, 
+  ClaimsInfo 
+} from '../interfaces';
 
 /**
  * Domain rules for user data visibility in GET /me endpoint
@@ -75,8 +29,8 @@ export class UserVisibilityRules {
    */
   static getMfaStatus(user: User): MfaStatus {
     return {
-      required: user.getRole() === UserRole.SUPER_ADMIN || user.getMfaRequired(),
-      enabled: user.getMfaEnabled()
+      required: user.getRole() === UserRole.SUPER_ADMIN,
+      enabled: user.isMfaEnabled()
     };
   }
 
@@ -87,7 +41,7 @@ export class UserVisibilityRules {
    */
   static getIdentityInfo(user: User): IdentityInfo {
     return {
-      cognitoSub: user.getCognitoSub()
+      cognitoSub: user.getCognitoSub().toString()
     };
   }
 
@@ -96,7 +50,7 @@ export class UserVisibilityRules {
    * @param user - The user entity
    * @returns Personal information or null if not available
    */
-  static getPersonalInfo(user: User): PersonalInfo | null {
+  static getPersonalInfo(_user: User): PersonalInfo | null {
     // TODO: Implement when UserPersonalInfo entity is available
     // For now, return null as personal info is not yet implemented
     return null;
@@ -111,8 +65,8 @@ export class UserVisibilityRules {
     return {
       role: user.getRole(),
       account_status: user.getStatus(),
-      is_mfa_required: user.getRole() === UserRole.SUPER_ADMIN || user.getMfaRequired(),
-      mfa_enabled: user.getMfaEnabled(),
+      is_mfa_required: user.getRole() === UserRole.SUPER_ADMIN,
+      mfa_enabled: user.isMfaEnabled(),
       user_id: user.getId().toString()
     };
   }

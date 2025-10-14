@@ -6,6 +6,7 @@
  */
 
 import { z } from 'zod';
+import { UserRole, UserAccountStatus, OAuthProvider, IncludeFlag } from '../enums';
 
 /**
  * Schema for GET /me query parameters
@@ -16,7 +17,7 @@ export const GetMeQuerySchema = z.object({
     .optional()
     .refine(
       (val) => !val || /^(idp|profile|claims)(,(idp|profile|claims))*$/.test(val),
-      { message: "Include must be comma-separated values: idp, profile, claims" }
+      { message: `Include must be comma-separated values: ${Object.values(IncludeFlag).join(', ')}` }
     )
     .transform((val) => val || '')
 });
@@ -32,8 +33,8 @@ export const GetMeResponseSchema = z.object({
     name: z.string(),
     givenName: z.string().nullable(),
     lastName: z.string().nullable(),
-    role: z.enum(['CUSTOMER', 'LAWYER', 'ADMIN', 'SUPER_ADMIN', 'UNASSIGNED']),
-    status: z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED', 'DELETED', 'PENDING_VERIFICATION']),
+    role: z.nativeEnum(UserRole),
+    status: z.nativeEnum(UserAccountStatus),
     mfa: z.object({
       required: z.boolean(),
       enabled: z.boolean()
@@ -42,7 +43,7 @@ export const GetMeResponseSchema = z.object({
       cognitoSub: z.string()
     }),
     providers: z.array(z.object({
-      provider: z.enum(['GOOGLE', 'MICROSOFT_365', 'APPLE', 'COGNITO']),
+      provider: z.nativeEnum(OAuthProvider),
       linkedAt: z.string().datetime()
     })).optional(),
     personalInfo: z.object({

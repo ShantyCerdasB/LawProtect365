@@ -12,3 +12,5 @@ export * from './MfaPolicyResult';
 export * from './CognitoMfaSettings';
 export * from './UserAccessResult';
 export * from './claims-mapping';
+export * from './user-visibility';
+export * from './provider-linking';

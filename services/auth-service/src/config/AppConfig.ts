@@ -56,9 +56,24 @@ export interface AuthServiceConfig extends AppConfig {
     tokenIncludeInternalUserId: boolean;
     tokenAddToAccessOnly: boolean;
     tokenAddToIdOnly: boolean;
-    // PostConfirmation features
-    postConfirmationLinkProviders: boolean;
-    postConfirmationAllowUpdateEmail: boolean;
+        // PostConfirmation features
+        postConfirmationLinkProviders: boolean;
+        postConfirmationAllowUpdateEmail: boolean;
+        // GetMe features
+        getMe: {
+          includeProvidersDefault: boolean;
+          includeProfileDefault: boolean;
+          includeClaimsDefault: boolean;
+          allowPartialWhenNoDb: boolean;
+        };
+        // Provider Linking features
+        providerLinking: {
+          allowedProviders: string[];
+          enabledModes: string[];
+          stateTtlSeconds: number;
+          enforceEmailMatch: boolean;
+          maxAttemptsPerHour: number;
+        };
   };
   
   // Security Configuration
@@ -133,9 +148,24 @@ export const loadConfig = (): AuthServiceConfig => {
     tokenIncludeInternalUserId: process.env.TOKEN_INCLUDE_INTERNAL_USER_ID !== 'false', // Default true
     tokenAddToAccessOnly: process.env.TOKEN_ADD_TO_ACCESS_ONLY === 'true', // Default false
     tokenAddToIdOnly: process.env.TOKEN_ADD_TO_ID_ONLY === 'true', // Default false
-    // PostConfirmation features
-    postConfirmationLinkProviders: process.env.POSTCONFIRMATION_LINK_PROVIDERS !== 'false', // Default true
-    postConfirmationAllowUpdateEmail: process.env.POSTCONFIRMATION_ALLOW_UPDATE_EMAIL !== 'false', // Default true
+        // PostConfirmation features
+        postConfirmationLinkProviders: process.env.POSTCONFIRMATION_LINK_PROVIDERS !== 'false', // Default true
+        postConfirmationAllowUpdateEmail: process.env.POSTCONFIRMATION_ALLOW_UPDATE_EMAIL !== 'false', // Default true
+        // GetMe features
+        getMe: {
+          includeProvidersDefault: process.env.GETME_INCLUDE_PROVIDERS_DEFAULT === 'true', // Default false
+          includeProfileDefault: process.env.GETME_INCLUDE_PROFILE_DEFAULT === 'true', // Default false
+          includeClaimsDefault: process.env.GETME_INCLUDE_CLAIMS_DEFAULT === 'true', // Default false
+          allowPartialWhenNoDb: process.env.GETME_ALLOW_PARTIAL_WHEN_NO_DB === 'true', // Default false
+        },
+        // Provider Linking features
+        providerLinking: {
+          allowedProviders: process.env.LINKING_ALLOWED_PROVIDERS ? process.env.LINKING_ALLOWED_PROVIDERS.split(',') : ['GOOGLE', 'MICROSOFT_365', 'APPLE'],
+          enabledModes: process.env.LINKING_MODE_ENABLED ? process.env.LINKING_MODE_ENABLED.split(',') : ['redirect', 'finalize', 'direct'],
+          stateTtlSeconds: parseInt(process.env.LINKING_STATE_TTL_SEC || '600'), // 10 minutes
+          enforceEmailMatch: process.env.LINKING_ENFORCE_EMAIL_MATCH === 'true', // Default false
+          maxAttemptsPerHour: parseInt(process.env.LINKING_MAX_ATTEMPTS_PER_HOUR || '5'),
+        },
     },
     
     security: {

@@ -6,6 +6,7 @@
  */
 
 import { StringValueObject } from '@lawprotect/shared-ts';
+import { IncludeFlag } from '../enums';
 
 /**
  * Value object for managing include flags in GET /me requests
@@ -14,7 +15,7 @@ import { StringValueObject } from '@lawprotect/shared-ts';
  * Format: comma-separated values (e.g., 'idp,profile')
  */
 export class IncludeFlags extends StringValueObject {
-  private static readonly VALID_FLAGS = ['idp', 'profile', 'claims'] as const;
+  private static readonly VALID_FLAGS = Object.values(IncludeFlag);
 
   constructor(value: string) {
     super(value);
@@ -43,7 +44,7 @@ export class IncludeFlags extends StringValueObject {
    * @returns true if 'idp' flag is present
    */
   getProviders(): boolean {
-    return this.value.includes('idp');
+    return this.value.includes(IncludeFlag.IDP);
   }
 
   /**
@@ -51,7 +52,7 @@ export class IncludeFlags extends StringValueObject {
    * @returns true if 'profile' flag is present
    */
   getProfile(): boolean {
-    return this.value.includes('profile');
+    return this.value.includes(IncludeFlag.PROFILE);
   }
 
   /**
@@ -59,7 +60,7 @@ export class IncludeFlags extends StringValueObject {
    * @returns true if 'claims' flag is present
    */
   getClaims(): boolean {
-    return this.value.includes('claims');
+    return this.value.includes(IncludeFlag.CLAIMS);
   }
 
   /**

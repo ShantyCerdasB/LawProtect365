@@ -14,3 +14,6 @@ export * from './MfaReason';
 export * from './MfaSetting';
 export * from './AccessErrorCode';
 export * from './CognitoAttribute';
+export * from './IncludeFlag';
+export * from './LinkingMode';
+export * from './ProviderLinkingStatus';

@@ -239,6 +239,41 @@ export class UserRepository extends RepositoryBase<User, UserId, UserSpec> {
   }
 
   /**
+   * Find user by Cognito sub with minimal data for GET /me
+   * @param cognitoSub - Cognito user sub
+   * @param tx - Optional transactional context
+   * @returns User entity or null if not found
+   */
+  async findByCognitoSubLight(cognitoSub: string, tx?: any): Promise<User | null> {
+    try {
+      const user = await (tx || this.prisma).user.findUnique({
+        where: { cognitoSub },
+        select: {
+          id: true,
+          cognitoSub: true,
+          email: true,
+          givenName: true,
+          lastName: true,
+          role: true,
+          status: true,
+          mfaEnabled: true,
+          lastLoginAt: true,
+          createdAt: true,
+          updatedAt: true
+        }
+      });
+
+      return user ? this.toDomain(user) : null;
+    } catch (error) {
+      throw repositoryError({
+        operation: 'findByCognitoSubLight',
+        cognitoSub,
+        cause: error
+      });
+    }
+  }
+
+  /**
    * Finds users by email with cursor pagination
    * @param email - Email address
    * @param limit - Page size

@@ -27,6 +27,8 @@ export class CompositionRoot {
   public readonly userRepository: any;
   public readonly oauthAccountRepository: any;
   public readonly userAuditEventRepository: any;
+  public readonly getMeUseCase: any;
+  public readonly linkProviderUseCase: any;
 
   private constructor(
     logger: Logger,
@@ -44,6 +46,26 @@ export class CompositionRoot {
     this.userRepository = repositories.userRepository;
     this.oauthAccountRepository = repositories.oauthAccountRepository;
     this.userAuditEventRepository = repositories.userAuditEventRepository;
+    
+    // Create GetMeUseCase
+    const { GetMeUseCase } = require('../../application/GetMeUseCase');
+    this.getMeUseCase = new GetMeUseCase(
+      services.userService,
+      repositories.oauthAccountRepository,
+      logger
+    );
+
+    // Create LinkProviderUseCase
+    const { LinkProviderUseCase } = require('../../application/LinkProviderUseCase');
+    this.linkProviderUseCase = new LinkProviderUseCase(
+      services.userService,
+      services.cognitoService,
+      repositories.oauthAccountRepository,
+      services.auditService,
+      services.eventPublishingService,
+      config,
+      logger
+    );
   }
 
   /**
@@ -72,6 +94,50 @@ export class CompositionRoot {
       repositories,
       services,
       infrastructure
+    );
+  }
+
+  /**
+   * Creates GetMeUseCase instance
+   * @returns GetMeUseCase instance
+   */
+  static createGetMeUseCase(): any {
+    const { GetMeUseCase } = require('../../application/GetMeUseCase');
+    const { createServiceLogger } = require('../../utils/logger');
+
+    const logger = createServiceLogger();
+    const repositories = RepositoryFactory.createAll();
+    const services = ServiceFactory.createAll(repositories, AwsClientFactory.createAll());
+
+    return new GetMeUseCase(
+      services.userService,
+      repositories.oauthAccountRepository,
+      logger
+    );
+  }
+
+  /**
+   * Creates LinkProviderUseCase instance
+   * @returns LinkProviderUseCase instance
+   */
+  static createLinkProviderUseCase(): any {
+    const { LinkProviderUseCase } = require('../../application/LinkProviderUseCase');
+    const { createServiceLogger } = require('../../utils/logger');
+    const { loadConfig } = require('../../config/AppConfig');
+
+    const logger = createServiceLogger();
+    const config = loadConfig();
+    const repositories = RepositoryFactory.createAll();
+    const services = ServiceFactory.createAll(repositories, AwsClientFactory.createAll());
+
+    return new LinkProviderUseCase(
+      services.userService,
+      services.cognitoService,
+      repositories.oauthAccountRepository,
+      services.auditService,
+      services.eventPublishingService,
+      config,
+      logger
     );
   }
 }
