@@ -52,18 +52,29 @@ phases:
         export DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}"
         npm run test:unit:coverage
 
-      # 5) Build del servicio (TS → JS) ESM + CJS
+      # 5) Build del servicio (ESM + CJS). Creamos tsconfig.cjs.json si no existe.
       - |
         echo "[INFO] Building service (ESM)"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
         npm run build
+
+        echo "[INFO] Ensuring tsconfig.cjs.json exists"
+        if [ ! -f tsconfig.cjs.json ]; then
+          cat > tsconfig.cjs.json << 'EOF'
+          {
+            "extends": "./tsconfig.json",
+            "compilerOptions": {
+              "module": "CommonJS",
+              "outDir": "dist-cjs",
+              "declaration": false,
+              "esModuleInterop": true
+            },
+            "include": ["src/**/*"]
+          }
+          EOF
+        fi
+
         echo "[INFO] Building service (CJS)"
-        # tsconfig.cjs.json requerido en el repo
-        # {
-        #   "extends": "./tsconfig.json",
-        #   "compilerOptions": { "module": "CommonJS", "outDir": "dist-cjs", "declaration": false, "esModuleInterop": true },
-        #   "include": ["src/**/*"]
-        # }
         npx tsc -p tsconfig.cjs.json
 
       # 6) DEPS LAYER: construir en un folder limpio con prod deps (con fallback sin lockfile)
@@ -82,19 +93,12 @@ phases:
           echo "[WARN] package-lock.json not found. Using npm i --omit=dev"
           npm i --omit=dev
         fi
-
-        # sanity check
         test -d node_modules || { echo "[ERROR] node_modules not created for deps layer"; exit 1; }
-        find node_modules -maxdepth 1 -type d | head
-
         mkdir -p ../layer-deps/nodejs
         cp -r node_modules ../layer-deps/nodejs/
         cd ..
         (cd layer-deps && zip -qr ../sign-deps-layer.zip .)
-
-        # ZIP no vacío
         test -s sign-deps-layer.zip || { echo "[ERROR] sign-deps-layer.zip is empty"; exit 1; }
-
         rm -rf deps-build layer-deps
         echo "[INFO] Dependencies layer ZIP created"
 
@@ -104,11 +108,8 @@ phases:
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
         rm -rf layer-core sign-core-layer.zip
         mkdir -p "layer-core/nodejs/node_modules/@lawprotect/sign-core"
-
-        # Usamos la salida CJS
         cp -r "dist-cjs" "layer-core/nodejs/node_modules/@lawprotect/sign-core/dist"
 
-        # package.json CJS
         cat > "layer-core/nodejs/node_modules/@lawprotect/sign-core/package.json" << 'EOF'
         {
           "name": "@lawprotect/sign-core",
@@ -118,7 +119,6 @@ phases:
         }
         EOF
 
-        # index.js CJS -> require sobre dist-cjs
         cat > "layer-core/nodejs/node_modules/@lawprotect/sign-core/index.js" << 'EOF'
         module.exports = {
           handlers: {
@@ -173,7 +173,6 @@ phases:
         fi
 
         AWS_ACCOUNT_ID="${AWS_ACCOUNT_ID:-$(aws sts get-caller-identity --query Account --output text)}"
-        REGION="${AWS_DEFAULT_REGION:-us-east-1}"
 
         aws s3 cp "sign-deps-layer.zip" "s3://$CODE_BUCKET/sign-deps-layer.zip"
         aws s3 cp "sign-core-layer.zip" "s3://$CODE_BUCKET/sign-core-layer.zip"
