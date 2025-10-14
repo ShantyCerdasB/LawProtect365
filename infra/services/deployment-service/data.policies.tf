@@ -120,24 +120,25 @@ data "aws_iam_policy_document" "secrets_manager_policy" {
 
 # Lambda permissions for CodeBuild (for outbox handler deployment)
 data "aws_iam_policy_document" "lambda_policy" {
+  # === Lambda Functions (already OK) ===
   statement {
     effect = "Allow"
     actions = [
       "lambda:UpdateFunctionCode",
       "lambda:UpdateFunctionConfiguration",
-      "lambda:GetLayerVersion",
+      "lambda:GetFunction",
+      "lambda:GetFunctionConfiguration",
       "lambda:PublishVersion",
       "lambda:CreateAlias",
-      "lambda:GetAlias",
-      "lambda:GetFunction",
-      "lambda:GetFunctionConfiguration"
+      "lambda:GetAlias"
     ]
     resources = [
       "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${var.project_name}-outbox-stream-handler-${var.env}-*",
       "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${var.project_name}-sign-service-*-${var.env}"
     ]
   }
-  
+
+  # === LIST/GET permissions for layers (shared + sign-core + sign-deps) ===
   statement {
     effect = "Allow"
     actions = [
@@ -146,18 +147,27 @@ data "aws_iam_policy_document" "lambda_policy" {
       "lambda:ListLayerVersions"
     ]
     resources = [
-      "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:layer:${var.project_name}-shared-ts-layer-${var.env}:*"
+      "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:layer:${var.project_name}-shared-ts-layer-${var.env}",
+      "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:layer:${var.project_name}-shared-ts-layer-${var.env}:*",
+      "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:layer:${var.project_name}-sign-core-${var.env}",
+      "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:layer:${var.project_name}-sign-core-${var.env}:*",
+      "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:layer:${var.project_name}-sign-deps-${var.env}",
+      "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:layer:${var.project_name}-sign-deps-${var.env}:*"
     ]
   }
-  
+
+  # === Layer version publishing (sign-core + sign-deps) ===
   statement {
     effect = "Allow"
     actions = [
       "lambda:PublishLayerVersion",
-      "lambda:CreateLayerVersion"
+      "lambda:AddLayerVersionPermission"
     ]
     resources = [
+      # Base ARN and version wildcard
+      "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:layer:${var.project_name}-sign-core-${var.env}",
       "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:layer:${var.project_name}-sign-core-${var.env}:*",
+      "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:layer:${var.project_name}-sign-deps-${var.env}",
       "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:layer:${var.project_name}-sign-deps-${var.env}:*"
     ]
   }
