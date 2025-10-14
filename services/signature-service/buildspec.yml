@@ -8,16 +8,25 @@ phases:
   pre_build:
     commands:
       - |
+        set -euo pipefail
+        echo "[INFO] ===== Pre-build ====="
+
+      # ---- Build shared-ts (genera Prisma y compila) ----
+      - |
         echo "[INFO] Building packages/shared-ts"
         cd "$CODEBUILD_SRC_DIR/packages/shared-ts"
         npm ci
         export DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}"
         npm run prisma:generate
         npm run build
+
+      # ---- Instalar deps del servicio (con dev) para compilar y testear) ----
       - |
         echo "[INFO] Installing deps in services/signature-service"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
         npm ci
+
+      # ---- Preparar Prisma client dentro del servicio ----
       - |
         echo "[INFO] Preparing Prisma client"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
@@ -27,353 +36,175 @@ phases:
         fi
         export DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}"
         npx -y prisma@5.22.0 generate
-        node -e "try{require.resolve(\"@prisma/client\");console.log(\"@prisma/client OK\")}catch(e){process.exit(1)}"
-        node -e "try{require.resolve(\"@lawprotect/shared-ts\");console.log(\"shared-ts OK\")}catch(e){process.exit(1)}"
+        node -e "try{require.resolve('@prisma/client');console.log('[OK] @prisma/client')}catch(e){console.error(e);process.exit(1)}"
+        node -e "try{require.resolve('@lawprotect/shared-ts');console.log('[OK] @lawprotect/shared-ts')}catch(e){console.error(e);process.exit(1)}"
 
   build:
     commands:
       - |
-        echo "[INFO] Tests"
+        set -euo pipefail
+        echo "[INFO] ===== Build & Package ====="
+
+      # ---- Tests ----
+      - |
+        echo "[INFO] Running unit tests"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
         export DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}"
         npm run test:unit:coverage
+
+      # ---- Build del servicio (TS → JS) ----
       - |
-        echo "[INFO] Install dependencies"
+        echo "[INFO] Building service"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
-        npm install
-        
-        # Copy dependencies BEFORE pruning
-        echo "[INFO] Copying dependencies before pruning"
-        mkdir -p "temp-deps"
-        cp -r "node_modules" "temp-deps/" || true
-        
-        # Verify temp-deps was created
-        echo "[INFO] Verifying temp-deps creation"
-        ls -la "temp-deps/" || echo "[WARNING] temp-deps directory not found"
-        ls -la "temp-deps/node_modules/" | head -10 || echo "[WARNING] temp-deps/node_modules not found"
-        
-        echo "[INFO] Build + prune"
         npm run build
-        npm prune --omit=dev
-        rm -rf node_modules/@lawprotect/shared-ts || true
+
+      # ---- DEPS LAYER: construir en un folder limpio con prod deps ----
       - |
-        echo "[INFO] Create sign-core layer"
+        echo "[INFO] Building dependencies layer (clean env)"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
-        
-        # Create dependencies layer structure
-        echo "[INFO] Creating dependencies layer"
-        mkdir -p "layer-deps/nodejs/node_modules"
-        
-        # Copy production dependencies to layer (read from package.json)
-        echo "[INFO] Reading production dependencies from package.json"
-        
-        # Get production dependencies from package.json (exclude dev dependencies)
-        PROD_DEPS=$(node -e "
-          const pkg = require('./package.json');
-          const deps = {...pkg.dependencies, ...pkg.peerDependencies};
-          const excludeDeps = ['@lawprotect/shared-ts', 'typescript', 'jest', 'eslint'];
-          const filteredDeps = Object.keys(deps).filter(dep => !excludeDeps.includes(dep));
-          console.log(filteredDeps.join(' '));
-        ")
-        
-        echo "[INFO] Production dependencies: $PROD_DEPS"
-        
-        # Validate critical dependencies
-        CRITICAL_DEPS="@aws-sdk dotenv jsonwebtoken pdf-lib uuid"
-        for critical in $CRITICAL_DEPS; do
-          if ! echo "$PROD_DEPS" | grep -q "$critical"; then
-            echo "[ERROR] Critical dependency $critical not found in package.json"
-            exit 1
-          fi
-        done
-        
-        # Debug temp-deps structure
-        echo "[INFO] Debugging temp-deps structure"
-        ls -la "temp-deps/" || echo "[ERROR] temp-deps directory missing"
-        ls -la "temp-deps/node_modules/" | head -5 || echo "[ERROR] temp-deps/node_modules missing"
-        
-        # Copy each dependency to layer (from temp-deps)
-        for dep in $PROD_DEPS; do
-          if [ -d "temp-deps/node_modules/$dep" ]; then
-            echo "[INFO] Copying $dep to layer"
-            cp -r "temp-deps/node_modules/$dep" "layer-deps/nodejs/node_modules/" || true
-          else
-            echo "[WARNING] Dependency $dep not found in temp-deps/node_modules"
-            echo "[DEBUG] Available in temp-deps:"
-            ls -la "temp-deps/node_modules/" | grep "$dep" || echo "Not found"
-          fi
-        done
-        
-        # Create ZIP of dependencies layer
-        cd "layer-deps"
-        zip -qr "../sign-deps-layer.zip" .
+        rm -rf deps-build layer-deps sign-deps-layer.zip
+        mkdir -p deps-build
+        cp package.json package-lock.json deps-build/
+        cd deps-build
+        npm ci --omit=dev
+        mkdir -p ../layer-deps/nodejs
+        cp -r node_modules ../layer-deps/nodejs/
         cd ..
-        rm -rf "layer-deps"
-        
-        # Clean up temp dependencies
-        rm -rf "temp-deps"
-        
-        # Create core layer structure
-        echo "[INFO] Creating core layer"
+        (cd layer-deps && zip -qr ../sign-deps-layer.zip .)
+        rm -rf deps-build layer-deps
+        echo "[INFO] Dependencies layer ZIP created"
+
+      # ---- CORE LAYER: empaquetar dist como paquete CJS @lawprotect/sign-core ----
+      - |
+        echo "[INFO] Building core layer"
+        cd "$CODEBUILD_SRC_DIR/services/signature-service"
+        rm -rf layer-core sign-core-layer.zip
         mkdir -p "layer-core/nodejs/node_modules/@lawprotect/sign-core"
-        
-        # Copy compiled code to layer
         cp -r "dist" "layer-core/nodejs/node_modules/@lawprotect/sign-core/"
-        
-        # Create package.json for the core module
-        cat > "layer-core/nodejs/node_modules/@lawprotect/sign-core/package.json" << EOF
+
+        # package.json CJS (evita fricciones ESM en Lambda)
+        cat > "layer-core/nodejs/node_modules/@lawprotect/sign-core/package.json" << 'EOF'
         {
           "name": "@lawprotect/sign-core",
           "version": "1.0.0",
           "main": "index.js",
-          "type": "module"
+          "type": "commonjs"
         }
         EOF
-        
-        # Create index.js that re-exports all handlers (ES modules)
-        cat > "layer-core/nodejs/node_modules/@lawprotect/sign-core/index.js" << EOF
-        // Re-export all handlers (ES modules)
-        import { createEnvelopeHandler } from './dist/src/handlers/envelopes/CreateEnvelopeHandler.js';
-        import { getEnvelopeHandler } from './dist/src/handlers/envelopes/GetEnvelopeHandler.js';
-        import { sendEnvelopeHandler } from './dist/src/handlers/envelopes/SendEnvelopeHandler.js';
-        import { updateEnvelopeHandler } from './dist/src/handlers/envelopes/UpdateEnvelopeHandler.js';
-        import { cancelEnvelopeHandler } from './dist/src/handlers/envelopes/CancelEnvelopeHandler.js';
-        import { getEnvelopesByUserHandler } from './dist/src/handlers/envelopes/GetEnvelopesByUserHandler.js';
-        import { downloadDocumentHandler } from './dist/src/handlers/envelopes/DownloadDocumentHandler.js';
-        import { signDocumentHandler } from './dist/src/handlers/signing/SignDocumentHandler.js';
-        import { declineSignerHandler } from './dist/src/handlers/signing/DeclineSignerHandler.js';
-        import { shareDocumentViewHandler } from './dist/src/handlers/signing/ShareDocumentViewHandler.js';
-        import { sendNotificationHandler } from './dist/src/handlers/notifications/SendNotificationHandler.js';
-        import { getAuditTrailHandler } from './dist/src/handlers/audit/GetAuditTrailHandler.js';
 
-        export const handlers = {
-          createEnvelope: createEnvelopeHandler,
-          getEnvelope: getEnvelopeHandler,
-          sendEnvelope: sendEnvelopeHandler,
-          updateEnvelope: updateEnvelopeHandler,
-          cancelEnvelope: cancelEnvelopeHandler,
-          getEnvelopesByUser: getEnvelopesByUserHandler,
-          downloadDocument: downloadDocumentHandler,
-          signDocument: signDocumentHandler,
-          declineSigner: declineSignerHandler,
-          shareDocument: shareDocumentViewHandler,
-          sendNotification: sendNotificationHandler,
-          getAuditTrail: getAuditTrailHandler
+        # index.js: re-exporta handlers vía require()
+        cat > "layer-core/nodejs/node_modules/@lawprotect/sign-core/index.js" << 'EOF'
+        module.exports = {
+          handlers: {
+            createEnvelope: require('./dist/src/handlers/envelopes/CreateEnvelopeHandler').createEnvelopeHandler,
+            getEnvelope: require('./dist/src/handlers/envelopes/GetEnvelopeHandler').getEnvelopeHandler,
+            sendEnvelope: require('./dist/src/handlers/envelopes/SendEnvelopeHandler').sendEnvelopeHandler,
+            updateEnvelope: require('./dist/src/handlers/envelopes/UpdateEnvelopeHandler').updateEnvelopeHandler,
+            cancelEnvelope: require('./dist/src/handlers/envelopes/CancelEnvelopeHandler').cancelEnvelopeHandler,
+            getEnvelopesByUser: require('./dist/src/handlers/envelopes/GetEnvelopesByUserHandler').getEnvelopesByUserHandler,
+            downloadDocument: require('./dist/src/handlers/envelopes/DownloadDocumentHandler').downloadDocumentHandler,
+            signDocument: require('./dist/src/handlers/signing/SignDocumentHandler').signDocumentHandler,
+            declineSigner: require('./dist/src/handlers/signing/DeclineSignerHandler').declineSignerHandler,
+            shareDocument: require('./dist/src/handlers/signing/ShareDocumentViewHandler').shareDocumentViewHandler,
+            sendNotification: require('./dist/src/handlers/notifications/SendNotificationHandler').sendNotificationHandler,
+            getAuditTrail: require('./dist/src/handlers/audit/GetAuditTrailHandler').getAuditTrailHandler
+          }
         };
         EOF
-        
-        # Create ZIP of the layer
-        cd "layer-core"
-        zip -qr "../sign-core-layer.zip" .
-        cd ..
-        
-        # Smoke test del layer (simula el NODE_PATH de Lambda)
-        echo "[INFO] Testing layer before deployment..."
-        NODE_PATH="$CODEBUILD_SRC_DIR/services/signature-service/layer-core/nodejs/node_modules" \
-        node -e "require('module').Module._initPaths(); try { require('@lawprotect/sign-core'); console.log('sign-core OK') } catch(e) { console.log('Layer test skipped - will be tested in Lambda'); }" || {
-          echo "[WARNING] Layer smoke test failed - continuing anyway"
-        }
-        
-        rm -rf "layer-core"
-        
-        echo "[INFO] Create minimal Lambda ZIPs"
-        
-        # Create minimal ZIPs for each Lambda (ES modules)
-        echo "[INFO] Creating create-envelope ZIP"
-        echo "import { handlers } from '@lawprotect/sign-core';" > "index.js"
-        echo "export const handler = handlers.createEnvelope;" >> "index.js"
-        zip -q "sign-create-envelope.zip" "index.js"
-        rm "index.js"
-        
-        echo "[INFO] Creating get-envelope ZIP"
-        echo "import { handlers } from '@lawprotect/sign-core';" > "index.js"
-        echo "export const handler = handlers.getEnvelope;" >> "index.js"
-        zip -q "sign-get-envelope.zip" "index.js"
-        rm "index.js"
-        
-        echo "[INFO] Creating send-envelope ZIP"
-        echo "import { handlers } from '@lawprotect/sign-core';" > "index.js"
-        echo "export const handler = handlers.sendEnvelope;" >> "index.js"
-        zip -q "sign-send-envelope.zip" "index.js"
-        rm "index.js"
-        
-        echo "[INFO] Creating sign-document ZIP"
-        echo "import { handlers } from '@lawprotect/sign-core';" > "index.js"
-        echo "export const handler = handlers.signDocument;" >> "index.js"
-        zip -q "sign-sign-document.zip" "index.js"
-        rm "index.js"
-        
-        echo "[INFO] Creating decline-signer ZIP"
-        echo "import { handlers } from '@lawprotect/sign-core';" > "index.js"
-        echo "export const handler = handlers.declineSigner;" >> "index.js"
-        zip -q "sign-decline-signer.zip" "index.js"
-        rm "index.js"
-        
-        echo "[INFO] Creating share-document ZIP"
-        echo "import { handlers } from '@lawprotect/sign-core';" > "index.js"
-        echo "export const handler = handlers.shareDocument;" >> "index.js"
-        zip -q "sign-share-document.zip" "index.js"
-        rm "index.js"
-        
-        echo "[INFO] Creating send-notification ZIP"
-        echo "import { handlers } from '@lawprotect/sign-core';" > "index.js"
-        echo "export const handler = handlers.sendNotification;" >> "index.js"
-        zip -q "sign-send-notification.zip" "index.js"
-        rm "index.js"
-        
-        echo "[INFO] Creating get-audit-trail ZIP"
-        echo "import { handlers } from '@lawprotect/sign-core';" > "index.js"
-        echo "export const handler = handlers.getAuditTrail;" >> "index.js"
-        zip -q "sign-get-audit-trail.zip" "index.js"
-        rm "index.js"
-        
-        echo "[INFO] Creating get-envelopes-by-user ZIP"
-        echo "import { handlers } from '@lawprotect/sign-core';" > "index.js"
-        echo "export const handler = handlers.getEnvelopesByUser;" >> "index.js"
-        zip -q "sign-get-envelopes-by-user.zip" "index.js"
-        rm "index.js"
-        
-        echo "[INFO] Creating update-envelope ZIP"
-        echo "import { handlers } from '@lawprotect/sign-core';" > "index.js"
-        echo "export const handler = handlers.updateEnvelope;" >> "index.js"
-        zip -q "sign-update-envelope.zip" "index.js"
-        rm "index.js"
-        
-        echo "[INFO] Creating cancel-envelope ZIP"
-        echo "import { handlers } from '@lawprotect/sign-core';" > "index.js"
-        echo "export const handler = handlers.cancelEnvelope;" >> "index.js"
-        zip -q "sign-cancel-envelope.zip" "index.js"
-        rm "index.js"
-        
-        echo "[INFO] Creating download-document ZIP"
-        echo "import { handlers } from '@lawprotect/sign-core';" > "index.js"
-        echo "export const handler = handlers.downloadDocument;" >> "index.js"
-        zip -q "sign-download-document.zip" "index.js"
-        rm "index.js"
-        
-        # Upload both layers to S3
-        echo "[INFO] Uploading dependencies layer to S3"
+
+        (cd layer-core && zip -qr ../sign-core-layer.zip .)
+        rm -rf layer-core
+        echo "[INFO] Core layer ZIP created"
+
+      # ---- ZIPs mínimos por Lambda (CommonJS) ----
+      - |
+        echo "[INFO] Creating minimal function ZIPs"
+        cd "$CODEBUILD_SRC_DIR/services/signature-service"
+        make_zip () { echo "exports.handler = require('@lawprotect/sign-core').handlers.$2;" > index.js; zip -q "$1" index.js; rm index.js; }
+        make_zip "sign-create-envelope.zip"      "createEnvelope"
+        make_zip "sign-get-envelope.zip"         "getEnvelope"
+        make_zip "sign-send-envelope.zip"        "sendEnvelope"
+        make_zip "sign-sign-document.zip"        "signDocument"
+        make_zip "sign-decline-signer.zip"       "declineSigner"
+        make_zip "sign-share-document.zip"       "shareDocument"
+        make_zip "sign-send-notification.zip"    "sendNotification"
+        make_zip "sign-get-audit-trail.zip"      "getAuditTrail"
+        make_zip "sign-get-envelopes-by-user.zip" "getEnvelopesByUser"
+        make_zip "sign-update-envelope.zip"      "updateEnvelope"
+        make_zip "sign-cancel-envelope.zip"      "cancelEnvelope"
+        make_zip "sign-download-document.zip"    "downloadDocument"
+
+      # ---- Subir y publicar layers ----
+      - |
+        echo "[INFO] Uploading layers to S3 & publishing versions"
+        cd "$CODEBUILD_SRC_DIR/services/signature-service"
         aws s3 cp "sign-deps-layer.zip" "s3://$CODE_BUCKET/sign-deps-layer.zip"
-        
-        echo "[INFO] Uploading core layer to S3"
         aws s3 cp "sign-core-layer.zip" "s3://$CODE_BUCKET/sign-core-layer.zip"
-        
-        # Publish layer versions
-        echo "[INFO] Publishing dependencies layer"
+
         DEPS_LAYER_VERSION=$(aws lambda publish-layer-version \
           --layer-name "lawprotect365-sign-deps-stg" \
           --description "Signature service dependencies" \
           --zip-file fileb://sign-deps-layer.zip \
           --compatible-runtimes nodejs20.x \
           --query LayerVersionArn --output text)
-        
-        echo "[INFO] Publishing core layer"
+
         CORE_LAYER_VERSION=$(aws lambda publish-layer-version \
           --layer-name "lawprotect365-sign-core-stg" \
           --description "Signature service core code" \
           --zip-file fileb://sign-core-layer.zip \
           --compatible-runtimes nodejs20.x \
           --query LayerVersionArn --output text)
-        
-        echo "[INFO] Dependencies layer: $DEPS_LAYER_VERSION"
-        echo "[INFO] Core layer: $CORE_LAYER_VERSION"
-        
-        # Verifica que realmente existe la versión publicada
-        echo "[INFO] Verifying published layers..."
-        aws lambda list-layer-versions --layer-name "lawprotect365-sign-core-stg" --max-items 5
-        aws lambda list-layer-versions --layer-name "lawprotect365-sign-deps-stg" --max-items 5
-        
-      - |
-        echo "[INFO] Deploy all Lambda functions"
-        cd "$CODEBUILD_SRC_DIR/services/signature-service"
-        
-        # ARN del shared layer fijo (el que ya tienes)
-        SHARED_TS_LAYER_ARN="arn:aws:lambda:us-east-1:088609649600:layer:lawprotect365-shared-ts-layer-stg:1"
-        echo "[INFO] Using shared layer: $SHARED_TS_LAYER_ARN"
 
-        # Deploy each function individually
-        echo "[INFO] Deploying create-envelope"
-        aws s3 cp "sign-create-envelope.zip" "s3://$CODE_BUCKET/sign-create-envelope.zip"
-        aws lambda update-function-code --function-name "lawprotect365-sign-service-create-envelope-stg" --s3-bucket "$CODE_BUCKET" --s3-key "sign-create-envelope.zip"
-        aws lambda update-function-configuration --function-name "lawprotect365-sign-service-create-envelope-stg" --layers "$SHARED_TS_LAYER_ARN" "$DEPS_LAYER_VERSION" "$CORE_LAYER_VERSION"
-        aws lambda wait function-updated --function-name "lawprotect365-sign-service-create-envelope-stg"
-        
-        echo "[INFO] Deploying get-envelope"
-        aws s3 cp "sign-get-envelope.zip" "s3://$CODE_BUCKET/sign-get-envelope.zip"
-        aws lambda update-function-code --function-name "lawprotect365-sign-service-get-envelope-stg" --s3-bucket "$CODE_BUCKET" --s3-key "sign-get-envelope.zip"
-        aws lambda update-function-configuration --function-name "lawprotect365-sign-service-get-envelope-stg" --layers "$SHARED_TS_LAYER_ARN" "$DEPS_LAYER_VERSION" "$CORE_LAYER_VERSION"
-        aws lambda wait function-updated --function-name "lawprotect365-sign-service-get-envelope-stg"
-        
-        echo "[INFO] Deploying send-envelope"
-        aws s3 cp "sign-send-envelope.zip" "s3://$CODE_BUCKET/sign-send-envelope.zip"
-        aws lambda update-function-code --function-name "lawprotect365-sign-service-send-envelope-stg" --s3-bucket "$CODE_BUCKET" --s3-key "sign-send-envelope.zip"
-        aws lambda update-function-configuration --function-name "lawprotect365-sign-service-send-envelope-stg" --layers "$SHARED_TS_LAYER_ARN" "$DEPS_LAYER_VERSION" "$CORE_LAYER_VERSION"
-        aws lambda wait function-updated --function-name "lawprotect365-sign-service-send-envelope-stg"
-        
-        echo "[INFO] Deploying sign-document"
-        aws s3 cp "sign-sign-document.zip" "s3://$CODE_BUCKET/sign-sign-document.zip"
-        aws lambda update-function-code --function-name "lawprotect365-sign-service-sign-document-stg" --s3-bucket "$CODE_BUCKET" --s3-key "sign-sign-document.zip"
-        aws lambda update-function-configuration --function-name "lawprotect365-sign-service-sign-document-stg" --layers "$SHARED_TS_LAYER_ARN" "$DEPS_LAYER_VERSION" "$CORE_LAYER_VERSION"
-        aws lambda wait function-updated --function-name "lawprotect365-sign-service-sign-document-stg"
-        
-        echo "[INFO] Deploying decline-signer"
-        aws s3 cp "sign-decline-signer.zip" "s3://$CODE_BUCKET/sign-decline-signer.zip"
-        aws lambda update-function-code --function-name "lawprotect365-sign-service-decline-signer-stg" --s3-bucket "$CODE_BUCKET" --s3-key "sign-decline-signer.zip"
-        aws lambda update-function-configuration --function-name "lawprotect365-sign-service-decline-signer-stg" --layers "$SHARED_TS_LAYER_ARN" "$DEPS_LAYER_VERSION" "$CORE_LAYER_VERSION"
-        aws lambda wait function-updated --function-name "lawprotect365-sign-service-decline-signer-stg"
-        
-        echo "[INFO] Deploying share-document"
-        aws s3 cp "sign-share-document.zip" "s3://$CODE_BUCKET/sign-share-document.zip"
-        aws lambda update-function-code --function-name "lawprotect365-sign-service-share-document-stg" --s3-bucket "$CODE_BUCKET" --s3-key "sign-share-document.zip"
-        aws lambda update-function-configuration --function-name "lawprotect365-sign-service-share-document-stg" --layers "$SHARED_TS_LAYER_ARN" "$DEPS_LAYER_VERSION" "$CORE_LAYER_VERSION"
-        aws lambda wait function-updated --function-name "lawprotect365-sign-service-share-document-stg"
-        
-        echo "[INFO] Deploying send-notification"
-        aws s3 cp "sign-send-notification.zip" "s3://$CODE_BUCKET/sign-send-notification.zip"
-        aws lambda update-function-code --function-name "lawprotect365-sign-service-send-notification-stg" --s3-bucket "$CODE_BUCKET" --s3-key "sign-send-notification.zip"
-        aws lambda update-function-configuration --function-name "lawprotect365-sign-service-send-notification-stg" --layers "$SHARED_TS_LAYER_ARN" "$DEPS_LAYER_VERSION" "$CORE_LAYER_VERSION"
-        aws lambda wait function-updated --function-name "lawprotect365-sign-service-send-notification-stg"
-        
-        echo "[INFO] Deploying get-audit-trail"
-        aws s3 cp "sign-get-audit-trail.zip" "s3://$CODE_BUCKET/sign-get-audit-trail.zip"
-        aws lambda update-function-code --function-name "lawprotect365-sign-service-get-audit-trail-stg" --s3-bucket "$CODE_BUCKET" --s3-key "sign-get-audit-trail.zip"
-        aws lambda update-function-configuration --function-name "lawprotect365-sign-service-get-audit-trail-stg" --layers "$SHARED_TS_LAYER_ARN" "$DEPS_LAYER_VERSION" "$CORE_LAYER_VERSION"
-        aws lambda wait function-updated --function-name "lawprotect365-sign-service-get-audit-trail-stg"
-        
-        echo "[INFO] Deploying get-envelopes-by-user"
-        aws s3 cp "sign-get-envelopes-by-user.zip" "s3://$CODE_BUCKET/sign-get-envelopes-by-user.zip"
-        aws lambda update-function-code --function-name "lawprotect365-sign-service-get-envelopes-by-user-stg" --s3-bucket "$CODE_BUCKET" --s3-key "sign-get-envelopes-by-user.zip"
-        aws lambda update-function-configuration --function-name "lawprotect365-sign-service-get-envelopes-by-user-stg" --layers "$SHARED_TS_LAYER_ARN" "$DEPS_LAYER_VERSION" "$CORE_LAYER_VERSION"
-        aws lambda wait function-updated --function-name "lawprotect365-sign-service-get-envelopes-by-user-stg"
-        
-        echo "[INFO] Deploying update-envelope"
-        aws s3 cp "sign-update-envelope.zip" "s3://$CODE_BUCKET/sign-update-envelope.zip"
-        aws lambda update-function-code --function-name "lawprotect365-sign-service-update-envelope-stg" --s3-bucket "$CODE_BUCKET" --s3-key "sign-update-envelope.zip"
-        aws lambda update-function-configuration --function-name "lawprotect365-sign-service-update-envelope-stg" --layers "$SHARED_TS_LAYER_ARN" "$DEPS_LAYER_VERSION" "$CORE_LAYER_VERSION"
-        aws lambda wait function-updated --function-name "lawprotect365-sign-service-update-envelope-stg"
-        
-        echo "[INFO] Deploying cancel-envelope"
-        aws s3 cp "sign-cancel-envelope.zip" "s3://$CODE_BUCKET/sign-cancel-envelope.zip"
-        aws lambda update-function-code --function-name "lawprotect365-sign-service-cancel-envelope-stg" --s3-bucket "$CODE_BUCKET" --s3-key "sign-cancel-envelope.zip"
-        aws lambda update-function-configuration --function-name "lawprotect365-sign-service-cancel-envelope-stg" --layers "$SHARED_TS_LAYER_ARN" "$DEPS_LAYER_VERSION" "$CORE_LAYER_VERSION"
-        aws lambda wait function-updated --function-name "lawprotect365-sign-service-cancel-envelope-stg"
-        
-        echo "[INFO] Deploying download-document"
-        aws s3 cp "sign-download-document.zip" "s3://$CODE_BUCKET/sign-download-document.zip"
-        aws lambda update-function-code --function-name "lawprotect365-sign-service-download-document-stg" --s3-bucket "$CODE_BUCKET" --s3-key "sign-download-document.zip"
-        aws lambda update-function-configuration --function-name "lawprotect365-sign-service-download-document-stg" --layers "$SHARED_TS_LAYER_ARN" "$DEPS_LAYER_VERSION" "$CORE_LAYER_VERSION"
-        aws lambda wait function-updated --function-name "lawprotect365-sign-service-download-document-stg"
-        
-        # Create a default appspec.yml for the main function
-        echo "version: 0.0" > "appspec.yml"
-        echo "Resources:" >> "appspec.yml"
-        echo "  - CreateEnvelope:" >> "appspec.yml"
-        echo "      Type: AWS::Lambda::Function" >> "appspec.yml"
-        echo "      Properties:" >> "appspec.yml"
-        echo "        Name: \"lawprotect365-sign-service-create-envelope-stg\"" >> "appspec.yml"
-        echo "        Alias: \"live\"" >> "appspec.yml"
-        echo "        CurrentVersion: 1" >> "appspec.yml"
-        echo "        TargetVersion: 1" >> "appspec.yml"
+        echo "[INFO] Dependencies layer: $DEPS_LAYER_VERSION"
+        echo "[INFO] Core layer:          $CORE_LAYER_VERSION"
+
+        echo "[INFO] Listing latest layer versions (sanity)"
+        aws lambda list-layer-versions --layer-name "lawprotect365-sign-core-stg" --max-items 5 || true
+        aws lambda list-layer-versions --layer-name "lawprotect365-sign-deps-stg" --max-items 5 || true
+
+      # ---- Deploy de todas las Lambdas con 3 layers: shared + deps + core ----
+      - |
+        echo "[INFO] Deploying Lambda functions"
+        cd "$CODEBUILD_SRC_DIR/services/signature-service"
+        SHARED_TS_LAYER_ARN="arn:aws:lambda:us-east-1:${AWS_ACCOUNT_ID:-088609649600}:layer:lawprotect365-shared-ts-layer-stg:1"
+
+        deploy_fn () {
+          local FN="$1"; local ZIP="$2"
+          echo "[INFO] Deploying $FN"
+          aws s3 cp "$ZIP" "s3://$CODE_BUCKET/$ZIP"
+          aws lambda update-function-code --function-name "$FN" --s3-bucket "$CODE_BUCKET" --s3-key "$ZIP" >/dev/null
+          aws lambda update-function-configuration --function-name "$FN" --layers "$SHARED_TS_LAYER_ARN" "$DEPS_LAYER_VERSION" "$CORE_LAYER_VERSION" >/dev/null
+          aws lambda wait function-updated --function-name "$FN"
+        }
+
+        deploy_fn "lawprotect365-sign-service-create-envelope-stg"   "sign-create-envelope.zip"
+        deploy_fn "lawprotect365-sign-service-get-envelope-stg"      "sign-get-envelope.zip"
+        deploy_fn "lawprotect365-sign-service-send-envelope-stg"     "sign-send-envelope.zip"
+        deploy_fn "lawprotect365-sign-service-sign-document-stg"     "sign-sign-document.zip"
+        deploy_fn "lawprotect365-sign-service-decline-signer-stg"    "sign-decline-signer.zip"
+        deploy_fn "lawprotect365-sign-service-share-document-stg"    "sign-share-document.zip"
+        deploy_fn "lawprotect365-sign-service-send-notification-stg" "sign-send-notification.zip"
+        deploy_fn "lawprotect365-sign-service-get-audit-trail-stg"   "sign-get-audit-trail.zip"
+        deploy_fn "lawprotect365-sign-service-get-envelopes-by-user-stg" "sign-get-envelopes-by-user.zip"
+        deploy_fn "lawprotect365-sign-service-update-envelope-stg"   "sign-update-envelope.zip"
+        deploy_fn "lawprotect365-sign-service-cancel-envelope-stg"   "sign-cancel-envelope.zip"
+        deploy_fn "lawprotect365-sign-service-download-document-stg" "sign-download-document.zip"
+
+      # ---- appspec de cortesía (no usado si despliegas directo) ----
+      - |
+        echo "[INFO] Writing default appspec.yml"
+        cd "$CODEBUILD_SRC_DIR/services/signature-service"
+        cat > appspec.yml <<'EOF'
+        version: 0.0
+        Resources:
+          - CreateEnvelope:
+              Type: AWS::Lambda::Function
+              Properties:
+                Name: "lawprotect365-sign-service-create-envelope-stg"
+                Alias: "live"
+                CurrentVersion: 1
+                TargetVersion: 1
+        EOF
 
 artifacts:
   files:
