@@ -9,3 +9,4 @@ export * from './UserId';
 export * from './CognitoSub';
 export * from './ProviderAccountId';
 export * from './UserAuditEventId';
+export * from './OAuthAccountId';

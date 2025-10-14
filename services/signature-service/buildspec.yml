@@ -60,24 +60,17 @@ phases:
         # Copy production dependencies from existing node_modules
         echo "[INFO] Copying production dependencies from existing node_modules"
         
-        # Get production dependencies from package.json
-        PROD_DEPS=$(node -e "
-          const pkg = require('./package.json');
-          const deps = {...pkg.dependencies, ...pkg.peerDependencies};
-          const excludeDeps = ['@lawprotect/shared-ts', 'typescript', 'jest', 'eslint'];
-          const filteredDeps = Object.keys(deps).filter(dep => !excludeDeps.includes(dep));
-          console.log(filteredDeps.join(' '));
-        ")
-        
-        echo "[INFO] Production dependencies: $PROD_DEPS"
-        
-        # Copy each dependency to layer
-        for dep in $PROD_DEPS; do
-          if [ -d "node_modules/$dep" ]; then
-            echo "[INFO] Copying $dep to layer"
-            cp -r "node_modules/$dep" "layer-deps/nodejs/" || true
-          else
-            echo "[WARNING] Dependency $dep not found in node_modules"
+        # Copy all dependencies except excluded ones
+        for dep_dir in node_modules/*; do
+          if [ -d "$dep_dir" ]; then
+            dep_name=$(basename "$dep_dir")
+            # Skip excluded dependencies
+            if [[ "$dep_name" != "@lawprotect" && "$dep_name" != "typescript" && "$dep_name" != "jest" && "$dep_name" != "eslint" && "$dep_name" != "@types" ]]; then
+              echo "[INFO] Copying $dep_name to layer"
+              cp -r "$dep_dir" "layer-deps/nodejs/" || true
+            else
+              echo "[INFO] Skipping $dep_name (excluded)"
+            fi
           fi
         done
         
@@ -210,9 +203,10 @@ phases:
           local RC=$?
           set -e
           if [ $RC -ne 0 ] || [ -z "$ARN" ] || [ "$ARN" = "None" ]; then
-            echo "[WARN] publish-layer-version failed for $NAME, getting latest..."
+            echo "[WARN] publish-layer-version failed for $NAME, getting latest..." >&2
             ARN="$(get_latest_layer_arn "$NAME")"
           fi
+          # Only output the ARN, not warnings
           echo "$ARN"
         }
 

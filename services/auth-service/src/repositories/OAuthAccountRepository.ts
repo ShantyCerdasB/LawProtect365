@@ -2,21 +2,51 @@
  * @fileoverview OAuthAccountRepository - Data access for OAuthAccount entity
  * @summary Handles OAuthAccount entity persistence operations
  * @description Provides data access methods for OAuthAccount entity using Prisma,
- * including CRUD operations and OAuth account linking.
+ * including CRUD operations and OAuth account linking. Extends RepositoryBase for consistent patterns.
  */
 
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma, OAuthProvider as PrismaOAuthProvider } from '@prisma/client';
+import { 
+  RepositoryBase, 
+  EntityMapper, 
+  WhereBuilder,
+  textContainsInsensitive
+} from '@lawprotect/shared-ts';
 import { OAuthAccount } from '../domain/entities/OAuthAccount';
+import { OAuthAccountId } from '../domain/value-objects/OAuthAccountId';
 import { OAuthProvider } from '../domain/enums/OAuthProvider';
 import { repositoryError } from '../auth-errors/factories';
+
+/**
+ * Query specification for OAuthAccount searches
+ */
+export interface OAuthAccountSpec {
+  userId?: string;
+  provider?: PrismaOAuthProvider;
+  providerId?: string;
+  providerEmail?: string;
+  providerName?: string;
+  isPrimary?: boolean;
+  linkedAfter?: Date;
+  linkedBefore?: Date;
+  lastUsedAfter?: Date;
+  lastUsedBefore?: Date;
+}
+
+type OAuthAccountRow = Prisma.OAuthAccountGetPayload<{}>;
 
 /**
  * Repository for OAuthAccount entity persistence
  * 
  * Handles all database operations for OAuthAccount entity.
+ * Extends RepositoryBase to leverage shared repository patterns and Prisma integration.
  */
-export class OAuthAccountRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class OAuthAccountRepository extends RepositoryBase<OAuthAccount, OAuthAccountId, OAuthAccountSpec> {
+  private static readonly DEFAULT_PAGE_LIMIT = 25;
+  
+  constructor(protected readonly prisma: PrismaClient) {
+    super(prisma);
+  }
 
   /**
    * Upserts an OAuth account (create or update)
