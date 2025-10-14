@@ -6,47 +6,7 @@
  */
 
 import { UserRole, UserAccountStatus } from '../enums';
-import { UserId } from '../value-objects/UserId';
-
-/**
- * Core user data for claims mapping
- */
-export interface UserClaimsData {
-  /** User ID from database */
-  userId: UserId;
-  /** User role from database */
-  role: UserRole;
-  /** User account status from database */
-  status: UserAccountStatus;
-}
-
-/**
- * MFA-related data for claims mapping
- */
-export interface MfaClaimsData {
-  /** Whether MFA is required by policy */
-  isMfaRequired: boolean;
-  /** Whether MFA is enabled in Cognito */
-  isMfaEnabled: boolean;
-}
-
-/**
- * Claims override details structure for Cognito
- */
-export interface ClaimsOverrideDetails {
-  /** Claims to add or override */
-  claimsToAddOrOverride?: {
-    [key: string]: string | number | boolean;
-  };
-  /** Claims to suppress */
-  claimsToSuppress?: string[];
-  /** Group override details (optional) */
-  groupOverrideDetails?: {
-    groupsToOverride?: string[];
-    iamRolesToOverride?: string[];
-    preferredRole?: string;
-  };
-}
+import { UserClaimsData, MfaClaimsData, ClaimsOverrideDetails } from '../interfaces';
 
 /**
  * ClaimsMappingRules - Domain rule for JWT claims mapping

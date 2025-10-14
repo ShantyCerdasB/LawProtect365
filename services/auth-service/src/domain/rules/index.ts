@@ -10,3 +10,4 @@ export * from './MfaPolicyRules';
 export * from './UserLifecycleRules';
 export * from './UserAccessRules';
 export * from './ClaimsMappingRules';
+export * from './UserRegistrationRules';

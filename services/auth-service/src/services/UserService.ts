@@ -114,6 +114,112 @@ export class UserService {
   }
 
   /**
+   * Registers user on PostConfirmation trigger
+   * @param input - User registration input
+   * @returns Registration result with user and creation status
+   */
+  async registerOnConfirmation(input: {
+    cognitoSub: string;
+    email?: string;
+    givenName?: string;
+    familyName?: string;
+    phoneNumber?: string;
+    locale?: string;
+    role: UserRole;
+    status: UserAccountStatus;
+  }): Promise<{ user: User; created: boolean }> {
+    try {
+      // Check if user already exists
+      const existingUser = await this.userRepository.findByCognitoSub(input.cognitoSub);
+      
+      if (existingUser) {
+        // User exists, update if needed (idempotent)
+        const updatedUser = await this.updateExistingUser(existingUser, input);
+        return { user: updatedUser, created: false };
+      }
+      
+      // Create new user
+      const newUser = await this.createNewUser(input);
+      return { user: newUser, created: true };
+      
+    } catch (error) {
+      throw userCreationFailed({
+        cause: `Failed to register user on confirmation: ${error instanceof Error ? error.message : String(error)}`
+      });
+    }
+  }
+
+  /**
+   * Updates existing user if needed
+   * @param existingUser - Existing user entity
+   * @param input - Update input
+   * @returns Updated user entity
+   */
+  private async updateExistingUser(
+    existingUser: User,
+    input: {
+      email?: string;
+      givenName?: string;
+      familyName?: string;
+      phoneNumber?: string;
+      locale?: string;
+    }
+  ): Promise<User> {
+    // Only update soft fields, don't change role/status if already set
+    const updates: Partial<User> = {};
+    
+    if (input.email && input.email !== existingUser.getEmail()?.toString()) {
+      // Update email if different and allowed
+      updates.email = new Email(input.email);
+    }
+    
+    if (input.givenName && input.givenName !== existingUser.getFirstName()) {
+      updates.firstName = input.givenName;
+    }
+    
+    if (input.familyName && input.familyName !== existingUser.getLastName()) {
+      updates.lastName = input.familyName;
+    }
+    
+    // Apply updates if any
+    if (Object.keys(updates).length > 0) {
+      return await this.userRepository.update(existingUser.getId(), updates);
+    }
+    
+    return existingUser;
+  }
+
+  /**
+   * Creates new user
+   * @param input - User creation input
+   * @returns Created user entity
+   */
+  private async createNewUser(input: {
+    cognitoSub: string;
+    email?: string;
+    givenName?: string;
+    familyName?: string;
+    phoneNumber?: string;
+    locale?: string;
+    role: UserRole;
+    status: UserAccountStatus;
+  }): Promise<User> {
+    const userData = {
+      cognitoSub: input.cognitoSub,
+      email: input.email ? new Email(input.email) : undefined,
+      givenName: input.givenName || '',
+      lastName: input.familyName || '',
+      role: input.role,
+      status: input.status,
+      mfaEnabled: false,
+      lastLoginAt: undefined
+    };
+    
+    const user = User.fromPersistence(userData);
+    return await this.userRepository.create(user);
+  }
+
+  /**
    * Determines user status based on role
    * @param role - User role
    * @returns Appropriate user status

@@ -56,6 +56,9 @@ export interface AuthServiceConfig extends AppConfig {
     tokenIncludeInternalUserId: boolean;
     tokenAddToAccessOnly: boolean;
     tokenAddToIdOnly: boolean;
+    // PostConfirmation features
+    postConfirmationLinkProviders: boolean;
+    postConfirmationAllowUpdateEmail: boolean;
   };
   
   // Security Configuration
@@ -130,6 +133,9 @@ export const loadConfig = (): AuthServiceConfig => {
     tokenIncludeInternalUserId: process.env.TOKEN_INCLUDE_INTERNAL_USER_ID !== 'false', // Default true
     tokenAddToAccessOnly: process.env.TOKEN_ADD_TO_ACCESS_ONLY === 'true', // Default false
     tokenAddToIdOnly: process.env.TOKEN_ADD_TO_ID_ONLY === 'true', // Default false
+    // PostConfirmation features
+    postConfirmationLinkProviders: process.env.POSTCONFIRMATION_LINK_PROVIDERS !== 'false', // Default true
+    postConfirmationAllowUpdateEmail: process.env.POSTCONFIRMATION_ALLOW_UPDATE_EMAIL !== 'false', // Default true
     },
     
     security: {
@@ -147,6 +153,6 @@ export const loadConfig = (): AuthServiceConfig => {
       tableName: process.env.OUTBOX_TABLE_NAME || '',
     },
     
-    defaultRole: process.env.DEFAULT_ROLE || 'UNASSIGNED',
+    defaultRole: process.env.DEFAULT_ROLE || 'CUSTOMER', // Changed from UNASSIGNED to CUSTOMER
   };
 }

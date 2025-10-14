@@ -85,8 +85,8 @@ phases:
         echo "[INFO] Building core layer (ESM)"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
         rm -rf layer-core sign-core-layer.zip
-        mkdir -p "layer-core/nodejs/node_modules/@lawprotect/sign-core/dist"
-        cp -r "dist" "layer-core/nodejs/node_modules/@lawprotect/sign-core/dist"
+        mkdir -p "layer-core/nodejs/node_modules/@lawprotect/sign-core"
+        cp -r "dist" "layer-core/nodejs/node_modules/@lawprotect/sign-core/"
 
         # package.json del módulo ESM
         cat > "layer-core/nodejs/node_modules/@lawprotect/sign-core/package.json" << 'EOF'

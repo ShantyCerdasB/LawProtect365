@@ -8,3 +8,4 @@
 export * from './PostAuthenticationOrchestrator';
 export * from './PreAuthenticationOrchestrator';
 export * from './PreTokenGenerationOrchestrator';
+export * from './PostConfirmationOrchestrator';

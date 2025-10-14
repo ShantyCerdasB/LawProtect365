@@ -11,3 +11,4 @@ export * from './UserAuditEventSpec';
 export * from './MfaPolicyResult';
 export * from './CognitoMfaSettings';
 export * from './UserAccessResult';
+export * from './claims-mapping';

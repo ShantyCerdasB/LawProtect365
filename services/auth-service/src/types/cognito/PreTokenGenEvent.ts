@@ -5,7 +5,7 @@
  * PreTokenGeneration trigger event and response structures.
  */
 
-import { PreTokenGenerationTriggerEvent } from 'aws-lambda';
+// import { PreTokenGenerationTriggerEvent } from 'aws-lambda';
 
 /**
  * PreTokenGeneration trigger event structure

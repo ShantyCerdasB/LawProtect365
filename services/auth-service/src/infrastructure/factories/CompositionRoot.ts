@@ -9,6 +9,7 @@
 import { RepositoryFactory } from './RepositoryFactory';
 import { ServiceFactory } from './ServiceFactory';
 import { AwsClientFactory } from './AwsClientFactory';
+import { loadConfig } from '../../config/AppConfig';
 
 /**
  * Main composition root that assembles the complete object graph for the auth service.
@@ -20,6 +21,9 @@ export class CompositionRoot {
    * @returns Fully configured service instances with all dependencies
    */
   static async build() {
+    // Load configuration
+    const config = loadConfig();
+
     // Create repositories
     const repositories = RepositoryFactory.createAll();
 
@@ -30,6 +34,9 @@ export class CompositionRoot {
     const services = ServiceFactory.createAll(repositories, infrastructure);
 
     return {
+      // Configuration
+      config,
+      
       // Repositories
       ...repositories,
       

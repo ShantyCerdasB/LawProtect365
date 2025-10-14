@@ -9,7 +9,8 @@ import { User } from '../domain/entities/User';
 import { UserService } from '../services/UserService';
 import { CognitoService } from '../services/CognitoService';
 import { PreTokenGenEvent, PreTokenGenResult } from '../types/cognito/PreTokenGenEvent';
-import { ClaimsMappingRules, UserClaimsData, MfaClaimsData, ClaimsOverrideDetails } from '../domain/rules/ClaimsMappingRules';
+import { ClaimsMappingRules } from '../domain/rules/ClaimsMappingRules';
+import { UserClaimsData, MfaClaimsData, ClaimsOverrideDetails } from '../domain/interfaces';
 import { CognitoAttribute } from '../domain/enums';
 import { AuthServiceConfig } from '../config/AppConfig';
 
