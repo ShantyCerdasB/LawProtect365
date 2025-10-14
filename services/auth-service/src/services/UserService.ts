@@ -166,15 +166,15 @@ export class UserService {
     }
   ): Promise<User> {
     // Only update soft fields, don't change role/status if already set
-    const updates: Partial<User> = {};
+    const updates: Record<string, unknown> = {};
     
     if (input.email && input.email !== existingUser.getEmail()?.toString()) {
       // Update email if different and allowed
-      updates.email = new Email(input.email);
+      updates.email = input.email;
     }
     
     if (input.givenName && input.givenName !== existingUser.getFirstName()) {
-      updates.firstName = input.givenName;
+      updates.givenName = input.givenName;
     }
     
     if (input.familyName && input.familyName !== existingUser.getLastName()) {

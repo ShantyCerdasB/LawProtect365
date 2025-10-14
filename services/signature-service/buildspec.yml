@@ -65,7 +65,8 @@ phases:
           if [ -d "$dep_dir" ]; then
             dep_name=$(basename "$dep_dir")
             # Skip excluded dependencies
-            if [[ "$dep_name" != "@lawprotect" && "$dep_name" != "typescript" && "$dep_name" != "jest" && "$dep_name" != "eslint" && "$dep_name" != "@types" ]]; then
+            if [[ "$dep_name" != "typescript" && "$dep_name" != "jest" && "$dep_name" != "eslint" && "$dep_name" != "@types" ]]; then
+               echo "[INFO] Copying $dep_name to layer"
               echo "[INFO] Copying $dep_name to layer"
               cp -r "$dep_dir" "layer-deps/nodejs/" || true
             else
@@ -73,6 +74,18 @@ phases:
             fi
           fi
         done
+
+        if [ -d "node_modules/@lawprotect/shared-ts" ]; then
+         echo "[INFO] Adding @lawprotect/shared-ts to deps layer"
+          mkdir -p "layer-deps/nodejs/node_modules/@lawprotect"
+          cp -r "node_modules/@lawprotect/shared-ts" "layer-deps/nodejs/node_modules/@lawprotect/" || {
+            echo "[ERROR] Failed to copy @lawprotect/shared-ts into deps layer"; exit 1; }
+
+          test -f "layer-deps/nodejs/node_modules/@lawprotect/shared-ts/package.json" || {
+            echo "[ERROR] shared-ts package.json not found in layer"; exit 1; }
+        else
+          echo "[ERROR] node_modules/@lawprotect/shared-ts not found in workspace"; exit 1
+        fi
         
         # Create ZIP of dependencies layer
         (cd layer-deps && zip -qr ../sign-deps-layer.zip .)
