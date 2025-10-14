@@ -50,27 +50,41 @@ phases:
 
       # ===== Deps layer (prod deps) =====
       - |
-        echo "[INFO] Building dependencies layer (clean env)"
+        echo "[INFO] Building dependencies layer (using existing node_modules)"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
-        rm -rf deps-build layer-deps sign-deps-layer.zip
-        mkdir -p deps-build
-        cp package.json deps-build/
-        if [ -f package-lock.json ]; then cp package-lock.json deps-build/; fi
-        cd deps-build
-        if [ -f package-lock.json ]; then
-          echo "[INFO] Using npm ci --omit=dev (lockfile present)"
-          npm ci --omit=dev
-        else
-          echo "[WARN] package-lock.json not found. Using npm i --omit=dev"
-          npm i --omit=dev
-        fi
-        test -d node_modules || { echo "[ERROR] node_modules not created for deps layer"; exit 1; }
-        mkdir -p ../layer-deps/nodejs
-        cp -r node_modules ../layer-deps/nodejs/
-        cd ..
+        rm -rf layer-deps sign-deps-layer.zip
+        
+        # Create layer structure
+        mkdir -p layer-deps/nodejs
+        
+        # Copy production dependencies from existing node_modules
+        echo "[INFO] Copying production dependencies from existing node_modules"
+        
+        # Get production dependencies from package.json
+        PROD_DEPS=$(node -e "
+          const pkg = require('./package.json');
+          const deps = {...pkg.dependencies, ...pkg.peerDependencies};
+          const excludeDeps = ['@lawprotect/shared-ts', 'typescript', 'jest', 'eslint'];
+          const filteredDeps = Object.keys(deps).filter(dep => !excludeDeps.includes(dep));
+          console.log(filteredDeps.join(' '));
+        ")
+        
+        echo "[INFO] Production dependencies: $PROD_DEPS"
+        
+        # Copy each dependency to layer
+        for dep in $PROD_DEPS; do
+          if [ -d "node_modules/$dep" ]; then
+            echo "[INFO] Copying $dep to layer"
+            cp -r "node_modules/$dep" "layer-deps/nodejs/" || true
+          else
+            echo "[WARNING] Dependency $dep not found in node_modules"
+          fi
+        done
+        
+        # Create ZIP of dependencies layer
         (cd layer-deps && zip -qr ../sign-deps-layer.zip .)
         test -s sign-deps-layer.zip || { echo "[ERROR] sign-deps-layer.zip is empty"; exit 1; }
-        rm -rf deps-build layer-deps
+        rm -rf layer-deps
         echo "[INFO] Dependencies layer ZIP created"
 
       # ===== Core layer (ESM) =====

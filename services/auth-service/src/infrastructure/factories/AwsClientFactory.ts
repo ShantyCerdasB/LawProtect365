@@ -18,7 +18,7 @@ import {
   EventBridgeClientAdapter,
 } from '@lawprotect/shared-ts';
 
-import { loadConfig } from '../../../config/AppConfig';
+import { loadConfig } from '../../config/AppConfig';
 
 /**
  * Factory responsible for creating all AWS service clients.
