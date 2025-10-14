@@ -52,32 +52,13 @@ phases:
         export DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}"
         npm run test:unit:coverage
 
-      # 5) Build del servicio (ESM + CJS). Creamos tsconfig.cjs.json si no existe.
+      # 5) Build del servicio (ESM)
       - |
         echo "[INFO] Building service (ESM)"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
         npm run build
 
-        echo "[INFO] Ensuring tsconfig.cjs.json exists"
-        if [ ! -f tsconfig.cjs.json ]; then
-          cat > tsconfig.cjs.json << 'EOF'
-          {
-            "extends": "./tsconfig.json",
-            "compilerOptions": {
-              "module": "CommonJS",
-              "outDir": "dist-cjs",
-              "declaration": false,
-              "esModuleInterop": true
-            },
-            "include": ["src/**/*"]
-          }
-          EOF
-        fi
-
-        echo "[INFO] Building service (CJS)"
-        npx tsc -p tsconfig.cjs.json
-
-      # 6) DEPS LAYER: construir en un folder limpio con prod deps (con fallback sin lockfile)
+      # 6) DEPS LAYER: prod deps con fallback si no hay lockfile
       - |
         echo "[INFO] Building dependencies layer (clean env)"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
@@ -102,39 +83,52 @@ phases:
         rm -rf deps-build layer-deps
         echo "[INFO] Dependencies layer ZIP created"
 
-      # 7) CORE LAYER: empaquetar **dist-cjs** como paquete CJS @lawprotect/sign-core
+      # 7) CORE LAYER (ESM): empaquetar dist (ESM) como @lawprotect/sign-core
       - |
-        echo "[INFO] Building core layer (CJS)"
+        echo "[INFO] Building core layer (ESM)"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
         rm -rf layer-core sign-core-layer.zip
-        mkdir -p "layer-core/nodejs/node_modules/@lawprotect/sign-core"
-        cp -r "dist-cjs" "layer-core/nodejs/node_modules/@lawprotect/sign-core/dist"
+        mkdir -p "layer-core/nodejs/node_modules/@lawprotect/sign-core/dist"
+        cp -r "dist" "layer-core/nodejs/node_modules/@lawprotect/sign-core/dist"
 
+        # package.json ESM
         cat > "layer-core/nodejs/node_modules/@lawprotect/sign-core/package.json" << 'EOF'
         {
           "name": "@lawprotect/sign-core",
           "version": "1.0.0",
           "main": "index.js",
-          "type": "commonjs"
+          "type": "module"
         }
         EOF
 
+        # index.js ESM: re-exporta handlers con extensión .js
         cat > "layer-core/nodejs/node_modules/@lawprotect/sign-core/index.js" << 'EOF'
-        module.exports = {
-          handlers: {
-            createEnvelope: require('./dist/src/handlers/envelopes/CreateEnvelopeHandler').createEnvelopeHandler,
-            getEnvelope: require('./dist/src/handlers/envelopes/GetEnvelopeHandler').getEnvelopeHandler,
-            sendEnvelope: require('./dist/src/handlers/envelopes/SendEnvelopeHandler').sendEnvelopeHandler,
-            updateEnvelope: require('./dist/src/handlers/envelopes/UpdateEnvelopeHandler').updateEnvelopeHandler,
-            cancelEnvelope: require('./dist/src/handlers/envelopes/CancelEnvelopeHandler').cancelEnvelopeHandler,
-            getEnvelopesByUser: require('./dist/src/handlers/envelopes/GetEnvelopesByUserHandler').getEnvelopesByUserHandler,
-            downloadDocument: require('./dist/src/handlers/envelopes/DownloadDocumentHandler').downloadDocumentHandler,
-            signDocument: require('./dist/src/handlers/signing/SignDocumentHandler').signDocumentHandler,
-            declineSigner: require('./dist/src/handlers/signing/DeclineSignerHandler').declineSignerHandler,
-            shareDocument: require('./dist/src/handlers/signing/ShareDocumentViewHandler').shareDocumentViewHandler,
-            sendNotification: require('./dist/src/handlers/notifications/SendNotificationHandler').sendNotificationHandler,
-            getAuditTrail: require('./dist/src/handlers/audit/GetAuditTrailHandler').getAuditTrailHandler
-          }
+        import { createEnvelopeHandler } from './dist/src/handlers/envelopes/CreateEnvelopeHandler.js';
+        import { getEnvelopeHandler } from './dist/src/handlers/envelopes/GetEnvelopeHandler.js';
+        import { sendEnvelopeHandler } from './dist/src/handlers/envelopes/SendEnvelopeHandler.js';
+        import { updateEnvelopeHandler } from './dist/src/handlers/envelopes/UpdateEnvelopeHandler.js';
+        import { cancelEnvelopeHandler } from './dist/src/handlers/envelopes/CancelEnvelopeHandler.js';
+        import { getEnvelopesByUserHandler } from './dist/src/handlers/envelopes/GetEnvelopesByUserHandler.js';
+        import { downloadDocumentHandler } from './dist/src/handlers/envelopes/DownloadDocumentHandler.js';
+        import { signDocumentHandler } from './dist/src/handlers/signing/SignDocumentHandler.js';
+        import { declineSignerHandler } from './dist/src/handlers/signing/DeclineSignerHandler.js';
+        import { shareDocumentViewHandler } from './dist/src/handlers/signing/ShareDocumentViewHandler.js';
+        import { sendNotificationHandler } from './dist/src/handlers/notifications/SendNotificationHandler.js';
+        import { getAuditTrailHandler } from './dist/src/handlers/audit/GetAuditTrailHandler.js';
+
+        export const handlers = {
+          createEnvelope: createEnvelopeHandler,
+          getEnvelope: getEnvelopeHandler,
+          sendEnvelope: sendEnvelopeHandler,
+          updateEnvelope: updateEnvelopeHandler,
+          cancelEnvelope: cancelEnvelopeHandler,
+          getEnvelopesByUser: getEnvelopesByUserHandler,
+          downloadDocument: downloadDocumentHandler,
+          signDocument: signDocumentHandler,
+          declineSigner: declineSignerHandler,
+          shareDocument: shareDocumentViewHandler,
+          sendNotification: sendNotificationHandler,
+          getAuditTrail: getAuditTrailHandler
         };
         EOF
 
@@ -143,25 +137,40 @@ phases:
         rm -rf layer-core
         echo "[INFO] Core layer ZIP created"
 
-      # 8) ZIPs mínimos por Lambda (CommonJS)
+      # 8) ZIPs mínimos por Lambda (ESM): index.js + package.json "type":"module"
       - |
-        echo "[INFO] Creating minimal function ZIPs"
+        echo "[INFO] Creating minimal ESM function ZIPs"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
-        make_zip () { echo "exports.handler = require('@lawprotect/sign-core').handlers.$2;" > index.js; zip -q "$1" index.js; rm index.js; }
-        make_zip "sign-create-envelope.zip"       "createEnvelope"
-        make_zip "sign-get-envelope.zip"          "getEnvelope"
-        make_zip "sign-send-envelope.zip"         "sendEnvelope"
-        make_zip "sign-sign-document.zip"         "signDocument"
-        make_zip "sign-decline-signer.zip"        "declineSigner"
-        make_zip "sign-share-document.zip"        "shareDocument"
-        make_zip "sign-send-notification.zip"     "sendNotification"
-        make_zip "sign-get-audit-trail.zip"       "getAuditTrail"
-        make_zip "sign-get-envelopes-by-user.zip" "getEnvelopesByUser"
-        make_zip "sign-update-envelope.zip"       "updateEnvelope"
-        make_zip "sign-cancel-envelope.zip"       "cancelEnvelope"
-        make_zip "sign-download-document.zip"     "downloadDocument"
 
-      # 9) Subir y publicar layers (con fallback a última versión existente si falla publish)
+        make_zip() {
+          local zip="$1"
+          local exp="$2"
+          mkdir -p __tmp_fn
+          cat > __tmp_fn/index.js << 'EOF'
+        import { handlers } from '@lawprotect/sign-core';
+        export const handler = handlers.${exp};
+        EOF
+          cat > __tmp_fn/package.json << 'EOF'
+        { "type": "module" }
+        EOF
+          (cd __tmp_fn && zip -qr "../$zip" .)
+          rm -rf __tmp_fn
+        }
+
+        make_zip "sign-create-envelope.zip" "createEnvelope"
+        make_zip "sign-get-envelope.zip" "getEnvelope"
+        make_zip "sign-send-envelope.zip" "sendEnvelope"
+        make_zip "sign-sign-document.zip" "signDocument"
+        make_zip "sign-decline-signer.zip" "declineSigner"
+        make_zip "sign-share-document.zip" "shareDocument"
+        make_zip "sign-send-notification.zip" "sendNotification"
+        make_zip "sign-get-audit-trail.zip" "getAuditTrail"
+        make_zip "sign-get-envelopes-by-user.zip" "getEnvelopesByUser"
+        make_zip "sign-update-envelope.zip" "updateEnvelope"
+        make_zip "sign-cancel-envelope.zip" "cancelEnvelope"
+        make_zip "sign-download-document.zip" "downloadDocument"
+
+      # 9) Subir y publicar layers (con fallback a última versión si falla publish)
       - |
         echo "[INFO] Uploading layers to S3 & publishing versions"
         set -e
@@ -177,13 +186,15 @@ phases:
         aws s3 cp "sign-deps-layer.zip" "s3://$CODE_BUCKET/sign-deps-layer.zip"
         aws s3 cp "sign-core-layer.zip" "s3://$CODE_BUCKET/sign-core-layer.zip"
 
-        get_latest_layer_arn () {
+        get_latest_layer_arn() {
           local NAME="$1"
           aws lambda list-layer-versions --layer-name "$NAME" --max-items 1 --query "LayerVersions[0].LayerVersionArn" --output text 2>/dev/null || echo ""
         }
 
-        publish_or_latest () {
-          local NAME="$1"; local ZIP="$2"; local DESC="$3"
+        publish_or_latest() {
+          local NAME="$1"
+          local ZIP="$2"
+          local DESC="$3"
           local ARN=""
           set +e
           ARN=$(aws lambda publish-layer-version \
@@ -210,7 +221,6 @@ phases:
         echo "[INFO] Dependencies layer ARN: ${DEPS_LAYER_VERSION:-<empty>}"
         echo "[INFO] Core layer ARN:         ${CORE_LAYER_VERSION:-<empty>}"
 
-        # Sanity list
         aws lambda list-layer-versions --layer-name "$CORE_LAYER_NAME" --max-items 5 || true
         aws lambda list-layer-versions --layer-name "$DEPS_LAYER_NAME" --max-items 5 || true
 
@@ -222,7 +232,7 @@ phases:
         AWS_ACCOUNT_ID="${AWS_ACCOUNT_ID:-$(aws sts get-caller-identity --query Account --output text)}"
         SHARED_TS_LAYER_ARN="arn:aws:lambda:us-east-1:${AWS_ACCOUNT_ID}:layer:lawprotect365-shared-ts-layer-stg:1"
 
-        build_layers_args () {
+        build_layers_args() {
           local args="$SHARED_TS_LAYER_ARN"
           if [ -n "${DEPS_LAYER_VERSION:-}" ] && [ "${DEPS_LAYER_VERSION}" != "None" ]; then
             args="$args ${DEPS_LAYER_VERSION}"
@@ -233,9 +243,11 @@ phases:
           echo "$args"
         }
 
-        deploy_fn () {
-          local FN="$1"; local ZIP="$2"
-          local LAYERS_ARGS; LAYERS_ARGS="$(build_layers_args)"
+        deploy_fn() {
+          local FN="$1"
+          local ZIP="$2"
+          local LAYERS_ARGS
+          LAYERS_ARGS="$(build_layers_args)"
           echo "[INFO] Deploying $FN"
           aws s3 cp "$ZIP" "s3://$CODE_BUCKET/$ZIP"
           aws lambda update-function-code --function-name "$FN" --s3-bucket "$CODE_BUCKET" --s3-key "$ZIP" >/dev/null
@@ -243,18 +255,18 @@ phases:
           aws lambda wait function-updated --function-name "$FN"
         }
 
-        deploy_fn "lawprotect365-sign-service-create-envelope-stg"        "sign-create-envelope.zip"
-        deploy_fn "lawprotect365-sign-service-get-envelope-stg"           "sign-get-envelope.zip"
-        deploy_fn "lawprotect365-sign-service-send-envelope-stg"          "sign-send-envelope.zip"
-        deploy_fn "lawprotect365-sign-service-sign-document-stg"          "sign-sign-document.zip"
-        deploy_fn "lawprotect365-sign-service-decline-signer-stg"         "sign-decline-signer.zip"
-        deploy_fn "lawprotect365-sign-service-share-document-stg"         "sign-share-document.zip"
-        deploy_fn "lawprotect365-sign-service-send-notification-stg"      "sign-send-notification.zip"
-        deploy_fn "lawprotect365-sign-service-get-audit-trail-stg"        "sign-get-audit-trail.zip"
-        deploy_fn "lawprotect365-sign-service-get-envelopes-by-user-stg"  "sign-get-envelopes-by-user.zip"
-        deploy_fn "lawprotect365-sign-service-update-envelope-stg"        "sign-update-envelope.zip"
-        deploy_fn "lawprotect365-sign-service-cancel-envelope-stg"        "sign-cancel-envelope.zip"
-        deploy_fn "lawprotect365-sign-service-download-document-stg"      "sign-download-document.zip"
+        deploy_fn "lawprotect365-sign-service-create-envelope-stg" "sign-create-envelope.zip"
+        deploy_fn "lawprotect365-sign-service-get-envelope-stg" "sign-get-envelope.zip"
+        deploy_fn "lawprotect365-sign-service-send-envelope-stg" "sign-send-envelope.zip"
+        deploy_fn "lawprotect365-sign-service-sign-document-stg" "sign-sign-document.zip"
+        deploy_fn "lawprotect365-sign-service-decline-signer-stg" "sign-decline-signer.zip"
+        deploy_fn "lawprotect365-sign-service-share-document-stg" "sign-share-document.zip"
+        deploy_fn "lawprotect365-sign-service-send-notification-stg" "sign-send-notification.zip"
+        deploy_fn "lawprotect365-sign-service-get-audit-trail-stg" "sign-get-audit-trail.zip"
+        deploy_fn "lawprotect365-sign-service-get-envelopes-by-user-stg" "sign-get-envelopes-by-user.zip"
+        deploy_fn "lawprotect365-sign-service-update-envelope-stg" "sign-update-envelope.zip"
+        deploy_fn "lawprotect365-sign-service-cancel-envelope-stg" "sign-cancel-envelope.zip"
+        deploy_fn "lawprotect365-sign-service-download-document-stg" "sign-download-document.zip"
 
       # 11) appspec de cortesía
       - |
