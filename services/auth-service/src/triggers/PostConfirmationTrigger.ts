@@ -33,15 +33,16 @@ export class PostConfirmationTrigger extends LambdaTriggerBase<PostConfirmationE
       cr.cognitoService,
       cr.auditService,
       cr.eventPublishingService,
-      cr.config
+      cr.config,
+      cr.logger
     );
 
     const { cognitoSub } = this.extractUserData(event);
-    console.log(`Processing PostConfirmation for user: ${cognitoSub}`);
+    cr.logger.info('Processing PostConfirmation', { cognitoSub });
 
     const result = await this.orchestrator.processPostConfirmation(event);
 
-    console.log(`PostConfirmation completed for user: ${cognitoSub}`);
+    cr.logger.info('PostConfirmation completed successfully', { cognitoSub });
     return result;
   }
 

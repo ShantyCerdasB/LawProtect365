@@ -53,20 +53,19 @@ phases:
         echo "[INFO] Building dependencies layer (using existing node_modules)"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
         rm -rf layer-deps sign-deps-layer.zip
-        
+
         # Create layer structure
         mkdir -p layer-deps/nodejs
-        
+
         # Copy production dependencies from existing node_modules
         echo "[INFO] Copying production dependencies from existing node_modules"
-        
+
         # Copy all dependencies except excluded ones
         for dep_dir in node_modules/*; do
           if [ -d "$dep_dir" ]; then
             dep_name=$(basename "$dep_dir")
             # Skip excluded dependencies
             if [[ "$dep_name" != "typescript" && "$dep_name" != "jest" && "$dep_name" != "eslint" && "$dep_name" != "@types" ]]; then
-               echo "[INFO] Copying $dep_name to layer"
               echo "[INFO] Copying $dep_name to layer"
               cp -r "$dep_dir" "layer-deps/nodejs/" || true
             else
@@ -75,18 +74,41 @@ phases:
           fi
         done
 
-        if [ -d "node_modules/@lawprotect/shared-ts" ]; then
-         echo "[INFO] Adding @lawprotect/shared-ts to deps layer"
-          mkdir -p "layer-deps/nodejs/node_modules/@lawprotect"
-          cp -r "node_modules/@lawprotect/shared-ts" "layer-deps/nodejs/node_modules/@lawprotect/" || {
-            echo "[ERROR] Failed to copy @lawprotect/shared-ts into deps layer"; exit 1; }
+        # === Ensure @lawprotect/shared-ts is present in the deps layer ===
+        DEST_DIR="layer-deps/nodejs/node_modules/@lawprotect/shared-ts"
+        mkdir -p "layer-deps/nodejs/node_modules/@lawprotect"
 
-          test -f "layer-deps/nodejs/node_modules/@lawprotect/shared-ts/package.json" || {
-            echo "[ERROR] shared-ts package.json not found in layer"; exit 1; }
+        add_shared_ts() {
+          local SRC="$1"
+          echo "[INFO] Adding @lawprotect/shared-ts to deps layer from: $SRC"
+          mkdir -p "$DEST_DIR"
+          # package.json (necesario para resolución de módulo)
+          if [ -f "$SRC/package.json" ]; then
+            cp "$SRC/package.json" "$DEST_DIR/package.json"
+          else
+            echo "[ERROR] package.json not found at $SRC"; return 1
+          fi
+          # dist/ (artefactos de runtime)
+          if [ -d "$SRC/dist" ]; then
+            rsync -a "$SRC/dist/" "$DEST_DIR/dist/"
+          else
+            echo "[WARN] dist/ not found at $SRC (asegúrate de haber ejecutado el build del shared-ts)"
+          fi
+        }
+
+        if [ -d "node_modules/@lawprotect/shared-ts" ]; then
+          add_shared_ts "node_modules/@lawprotect/shared-ts" || exit 1
+        elif [ -d "$CODEBUILD_SRC_DIR/node_modules/@lawprotect/shared-ts" ]; then
+          add_shared_ts "$CODEBUILD_SRC_DIR/node_modules/@lawprotect/shared-ts" || exit 1
+        elif [ -d "$CODEBUILD_SRC_DIR/packages/shared-ts" ]; then
+          add_shared_ts "$CODEBUILD_SRC_DIR/packages/shared-ts" || exit 1
         else
-          echo "[ERROR] node_modules/@lawprotect/shared-ts not found in workspace"; exit 1
+          echo "[ERROR] Could not locate @lawprotect/shared-ts in workspace"; exit 1
         fi
-        
+
+        # Sanity checks
+        test -f "$DEST_DIR/package.json" || { echo "[ERROR] shared-ts package.json not found in layer"; exit 1; }
+
         # Create ZIP of dependencies layer
         (cd layer-deps && zip -qr ../sign-deps-layer.zip .)
         test -s sign-deps-layer.zip || { echo "[ERROR] sign-deps-layer.zip is empty"; exit 1; }
@@ -98,6 +120,7 @@ phases:
         echo "[INFO] Building core layer (ESM)"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
         rm -rf layer-core sign-core-layer.zip
+
         mkdir -p "layer-core/nodejs/node_modules/@lawprotect/sign-core"
         cp -r "dist" "layer-core/nodejs/node_modules/@lawprotect/sign-core/"
 
@@ -111,7 +134,7 @@ phases:
         }
         EOF
 
-        # index.js ESM: importa con extensión .js
+        # index.js ESM: importa con extensión .js (paths dentro de dist)
         cat > "layer-core/nodejs/node_modules/@lawprotect/sign-core/index.js" << 'EOF'
         import { createEnvelopeHandler } from './dist/src/handlers/envelopes/CreateEnvelopeHandler.js';
         import { getEnvelopeHandler } from './dist/src/handlers/envelopes/GetEnvelopeHandler.js';
@@ -298,9 +321,9 @@ phases:
 
 artifacts:
   files:
-    - services/signature-service/sign-*.zip
-    - services/signature-service/sign-deps-layer.zip
-    - services/signature-service/sign-core-layer.zip
-    - services/signature-service/appspec.yml
-    - services/signature-service/appspec-*.yml
+    - "services/signature-service/sign-*.zip"
+    - "services/signature-service/sign-deps-layer.zip"
+    - "services/signature-service/sign-core-layer.zip"
+    - "services/signature-service/appspec.yml"
+    - "services/signature-service/appspec-*.yml"
   discard-paths: yes

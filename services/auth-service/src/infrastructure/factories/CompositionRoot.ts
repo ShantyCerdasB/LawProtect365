@@ -10,17 +10,50 @@ import { RepositoryFactory } from './RepositoryFactory';
 import { ServiceFactory } from './ServiceFactory';
 import { AwsClientFactory } from './AwsClientFactory';
 import { loadConfig } from '../../config/AppConfig';
+import { createServiceLogger } from '../../utils/logger';
+import { Logger } from '@lawprotect/shared-ts';
 
 /**
  * Main composition root that assembles the complete object graph for the auth service.
  * Follows the Composition Root pattern by centralizing all dependency creation and wiring.
  */
 export class CompositionRoot {
+  public readonly logger: Logger;
+  public readonly config: any;
+  public readonly userService: any;
+  public readonly cognitoService: any;
+  public readonly auditService: any;
+  public readonly eventPublishingService: any;
+  public readonly userRepository: any;
+  public readonly oauthAccountRepository: any;
+  public readonly userAuditEventRepository: any;
+
+  private constructor(
+    logger: Logger,
+    config: any,
+    repositories: any,
+    services: any,
+    _infrastructure: any
+  ) {
+    this.logger = logger;
+    this.config = config;
+    this.userService = services.userService;
+    this.cognitoService = services.cognitoService;
+    this.auditService = services.auditService;
+    this.eventPublishingService = services.eventPublishingService;
+    this.userRepository = repositories.userRepository;
+    this.oauthAccountRepository = repositories.oauthAccountRepository;
+    this.userAuditEventRepository = repositories.userAuditEventRepository;
+  }
+
   /**
    * Creates the complete dependency graph for the auth service
    * @returns Fully configured service instances with all dependencies
    */
-  static async build() {
+  static async build(): Promise<CompositionRoot> {
+    // Create logger first
+    const logger = createServiceLogger();
+
     // Load configuration
     const config = loadConfig();
 
@@ -33,18 +66,12 @@ export class CompositionRoot {
     // Create domain services
     const services = ServiceFactory.createAll(repositories, infrastructure);
 
-    return {
-      // Configuration
+    return new CompositionRoot(
+      logger,
       config,
-      
-      // Repositories
-      ...repositories,
-      
-      // Services
-      ...services,
-      
-      // Infrastructure
-      ...infrastructure,
-    };
+      repositories,
+      services,
+      infrastructure
+    );
   }
 }

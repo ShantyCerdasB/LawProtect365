@@ -15,6 +15,7 @@ import { UserRegistrationRules } from '../domain/rules/UserRegistrationRules';
 import { UserRole, CognitoAttribute } from '../domain/enums';
 import { AuthServiceConfig } from '../config/AppConfig';
 import { authenticationFailed } from '../auth-errors/factories';
+import { Logger } from '@lawprotect/shared-ts';
 
 /**
  * Application service that orchestrates the PostConfirmation flow
@@ -28,7 +29,8 @@ export class PostConfirmationOrchestrator {
     private readonly cognitoService: CognitoService,
     private readonly auditService: AuditService,
     private readonly eventPublishingService: EventPublishingService,
-    private readonly config: AuthServiceConfig
+    private readonly config: AuthServiceConfig,
+    private readonly logger: Logger
   ) {}
 
   /**
@@ -38,6 +40,13 @@ export class PostConfirmationOrchestrator {
    */
   async processPostConfirmation(event: PostConfirmationEvent): Promise<PostConfirmationResult> {
     const { cognitoSub, email, givenName, familyName, phoneNumber, locale } = this.extractUserData(event);
+    
+    this.logger.info('Starting PostConfirmation flow', {
+      cognitoSub,
+      hasEmail: !!email,
+      hasPhone: !!phoneNumber,
+      hasLocale: !!locale
+    });
     
     try {
       // Get Cognito data for provider linking
@@ -82,7 +91,8 @@ export class PostConfirmationOrchestrator {
       }
       
       // For non-critical errors, log and continue
-      console.warn(`Non-critical error during PostConfirmation for user: ${cognitoSub}`, {
+      this.logger.warn('Non-critical error during PostConfirmation', {
+        cognitoSub,
         error: error instanceof Error ? error.message : String(error)
       });
       
@@ -118,7 +128,8 @@ export class PostConfirmationOrchestrator {
       const cognitoUser = await this.cognitoService.adminGetUser(cognitoSub);
       return this.cognitoService.parseAdminUser(cognitoUser);
     } catch (error) {
-      console.warn(`Failed to retrieve Cognito data for user: ${cognitoSub}`, {
+      this.logger.warn('Failed to retrieve Cognito data', {
+        cognitoSub,
         error: error instanceof Error ? error.message : String(error)
       });
       return { mfaEnabled: false, identities: [] };
@@ -190,9 +201,13 @@ export class PostConfirmationOrchestrator {
         }))
       );
       
-      console.log(`Linked ${identities.length} provider identities for user: ${user.getId().toString()}`);
+      this.logger.info('Linked provider identities', {
+        userId: user.getId().toString(),
+        providersCount: identities.length
+      });
     } catch (error) {
-      console.warn(`Failed to link provider identities for user: ${user.getId().toString()}`, {
+      this.logger.warn('Failed to link provider identities', {
+        userId: user.getId().toString(),
         error: error instanceof Error ? error.message : String(error)
       });
     }
@@ -219,7 +234,8 @@ export class PostConfirmationOrchestrator {
         });
       }
     } catch (error) {
-      console.warn(`Failed to create audit events for user: ${user.getId().toString()}`, {
+      this.logger.warn('Failed to create audit events', {
+        userId: user.getId().toString(),
         error: error instanceof Error ? error.message : String(error)
       });
     }
@@ -242,7 +258,8 @@ export class PostConfirmationOrchestrator {
         });
       }
     } catch (error) {
-      console.warn(`Failed to publish integration events for user: ${user.getId().toString()}`, {
+      this.logger.warn('Failed to publish integration events', {
+        userId: user.getId().toString(),
         error: error instanceof Error ? error.message : String(error)
       });
     }
@@ -277,7 +294,8 @@ export class PostConfirmationOrchestrator {
    * @param created - Whether user was created
    */
   private logRegistrationSuccess(cognitoSub: string, user: User, created: boolean) {
-    console.log(`PostConfirmation successful for user: ${cognitoSub}`, {
+    this.logger.info('PostConfirmation successful', {
+      cognitoSub,
       userId: user.getId().toString(),
       role: user.getRole(),
       status: user.getStatus(),
@@ -292,7 +310,8 @@ export class PostConfirmationOrchestrator {
    * @param error - Error that occurred
    */
   private logRegistrationError(cognitoSub: string, error: unknown) {
-    console.error(`PostConfirmation error for user: ${cognitoSub}`, {
+    this.logger.error('PostConfirmation error', {
+      cognitoSub,
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined
     });
