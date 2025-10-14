@@ -227,6 +227,32 @@ export class AuditService {
   }
 
   /**
+   * Records OAuth provider linking audit event
+   * @param userId - User ID
+   * @param provider - OAuth provider
+   * @param providerAccountId - Provider account ID
+   * @param metadata - Additional metadata
+   */
+  async userProviderLinked(
+    userId: string, 
+    provider: string, 
+    providerAccountId: string, 
+    metadata?: Record<string, unknown>
+  ): Promise<void> {
+    await this.createAuditEvent({
+      userId,
+      action: UserAuditAction.PROFILE_UPDATED, // Using existing action for now
+      description: `OAuth provider ${provider} linked to user account`,
+      metadata: { 
+        source: 'ProviderLinking', 
+        provider,
+        providerAccountIdHash: this.hashProviderAccountId(providerAccountId),
+        ...metadata 
+      }
+    });
+  }
+
+  /**
    * Creates a generic audit event (private helper)
    * @param params - Audit event parameters
    */
@@ -247,5 +273,16 @@ export class AuditService {
         cause: `Failed to create audit event: ${error instanceof Error ? error.message : String(error)}`
       });
     }
+  }
+
+  /**
+   * Hashes provider account ID for privacy in audit logs
+   * @param providerAccountId - The provider account ID
+   * @returns Hashed version of the account ID
+   */
+  private hashProviderAccountId(providerAccountId: string): string {
+    // Simple hash for audit purposes - in production, use crypto.createHash
+    const crypto = require('crypto');
+    return crypto.createHash('sha256').update(providerAccountId).digest('hex').substring(0, 16);
   }
 }

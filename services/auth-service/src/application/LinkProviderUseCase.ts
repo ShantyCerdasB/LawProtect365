@@ -221,7 +221,7 @@ export class LinkProviderUseCase {
         linked: true,
         provider,
         providerAccountId,
-        linkedAt: new Date().toISOString() // TODO: Use existingAccount.getCreatedAt() when method is available
+        linkedAt: existingAccount.getCreatedAt().toISOString()
       };
     }
 
@@ -284,8 +284,11 @@ export class LinkProviderUseCase {
     const { provider } = identity;
 
     try {
-      // This would use the OAuthAccountRepository.upsert method
-      // await this.oauthAccountRepository.upsert(user.getId(), provider, providerAccountId);
+      await this.oauthAccountRepository.upsert(
+        user.getId().toString(), 
+        provider, 
+        identity.providerAccountId
+      );
       this.logger.info('Provider link persisted in database', { 
         provider, 
         userId: user.getId().toString() 
@@ -307,19 +310,11 @@ export class LinkProviderUseCase {
    */
   private async createAuditEvent(user: User, identity: ProviderIdentity): Promise<void> {
     try {
-      // TODO: Implement userProviderLinked method in AuditService
-      // await this._auditService.userProviderLinked(
-      //   user.getId(),
-      //   identity.provider,
-      //   identity.providerAccountId
-      // );
-      
-      // Log that audit service is available but method not implemented
-      this.logger.debug('Audit service available but userProviderLinked method not implemented', {
-        auditServiceType: typeof this._auditService,
-        provider: identity.provider,
-        userId: user.getId().toString()
-      });
+      await this._auditService.userProviderLinked(
+        user.getId().toString(),
+        identity.provider,
+        identity.providerAccountId
+      );
     } catch (error) {
       this.logger.warn('Failed to create audit event for provider linking', {
         provider: identity.provider,
@@ -337,15 +332,7 @@ export class LinkProviderUseCase {
    */
   private async publishIntegrationEvent(user: User, identity: ProviderIdentity): Promise<void> {
     try {
-      // TODO: Implement publishUserProviderLinked method in EventPublishingService
-      // await this._eventPublishingService.publishUserProviderLinked(user, identity);
-      
-      // Log that event publishing service is available but method not implemented
-      this.logger.debug('Event publishing service available but publishUserProviderLinked method not implemented', {
-        eventPublishingServiceType: typeof this._eventPublishingService,
-        provider: identity.provider,
-        userId: user.getId().toString()
-      });
+      await this._eventPublishingService.publishUserProviderLinked(user, identity);
     } catch (error) {
       this.logger.warn('Failed to publish integration event for provider linking', {
         provider: identity.provider,

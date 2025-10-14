@@ -137,4 +137,12 @@ export class OAuthAccount {
   removePrimaryStatus(): void {
     (this as any).isPrimary = false;
   }
+
+  /**
+   * Gets the creation date of the OAuth account
+   * @returns The creation date
+   */
+  getCreatedAt(): Date {
+    return this.linkedAt;
+  }
 }

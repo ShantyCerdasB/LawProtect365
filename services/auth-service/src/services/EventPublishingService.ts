@@ -198,4 +198,25 @@ export class EventPublishingService {
       console.warn(`Custom integration event publishing failed (non-blocking): ${error instanceof Error ? error.message : String(error)}`);
     }
   }
+
+  /**
+   * Publishes user provider linked event
+   * @param user - The user entity
+   * @param identity - The provider identity
+   * @param metadata - Additional metadata
+   */
+  async publishUserProviderLinked(
+    user: User, 
+    identity: { provider: string; providerAccountId: string; email?: string; name?: string },
+    metadata?: Record<string, unknown>
+  ): Promise<void> {
+    await this.publishUserEvent('UserProviderLinked', user, {
+      provider: identity.provider,
+      providerAccountId: identity.providerAccountId,
+      providerEmail: identity.email,
+      providerName: identity.name,
+      linkedAt: nowIso(),
+      ...metadata
+    });
+  }
 }
