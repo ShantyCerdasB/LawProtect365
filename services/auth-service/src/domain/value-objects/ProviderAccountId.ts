@@ -5,7 +5,7 @@
  * with validation and type safety for external provider integration.
  */
 
-import { StringValueObject } from '@lawprotect/shared-ts';
+import { StringValueObject, BadRequestError, isNonEmptyString } from '@lawprotect/shared-ts';
 
 /**
  * ProviderAccountId value object representing an OAuth provider account identifier
@@ -14,11 +14,8 @@ import { StringValueObject } from '@lawprotect/shared-ts';
  */
 export class ProviderAccountId extends StringValueObject {
   constructor(value: string) {
-    if (!value || typeof value !== 'string') {
-      throw new Error('ProviderAccountId must be a non-empty string');
-    }
-    if (value.trim().length === 0) {
-      throw new Error('ProviderAccountId cannot be empty');
+    if (!isNonEmptyString(value)) {
+      throw new BadRequestError('ProviderAccountId must be a non-empty string', 'INVALID_PROVIDER_ACCOUNT_ID');
     }
     super(value.trim());
   }

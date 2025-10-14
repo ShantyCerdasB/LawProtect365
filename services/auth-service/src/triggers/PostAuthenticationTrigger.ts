@@ -6,116 +6,175 @@
  * It ensures idempotent user provisioning and maintains data consistency.
  */
 
+import { LambdaTriggerBase } from '@lawprotect/shared-ts';
 import type { PostAuthEvent, PostAuthResult } from '../types/cognito/PostAuthEvent';
 import { CompositionRoot } from '../infrastructure/factories/CompositionRoot';
 import { authenticationFailed } from '../auth-errors/factories';
+import { User } from '../domain/entities/User';
 
 /**
- * Cognito PostAuthentication trigger handler
- * 
- * Processes user data after successful authentication, including:
- * - User creation/updates with proper role assignment
- * - OAuth account linking for social identities
- * - MFA status synchronization
- * - Audit trail creation
- * - Integration event publishing
- * 
- * @param event - Cognito PostAuthentication event
- * @returns PostAuthentication result (echoes back the event)
+ * PostAuthentication trigger handler that processes Cognito PostAuthentication events
+ * @summary Coordinates user data processing, OAuth linking, audit events, and event publishing
+ * @description This trigger handles the complete flow of user authentication processing including user upsert, OAuth account linking, audit logging, and integration event publishing
  */
-export const handler = async (event: PostAuthEvent): Promise<PostAuthResult> => {
-  const cr = await CompositionRoot.build();
-  const log = console; // Simple logging for now
-  
-  try {
-    const cognitoSub = event.userName; // Cognito sub
-    const attrs = event.request.userAttributes || {};
-    const email = attrs.email as string | undefined;
-    const givenName = attrs.given_name as string | undefined;
-    const familyName = attrs.family_name as string | undefined;
+export class PostAuthenticationTrigger extends LambdaTriggerBase<PostAuthEvent, PostAuthResult> {
+  private cr: any;
 
+  /**
+   * Process the PostAuthentication event
+   * @param event - The Cognito PostAuthentication event
+   * @returns Promise that resolves to the processed event
+   */
+  protected async processEvent(event: PostAuthEvent): Promise<PostAuthResult> {
+    this.cr = await CompositionRoot.build();
+    const log = this.cr.logger;
+
+    const { cognitoSub, email, givenName, familyName } = this.extractUserData(event);
     log.info(`Processing PostAuthentication for user: ${cognitoSub}`);
 
-    // 1) Read Cognito for MFA + identities
-    const adminUser = await cr.cognitoService.adminGetUser(cognitoSub);
-    const { mfaEnabled, identities } = cr.cognitoService.parseAdminUser(adminUser);
+    const cognitoData = await this.getCognitoData(cognitoSub);
+    const userResult = await this.upsertUser({ cognitoSub, email, givenName, familyName }, cognitoData);
+    
+    await this.linkOAuthAccounts(userResult.user, cognitoData.identities);
+    await this.createAuditEvents(userResult.user, userResult.created, userResult.mfaChanged);
+    await this.publishEvents(userResult.user, userResult.created);
 
-    // 2) Upsert User
-    const { user, created, mfaChanged } = await cr.userService.upsertOnPostAuth({
-      cognitoSub,
-      email,
-      givenName,
-      familyName,
-      mfaEnabled,
-      intendedRole: undefined // Will use default role (UNASSIGNED)
-    });
+    log.info(`PostAuthentication completed for user: ${userResult.user.getId().toString()}, created: ${userResult.created}, mfaEnabled: ${userResult.user.isMfaEnabled()}`);
+    return event;
+  }
 
-    // 3) Link OAuth accounts if present
-    if (identities.length > 0) {
-      await cr.userService.linkProviderIdentities(user.getId().getValue(), identities).catch(err => {
-        log.warn(`OAuth linking failed (non-blocking): ${err instanceof Error ? err.message : String(err)}`);
+  /**
+   * Extract request ID from the event for logging
+   * @param event - The PostAuthentication event
+   * @returns Request ID if available, undefined otherwise
+   */
+  protected getRequestId(event: PostAuthEvent): string | undefined {
+    return event.requestContext?.awsRequestId;
+  }
+
+  /**
+   * Extract user data from the Cognito event
+   * @param event - The PostAuthentication event
+   * @returns Extracted user data
+   */
+  private extractUserData(event: PostAuthEvent) {
+    const attrs = event.request.userAttributes || {};
+    return {
+      cognitoSub: event.userName,
+      email: attrs.email as string | undefined,
+      givenName: attrs.given_name as string | undefined,
+      familyName: attrs.family_name as string | undefined
+    };
+  }
+
+  /**
+   * Get Cognito user data including MFA status and identities
+   * @param cognitoSub - The Cognito user sub
+   * @returns Cognito user data
+   */
+  private async getCognitoData(cognitoSub: string) {
+    try {
+      const adminUser = await this.cr.cognitoService.adminGetUser(cognitoSub);
+      return this.cr.cognitoService.parseAdminUser(adminUser);
+    } catch (error) {
+      throw authenticationFailed({
+        reason: 'post-auth-cognito-failure',
+        cause: error instanceof Error ? error.message : String(error)
       });
     }
+  }
 
-    // 4) Audit + events
+  /**
+   * Upsert user in the database
+   * @param userData - User data from the event
+   * @param cognitoData - Cognito user data
+   * @returns User upsert result
+   */
+  private async upsertUser(userData: any, cognitoData: any) {
+    try {
+      return await this.cr.userService.upsertOnPostAuth({
+        ...userData,
+        mfaEnabled: cognitoData.mfaEnabled,
+        intendedRole: undefined,
+        defaultRole: this.cr.config.defaultRole
+      });
+    } catch (error) {
+      throw authenticationFailed({
+        reason: 'post-auth-user-upsert-failure',
+        cause: error instanceof Error ? error.message : String(error)
+      });
+    }
+  }
+
+  /**
+   * Link OAuth accounts for the user (non-blocking)
+   * @param user - The user entity
+   * @param identities - OAuth identities from Cognito
+   */
+  private async linkOAuthAccounts(user: User, identities: any[]) {
+    if (identities.length > 0) {
+      await this.cr.userService.linkProviderIdentities(user.getId().toString(), identities).catch((err: unknown) => {
+        this.cr.logger.warn(`OAuth linking failed (non-blocking): ${err instanceof Error ? err.message : String(err)}`);
+      });
+    }
+  }
+
+  /**
+   * Create audit events for user actions
+   * @param user - The user entity
+   * @param created - Whether the user was created
+   * @param mfaChanged - Whether MFA status changed
+   */
+  private async createAuditEvents(user: User, created: boolean, mfaChanged: boolean) {
     if (created) {
-      await cr.auditService.userRegistered(user.getId().getValue(), { 
+      await this.cr.auditService.userRegistered(user.getId().toString(), {
         source: 'PostAuthentication',
         role: user.getRole(),
         status: user.getStatus()
-      });
-      
-      // Publish integration event
-      await cr.eventPublisherService.publish('UserRegistered', {
-        userId: user.getId().getValue(),
-        role: user.getRole(),
-        status: user.getStatus(),
-        mfaEnabled: user.isMfaEnabled(),
-        createdAt: user.getCreatedAt().toISOString()
-      }).catch(err => {
-        log.warn(`Event publishing failed (non-blocking): ${err instanceof Error ? err.message : String(err)}`);
       });
     } else {
       if (mfaChanged) {
-        await cr.auditService.mfaToggled(user.getId().getValue(), user.isMfaEnabled());
+        if (user.isMfaEnabled()) {
+          await this.cr.auditService.mfaEnabled(user.getId().toString());
+        } else {
+          await this.cr.auditService.mfaDisabled(user.getId().toString());
+        }
       }
-      
-      await cr.auditService.userUpdated(user.getId().getValue(), { 
+      await this.cr.auditService.userUpdated(user.getId().toString(), {
         source: 'PostAuthentication',
         role: user.getRole(),
         status: user.getStatus()
       });
-      
-      // Publish integration event
-      await cr.eventPublisherService.publish('UserUpdated', {
-        userId: user.getId().getValue(),
-        role: user.getRole(),
-        status: user.getStatus(),
-        mfaEnabled: user.isMfaEnabled(),
-        updatedAt: user.getUpdatedAt().toISOString()
-      }).catch(err => {
-        log.warn(`Event publishing failed (non-blocking): ${err instanceof Error ? err.message : String(err)}`);
-      });
     }
+  }
 
-    log.info(`PostAuthentication completed for user: ${user.getId().getValue()}, created: ${created}, mfaEnabled: ${user.isMfaEnabled()}`);
-    return event; // PostAuth returns the same shape
-  } catch (err) {
-    log.error(`PostAuthentication failed: ${err instanceof Error ? err.message : String(err)}`);
-    
-    // IMPORTANT: Only throw for critical failures that should block login
-    // For non-critical enrichments, we log and continue
-    if (err instanceof Error && err.message.includes('cognito')) {
-      throw authenticationFailed({ 
-        reason: 'post-auth-cognito-failure', 
-        cause: err.message 
-      });
-    }
-    
-    // For other errors, we still throw to maintain security
-    throw authenticationFailed({ 
-      reason: 'post-auth-failure', 
-      cause: err instanceof Error ? err.message : String(err) 
+  /**
+   * Publish integration events (non-blocking)
+   * @param user - The user entity
+   * @param created - Whether the user was created
+   */
+  private async publishEvents(user: User, created: boolean) {
+    const eventType = created ? 'UserRegistered' : 'UserUpdated';
+    const eventData = {
+      userId: user.getId().toString(),
+      role: user.getRole(),
+      status: user.getStatus(),
+      mfaEnabled: user.isMfaEnabled(),
+      ...(created ? { createdAt: user.getCreatedAt().toISOString() } : { updatedAt: user.getUpdatedAt().toISOString() })
+    };
+
+    await this.cr.eventPublisherService.publish(eventType, eventData).catch((err: unknown) => {
+      this.cr.logger.warn(`Event publishing failed (non-blocking): ${err instanceof Error ? err.message : String(err)}`);
     });
   }
+}
+
+/**
+ * Lambda handler function for PostAuthentication trigger
+ * @param event - The Cognito PostAuthentication event
+ * @returns PostAuthentication result (echoes back the event)
+ */
+export const handler = async (event: PostAuthEvent): Promise<PostAuthResult> => {
+  const trigger = new PostAuthenticationTrigger();
+  return trigger.handler(event);
 };

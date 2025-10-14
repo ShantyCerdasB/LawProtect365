@@ -42,67 +42,121 @@ export class AuditService {
   async userUpdated(userId: string, metadata?: Record<string, unknown>): Promise<void> {
     await this.createAuditEvent({
       userId,
-      action: UserAuditAction.USER_REGISTERED, // Using existing action
+      action: UserAuditAction.PROFILE_UPDATED,
       description: 'User updated via PostAuthentication trigger',
       metadata: { source: 'PostAuthentication', ...metadata }
     });
   }
 
   /**
-   * Records MFA toggle audit event
+   * Records MFA enabled audit event
    * @param userId - User ID
-   * @param enabled - MFA enabled status
+   * @param metadata - Additional metadata
    */
-  async mfaToggled(userId: string, enabled: boolean): Promise<void> {
+  async mfaEnabled(userId: string, metadata?: Record<string, unknown>): Promise<void> {
     await this.createAuditEvent({
       userId,
-      action: UserAuditAction.MFA_TOGGLED,
-      description: `MFA ${enabled ? 'enabled' : 'disabled'}`,
-      metadata: { enabled }
+      action: UserAuditAction.MFA_ENABLED,
+      description: 'MFA enabled',
+      metadata: { ...metadata }
     });
   }
 
   /**
-   * Records role change audit event
+   * Records MFA disabled audit event
    * @param userId - User ID
-   * @param oldRole - Previous role
-   * @param newRole - New role
-   * @param actorId - Actor who made the change
+   * @param metadata - Additional metadata
    */
-  async roleChanged(
+  async mfaDisabled(userId: string, metadata?: Record<string, unknown>): Promise<void> {
+    await this.createAuditEvent({
+      userId,
+      action: UserAuditAction.MFA_DISABLED,
+      description: 'MFA disabled',
+      metadata: { ...metadata }
+    });
+  }
+
+  /**
+   * Records role assignment audit event
+   * @param userId - User ID
+   * @param role - Assigned role
+   * @param actorId - Actor who made the change
+   * @param metadata - Additional metadata
+   */
+  async roleAssigned(
     userId: string, 
-    oldRole: string, 
-    newRole: string, 
-    actorId?: string
+    role: string, 
+    actorId?: string,
+    metadata?: Record<string, unknown>
   ): Promise<void> {
     await this.createAuditEvent({
       userId,
-      action: UserAuditAction.ROLE_CHANGED,
-      description: `Role changed from ${oldRole} to ${newRole}`,
+      action: UserAuditAction.ROLE_ASSIGNED,
+      description: `Role assigned: ${role}`,
       actorId,
-      metadata: { oldRole, newRole }
+      metadata: { role, ...metadata }
     });
   }
 
   /**
-   * Records account status change audit event
+   * Records role removal audit event
    * @param userId - User ID
-   * @param oldStatus - Previous status
-   * @param newStatus - New status
+   * @param role - Removed role
    * @param actorId - Actor who made the change
+   * @param metadata - Additional metadata
    */
-  async accountStatusChanged(
-    userId: string,
-    oldStatus: string,
-    newStatus: string,
-    actorId?: string
+  async roleRemoved(
+    userId: string, 
+    role: string, 
+    actorId?: string,
+    metadata?: Record<string, unknown>
   ): Promise<void> {
     await this.createAuditEvent({
       userId,
-      action: UserAuditAction.ACCOUNT_STATUS_CHANGED,
-      description: `Account status changed from ${oldStatus} to ${newStatus}`,
+      action: UserAuditAction.ROLE_REMOVED,
+      description: `Role removed: ${role}`,
       actorId,
-      metadata: { oldStatus, newStatus }
+      metadata: { role, ...metadata }
+    });
+  }
+
+  /**
+   * Records user activation audit event
+   * @param userId - User ID
+   * @param actorId - Actor who made the change
+   * @param metadata - Additional metadata
+   */
+  async userActivated(
+    userId: string,
+    actorId?: string,
+    metadata?: Record<string, unknown>
+  ): Promise<void> {
+    await this.createAuditEvent({
+      userId,
+      action: UserAuditAction.USER_ACTIVATED,
+      description: 'User account activated',
+      actorId,
+      metadata: { ...metadata }
+    });
+  }
+
+  /**
+   * Records user suspension audit event
+   * @param userId - User ID
+   * @param actorId - Actor who made the change
+   * @param metadata - Additional metadata
+   */
+  async userSuspended(
+    userId: string,
+    actorId?: string,
+    metadata?: Record<string, unknown>
+  ): Promise<void> {
+    await this.createAuditEvent({
+      userId,
+      action: UserAuditAction.USER_SUSPENDED,
+      description: 'User account suspended',
+      actorId,
+      metadata: { ...metadata }
     });
   }
 
@@ -111,17 +165,19 @@ export class AuditService {
    * @param userId - User ID
    * @param provider - OAuth provider
    * @param providerAccountId - Provider account ID
+   * @param metadata - Additional metadata
    */
   async oauthAccountLinked(
     userId: string,
     provider: string,
-    providerAccountId: string
+    providerAccountId: string,
+    metadata?: Record<string, unknown>
   ): Promise<void> {
     await this.createAuditEvent({
       userId,
-      action: UserAuditAction.LINKED_IDP,
+      action: UserAuditAction.OAUTH_ACCOUNT_LINKED,
       description: `OAuth account linked: ${provider}`,
-      metadata: { provider, providerAccountId }
+      metadata: { provider, providerAccountId, ...metadata }
     });
   }
 
@@ -130,28 +186,54 @@ export class AuditService {
    * @param userId - User ID
    * @param provider - OAuth provider
    * @param providerAccountId - Provider account ID
+   * @param metadata - Additional metadata
    */
   async oauthAccountUnlinked(
     userId: string,
     provider: string,
-    providerAccountId: string
+    providerAccountId: string,
+    metadata?: Record<string, unknown>
   ): Promise<void> {
     await this.createAuditEvent({
       userId,
-      action: UserAuditAction.UNLINKED_IDP,
+      action: UserAuditAction.OAUTH_ACCOUNT_UNLINKED,
       description: `OAuth account unlinked: ${provider}`,
-      metadata: { provider, providerAccountId }
+      metadata: { provider, providerAccountId, ...metadata }
     });
   }
 
   /**
-   * Creates a generic audit event
+   * Records custom audit event
+   * @param userId - User ID
+   * @param action - Audit action
+   * @param description - Event description
+   * @param actorId - Actor who performed the action
+   * @param metadata - Additional metadata
+   */
+  async recordCustomEvent(
+    userId: string,
+    action: UserAuditAction,
+    description: string,
+    actorId?: string,
+    metadata?: Record<string, unknown>
+  ): Promise<void> {
+    await this.createAuditEvent({
+      userId,
+      action,
+      description,
+      actorId,
+      metadata: { ...metadata }
+    });
+  }
+
+  /**
+   * Creates a generic audit event (private helper)
    * @param params - Audit event parameters
    */
   private async createAuditEvent(params: {
     userId: string;
     action: UserAuditAction;
-    description?: string;
+    description: string;
     actorId?: string;
     ipAddress?: string;
     userAgent?: string;

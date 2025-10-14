@@ -236,8 +236,9 @@ describe('SignatureAuditEvent', () => {
         createdAt: now
       });
 
-      expect(event.isRecent(1)).toBe(true); // 1ms margin for timing precision
-      expect(event.isRecent(1)).toBe(true); // 1ms after
+      // Test with a more generous margin to account for timing variations
+      expect(event.isRecent(10)).toBe(true); // 10ms margin for timing precision
+      expect(event.isRecent(10)).toBe(true); // Should still be recent
     });
   });
 

@@ -13,7 +13,7 @@ import { UserRepository } from '../../repositories/UserRepository';
 import { OAuthAccountRepository } from '../../repositories/OAuthAccountRepository';
 import { UserAuditEventRepository } from '../../repositories/UserAuditEventRepository';
 import { CognitoIdentityProviderClient } from '@aws-sdk/client-cognito-identity-provider';
-import { loadConfig } from '../../../config/AppConfig';
+import { loadConfig } from '../../config/AppConfig';
 
 /**
  * Factory responsible for creating all service instances.

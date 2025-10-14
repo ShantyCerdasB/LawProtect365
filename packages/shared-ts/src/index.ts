@@ -23,6 +23,7 @@ export * from "./controllers/index.js";
 export * from "./middleware/index.js";
 export * from "./rules/index.js";
 export * from "./lambdas/index.js";
+export * from "./triggers/index.js";
 
 // Prisma enums
 export { 
