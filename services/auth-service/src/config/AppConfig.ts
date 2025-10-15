@@ -74,6 +74,13 @@ export interface AuthServiceConfig extends AppConfig {
           enforceEmailMatch: boolean;
           maxAttemptsPerHour: number;
         };
+        // Admin Users features
+        adminUsers: {
+          maxLimit: number;
+          defaultLimit: number;
+          excludeDeletedByDefault: boolean;
+          enableTrgm: boolean;
+        };
   };
   
   // Security Configuration
@@ -165,6 +172,13 @@ export const loadConfig = (): AuthServiceConfig => {
           stateTtlSeconds: parseInt(process.env.LINKING_STATE_TTL_SEC || '600'), // 10 minutes
           enforceEmailMatch: process.env.LINKING_ENFORCE_EMAIL_MATCH === 'true', // Default false
           maxAttemptsPerHour: parseInt(process.env.LINKING_MAX_ATTEMPTS_PER_HOUR || '5'),
+        },
+        // Admin Users features
+        adminUsers: {
+          maxLimit: parseInt(process.env.ADMIN_USERS_MAX_LIMIT || '200'),
+          defaultLimit: parseInt(process.env.ADMIN_USERS_DEFAULT_LIMIT || '25'),
+          excludeDeletedByDefault: process.env.ADMIN_USERS_EXCLUDE_DELETED_BY_DEFAULT !== 'false', // Default true
+          enableTrgm: process.env.ADMIN_USERS_ENABLE_TRGM === 'true', // Default false
         },
     },
     

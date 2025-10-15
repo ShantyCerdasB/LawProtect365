@@ -142,4 +142,21 @@ export class CompositionRoot {
       logger
     );
   }
+
+  /**
+   * Creates GetUsersAdminUseCase instance
+   * @returns Configured GetUsersAdminUseCase instance
+   */
+  static createGetUsersAdminUseCase(): GetUsersAdminUseCase {
+    const { GetUsersAdminUseCase } = require('../../application/admin/GetUsersAdminUseCase');
+    const { createServiceLogger } = require('../../utils/logger');
+
+    const logger = createServiceLogger();
+    const repositories = RepositoryFactory.createAll();
+
+    return new GetUsersAdminUseCase(
+      repositories.userRepository,
+      logger
+    );
+  }
 }
