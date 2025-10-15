@@ -287,21 +287,15 @@ phases:
           aws s3 cp "$ZIP" "s3://$CODE_BUCKET/$ZIP"
           aws lambda update-function-code --function-name "$FN" --s3-bucket "$CODE_BUCKET" --s3-key "$ZIP" >/dev/null
           aws lambda wait function-updated --function-name "$FN"
-          ENV_JSON="$(aws lambda get-function-configuration --function-name "$FN" --query 'Environment.Variables' --output json 2>/dev/null || echo '{}')"
-          ENV_ARG="$(python - <<'PY' "$ENV_JSON"
-        import json,sys
-        raw=sys.argv[1] if len(sys.argv)>1 else '{}'
-        try:
-            env=json.loads(raw or '{}')
-        except Exception:
-          env={}
-        env['NODE_OPTIONS']='--experimental-specifier-resolution=node'
-        pairs=",".join(f"{k}={v}" for k,v in env.items())
-        print(f"Variables={{"+pairs+"}}")
-        PY
-        )"
+          ENV_JSON="$(aws lambda get-function-configuration --function-name "$FN" \
+            --query 'Environment.Variables' --output json 2>/dev/null || echo '{}')"
+          ENV_ARG="$(python3 -c "import json,sys; raw=sys.argv[1] if len(sys.argv)>1 else '{}'
+          try: env=json.loads(raw or '{}') or {}
+          except Exception: env={}
+          env['NODE_OPTIONS']='--experimental-specifier-resolution=node'
+          print(json.dumps({'Variables': env}, separators=(',',':')))" "$ENV_JSON")"
         
-        aws lambda update-function-configuration --function-name "$FN" --runtime nodejs20.x --handler index.handler --layers $LAYERS_ARGS --environment "$ENV_ARG" >/dev/null
+          aws lambda update-function-configuration --function-name "$FN" --runtime nodejs20.x --handler index.handler --layers $LAYERS_ARGS --environment "$ENV_ARG" >/dev/null
 
           aws lambda wait function-updated --function-name "$FN"
         }

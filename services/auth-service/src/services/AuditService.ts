@@ -9,6 +9,7 @@ import { UserAuditEventRepository } from '../repositories/UserAuditEventReposito
 import { UserAuditAction } from '../domain/enums/UserAuditAction';
 import { UserAuditEvent } from '../domain/entities/UserAuditEvent';
 import { auditEventCreationFailed } from '../auth-errors/factories';
+import { sha256Hex } from '@lawprotect/shared-ts';
 
 /**
  * Generic audit service for all services
@@ -275,14 +276,26 @@ export class AuditService {
     }
   }
 
-  /**
-   * Hashes provider account ID for privacy in audit logs
-   * @param providerAccountId - The provider account ID
-   * @returns Hashed version of the account ID
-   */
+  async userProviderUnlinked(
+    userId: string, 
+    provider: string, 
+    providerAccountId: string, 
+    metadata?: Record<string, unknown>
+  ): Promise<void> {
+    await this.createAuditEvent({
+      userId,
+      action: UserAuditAction.PROFILE_UPDATED,
+      description: `OAuth provider ${provider} unlinked from user account`,
+      metadata: { 
+        source: 'ProviderUnlinking', 
+        provider,
+        providerAccountIdHash: this.hashProviderAccountId(providerAccountId),
+        ...metadata 
+      }
+    });
+  }
+
   private hashProviderAccountId(providerAccountId: string): string {
-    // Simple hash for audit purposes - in production, use crypto.createHash
-    const crypto = require('crypto');
-    return crypto.createHash('sha256').update(providerAccountId).digest('hex').substring(0, 16);
+    return sha256Hex(providerAccountId).substring(0, 16);
   }
 }

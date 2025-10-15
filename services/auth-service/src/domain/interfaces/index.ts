@@ -14,3 +14,4 @@ export * from './UserAccessResult';
 export * from './claims-mapping';
 export * from './user-visibility';
 export * from './provider-linking';
+export * from './admin';

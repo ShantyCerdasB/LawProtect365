@@ -32,9 +32,10 @@ export class ServiceFactory {
    */
   static createUserService(
     userRepository: UserRepository,
-    oauthAccountRepository: OAuthAccountRepository
+    oauthAccountRepository: OAuthAccountRepository,
+    userPersonalInfoRepository: any
   ): UserService {
-    return new UserService(userRepository, oauthAccountRepository);
+    return new UserService(userRepository, oauthAccountRepository, userPersonalInfoRepository);
   }
 
   /**
@@ -42,8 +43,8 @@ export class ServiceFactory {
    * @param cognitoClient - Cognito Identity Provider client
    * @returns Configured CognitoService instance
    */
-  static createCognitoService(cognitoClient: CognitoIdentityProviderClient): CognitoService {
-    return new CognitoService(cognitoClient, this.config.aws.cognito.userPoolId);
+  static createCognitoService(cognitoClient: CognitoIdentityProviderClient, logger: any): CognitoService {
+    return new CognitoService(cognitoClient, this.config.aws.cognito.userPoolId, logger);
   }
 
   /**
@@ -92,13 +93,14 @@ export class ServiceFactory {
    * @param infrastructure - Infrastructure services
    * @returns Object containing all service instances
    */
-  static createAll(repositories: any, infrastructure: any) {
+  static createAll(repositories: any, infrastructure: any, logger: any) {
     return {
       userService: this.createUserService(
         repositories.userRepository,
-        repositories.oauthAccountRepository
+        repositories.oauthAccountRepository,
+        repositories.userPersonalInfoRepository
       ),
-      cognitoService: this.createCognitoService(infrastructure.cognitoClient),
+      cognitoService: this.createCognitoService(infrastructure.cognitoClient, logger),
       auditService: this.createAuditService(repositories.userAuditEventRepository),
       eventPublisherService: infrastructure.eventPublisherService,
       integrationEventPublisher: this.createIntegrationEventPublisher(infrastructure.outboxRepository),

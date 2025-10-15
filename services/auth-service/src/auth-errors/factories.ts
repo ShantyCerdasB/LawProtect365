@@ -265,6 +265,22 @@ export const oauthLoginFailed = (details?: unknown) =>
   new UnauthorizedError("OAuth login failed", AuthErrorCodes.OAUTH_LOGIN_FAILED, details);
 
 // ============================================================================
+// ADMIN ERRORS
+// ============================================================================
+
+/**
+ * Creates a ForbiddenError for insufficient admin permissions (403).
+ */
+export const insufficientAdminPermissions = (details?: unknown) =>
+  new ForbiddenError("Insufficient admin permissions", AuthErrorCodes.INSUFFICIENT_ADMIN_PERMISSIONS, details);
+
+/**
+ * Creates a BadRequestError for invalid admin query parameters (400).
+ */
+export const invalidAdminQuery = (details?: unknown) =>
+  new BadRequestError("Invalid admin query parameters", AuthErrorCodes.INVALID_ADMIN_QUERY, details);
+
+// ============================================================================
 // COGNITO ERRORS
 // ============================================================================
 

@@ -8,3 +8,5 @@ export * from './LinkProviderRequest';
 export * from './LinkProviderResponse';
 export * from './ProviderIdentity';
 export * from './LinkProviderResult';
+export * from './UnlinkProviderRequest';
+export * from './UnlinkProviderResponse';

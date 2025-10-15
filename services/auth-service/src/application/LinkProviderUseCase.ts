@@ -41,12 +41,6 @@ export class LinkProviderUseCase {
    */
   async execute(input: LinkProviderRequest): Promise<LinkProviderResponse> {
     const { mode, provider } = input;
-    
-    this.logger.info('Starting provider linking use case', { 
-      mode, 
-      provider,
-      userId: 'extracted-from-token' // Will be extracted from security context
-    });
 
     try {
       // Validate provider and mode
@@ -148,7 +142,7 @@ export class LinkProviderUseCase {
 
     // Validate state parameter
     if (!ProviderLinkingRules.validateState(state, this.config)) {
-      throw new Error('Invalid or expired state parameter');
+      throw oauthAccountLinkingFailed('Invalid or expired state parameter');
     }
 
     // Validate and extract provider identity
@@ -187,18 +181,17 @@ export class LinkProviderUseCase {
 
     // Validate provider account ID format
     if (!ProviderLinkingRules.validateProviderAccountId(provider, providerAccountId)) {
-      throw new Error(`Invalid provider account ID format for ${provider}`);
+      throw oauthAccountLinkingFailed(`Invalid provider account ID format for ${provider}`);
     }
 
-    // Get current user (this would come from security context in real implementation)
     const currentUser = await this.userService.findByCognitoSub('current-user-sub');
     if (!currentUser) {
-      throw new Error('Current user not found');
+      throw oauthAccountLinkingFailed('Current user not found');
     }
 
     // Check if linking is allowed for this user
     if (!ProviderLinkingRules.shouldAllowLinking(currentUser, provider)) {
-      throw new Error('Linking not allowed for this user');
+      throw oauthAccountLinkingFailed('Linking not allowed for this user');
     }
 
     // Check for existing OAuth account
@@ -240,7 +233,7 @@ export class LinkProviderUseCase {
     this.logger.info('Provider linked successfully', { 
       provider, 
       userId: currentUser.getId().toString(),
-      providerAccountId: providerAccountId.substring(0, 8) + '...' // Partial for logging
+      providerAccountId: providerAccountId.substring(0, 8) + '...'
     });
 
     return {
@@ -321,7 +314,6 @@ export class LinkProviderUseCase {
         userId: user.getId().toString(),
         error: error instanceof Error ? error.message : String(error)
       });
-      // Don't throw - audit failure shouldn't block the operation
     }
   }
 
@@ -339,7 +331,6 @@ export class LinkProviderUseCase {
         userId: user.getId().toString(),
         error: error instanceof Error ? error.message : String(error)
       });
-      // Don't throw - event publishing failure shouldn't block the operation
     }
   }
 

@@ -17,3 +17,8 @@ export * from './CognitoAttribute';
 export * from './IncludeFlag';
 export * from './LinkingMode';
 export * from './ProviderLinkingStatus';
+export * from './UnlinkingMode';
+export * from './ProviderUnlinkingStatus';
+export * from './AdminSortField';
+export * from './SortDirection';
+export * from './AdminIncludeField';

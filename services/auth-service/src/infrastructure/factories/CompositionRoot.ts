@@ -83,10 +83,10 @@ export class CompositionRoot {
     const repositories = RepositoryFactory.createAll();
 
     // Create infrastructure services
-    const infrastructure = AwsClientFactory.createAll();
+    const infrastructure = AwsClientFactory.createAll(logger);
 
     // Create domain services
-    const services = ServiceFactory.createAll(repositories, infrastructure);
+    const services = ServiceFactory.createAll(repositories, infrastructure, logger);
 
     return new CompositionRoot(
       logger,
@@ -107,7 +107,8 @@ export class CompositionRoot {
 
     const logger = createServiceLogger();
     const repositories = RepositoryFactory.createAll();
-    const services = ServiceFactory.createAll(repositories, AwsClientFactory.createAll());
+    const infrastructure = AwsClientFactory.createAll(logger);
+    const services = ServiceFactory.createAll(repositories, infrastructure, logger);
 
     return new GetMeUseCase(
       services.userService,
@@ -128,7 +129,8 @@ export class CompositionRoot {
     const logger = createServiceLogger();
     const config = loadConfig();
     const repositories = RepositoryFactory.createAll();
-    const services = ServiceFactory.createAll(repositories, AwsClientFactory.createAll());
+    const infrastructure = AwsClientFactory.createAll(logger);
+    const services = ServiceFactory.createAll(repositories, infrastructure, logger);
 
     return new LinkProviderUseCase(
       services.userService,

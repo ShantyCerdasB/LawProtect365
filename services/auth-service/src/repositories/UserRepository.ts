@@ -17,6 +17,7 @@ import { User } from '../domain/entities/User';
 import { UserId } from '../domain/value-objects/UserId';
 import { UserRole, UserAccountStatus } from '../domain/enums';
 import { UserSpec } from '../domain/interfaces/UserSpec';
+import { AdminUserQuery, AdminUserResponse } from '../domain/interfaces/admin';
 import { repositoryError } from '../auth-errors/factories';
 
 type UserRow = Prisma.UserGetPayload<{}>;
@@ -391,5 +392,160 @@ export class UserRepository extends RepositoryBase<User, UserId, UserSpec> {
         cause: error
       });
     }
+  }
+
+  /**
+   * Lists users for admin with advanced filtering and pagination
+   * @param query - Admin query parameters
+   * @param viewerRole - Role of the user making the request
+   * @returns Paginated admin user response
+   */
+  async listForAdmin(query: AdminUserQuery, viewerRole: UserRole): Promise<AdminUserResponse> {
+    try {
+      const where = this.buildAdminWhereClause(query, viewerRole);
+      const orderBy = this.buildAdminOrderBy(query);
+      
+      const [users, totalCount] = await Promise.all([
+        this.prisma.user.findMany({
+          where,
+          orderBy,
+          take: query.limit || 25,
+          skip: query.cursor ? 1 : 0,
+          cursor: query.cursor ? { id: query.cursor } : undefined,
+          include: {
+            personalInfo: query.include?.includes('profile') || false,
+            oauthAccounts: query.include?.includes('idp') || false
+          }
+        }),
+        this.prisma.user.count({ where })
+      ]);
+
+      const items = users.map(user => this.mapToAdminUserItem(user));
+      const hasMore = users.length === (query.limit || 25);
+      const nextCursor = hasMore ? users[users.length - 1]?.id : null;
+
+      return {
+        items,
+        pageInfo: {
+          nextCursor,
+          limit: query.limit || 25,
+          hasMore
+        },
+        summary: {
+          count: totalCount
+        }
+      };
+    } catch (error) {
+      throw repositoryError({
+        operation: 'listForAdmin',
+        query,
+        cause: error
+      });
+    }
+  }
+
+  private buildAdminWhereClause(query: AdminUserQuery, viewerRole: UserRole): Prisma.UserWhereInput {
+    const where: Prisma.UserWhereInput = {};
+
+    // Apply role visibility rules
+    const visibleRoles = viewerRole === UserRole.SUPER_ADMIN 
+      ? Object.values(UserRole)
+      : Object.values(UserRole).filter(role => role !== UserRole.SUPER_ADMIN);
+    
+    where.role = { in: visibleRoles };
+
+    // Text search
+    if (query.q) {
+      where.OR = [
+        { email: { contains: query.q, mode: 'insensitive' } },
+        { name: { contains: query.q, mode: 'insensitive' } },
+        { givenName: { contains: query.q, mode: 'insensitive' } },
+        { lastName: { contains: query.q, mode: 'insensitive' } }
+      ];
+    }
+
+    // Role filter
+    if (query.role?.length) {
+      where.role = { in: query.role };
+    }
+
+    // Status filter (exclude DELETED by default if not specified)
+    if (query.status?.length) {
+      where.status = { in: query.status };
+    } else {
+      where.status = { not: UserAccountStatus.DELETED };
+    }
+
+    // MFA filter
+    if (query.mfa) {
+      where.mfaEnabled = query.mfa === 'enabled';
+    }
+
+    // Date ranges
+    if (query.createdFrom || query.createdTo) {
+      where.createdAt = {
+        ...(query.createdFrom && { gte: new Date(query.createdFrom) }),
+        ...(query.createdTo && { lte: new Date(query.createdTo) })
+      };
+    }
+
+    if (query.lastLoginFrom || query.lastLoginTo) {
+      where.lastLoginAt = {
+        ...(query.lastLoginFrom && { gte: new Date(query.lastLoginFrom) }),
+        ...(query.lastLoginTo && { lte: new Date(query.lastLoginTo) })
+      };
+    }
+
+    // Provider filter
+    if (query.provider?.length) {
+      where.oauthAccounts = {
+        some: {
+          provider: { in: query.provider }
+        }
+      };
+    }
+
+    return where;
+  }
+
+  private buildAdminOrderBy(query: AdminUserQuery): Prisma.UserOrderByWithRelationInput {
+    const sortBy = query.sortBy || 'createdAt';
+    const sortDir = query.sortDir || 'desc';
+
+    const orderBy: Prisma.UserOrderByWithRelationInput = {};
+    orderBy[sortBy] = sortDir;
+    orderBy.id = 'asc'; // Stable sort
+
+    return orderBy;
+  }
+
+  private mapToAdminUserItem(user: any): any {
+    return {
+      id: user.id,
+      cognitoSub: user.cognitoSub,
+      email: user.email,
+      name: user.name,
+      givenName: user.givenName,
+      lastName: user.lastName,
+      role: user.role,
+      status: user.status,
+      mfaEnabled: user.mfaEnabled,
+      lastLoginAt: user.lastLoginAt?.toISOString() || null,
+      createdAt: user.createdAt.toISOString(),
+      updatedAt: user.updatedAt.toISOString(),
+      ...(user.personalInfo && {
+        personalInfo: {
+          phone: user.personalInfo.phone,
+          locale: user.personalInfo.locale,
+          timeZone: user.personalInfo.timeZone
+        }
+      }),
+      ...(user.oauthAccounts && {
+        providers: user.oauthAccounts.map((account: any) => ({
+          provider: account.provider,
+          linkedAt: account.createdAt.toISOString()
+        }))
+      })
+    };
   }
 }

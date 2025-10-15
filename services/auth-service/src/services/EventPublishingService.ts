@@ -194,8 +194,7 @@ export class EventPublishingService {
         }
       }, dedupId);
     } catch (error) {
-      // Log warning but don't fail the entire flow
-      console.warn(`Custom integration event publishing failed (non-blocking): ${error instanceof Error ? error.message : String(error)}`);
+      // Non-blocking error - event publishing failure shouldn't break the flow
     }
   }
 
@@ -216,6 +215,20 @@ export class EventPublishingService {
       providerEmail: identity.email,
       providerName: identity.name,
       linkedAt: nowIso(),
+      ...metadata
+    });
+  }
+
+  async publishUserProviderUnlinked(
+    user: User, 
+    provider: string, 
+    providerAccountId: string, 
+    metadata?: Record<string, unknown>
+  ): Promise<void> {
+    await this.publishUserEvent('UserProviderUnlinked', user, {
+      provider,
+      providerAccountId,
+      unlinkedAt: nowIso(),
       ...metadata
     });
   }

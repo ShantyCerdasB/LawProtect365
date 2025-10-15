@@ -10,6 +10,7 @@ import { PrismaClient } from '@prisma/client';
 import { UserRepository } from '../../repositories/UserRepository';
 import { OAuthAccountRepository } from '../../repositories/OAuthAccountRepository';
 import { UserAuditEventRepository } from '../../repositories/UserAuditEventRepository';
+import { UserPersonalInfoRepository } from '../../repositories/UserPersonalInfoRepository';
 
 /**
  * Factory responsible for creating all repository instances.
@@ -55,6 +56,10 @@ export class RepositoryFactory {
     return new UserAuditEventRepository(this.createPrismaClient());
   }
 
+  static createUserPersonalInfoRepository(): UserPersonalInfoRepository {
+    return new UserPersonalInfoRepository(this.createPrismaClient());
+  }
+
   /**
    * Creates all repositories in a single operation
    * @returns Object containing all repository instances
@@ -64,6 +69,7 @@ export class RepositoryFactory {
       userRepository: this.createUserRepository(),
       oauthAccountRepository: this.createOAuthAccountRepository(),
       userAuditEventRepository: this.createUserAuditEventRepository(),
+      userPersonalInfoRepository: this.createUserPersonalInfoRepository(),
     };
   }
 }

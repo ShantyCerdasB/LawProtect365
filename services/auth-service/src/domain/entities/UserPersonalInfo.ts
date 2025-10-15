@@ -1,143 +1,102 @@
 /**
- * @fileoverview UserPersonalInfo entity - Personal information for users
- * @summary Manages user personal information like phone, locale, timezone
- * @description The UserPersonalInfo entity encapsulates personal information
- * that can grow over time without affecting the core User entity.
+ * @fileoverview UserPersonalInfo - Domain entity for user personal information
+ * @summary Entity representing user's personal information like phone, locale, timezone
+ * @description This entity handles user personal information that is separate from core user data
+ * to maintain privacy and allow optional personalization features.
  */
 
 import { UserId } from '../value-objects/UserId';
 
-/**
- * UserPersonalInfo entity representing personal user information
- * 
- * Manages personal information like phone, locale, timezone that can
- * be extended without affecting the core User entity.
- */
 export class UserPersonalInfo {
   constructor(
     private readonly id: string,
     private readonly userId: UserId,
-    private phone: string | undefined,
-    private locale: string | undefined,
-    private timeZone: string | undefined,
+    private readonly phone: string | null,
+    private readonly locale: string | null,
+    private readonly timeZone: string | null,
     private readonly createdAt: Date,
-    private updatedAt: Date
+    private readonly updatedAt: Date
   ) {}
 
   /**
-   * Creates a UserPersonalInfo from persistence data
-   * @param data - Prisma UserPersonalInfo data
-   * @returns UserPersonalInfo instance
+   * Creates UserPersonalInfo from persistence model
+   * @param data - Persistence model data
+   * @returns UserPersonalInfo entity
    */
   static fromPersistence(data: any): UserPersonalInfo {
     return new UserPersonalInfo(
       data.id,
       UserId.fromString(data.userId),
-      data.phone ?? undefined,
-      data.locale ?? undefined,
-      data.timeZone ?? undefined,
-      data.createdAt,
-      data.updatedAt
+      data.phone,
+      data.locale,
+      data.timeZone,
+      new Date(data.createdAt),
+      new Date(data.updatedAt)
     );
   }
 
   /**
-   * Gets the personal info unique identifier
-   * @returns The personal info ID
+   * Converts entity to persistence model
+   * @returns Persistence model data
    */
+  toPersistence(): any {
+    return {
+      id: this.id,
+      userId: this.userId.toString(),
+      phone: this.phone,
+      locale: this.locale,
+      timeZone: this.timeZone,
+      createdAt: this.createdAt,
+      updatedAt: this.updatedAt
+    };
+  }
+
   getId(): string {
     return this.id;
   }
 
-  /**
-   * Gets the associated user ID
-   * @returns The user ID value object
-   */
   getUserId(): UserId {
     return this.userId;
   }
 
-  /**
-   * Gets the user phone number
-   * @returns The phone number or undefined
-   */
-  getPhone(): string | undefined {
+  getPhone(): string | null {
     return this.phone;
   }
 
-  /**
-   * Gets the user locale
-   * @returns The locale or undefined
-   */
-  getLocale(): string | undefined {
+  getLocale(): string | null {
     return this.locale;
   }
 
-  /**
-   * Gets the user timezone
-   * @returns The timezone or undefined
-   */
-  getTimeZone(): string | undefined {
+  getTimeZone(): string | null {
     return this.timeZone;
   }
 
-  /**
-   * Gets the creation timestamp
-   * @returns The creation timestamp
-   */
   getCreatedAt(): Date {
     return this.createdAt;
   }
 
-  /**
-   * Gets the last update timestamp
-   * @returns The last update timestamp
-   */
   getUpdatedAt(): Date {
     return this.updatedAt;
   }
 
   /**
-   * Updates the phone number
-   * @param phone - New phone number
+   * Updates personal information
+   * @param updates - Partial updates for personal info
+   * @returns New UserPersonalInfo with updates
    */
-  updatePhone(phone: string | undefined): void {
-    this.phone = phone;
-    this.updatedAt = new Date();
-  }
-
-  /**
-   * Updates the locale
-   * @param locale - New locale
-   */
-  updateLocale(locale: string | undefined): void {
-    this.locale = locale;
-    this.updatedAt = new Date();
-  }
-
-  /**
-   * Updates the timezone
-   * @param timeZone - New timezone
-   */
-  updateTimeZone(timeZone: string | undefined): void {
-    this.timeZone = timeZone;
-    this.updatedAt = new Date();
-  }
-
-  /**
-   * Updates all personal information
-   * @param phone - New phone number
-   * @param locale - New locale
-   * @param timeZone - New timezone
-   */
-  updatePersonalInfo(
-    phone: string | undefined,
-    locale: string | undefined,
-    timeZone: string | undefined
-  ): void {
-    this.phone = phone;
-    this.locale = locale;
-    this.timeZone = timeZone;
-    this.updatedAt = new Date();
+  update(updates: {
+    phone?: string | null;
+    locale?: string | null;
+    timeZone?: string | null;
+  }): UserPersonalInfo {
+    return new UserPersonalInfo(
+      this.id,
+      this.userId,
+      updates.phone !== undefined ? updates.phone : this.phone,
+      updates.locale !== undefined ? updates.locale : this.locale,
+      updates.timeZone !== undefined ? updates.timeZone : this.timeZone,
+      this.createdAt,
+      new Date()
+    );
   }
 }

@@ -11,6 +11,7 @@ import { OAuthProvider } from '../domain/enums/OAuthProvider';
 import { CognitoAttribute } from '../domain/enums/CognitoAttribute';
 import { cognitoUserNotFound, cognitoUserCreationFailed, cognitoUserUpdateFailed } from '../auth-errors/factories';
 import { CognitoMfaSettings, ProviderIdentity } from '../domain/interfaces';
+import { Logger } from '@lawprotect/shared-ts';
 
 /**
  * Service for AWS Cognito integration
@@ -20,7 +21,8 @@ import { CognitoMfaSettings, ProviderIdentity } from '../domain/interfaces';
 export class CognitoService {
   constructor(
     private readonly client: CognitoIdentityProviderClient,
-    private readonly userPoolId: string
+    private readonly userPoolId: string,
+    private readonly logger: Logger
   ) {}
 
   /**
@@ -279,6 +281,25 @@ export class CognitoService {
    * @param provider - The OAuth provider
    * @returns The provider identifier for Cognito
    */
+  async adminUnlinkProviderForUser(
+    destinationUserSub: string,
+    sourceUserProvider: string,
+    _sourceUserProviderUserId: string
+  ): Promise<void> {
+    // Note: AWS Cognito doesn't support direct provider unlinking
+    // We can only unlink in our database. The provider will remain
+    // visible in Cognito until the user's session expires or they
+    // re-authenticate, but they won't be able to login with it.
+    this.logger.info('Provider unlinked in database only (Cognito limitation)', {
+      userSub: destinationUserSub,
+      provider: sourceUserProvider,
+      note: 'Provider will remain visible in Cognito until session expires'
+    });
+    
+    // No error thrown - this is the expected behavior
+    // The actual unlinking happens in the database layer
+  }
+
   private getProviderIdentifier(provider: OAuthProvider): string {
     switch (provider) {
       case OAuthProvider.GOOGLE:

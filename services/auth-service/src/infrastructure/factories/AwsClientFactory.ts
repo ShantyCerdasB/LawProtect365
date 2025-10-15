@@ -16,6 +16,7 @@ import {
   EventPublisherService,
   DynamoDBClientAdapter,
   EventBridgeClientAdapter,
+  Logger,
 } from '@lawprotect/shared-ts';
 
 import { loadConfig } from '../../config/AppConfig';
@@ -98,7 +99,7 @@ export class AwsClientFactory {
    * Creates all AWS clients in a single operation
    * @returns Object containing all AWS client instances
    */
-  static createAll() {
+  static createAll(logger: Logger) {
     return {
       cognitoClient: this.createCognitoClient(),
       eventBridgeClient: this.createEventBridgeClient(),
@@ -106,6 +107,7 @@ export class AwsClientFactory {
       outboxRepository: this.createOutboxRepository(),
       eventBridgeAdapter: this.createEventBridgeAdapter(),
       eventPublisherService: this.createEventPublisherService(),
+      logger,
     };
   }
 }

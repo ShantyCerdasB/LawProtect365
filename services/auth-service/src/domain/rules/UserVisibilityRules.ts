@@ -48,12 +48,19 @@ export class UserVisibilityRules {
   /**
    * Get personal information for the user
    * @param user - The user entity
+   * @param personalInfo - UserPersonalInfo entity or null
    * @returns Personal information or null if not available
    */
-  static getPersonalInfo(_user: User): PersonalInfo | null {
-    // TODO: Implement when UserPersonalInfo entity is available
-    // For now, return null as personal info is not yet implemented
-    return null;
+  static getPersonalInfo(_user: User, personalInfo: any | null): PersonalInfo | null {
+    if (!personalInfo) {
+      return null;
+    }
+
+    return {
+      phone: personalInfo.getPhone(),
+      locale: personalInfo.getLocale(),
+      timeZone: personalInfo.getTimeZone()
+    };
   }
 
   /**

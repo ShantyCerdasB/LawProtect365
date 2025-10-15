@@ -7,6 +7,7 @@
 
 import { UserRepository } from '../repositories/UserRepository';
 import { OAuthAccountRepository } from '../repositories/OAuthAccountRepository';
+import { UserPersonalInfoRepository } from '../repositories/UserPersonalInfoRepository';
 import { UserRole, UserAccountStatus } from '../domain/enums';
 import { User } from '../domain/entities/User';
 import { UserId } from '../domain/value-objects/UserId';
@@ -14,6 +15,7 @@ import { Email } from '@lawprotect/shared-ts';
 import { userCreationFailed, userUpdateFailed } from '../auth-errors/factories';
 import { OAuthProvider } from '../domain/enums/OAuthProvider';
 import { UpsertOnPostAuthInput, UpsertOnPostAuthResult } from '../types/UserServiceTypes';
+import { UserPersonalInfo } from '../domain/entities/UserPersonalInfo';
 
 /**
  * Service for user business logic orchestration
@@ -23,7 +25,8 @@ import { UpsertOnPostAuthInput, UpsertOnPostAuthResult } from '../types/UserServ
 export class UserService {
   constructor(
     private readonly userRepository: UserRepository,
-    private readonly oauthAccountRepository: OAuthAccountRepository
+    private readonly oauthAccountRepository: OAuthAccountRepository,
+    private readonly userPersonalInfoRepository: UserPersonalInfoRepository
   ) {}
 
   /**
@@ -233,5 +236,49 @@ export class UserService {
       default:
         return UserAccountStatus.ACTIVE;
     }
+  }
+
+  /**
+   * Gets user personal information
+   * @param userId - The user ID
+   * @returns UserPersonalInfo or null
+   */
+  async getPersonalInfo(userId: UserId): Promise<any | null> {
+    return await this.userPersonalInfoRepository.findByUserId(userId);
+  }
+
+  /**
+   * Updates user personal information
+   * @param userId - The user ID
+   * @param personalInfo - Personal info updates
+   * @returns Updated UserPersonalInfo
+   */
+  async updatePersonalInfo(userId: UserId, personalInfo: {
+    phone?: string | null;
+    locale?: string | null;
+    timeZone?: string | null;
+  }): Promise<any> {
+    const existing = await this.userPersonalInfoRepository.findByUserId(userId);
+    
+    if (existing) {
+      const updated = existing.update(personalInfo);
+      return await this.userPersonalInfoRepository.update(updated.getId(), updated);
+    } else {
+      // Create new personal info
+      const newPersonalInfo = new UserPersonalInfo(
+        this.generateId(),
+        userId,
+        personalInfo.phone || null,
+        personalInfo.locale || null,
+        personalInfo.timeZone || null,
+        new Date(),
+        new Date()
+      );
+      return await this.userPersonalInfoRepository.create(newPersonalInfo);
+    }
+  }
+
+  private generateId(): string {
+    return require('crypto').randomUUID();
   }
 }

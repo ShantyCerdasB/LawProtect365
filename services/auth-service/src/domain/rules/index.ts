@@ -13,3 +13,5 @@ export * from './ClaimsMappingRules';
 export * from './UserRegistrationRules';
 export * from './UserVisibilityRules';
 export * from './ProviderLinkingRules';
+export * from './ProviderUnlinkingRules';
+export * from './AdminVisibilityRules';

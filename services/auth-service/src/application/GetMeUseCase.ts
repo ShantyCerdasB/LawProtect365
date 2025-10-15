@@ -54,8 +54,11 @@ export class GetMeUseCase {
         : undefined;
       
       // 3. Get personal info if requested
+      const userPersonalInfo = flags.getProfile()
+        ? await this.userService.getPersonalInfo(user.getId())
+        : null;
       const personalInfo = flags.getProfile()
-        ? UserVisibilityRules.getPersonalInfo(user)
+        ? UserVisibilityRules.getPersonalInfo(user, userPersonalInfo)
         : undefined;
       
       // 4. Get claims if requested
