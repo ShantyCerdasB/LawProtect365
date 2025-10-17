@@ -10,6 +10,7 @@ import { RepositoryBase } from '@lawprotect/shared-ts';
 import { UserPersonalInfo } from '../domain/entities/UserPersonalInfo';
 import { UserId } from '../domain/value-objects/UserId';
 import { repositoryError } from '../auth-errors/factories';
+import { uuid } from '@lawprotect/shared-ts';
 
 export class UserPersonalInfoRepository extends RepositoryBase<UserPersonalInfo, string, any> {
   constructor(protected readonly prisma: PrismaClient) {
@@ -209,4 +210,61 @@ export class UserPersonalInfoRepository extends RepositoryBase<UserPersonalInfo,
       });
     }
   }
+
+  /**
+   * Upserts personal info by user ID
+   * @param userId - User ID
+   * @param personalInfoData - Personal info data to upsert
+   * @returns Upserted personal info entity
+   */
+  async upsertByUserId(
+    userId: UserId,
+    personalInfoData: {
+      phone?: string;
+      locale?: string;
+      timeZone?: string;
+    }
+  ): Promise<UserPersonalInfo> {
+    try {
+      // Check if personal info exists
+      const existing = await this.findByUserId(userId);
+      
+      if (existing) {
+        // Update existing
+        if (personalInfoData.phone !== undefined) {
+          (existing as any).phone = personalInfoData.phone;
+        }
+        if (personalInfoData.locale !== undefined) {
+          (existing as any).locale = personalInfoData.locale;
+        }
+        if (personalInfoData.timeZone !== undefined) {
+          (existing as any).timeZone = personalInfoData.timeZone;
+        }
+        
+        (existing as any).updatedAt = new Date();
+        
+        return await this.update(existing.getId(), existing);
+      } else {
+        // Create new
+        const personalInfo = new UserPersonalInfo(
+          uuid(),
+          userId,
+          personalInfoData.phone || null,
+          personalInfoData.locale || null,
+          personalInfoData.timeZone || null,
+          new Date(),
+          new Date()
+        );
+        
+        return await this.create(personalInfo);
+      }
+    } catch (error) {
+      throw repositoryError({
+        operation: 'upsertByUserId',
+        userId: userId.toString(),
+        cause: error
+      });
+    }
+  }
+
 }

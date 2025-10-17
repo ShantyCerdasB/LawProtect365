@@ -50,6 +50,29 @@ export class AuditService {
   }
 
   /**
+   * Records user profile update audit event
+   * @param userId - User ID
+   * @param changedFields - Array of fields that were changed
+   * @param metadata - Additional metadata
+   */
+  async userProfileUpdated(
+    userId: string, 
+    changedFields: string[], 
+    metadata?: Record<string, unknown>
+  ): Promise<void> {
+    await this.createAuditEvent({
+      userId,
+      action: UserAuditAction.PROFILE_UPDATED,
+      description: `User profile updated: ${changedFields.join(', ')}`,
+      metadata: { 
+        source: 'PatchMeUseCase', 
+        changedFields,
+        ...metadata 
+      }
+    });
+  }
+
+  /**
    * Records MFA enabled audit event
    * @param userId - User ID
    * @param metadata - Additional metadata
@@ -290,6 +313,64 @@ export class AuditService {
         source: 'ProviderUnlinking', 
         provider,
         providerAccountIdHash: this.hashProviderAccountId(providerAccountId),
+        ...metadata 
+      }
+    });
+  }
+
+  /**
+   * Records user status change audit event
+   * @param userId - User ID
+   * @param oldStatus - Previous status
+   * @param newStatus - New status
+   * @param actorId - Actor who made the change
+   * @param metadata - Additional metadata
+   */
+  async userStatusChanged(
+    userId: string,
+    oldStatus: string,
+    newStatus: string,
+    actorId?: string,
+    metadata?: Record<string, unknown>
+  ): Promise<void> {
+    await this.createAuditEvent({
+      userId,
+      action: UserAuditAction.ACCOUNT_STATUS_CHANGED,
+      description: `User status changed from ${oldStatus} to ${newStatus}`,
+      actorId,
+      metadata: { 
+        oldStatus, 
+        newStatus, 
+        source: 'AdminStatusChange',
+        ...metadata 
+      }
+    });
+  }
+
+  /**
+   * Records user role change audit event
+   * @param userId - User ID
+   * @param oldRole - Previous role
+   * @param newRole - New role
+   * @param actorId - Actor who made the change
+   * @param metadata - Additional metadata
+   */
+  async userRoleChanged(
+    userId: string,
+    oldRole: string,
+    newRole: string,
+    actorId?: string,
+    metadata?: Record<string, unknown>
+  ): Promise<void> {
+    await this.createAuditEvent({
+      userId,
+      action: UserAuditAction.ROLE_ASSIGNED,
+      description: `User role changed from ${oldRole} to ${newRole}`,
+      actorId,
+      metadata: { 
+        oldRole, 
+        newRole, 
+        source: 'AdminRoleChange',
         ...metadata 
       }
     });

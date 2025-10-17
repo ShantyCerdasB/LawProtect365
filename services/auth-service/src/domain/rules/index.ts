@@ -14,4 +14,6 @@ export * from './UserRegistrationRules';
 export * from './UserVisibilityRules';
 export * from './ProviderLinkingRules';
 export * from './ProviderUnlinkingRules';
+export * from './UserLifecycleRules';
+export * from './AdminStatusChangeRules';
 export * from './AdminVisibilityRules';

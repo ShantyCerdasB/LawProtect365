@@ -50,7 +50,7 @@ export class Policy {
 /**
  * Allows all actions for super administrators.
  */
-export const allowSuperAdmin: PolicyRule = (s) => hasRole(s.roles, "super_admin");
+export const allowSuperAdmin: PolicyRule = (s) => hasRole(s.roles, "SUPER_ADMIN");
 
 
 /**

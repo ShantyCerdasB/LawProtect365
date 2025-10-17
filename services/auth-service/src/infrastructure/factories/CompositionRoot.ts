@@ -12,6 +12,14 @@ import { AwsClientFactory } from './AwsClientFactory';
 import { loadConfig } from '../../config/AppConfig';
 import { createServiceLogger } from '../../utils/logger';
 import { Logger } from '@lawprotect/shared-ts';
+import { GetMeUseCase } from '../../application/GetMeUseCase';
+import { LinkProviderUseCase } from '../../application/LinkProviderUseCase';
+import { UnlinkProviderUseCase } from '../../application/UnlinkProviderUseCase';
+import { GetUsersAdminUseCase } from '../../application/admin/GetUsersAdminUseCase';
+import { GetUserByIdAdminUseCase } from '../../application/admin/GetUserByIdAdminUseCase';
+import { SetUserStatusAdminUseCase } from '../../application/admin/SetUserStatusAdminUseCase';
+import { SetUserRoleAdminUseCase } from '../../application/admin/SetUserRoleAdminUseCase';
+import { PatchMeUseCase } from '../../application/users/PatchMeUseCase';
 
 /**
  * Main composition root that assembles the complete object graph for the auth service.
@@ -29,6 +37,7 @@ export class CompositionRoot {
   public readonly userAuditEventRepository: any;
   public readonly getMeUseCase: any;
   public readonly linkProviderUseCase: any;
+  public readonly unlinkProviderUseCase: any;
 
   private constructor(
     logger: Logger,
@@ -48,7 +57,6 @@ export class CompositionRoot {
     this.userAuditEventRepository = repositories.userAuditEventRepository;
     
     // Create GetMeUseCase
-    const { GetMeUseCase } = require('../../application/GetMeUseCase');
     this.getMeUseCase = new GetMeUseCase(
       services.userService,
       repositories.oauthAccountRepository,
@@ -56,8 +64,18 @@ export class CompositionRoot {
     );
 
     // Create LinkProviderUseCase
-    const { LinkProviderUseCase } = require('../../application/LinkProviderUseCase');
     this.linkProviderUseCase = new LinkProviderUseCase(
+      services.userService,
+      services.cognitoService,
+      repositories.oauthAccountRepository,
+      services.auditService,
+      services.eventPublishingService,
+      config,
+      logger
+    );
+
+    // Create UnlinkProviderUseCase
+    this.unlinkProviderUseCase = new UnlinkProviderUseCase(
       services.userService,
       services.cognitoService,
       repositories.oauthAccountRepository,
@@ -102,9 +120,6 @@ export class CompositionRoot {
    * @returns GetMeUseCase instance
    */
   static createGetMeUseCase(): any {
-    const { GetMeUseCase } = require('../../application/GetMeUseCase');
-    const { createServiceLogger } = require('../../utils/logger');
-
     const logger = createServiceLogger();
     const repositories = RepositoryFactory.createAll();
     const infrastructure = AwsClientFactory.createAll(logger);
@@ -122,10 +137,6 @@ export class CompositionRoot {
    * @returns LinkProviderUseCase instance
    */
   static createLinkProviderUseCase(): any {
-    const { LinkProviderUseCase } = require('../../application/LinkProviderUseCase');
-    const { createServiceLogger } = require('../../utils/logger');
-    const { loadConfig } = require('../../config/AppConfig');
-
     const logger = createServiceLogger();
     const config = loadConfig();
     const repositories = RepositoryFactory.createAll();
@@ -144,18 +155,107 @@ export class CompositionRoot {
   }
 
   /**
+   * Creates UnlinkProviderUseCase instance
+   * @returns UnlinkProviderUseCase instance
+   */
+  static createUnlinkProviderUseCase(): any {
+    const logger = createServiceLogger();
+    const config = loadConfig();
+    const repositories = RepositoryFactory.createAll();
+    const infrastructure = AwsClientFactory.createAll(logger);
+    const services = ServiceFactory.createAll(repositories, infrastructure, logger);
+
+    return new UnlinkProviderUseCase(
+      services.userService,
+      services.cognitoService,
+      repositories.oauthAccountRepository,
+      services.auditService,
+      services.eventPublishingService,
+      config,
+      logger
+    );
+  }
+
+  /**
    * Creates GetUsersAdminUseCase instance
    * @returns Configured GetUsersAdminUseCase instance
    */
-  static createGetUsersAdminUseCase(): GetUsersAdminUseCase {
-    const { GetUsersAdminUseCase } = require('../../application/admin/GetUsersAdminUseCase');
-    const { createServiceLogger } = require('../../utils/logger');
-
+  static createGetUsersAdminUseCase(): any {
     const logger = createServiceLogger();
     const repositories = RepositoryFactory.createAll();
 
     return new GetUsersAdminUseCase(
       repositories.userRepository,
+      logger
+    );
+  }
+
+  /**
+   * Creates SetUserStatusAdminUseCase instance
+   * @returns Configured SetUserStatusAdminUseCase instance
+   */
+  static createSetUserStatusAdminUseCase(): any {
+    const logger = createServiceLogger();
+    const repositories = RepositoryFactory.createAll();
+    const infrastructure = AwsClientFactory.createAll(logger);
+    const services = ServiceFactory.createAll(repositories, infrastructure, logger);
+
+    return new SetUserStatusAdminUseCase(
+      services.userService,
+      services.cognitoService,
+      services.auditService,
+      services.eventPublishingService,
+      repositories.userRepository,
+      logger
+    );
+  }
+
+  /**
+   * Creates SetUserRoleAdminUseCase with all dependencies
+   * @returns Configured SetUserRoleAdminUseCase instance
+   */
+  static createSetUserRoleAdminUseCase(): SetUserRoleAdminUseCase {
+    const logger = createServiceLogger();
+    const repositories = RepositoryFactory.createAll();
+    const infrastructure = AwsClientFactory.createAll(logger);
+    const services = ServiceFactory.createAll(repositories, infrastructure, logger);
+
+    return new SetUserRoleAdminUseCase(
+      services.userService,
+      services.cognitoService,
+      services.auditService,
+      repositories.userRepository,
+      logger
+    );
+  }
+
+  /**
+   * Creates GetUserByIdAdminUseCase with all dependencies
+   * @returns Configured GetUserByIdAdminUseCase instance
+   */
+  static createGetUserByIdAdminUseCase(): GetUserByIdAdminUseCase {
+    const logger = createServiceLogger();
+    const repositories = RepositoryFactory.createAll();
+
+    return new GetUserByIdAdminUseCase(
+      repositories.userRepository,
+      logger
+    );
+  }
+
+  /**
+   * Creates PatchMeUseCase with all dependencies
+   * @returns Configured PatchMeUseCase instance
+   */
+  static createPatchMeUseCase(): PatchMeUseCase {
+    const logger = createServiceLogger();
+    const repositories = RepositoryFactory.createAll();
+    const infrastructure = AwsClientFactory.createAll(logger);
+    const services = ServiceFactory.createAll(repositories, infrastructure, logger);
+
+    return new PatchMeUseCase(
+      services.userService,
+      services.auditService,
       logger
     );
   }

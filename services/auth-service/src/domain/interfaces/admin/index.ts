@@ -6,3 +6,5 @@
 
 export * from './AdminUserQuery';
 export * from './AdminUserResponse';
+export * from './SetUserStatusRequest';
+export * from './SetUserStatusResponse';

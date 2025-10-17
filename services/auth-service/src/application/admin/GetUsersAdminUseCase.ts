@@ -21,7 +21,7 @@ export class GetUsersAdminUseCase {
     });
 
     // Validate admin permissions
-    if (!AdminVisibilityRules.hasAdminPrivileges(viewerRole)) {
+    if (!AdminVisibilityRules.hasAdminPrivileges(viewerRole as UserRole)) {
       throw insufficientAdminPermissions({
         viewerRole,
         requiredRoles: [UserRole.ADMIN, UserRole.SUPER_ADMIN]
@@ -32,7 +32,7 @@ export class GetUsersAdminUseCase {
     this.validateQuery(query);
 
     // Execute admin query with role-based visibility
-    const result = await this.userRepository.listForAdmin(query, viewerRole);
+    const result = await this.userRepository.listForAdmin(query, viewerRole as UserRole);
 
     this.logger.info('Admin users query completed', {
       viewerRole,

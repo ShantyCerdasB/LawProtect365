@@ -1,8 +1,8 @@
 /**
- * @fileoverview UserRole - Enum for user roles in the system
- * @summary Defines all possible user roles with hierarchy
- * @description This enum provides type-safe user role values for
- * authorization and access control throughout the system.
+ * @fileoverview UserRole - Local enum that matches Prisma schema
+ * @summary Defines user roles that match the Prisma database schema
+ * @description This enum provides type-safe user role values that match
+ * the Prisma UserRole enum in the database schema.
  */
 
 export enum UserRole {
@@ -15,5 +15,7 @@ export enum UserRole {
   /** Administrative user with management access */
   ADMIN = 'ADMIN',
   /** Super administrator with full system access */
-  SUPER_ADMIN = 'SUPER_ADMIN'
+  SUPER_ADMIN = 'SUPER_ADMIN',
+  /** External user - for external integrations */
+  EXTERNAL_USER = 'EXTERNAL_USER'
 }

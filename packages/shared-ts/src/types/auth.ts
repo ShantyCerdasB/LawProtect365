@@ -2,8 +2,22 @@ import type { UserId } from "./brand.js";
 
 /**
  * Enumerates platform roles used in RBAC checks.
+ * These values match the Prisma UserRole enum in the database schema.
  */
-export type UserRole = "customer" | "lawyer" | "admin" | "super_admin" | "system";
+export type UserRole = "UNASSIGNED" | "CUSTOMER" | "LAWYER" | "ADMIN" | "SUPER_ADMIN" | "EXTERNAL_USER";
+
+/**
+ * Enum for platform roles used in RBAC checks.
+ * These values match the Prisma UserRole enum in the database schema.
+ */
+export enum UserRoleEnum {
+  UNASSIGNED = "UNASSIGNED",
+  CUSTOMER = "CUSTOMER",
+  LAWYER = "LAWYER",
+  ADMIN = "ADMIN",
+  SUPER_ADMIN = "SUPER_ADMIN",
+  EXTERNAL_USER = "EXTERNAL_USER"
+}
 
 /**
  * Canonical JWT claims normalized for the platform.

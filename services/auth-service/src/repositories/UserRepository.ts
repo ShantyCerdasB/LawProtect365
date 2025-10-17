@@ -5,7 +5,7 @@
  * including CRUD operations and business queries. Extends RepositoryBase for consistent patterns.
  */
 
-import { PrismaClient, Prisma, UserRole as PrismaUserRole, UserAccountStatus as PrismaUserAccountStatus } from '@prisma/client';
+import { PrismaClient, Prisma, $Enums } from '@prisma/client';
 import { 
   RepositoryBase, 
   EntityMapper, 
@@ -15,7 +15,7 @@ import {
 } from '@lawprotect/shared-ts';
 import { User } from '../domain/entities/User';
 import { UserId } from '../domain/value-objects/UserId';
-import { UserRole, UserAccountStatus } from '../domain/enums';
+import { UserRole, UserAccountStatus, AdminIncludeField } from '../domain/enums';
 import { UserSpec } from '../domain/interfaces/UserSpec';
 import { AdminUserQuery, AdminUserResponse } from '../domain/interfaces/admin';
 import { repositoryError } from '../auth-errors/factories';
@@ -59,8 +59,8 @@ export class UserRepository extends RepositoryBase<User, UserId, UserSpec> {
       name: `${entity.getFirstName()} ${entity.getLastName()}`.trim(),
       givenName: entity.getFirstName(),
       lastName: entity.getLastName(),
-      role: entity.getRole() as PrismaUserRole,
-      status: entity.getStatus() as PrismaUserAccountStatus,
+      role: entity.getRole() as $Enums.UserRole,
+      status: entity.getStatus() as $Enums.UserAccountStatus,
       mfaEnabled: entity.isMfaEnabled(),
       lastLoginAt: entity.getLastLoginAt()
     };
@@ -185,7 +185,7 @@ export class UserRepository extends RepositoryBase<User, UserId, UserSpec> {
       await (tx || this.prisma).user.update({
         where: this.whereById(id),
         data: {
-          status: PrismaUserAccountStatus.DELETED,
+          status: $Enums.UserAccountStatus.DELETED,
           deletedAt: new Date(),
           updatedAt: new Date()
         }
@@ -297,7 +297,7 @@ export class UserRepository extends RepositoryBase<User, UserId, UserSpec> {
    * @returns Page of User entities
    */
   async findByRole(
-    role: PrismaUserRole,
+    role: $Enums.UserRole,
     limit: number = UserRepository.DEFAULT_PAGE_LIMIT,
     cursor?: string
   ): Promise<{ items: User[]; nextCursor?: string }> {
@@ -312,7 +312,7 @@ export class UserRepository extends RepositoryBase<User, UserId, UserSpec> {
    * @returns Page of User entities
    */
   async findByStatus(
-    status: PrismaUserAccountStatus,
+    status: $Enums.UserAccountStatus,
     limit: number = UserRepository.DEFAULT_PAGE_LIMIT,
     cursor?: string
   ): Promise<{ items: User[]; nextCursor?: string }> {
@@ -331,7 +331,7 @@ export class UserRepository extends RepositoryBase<User, UserId, UserSpec> {
       const user = await (tx || this.prisma).user.update({
         where: this.whereById(id),
         data: {
-          status: status as PrismaUserAccountStatus,
+          status: status as $Enums.UserAccountStatus,
           updatedAt: new Date()
         }
       });
@@ -359,7 +359,7 @@ export class UserRepository extends RepositoryBase<User, UserId, UserSpec> {
       const user = await (tx || this.prisma).user.update({
         where: this.whereById(id),
         data: {
-          role: role as PrismaUserRole,
+          role: role as $Enums.UserRole,
           updatedAt: new Date()
         }
       });
@@ -413,8 +413,7 @@ export class UserRepository extends RepositoryBase<User, UserId, UserSpec> {
           skip: query.cursor ? 1 : 0,
           cursor: query.cursor ? { id: query.cursor } : undefined,
           include: {
-            personalInfo: query.include?.includes('profile') || false,
-            oauthAccounts: query.include?.includes('idp') || false
+            oauthAccounts: query.include?.includes(AdminIncludeField.IDP) || false
           }
         }),
         this.prisma.user.count({ where })
@@ -452,7 +451,7 @@ export class UserRepository extends RepositoryBase<User, UserId, UserSpec> {
       ? Object.values(UserRole)
       : Object.values(UserRole).filter(role => role !== UserRole.SUPER_ADMIN);
     
-    where.role = { in: visibleRoles };
+    where.role = { in: visibleRoles as any };
 
     // Text search
     if (query.q) {
@@ -466,14 +465,14 @@ export class UserRepository extends RepositoryBase<User, UserId, UserSpec> {
 
     // Role filter
     if (query.role?.length) {
-      where.role = { in: query.role };
+      where.role = { in: query.role as any };
     }
 
     // Status filter (exclude DELETED by default if not specified)
     if (query.status?.length) {
-      where.status = { in: query.status };
+      where.status = { in: query.status as any };
     } else {
-      where.status = { not: UserAccountStatus.DELETED };
+      where.status = { not: UserAccountStatus.DELETED as any };
     }
 
     // MFA filter
@@ -500,7 +499,7 @@ export class UserRepository extends RepositoryBase<User, UserId, UserSpec> {
     if (query.provider?.length) {
       where.oauthAccounts = {
         some: {
-          provider: { in: query.provider }
+          provider: { in: query.provider as any }
         }
       };
     }
@@ -519,6 +518,88 @@ export class UserRepository extends RepositoryBase<User, UserId, UserSpec> {
     return orderBy;
   }
 
+  /**
+   * Finds user by ID with optional includes
+   * @param id - User ID
+   * @param includes - Optional includes for related data
+   * @returns User with includes or null
+   */
+  async findByIdWithIncludes(
+    id: UserId,
+    includes: AdminIncludeField[] = []
+  ): Promise<any | null> {
+    try {
+      const includeOAuthAccounts = includes.includes(AdminIncludeField.IDP);
+
+      const user = await this.prisma.user.findUnique({
+        where: { id: id.toString() },
+        include: {
+          oauthAccounts: includeOAuthAccounts
+        }
+      });
+
+      if (!user) {
+        return null;
+      }
+
+      return this.mapToAdminUserItem(user);
+    } catch (error) {
+      throw repositoryError({
+        operation: 'findByIdWithIncludes',
+        userId: id.toString(),
+        cause: error
+      });
+    }
+  }
+
+  /**
+   * Updates user profile fields
+   * @param userId - User ID
+   * @param profileData - Profile data to update
+   * @returns Updated user entity
+   */
+  async updateProfile(
+    userId: UserId,
+    profileData: {
+      name?: string;
+      givenName?: string;
+      lastName?: string;
+    }
+  ): Promise<User> {
+    try {
+      const user = await this.findById(userId);
+      if (!user) {
+        throw repositoryError({
+          operation: 'updateProfile',
+          userId: userId.toString(),
+          cause: 'User not found'
+        });
+      }
+
+      // Update fields if provided
+      if (profileData.name !== undefined) {
+        (user as any).name = profileData.name;
+      }
+      if (profileData.givenName !== undefined) {
+        (user as any).givenName = profileData.givenName;
+      }
+      if (profileData.lastName !== undefined) {
+        (user as any).lastName = profileData.lastName;
+      }
+
+      // Update timestamp
+      (user as any).updatedAt = new Date();
+
+      return await this.update(userId, user);
+    } catch (error) {
+      throw repositoryError({
+        operation: 'updateProfile',
+        userId: userId.toString(),
+        cause: error
+      });
+    }
+  }
+
   private mapToAdminUserItem(user: any): any {
     return {
       id: user.id,
@@ -531,6 +612,8 @@ export class UserRepository extends RepositoryBase<User, UserId, UserSpec> {
       status: user.status,
       mfaEnabled: user.mfaEnabled,
       lastLoginAt: user.lastLoginAt?.toISOString() || null,
+      suspendedUntil: user.suspendedUntil?.toISOString() || null,
+      deactivationReason: user.deactivationReason || null,
       createdAt: user.createdAt.toISOString(),
       updatedAt: user.updatedAt.toISOString(),
       ...(user.personalInfo && {

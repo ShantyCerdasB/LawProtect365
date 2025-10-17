@@ -209,9 +209,32 @@ export class User {
   /**
    * Updates user status
    * @param newStatus - New user status
+   * @param reason - Reason for status change
+   * @param suspendedUntil - Suspension end date (for SUSPENDED status)
    */
-  updateStatus(newStatus: UserAccountStatus): void {
+  updateStatus(newStatus: UserAccountStatus, reason?: string, suspendedUntil?: Date): void {
     this.status = newStatus;
+    (this as any).updatedAt = new Date();
+    
+    if (reason) {
+      (this as any).deactivationReason = reason;
+    }
+    
+    if (suspendedUntil) {
+      (this as any).suspendedUntil = suspendedUntil;
+    }
+    
+    if (newStatus === UserAccountStatus.DELETED) {
+      (this as any).deletedAt = new Date();
+    }
+  }
+
+  /**
+   * Updates user role
+   * @param newRole - New user role
+   */
+  updateRole(newRole: UserRole): void {
+    (this as any).role = newRole;
     (this as any).updatedAt = new Date();
   }
 

@@ -14,9 +14,9 @@ import { hasRole } from "./roles.js";
  * @returns True if access is allowed, false otherwise.
  */
 export const can = (subject: SecurityContext, _action: Action, resource: ResourceRef): boolean => {
-  if (hasRole(subject.roles, "super_admin")) return true;
+  if (hasRole(subject.roles, "SUPER_ADMIN")) return true;
 
-  if (hasRole(subject.roles, "admin")) {
+  if (hasRole(subject.roles, "ADMIN")) {
     return true;
   }
 

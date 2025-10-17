@@ -1,4 +1,4 @@
-import { ControllerFactory } from '@lawprotect/shared-ts';
+import { ControllerFactory, UserRoleEnum } from '@lawprotect/shared-ts';
 import { CompositionRoot } from '../../infrastructure/factories/CompositionRoot';
 import { AdminUserQuerySchema } from '../../domain/schemas/AdminUserQuerySchema';
 import { GetUsersAdminUseCase } from '../../application/admin/GetUsersAdminUseCase';
@@ -52,6 +52,6 @@ export const getUsersAdminHandler = ControllerFactory.createQuery({
   transformResult: async (result: any) => result,
   
   requireAuth: true,
-  requiredRoles: ['admin', 'super_admin'],
+  requiredRoles: [UserRoleEnum.ADMIN, UserRoleEnum.SUPER_ADMIN],
   includeSecurityContext: true
 });

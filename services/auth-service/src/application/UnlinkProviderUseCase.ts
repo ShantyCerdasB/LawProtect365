@@ -40,7 +40,7 @@ export class UnlinkProviderUseCase {
    * @returns The unlinking response
    * @throws Error if unlinking fails
    */
-  async execute(input: UnlinkProviderRequest): Promise<UnlinkProviderResponse> {
+  async execute(input: UnlinkProviderRequest & { cognitoSub: string }): Promise<UnlinkProviderResponse> {
     const { mode, provider } = input;
 
     try {
@@ -72,14 +72,14 @@ export class UnlinkProviderUseCase {
    * @param input - The unlinking request
    * @returns Response with unlinking result
    */
-  private async handleDirectMode(input: UnlinkProviderRequest): Promise<UnlinkProviderResponse> {
-    const { provider, providerAccountId } = input;
+  private async handleDirectMode(input: UnlinkProviderRequest & { cognitoSub: string }): Promise<UnlinkProviderResponse> {
+    const { provider, providerAccountId, cognitoSub } = input;
 
     if (!ProviderUnlinkingRules.validateProviderAccountId(provider, providerAccountId)) {
       throw oauthAccountUnlinkingFailed(`Invalid provider account ID format for ${provider}`);
     }
 
-    return await this.performUnlinking(provider, providerAccountId);
+    return await this.performUnlinking(provider, providerAccountId, cognitoSub);
   }
 
   /**
@@ -87,20 +87,18 @@ export class UnlinkProviderUseCase {
    * @param input - The unlinking request
    * @returns Response with unlinking result
    */
-  private async handleConfirmMode(input: UnlinkProviderRequest): Promise<UnlinkProviderResponse> {
-    const { provider, providerAccountId, confirmationToken } = input;
+  private async handleConfirmMode(input: UnlinkProviderRequest & { cognitoSub: string }): Promise<UnlinkProviderResponse> {
+    const { provider, providerAccountId, confirmationToken, cognitoSub } = input;
 
     if (!confirmationToken) {
       throw missingRequiredFields('confirmationToken is required for confirm mode');
     }
 
-    // Note: Confirmation token validation removed - using direct mode only
-
     if (!ProviderUnlinkingRules.validateProviderAccountId(provider, providerAccountId)) {
       throw oauthAccountUnlinkingFailed(`Invalid provider account ID format for ${provider}`);
     }
 
-    return await this.performUnlinking(provider, providerAccountId);
+    return await this.performUnlinking(provider, providerAccountId, cognitoSub);
   }
 
   /**
@@ -109,8 +107,8 @@ export class UnlinkProviderUseCase {
    * @param providerAccountId - The provider account ID
    * @returns Response with unlinking result
    */
-  private async performUnlinking(provider: OAuthProvider, providerAccountId: string): Promise<UnlinkProviderResponse> {
-    const currentUser = await this.userService.findByCognitoSub('current-user-sub');
+  private async performUnlinking(provider: OAuthProvider, providerAccountId: string, cognitoSub: string): Promise<UnlinkProviderResponse> {
+    const currentUser = await this.userService.findByCognitoSub(cognitoSub);
     if (!currentUser) {
       throw oauthAccountUnlinkingFailed('Current user not found');
     }

@@ -12,10 +12,13 @@ import { UserRole, UserAccountStatus } from '../domain/enums';
 import { User } from '../domain/entities/User';
 import { UserId } from '../domain/value-objects/UserId';
 import { Email } from '@lawprotect/shared-ts';
-import { userCreationFailed, userUpdateFailed } from '../auth-errors/factories';
+import { userCreationFailed, userUpdateFailed, userNotFound } from '../auth-errors/factories';
+import { UserLifecycleRules } from '../domain/rules/UserLifecycleRules';
 import { OAuthProvider } from '../domain/enums/OAuthProvider';
 import { UpsertOnPostAuthInput, UpsertOnPostAuthResult } from '../types/UserServiceTypes';
 import { UserPersonalInfo } from '../domain/entities/UserPersonalInfo';
+import { PatchMeRequest, PatchMeResponse } from '../domain/schemas/PatchMeSchema';
+import { uuid } from '@lawprotect/shared-ts';
 
 /**
  * Service for user business logic orchestration
@@ -278,7 +281,266 @@ export class UserService {
     }
   }
 
+  /**
+   * Changes user status with business rules validation
+   * @param userId - User ID to change status for
+   * @param newStatus - New status
+   * @param reason - Reason for status change
+   * @param suspendedUntil - Suspension end date (for SUSPENDED status)
+   * @param _actorId - ID of the admin making the change
+   * @returns Updated user entity
+   */
+  async changeUserStatus(
+    userId: UserId,
+    newStatus: UserAccountStatus,
+    _actorId: UserId,
+    reason?: string,
+    suspendedUntil?: Date
+  ): Promise<User> {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw userNotFound({ userId: userId.toString() });
+    }
+
+    // Validate status transition
+    UserLifecycleRules.validateTransition(user.getStatus(), newStatus);
+    UserLifecycleRules.validatePendingVerificationTransition(user, newStatus);
+
+    // Update user with additional fields
+    user.updateStatus(newStatus, reason, suspendedUntil);
+    return await this.userRepository.update(userId, user);
+  }
+
+  /**
+   * Changes user role
+   * @param userId - User ID to change role for
+   * @param newRole - New role to assign
+   * @returns Updated user entity
+   * @throws userNotFound if user doesn't exist
+   * @throws userUpdateFailed if update fails
+   */
+  async changeUserRole(
+    userId: UserId,
+    newRole: UserRole
+  ): Promise<User> {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw userNotFound({ userId: userId.toString() });
+    }
+
+    // Update user role
+    user.updateRole(newRole);
+    
+    // Update timestamp
+    (user as any).updatedAt = new Date();
+
+    return await this.userRepository.update(userId, user);
+  }
+
+  /**
+   * Updates user profile information
+   * @param userId - User ID
+   * @param request - Profile update request
+   * @returns Updated user profile response
+   * @throws userNotFound if user doesn't exist
+   * @throws userUpdateFailed if update fails
+   */
+  async updateUserProfile(
+    userId: UserId,
+    request: PatchMeRequest
+  ): Promise<PatchMeResponse> {
+    try {
+      const user = await this.validateUserExists(userId);
+      const currentPersonalInfo = await this.userPersonalInfoRepository.findByUserId(userId);
+      
+      const changes = this.detectChanges(user, currentPersonalInfo, request);
+      
+      if (!changes.hasChanges) {
+        return this.buildProfileResponse(user, currentPersonalInfo, false);
+      }
+
+      const { updatedUser, updatedPersonalInfo } = await this.applyChanges(userId, user, changes);
+      
+      return this.buildProfileResponse(updatedUser, updatedPersonalInfo, true);
+    } catch (error) {
+      throw userUpdateFailed({
+        userId: userId.toString(),
+        operation: 'updateUserProfile',
+        cause: error
+      });
+    }
+  }
+
+  /**
+   * Validates that user exists and is not deleted
+   * @param userId - User ID to validate
+   * @returns User entity
+   * @throws userNotFound if user doesn't exist or is deleted
+   */
+  private async validateUserExists(userId: UserId): Promise<User> {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw userNotFound({ userId: userId.toString() });
+    }
+    if (user.getStatus() === UserAccountStatus.DELETED) {
+      throw userNotFound({ userId: userId.toString() });
+    }
+    return user;
+  }
+
+  /**
+   * Detects what fields have actually changed
+   * @param user - Current user entity
+   * @param currentPersonalInfo - Current personal info entity
+   * @param request - Update request
+   * @returns Changes object with user and personal info changes
+   */
+  private detectChanges(
+    user: User,
+    currentPersonalInfo: UserPersonalInfo | null,
+    request: PatchMeRequest
+  ): {
+    hasChanges: boolean;
+    userChanges: any;
+    personalInfoChanges: any;
+  } {
+    const userChanges = this.detectUserChanges(user, request);
+    const personalInfoChanges = this.detectPersonalInfoChanges(currentPersonalInfo, request);
+    
+    return {
+      hasChanges: Object.keys(userChanges).length > 0 || Object.keys(personalInfoChanges).length > 0,
+      userChanges,
+      personalInfoChanges
+    };
+  }
+
+  /**
+   * Detects changes in user fields
+   * @param user - Current user entity
+   * @param request - Update request
+   * @returns User field changes
+   */
+  private detectUserChanges(user: User, request: PatchMeRequest): any {
+    const changes: any = {};
+    
+    if (request.name !== undefined && request.name !== user.getFullName()) {
+      changes.name = request.name;
+    }
+    if (request.givenName !== undefined && request.givenName !== user.getFirstName()) {
+      changes.givenName = request.givenName;
+    }
+    if (request.lastName !== undefined && request.lastName !== user.getLastName()) {
+      changes.lastName = request.lastName;
+    }
+    
+    return changes;
+  }
+
+  /**
+   * Detects changes in personal info fields
+   * @param currentPersonalInfo - Current personal info entity
+   * @param request - Update request
+   * @returns Personal info field changes
+   */
+  private detectPersonalInfoChanges(
+    currentPersonalInfo: UserPersonalInfo | null,
+    request: PatchMeRequest
+  ): any {
+    if (!request.personalInfo) return {};
+    
+    const changes: any = {};
+    
+    if (request.personalInfo.phone !== undefined) {
+      const currentPhone = currentPersonalInfo?.getPhone() || null;
+      if (request.personalInfo.phone !== currentPhone) {
+        changes.phone = request.personalInfo.phone;
+      }
+    }
+    
+    if (request.personalInfo.locale !== undefined) {
+      const currentLocale = currentPersonalInfo?.getLocale() || null;
+      if (request.personalInfo.locale !== currentLocale) {
+        changes.locale = request.personalInfo.locale;
+      }
+    }
+    
+    if (request.personalInfo.timeZone !== undefined) {
+      const currentTimeZone = currentPersonalInfo?.getTimeZone() || null;
+      if (request.personalInfo.timeZone !== currentTimeZone) {
+        changes.timeZone = request.personalInfo.timeZone;
+      }
+    }
+    
+    return changes;
+  }
+
+  /**
+   * Applies changes to user and personal info
+   * @param userId - User ID
+   * @param user - Current user entity
+   * @param changes - Changes to apply
+   * @returns Updated user and personal info entities
+   */
+  private async applyChanges(
+    userId: UserId,
+    user: User,
+    changes: {
+      hasChanges: boolean;
+      userChanges: any;
+      personalInfoChanges: any;
+    }
+  ): Promise<{
+    updatedUser: User;
+    updatedPersonalInfo: UserPersonalInfo | null;
+  }> {
+    let updatedUser = user;
+    let updatedPersonalInfo = await this.userPersonalInfoRepository.findByUserId(userId);
+    
+    if (Object.keys(changes.userChanges).length > 0) {
+      updatedUser = await this.userRepository.updateProfile(userId, changes.userChanges);
+    }
+    
+    if (Object.keys(changes.personalInfoChanges).length > 0) {
+      updatedPersonalInfo = await this.userPersonalInfoRepository.upsertByUserId(
+        userId,
+        changes.personalInfoChanges
+      );
+    }
+    
+    return { updatedUser, updatedPersonalInfo };
+  }
+
+  /**
+   * Builds profile response from user and personal info
+   * @param user - User entity
+   * @param personalInfo - Personal info entity or null
+   * @param changed - Whether changes were made
+   * @returns Profile response
+   */
+  private buildProfileResponse(
+    user: User,
+    personalInfo: UserPersonalInfo | null,
+    changed: boolean
+  ): PatchMeResponse {
+    return {
+      id: user.getId().toString(),
+      email: user.getEmail().toString(),
+      name: user.getFullName(),
+      givenName: user.getFirstName(),
+      lastName: user.getLastName(),
+      personalInfo: {
+        phone: personalInfo?.getPhone() || null,
+        locale: personalInfo?.getLocale() || null,
+        timeZone: personalInfo?.getTimeZone() || null
+      },
+      meta: {
+        updatedAt: new Date().toISOString(),
+        changed
+      }
+    };
+  }
+
   private generateId(): string {
-    return require('crypto').randomUUID();
+    return uuid();
   }
 }

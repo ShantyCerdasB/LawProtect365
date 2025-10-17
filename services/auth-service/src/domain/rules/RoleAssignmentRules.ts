@@ -67,7 +67,8 @@ export class RoleAssignmentRules {
       [UserRole.CUSTOMER]: 1,
       [UserRole.LAWYER]: 2,
       [UserRole.ADMIN]: 3,
-      [UserRole.SUPER_ADMIN]: 4
+      [UserRole.SUPER_ADMIN]: 4,
+      [UserRole.EXTERNAL_USER]: 0
     };
 
     const currentLevel = roleHierarchy[currentUserRole];
@@ -133,7 +134,8 @@ export class RoleAssignmentRules {
       [UserRole.CUSTOMER]: UserRole.ADMIN,
       [UserRole.LAWYER]: UserRole.ADMIN,
       [UserRole.ADMIN]: UserRole.SUPER_ADMIN,
-      [UserRole.SUPER_ADMIN]: UserRole.SUPER_ADMIN
+      [UserRole.SUPER_ADMIN]: UserRole.SUPER_ADMIN,
+      [UserRole.EXTERNAL_USER]: UserRole.ADMIN
     };
 
     return roleRequirements[role];

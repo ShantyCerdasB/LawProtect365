@@ -1,4 +1,6 @@
 import { UserRole } from '../enums/UserRole';
+import { User } from '../entities/User';
+import { insufficientPermissions } from '../../auth-errors/factories';
 
 export class AdminVisibilityRules {
   /**
@@ -46,5 +48,36 @@ export class AdminVisibilityRules {
    */
   static hasAdminPrivileges(role: UserRole): boolean {
     return role === UserRole.ADMIN || role === UserRole.SUPER_ADMIN;
+  }
+
+  /**
+   * Validates if a user can view a specific user (for admin detail endpoints)
+   * @param viewerRole - Role of the user making the request
+   * @param targetUser - Target user being viewed
+   * @param viewerId - ID of the user making the request
+   * @throws insufficientPermissions if user cannot view target
+   */
+  static validateUserVisibility(
+    viewerRole: UserRole,
+    targetUser: User,
+    viewerId: string
+  ): void {
+    // Prevent self-lookup via admin endpoint
+    if (targetUser.getId().toString() === viewerId) {
+      throw insufficientPermissions({
+        viewerRole,
+        targetRole: targetUser.getRole(),
+        message: 'Use /me endpoint for self-lookup'
+      });
+    }
+
+    // Check if viewer can see target user
+    if (!this.canViewUser(viewerRole, targetUser.getRole())) {
+      throw insufficientPermissions({
+        viewerRole,
+        targetRole: targetUser.getRole(),
+        message: 'Insufficient permissions to view this user'
+      });
+    }
   }
 }

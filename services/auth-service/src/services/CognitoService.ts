@@ -5,7 +5,7 @@
  * MFA status retrieval, and social identity parsing.
  */
 
-import { CognitoIdentityProviderClient, AdminGetUserCommand, AdminLinkProviderForUserCommand } from '@aws-sdk/client-cognito-identity-provider';
+import { CognitoIdentityProviderClient, AdminGetUserCommand, AdminLinkProviderForUserCommand, AdminEnableUserCommand, AdminDisableUserCommand, AdminUserGlobalSignOutCommand, AdminUpdateUserAttributesCommand } from '@aws-sdk/client-cognito-identity-provider';
 import type { AdminGetUserCommandOutput } from '@aws-sdk/client-cognito-identity-provider';
 import { OAuthProvider } from '../domain/enums/OAuthProvider';
 import { CognitoAttribute } from '../domain/enums/CognitoAttribute';
@@ -300,6 +300,81 @@ export class CognitoService {
     // The actual unlinking happens in the database layer
   }
 
+  /**
+   * Enables a user in Cognito
+   * @param sub - Cognito user sub
+   * @returns Promise that resolves when user is enabled
+   */
+  async adminEnableUser(sub: string): Promise<void> {
+    try {
+      const command = new AdminEnableUserCommand({
+        UserPoolId: this.userPoolId,
+        Username: sub
+      });
+
+      await this.client.send(command);
+      this.logger.info('User enabled in Cognito', { sub });
+    } catch (error) {
+      this.logger.error('Failed to enable user in Cognito', {
+        sub,
+        error: error instanceof Error ? error.message : String(error)
+      });
+      throw cognitoUserUpdateFailed({
+        cause: `Failed to enable user: ${error instanceof Error ? error.message : String(error)}`
+      });
+    }
+  }
+
+  /**
+   * Disables a user in Cognito
+   * @param sub - Cognito user sub
+   * @returns Promise that resolves when user is disabled
+   */
+  async adminDisableUser(sub: string): Promise<void> {
+    try {
+      const command = new AdminDisableUserCommand({
+        UserPoolId: this.userPoolId,
+        Username: sub
+      });
+
+      await this.client.send(command);
+      this.logger.info('User disabled in Cognito', { sub });
+    } catch (error) {
+      this.logger.error('Failed to disable user in Cognito', {
+        sub,
+        error: error instanceof Error ? error.message : String(error)
+      });
+      throw cognitoUserUpdateFailed({
+        cause: `Failed to disable user: ${error instanceof Error ? error.message : String(error)}`
+      });
+    }
+  }
+
+  /**
+   * Performs global sign out for a user in Cognito
+   * @param sub - Cognito user sub
+   * @returns Promise that resolves when global sign out is complete
+   */
+  async adminUserGlobalSignOut(sub: string): Promise<void> {
+    try {
+      const command = new AdminUserGlobalSignOutCommand({
+        UserPoolId: this.userPoolId,
+        Username: sub
+      });
+
+      await this.client.send(command);
+      this.logger.info('Global sign out completed for user', { sub });
+    } catch (error) {
+      this.logger.error('Failed to perform global sign out', {
+        sub,
+        error: error instanceof Error ? error.message : String(error)
+      });
+      throw cognitoUserUpdateFailed({
+        cause: `Failed to perform global sign out: ${error instanceof Error ? error.message : String(error)}`
+      });
+    }
+  }
+
   private getProviderIdentifier(provider: OAuthProvider): string {
     switch (provider) {
       case OAuthProvider.GOOGLE:
@@ -310,6 +385,42 @@ export class CognitoService {
         return 'SignInWithApple';
       default:
         return 'Cognito';
+    }
+  }
+
+  /**
+   * Updates user attributes in Cognito
+   * @param sub - Cognito user sub (username)
+   * @param attributes - Attributes to update
+   * @throws cognitoUserUpdateFailed if update fails
+   */
+  async adminUpdateUserAttributes(
+    sub: string,
+    attributes: { [key: string]: string }
+  ): Promise<void> {
+    try {
+      const userAttributes = Object.entries(attributes).map(([name, value]) => ({
+        Name: name,
+        Value: value
+      }));
+
+      const command = new AdminUpdateUserAttributesCommand({
+        UserPoolId: this.userPoolId,
+        Username: sub,
+        UserAttributes: userAttributes
+      });
+
+      await this.client.send(command);
+      this.logger.info('User attributes updated in Cognito', { sub, attributes });
+    } catch (error) {
+      this.logger.error('Failed to update user attributes in Cognito', {
+        sub,
+        attributes,
+        error: error instanceof Error ? error.message : String(error)
+      });
+      throw cognitoUserUpdateFailed({
+        cause: `Failed to update user attributes: ${error instanceof Error ? error.message : String(error)}`
+      });
     }
   }
 }

@@ -6,13 +6,13 @@
 
 /**
  * Valid Cognito roles for the platform
- * These roles are used across all microservices for authorization
+ * These roles match the Prisma UserRole enum values
  */
 export const VALID_COGNITO_ROLES = [
-  "customer",
-  "lawyer", 
-  "admin",
-  "super_admin"
+  "CUSTOMER",
+  "LAWYER", 
+  "ADMIN",
+  "SUPER_ADMIN"
 ] as const;
 
 /**

@@ -30,7 +30,7 @@ export const maxRole = (roles: string[]): UserRole => {
     (a: UserRole, b: UserRole) => rank(b) - rank(a)
   );
   const best = sorted[0];
-  return best ?? "client";
+  return best ?? "CUSTOMER";
 };
 
 /**
@@ -46,12 +46,13 @@ export const hasRole = (roles: string[], role: UserRole): boolean =>
  * @param r Arbitrary role string.
  */
 export const toRole = (r: string): UserRole | undefined => {
-  const x = r.toLowerCase();
-  if (x === "super_admin" || x === "super-admin") return "super_admin";
-  if (x === "admin") return "admin";
-  if (x === "lawyer" || x === "abogado") return "lawyer";
-  if (x === "customer" || x === "cliente" || x === "client") return "customer";
-  if (x === "system") return "system";
+  const x = r.toUpperCase();
+  if (x === "SUPER_ADMIN" || x === "SUPER-ADMIN") return "SUPER_ADMIN";
+  if (x === "ADMIN") return "ADMIN";
+  if (x === "LAWYER" || x === "ABOGADO") return "LAWYER";
+  if (x === "CUSTOMER" || x === "CLIENTE" || x === "CLIENT") return "CUSTOMER";
+  if (x === "UNASSIGNED") return "UNASSIGNED";
+  if (x === "EXTERNAL_USER") return "EXTERNAL_USER";
   return undefined;
 };
 
@@ -63,4 +64,4 @@ export const normalizeRoles = (roles: string[]): UserRole[] =>
   roles.map(toRole).filter(Boolean) as UserRole[];
 
 /** Returns the index rank for hierarchical comparison. Lower index = weaker role. */
-const rank = (r: UserRole) => ORDER.indexOf(r as Exclude<UserRole, "system">);
+const rank = (r: UserRole) => ORDER.indexOf(r as Exclude<UserRole, "UNASSIGNED" | "EXTERNAL_USER">);
