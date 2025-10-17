@@ -88,7 +88,7 @@ model User {
   /// Cognito identity (unique).
   cognitoSub         String            @unique
   /// Login and contact address (case-insensitive, unique).
-  email              String            @unique @db.Citext
+  email              String            @unique
   /// Display name.
   name               String
   /// Optional given/last names for normalization.
@@ -206,7 +206,7 @@ model EnvelopeSigner {
   /// Convenience flag for external participants (derived from userId null).
   isExternal       Boolean @default(false)
   /// External contact email (nullable when userId is set).
-  email            String? @db.Citext
+  email            String?
   /// External display name (nullable when userId is set).
   fullName         String?
   invitedByUserId  String? @db.Uuid

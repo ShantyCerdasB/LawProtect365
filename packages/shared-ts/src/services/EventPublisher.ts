@@ -5,7 +5,7 @@
  * to EventBridge with proper error handling, retry logic, and observability.
  */
 
-import { mapAwsError, OutboxRepository, type OutboxRecord, type EventBridgeAdapter } from '../index.js';
+import { mapAwsError, OutboxRepository } from '../index.js';
 
 /**
  * Event publisher service configuration
@@ -13,10 +13,7 @@ import { mapAwsError, OutboxRepository, type OutboxRecord, type EventBridgeAdapt
  */
 export interface EventPublisherServiceConfig {
   outboxRepository: OutboxRepository;
-  eventBridgeAdapter: EventBridgeAdapter;
-  maxBatchSize?: number;
-  maxRetries?: number;
-  retryDelayMs?: number;
+  eventBridgeAdapter: any; // EventBridge adapter for publishing events
 }
 
 /**
@@ -43,65 +40,11 @@ export interface EventPublisherServiceStats {
  */
 export class EventPublisherService {
   private readonly outbox: OutboxRepository;
-  private readonly eventBridge: EventBridgeAdapter;
-  private readonly maxBatchSize: number;
-  private readonly maxRetries: number;
-  private readonly retryDelayMs: number;
+  private readonly eventBridge: any;
 
   constructor(config: EventPublisherServiceConfig) {
     this.outbox = config.outboxRepository;
     this.eventBridge = config.eventBridgeAdapter;
-    this.maxBatchSize = config.maxBatchSize ?? 10;
-    this.maxRetries = config.maxRetries ?? 3;
-    this.retryDelayMs = config.retryDelayMs ?? 1000;
-  }
-
-
-  /**
-   * Processes a single outbox event
-   * @param event - Outbox event to process
-   */
-  private async processEvent(event: OutboxRecord): Promise<void> {
-    try {
-
-      // Convert OutboxRecord to DomainEvent format
-      const domainEvent = {
-        id: event.id,
-        type: event.type,
-        payload: event.payload,
-        occurredAt: event.occurredAt,
-        metadata: event.traceId ? { "x-trace-id": event.traceId } : undefined
-      };
-
-
-      // Publish to EventBridge
-      await this.eventBridge.publish([domainEvent]);
-
-
-      // Mark as processed (for DynamoDB Streams)
-      await this.outbox.markAsProcessed(event.id);
-
-    } catch (error) {
-      // Re-throw with additional context
-      throw mapAwsError(error, 'EventPublisher.processEvent');
-    }
-  }
-
-  /**
-   * Handles errors when processing events
-   * @param event - Event that failed
-   * @param error - Error that occurred
-   */
-  private async handleEventError(event: OutboxRecord, error: Error): Promise<void> {
-    const errorMessage = error.message || 'Unknown error';
-    
-    // Log error for observability (DynamoDB Streams handles retries automatically)
-    console.error(`EventPublisher: Failed to process event ${event.id}:`, {
-      eventType: event.type,
-      attempts: event.attempts + 1,
-      error: errorMessage,
-      traceId: event.traceId
-    });
   }
 
   /**
@@ -130,5 +73,33 @@ export class EventPublisherService {
     }
   }
 
+  /**
+   * Dispatches up to `maxBatch` pending outbox events via EventBridge
+   * @param maxBatch - Maximum number of events to process
+   */
+  async dispatchPending(maxBatch: number): Promise<void> {
+    try {
+      const events = await (this.outbox as any).pullPending(maxBatch);
+      if (!events?.length) return;
 
+      for (const r of events) {
+        const domainEvent = {
+          id: r.id,
+          type: r.type,
+          payload: r.payload,
+          occurredAt: r.occurredAt,
+          metadata: r.traceId ? { 'x-trace-id': r.traceId } : undefined
+        };
+
+        try {
+          await this.eventBridge.publish([domainEvent]);
+          await (this.outbox as any).markAsProcessed(r.id);
+        } catch (err) {
+          await (this.outbox as any).markFailed(r.id, (err as Error)?.message ?? String(err));
+        }
+      }
+    } catch (error) {
+      throw mapAwsError(error, 'EventPublisher.dispatchPending');
+    }
+  }
 }

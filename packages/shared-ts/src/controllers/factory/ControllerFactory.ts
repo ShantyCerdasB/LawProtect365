@@ -223,7 +223,7 @@ export class ControllerFactory {
       ],
         onError: [
           // Error handling
-          async (evt: any, error: any) => mapError(error)
+          async (_evt: any, error: any) => mapError(error)
         ]
     };
   }
@@ -294,7 +294,7 @@ export class ControllerFactory {
           withControllerLogging().after
         ],
         onError: [
-          async (evt, error) => mapError(error)
+          async (_evt, error) => mapError(error)
         ]
       }
     );

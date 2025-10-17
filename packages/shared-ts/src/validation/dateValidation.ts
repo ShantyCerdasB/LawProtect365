@@ -209,7 +209,7 @@ export function validateBusinessHours(
  */
 export function validateBusinessHoursInTimezone(
   date: Date | undefined,
-  timezone: string,
+  _timezone: string,
   fieldName: string = "date"
 ): void {
   if (!date) {

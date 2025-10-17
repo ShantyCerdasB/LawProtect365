@@ -78,7 +78,7 @@ export abstract class Identifier<T> extends ValueObject<T> {
   /**
    * Creates an identifier from a string value
    */
-  static fromString(value: string): Identifier<string> {
+  static fromString(_value: string): Identifier<string> {
     throw new Error('fromString must be implemented by subclass');
   }
 
@@ -124,7 +124,7 @@ export abstract class StringValueObject extends ValueObject<string> {
   /**
    * Creates a string value object from a string value
    */
-  static fromString(value: string): StringValueObject {
+  static fromString(_value: string): StringValueObject {
     throw new Error('fromString must be implemented by subclass');
   }
 

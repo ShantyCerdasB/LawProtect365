@@ -13,6 +13,7 @@ import { UserRepository } from '../../repositories/UserRepository';
 import { UserService } from '../../services/UserService';
 import { CognitoService } from '../../services/CognitoService';
 import { AuditService } from '../../services/AuditService';
+import { EventPublishingService } from '../../services/EventPublishingService';
 import { RoleChangeRules } from '../../domain/rules/RoleChangeRules';
 import { SetUserRoleRequest, SetUserRoleResponse } from '../../domain/schemas/SetUserRoleSchema';
 import { userNotFound, roleAssignmentFailed } from '../../auth-errors/factories';
@@ -33,6 +34,7 @@ export class SetUserRoleAdminUseCase {
     private readonly userService: UserService,
     private readonly cognitoService: CognitoService,
     private readonly auditService: AuditService,
+    private readonly eventPublishingService: EventPublishingService,
     private readonly userRepository: UserRepository,
     private readonly logger: Logger
   ) {}
@@ -210,14 +212,16 @@ export class SetUserRoleAdminUseCase {
     actorId: string
   ): Promise<void> {
     try {
-      // TODO: Implement publishUserRoleChanged in EventPublishingService
-      this.logger.info('User role changed event would be published', {
-        userId: updatedUser.getId().toString(),
-        fromRole: originalUser.getRole(),
-        toRole: request.role,
-        actorId,
-        reason: request.reason
-      });
+      await this.eventPublishingService.publishUserRoleChanged(
+        updatedUser,
+        originalUser.getRole(),
+        request.role,
+        {
+          actorId,
+          reason: request.reason,
+          source: 'AdminRoleChange'
+        }
+      );
     } catch (error) {
       this.logger.warn('Failed to publish integration event for role change', {
         userId: updatedUser.getId().toString(),

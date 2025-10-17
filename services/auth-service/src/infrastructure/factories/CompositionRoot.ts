@@ -224,6 +224,7 @@ export class CompositionRoot {
       services.userService,
       services.cognitoService,
       services.auditService,
+      services.eventPublishingService,
       repositories.userRepository,
       logger
     );

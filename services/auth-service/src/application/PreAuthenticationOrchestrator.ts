@@ -14,6 +14,7 @@ import { CognitoMfaSettings } from '../domain/interfaces';
 import { UserAccessRules } from '../domain/rules/UserAccessRules';
 import { UserRole, UserAccountStatus, CognitoAttribute } from '../domain/enums';
 import { authenticationFailed } from '../auth-errors/factories';
+import { AuthServiceConfig } from '../config/AppConfig';
 
 /**
  * Application service that orchestrates the PreAuthentication flow
@@ -24,7 +25,8 @@ import { authenticationFailed } from '../auth-errors/factories';
 export class PreAuthenticationOrchestrator {
   constructor(
     private readonly userService: UserService,
-    private readonly cognitoService: CognitoService
+    private readonly cognitoService: CognitoService,
+    private readonly config: AuthServiceConfig
   ) {}
 
   /**
@@ -194,8 +196,7 @@ export class PreAuthenticationOrchestrator {
    * @returns Whether to allow PENDING_VERIFICATION status
    */
   private getAllowPendingVerificationConfig(): boolean {
-    // TODO: Get from AppConfig when extended
-    return true; // Default to allowing PENDING_VERIFICATION
+    return this.config.features.allowLoginWhenPendingVerification;
   }
 
   /**

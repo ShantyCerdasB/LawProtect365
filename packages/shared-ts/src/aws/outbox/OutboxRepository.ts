@@ -152,6 +152,72 @@ export class OutboxRepository {
   }
 
   /**
+   * Pulls a batch of pending outbox records for processing
+   * @param limit - Maximum number of records to return (1-100)
+   * @returns Array of pending outbox records
+   */
+  async pullPending(limit: number): Promise<OutboxRecord[]> {
+    const clampedLimit = Math.max(1, Math.min(100, Math.floor(limit || 1)));
+
+    try {
+      const result = await this.ddb.query!({
+        TableName: this.tableName,
+        IndexName: 'gsi1',
+        KeyConditionExpression: '#gsi1pk = :gsi1pk',
+        ExpressionAttributeNames: { '#gsi1pk': 'gsi1pk' },
+        ExpressionAttributeValues: { ':gsi1pk': `STATUS#${OUTBOX_STATUSES.PENDING}` },
+        Limit: clampedLimit,
+        ScanIndexForward: true
+      });
+
+      const items = result.Items ?? [];
+      return items
+        .filter(isOutboxDdbItem)
+        .map(item => outboxFromDdbItem(item as unknown as OutboxDdbItem));
+    } catch (err) {
+      throw mapAwsError(err, 'OutboxRepository.pullPending');
+    }
+  }
+
+  /**
+   * Marks an outbox record as failed and increments attempts
+   * @param id - Event ID
+   * @param error - Error description
+   */
+  async markFailed(id: string, error: string): Promise<void> {
+    try {
+      await this.ddb.update!({
+        TableName: this.tableName,
+        Key: OutboxKeyBuilders.buildPrimaryKey(id),
+        UpdateExpression: [
+          'SET #status = :status',
+          '#gsi1pk = :gsi1pk',
+          '#updatedAt = :updatedAt',
+          '#attempts = if_not_exists(#attempts, :zero) + :one',
+          '#lastError = :lastError'
+        ].join(', '),
+        ExpressionAttributeNames: {
+          '#status': 'status',
+          '#gsi1pk': 'gsi1pk',
+          '#updatedAt': 'updatedAt',
+          '#attempts': 'attempts',
+          '#lastError': 'lastError'
+        },
+        ExpressionAttributeValues: {
+          ':status': OUTBOX_STATUSES.FAILED,
+          ':gsi1pk': `STATUS#${OUTBOX_STATUSES.FAILED}`,
+          ':updatedAt': new Date().toISOString(),
+          ':zero': 0,
+          ':one': 1,
+          ':lastError': error
+        }
+      });
+    } catch (err) {
+      throw mapAwsError(err, 'OutboxRepository.markFailed');
+    }
+  }
+
+  /**
    * Lists outbox records with optional filtering
    * @param options - Query options
    * @returns Paginated list of outbox records

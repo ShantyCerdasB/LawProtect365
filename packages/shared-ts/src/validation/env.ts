@@ -8,11 +8,11 @@ import { ErrorCodes } from "../errors/codes.js";
  */
 
 export const Env = z.object({
-  ENV: z.enum(["dev", "staging", "prod"]).default("dev"),
-  PROJECT_NAME: z.string().min(1),
-  SERVICE_NAME: z.string().min(1),
-  AWS_REGION: z.string().min(1),
-  LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
+  ENV: z.enum(["dev", "staging", "prod", "test"]).default("dev"),
+  PROJECT_NAME: z.string().min(1).default("lawprotect"),
+  SERVICE_NAME: z.string().min(1).default("auth-service"),
+  AWS_REGION: z.string().min(1).default("us-east-1"),
+  LOG_LEVEL: z.enum(["debug", "info", "warn", "error", "silent"]).default("info"),
   JWT_ISSUER: z.string().url().optional(),
   JWT_AUDIENCE: z.string().optional()
 });
@@ -26,6 +26,7 @@ export const loadEnv = <T extends Record<string, unknown>>(schema: z.ZodType<T>)
     string,
     unknown
   >;
+  
   const parsed = schema.safeParse(input);
   if (!parsed.success) {
     throw new AppError(

@@ -31,7 +31,8 @@ export class PreAuthenticationTrigger extends LambdaTriggerBase<PreAuthEvent, Pr
     // Initialize orchestrator with dependencies
     this.orchestrator = new PreAuthenticationOrchestrator(
       cr.userService,
-      cr.cognitoService
+      cr.cognitoService,
+      cr.config
     );
 
     const { cognitoSub } = this.extractUserData(event);

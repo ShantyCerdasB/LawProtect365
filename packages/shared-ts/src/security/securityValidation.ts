@@ -275,7 +275,7 @@ export function validateSuspiciousActivity(
 export function validateAccessToken(
   token: string | undefined,
   accessType: string,
-  config: SecurityConfig
+  _config: SecurityConfig
 ): SecurityValidationResult {
   if (accessType === 'SYSTEM' || accessType === 'DIRECT') {
     return { isValid: true }; // Skip validation for system and direct access
