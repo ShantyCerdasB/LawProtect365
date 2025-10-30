@@ -11,6 +11,10 @@ phases:
         set -eu
         echo "[INFO] ===== Pre-build ====="
       - |
+        echo "[INFO] Installing workspace dependencies (npm workspaces)"
+        cd "$CODEBUILD_SRC_DIR"
+        npm ci --workspaces --include-workspace-root --no-audit --no-fund
+      - |
         echo "[INFO] Building packages/shared-ts"
         cd "$CODEBUILD_SRC_DIR/packages/shared-ts"
         npm ci --no-audit --no-fund
@@ -59,8 +63,13 @@ phases:
 
         # Copy already-installed node_modules and prune dev dependencies (keeps private scoped packages)
         echo "[INFO] Copying existing node_modules into layer"
-        test -d node_modules || { echo "[ERROR] node_modules not found (ensure npm ci succeeded earlier)"; exit 1; }
-        rsync -a node_modules/ layer-deps/nodejs/node_modules/
+        SRC_NODE_MODULES="node_modules"
+        if [ ! -d "$SRC_NODE_MODULES" ] && [ -d "$CODEBUILD_SRC_DIR/node_modules" ]; then
+          echo "[WARN] services/signature-service/node_modules not found, using workspace root node_modules"
+          SRC_NODE_MODULES="$CODEBUILD_SRC_DIR/node_modules"
+        fi
+        test -d "$SRC_NODE_MODULES" || { echo "[ERROR] node_modules not found in service or workspace root"; exit 1; }
+        rsync -aL "$SRC_NODE_MODULES/" layer-deps/nodejs/node_modules/
         # Copy package.json so npm prune can detect dev deps
         cp -f package.json layer-deps/nodejs/package.json
         # Prune dev dependencies in the layer (no network access needed)
@@ -73,6 +82,7 @@ phases:
         add_shared_ts() {
           local SRC="$1"
           echo "[INFO] Adding @lawprotect/shared-ts to deps layer from: $SRC"
+          rm -rf "$DEST_DIR"
           mkdir -p "$DEST_DIR"
           # package.json (necesario para resolución de módulo)
           if [ -f "$SRC/package.json" ]; then
