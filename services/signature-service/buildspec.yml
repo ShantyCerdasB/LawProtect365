@@ -13,14 +13,14 @@ phases:
       - |
         echo "[INFO] Building packages/shared-ts"
         cd "$CODEBUILD_SRC_DIR/packages/shared-ts"
-        npm install
+        npm ci --no-audit --no-fund
         export DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}"
         npm run prisma:generate
         npm run build
       - |
         echo "[INFO] Installing deps in services/signature-service"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
-        npm install
+        npm ci --no-audit --no-fund
       - |
         echo "[INFO] Preparing Prisma client"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
@@ -54,25 +54,19 @@ phases:
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
         rm -rf layer-deps sign-deps-layer.zip
 
-        # Create layer structure
-        mkdir -p layer-deps/nodejs
+        # Create proper layer structure for Node.js
+        mkdir -p layer-deps/nodejs/node_modules
 
-        # Copy production dependencies from existing node_modules
-        echo "[INFO] Copying production dependencies from existing node_modules"
+        # Build a clean production-only node_modules in a temp dir to avoid shipping dev deps
+        echo "[INFO] Installing production dependencies (clean install)"
+        rm -rf __prod
+        mkdir -p __prod
+        cp package.json package-lock.json __prod/
+        (cd __prod && npm ci --omit=dev --no-audit --no-fund)
 
-        # Copy all dependencies except excluded ones
-        for dep_dir in node_modules/*; do
-          if [ -d "$dep_dir" ]; then
-            dep_name=$(basename "$dep_dir")
-            # Skip excluded dependencies
-            if [[ "$dep_name" != "typescript" && "$dep_name" != "jest" && "$dep_name" != "eslint" && "$dep_name" != "@types" ]]; then
-              echo "[INFO] Copying $dep_name to layer"
-              cp -r "$dep_dir" "layer-deps/nodejs/" || true
-            else
-              echo "[INFO] Skipping $dep_name (excluded)"
-            fi
-          fi
-        done
+        echo "[INFO] Copying production node_modules into layer"
+        rsync -a __prod/node_modules/ layer-deps/nodejs/node_modules/
+        rm -rf __prod
 
         # === Ensure @lawprotect/shared-ts is present in the deps layer ===
         DEST_DIR="layer-deps/nodejs/node_modules/@lawprotect/shared-ts"
@@ -107,6 +101,7 @@ phases:
         fi
 
         # Sanity checks
+        test -d "layer-deps/nodejs/node_modules" || { echo "[ERROR] node_modules not created inside layer"; exit 1; }
         test -f "$DEST_DIR/package.json" || { echo "[ERROR] shared-ts package.json not found in layer"; exit 1; }
 
         # Create ZIP of dependencies layer
@@ -166,6 +161,11 @@ phases:
 
         (cd layer-core && zip -qr ../sign-core-layer.zip .)
         test -s sign-core-layer.zip || { echo "[ERROR] sign-core-layer.zip is empty"; exit 1; }
+        # Validate critical files exist in the core layer
+        unzip -l sign-core-layer.zip | grep -q 'nodejs/node_modules/@lawprotect/sign-core/dist/src/handlers/envelopes/CreateEnvelopeHandler\.js' \
+          || { echo "[ERROR] CreateEnvelopeHandler.js missing from core layer"; exit 1; }
+        unzip -l sign-core-layer.zip | grep -q 'nodejs/node_modules/@lawprotect/sign-core/dist/src/domain/schemas/EnvelopeSchema\.js' \
+          || { echo "[ERROR] EnvelopeSchema.js missing from core layer"; exit 1; }
         rm -rf layer-core
         echo "[INFO] Core layer ZIP created"
 
@@ -219,38 +219,29 @@ phases:
         aws s3 cp "sign-deps-layer.zip" "s3://$CODE_BUCKET/sign-deps-layer.zip"
         aws s3 cp "sign-core-layer.zip" "s3://$CODE_BUCKET/sign-core-layer.zip"
 
-        get_latest_layer_arn() {
-          local NAME="$1"
-          aws lambda list-layer-versions --layer-name "$NAME" --max-items 1 --query "LayerVersions[0].LayerVersionArn" --output text 2>/dev/null || echo ""
-        }
-
-        publish_or_latest() {
+        publish_layer() {
           local NAME="$1"
           local ZIP="$2"
           local DESC="$3"
           local ARN=""
-          set +e
           ARN=$(aws lambda publish-layer-version \
             --layer-name "$NAME" \
             --description "$DESC" \
             --zip-file "fileb://$ZIP" \
             --compatible-runtimes nodejs20.x \
-            --query LayerVersionArn --output text 2>/dev/null)
-          local RC=$?
-          set -e
-          if [ $RC -ne 0 ] || [ -z "$ARN" ] || [ "$ARN" = "None" ]; then
-            echo "[WARN] publish-layer-version failed for $NAME, getting latest..." >&2
-            ARN="$(get_latest_layer_arn "$NAME")"
+            --query LayerVersionArn --output text)
+          if [ -z "$ARN" ] || [ "$ARN" = "None" ]; then
+            echo "[ERROR] Failed to publish layer $NAME" >&2
+            exit 1
           fi
-          # Only output the ARN, not warnings
           echo "$ARN"
         }
 
         DEPS_LAYER_NAME="lawprotect365-sign-deps-stg"
         CORE_LAYER_NAME="lawprotect365-sign-core-stg"
 
-        DEPS_LAYER_VERSION="$(publish_or_latest "$DEPS_LAYER_NAME" "sign-deps-layer.zip" "Signature service dependencies")"
-        CORE_LAYER_VERSION="$(publish_or_latest "$CORE_LAYER_NAME" "sign-core-layer.zip" "Signature service core code")"
+        DEPS_LAYER_VERSION="$(publish_layer "$DEPS_LAYER_NAME" "sign-deps-layer.zip" "Signature service dependencies")"
+        CORE_LAYER_VERSION="$(publish_layer "$CORE_LAYER_NAME" "sign-core-layer.zip" "Signature service core code")"
 
         echo "[INFO] Dependencies layer ARN: ${DEPS_LAYER_VERSION:-<empty>}"
         echo "[INFO] Core layer ARN:         ${CORE_LAYER_VERSION:-<empty>}"
@@ -268,14 +259,17 @@ phases:
         SHARED_TS_LAYER_ARN="$(aws lambda list-layer-versions --layer-name "$SHARED_TS_LAYER_NAME" --max-items 1 --query "LayerVersions[0].LayerVersionArn" --output text 2>/dev/null || true)"
 
         build_layers_args() {
-          local args="$SHARED_TS_LAYER_ARN"
+          local args=()
+          if [ -n "${SHARED_TS_LAYER_ARN:-}" ] && [ "${SHARED_TS_LAYER_ARN}" != "None" ]; then
+            args+=("${SHARED_TS_LAYER_ARN}")
+          fi
           if [ -n "${DEPS_LAYER_VERSION:-}" ] && [ "${DEPS_LAYER_VERSION}" != "None" ]; then
-            args="$args ${DEPS_LAYER_VERSION}"
+            args+=("${DEPS_LAYER_VERSION}")
           fi
           if [ -n "${CORE_LAYER_VERSION:-}" ] && [ "${CORE_LAYER_VERSION}" != "None" ]; then
-            args="$args ${CORE_LAYER_VERSION}"
+            args+=("${CORE_LAYER_VERSION}")
           fi
-          echo "$args"
+          printf "%s" "${args[*]}"
         }
 
         deploy_fn() {
@@ -291,7 +285,11 @@ phases:
 
           ENV_ARG="$(python3 -c "import json,sys; raw=sys.argv[1] if len(sys.argv)>1 else '{}'; env=json.loads(raw or '{}') or {}; env['NODE_OPTIONS']='--experimental-specifier-resolution=node'; print(json.dumps({'Variables': env}, separators=(',',':')))" "$ENV_JSON")"
 
-          aws lambda update-function-configuration --function-name "$FN" --runtime nodejs20.x --handler index.handler --layers $LAYERS_ARGS --environment "$ENV_ARG" >/dev/null
+          if [ -n "$LAYERS_ARGS" ]; then
+            aws lambda update-function-configuration --function-name "$FN" --runtime nodejs20.x --handler index.handler --layers $LAYERS_ARGS --environment "$ENV_ARG" >/dev/null
+          else
+            aws lambda update-function-configuration --function-name "$FN" --runtime nodejs20.x --handler index.handler --environment "$ENV_ARG" >/dev/null
+          fi
 
           aws lambda wait function-updated --function-name "$FN"
         }
