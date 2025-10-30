@@ -8,7 +8,7 @@
 // Set test environment variables FIRST - before any imports
 process.env.NODE_ENV = 'test';
 process.env.LOG_LEVEL = 'silent';
-process.env.DATABASE_URL = process.env.TEST_DATABASE_URL || 'postgresql://livekitadmin:ADcc2023.@localhost:5432/postgres?schema=public';
+process.env.DATABASE_URL = process.env.TEST_DATABASE_URL || 'postgresql://admin:admin@localhost:5432/lawprotect365?schema=public';
 
 // Required environment variables for shared-ts - MUST be set before any imports
 process.env.PROJECT_NAME = 'lawprotect';
@@ -19,6 +19,12 @@ process.env.ENV = 'test';
 // Additional environment variables that might be required
 process.env.JWT_ISSUER = 'https://test.lawprotect.com';
 process.env.JWT_AUDIENCE = 'test-audience';
+
+// AWS Configuration for tests
+process.env.COGNITO_USER_POOL_ID = 'test-pool-id';
+process.env.COGNITO_CLIENT_ID = 'test-client-id';
+process.env.EVENTBRIDGE_BUS_NAME = 'test-bus';
+process.env.OUTBOX_TABLE_NAME = 'test-outbox';
 
 // Mock console methods to reduce noise in tests
 const originalConsole = global.console;

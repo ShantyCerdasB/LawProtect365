@@ -6,7 +6,10 @@
  */
 
 import { PrismaClient } from '@prisma/client';
-import { UserRole, UserAccountStatus } from '../../../src/domain/enums';
+import { UserRole } from '../../../src/domain/enums/UserRole';
+import { UserAccountStatus } from '../../../src/domain/enums/UserAccountStatus';
+import { OAuthProvider } from '../../../src/domain/enums/OAuthProvider';
+import { uuid } from '@lawprotect/shared-ts';
 
 /**
  * User with profile data for testing
@@ -45,8 +48,8 @@ export async function createUserWithProfile(
     lastName?: string;
   } = {}
 ): Promise<UserWithProfile> {
-  const userId = `test-user-${Date.now()}`;
-  const cognitoSub = options.cognitoSub || `test-cognito-${Date.now()}`;
+  const userId = uuid();
+  const cognitoSub = options.cognitoSub || `test-cognito-${userId}`;
   const email = options.email || `test-${Date.now()}@example.com`;
   
   // Create user
@@ -72,7 +75,7 @@ export async function createUserWithProfile(
   if (options.personalInfo) {
     personalInfo = await (prisma as any).userPersonalInfo.create({
       data: {
-        id: `test-personal-info-${Date.now()}`,
+        id: uuid(),
         userId,
         phone: options.personalInfo.phone || null,
         locale: options.personalInfo.locale || null,
@@ -231,4 +234,74 @@ export async function createUserWithInvalidData(
   return createUserWithProfile(prisma, {
     personalInfo: invalidData
   });
+}
+
+/**
+ * Creates an OAuth account linked to a user
+ * @param prisma - Prisma client instance
+ * @param userId - User ID to link the account to
+ * @param options - OAuth account options
+ * @returns Created OAuth account
+ */
+export async function createOAuthAccount(
+  prisma: PrismaClient,
+  userId: string,
+  options: {
+    provider: OAuthProvider;
+    providerAccountId?: string; // Make optional
+  }
+) {
+  // Use the provided providerAccountId or generate a unique one
+  const timestamp = process.hrtime.bigint().toString();
+  const finalProviderAccountId = options.providerAccountId || 
+    `${options.provider.toLowerCase()}-account-${timestamp}-${Math.random().toString(36).substring(2, 8)}`;
+
+  return await prisma.oAuthAccount.create({
+    data: {
+      id: uuid(),
+      userId: userId,
+      provider: options.provider,
+      providerAccountId: finalProviderAccountId,
+      createdAt: new Date()
+    }
+  });
+}
+
+/**
+ * Creates a user with linked OAuth accounts
+ * @param prisma - Prisma client instance
+ * @param options - User and OAuth account options
+ * @returns User with linked OAuth accounts
+ */
+export async function createUserWithLinkedProviders(
+  prisma: PrismaClient,
+  options: {
+    role?: UserRole;
+    status?: UserAccountStatus;
+    providers?: Array<{
+      provider: OAuthProvider;
+      providerAccountId: string;
+    }>;
+  } = {}
+): Promise<UserWithProfile & { oauthAccounts: any[] }> {
+  const userWithProfile = await createUserWithProfile(prisma, {
+    role: options.role,
+    status: options.status
+  });
+
+  const oauthAccounts: any[] = [];
+  if (options.providers) {
+    for (const providerInfo of options.providers) {
+      const oauthAccount = await createOAuthAccount(prisma, userWithProfile.user.id, {
+        provider: providerInfo.provider,
+        providerAccountId: providerInfo.providerAccountId
+      });
+      oauthAccounts.push(oauthAccount);
+    }
+  }
+
+  return {
+    ...userWithProfile,
+    oauthAccounts
+  };
 }

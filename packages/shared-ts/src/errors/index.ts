@@ -7,3 +7,4 @@ export * from "./mapError.js";
 export * from "./awsErrorsMap.js";
 export * from "./wrapServiceError.js";
 export * from "./error.js";
+export * from "./propagate.js";

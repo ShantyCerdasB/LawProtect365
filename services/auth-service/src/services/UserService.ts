@@ -8,11 +8,13 @@
 import { UserRepository } from '../repositories/UserRepository';
 import { OAuthAccountRepository } from '../repositories/OAuthAccountRepository';
 import { UserPersonalInfoRepository } from '../repositories/UserPersonalInfoRepository';
+import { EventPublishingService } from './EventPublishingService';
 import { UserRole, UserAccountStatus } from '../domain/enums';
 import { User } from '../domain/entities/User';
 import { UserId } from '../domain/value-objects/UserId';
 import { Email } from '@lawprotect/shared-ts';
-import { userCreationFailed, userUpdateFailed, userNotFound } from '../auth-errors/factories';
+import { userCreationFailed, userUpdateFailed, userNotFound, accountLocked, accountSuspended } from '../auth-errors/factories';
+import { rethrowAppErrorOr } from '@lawprotect/shared-ts';
 import { UserLifecycleRules } from '../domain/rules/UserLifecycleRules';
 import { OAuthProvider } from '../domain/enums/OAuthProvider';
 import { UpsertOnPostAuthInput, UpsertOnPostAuthResult } from '../types/UserServiceTypes';
@@ -29,7 +31,8 @@ export class UserService {
   constructor(
     private readonly userRepository: UserRepository,
     private readonly oauthAccountRepository: OAuthAccountRepository,
-    private readonly userPersonalInfoRepository: UserPersonalInfoRepository
+    private readonly userPersonalInfoRepository: UserPersonalInfoRepository,
+    private readonly eventPublishingService: EventPublishingService
   ) {}
 
   /**
@@ -351,6 +354,15 @@ export class UserService {
   ): Promise<PatchMeResponse> {
     try {
       const user = await this.validateUserExists(userId);
+
+      // Enforce status restrictions
+      const status = user.getStatus();
+      if (status === UserAccountStatus.INACTIVE) {
+        throw accountLocked({ userId: userId.toString() });
+      }
+      if (status === UserAccountStatus.SUSPENDED) {
+        throw accountSuspended({ userId: userId.toString() });
+      }
       const currentPersonalInfo = await this.userPersonalInfoRepository.findByUserId(userId);
       
       const changes = this.detectChanges(user, currentPersonalInfo, request);
@@ -361,13 +373,21 @@ export class UserService {
 
       const { updatedUser, updatedPersonalInfo } = await this.applyChanges(userId, user, changes);
       
+      // Publish user updated event
+      const changedFields = [
+        ...Object.keys(changes.userChanges),
+        ...Object.keys(changes.personalInfoChanges)
+      ];
+      
+      await this.eventPublishingService.publishUserUpdated(updatedUser, {
+        changedFields,
+        personalInfo: updatedPersonalInfo
+      });   
       return this.buildProfileResponse(updatedUser, updatedPersonalInfo, true);
-    } catch (error) {
-      throw userUpdateFailed({
-        userId: userId.toString(),
-        operation: 'updateUserProfile',
-        cause: error
-      });
+    } catch (error: any) {
+      rethrowAppErrorOr(error, (extra?: unknown) => userUpdateFailed({ userId: userId.toString(), operation: 'updateUserProfile', cause: extra }));
+      // This will never be reached, but satisfies TypeScript
+      return {} as PatchMeResponse;
     }
   }
 

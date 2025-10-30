@@ -67,13 +67,14 @@ export class UserProfileRules {
         message: 'Name cannot have leading or trailing whitespace'
       });
     }
-    
-    // Check for multiple consecutive spaces
-    if (/\s{2,}/.test(name)) {
+
+    // Check length limits
+    const maxLength = fieldName === 'name' ? 120 : 60;
+    if (name.length > maxLength) {
       throw invalidUserData({
         field: fieldName,
         value: name,
-        message: 'Name cannot have multiple consecutive spaces'
+        message: `${fieldName} cannot exceed ${maxLength} characters`
       });
     }
   }
@@ -153,7 +154,8 @@ export class UserProfileRules {
    */
   static sanitizeString(input: string): string {
     return input
-      .replace(/[\x00-\x1F\x7F]/g, '') // Remove control characters
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // Remove only real control characters
+      .replace(/\u200B/g, '') // Remove zero-width space
       .replace(/\s+/g, ' ') // Normalize whitespace
       .trim();
   }

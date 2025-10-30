@@ -35,7 +35,7 @@ export default async function globalSetup(): Promise<void> {
     
     // Set DATABASE_URL for tests if not already set
     if (!process.env.DATABASE_URL) {
-      process.env.DATABASE_URL = process.env.TEST_DATABASE_URL || 'postgresql://livekitadmin:ADcc2023.@localhost:5432/postgres?schema=public';
+      process.env.DATABASE_URL = process.env.TEST_DATABASE_URL || 'postgresql://admin:admin@localhost:5432/lawprotect365?schema=public';
     }
 
     logger.info('Environment variables configured successfully');

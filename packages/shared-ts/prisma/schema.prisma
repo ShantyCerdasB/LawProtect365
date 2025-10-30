@@ -21,6 +21,7 @@ enum UserAccountStatus {
 
 enum UserAuditAction {
   USER_REGISTERED
+  PROFILE_UPDATED
   ROLE_CHANGED
   MFA_TOGGLED
   ACCOUNT_STATUS_CHANGED

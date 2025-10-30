@@ -6,6 +6,7 @@
  */
 
 import { Logger } from '@lawprotect/shared-ts';
+import { missingRequiredFields } from '../../auth-errors/factories';
 import { UserId } from '../../domain/value-objects/UserId';
 import { UserService } from '../../services/UserService';
 import { AuditService } from '../../services/AuditService';
@@ -45,11 +46,23 @@ export class PatchMeUseCase {
     });
 
     try {
-      // Validate profile update request
-      UserProfileRules.validateProfileUpdate(request);
-
-      // Sanitize string inputs
+      // Sanitize first to normalize inputs before validation
       const sanitizedRequest = this.sanitizeRequest(request);
+
+      // Ensure at least one field provided after sanitization
+      const hasAnyField = (
+        sanitizedRequest.name !== undefined ||
+        sanitizedRequest.givenName !== undefined ||
+        sanitizedRequest.lastName !== undefined ||
+        (sanitizedRequest.personalInfo !== undefined &&
+          Object.keys(sanitizedRequest.personalInfo).length > 0)
+      );
+      if (!hasAnyField) {
+        throw missingRequiredFields({ message: 'No updatable fields provided' });
+      }
+
+      // Validate sanitized request against domain rules
+      UserProfileRules.validateProfileUpdate(sanitizedRequest);
 
       // Execute profile update
       const response = await this.userService.updateUserProfile(
@@ -88,30 +101,48 @@ export class PatchMeUseCase {
     const sanitized: PatchMeRequest = {};
 
     if (request.name !== undefined) {
-      sanitized.name = UserProfileRules.sanitizeString(request.name);
+      const sanitizedName = UserProfileRules.sanitizeString(request.name);
+      if (sanitizedName.length > 0) {
+        sanitized.name = sanitizedName;
+      }
     }
     
     if (request.givenName !== undefined) {
-      sanitized.givenName = UserProfileRules.sanitizeString(request.givenName);
+      const sanitizedGivenName = UserProfileRules.sanitizeString(request.givenName);
+      if (sanitizedGivenName.length > 0) {
+        sanitized.givenName = sanitizedGivenName;
+      }
     }
     
     if (request.lastName !== undefined) {
-      sanitized.lastName = UserProfileRules.sanitizeString(request.lastName);
+      const sanitizedLastName = UserProfileRules.sanitizeString(request.lastName);
+      if (sanitizedLastName.length > 0) {
+        sanitized.lastName = sanitizedLastName;
+      }
     }
 
     if (request.personalInfo) {
       sanitized.personalInfo = {};
       
       if (request.personalInfo.phone !== undefined) {
-        sanitized.personalInfo.phone = request.personalInfo.phone.trim();
+        const trimmedPhone = request.personalInfo.phone.trim();
+        if (trimmedPhone.length > 0) {
+          sanitized.personalInfo.phone = trimmedPhone;
+        }
       }
       
       if (request.personalInfo.locale !== undefined) {
-        sanitized.personalInfo.locale = request.personalInfo.locale.trim();
+        const trimmedLocale = request.personalInfo.locale.trim();
+        if (trimmedLocale.length > 0) {
+          sanitized.personalInfo.locale = trimmedLocale;
+        }
       }
       
       if (request.personalInfo.timeZone !== undefined) {
-        sanitized.personalInfo.timeZone = request.personalInfo.timeZone.trim();
+        const trimmedTimeZone = request.personalInfo.timeZone.trim();
+        if (trimmedTimeZone.length > 0) {
+          sanitized.personalInfo.timeZone = trimmedTimeZone;
+        }
       }
     }
 

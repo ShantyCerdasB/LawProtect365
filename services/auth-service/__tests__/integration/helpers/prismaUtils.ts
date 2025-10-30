@@ -5,7 +5,7 @@
  * savepoints to ensure test isolation and fast cleanup.
  */
 
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 
 /**
  * Transaction context for tests
@@ -27,7 +27,7 @@ export async function beginWithSavepoint(prisma: PrismaClient): Promise<Transact
   await prisma.$executeRaw`BEGIN`;
   
   // Create savepoint
-  await prisma.$executeRaw`SAVEPOINT ${savepointId}`;
+  await prisma.$executeRaw(Prisma.sql`SAVEPOINT ${Prisma.raw(savepointId)}`);
   
   return {
     savepointId,
@@ -43,7 +43,7 @@ export async function rollbackToSavepoint(context: TransactionContext): Promise<
   const { savepointId, prisma } = context;
   
   try {
-    await prisma.$executeRaw`ROLLBACK TO SAVEPOINT ${savepointId}`;
+    await prisma.$executeRaw(Prisma.sql`ROLLBACK TO SAVEPOINT ${Prisma.raw(savepointId)}`);
   } catch (error) {
     // If savepoint doesn't exist, it's already been released
     if (!(error as Error).message?.includes('savepoint') && !(error as Error).message?.includes('SAVEPOINT')) {
@@ -60,7 +60,7 @@ export async function releaseSavepoint(context: TransactionContext): Promise<voi
   const { savepointId, prisma } = context;
   
   try {
-    await prisma.$executeRaw`RELEASE SAVEPOINT ${savepointId}`;
+    await prisma.$executeRaw(Prisma.sql`RELEASE SAVEPOINT ${Prisma.raw(savepointId)}`);
   } catch (error) {
     // If savepoint doesn't exist, it's already been released
     if (!(error as Error).message?.includes('savepoint') && !(error as Error).message?.includes('SAVEPOINT')) {

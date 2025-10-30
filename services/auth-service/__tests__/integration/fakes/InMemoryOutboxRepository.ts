@@ -17,19 +17,22 @@ import { type OutboxRecord } from '@lawprotect/shared-ts';
  */
 export class InMemoryOutboxRepository {
   private events: OutboxRecord[] = [];
-  private nextId = 1;
 
   /**
-   * Saves an outbox record to memory
-   * @param record - The outbox record to save
+   * Saves an outbox record to memory (overrides parent implementation)
+   * @param event - The event to save
+   * @param traceId - Optional trace ID
    * @returns Promise that resolves when the record is saved
    */
-  async save(record: OutboxRecord): Promise<void> {
-    const eventWithId = {
-      ...record,
-      id: record.id || `test-outbox-${this.nextId++}`,
-      createdAt: (record as any).createdAt || new Date().toISOString(),
-      status: record.status || 'pending'
+  async save(event: { id: string; type: string; payload?: Record<string, unknown>; occurredAt: string }, traceId?: string): Promise<void> {
+    const eventWithId: OutboxRecord = {
+      id: event.id,
+      type: event.type,
+      payload: event.payload,
+      occurredAt: event.occurredAt,
+      status: 'pending' as const,
+      traceId,
+      attempts: 0
     };
     
     this.events.push(eventWithId);
@@ -176,7 +179,6 @@ export class InMemoryOutboxRepository {
    */
   clear(): void {
     this.events = [];
-    this.nextId = 1;
   }
 
   /**
@@ -185,5 +187,52 @@ export class InMemoryOutboxRepository {
    */
   getEventCount(): number {
     return this.events.length;
+  }
+
+  /**
+   * Pulls pending events for processing (mock implementation)
+   * @param limit - Maximum number of events to pull
+   * @returns Promise that resolves to array of pending events
+   */
+  async pullPending(limit: number = 10): Promise<OutboxRecord[]> {
+    return this.events
+      .filter(event => event.status === 'pending')
+      .slice(0, limit);
+  }
+
+  /**
+   * Marks an event as failed (mock implementation)
+   * @param id - Event ID to mark as failed
+   * @param error - Error message
+   * @returns Promise that resolves when marked
+   */
+  async markFailed(id: string, error: string): Promise<void> {
+    const record = this.events.find(event => event.id === id);
+    if (record) {
+      record.status = 'failed';
+      (record as any).error = error;
+      (record as any).attempts = ((record as any).attempts || 0) + 1;
+    }
+  }
+
+  // Mock properties for compatibility
+  tableName = 'test-outbox';
+  ddb = {} as any;
+
+  /**
+   * Publishes an integration event (implements IntegrationEventPublisher)
+   * @param event - Integration event to publish
+   * @param dedupId - Optional deduplication key
+   * @returns Promise that resolves when published
+   */
+  async publish(event: { type: string; source: string; data: any }, dedupId?: string): Promise<void> {
+    const outboxEvent = {
+      id: dedupId || `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      type: event.type,
+      payload: event,
+      occurredAt: new Date().toISOString()
+    };
+    
+    await this.save(outboxEvent);
   }
 }

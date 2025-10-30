@@ -72,7 +72,7 @@ export const withSecurityContext = (): BeforeMiddleware => {
 /**
  * Extracts IP address from request
  */
-function extractIpAddress(evt: any): string {
+export function extractIpAddress(evt: any): string {
   // Try x-forwarded-for header first (for load balancers)
   const forwardedFor = evt.headers?.['x-forwarded-for'] || 
                       evt.headers?.['X-Forwarded-For'];
@@ -103,7 +103,7 @@ function extractIpAddress(evt: any): string {
 /**
  * Determines access type based on request characteristics
  */
-function determineAccessType(evt: any): AccessType {
+export function determineAccessType(evt: any): AccessType {
   // Check for shared link access
   if (hasSharedLinkAccess(evt)) {
     return AccessType.SHARED_LINK;
@@ -141,14 +141,14 @@ function determineAccessType(evt: any): AccessType {
 /**
  * Checks if request has shared link access
  */
-function hasSharedLinkAccess(evt: any): boolean {
+export function hasSharedLinkAccess(evt: any): boolean {
   return !!(evt.headers?.['x-shared-link'] || evt.queryStringParameters?.sharedLink);
 }
 
 /**
  * Checks if request has invitation access
  */
-function hasInvitationAccess(evt: any): boolean {
+export function hasInvitationAccess(evt: any): boolean {
   // Check headers and query parameters
   if (evt.headers?.['x-invitation-token'] || evt.queryStringParameters?.invitationToken) {
     return true;
@@ -166,7 +166,7 @@ function hasInvitationAccess(evt: any): boolean {
 /**
  * Checks if invitation token exists in request body
  */
-function hasInvitationTokenInBody(evt: any): boolean {
+export function hasInvitationTokenInBody(evt: any): boolean {
   if (!evt.body) {
     return false;
   }
@@ -182,7 +182,7 @@ function hasInvitationTokenInBody(evt: any): boolean {
 /**
  * Checks if request has API access
  */
-function hasApiAccess(evt: any): boolean {
+export function hasApiAccess(evt: any): boolean {
   const authzHeader = evt.headers?.['authorization'] || evt.headers?.['Authorization'];
   return !!(evt.headers?.['x-api-key'] || (typeof authzHeader === 'string' && authzHeader.startsWith('Bearer')));
 }
@@ -190,14 +190,14 @@ function hasApiAccess(evt: any): boolean {
 /**
  * Checks if request has system access
  */
-function hasSystemAccess(evt: any): boolean {
+export function hasSystemAccess(evt: any): boolean {
   return !!(evt.headers?.['x-system-token'] || evt.requestContext?.identity?.userAgent?.includes('system'));
 }
 
 /**
  * Checks if request has public access
  */
-function hasPublicAccess(evt: any): boolean {
+export function hasPublicAccess(evt: any): boolean {
   const authzHeader = evt.headers?.['authorization'] || evt.headers?.['Authorization'];
   return !authzHeader && !evt.headers?.['x-api-key'];
 }
@@ -205,7 +205,7 @@ function hasPublicAccess(evt: any): boolean {
 /**
  * Determines permission level based on auth context
  */
-function determinePermissionLevel(auth: any, evt: any): PermissionLevel {
+export function determinePermissionLevel(auth: any, _evt: any): PermissionLevel {
   if (!auth) {
     return PermissionLevel.PARTICIPANT;
   }
@@ -237,7 +237,7 @@ function determinePermissionLevel(auth: any, evt: any): PermissionLevel {
 /**
  * Generates device fingerprint from request
  */
-function generateDeviceFingerprint(evt: any): string | undefined {
+export function generateDeviceFingerprint(evt: any): string | undefined {
   const userAgent = evt.headers?.['user-agent'] || evt.headers?.['User-Agent'];
   const acceptLanguage = evt.headers?.['accept-language'] || evt.headers?.['Accept-Language'];
   
@@ -253,7 +253,7 @@ function generateDeviceFingerprint(evt: any): string | undefined {
 /**
  * Extracts country from request headers
  */
-function extractCountry(evt: any): string | undefined {
+export function extractCountry(evt: any): string | undefined {
   return evt.headers?.['x-country'] || 
          evt.headers?.['X-Country'] ||
          evt.headers?.['cf-ipcountry'] ||
@@ -263,7 +263,7 @@ function extractCountry(evt: any): string | undefined {
 /**
  * Extracts session ID from request
  */
-function extractSessionId(evt: any): string | undefined {
+export function extractSessionId(evt: any): string | undefined {
   return evt.headers?.['x-session-id'] || 
          evt.headers?.['X-Session-Id'] ||
          evt.cookies?.['sessionId'] ||

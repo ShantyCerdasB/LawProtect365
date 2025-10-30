@@ -55,6 +55,7 @@ export class UserRepository extends RepositoryBase<User, UserId, UserSpec> {
   protected toCreateModel(entity: User): Prisma.UserUncheckedCreateInput {
     return {
       id: entity.getId().toString(),
+      cognitoSub: entity.getCognitoSub().toString(),
       email: entity.getEmail().toString(),
       name: `${entity.getFirstName()} ${entity.getLastName()}`.trim(),
       givenName: entity.getFirstName(),
@@ -68,6 +69,7 @@ export class UserRepository extends RepositoryBase<User, UserId, UserSpec> {
 
   protected toUpdateModel(patch: Partial<User> | Record<string, unknown>): Prisma.UserUncheckedUpdateInput {
     return EntityMapper.toUpdateModel(patch, [
+      { field: 'name', getter: 'getFullName' },
       { field: 'email', getter: 'getEmail', valueExtractor: (v: unknown) => (v as any)?.toString?.() },
       { field: 'givenName', getter: 'getFirstName' },
       { field: 'lastName', getter: 'getLastName' },
@@ -577,14 +579,24 @@ export class UserRepository extends RepositoryBase<User, UserId, UserSpec> {
       }
 
       // Update fields if provided
+      // Priority: name > givenName/lastName (name takes precedence)
       if (profileData.name !== undefined) {
-        (user as any).name = profileData.name;
-      }
-      if (profileData.givenName !== undefined) {
-        (user as any).givenName = profileData.givenName;
-      }
-      if (profileData.lastName !== undefined) {
-        (user as any).lastName = profileData.lastName;
+        // Split name into firstName and lastName
+        const nameParts = profileData.name.trim().split(' ');
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.slice(1).join(' ') || '';
+        
+        // Update firstName and lastName from name
+        (user as any).firstName = firstName;
+        (user as any).lastName = lastName;
+      } else {
+        // Only update individual fields if name is not provided
+        if (profileData.givenName !== undefined) {
+          (user as any).firstName = profileData.givenName;
+        }
+        if (profileData.lastName !== undefined) {
+          (user as any).lastName = profileData.lastName;
+        }
       }
 
       // Update timestamp

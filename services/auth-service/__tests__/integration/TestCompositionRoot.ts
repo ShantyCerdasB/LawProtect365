@@ -10,6 +10,7 @@ import { InMemoryOutboxRepository } from './fakes/InMemoryOutboxRepository';
 import { FakeLogger } from './fakes/FakeLogger';
 import { FakeCognitoService } from './fakes/FakeCognitoService';
 import { loadTestConfig } from './setup/testEnv';
+import { IntegrationEventPublisher } from '@lawprotect/shared-ts';
 
 // Import repositories
 import { UserRepository } from '../../src/repositories/UserRepository';
@@ -24,9 +25,23 @@ import { EventPublishingService } from '../../src/services/EventPublishingServic
 
 // Import use cases
 import { PatchMeUseCase } from '../../src/application/users/PatchMeUseCase';
+import { TestLinkProviderUseCase } from './helpers/TestLinkProviderUseCase';
+import { TestGetMeUseCase } from './helpers/TestGetMeUseCase';
+import { TestUnlinkProviderUseCase } from './helpers/TestUnlinkProviderUseCase';
+import { TestGetUserByIdAdminUseCase } from './helpers/TestGetUserByIdAdminUseCase';
+import { TestSetUserRoleAdminUseCase } from './helpers/TestSetUserRoleAdminUseCase';
+import { TestSetUserStatusAdminUseCase } from './helpers/TestSetUserStatusAdminUseCase';
+import { TestGetUsersAdminUseCase } from './helpers/TestGetUsersAdminUseCase';
 
 // Import handlers
-import { patchMeHandler } from '../../src/handlers/users/PatchMeHandler';
+import { testPatchMeHandler } from './TestPatchMeHandler';
+import { testLinkProviderHandler } from './helpers/TestLinkProviderHandler';
+import { testGetMeHandler } from './helpers/TestGetMeHandler';
+import { testUnlinkProviderHandler } from './helpers/TestUnlinkProviderHandler';
+import { testGetUserByIdAdminHandler } from './helpers/TestGetUserByIdAdminHandler';
+import { testSetUserRoleAdminHandler } from './helpers/TestSetUserRoleAdminHandler';
+import { testSetUserStatusAdminHandler } from './helpers/TestSetUserStatusAdminHandler';
+import { testGetUsersAdminHandler } from './helpers/TestGetUsersAdminHandler';
 
 /**
  * Test composition root for integration tests
@@ -56,7 +71,7 @@ export class TestCompositionRoot {
     });
     
     this.outboxRepository = new InMemoryOutboxRepository();
-    this.eventPublisher = this.outboxRepository;
+    this.eventPublisher = this.outboxRepository as any as IntegrationEventPublisher;
     this.logger = new FakeLogger();
     this.cognitoService = new FakeCognitoService();
   }
@@ -96,7 +111,8 @@ export class TestCompositionRoot {
       userService: new UserService(
         repositories.userRepository,
         repositories.oauthAccountRepository,
-        repositories.userPersonalInfoRepository
+        repositories.userPersonalInfoRepository,
+        new EventPublishingService(this.eventPublisher)
       ),
       auditService: new AuditService(repositories.userAuditEventRepository),
       eventPublishingService: new EventPublishingService(this.eventPublisher)
@@ -115,7 +131,14 @@ export class TestCompositionRoot {
         services.userService,
         services.auditService,
         this.logger as any
-      )
+      ),
+      linkProviderUseCase: new TestLinkProviderUseCase(this.prisma),
+      getMeUseCase: new TestGetMeUseCase(this.prisma),
+      unlinkProviderUseCase: new TestUnlinkProviderUseCase(this.prisma),
+      getUserByIdAdminUseCase: new TestGetUserByIdAdminUseCase(this.prisma),
+      setUserRoleAdminUseCase: new TestSetUserRoleAdminUseCase(this.prisma),
+      setUserStatusAdminUseCase: new TestSetUserStatusAdminUseCase(this.prisma),
+      getUsersAdminUseCase: new TestGetUsersAdminUseCase(this.prisma)
     };
   }
 
@@ -124,9 +147,17 @@ export class TestCompositionRoot {
    * @returns Object containing all handlers
    */
   createHandlers() {
-    
+    // Use the test handlers that use TestCompositionRoot
+    // This ensures we use the test database and mocked AWS services
     return {
-      patchMeHandler: patchMeHandler
+      patchMeHandler: testPatchMeHandler,
+      linkProviderHandler: testLinkProviderHandler,
+      getMeHandler: testGetMeHandler,
+      unlinkProviderHandler: testUnlinkProviderHandler,
+      getUserByIdAdminHandler: testGetUserByIdAdminHandler,
+      setUserRoleAdminHandler: testSetUserRoleAdminHandler,
+      setUserStatusAdminHandler: testSetUserStatusAdminHandler,
+      getUsersAdminHandler: testGetUsersAdminHandler
     };
   }
 
@@ -166,6 +197,12 @@ export class TestCompositionRoot {
    * Clears all test data and resets mocks
    */
   async clearTestData(): Promise<void> {
+    // Clear database test data
+    await this.prisma.oAuthAccount.deleteMany({});
+    await this.prisma.userPersonalInfo.deleteMany({});
+    await this.prisma.userAuditEvent.deleteMany({});
+    await this.prisma.user.deleteMany({});
+    
     // Clear outbox events
     this.outboxRepository.clear();
     
@@ -174,7 +211,6 @@ export class TestCompositionRoot {
     
     // Clear Cognito users
     this.cognitoService.clear();
-    
   }
 
   /**

@@ -67,6 +67,22 @@ const normalizeError = (err: unknown): {
     };
   }
 
+  // Provider-shaped errors carrying statusCode/code → pass-through
+  const anyErr = err as any;
+  if (
+    anyErr &&
+    typeof anyErr.statusCode === "number" &&
+    typeof anyErr.code === "string" &&
+    anyErr.statusCode >= 400 && anyErr.statusCode < 600
+  ) {
+    return {
+      statusCode: anyErr.statusCode,
+      code: anyErr.code,
+      message: typeof anyErr.message === "string" && anyErr.message.length > 0 ? anyErr.message : "Error",
+      details: anyErr.details
+    };
+  }
+
   // ZodError → 422
   if (isZodError(err)) {
     // Extract the first error message from Zod issues
