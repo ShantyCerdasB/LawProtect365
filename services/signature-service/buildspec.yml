@@ -228,14 +228,20 @@ phases:
         aws s3 cp "sign-core-layer.zip" "s3://$CODE_BUCKET/sign-core-layer.zip"
 
         publish_layer() {
-          local NAME="$1"
-          local ZIP="$2"
-          local DESC="$3"
-          local ARN=""
+          NAME="$1"
+          ZIP="$2"
+          DESC="$3"
+          # Enforce 50MB compressed limit for Lambda layers
+          ZIP_SIZE=$( (stat -c%s "$ZIP" 2>/dev/null) || (wc -c < "$ZIP") )
+          MAX_SIZE=$((50*1024*1024))
+          if [ "$ZIP_SIZE" -gt "$MAX_SIZE" ]; then
+            echo "[ERROR] $ZIP exceeds 50MB compressed limit ($ZIP_SIZE bytes)" >&2
+            exit 1
+          fi
           ARN=$(aws lambda publish-layer-version \
             --layer-name "$NAME" \
             --description "$DESC" \
-            --zip-file "fileb://$ZIP" \
+            --content S3Bucket="$CODE_BUCKET",S3Key="$ZIP" \
             --compatible-runtimes nodejs20.x \
             --query LayerVersionArn --output text)
           if [ -z "$ARN" ] || [ "$ARN" = "None" ]; then
