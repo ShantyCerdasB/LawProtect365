@@ -57,23 +57,14 @@ phases:
         # Create proper layer structure for Node.js
         mkdir -p layer-deps/nodejs/node_modules
 
-        # Build a clean production-only node_modules in a temp dir to avoid shipping dev deps
-        echo "[INFO] Installing production dependencies (clean install)"
-        rm -rf __prod
-        mkdir -p __prod
-        cp -f package.json __prod/
-        if [ -f package-lock.json ]; then
-          cp -f package-lock.json __prod/
-          (cd __prod && npm ci --omit=dev --no-audit --no-fund)
-        else
-          echo "[WARN] package-lock.json not found; using npm install --omit=dev"
-          (cd __prod && npm install --omit=dev --no-audit --no-fund)
-        fi
-
-        echo "[INFO] Copying production node_modules into layer"
-        test -d __prod/node_modules || { echo "[ERROR] __prod/node_modules not created (npm install failed)"; exit 1; }
-        rsync -a __prod/node_modules/ layer-deps/nodejs/node_modules/
-        rm -rf __prod
+        # Copy already-installed node_modules and prune dev dependencies (keeps private scoped packages)
+        echo "[INFO] Copying existing node_modules into layer"
+        test -d node_modules || { echo "[ERROR] node_modules not found (ensure npm ci succeeded earlier)"; exit 1; }
+        rsync -a node_modules/ layer-deps/nodejs/node_modules/
+        # Copy package.json so npm prune can detect dev deps
+        cp -f package.json layer-deps/nodejs/package.json
+        # Prune dev dependencies in the layer (no network access needed)
+        (cd layer-deps/nodejs && npm prune --omit=dev --no-audit --no-fund || true)
 
         # === Ensure @lawprotect/shared-ts is present in the deps layer ===
         DEST_DIR="layer-deps/nodejs/node_modules/@lawprotect/shared-ts"
