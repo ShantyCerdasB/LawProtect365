@@ -61,10 +61,17 @@ phases:
         echo "[INFO] Installing production dependencies (clean install)"
         rm -rf __prod
         mkdir -p __prod
-        cp package.json package-lock.json __prod/
-        (cd __prod && npm ci --omit=dev --no-audit --no-fund)
+        cp -f package.json __prod/
+        if [ -f package-lock.json ]; then
+          cp -f package-lock.json __prod/
+          (cd __prod && npm ci --omit=dev --no-audit --no-fund)
+        else
+          echo "[WARN] package-lock.json not found; using npm install --omit=dev"
+          (cd __prod && npm install --omit=dev --no-audit --no-fund)
+        fi
 
         echo "[INFO] Copying production node_modules into layer"
+        test -d __prod/node_modules || { echo "[ERROR] __prod/node_modules not created (npm install failed)"; exit 1; }
         rsync -a __prod/node_modules/ layer-deps/nodejs/node_modules/
         rm -rf __prod
 
@@ -259,23 +266,22 @@ phases:
         SHARED_TS_LAYER_ARN="$(aws lambda list-layer-versions --layer-name "$SHARED_TS_LAYER_NAME" --max-items 1 --query "LayerVersions[0].LayerVersionArn" --output text 2>/dev/null || true)"
 
         build_layers_args() {
-          local args=()
+          args=""
           if [ -n "${SHARED_TS_LAYER_ARN:-}" ] && [ "${SHARED_TS_LAYER_ARN}" != "None" ]; then
-            args+=("${SHARED_TS_LAYER_ARN}")
+            args="${args} ${SHARED_TS_LAYER_ARN}"
           fi
           if [ -n "${DEPS_LAYER_VERSION:-}" ] && [ "${DEPS_LAYER_VERSION}" != "None" ]; then
-            args+=("${DEPS_LAYER_VERSION}")
+            args="${args} ${DEPS_LAYER_VERSION}"
           fi
           if [ -n "${CORE_LAYER_VERSION:-}" ] && [ "${CORE_LAYER_VERSION}" != "None" ]; then
-            args+=("${CORE_LAYER_VERSION}")
+            args="${args} ${CORE_LAYER_VERSION}"
           fi
-          printf "%s" "${args[*]}"
+          echo "$args" | sed -e 's/^ *//'
         }
 
         deploy_fn() {
-          local FN="$1"
-          local ZIP="$2"
-          local LAYERS_ARGS
+          FN="$1"
+          ZIP="$2"
           LAYERS_ARGS="$(build_layers_args)"
           echo "[INFO] Deploying $FN"
           aws s3 cp "$ZIP" "s3://$CODE_BUCKET/$ZIP"
