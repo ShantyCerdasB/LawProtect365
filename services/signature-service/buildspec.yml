@@ -95,6 +95,7 @@ phases:
         npx -y esbuild@0.21.5 core-bundle-entry.mjs \
           --bundle --platform=node --format=esm --target=node20 \
           --minify --sourcemap=linked \
+          --banner:js="import { webcrypto as __wc } from 'node:crypto'; if (!globalThis.crypto) globalThis.crypto = __wc;" \
           --outfile="layer-core/nodejs/node_modules/@lawprotect/sign-core/index.js"
 
         # package.json del módulo ESM
