@@ -253,8 +253,9 @@ export async function createOAuthAccount(
 ) {
   // Use the provided providerAccountId or generate a unique one
   const timestamp = process.hrtime.bigint().toString();
+  const { randomBytes } = require('node:crypto');
   const finalProviderAccountId = options.providerAccountId || 
-    `${options.provider.toLowerCase()}-account-${timestamp}-${Math.random().toString(36).substring(2, 8)}`;
+    `${options.provider.toLowerCase()}-account-${timestamp}-${randomBytes(3).toString('hex')}`;
 
   return await prisma.oAuthAccount.create({
     data: {

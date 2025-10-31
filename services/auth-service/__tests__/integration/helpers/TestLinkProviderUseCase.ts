@@ -212,7 +212,8 @@ export class TestLinkProviderUseCase {
 
   private generateMockProviderAccountId(provider: OAuthProvider): string {
     const timestamp = Date.now();
-    const random = Math.random().toString(36).substring(2, 8);
+    const { randomBytes } = require('node:crypto');
+    const random = randomBytes(4).toString('hex');
     
     // Use a simple format that works for all providers
     return `${String(provider).toLowerCase()}-${timestamp}-${random}`;

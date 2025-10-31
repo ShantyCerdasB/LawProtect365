@@ -5,7 +5,6 @@
  */
 
 import * as crypto from "node:crypto";
-import { ulid as makeUlid } from "ulid";
 
 /** Generates an RFC 4122 v4 UUID using Node's crypto. */
 export const uuid = (): string => {
@@ -18,7 +17,61 @@ export const uuid = (): string => {
 };
 
 /** Generates a ULID (lexicographically sortable). */
-export const ulid = (): string => makeUlid();
+/**
+ * Generates a ULID using secure RNG
+ * ULID spec: 48-bit timestamp + 80-bit randomness, Crockford's Base32 (26 chars).
+ */
+export const ulid = (): string => {
+  const ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+
+  const encodeTime = (time: number): string => {
+    // 48-bit timestamp -> 10 chars (base32)
+    let t = Math.floor(time);
+    let out = "";
+    for (let i = 0; i < 10; i++) {
+      out = ALPHABET[t % 32] + out;
+      t = Math.floor(t / 32);
+    }
+    return out;
+  };
+
+  const encodeRandom = (): string => {
+    // 80 bits randomness -> 16 chars. Use crypto bytes and map 5-bit chunks.
+    const bytes = crypto.randomBytes(10); // 80 bits
+    const chars = new Array<string>(16);
+    let idx = 0;
+    // pack 5-bit groups
+    for (let i = 0; i < 10; i += 5) {
+      const b0 = bytes[i] ?? 0;
+      const b1 = bytes[i + 1] ?? 0;
+      const b2 = bytes[i + 2] ?? 0;
+      const b3 = bytes[i + 3] ?? 0;
+      const b4 = bytes[i + 4] ?? 0;
+
+      // 5 bytes = 40 bits -> 8 groups of 5 bits
+      const v0 = (b0 & 0b11111000) >> 3;
+      const v1 = ((b0 & 0b00000111) << 2) | ((b1 & 0b11000000) >> 6);
+      const v2 = (b1 & 0b00111110) >> 1;
+      const v3 = ((b1 & 0b00000001) << 4) | ((b2 & 0b11110000) >> 4);
+      const v4 = ((b2 & 0b00001111) << 1) | ((b3 & 0b10000000) >> 7);
+      const v5 = (b3 & 0b01111100) >> 2;
+      const v6 = ((b3 & 0b00000011) << 3) | ((b4 & 0b11100000) >> 5);
+      const v7 = b4 & 0b00011111;
+
+      chars[idx++] = ALPHABET[v0];
+      chars[idx++] = ALPHABET[v1];
+      chars[idx++] = ALPHABET[v2];
+      chars[idx++] = ALPHABET[v3];
+      chars[idx++] = ALPHABET[v4];
+      chars[idx++] = ALPHABET[v5];
+      chars[idx++] = ALPHABET[v6];
+      chars[idx++] = ALPHABET[v7];
+    }
+    return chars.join("");
+  };
+
+  return encodeTime(Date.now()) + encodeRandom();
+};
 
 /**
  * Generates a base64url token of N random bytes.

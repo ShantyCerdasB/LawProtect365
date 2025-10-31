@@ -1,5 +1,5 @@
 import { AsyncLocalStorage } from "node:async_hooks";
-import { ulid } from "ulid";
+import { ulid } from "../utils/id.js";
 
 /**
  * Request-scoped context propagated via AsyncLocalStorage.

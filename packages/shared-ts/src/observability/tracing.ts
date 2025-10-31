@@ -1,4 +1,4 @@
-import { ulid } from "ulid";
+import { ulid } from "../utils/id.js";
 import { getRequestContext, setContextFields } from "./context.js";
 import { startTimer } from "./timers.js";
 import { logger } from "./logger.js";

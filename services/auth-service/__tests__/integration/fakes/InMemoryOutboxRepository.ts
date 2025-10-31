@@ -227,7 +227,7 @@ export class InMemoryOutboxRepository {
    */
   async publish(event: { type: string; source: string; data: any }, dedupId?: string): Promise<void> {
     const outboxEvent = {
-      id: dedupId || `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: dedupId || `event-${Date.now()}-${require('node:crypto').randomBytes(5).toString('hex')}`,
       type: event.type,
       payload: event,
       occurredAt: new Date().toISOString()

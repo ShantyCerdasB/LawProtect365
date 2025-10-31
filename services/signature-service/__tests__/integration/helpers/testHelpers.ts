@@ -15,8 +15,6 @@ import { generateTestJwtToken as generateJwtFromMock } from '../mocks/cognito/jw
  * @param length - Length of the random string to generate
  * @returns Cryptographically secure random string
  * @description Creates a random string using crypto.randomBytes for security.
- * This is cryptographically secure unlike Math.random() which is not suitable
- * for security-sensitive applications.
  */
 export const secureRandomString = (length: number): string => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';

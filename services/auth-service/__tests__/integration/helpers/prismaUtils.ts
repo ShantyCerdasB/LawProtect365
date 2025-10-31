@@ -21,7 +21,8 @@ export interface TransactionContext {
  * @returns Transaction context with savepoint
  */
 export async function beginWithSavepoint(prisma: PrismaClient): Promise<TransactionContext> {
-  const savepointId = `test_savepoint_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const { randomBytes } = require('node:crypto');
+  const savepointId = `test_savepoint_${Date.now()}_${randomBytes(5).toString('hex')}`;
   
   // Start transaction
   await prisma.$executeRaw`BEGIN`;

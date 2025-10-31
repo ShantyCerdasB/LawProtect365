@@ -137,7 +137,8 @@ export class ProviderLinkingRules {
    */
   static generateState(userId: string, provider: OAuthProvider, _config: AuthServiceConfig): string {
     const timestamp = Date.now();
-    const nonce = Math.random().toString(36).substring(2, 15);
+    const { randomBytes } = require('node:crypto');
+    const nonce = randomBytes(12).toString('base64url');
     
     const stateData = {
       userId,
