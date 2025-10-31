@@ -1,6 +1,6 @@
 
 import type { BeforeMiddleware } from "./middleware.js";
-import { ulid } from "ulid";
+import { ulid } from "../utils/id.js";
 
 /**
  * Attaches a request id and trace id to the event headers if missing.
