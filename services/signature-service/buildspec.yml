@@ -17,14 +17,11 @@ phases:
       - |
         echo "[INFO] Building packages/shared-ts"
         cd "$CODEBUILD_SRC_DIR/packages/shared-ts"
-        npm ci --no-audit --no-fund
         export DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}"
         npm run prisma:generate
         npm run build
       - |
-        echo "[INFO] Installing deps in services/signature-service"
-        cd "$CODEBUILD_SRC_DIR/services/signature-service"
-        npm ci --no-audit --no-fund
+        echo "[INFO] Using workspace install; skipping per-service npm ci"
       - |
         echo "[INFO] Preparing Prisma client"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
@@ -52,71 +49,9 @@ phases:
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
         npm run build
 
-      # ===== Deps layer (prod deps) =====
+      # ===== Deps layer skipped (using bundled core) =====
       - |
-        echo "[INFO] Building dependencies layer (using existing node_modules)"
-        cd "$CODEBUILD_SRC_DIR/services/signature-service"
-        rm -rf layer-deps sign-deps-layer.zip
-
-        # Create proper layer structure for Node.js
-        mkdir -p layer-deps/nodejs/node_modules
-
-        # Copy already-installed node_modules and prune dev dependencies (keeps private scoped packages)
-        echo "[INFO] Copying existing node_modules into layer"
-        SRC_NODE_MODULES="node_modules"
-        if [ ! -d "$SRC_NODE_MODULES" ] && [ -d "$CODEBUILD_SRC_DIR/node_modules" ]; then
-          echo "[WARN] services/signature-service/node_modules not found, using workspace root node_modules"
-          SRC_NODE_MODULES="$CODEBUILD_SRC_DIR/node_modules"
-        fi
-        test -d "$SRC_NODE_MODULES" || { echo "[ERROR] node_modules not found in service or workspace root"; exit 1; }
-        rsync -aL "$SRC_NODE_MODULES/" layer-deps/nodejs/node_modules/
-        # Copy package.json so npm prune can detect dev deps
-        cp -f package.json layer-deps/nodejs/package.json
-        # Prune dev dependencies in the layer (no network access needed)
-        (cd layer-deps/nodejs && npm prune --omit=dev --no-audit --no-fund || true)
-
-        # === Ensure @lawprotect/shared-ts is present in the deps layer ===
-        DEST_DIR="layer-deps/nodejs/node_modules/@lawprotect/shared-ts"
-        mkdir -p "layer-deps/nodejs/node_modules/@lawprotect"
-
-        add_shared_ts() {
-          local SRC="$1"
-          echo "[INFO] Adding @lawprotect/shared-ts to deps layer from: $SRC"
-          rm -rf "$DEST_DIR"
-          mkdir -p "$DEST_DIR"
-          # package.json (necesario para resolución de módulo)
-          if [ -f "$SRC/package.json" ]; then
-            cp "$SRC/package.json" "$DEST_DIR/package.json"
-          else
-            echo "[ERROR] package.json not found at $SRC"; return 1
-          fi
-          # dist/ (artefactos de runtime)
-          if [ -d "$SRC/dist" ]; then
-            rsync -a "$SRC/dist/" "$DEST_DIR/dist/"
-          else
-            echo "[WARN] dist/ not found at $SRC (asegúrate de haber ejecutado el build del shared-ts)"
-          fi
-        }
-
-        if [ -d "node_modules/@lawprotect/shared-ts" ]; then
-          add_shared_ts "node_modules/@lawprotect/shared-ts" || exit 1
-        elif [ -d "$CODEBUILD_SRC_DIR/node_modules/@lawprotect/shared-ts" ]; then
-          add_shared_ts "$CODEBUILD_SRC_DIR/node_modules/@lawprotect/shared-ts" || exit 1
-        elif [ -d "$CODEBUILD_SRC_DIR/packages/shared-ts" ]; then
-          add_shared_ts "$CODEBUILD_SRC_DIR/packages/shared-ts" || exit 1
-        else
-          echo "[ERROR] Could not locate @lawprotect/shared-ts in workspace"; exit 1
-        fi
-
-        # Sanity checks
-        test -d "layer-deps/nodejs/node_modules" || { echo "[ERROR] node_modules not created inside layer"; exit 1; }
-        test -f "$DEST_DIR/package.json" || { echo "[ERROR] shared-ts package.json not found in layer"; exit 1; }
-
-        # Create ZIP of dependencies layer
-        (cd layer-deps && zip -qr ../sign-deps-layer.zip .)
-        test -s sign-deps-layer.zip || { echo "[ERROR] sign-deps-layer.zip is empty"; exit 1; }
-        rm -rf layer-deps
-        echo "[INFO] Dependencies layer ZIP created"
+        echo "[INFO] Skipping dependencies layer; core layer will include runtime deps via bundling"
 
       # ===== Core layer (ESM) =====
       - |
@@ -125,20 +60,9 @@ phases:
         rm -rf layer-core sign-core-layer.zip
 
         mkdir -p "layer-core/nodejs/node_modules/@lawprotect/sign-core"
-        cp -r "dist" "layer-core/nodejs/node_modules/@lawprotect/sign-core/"
 
-        # package.json del módulo ESM
-        cat > "layer-core/nodejs/node_modules/@lawprotect/sign-core/package.json" << 'EOF'
-        {
-          "name": "@lawprotect/sign-core",
-          "version": "1.0.0",
-          "main": "index.js",
-          "type": "module"
-        }
-        EOF
-
-        # index.js ESM: importa con extensión .js (paths dentro de dist)
-        cat > "layer-core/nodejs/node_modules/@lawprotect/sign-core/index.js" << 'EOF'
+        # Create ESM bundle entry that re-exports handlers
+        cat > "core-bundle-entry.mjs" << 'EOF'
         import { createEnvelopeHandler } from './dist/src/handlers/envelopes/CreateEnvelopeHandler.js';
         import { getEnvelopeHandler } from './dist/src/handlers/envelopes/GetEnvelopeHandler.js';
         import { sendEnvelopeHandler } from './dist/src/handlers/envelopes/SendEnvelopeHandler.js';
@@ -167,13 +91,28 @@ phases:
         };
         EOF
 
+        # Bundle with esbuild (Node 20 ESM), include all runtime deps in one file
+        npx -y esbuild@0.21.5 core-bundle-entry.mjs \
+          --bundle --platform=node --format=esm --target=node20 \
+          --minify --sourcemap=linked \
+          --outfile="layer-core/nodejs/node_modules/@lawprotect/sign-core/index.js"
+
+        # package.json del módulo ESM
+        cat > "layer-core/nodejs/node_modules/@lawprotect/sign-core/package.json" << 'EOF'
+        {
+          "name": "@lawprotect/sign-core",
+          "version": "1.0.0",
+          "main": "index.js",
+          "type": "module"
+        }
+        EOF
+
+
         (cd layer-core && zip -qr ../sign-core-layer.zip .)
         test -s sign-core-layer.zip || { echo "[ERROR] sign-core-layer.zip is empty"; exit 1; }
-        # Validate critical files exist in the core layer
-        unzip -l sign-core-layer.zip | grep -q 'nodejs/node_modules/@lawprotect/sign-core/dist/src/handlers/envelopes/CreateEnvelopeHandler\.js' \
-          || { echo "[ERROR] CreateEnvelopeHandler.js missing from core layer"; exit 1; }
-        unzip -l sign-core-layer.zip | grep -q 'nodejs/node_modules/@lawprotect/sign-core/dist/src/domain/schemas/EnvelopeSchema\.js' \
-          || { echo "[ERROR] EnvelopeSchema.js missing from core layer"; exit 1; }
+        # Validate bundled index exists
+        unzip -l sign-core-layer.zip | grep -q 'nodejs/node_modules/@lawprotect/sign-core/index\.js' \
+          || { echo "[ERROR] index.js bundle missing from core layer"; exit 1; }
         rm -rf layer-core
         echo "[INFO] Core layer ZIP created"
 
@@ -224,7 +163,6 @@ phases:
 
         AWS_ACCOUNT_ID="${AWS_ACCOUNT_ID:-$(aws sts get-caller-identity --query Account --output text)}"
 
-        aws s3 cp "sign-deps-layer.zip" "s3://$CODE_BUCKET/sign-deps-layer.zip"
         aws s3 cp "sign-core-layer.zip" "s3://$CODE_BUCKET/sign-core-layer.zip"
 
         publish_layer() {
@@ -251,17 +189,13 @@ phases:
           echo "$ARN"
         }
 
-        DEPS_LAYER_NAME="lawprotect365-sign-deps-stg"
         CORE_LAYER_NAME="lawprotect365-sign-core-stg"
 
-        DEPS_LAYER_VERSION="$(publish_layer "$DEPS_LAYER_NAME" "sign-deps-layer.zip" "Signature service dependencies")"
         CORE_LAYER_VERSION="$(publish_layer "$CORE_LAYER_NAME" "sign-core-layer.zip" "Signature service core code")"
 
-        echo "[INFO] Dependencies layer ARN: ${DEPS_LAYER_VERSION:-<empty>}"
         echo "[INFO] Core layer ARN:         ${CORE_LAYER_VERSION:-<empty>}"
 
         aws lambda list-layer-versions --layer-name "$CORE_LAYER_NAME" --max-items 5 || true
-        aws lambda list-layer-versions --layer-name "$DEPS_LAYER_NAME" --max-items 5 || true
 
       # ===== Deploy de funciones =====
       - |
@@ -276,9 +210,6 @@ phases:
           args=""
           if [ -n "${SHARED_TS_LAYER_ARN:-}" ] && [ "${SHARED_TS_LAYER_ARN}" != "None" ]; then
             args="${args} ${SHARED_TS_LAYER_ARN}"
-          fi
-          if [ -n "${DEPS_LAYER_VERSION:-}" ] && [ "${DEPS_LAYER_VERSION}" != "None" ]; then
-            args="${args} ${DEPS_LAYER_VERSION}"
           fi
           if [ -n "${CORE_LAYER_VERSION:-}" ] && [ "${CORE_LAYER_VERSION}" != "None" ]; then
             args="${args} ${CORE_LAYER_VERSION}"
@@ -338,7 +269,6 @@ phases:
 artifacts:
   files:
     - "services/signature-service/sign-*.zip"
-    - "services/signature-service/sign-deps-layer.zip"
     - "services/signature-service/sign-core-layer.zip"
     - "services/signature-service/appspec.yml"
     - "services/signature-service/appspec-*.yml"
