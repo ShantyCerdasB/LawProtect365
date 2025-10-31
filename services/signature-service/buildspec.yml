@@ -127,7 +127,9 @@ phases:
           rm -rf __tmp_fn
           mkdir -p __tmp_fn
           cat > __tmp_fn/index.mjs << EOF
-        import { handlers } from '@lawprotect/sign-core';
+        import { webcrypto } from 'node:crypto';
+        if (!globalThis.crypto) { globalThis.crypto = webcrypto; }
+        const { handlers } = await import('@lawprotect/sign-core');
         export const handler = handlers.${exp};
         EOF
           cat > __tmp_fn/package.json << 'EOF'
