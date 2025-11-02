@@ -91,12 +91,17 @@ phases:
         };
         EOF
 
-        # Bundle with esbuild (Node 20 ESM), include all runtime deps in one file
+        # Bundle with esbuild (Node 20 ESM), external only AWS SDK and builtins
         npx -y esbuild@0.21.5 core-bundle-entry.mjs \
           --bundle --platform=node --format=esm --target=node20 \
-          --minify --sourcemap=linked \
-          --banner:js="import { webcrypto as __wc } from 'node:crypto'; if (!globalThis.crypto) globalThis.crypto = __wc;" \
+          --external:@aws-sdk/* --external:@prisma/client --external:dotenv \
+          --minify --sourcemap \
           --outfile="layer-core/nodejs/node_modules/@lawprotect/sign-core/index.js"
+        
+        # Inject crypto polyfill manually at the start of the bundle
+        echo "import{webcrypto as __wc}from'node:crypto';if(!globalThis.crypto)globalThis.crypto=__wc;" > __banner.js
+        cat layer-core/nodejs/node_modules/@lawprotect/sign-core/index.js >> __banner.js
+        mv __banner.js layer-core/nodejs/node_modules/@lawprotect/sign-core/index.js
 
         # package.json del módulo ESM
         cat > "layer-core/nodejs/node_modules/@lawprotect/sign-core/package.json" << 'EOF'
