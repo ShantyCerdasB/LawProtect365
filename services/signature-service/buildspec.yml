@@ -227,7 +227,7 @@ phases:
       # ===== Publicar layers (con fallback a última versión) =====
       - |
         echo "[INFO] Uploading layers to S3 & publishing versions"
-        set -e
+        set -euo pipefail
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
 
         if [ -z "${CODE_BUCKET:-}" ]; then
@@ -236,10 +236,16 @@ phases:
         fi
 
         AWS_ACCOUNT_ID="${AWS_ACCOUNT_ID:-$(aws sts get-caller-identity --query Account --output text)}"
+        AWS_REGION="${AWS_REGION:-${AWS_DEFAULT_REGION:-us-east-1}}"
 
-        aws s3 cp "sign-core-layer.zip" "s3://$CODE_BUCKET/sign-core-layer.zip"
+        aws s3 cp "sign-core-layer.zip"   "s3://$CODE_BUCKET/sign-core-layer.zip"
         aws s3 cp "sign-shared-layer.zip" "s3://$CODE_BUCKET/sign-shared-layer.zip"
         aws s3 cp "sign-prisma-layer.zip" "s3://$CODE_BUCKET/sign-prisma-layer.zip"
+
+        # Quick sanity check that S3 objects exist
+        aws s3 ls "s3://$CODE_BUCKET/sign-core-layer.zip"   >/dev/null
+        aws s3 ls "s3://$CODE_BUCKET/sign-shared-layer.zip" >/dev/null
+        aws s3 ls "s3://$CODE_BUCKET/sign-prisma-layer.zip" >/dev/null
 
         publish_layer() {
           NAME="$1"
@@ -252,14 +258,21 @@ phases:
             echo "[ERROR] $ZIP exceeds 50MB compressed limit ($ZIP_SIZE bytes)" >&2
             exit 1
           fi
-          ARN=$(aws lambda publish-layer-version \
+          # Publish and capture errors for diagnostics
+          if ! ARN=$(aws lambda publish-layer-version \
+            --region "$AWS_REGION" \
             --layer-name "$NAME" \
             --description "$DESC" \
             --content S3Bucket="$CODE_BUCKET",S3Key="$ZIP" \
             --compatible-runtimes nodejs20.x \
-            --query LayerVersionArn --output text)
+            --query LayerVersionArn --output text 2>"publish-$NAME.err"); then
+            echo "[ERROR] Failed to publish layer $NAME (see below)" >&2
+            cat "publish-$NAME.err" >&2 || true
+            exit 1
+          fi
           if [ -z "$ARN" ] || [ "$ARN" = "None" ]; then
-            echo "[ERROR] Failed to publish layer $NAME" >&2
+            echo "[ERROR] Failed to obtain ARN for layer $NAME" >&2
+            cat "publish-$NAME.err" >&2 || true
             exit 1
           fi
           echo "$ARN"
@@ -277,7 +290,7 @@ phases:
         echo "[INFO] Shared layer ARN: ${SHARED_LAYER_VERSION:-<empty>}"
         echo "[INFO] Prisma layer ARN: ${PRISMA_LAYER_VERSION:-<empty>}"
 
-        aws lambda list-layer-versions --layer-name "$CORE_LAYER_NAME" --max-items 5 || true
+        aws lambda list-layer-versions --region "$AWS_REGION" --layer-name "$CORE_LAYER_NAME" --max-items 5 || true
 
       # ===== Deploy de funciones =====
       - |
