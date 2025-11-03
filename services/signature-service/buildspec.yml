@@ -91,10 +91,11 @@ phases:
         };
         EOF
 
-        # Bundle with esbuild (Node 20 ESM), external only AWS SDK and builtins
+        # Bundle with esbuild (Node 20 ESM), external only AWS SDK
+        # Prisma Client se bundlea (ya optimizado); dotenv tambien (pequeño)
         npx -y esbuild@0.21.5 core-bundle-entry.mjs \
           --bundle --platform=node --format=esm --target=node20 \
-          --external:@aws-sdk/* --external:@prisma/client --external:dotenv \
+          --external:@aws-sdk/* \
           --minify --sourcemap \
           --outfile="layer-core/nodejs/node_modules/@lawprotect/sign-core/index.js"
         
