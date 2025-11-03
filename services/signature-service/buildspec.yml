@@ -61,6 +61,22 @@ phases:
 
         mkdir -p "layer-core/nodejs/node_modules/@lawprotect/sign-core"
 
+        # Copy runtime dependencies from existing node_modules (same ones used by tests)
+        echo "[INFO] Copying runtime dependencies to layer"
+        
+        # Las dependencias que necesita el runtime (no se pueden bundlear o son muy grandes)
+        RUNTIME_DEPS="@prisma/client .prisma dotenv"
+        
+        for dep in $RUNTIME_DEPS; do
+          if [ -d "node_modules/$dep" ]; then
+            echo "[INFO] Copying $dep"
+            mkdir -p "layer-core/nodejs/node_modules/$(dirname $dep)"
+            cp -r "node_modules/$dep" "layer-core/nodejs/node_modules/$dep"
+          else
+            echo "[WARN] $dep not found in node_modules"
+          fi
+        done
+
         # Create ESM bundle entry that re-exports handlers
         cat > "core-bundle-entry.mjs" << 'EOF'
         import { createEnvelopeHandler } from './dist/src/handlers/envelopes/CreateEnvelopeHandler.js';
@@ -91,11 +107,10 @@ phases:
         };
         EOF
 
-        # Bundle with esbuild (Node 20 ESM), external only AWS SDK
-        # Prisma Client se bundlea (ya optimizado); dotenv tambien (pequeño)
+        # Bundle with esbuild (Node 20 ESM), external: AWS SDK, Prisma, dotenv
         npx -y esbuild@0.21.5 core-bundle-entry.mjs \
           --bundle --platform=node --format=esm --target=node20 \
-          --external:@aws-sdk/* \
+          --external:@aws-sdk/* --external:@prisma/client --external:dotenv \
           --minify --sourcemap \
           --outfile="layer-core/nodejs/node_modules/@lawprotect/sign-core/index.js"
         
