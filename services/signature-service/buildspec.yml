@@ -227,7 +227,7 @@ phases:
       # ===== Publicar layers (con fallback a última versión) =====
       - |
         echo "[INFO] Uploading layers to S3 & publishing versions"
-        set -euo pipefail
+        set -euo
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
 
         if [ -z "${CODE_BUCKET:-}" ]; then
@@ -330,7 +330,7 @@ phases:
           ENV_ARG="$(python3 -c "import json,sys; raw=sys.argv[1] if len(sys.argv)>1 else '{}'; env=json.loads(raw or '{}') or {}; env['NODE_OPTIONS']='--experimental-specifier-resolution=node'; print(json.dumps({'Variables': env}, separators=(',',':')))" "$ENV_JSON")"
 
           if [ -n "$LAYERS_ARGS" ]; then
-            aws lambda update-function-configuration --function-name "$FN" --runtime nodejs20.x --handler index.handler --layers $LAYERS_ARGS --environment "$ENV_ARG" >/dev/null
+          aws lambda update-function-configuration --function-name "$FN" --runtime nodejs20.x --handler index.handler --layers $LAYERS_ARGS --environment "$ENV_ARG" >/dev/null
           else
             aws lambda update-function-configuration --function-name "$FN" --runtime nodejs20.x --handler index.handler --environment "$ENV_ARG" >/dev/null
           fi
