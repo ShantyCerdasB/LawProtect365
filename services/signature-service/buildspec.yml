@@ -53,70 +53,13 @@ phases:
       - |
         echo "[INFO] Skipping dependencies layer; core layer will include runtime deps via bundling"
 
-      # ===== Shared-TS layer (full dist: esm, cjs, types) =====
+      # ===== Shared-TS layer (SKIPPED here; managed por pipeline/layer propio) =====
       - |
-        echo "[INFO] Building shared-ts layer"
-        cd "$CODEBUILD_SRC_DIR"
-        rm -rf services/signature-service/layer-shared services/signature-service/sign-shared-layer.zip
+        echo "[INFO] Skipping shared-ts layer build/publish in this pipeline (managed separately)"
 
-        mkdir -p "services/signature-service/layer-shared/nodejs/node_modules/@lawprotect/shared-ts"
-        # Copiamos todo el dist (esm, cjs, types)
-        mkdir -p "services/signature-service/layer-shared/nodejs/node_modules/@lawprotect/shared-ts/dist"
-        cp -r "packages/shared-ts/dist/"* "services/signature-service/layer-shared/nodejs/node_modules/@lawprotect/shared-ts/dist/"
-        # package.json con require/import/types para CJS & ESM
-        cat > "services/signature-service/layer-shared/nodejs/node_modules/@lawprotect/shared-ts/package.json" << 'EOF'
-        {
-          "name": "@lawprotect/shared-ts",
-          "version": "0.1.0",
-          "type": "module",
-          "main": "dist/cjs/index.js",
-          "module": "dist/esm/index.js",
-          "types": "dist/types/index.d.ts",
-          "exports": {
-            ".": {
-              "require": "./dist/cjs/index.js",
-              "import": "./dist/esm/index.js",
-              "types": "./dist/types/index.d.ts"
-            }
-          }
-        }
-        EOF
-
-        (cd services/signature-service/layer-shared && zip -qr ../sign-shared-layer.zip .)
-        test -s services/signature-service/sign-shared-layer.zip || { echo "[ERROR] sign-shared-layer.zip is empty"; exit 1; }
-        rm -rf services/signature-service/layer-shared
-
-      # ===== Prisma layer (native engines + client) =====
+      # ===== Prisma layer (SKIPPED; Prisma vive en shared-ts layer) =====
       - |
-        echo "[INFO] Building prisma layer (@prisma/client + engines)"
-        cd "$CODEBUILD_SRC_DIR/services/signature-service"
-        rm -rf layer-prisma sign-prisma-layer.zip
-
-        mkdir -p "layer-prisma/nodejs/node_modules/@prisma" "layer-prisma/nodejs/node_modules/.prisma"
-
-        copy_dep() {
-          local dep_path="$1"; local target="$2"
-          if [ -d "$dep_path" ]; then
-            echo "[INFO] Copying $(basename "$dep_path") from $dep_path"
-            cp -r "$dep_path" "$target"
-            return 0
-          fi
-          return 1
-        }
-
-        # Intentamos en service, root y shared-ts (por si no hoistea)
-        copy_dep "node_modules/@prisma/client" "layer-prisma/nodejs/node_modules/@prisma/" \
-          || copy_dep "$CODEBUILD_SRC_DIR/node_modules/@prisma/client" "layer-prisma/nodejs/node_modules/@prisma/" \
-          || copy_dep "$CODEBUILD_SRC_DIR/packages/shared-ts/node_modules/@prisma/client" "layer-prisma/nodejs/node_modules/@prisma/" \
-          || { echo "[ERROR] @prisma/client not found in workspace"; exit 1; }
-
-        copy_dep "node_modules/.prisma/client" "layer-prisma/nodejs/node_modules/.prisma/" \
-          || copy_dep "$CODEBUILD_SRC_DIR/node_modules/.prisma/client" "layer-prisma/nodejs/node_modules/.prisma/" \
-          || { echo "[WARN] .prisma/client not found (may be embedded)"; }
-
-        (cd layer-prisma && zip -qr ../sign-prisma-layer.zip .)
-        test -s sign-prisma-layer.zip || { echo "[ERROR] sign-prisma-layer.zip is empty"; exit 1; }
-        rm -rf layer-prisma
+        echo "[INFO] Skipping prisma layer; @prisma/client y engines van en shared-ts layer"
 
       # ===== Core layer (ESM) =====
       - |
@@ -239,13 +182,9 @@ phases:
         AWS_REGION="${AWS_REGION:-${AWS_DEFAULT_REGION:-us-east-1}}"
 
         aws s3 cp "sign-core-layer.zip"   "s3://$CODE_BUCKET/sign-core-layer.zip"
-        aws s3 cp "sign-shared-layer.zip" "s3://$CODE_BUCKET/sign-shared-layer.zip"
-        aws s3 cp "sign-prisma-layer.zip" "s3://$CODE_BUCKET/sign-prisma-layer.zip"
 
-        # Quick sanity check that S3 objects exist
+        # Quick sanity check that S3 object exists
         aws s3 ls "s3://$CODE_BUCKET/sign-core-layer.zip"   >/dev/null
-        aws s3 ls "s3://$CODE_BUCKET/sign-shared-layer.zip" >/dev/null
-        aws s3 ls "s3://$CODE_BUCKET/sign-prisma-layer.zip" >/dev/null
 
         publish_layer() {
           NAME="$1"
@@ -280,15 +219,10 @@ phases:
 
         CORE_LAYER_NAME="lawprotect365-sign-core-stg"
         SHARED_LAYER_NAME="lawprotect365-shared-ts-layer-stg"
-        PRISMA_LAYER_NAME="lawprotect365-prisma-layer-stg"
 
         CORE_LAYER_VERSION="$(publish_layer "$CORE_LAYER_NAME" "sign-core-layer.zip" "Signature service core code")"
-        SHARED_LAYER_VERSION="$(publish_layer "$SHARED_LAYER_NAME" "sign-shared-layer.zip" "Shared TS library layer")"
-        PRISMA_LAYER_VERSION="$(publish_layer "$PRISMA_LAYER_NAME" "sign-prisma-layer.zip" "Prisma Client & engines layer")"
 
         echo "[INFO] Core layer ARN:   ${CORE_LAYER_VERSION:-<empty>}"
-        echo "[INFO] Shared layer ARN: ${SHARED_LAYER_VERSION:-<empty>}"
-        echo "[INFO] Prisma layer ARN: ${PRISMA_LAYER_VERSION:-<empty>}"
 
         aws lambda list-layer-versions --region "$AWS_REGION" --layer-name "$CORE_LAYER_NAME" --max-items 5 || true
 
@@ -299,17 +233,12 @@ phases:
 
         AWS_ACCOUNT_ID="${AWS_ACCOUNT_ID:-$(aws sts get-caller-identity --query Account --output text)}"
         SHARED_TS_LAYER_NAME="lawprotect365-shared-ts-layer-stg"
-        SHARED_TS_LAYER_ARN="${SHARED_LAYER_VERSION:-$(aws lambda list-layer-versions --layer-name "$SHARED_TS_LAYER_NAME" --max-items 1 --query "LayerVersions[0].LayerVersionArn" --output text 2>/dev/null || true)}"
-        PRISMA_LAYER_NAME="lawprotect365-prisma-layer-stg"
-        PRISMA_LAYER_ARN="${PRISMA_LAYER_VERSION:-$(aws lambda list-layer-versions --layer-name "$PRISMA_LAYER_NAME" --max-items 1 --query "LayerVersions[0].LayerVersionArn" --output text 2>/dev/null || true)}"
+        SHARED_TS_LAYER_ARN="$(aws lambda list-layer-versions --layer-name "$SHARED_TS_LAYER_NAME" --max-items 1 --query "LayerVersions[0].LayerVersionArn" --output text 2>/dev/null || true)"
 
         build_layers_args() {
           args=""
           if [ -n "${SHARED_TS_LAYER_ARN:-}" ] && [ "${SHARED_TS_LAYER_ARN}" != "None" ]; then
             args="${args} ${SHARED_TS_LAYER_ARN}"
-          fi
-          if [ -n "${PRISMA_LAYER_ARN:-}" ] && [ "${PRISMA_LAYER_ARN}" != "None" ]; then
-            args="${args} ${PRISMA_LAYER_ARN}"
           fi
           if [ -n "${CORE_LAYER_VERSION:-}" ] && [ "${CORE_LAYER_VERSION}" != "None" ]; then
             args="${args} ${CORE_LAYER_VERSION}"
@@ -370,8 +299,6 @@ artifacts:
   files:
     - "services/signature-service/sign-*.zip"
     - "services/signature-service/sign-core-layer.zip"
-    - "services/signature-service/sign-shared-layer.zip"
-    - "services/signature-service/sign-prisma-layer.zip"
     - "services/signature-service/appspec.yml"
     - "services/signature-service/appspec-*.yml"
   discard-paths: yes
