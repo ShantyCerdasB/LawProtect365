@@ -102,11 +102,19 @@ phases:
     commands:
       - |
         bash -lc "set -euo pipefail
+        if [ -f '/tmp/skip_build.flag' ]; then
+          echo '[INFO] Skipping layer package/upload (no changes)'
+          exit 0
+        fi
         cd /tmp/layer
         zip -r shared-ts-layer.zip .
         aws s3 cp shared-ts-layer.zip \"s3://$CODE_BUCKET/shared-ts-layer.zip\""
       - |
         bash -lc "set -euo pipefail
+        if [ -f '/tmp/skip_build.flag' ]; then
+          echo '[INFO] Skipping layer publish (no changes)'
+          exit 0
+        fi
         AWS_REGION=\"${AWS_REGION:-${AWS_DEFAULT_REGION:-us-east-1}}\"
         LAYER_NAME=\"${PROJECT_NAME}-shared-ts-layer-${ENV}\"
         echo \"[INFO] Publishing Lambda layer: $LAYER_NAME\"
@@ -130,6 +138,10 @@ phases:
         echo -n \"$PUBLISHED_ARN\" > /tmp/SHARED_TS_LAYER_ARN"
       - |
         bash -lc "set -euo pipefail
+        if [ -f '/tmp/skip_build.flag' ]; then
+          echo '[INFO] Skipping outbox zip (no changes)'
+          exit 0
+        fi
         cd \"$CODEBUILD_SRC_DIR\"
         mkdir -p outbox-stream-handler
         if [ -f \"/tmp/layer/nodejs/node_modules/@lawprotect/shared-ts/dist/lambdas/OutboxStreamHandler.js\" ]; then
@@ -144,6 +156,10 @@ phases:
         rm -rf outbox-stream-handler"
       - |
         set +e
+        if [ -f '/tmp/skip_build.flag' ]; then
+          echo '[INFO] Skipping function update (no changes)'
+          exit 0
+        fi
         FUNCTION_NAME="${OUTBOX_FUNCTION_NAME}"
         ALIAS_NAME="${OUTBOX_ALIAS_NAME}"
         
