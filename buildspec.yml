@@ -88,9 +88,10 @@ phases:
       - |
         bash -lc "set -euo pipefail
         echo '[INFO] Updating outbox Lambda with new code & shared layer'
-        FUNCTION_NAME=\"${OUTBOX_FUNCTION_NAME}\"
-        ALIAS_NAME=\"${OUTBOX_ALIAS_NAME}\"
+        FUNCTION_NAME=\"${OUTBOX_FUNCTION_NAME:-${PROJECT_NAME}-outbox-stream-handler-${ENV}}\"
+        ALIAS_NAME=\"${OUTBOX_ALIAS_NAME:-live}\"
         SHARED_TS_LAYER_ARN=$(cat /tmp/SHARED_TS_LAYER_ARN)
+        if [ -z \"$FUNCTION_NAME\" ]; then echo '[ERROR] OUTBOX_FUNCTION_NAME is empty' >&2; exit 1; fi
         aws s3 cp outbox-stream-handler.zip \"s3://$CODE_BUCKET/outbox-stream-handler.zip\"
         aws lambda update-function-code --function-name \"$FUNCTION_NAME\" --s3-bucket \"$CODE_BUCKET\" --s3-key \"outbox-stream-handler.zip\"
         aws lambda wait function-updated --function-name \"$FUNCTION_NAME\"
@@ -99,7 +100,7 @@ phases:
       - |
         bash -lc "set -euo pipefail
         echo '[INFO] Sanity invoking outbox to detect ImportModuleError'
-        FUNCTION_NAME=\"${OUTBOX_FUNCTION_NAME}\"
+        FUNCTION_NAME=\"${OUTBOX_FUNCTION_NAME:-${PROJECT_NAME}-outbox-stream-handler-${ENV}}\"
         ERR=$(aws lambda invoke --function-name \"$FUNCTION_NAME\" --payload '{}' /tmp/invoke.json --query FunctionError --output text 2>/dev/null || true)
         if [ -n \"$ERR\" ] && [ \"$ERR\" != \"None\" ]; then
           echo \"[ERROR] Lambda invocation failed (FunctionError=$ERR). Check import errors.\" >&2
@@ -110,8 +111,8 @@ phases:
       - |
         bash -lc "set -euo pipefail
         echo '[INFO] Publishing version and updating alias'
-        FUNCTION_NAME=\"${OUTBOX_FUNCTION_NAME}\"
-        ALIAS_NAME=\"${OUTBOX_ALIAS_NAME}\"
+        FUNCTION_NAME=\"${OUTBOX_FUNCTION_NAME:-${PROJECT_NAME}-outbox-stream-handler-${ENV}}\"
+        ALIAS_NAME=\"${OUTBOX_ALIAS_NAME:-live}\"
         CURRENT_BEFORE=$(aws lambda get-alias --function-name \"$FUNCTION_NAME\" --name \"$ALIAS_NAME\" --query FunctionVersion --output text 2>/dev/null || true)
         TARGET_VERSION=$(aws lambda publish-version --function-name \"$FUNCTION_NAME\" --description \"Build-$(date +%s)\" --query Version --output text)
         if aws lambda get-alias --function-name \"$FUNCTION_NAME\" --name \"$ALIAS_NAME\" >/dev/null 2>&1; then
@@ -121,15 +122,15 @@ phases:
         fi
         CURRENT_SAFE=${CURRENT_BEFORE:-$TARGET_VERSION}
         printf \"%s\\n\" \\
-          \"version: 0.0\" \\
-          \"Resources:\" \\
-          \"  - OutboxHandler:\" \\
-          \"      Type: AWS::Lambda::Function\" \\
-          \"      Properties:\" \\
-          \"        Name: \\\"$FUNCTION_NAME\\"\" \\
-          \"        Alias: \\\"$ALIAS_NAME\\"\" \\
-          \"        CurrentVersion: $CURRENT_SAFE\" \\
-          \"        TargetVersion: $TARGET_VERSION\" \\
+          \"version: 0.0\" \
+          \"Resources:\" \
+          \"  - OutboxHandler:\" \
+          \"      Type: AWS::Lambda::Function\" \
+          \"      Properties:\" \
+          \"        Name: \\\"$FUNCTION_NAME\\"\" \
+          \"        Alias: \\\"$ALIAS_NAME\\"\" \
+          \"        CurrentVersion: $CURRENT_SAFE\" \
+          \"        TargetVersion: $TARGET_VERSION\" \
           > \"$CODEBUILD_SRC_DIR/appspec.yml\""
 
 artifacts:
