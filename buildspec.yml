@@ -9,6 +9,12 @@ phases:
     commands:
       - |
         bash -lc "set -euo pipefail
+        # Defaults for env if not provided by CodeBuild
+        export AWS_REGION=\"${AWS_REGION:-${AWS_DEFAULT_REGION:-us-east-1}}\"
+        export PROJECT_NAME=\"${PROJECT_NAME:-lawprotect365}\"
+        export ENV=\"${ENV:-stg}\""
+      - |
+        bash -lc "set -euo pipefail
         echo '[INFO] Building @lawprotect/shared-ts'
         cd \"$CODEBUILD_SRC_DIR/packages/shared-ts\"
         npm ci
@@ -56,8 +62,8 @@ phases:
         aws s3 cp shared-ts-layer.zip \"s3://$CODE_BUCKET/shared-ts-layer.zip\""
       - |
         bash -lc "set -euo pipefail
-        AWS_REGION=\"${AWS_REGION:-${AWS_DEFAULT_REGION:-us-east-1}}\"
-        LAYER_NAME=\"${PROJECT_NAME}-shared-ts-layer-${ENV}\"
+        LAYER_NAME=\"${LAYER_NAME:-${PROJECT_NAME}-shared-ts-layer-${ENV}}\"
+        if [ -z \"$LAYER_NAME\" ]; then echo '[ERROR] LAYER_NAME unresolved' >&2; exit 1; fi
         echo \"[INFO] Publishing Lambda layer: $LAYER_NAME\"
         if ! PUBLISHED_ARN=$(aws lambda publish-layer-version \
           --region \"$AWS_REGION\" \
@@ -66,6 +72,11 @@ phases:
           --compatible-runtimes nodejs20.x \
           --query LayerVersionArn --output text 2>publish-shared-ts.err); then
           echo \"[ERROR] Failed to publish $LAYER_NAME\" >&2
+          cat publish-shared-ts.err >&2 || true
+          exit 1
+        fi
+        if [ -z \"$PUBLISHED_ARN\" ] || [ \"$PUBLISHED_ARN\" = \"None\" ]; then
+          echo \"[ERROR] Empty ARN after publish for $LAYER_NAME\" >&2
           cat publish-shared-ts.err >&2 || true
           exit 1
         fi
