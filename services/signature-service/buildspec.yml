@@ -265,6 +265,17 @@ phases:
           fi
 
           aws lambda wait function-updated --function-name "$FN"
+
+          # Publicar nueva versión y apuntar alias 'live'
+          TARGET_VERSION="$(aws lambda publish-version --function-name "$FN" --description "Build-$(date +%s)" --query Version --output text 2>/dev/null)"
+          if [ -z "$TARGET_VERSION" ] || [ "$TARGET_VERSION" = "null" ]; then
+            TARGET_VERSION="$(aws lambda publish-version --function-name "$FN" --query Version --output text 2>/dev/null)"
+          fi
+          if aws lambda get-alias --function-name "$FN" --name "live" >/dev/null 2>&1; then
+            aws lambda update-alias --function-name "$FN" --name "live" --function-version "$TARGET_VERSION" >/dev/null
+          else
+            aws lambda create-alias --function-name "$FN" --name "live" --function-version "$TARGET_VERSION" >/dev/null
+          fi
         }
 
         deploy_fn "lawprotect365-sign-service-create-envelope-stg"        "sign-create-envelope.zip"
