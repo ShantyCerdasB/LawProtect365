@@ -104,38 +104,38 @@ phases:
         bash -lc "set -euo pipefail
         if [ -f '/tmp/skip_build.flag' ]; then
           echo '[INFO] Skipping layer package/upload (no changes)'
-          exit 0
-        fi
-        cd /tmp/layer
-        zip -r shared-ts-layer.zip .
-        aws s3 cp shared-ts-layer.zip \"s3://$CODE_BUCKET/shared-ts-layer.zip\""
+        else
+          cd /tmp/layer
+          zip -r shared-ts-layer.zip .
+          aws s3 cp shared-ts-layer.zip \"s3://$CODE_BUCKET/shared-ts-layer.zip\"
+        fi"
       - |
         bash -lc "set -euo pipefail
         if [ -f '/tmp/skip_build.flag' ]; then
           echo '[INFO] Skipping layer publish (no changes)'
-          exit 0
-        fi
-        AWS_REGION=\"${AWS_REGION:-${AWS_DEFAULT_REGION:-us-east-1}}\"
-        LAYER_NAME=\"${PROJECT_NAME}-shared-ts-layer-${ENV}\"
-        echo \"[INFO] Publishing Lambda layer: $LAYER_NAME\"
-        if ! PUBLISHED_ARN=$(aws lambda publish-layer-version \
-          --region \"$AWS_REGION\" \
-          --layer-name \"$LAYER_NAME\" \
-          --content S3Bucket=\"$CODE_BUCKET\",S3Key=\"shared-ts-layer.zip\" \
-          --compatible-runtimes nodejs20.x \
-          --query LayerVersionArn --output text 2>publish-shared-ts.err); then
-          echo \"[ERROR] Failed to publish $LAYER_NAME\" >&2
-          cat publish-shared-ts.err >&2 || true
-          exit 1
-        fi
-        if [ -z \"$PUBLISHED_ARN\" ] || [ \"$PUBLISHED_ARN\" = \"None\" ]; then
-          echo \"[ERROR] Empty ARN after publish for $LAYER_NAME\" >&2
-          cat publish-shared-ts.err >&2 || true
-          exit 1
-        fi
-        echo \"[INFO] Shared layer ARN: $PUBLISHED_ARN\"
-        # Persist for later commands in this phase
-        echo -n \"$PUBLISHED_ARN\" > /tmp/SHARED_TS_LAYER_ARN"
+        else
+          AWS_REGION=\"${AWS_REGION:-${AWS_DEFAULT_REGION:-us-east-1}}\"
+          LAYER_NAME=\"${PROJECT_NAME}-shared-ts-layer-${ENV}\"
+          echo \"[INFO] Publishing Lambda layer: $LAYER_NAME\"
+          if ! PUBLISHED_ARN=$(aws lambda publish-layer-version \
+            --region \"$AWS_REGION\" \
+            --layer-name \"$LAYER_NAME\" \
+            --content S3Bucket=\"$CODE_BUCKET\",S3Key=\"shared-ts-layer.zip\" \
+            --compatible-runtimes nodejs20.x \
+            --query LayerVersionArn --output text 2>publish-shared-ts.err); then
+            echo \"[ERROR] Failed to publish $LAYER_NAME\" >&2
+            cat publish-shared-ts.err >&2 || true
+            exit 1
+          fi
+          if [ -z \"$PUBLISHED_ARN\" ] || [ \"$PUBLISHED_ARN\" = \"None\" ]; then
+            echo \"[ERROR] Empty ARN after publish for $LAYER_NAME\" >&2
+            cat publish-shared-ts.err >&2 || true
+            exit 1
+          fi
+          echo \"[INFO] Shared layer ARN: $PUBLISHED_ARN\"
+          # Persist for later commands in this phase
+          echo -n \"$PUBLISHED_ARN\" > /tmp/SHARED_TS_LAYER_ARN
+        fi"
       - |
         bash -lc "set -euo pipefail
         if [ -f '/tmp/skip_build.flag' ]; then
@@ -157,52 +157,71 @@ phases:
       - |
         set +e
         if [ -f '/tmp/skip_build.flag' ]; then
-          echo '[INFO] Skipping function update (no changes)'
-          exit 0
-        fi
-        FUNCTION_NAME="${OUTBOX_FUNCTION_NAME}"
-        ALIAS_NAME="${OUTBOX_ALIAS_NAME}"
-        
-        aws s3 cp outbox-stream-handler.zip "s3://$CODE_BUCKET/outbox-stream-handler.zip"
-        aws lambda update-function-code --function-name "$FUNCTION_NAME" --s3-bucket "$CODE_BUCKET" --s3-key "outbox-stream-handler.zip"
-        aws lambda wait function-updated --function-name "$FUNCTION_NAME"
-        # Determine latest shared layer ARN (prefer the one just published)
-        if [ -z "${SHARED_TS_LAYER_ARN:-}" ] || [ "$SHARED_TS_LAYER_ARN" = "None" ]; then
-          if [ -f "/tmp/SHARED_TS_LAYER_ARN" ]; then
-            SHARED_TS_LAYER_ARN=$(cat /tmp/SHARED_TS_LAYER_ARN)
-          else
-            SHARED_TS_LAYER_ARN=$(aws lambda list-layer-versions --layer-name "${PROJECT_NAME}-shared-ts-layer-${ENV}" --max-items 1 --query "LayerVersions[0].LayerVersionArn" --output text 2>/dev/null || true)
+          echo '[INFO] No changes: generating AppSpec with current alias'
+          FUNCTION_NAME="${OUTBOX_FUNCTION_NAME}"
+          ALIAS_NAME="${OUTBOX_ALIAS_NAME}"
+          CURRENT_VERSION=$(aws lambda get-alias --function-name "$FUNCTION_NAME" --name "$ALIAS_NAME" --query FunctionVersion --output text 2>/dev/null)
+          if [ -z "$CURRENT_VERSION" ] || [ "$CURRENT_VERSION" = "null" ]; then
+            echo '[WARN] Alias not found; writing no-op AppSpec (1->1)'
+            CURRENT_VERSION=1
           fi
+          printf "%s\n" \
+            "version: 0.0" \
+            "Resources:" \
+            "  - OutboxHandler:" \
+            "      Type: AWS::Lambda::Function" \
+            "      Properties:" \
+            "        Name: \"$FUNCTION_NAME\"" \
+            "        Alias: \"$ALIAS_NAME\"" \
+            "        CurrentVersion: $CURRENT_VERSION" \
+            "        TargetVersion: $CURRENT_VERSION" \
+            > "$CODEBUILD_SRC_DIR/appspec.yml"
+          set -e
+        else
+          FUNCTION_NAME="${OUTBOX_FUNCTION_NAME}"
+          ALIAS_NAME="${OUTBOX_ALIAS_NAME}"
+          
+          aws s3 cp outbox-stream-handler.zip "s3://$CODE_BUCKET/outbox-stream-handler.zip"
+          aws lambda update-function-code --function-name "$FUNCTION_NAME" --s3-bucket "$CODE_BUCKET" --s3-key "outbox-stream-handler.zip"
+          aws lambda wait function-updated --function-name "$FUNCTION_NAME"
+          # Determine latest shared layer ARN (prefer the one just published)
+          if [ -z "${SHARED_TS_LAYER_ARN:-}" ] || [ "$SHARED_TS_LAYER_ARN" = "None" ]; then
+            if [ -f "/tmp/SHARED_TS_LAYER_ARN" ]; then
+              SHARED_TS_LAYER_ARN=$(cat /tmp/SHARED_TS_LAYER_ARN)
+            else
+              SHARED_TS_LAYER_ARN=$(aws lambda list-layer-versions --layer-name "${PROJECT_NAME}-shared-ts-layer-${ENV}" --max-items 1 --query "LayerVersions[0].LayerVersionArn" --output text 2>/dev/null || true)
+            fi
+          fi
+          echo "[INFO] Using shared layer: $SHARED_TS_LAYER_ARN"
+          aws lambda update-function-configuration --function-name "$FUNCTION_NAME" --layers "$SHARED_TS_LAYER_ARN"
+          
+          TARGET_VERSION=$(aws lambda publish-version --function-name "$FUNCTION_NAME" --query Version --output text 2>/dev/null)
+          if [ -z "$TARGET_VERSION" ] || [ "$TARGET_VERSION" = "null" ]; then
+            TIMESTAMP=$(date +%s)
+            TARGET_VERSION=$(aws lambda publish-version --function-name "$FUNCTION_NAME" --description "Build-${TIMESTAMP}" --query Version --output text 2>/dev/null)
+          fi
+          
+          CURRENT_VERSION=$(aws lambda get-alias --function-name "$FUNCTION_NAME" --name "$ALIAS_NAME" --query FunctionVersion --output text 2>/dev/null)
+          if [ -z "$CURRENT_VERSION" ] || [ "$CURRENT_VERSION" = "null" ] || [ "$CURRENT_VERSION" = "\$LATEST" ]; then
+            aws lambda create-alias --function-name "$FUNCTION_NAME" --name "$ALIAS_NAME" --function-version "$TARGET_VERSION"
+            CURRENT_VERSION="$TARGET_VERSION"
+          fi
+          
+          CURRENT_VERSION_INT=${CURRENT_VERSION:-1}
+          TARGET_VERSION_INT=${TARGET_VERSION:-1}
+          printf "%s\n" \
+            "version: 0.0" \
+            "Resources:" \
+            "  - OutboxHandler:" \
+            "      Type: AWS::Lambda::Function" \
+            "      Properties:" \
+            "        Name: \"$FUNCTION_NAME\"" \
+            "        Alias: \"$ALIAS_NAME\"" \
+            "        CurrentVersion: $CURRENT_VERSION_INT" \
+            "        TargetVersion: $TARGET_VERSION_INT" \
+            > "$CODEBUILD_SRC_DIR/appspec.yml"
+          set -e
         fi
-        echo "[INFO] Using shared layer: $SHARED_TS_LAYER_ARN"
-        aws lambda update-function-configuration --function-name "$FUNCTION_NAME" --layers "$SHARED_TS_LAYER_ARN"
-        
-        TARGET_VERSION=$(aws lambda publish-version --function-name "$FUNCTION_NAME" --query Version --output text 2>/dev/null)
-        if [ -z "$TARGET_VERSION" ] || [ "$TARGET_VERSION" = "null" ]; then
-          TIMESTAMP=$(date +%s)
-          TARGET_VERSION=$(aws lambda publish-version --function-name "$FUNCTION_NAME" --description "Build-${TIMESTAMP}" --query Version --output text 2>/dev/null)
-        fi
-        
-        CURRENT_VERSION=$(aws lambda get-alias --function-name "$FUNCTION_NAME" --name "$ALIAS_NAME" --query FunctionVersion --output text 2>/dev/null)
-        if [ -z "$CURRENT_VERSION" ] || [ "$CURRENT_VERSION" = "null" ] || [ "$CURRENT_VERSION" = "\$LATEST" ]; then
-          aws lambda create-alias --function-name "$FUNCTION_NAME" --name "$ALIAS_NAME" --function-version "$TARGET_VERSION"
-          CURRENT_VERSION="$TARGET_VERSION"
-        fi
-        
-        CURRENT_VERSION_INT=${CURRENT_VERSION:-1}
-        TARGET_VERSION_INT=${TARGET_VERSION:-1}
-        printf "%s\n" \
-          "version: 0.0" \
-          "Resources:" \
-          "  - OutboxHandler:" \
-          "      Type: AWS::Lambda::Function" \
-          "      Properties:" \
-          "        Name: \"$FUNCTION_NAME\"" \
-          "        Alias: \"$ALIAS_NAME\"" \
-          "        CurrentVersion: $CURRENT_VERSION_INT" \
-          "        TargetVersion: $TARGET_VERSION_INT" \
-          > "$CODEBUILD_SRC_DIR/appspec.yml"
-        set -e
 
 artifacts:
   files:
