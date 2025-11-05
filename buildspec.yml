@@ -14,12 +14,12 @@ phases:
         
         # Calcular hash del código actual de shared-ts
         CURRENT_HASH=\$(find \"$CODEBUILD_SRC_DIR/packages/shared-ts\" -type f -name '*.ts' -o -name '*.js' -o -name '*.json' -o -name '*.prisma' | sort | xargs cat | sha256sum | cut -d' ' -f1)
-        echo \"[INFO] Hash actual del código: \$CURRENT_HASH\"
+        echo \"[INFO] Hash actual del código: $CURRENT_HASH\"
         
         # Verificar si existe el layer anterior en S3
-        if aws s3 ls \"s3://\$CODE_BUCKET/shared-ts-layer.zip\" >/dev/null 2>&1; then
+        if aws s3 ls \"s3://$CODE_BUCKET/shared-ts-layer.zip\" >/dev/null 2>&1; then
           # Descargar y extraer el hash del build anterior
-          aws s3 cp \"s3://\$CODE_BUCKET/shared-ts-layer.zip\" /tmp/previous-layer.zip
+          aws s3 cp \"s3://$CODE_BUCKET/shared-ts-layer.zip\" /tmp/previous-layer.zip
           mkdir -p /tmp/previous-layer
           cd /tmp/previous-layer
           unzip -q ../previous-layer.zip
@@ -27,9 +27,9 @@ phases:
           # Leer el hash del build anterior
           if [ -f 'build-hash.txt' ]; then
             PREVIOUS_HASH=\$(cat build-hash.txt)
-            echo \"[INFO] Hash del build anterior: \$PREVIOUS_HASH\"
+            echo \"[INFO] Hash del build anterior: $PREVIOUS_HASH\"
             
-            if [ \"\$CURRENT_HASH\" = \"\$PREVIOUS_HASH\" ]; then
+            if [ \"$CURRENT_HASH\" = \"$PREVIOUS_HASH\" ]; then
               echo '[INFO] No hay cambios en shared-ts. Saltando el build...'
               echo '[INFO] Para forzar el build, modifica archivos en packages/shared-ts/'
               echo 'SKIP_BUILD=true' > /tmp/skip_build.flag
@@ -57,24 +57,46 @@ phases:
         test -d \"$CODEBUILD_SRC_DIR/packages/shared-ts\" || { echo 'shared-ts not found'; exit 2; }
         cd \"$CODEBUILD_SRC_DIR/packages/shared-ts\"
         npm ci
-        DATABASE_URL=\"\${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}\" npx -y prisma@5.22.0 generate
+        DATABASE_URL=\"${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}\" npx -y prisma@5.22.0 generate
         npm run build
         npm prune --omit=dev
-        mkdir -p /tmp/layer/nodejs
-        cp -a dist /tmp/layer/nodejs/
-        cp package.json /tmp/layer/nodejs/
-        if [ -d \"$CODEBUILD_SRC_DIR/node_modules\" ]; then
-          mkdir -p /tmp/layer/nodejs/node_modules
-          cp -a \"$CODEBUILD_SRC_DIR/node_modules/.\" /tmp/layer/nodejs/node_modules/
-        else
-          echo 'root node_modules not found'
-          exit 2
+
+        # Estructura correcta: /opt/nodejs/node_modules/@lawprotect/shared-ts
+        LAYER_DIR=/tmp/layer/nodejs/node_modules/@lawprotect/shared-ts
+        mkdir -p \"$LAYER_DIR/dist\"
+        cp -a dist/. \"$LAYER_DIR/dist/\"
+        # package.json del paquete (CJS+ESM+types)
+        cat > \"$LAYER_DIR/package.json\" << 'EOF'
+        {
+          "name": "@lawprotect/shared-ts",
+          "version": "0.1.0",
+          "type": "module",
+          "main": "dist/cjs/index.js",
+          "module": "dist/esm/index.js",
+          "types": "dist/types/index.d.ts",
+          "exports": {
+            ".": {
+              "require": "./dist/cjs/index.js",
+              "import": "./dist/esm/index.js",
+              "types": "./dist/types/index.d.ts"
+            }
+          }
+        }
+        EOF
+
+        # Incluir Prisma en el layer compartido
+        mkdir -p /tmp/layer/nodejs/node_modules/@prisma /tmp/layer/nodejs/node_modules/.prisma
+        if [ -d \"$CODEBUILD_SRC_DIR/node_modules/@prisma/client\" ]; then
+          cp -a \"$CODEBUILD_SRC_DIR/node_modules/@prisma/client\" /tmp/layer/nodejs/node_modules/@prisma/
+        fi
+        if [ -d \"$CODEBUILD_SRC_DIR/node_modules/.prisma/client\" ]; then
+          cp -a \"$CODEBUILD_SRC_DIR/node_modules/.prisma/client\" /tmp/layer/nodejs/node_modules/.prisma/
         fi
         
         # Guardar hash del build actual para futuras comparaciones
         CURRENT_HASH=\$(find \"$CODEBUILD_SRC_DIR/packages/shared-ts\" -type f -name '*.ts' -o -name '*.js' -o -name '*.json' -o -name '*.prisma' | sort | xargs cat | sha256sum | cut -d' ' -f1)
-        echo \"\$CURRENT_HASH\" > /tmp/layer/build-hash.txt
-        echo \"[INFO] Hash del build guardado: \$CURRENT_HASH\""
+        echo \"$CURRENT_HASH\" > /tmp/layer/build-hash.txt
+        echo \"[INFO] Hash del build guardado: $CURRENT_HASH\""
 
   build:
     commands:
@@ -85,15 +107,39 @@ phases:
         aws s3 cp shared-ts-layer.zip \"s3://$CODE_BUCKET/shared-ts-layer.zip\""
       - |
         bash -lc "set -euo pipefail
+        AWS_REGION=\"${AWS_REGION:-${AWS_DEFAULT_REGION:-us-east-1}}\"
+        LAYER_NAME=\"${PROJECT_NAME}-shared-ts-layer-${ENV}\"
+        echo \"[INFO] Publishing Lambda layer: $LAYER_NAME\"
+        if ! PUBLISHED_ARN=$(aws lambda publish-layer-version \
+          --region \"$AWS_REGION\" \
+          --layer-name \"$LAYER_NAME\" \
+          --content S3Bucket=\"$CODE_BUCKET\",S3Key=\"shared-ts-layer.zip\" \
+          --compatible-runtimes nodejs20.x \
+          --query LayerVersionArn --output text 2>publish-shared-ts.err); then
+          echo \"[ERROR] Failed to publish $LAYER_NAME\" >&2
+          cat publish-shared-ts.err >&2 || true
+          exit 1
+        fi
+        if [ -z \"$PUBLISHED_ARN\" ] || [ \"$PUBLISHED_ARN\" = \"None\" ]; then
+          echo \"[ERROR] Empty ARN after publish for $LAYER_NAME\" >&2
+          cat publish-shared-ts.err >&2 || true
+          exit 1
+        fi
+        echo \"[INFO] Shared layer ARN: $PUBLISHED_ARN\"
+        # Persist for later commands in this phase
+        echo -n \"$PUBLISHED_ARN\" > /tmp/SHARED_TS_LAYER_ARN"
+      - |
+        bash -lc "set -euo pipefail
         cd \"$CODEBUILD_SRC_DIR\"
         mkdir -p outbox-stream-handler
-        if [ -f \"/tmp/layer/nodejs/dist/lambdas/OutboxStreamHandler.js\" ]; then
-          cp /tmp/layer/nodejs/dist/lambdas/OutboxStreamHandler.js outbox-stream-handler/
+        if [ -f \"/tmp/layer/nodejs/node_modules/@lawprotect/shared-ts/dist/lambdas/OutboxStreamHandler.js\" ]; then
+          cp /tmp/layer/nodejs/node_modules/@lawprotect/shared-ts/dist/lambdas/OutboxStreamHandler.js outbox-stream-handler/index.js
         else
           echo 'const { outboxStreamHandler } = require(\"@lawprotect/shared-ts\");' > outbox-stream-handler/index.js
           echo 'exports.handler = outboxStreamHandler;' >> outbox-stream-handler/index.js
         fi
-        cp /tmp/layer/nodejs/package.json outbox-stream-handler/
+        # package.json mínimo de la función (no copiar el del paquete shared)
+        echo '{ "type": "commonjs" }' > outbox-stream-handler/package.json
         (cd outbox-stream-handler && zip -r ../outbox-stream-handler.zip .)
         rm -rf outbox-stream-handler"
       - |
@@ -104,6 +150,15 @@ phases:
         aws s3 cp outbox-stream-handler.zip "s3://$CODE_BUCKET/outbox-stream-handler.zip"
         aws lambda update-function-code --function-name "$FUNCTION_NAME" --s3-bucket "$CODE_BUCKET" --s3-key "outbox-stream-handler.zip"
         aws lambda wait function-updated --function-name "$FUNCTION_NAME"
+        # Determine latest shared layer ARN (prefer the one just published)
+        if [ -z "${SHARED_TS_LAYER_ARN:-}" ] || [ "$SHARED_TS_LAYER_ARN" = "None" ]; then
+          if [ -f "/tmp/SHARED_TS_LAYER_ARN" ]; then
+            SHARED_TS_LAYER_ARN=$(cat /tmp/SHARED_TS_LAYER_ARN)
+          else
+            SHARED_TS_LAYER_ARN=$(aws lambda list-layer-versions --layer-name "${PROJECT_NAME}-shared-ts-layer-${ENV}" --max-items 1 --query "LayerVersions[0].LayerVersionArn" --output text 2>/dev/null || true)
+          fi
+        fi
+        echo "[INFO] Using shared layer: $SHARED_TS_LAYER_ARN"
         aws lambda update-function-configuration --function-name "$FUNCTION_NAME" --layers "$SHARED_TS_LAYER_ARN"
         
         TARGET_VERSION=$(aws lambda publish-version --function-name "$FUNCTION_NAME" --query Version --output text 2>/dev/null)
