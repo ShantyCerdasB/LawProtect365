@@ -1,5 +1,15 @@
 version: 0.2
 
+env:
+  variables:
+    AWS_REGION: us-east-1
+    PROJECT_NAME: lawprotect365
+    ENV: stg
+    CODE_BUCKET: lawprotect365-code
+    LAYER_NAME: lawprotect365-shared-ts-layer-stg
+    OUTBOX_FUNCTION_NAME: lawprotect365-outbox-stream-handler-stg-stg
+    OUTBOX_ALIAS_NAME: live
+
 phases:
   install:
     runtime-versions:
@@ -7,16 +17,6 @@ phases:
 
   pre_build:
     commands:
-      - |
-        bash -lc "set -euo pipefail
-        # Defaults for env if not provided by CodeBuild
-        export AWS_REGION=\"${AWS_REGION:-${AWS_DEFAULT_REGION:-us-east-1}}\"
-        export PROJECT_NAME=\"${PROJECT_NAME:-lawprotect365}\"
-        export ENV=\"${ENV:-stg}\"
-        export CODE_BUCKET=\"${CODE_BUCKET:-lawprotect-code}\"
-        export LAYER_NAME=\"${LAYER_NAME:-lawprotect365-shared-ts-layer-stg}\"
-        export OUTBOX_FUNCTION_NAME=\"${OUTBOX_FUNCTION_NAME:-lawprotect365-outbox-stream-handler-stg-stg}\"
-        export OUTBOX_ALIAS_NAME=\"${OUTBOX_ALIAS_NAME:-live}\""
       - |
         bash -lc "set -euo pipefail
         echo '[INFO] Building @lawprotect/shared-ts'
@@ -66,7 +66,6 @@ phases:
         aws s3 cp shared-ts-layer.zip \"s3://$CODE_BUCKET/shared-ts-layer.zip\""
       - |
         bash -lc "set -euo pipefail
-        LAYER_NAME=\"${LAYER_NAME:-${PROJECT_NAME}-shared-ts-layer-${ENV}}\"
         if [ -z \"$LAYER_NAME\" ]; then echo '[ERROR] LAYER_NAME unresolved' >&2; exit 1; fi
         echo \"[INFO] Publishing Lambda layer: $LAYER_NAME\" 
         if ! PUBLISHED_ARN=$(aws lambda publish-layer-version \
@@ -103,20 +102,16 @@ phases:
       - |
         bash -lc "set -euo pipefail
         echo '[INFO] Updating outbox Lambda with new code & shared layer'
-        FUNCTION_NAME=\"${OUTBOX_FUNCTION_NAME:-${PROJECT_NAME}-outbox-stream-handler-${ENV}}\"
-        ALIAS_NAME=\"${OUTBOX_ALIAS_NAME:-live}\"
-        SHARED_TS_LAYER_ARN=$(cat /tmp/SHARED_TS_LAYER_ARN)
-        if [ -z \"$FUNCTION_NAME\" ]; then echo '[ERROR] OUTBOX_FUNCTION_NAME is empty' >&2; exit 1; fi
+        if [ -z \"$OUTBOX_FUNCTION_NAME\" ]; then echo '[ERROR] OUTBOX_FUNCTION_NAME is empty' >&2; exit 1; fi
         aws s3 cp outbox-stream-handler.zip \"s3://$CODE_BUCKET/outbox-stream-handler.zip\"
-        aws lambda update-function-code --function-name \"$FUNCTION_NAME\" --s3-bucket \"$CODE_BUCKET\" --s3-key \"outbox-stream-handler.zip\"
-        aws lambda wait function-updated --function-name \"$FUNCTION_NAME\"
-        aws lambda update-function-configuration --function-name \"$FUNCTION_NAME\" --layers \"$SHARED_TS_LAYER_ARN\"
-        aws lambda wait function-updated --function-name \"$FUNCTION_NAME\""
+        aws lambda update-function-code --function-name \"$OUTBOX_FUNCTION_NAME\" --s3-bucket \"$CODE_BUCKET\" --s3-key \"outbox-stream-handler.zip\"
+        aws lambda wait function-updated --function-name \"$OUTBOX_FUNCTION_NAME\"
+        aws lambda update-function-configuration --function-name \"$OUTBOX_FUNCTION_NAME\" --layers \"$(cat /tmp/SHARED_TS_LAYER_ARN)\"
+        aws lambda wait function-updated --function-name \"$OUTBOX_FUNCTION_NAME\""
       - |
         bash -lc "set -euo pipefail
         echo '[INFO] Sanity invoking outbox to detect ImportModuleError'
-        FUNCTION_NAME=\"${OUTBOX_FUNCTION_NAME:-${PROJECT_NAME}-outbox-stream-handler-${ENV}}\"
-        ERR=$(aws lambda invoke --function-name \"$FUNCTION_NAME\" --payload '{}' /tmp/invoke.json --query FunctionError --output text 2>/dev/null || true)
+        ERR=$(aws lambda invoke --function-name \"$OUTBOX_FUNCTION_NAME\" --payload '{}' /tmp/invoke.json --query FunctionError --output text 2>/dev/null || true)
         if [ -n \"$ERR\" ] && [ \"$ERR\" != \"None\" ]; then
           echo \"[ERROR] Lambda invocation failed (FunctionError=$ERR). Check import errors.\" >&2
           cat /tmp/invoke.json >&2 || true
@@ -126,14 +121,12 @@ phases:
       - |
         bash -lc "set -euo pipefail
         echo '[INFO] Publishing version and updating alias'
-        FUNCTION_NAME=\"${OUTBOX_FUNCTION_NAME:-${PROJECT_NAME}-outbox-stream-handler-${ENV}}\"
-        ALIAS_NAME=\"${OUTBOX_ALIAS_NAME:-live}\"
-        CURRENT_BEFORE=$(aws lambda get-alias --function-name \"$FUNCTION_NAME\" --name \"$ALIAS_NAME\" --query FunctionVersion --output text 2>/dev/null || true)
-        TARGET_VERSION=$(aws lambda publish-version --function-name \"$FUNCTION_NAME\" --description \"Build-$(date +%s)\" --query Version --output text)
-        if aws lambda get-alias --function-name \"$FUNCTION_NAME\" --name \"$ALIAS_NAME\" >/dev/null 2>&1; then
-          aws lambda update-alias --function-name \"$FUNCTION_NAME\" --name \"$ALIAS_NAME\" --function-version \"$TARGET_VERSION\"
+        CURRENT_BEFORE=$(aws lambda get-alias --function-name \"$OUTBOX_FUNCTION_NAME\" --name \"$OUTBOX_ALIAS_NAME\" --query FunctionVersion --output text 2>/dev/null || true)
+        TARGET_VERSION=$(aws lambda publish-version --function-name \"$OUTBOX_FUNCTION_NAME\" --description \"Build-$(date +%s)\" --query Version --output text)
+        if aws lambda get-alias --function-name \"$OUTBOX_FUNCTION_NAME\" --name \"$OUTBOX_ALIAS_NAME\" >/dev/null 2>&1; then
+          aws lambda update-alias --function-name \"$OUTBOX_FUNCTION_NAME\" --name \"$OUTBOX_ALIAS_NAME\" --function-version \"$TARGET_VERSION\"
         else
-          aws lambda create-alias --function-name \"$FUNCTION_NAME\" --name \"$ALIAS_NAME\" --function-version \"$TARGET_VERSION\"
+          aws lambda create-alias --function-name \"$OUTBOX_FUNCTION_NAME\" --name \"$OUTBOX_ALIAS_NAME\" --function-version \"$TARGET_VERSION\"
         fi
         CURRENT_SAFE=${CURRENT_BEFORE:-$TARGET_VERSION}
         printf \"%s\\n\" \\
@@ -142,8 +135,8 @@ phases:
           \"  - OutboxHandler:\" \
           \"      Type: AWS::Lambda::Function\" \
           \"      Properties:\" \
-          \"        Name: \\\"$FUNCTION_NAME\\"\" \
-          \"        Alias: \\\"$ALIAS_NAME\\"\" \
+          \"        Name: \\\"$OUTBOX_FUNCTION_NAME\\"\" \
+          \"        Alias: \\\"$OUTBOX_ALIAS_NAME\\"\" \
           \"        CurrentVersion: $CURRENT_SAFE\" \
           \"        TargetVersion: $TARGET_VERSION\" \
           > \"$CODEBUILD_SRC_DIR/appspec.yml\""
