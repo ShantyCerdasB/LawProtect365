@@ -129,6 +129,7 @@ data "aws_iam_policy_document" "lambda_policy" {
       "lambda:GetFunction",
       "lambda:GetFunctionConfiguration",
       "lambda:PublishVersion",
+      "lambda:UpdateAlias",
       "lambda:CreateAlias",
       "lambda:GetAlias"
     ]
