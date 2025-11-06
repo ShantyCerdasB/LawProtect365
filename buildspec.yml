@@ -26,7 +26,7 @@ phases:
         npm run build
         npm prune --omit=dev
 
-        echo '[INFO] Assembling layer under /tmp/layer'
+        echo '[INFO] Assembling layer under /tmp/layer '
         LAYER_DIR=/tmp/layer/nodejs/node_modules/@lawprotect/shared-ts
         mkdir -p \"$LAYER_DIR/dist\"
         cp -a dist/. \"$LAYER_DIR/dist/\"

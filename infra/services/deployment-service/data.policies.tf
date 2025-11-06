@@ -156,7 +156,7 @@ data "aws_iam_policy_document" "lambda_policy" {
     ]
   }
 
-  # === Layer version publishing (sign-core + sign-deps) ===
+  # === Layer version publishing (shared-ts + sign-core + legacy sign-deps) ===
   statement {
     effect = "Allow"
     actions = [
@@ -165,6 +165,9 @@ data "aws_iam_policy_document" "lambda_policy" {
     ]
     resources = [
       # Base ARN and version wildcard
+      # shared-ts layer (published by CodeBuild root pipeline)
+      "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:layer:${var.project_name}-shared-ts-layer-${var.env}",
+      "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:layer:${var.project_name}-shared-ts-layer-${var.env}:*",
       "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:layer:${var.project_name}-sign-core-${var.env}",
       "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:layer:${var.project_name}-sign-core-${var.env}:*",
       "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:layer:${var.project_name}-sign-deps-${var.env}",
