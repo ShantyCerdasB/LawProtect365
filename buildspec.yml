@@ -12,7 +12,11 @@ phases:
         # Defaults for env if not provided by CodeBuild
         export AWS_REGION=\"${AWS_REGION:-${AWS_DEFAULT_REGION:-us-east-1}}\"
         export PROJECT_NAME=\"${PROJECT_NAME:-lawprotect365}\"
-        export ENV=\"${ENV:-stg}\""
+        export ENV=\"${ENV:-stg}\"
+        export CODE_BUCKET=\"${CODE_BUCKET:-lawprotect-code}\"
+        export LAYER_NAME=\"${LAYER_NAME:-lawprotect365-shared-ts-layer-stg}\"
+        export OUTBOX_FUNCTION_NAME=\"${OUTBOX_FUNCTION_NAME:-lawprotect365-outbox-stream-handler-stg-stg}\"
+        export OUTBOX_ALIAS_NAME=\"${OUTBOX_ALIAS_NAME:-live}\""
       - |
         bash -lc "set -euo pipefail
         echo '[INFO] Building @lawprotect/shared-ts'
@@ -62,10 +66,7 @@ phases:
         aws s3 cp shared-ts-layer.zip \"s3://$CODE_BUCKET/shared-ts-layer.zip\""
       - |
         bash -lc "set -euo pipefail
-        AWS_REGION=\"${AWS_REGION:-${AWS_DEFAULT_REGION:-us-east-1}}\"
-        PROJECT=\"${PROJECT_NAME:-lawprotect365}\"
-        ENV_NAME=\"${ENV:-stg}\"
-        LAYER_NAME=\"${LAYER_NAME:-${PROJECT}-shared-ts-layer-${ENV_NAME}}\"
+        LAYER_NAME=\"${LAYER_NAME:-${PROJECT_NAME}-shared-ts-layer-${ENV}}\"
         if [ -z \"$LAYER_NAME\" ]; then echo '[ERROR] LAYER_NAME unresolved' >&2; exit 1; fi
         echo \"[INFO] Publishing Lambda layer: $LAYER_NAME\" 
         if ! PUBLISHED_ARN=$(aws lambda publish-layer-version \
@@ -102,9 +103,7 @@ phases:
       - |
         bash -lc "set -euo pipefail
         echo '[INFO] Updating outbox Lambda with new code & shared layer'
-        PROJECT=\"${PROJECT_NAME:-lawprotect365}\"
-        ENV_NAME=\"${ENV:-stg}\"
-        FUNCTION_NAME=\"${OUTBOX_FUNCTION_NAME:-${PROJECT}-outbox-stream-handler-${ENV_NAME}}\"
+        FUNCTION_NAME=\"${OUTBOX_FUNCTION_NAME:-${PROJECT_NAME}-outbox-stream-handler-${ENV}}\"
         ALIAS_NAME=\"${OUTBOX_ALIAS_NAME:-live}\"
         SHARED_TS_LAYER_ARN=$(cat /tmp/SHARED_TS_LAYER_ARN)
         if [ -z \"$FUNCTION_NAME\" ]; then echo '[ERROR] OUTBOX_FUNCTION_NAME is empty' >&2; exit 1; fi
@@ -116,9 +115,7 @@ phases:
       - |
         bash -lc "set -euo pipefail
         echo '[INFO] Sanity invoking outbox to detect ImportModuleError'
-        PROJECT=\"${PROJECT_NAME:-lawprotect365}\"
-        ENV_NAME=\"${ENV:-stg}\"
-        FUNCTION_NAME=\"${OUTBOX_FUNCTION_NAME:-${PROJECT}-outbox-stream-handler-${ENV_NAME}}\"
+        FUNCTION_NAME=\"${OUTBOX_FUNCTION_NAME:-${PROJECT_NAME}-outbox-stream-handler-${ENV}}\"
         ERR=$(aws lambda invoke --function-name \"$FUNCTION_NAME\" --payload '{}' /tmp/invoke.json --query FunctionError --output text 2>/dev/null || true)
         if [ -n \"$ERR\" ] && [ \"$ERR\" != \"None\" ]; then
           echo \"[ERROR] Lambda invocation failed (FunctionError=$ERR). Check import errors.\" >&2
@@ -129,9 +126,7 @@ phases:
       - |
         bash -lc "set -euo pipefail
         echo '[INFO] Publishing version and updating alias'
-        PROJECT=\"${PROJECT_NAME:-lawprotect365}\"
-        ENV_NAME=\"${ENV:-stg}\"
-        FUNCTION_NAME=\"${OUTBOX_FUNCTION_NAME:-${PROJECT}-outbox-stream-handler-${ENV_NAME}}\"
+        FUNCTION_NAME=\"${OUTBOX_FUNCTION_NAME:-${PROJECT_NAME}-outbox-stream-handler-${ENV}}\"
         ALIAS_NAME=\"${OUTBOX_ALIAS_NAME:-live}\"
         CURRENT_BEFORE=$(aws lambda get-alias --function-name \"$FUNCTION_NAME\" --name \"$ALIAS_NAME\" --query FunctionVersion --output text 2>/dev/null || true)
         TARGET_VERSION=$(aws lambda publish-version --function-name \"$FUNCTION_NAME\" --description \"Build-$(date +%s)\" --query Version --output text)
