@@ -17,20 +17,21 @@ phases:
 
   pre_build:
     commands:
+      - set -euo pipefail
       - |
-        bash -lc "set -euo pipefail
-        echo '[INFO] Building @lawprotect/shared-ts'
-        cd \"$CODEBUILD_SRC_DIR/packages/shared-ts\"
-        npm ci
-        DATABASE_URL=\"${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}\" npx -y prisma@5.22.0 generate
-        npm run build
-        npm prune --omit=dev
-
-        echo '[INFO] Assembling layer under /tmp/layer '
+        echo "[INFO] Building @lawprotect/shared-ts"
+      - cd "$CODEBUILD_SRC_DIR/packages/shared-ts"
+      - npm ci
+      - DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}" npx -y prisma@5.22.0 generate
+      - npm run build
+      - npm prune --omit=dev
+      - |
+        set -euo pipefail
+        echo '[INFO] Assembling layer under /tmp/layer'
         LAYER_DIR=/tmp/layer/nodejs/node_modules/@lawprotect/shared-ts
-        mkdir -p \"$LAYER_DIR/dist\"
-        cp -a dist/. \"$LAYER_DIR/dist/\"
-        cat > \"$LAYER_DIR/package.json\" << 'EOF'
+        mkdir -p "$LAYER_DIR/dist"
+        cp -a dist/. "$LAYER_DIR/dist/"
+        cat > "$LAYER_DIR/package.json" <<'EOF'
         {
           "name": "@lawprotect/shared-ts",
           "version": "0.1.0",
@@ -38,111 +39,123 @@ phases:
           "main": "dist/cjs/index.js",
           "module": "dist/esm/index.js",
           "types": "dist/types/index.d.ts",
-          "exports": {
-            ".": {
-              "require": "./dist/cjs/index.js",
-              "import": "./dist/esm/index.js",
-              "types": "./dist/types/index.d.ts"
-            }
-          }
+          "exports": { ".": { "require": "./dist/cjs/index.js", "import": "./dist/esm/index.js", "types": "./dist/types/index.d.ts" } }
         }
         EOF
-        # Include Prisma in shared layer when available
         mkdir -p /tmp/layer/nodejs/node_modules/@prisma /tmp/layer/nodejs/node_modules/.prisma
-        if [ -d \"$CODEBUILD_SRC_DIR/node_modules/@prisma/client\" ]; then
-          cp -a \"$CODEBUILD_SRC_DIR/node_modules/@prisma/client\" /tmp/layer/nodejs/node_modules/@prisma/
+        if [ -d "$CODEBUILD_SRC_DIR/node_modules/@prisma/client" ]; then
+          cp -a "$CODEBUILD_SRC_DIR/node_modules/@prisma/client" /tmp/layer/nodejs/node_modules/@prisma/
         fi
-        if [ -d \"$CODEBUILD_SRC_DIR/node_modules/.prisma/client\" ]; then
-          cp -a \"$CODEBUILD_SRC_DIR/node_modules/.prisma/client\" /tmp/layer/nodejs/node_modules/.prisma/
-        fi"
+        if [ -d "$CODEBUILD_SRC_DIR/node_modules/.prisma/client" ]; then
+          cp -a "$CODEBUILD_SRC_DIR/node_modules/.prisma/client" /tmp/layer/nodejs/node_modules/.prisma/
+        fi
 
   build:
     commands:
+      - set -euo pipefail
       - |
-        bash -lc "set -euo pipefail
-        echo '[INFO] Packaging & uploading shared-ts layer'
-        cd /tmp/layer
-        zip -r shared-ts-layer.zip .
-        aws s3 cp shared-ts-layer.zip \"s3://$CODE_BUCKET/shared-ts-layer.zip\""
+        echo "[INFO] Packaging & uploading shared-ts layer"
+      - cd /tmp/layer
+      - zip -r shared-ts-layer.zip .
+      - aws s3 cp shared-ts-layer.zip "s3://$CODE_BUCKET/shared-ts-layer.zip"
       - |
-        bash -lc "set -euo pipefail
-        if [ -z \"$LAYER_NAME\" ]; then echo '[ERROR] LAYER_NAME unresolved' >&2; exit 1; fi
-        echo \"[INFO] Publishing Lambda layer: $LAYER_NAME\"
+        set -euo pipefail
+        echo "[INFO] Publishing Lambda layer: $LAYER_NAME"
         aws configure set region "$AWS_REGION"
-        if ! PUBLISHED_ARN=$(aws lambda publish-layer-version \
+        PUBLISHED_ARN=$(aws lambda publish-layer-version \
           --layer-name "$LAYER_NAME" \
           --content S3Bucket="$CODE_BUCKET",S3Key="shared-ts-layer.zip" \
           --compatible-runtimes nodejs20.x \
-          --query LayerVersionArn --output text 2>publish-shared-ts.err); then
-          echo \"[ERROR] Failed to publish $LAYER_NAME\" >&2
+          --query LayerVersionArn --output text 2>publish-shared-ts.err || true)
+        if [ -z "$PUBLISHED_ARN" ] || [ "$PUBLISHED_ARN" = "None" ]; then
+          echo "[WARN] Empty ARN from --query; retrying with JSON parse"
+          JSON_OUT=$(aws lambda publish-layer-version \
+            --layer-name "$LAYER_NAME" \
+            --content S3Bucket="$CODE_BUCKET",S3Key="shared-ts-layer.zip" \
+            --compatible-runtimes nodejs20.x \
+            --output json 2>>publish-shared-ts.err || true)
+          if [ -n "$JSON_OUT" ]; then
+            PUBLISHED_ARN=$(python3 - <<'PY'
+        import sys,json
+        try:
+          print(json.loads(sys.stdin.read()).get('LayerVersionArn',''))
+        except Exception:
+          print('')
+        PY
+            <<< "$JSON_OUT")
+          fi
+        fi
+        if [ -z "$PUBLISHED_ARN" ] || [ "$PUBLISHED_ARN" = "None" ]; then
+          echo "[WARN] Using fallback SHARED_TS_LAYER_ARN from environment; layer not republished."
+          PUBLISHED_ARN="${SHARED_TS_LAYER_ARN:-}"
+        fi
+        if [ -z "$PUBLISHED_ARN" ] || [ "$PUBLISHED_ARN" = "None" ]; then
+          echo "[ERROR] No layer ARN available after publish and fallback." >&2
           cat publish-shared-ts.err >&2 || true
           exit 1
         fi
-        if [ -z \"$PUBLISHED_ARN\" ] || [ \"$PUBLISHED_ARN\" = \"None\" ]; then
-          echo \"[ERROR] Empty ARN after publish for $LAYER_NAME\" >&2
-          cat publish-shared-ts.err >&2 || true
-          exit 1
-        fi
-        echo \"[INFO] Shared layer ARN: $PUBLISHED_ARN\"
-        echo -n \"$PUBLISHED_ARN\" > /tmp/SHARED_TS_LAYER_ARN"
+        echo "[INFO] Shared layer ARN: $PUBLISHED_ARN"
+        echo -n "$PUBLISHED_ARN" > /tmp/SHARED_TS_LAYER_ARN
       - |
-        bash -lc "set -euo pipefail
+        set -euo pipefail
         echo '[INFO] Packaging outbox-stream-handler function'
-        cd \"$CODEBUILD_SRC_DIR\"
+        cd "$CODEBUILD_SRC_DIR"
         mkdir -p outbox-stream-handler
-        if [ -f \"/tmp/layer/nodejs/node_modules/@lawprotect/shared-ts/dist/lambdas/OutboxStreamHandler.js\" ]; then
+        if [ -f "/tmp/layer/nodejs/node_modules/@lawprotect/shared-ts/dist/lambdas/OutboxStreamHandler.js" ]; then
           cp /tmp/layer/nodejs/node_modules/@lawprotect/shared-ts/dist/lambdas/OutboxStreamHandler.js outbox-stream-handler/index.js
         else
-          echo 'const { outboxStreamHandler } = require(\"@lawprotect/shared-ts\");' > outbox-stream-handler/index.js
-          echo 'exports.handler = outboxStreamHandler;' >> outbox-stream-handler/index.js
+          cat > outbox-stream-handler/index.js <<'EOF'
+        const { outboxStreamHandler } = require("@lawprotect/shared-ts");
+        exports.handler = outboxStreamHandler;
+        EOF
         fi
         echo '{ "type": "commonjs" }' > outbox-stream-handler/package.json
         (cd outbox-stream-handler && zip -r ../outbox-stream-handler.zip .)
-        rm -rf outbox-stream-handler"
       - |
-        bash -lc "set -euo pipefail
+        set -euo pipefail
         echo '[INFO] Updating outbox Lambda with new code & shared layer'
-        if [ -z \"$OUTBOX_FUNCTION_NAME\" ]; then echo '[ERROR] OUTBOX_FUNCTION_NAME is empty' >&2; exit 1; fi
-        aws s3 cp outbox-stream-handler.zip \"s3://$CODE_BUCKET/outbox-stream-handler.zip\"
-        aws lambda update-function-code --function-name \"$OUTBOX_FUNCTION_NAME\" --s3-bucket \"$CODE_BUCKET\" --s3-key \"outbox-stream-handler.zip\"
-        aws lambda wait function-updated --function-name \"$OUTBOX_FUNCTION_NAME\"
-        aws lambda update-function-configuration --function-name \"$OUTBOX_FUNCTION_NAME\" --layers \"$(cat /tmp/SHARED_TS_LAYER_ARN)\"
-        aws lambda wait function-updated --function-name \"$OUTBOX_FUNCTION_NAME\""
+        if [ -z "$OUTBOX_FUNCTION_NAME" ]; then echo '[ERROR] OUTBOX_FUNCTION_NAME is empty' >&2; exit 1; fi
+        aws s3 cp outbox-stream-handler.zip "s3://$CODE_BUCKET/outbox-stream-handler.zip"
+        aws lambda update-function-code --function-name "$OUTBOX_FUNCTION_NAME" --s3-bucket "$CODE_BUCKET" --s3-key "outbox-stream-handler.zip"
+        aws lambda wait function-updated --function-name "$OUTBOX_FUNCTION_NAME"
+        LAYER_ARN=$(cat /tmp/SHARED_TS_LAYER_ARN)
+        aws lambda update-function-configuration --function-name "$OUTBOX_FUNCTION_NAME" --layers "$LAYER_ARN"
+        aws lambda wait function-updated --function-name "$OUTBOX_FUNCTION_NAME"
       - |
-        bash -lc "set -euo pipefail
+        set -euo pipefail
         echo '[INFO] Sanity invoking outbox to detect ImportModuleError'
-        ERR=$(aws lambda invoke --function-name \"$OUTBOX_FUNCTION_NAME\" --payload '{}' /tmp/invoke.json --query FunctionError --output text 2>/dev/null || true)
-        if [ -n \"$ERR\" ] && [ \"$ERR\" != \"None\" ]; then
-          echo \"[ERROR] Lambda invocation failed (FunctionError=$ERR). Check import errors.\" >&2
+        ERR=$(aws lambda invoke --function-name "$OUTBOX_FUNCTION_NAME" --payload '{}' /tmp/invoke.json --query FunctionError --output text 2>/dev/null || true)
+        if [ -n "$ERR" ] && [ "$ERR" != "None" ]; then
+          echo "[ERROR] Lambda invocation failed (FunctionError=$ERR). Check import errors." >&2
           cat /tmp/invoke.json >&2 || true
           exit 1
         fi
-        echo '[INFO] Invocation OK'"
+        echo '[INFO] Invocation OK'
       - |
-        bash -lc "set -euo pipefail
+        set -euo pipefail
         echo '[INFO] Publishing version and updating alias'
-        CURRENT_BEFORE=$(aws lambda get-alias --function-name \"$OUTBOX_FUNCTION_NAME\" --name \"$OUTBOX_ALIAS_NAME\" --query FunctionVersion --output text 2>/dev/null || true)
-        TARGET_VERSION=$(aws lambda publish-version --function-name \"$OUTBOX_FUNCTION_NAME\" --description \"Build-$(date +%s)\" --query Version --output text)
-        if aws lambda get-alias --function-name \"$OUTBOX_FUNCTION_NAME\" --name \"$OUTBOX_ALIAS_NAME\" >/dev/null 2>&1; then
-          aws lambda update-alias --function-name \"$OUTBOX_FUNCTION_NAME\" --name \"$OUTBOX_ALIAS_NAME\" --function-version \"$TARGET_VERSION\"
+        CURRENT_BEFORE=$(aws lambda get-alias --function-name "$OUTBOX_FUNCTION_NAME" --name "$OUTBOX_ALIAS_NAME" --query FunctionVersion --output text 2>/dev/null || true)
+        TARGET_VERSION=$(aws lambda publish-version --function-name "$OUTBOX_FUNCTION_NAME" --description "Build-$(date +%s)" --query Version --output text)
+        if aws lambda get-alias --function-name "$OUTBOX_FUNCTION_NAME" --name "$OUTBOX_ALIAS_NAME" >/dev/null 2>&1; then
+          aws lambda update-alias --function-name "$OUTBOX_FUNCTION_NAME" --name "$OUTBOX_ALIAS_NAME" --function-version "$TARGET_VERSION"
         else
-          aws lambda create-alias --function-name \"$OUTBOX_FUNCTION_NAME\" --name \"$OUTBOX_ALIAS_NAME\" --function-version \"$TARGET_VERSION\"
+          aws lambda create-alias --function-name "$OUTBOX_FUNCTION_NAME" --name "$OUTBOX_ALIAS_NAME" --function-version "$TARGET_VERSION"
         fi
         CURRENT_SAFE=${CURRENT_BEFORE:-$TARGET_VERSION}
-        printf \"%s\\n\" \\
-          \"version: 0.0\" \
-          \"Resources:\" \
-          \"  - OutboxHandler:\" \
-          \"      Type: AWS::Lambda::Function\" \
-          \"      Properties:\" \
-          \"        Name: \\\"$OUTBOX_FUNCTION_NAME\\"\" \
-          \"        Alias: \\\"$OUTBOX_ALIAS_NAME\\"\" \
-          \"        CurrentVersion: $CURRENT_SAFE\" \
-          \"        TargetVersion: $TARGET_VERSION\" \
-          > \"$CODEBUILD_SRC_DIR/appspec.yml\""
+        cat > "$CODEBUILD_SRC_DIR/appspec.yml" <<EOF
+        version: 0.0
+        Resources:
+          - OutboxHandler:
+              Type: AWS::Lambda::Function
+              Properties:
+                Name: "$OUTBOX_FUNCTION_NAME"
+                Alias: "$OUTBOX_ALIAS_NAME"
+                CurrentVersion: $CURRENT_SAFE
+                TargetVersion: $TARGET_VERSION
+        EOF
 
 artifacts:
   files:
-    - 'outbox-stream-handler.zip'
-    - 'appspec.yml'
+    - outbox-stream-handler.zip
+    - appspec.yml
   discard-paths: yes
