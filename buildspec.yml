@@ -66,13 +66,12 @@ phases:
         aws s3 cp shared-ts-layer.zip \"s3://$CODE_BUCKET/shared-ts-layer.zip\""
       - |
         bash -lc "set -euo pipefail
-        REGION_CLEAN=$(printf %s "$AWS_REGION" | tr -d '"' | tr -d "'")
         if [ -z \"$LAYER_NAME\" ]; then echo '[ERROR] LAYER_NAME unresolved' >&2; exit 1; fi
-        echo \"[INFO] Publishing Lambda layer: $LAYER_NAME\" 
+        echo \"[INFO] Publishing Lambda layer: $LAYER_NAME\"
+        aws configure set region "$AWS_REGION"
         if ! PUBLISHED_ARN=$(aws lambda publish-layer-version \
-          --region \"$REGION_CLEAN\" \
-          --layer-name \"$LAYER_NAME\" \
-          --content S3Bucket=\"$CODE_BUCKET\",S3Key=\"shared-ts-layer.zip\" \
+          --layer-name "$LAYER_NAME" \
+          --content S3Bucket="$CODE_BUCKET",S3Key="shared-ts-layer.zip" \
           --compatible-runtimes nodejs20.x \
           --query LayerVersionArn --output text 2>publish-shared-ts.err); then
           echo \"[ERROR] Failed to publish $LAYER_NAME\" >&2
