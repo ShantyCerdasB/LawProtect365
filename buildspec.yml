@@ -28,8 +28,11 @@ phases:
       - |
         set -eu
         echo '[INFO] Assembling layer under /tmp/layer'
-        LAYER_DIR=/tmp/layer/nodejs/node_modules/@lawprotect/shared-ts
-        mkdir -p "$LAYER_DIR/dist"
+        LAYER_NODE_MODULES=/tmp/layer/nodejs/node_modules
+        LAYER_DIR="$LAYER_NODE_MODULES/@lawprotect/shared-ts"
+        mkdir -p "$LAYER_NODE_MODULES" "$LAYER_DIR/dist"
+        # Include runtime dependencies (e.g., zod) in the layer
+        cp -a node_modules/. "$LAYER_NODE_MODULES/"
         cp -a dist/. "$LAYER_DIR/dist/"
         cat > "$LAYER_DIR/package.json" <<'EOF'
         {
