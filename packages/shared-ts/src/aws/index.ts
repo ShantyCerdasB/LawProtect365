@@ -14,6 +14,7 @@ export * from "./ratelimit/index.js";
 export * from "./s3/index.js";
 export * from "./ssm/index.js";
 export * from "./kms/index.js";
+export * from "./secrets/index.js";
 
 // Export presigning separately to avoid conflicts
 export { S3Presigner as S3PresignerPort } from "./s3Presign.js";

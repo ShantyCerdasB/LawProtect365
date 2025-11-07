@@ -25,7 +25,15 @@ import type { JsonValue } from '../types/common.js';
  * complex operations requiring transactions.
  */
 export class RepositoryFactory {
-  private static readonly prisma = getPrisma();
+  // Lazy-initialize Prisma only when first needed to avoid requiring
+  // DATABASE_URL at module import time in Lambdas that don't use the DB.
+  private static _prisma: PrismaClient | undefined;
+  private static get prisma(): PrismaClient {
+    if (!this._prisma) {
+      this._prisma = getPrisma();
+    }
+    return this._prisma;
+  }
 
   /**
    * Creates a repository instance with shared Prisma client

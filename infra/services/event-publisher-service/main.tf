@@ -52,6 +52,7 @@ module "outbox_stream_handler" {
     MAX_CONCURRENCY      = "10"
     MAX_RETRIES          = "3"
     RETRY_DELAY_MS       = "1000"
+    DB_SECRET_ARN        = var.db_secret_arn
   }
 }
 
@@ -66,10 +67,16 @@ module "outbox_stream_role" {
   
   assume_role_policy = data.aws_iam_policy_document.lambda_assume_role.json
   
-        inline_policies = {
-          "dynamodb-streams-read" = data.aws_iam_policy_document.dynamodb_streams_read.json
-          "eventbridge-publish"   = data.aws_iam_policy_document.eventbridge_publisher.json
-        }
+        inline_policies = merge(
+          {
+            "dynamodb-streams-read" = data.aws_iam_policy_document.dynamodb_streams_read.json,
+            "eventbridge-publish"   = data.aws_iam_policy_document.eventbridge_publisher.json,
+            "secrets-db-read"       = data.aws_iam_policy_document.db_secret_read.json
+          },
+          length(var.db_kms_key_arn) > 0 ? {
+            "kms-decrypt-db" = data.aws_iam_policy_document.kms_decrypt_db[0].json
+          } : {}
+        )
 }
 
 # DynamoDB Streams Event Source Mapping

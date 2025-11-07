@@ -503,6 +503,7 @@ module "event_publisher_service" {
   region          = var.region
   code_bucket     = var.code_bucket
   event_bus_name  = module.events.eventbridge_bus_name
+  db_secret_arn   = module.db_secret.secret_arn
   tags            = local.common_tags
 }
 
@@ -604,6 +605,11 @@ module "shared_components_pipeline" {
       name  = "PROJECT_DOMAIN"
       value = "${var.project_name}-domain"
       type  = "PLAINTEXT"
+    },
+    {
+      name  = "DATABASE_URL"
+      value = "${module.db_secret.secret_arn}:DATABASE_URL"
+      type  = "SECRETS_MANAGER"
     },
     {
       name  = "CODE_BUCKET"

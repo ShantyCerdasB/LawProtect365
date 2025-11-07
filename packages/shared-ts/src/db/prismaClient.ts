@@ -1,5 +1,6 @@
 import { PrismaClient, Prisma } from "@prisma/client";
 import { getEnv, getNumber } from "../utils/env.js";
+import { resolveDatabaseUrlFromSecret } from "../aws/secrets/index.js";
 
 /**
  * Prisma client singleton for Lambda and local environments.
@@ -43,6 +44,32 @@ export const getPrisma = (opts: PrismaFactoryOptions = {}): PrismaClient => {
 };
 
 /**
+ * Ensures DATABASE_URL is available, resolving from Secrets Manager if needed.
+ * - If process.env.DATABASE_URL exists, returns it.
+ * - Else reads JSON from Secrets Manager using env DB_SECRET_ARN and extracts DATABASE_URL.
+ * - Caches the resolved value back into process.env for future calls.
+ */
+export const ensureDatabaseUrl = async (): Promise<string> => {
+  const existing = getEnv("DATABASE_URL");
+  if (existing && existing.length > 0) return existing;
+
+  const arn = getEnv("DB_SECRET_ARN");
+  if (!arn) throw new Error("DATABASE_URL is not set and DB_SECRET_ARN is missing");
+
+  const urlFromSecret = await resolveDatabaseUrlFromSecret(arn);
+  process.env.DATABASE_URL = urlFromSecret;
+  return urlFromSecret;
+};
+
+/** Async variant that resolves DB URL from secret if needed before creating client. */
+export const getPrismaAsync = async (opts: PrismaFactoryOptions = {}): Promise<PrismaClient> => {
+  if (!opts.url && !getEnv("DATABASE_URL")) {
+    await ensureDatabaseUrl();
+  }
+  return getPrisma(opts);
+};
+
+/**
  * Returns a new PrismaClient without caching. Prefer getPrisma() for normal usage.
  * Useful for one-off scripts or tests that require isolated clients.
  *
@@ -53,6 +80,13 @@ export const createPrisma = (opts: PrismaFactoryOptions = {}): PrismaClient => {
   if (!url) {
     throw new Error("DATABASE_URL is not set");
   }
+  const log = opts.log ?? normalizeLogLevels();
+  return new PrismaClient({ datasources: { db: { url } }, log });
+};
+
+/** Async variant that resolves DB URL from secret if needed before creating client. */
+export const createPrismaAsync = async (opts: PrismaFactoryOptions = {}): Promise<PrismaClient> => {
+  const url = opts.url ?? getEnv("DATABASE_URL") ?? await ensureDatabaseUrl();
   const log = opts.log ?? normalizeLogLevels();
   return new PrismaClient({ datasources: { db: { url } }, log });
 };

@@ -35,3 +35,17 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+# Optional: Secrets Manager ARN for the database secret (grants Lambda read access)
+variable "db_secret_arn" {
+  description = "Secrets Manager ARN for the database credentials/URL"
+  type        = string
+  default     = ""
+}
+
+# Optional: KMS key ARN if the DB secret uses a customer-managed CMK
+variable "db_kms_key_arn" {
+  description = "KMS key ARN used to encrypt the DB secret (optional)"
+  type        = string
+  default     = ""
+}

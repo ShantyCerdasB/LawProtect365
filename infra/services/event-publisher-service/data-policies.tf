@@ -44,3 +44,27 @@ data "aws_iam_policy_document" "eventbridge_publisher" {
     resources = ["arn:aws:events:${var.region}:*:event-bus/${var.event_bus_name}"]
   }
 }
+
+# Grant read access to the DB secret
+data "aws_iam_policy_document" "db_secret_read" {
+  statement {
+    sid     = "ReadDbSecret"
+    effect  = "Allow"
+    actions = [
+      "secretsmanager:GetSecretValue",
+      "secretsmanager:DescribeSecret"
+    ]
+    resources = [var.db_secret_arn]
+  }
+}
+
+# Optional: Allow decrypt on the CMK used by the secret (if customer-managed)
+data "aws_iam_policy_document" "kms_decrypt_db" {
+  count = length(var.db_kms_key_arn) > 0 ? 1 : 0
+  statement {
+    sid     = "KmsDecryptDbSecret"
+    effect  = "Allow"
+    actions = ["kms:Decrypt"]
+    resources = [var.db_kms_key_arn]
+  }
+}
