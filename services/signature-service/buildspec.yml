@@ -217,8 +217,8 @@ phases:
           echo "$ARN"
         }
 
-        CORE_LAYER_NAME="lawprotect365-sign-core-stg"
-        SHARED_LAYER_NAME="lawprotect365-shared-ts-layer-stg"
+        CORE_LAYER_NAME="${SIGNATURE_LAYER_NAME:-lawprotect365-sign-core-stg}"
+        SHARED_LAYER_NAME="${SHARED_TS_LAYER_NAME:-${PROJECT_NAME:-lawprotect365}-shared-ts-layer-${ENV:-stg}}"
 
         CORE_LAYER_VERSION="$(publish_layer "$CORE_LAYER_NAME" "sign-core-layer.zip" "Signature service core code")"
 
@@ -228,17 +228,20 @@ phases:
 
       # ===== Deploy de funciones =====
       - |
-        echo "[INFO] Deploying Lambda functions"
+        echo "[INFO] Deploying Lambda functions (no alias shift; CodeDeploy will move aliases)"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
 
         AWS_ACCOUNT_ID="${AWS_ACCOUNT_ID:-$(aws sts get-caller-identity --query Account --output text)}"
-        SHARED_TS_LAYER_NAME="lawprotect365-shared-ts-layer-stg"
-        SHARED_TS_LAYER_ARN="$(aws lambda list-layer-versions --layer-name "$SHARED_TS_LAYER_NAME" --max-items 1 --query "LayerVersions[0].LayerVersionArn" --output text 2>/dev/null || true)"
+        if [ -n "${SHARED_TS_LAYER_ARN:-}" ] && [ "${SHARED_TS_LAYER_ARN}" != "None" ]; then
+          SHARED_LAYER_ARN="$SHARED_TS_LAYER_ARN"
+        else
+          SHARED_LAYER_ARN="$(aws lambda list-layer-versions --layer-name "$SHARED_LAYER_NAME" --max-items 1 --query "LayerVersions[0].LayerVersionArn" --output text 2>/dev/null || true)"
+        fi
 
         build_layers_args() {
           args=""
-          if [ -n "${SHARED_TS_LAYER_ARN:-}" ] && [ "${SHARED_TS_LAYER_ARN}" != "None" ]; then
-            args="${args} ${SHARED_TS_LAYER_ARN}"
+          if [ -n "${SHARED_LAYER_ARN:-}" ] && [ "${SHARED_LAYER_ARN}" != "None" ]; then
+            args="${args} ${SHARED_LAYER_ARN}"
           fi
           if [ -n "${CORE_LAYER_VERSION:-}" ] && [ "${CORE_LAYER_VERSION}" != "None" ]; then
             args="${args} ${CORE_LAYER_VERSION}"
@@ -246,70 +249,68 @@ phases:
           echo "$args" | sed -e 's/^ *//'
         }
 
-        deploy_fn() {
-          FN="$1"
-          ZIP="$2"
-          LAYERS_ARGS="$(build_layers_args)"
-          echo "[INFO] Deploying $FN"
+        # Build manifest JSON to iterate
+        python3 - "$FUNCTIONS_MANIFEST" > /tmp/functions.json << 'PY'
+import json,sys
+raw = sys.argv[1] if len(sys.argv)>1 else "[]"
+try:
+  data = json.loads(raw)
+  assert isinstance(data, list)
+except Exception:
+  data = []
+print(json.dumps(data))
+PY
+        jq -e . >/dev/null 2>&1 || { echo "[ERROR] jq is required"; exit 1; }
+        FUNS="$(cat /tmp/functions.json)"
+        LAYERS_ARGS="$(build_layers_args)"
+        : > /tmp/versions.jsonl
+        for row in $(echo "$FUNS" | jq -c '.[]'); do
+          FN=$(echo "$row" | jq -r '.functionName')
+          ZIP=$(echo "$row" | jq -r '.artifactS3Key')
+          ALIAS=$(echo "$row" | jq -r '.alias')
+          echo "[INFO] Deploying $FN (artifact=$ZIP, alias=$ALIAS)"
           aws s3 cp "$ZIP" "s3://$CODE_BUCKET/$ZIP"
           aws lambda update-function-code --function-name "$FN" --s3-bucket "$CODE_BUCKET" --s3-key "$ZIP" >/dev/null
           aws lambda wait function-updated --function-name "$FN"
           ENV_JSON="$(aws lambda get-function-configuration --function-name "$FN" --query 'Environment.Variables' --output json 2>/dev/null || echo '{}')"
-
           ENV_ARG="$(python3 -c "import json,sys; raw=sys.argv[1] if len(sys.argv)>1 else '{}'; env=json.loads(raw or '{}') or {}; env['NODE_OPTIONS']='--experimental-specifier-resolution=node'; print(json.dumps({'Variables': env}, separators=(',',':')))" "$ENV_JSON")"
-
           if [ -n "$LAYERS_ARGS" ]; then
-          aws lambda update-function-configuration --function-name "$FN" --runtime nodejs20.x --handler index.handler --layers $LAYERS_ARGS --environment "$ENV_ARG" >/dev/null
+            aws lambda update-function-configuration --function-name "$FN" --runtime nodejs20.x --handler index.handler --layers $LAYERS_ARGS --environment "$ENV_ARG" >/dev/null
           else
             aws lambda update-function-configuration --function-name "$FN" --runtime nodejs20.x --handler index.handler --environment "$ENV_ARG" >/dev/null
           fi
-
           aws lambda wait function-updated --function-name "$FN"
-
-          # Publicar nueva versión y apuntar alias 'live'
-          TARGET_VERSION="$(aws lambda publish-version --function-name "$FN" --description "Build-$(date +%s)" --query Version --output text 2>/dev/null)"
-          if [ -z "$TARGET_VERSION" ] || [ "$TARGET_VERSION" = "null" ]; then
-            TARGET_VERSION="$(aws lambda publish-version --function-name "$FN" --query Version --output text 2>/dev/null)"
+          CURRENT_BEFORE="$(aws lambda get-alias --function-name "$FN" --name "$ALIAS" --query FunctionVersion --output text 2>/dev/null || true)"
+          TARGET_VERSION="$(aws lambda publish-version --function-name "$FN" --description "Build-$(date +%s)" --query Version --output text 2>/dev/null || true)"
+          if [ -z "$TARGET_VERSION" ] || [ "$TARGET_VERSION" = "None" ] || [ "$TARGET_VERSION" = "null" ]; then
+            TARGET_VERSION="$(aws lambda publish-version --function-name "$FN" --query Version --output text 2>/dev/null || true)"
           fi
-          if aws lambda get-alias --function-name "$FN" --name "live" >/dev/null 2>&1; then
-            aws lambda update-alias --function-name "$FN" --name "live" --function-version "$TARGET_VERSION" >/dev/null
-          else
-            aws lambda create-alias --function-name "$FN" --name "live" --function-version "$TARGET_VERSION" >/dev/null
-          fi
-        }
-
-        deploy_fn "lawprotect365-sign-service-create-envelope-stg"        "sign-create-envelope.zip"
-        deploy_fn "lawprotect365-sign-service-get-envelope-stg"           "sign-get-envelope.zip"
-        deploy_fn "lawprotect365-sign-service-send-envelope-stg"          "sign-send-envelope.zip"
-        deploy_fn "lawprotect365-sign-service-sign-document-stg"          "sign-sign-document.zip"
-        deploy_fn "lawprotect365-sign-service-decline-signer-stg"         "sign-decline-signer.zip"
-        deploy_fn "lawprotect365-sign-service-share-document-stg"         "sign-share-document.zip"
-        deploy_fn "lawprotect365-sign-service-send-notification-stg"      "sign-send-notification.zip"
-        deploy_fn "lawprotect365-sign-service-get-audit-trail-stg"        "sign-get-audit-trail.zip"
-        deploy_fn "lawprotect365-sign-service-get-envelopes-by-user-stg"  "sign-get-envelopes-by-user.zip"
-        deploy_fn "lawprotect365-sign-service-update-envelope-stg"        "sign-update-envelope.zip"
-        deploy_fn "lawprotect365-sign-service-cancel-envelope-stg"        "sign-cancel-envelope.zip"
-        deploy_fn "lawprotect365-sign-service-download-document-stg"      "sign-download-document.zip"
+          [ -z "$CURRENT_BEFORE" ] || [ "$CURRENT_BEFORE" = "None" ] && CURRENT_BEFORE="$TARGET_VERSION"
+          echo "{\"name\":\"$FN\",\"alias\":\"$ALIAS\",\"current\":\"$CURRENT_BEFORE\",\"target\":\"$TARGET_VERSION\"}" >> /tmp/versions.jsonl
+        done
 
       - |
-        echo "[INFO] Writing default appspec.yml"
+        echo "[INFO] Writing appspec.yml from published versions"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
-        cat > appspec.yml << 'EOF'
-        version: 0.0
-        Resources:
-          - CreateEnvelope:
-              Type: AWS::Lambda::Function
-              Properties:
-                Name: "lawprotect365-sign-service-create-envelope-stg"
-                Alias: "live"
-                CurrentVersion: 1
-                TargetVersion: 1
-        EOF
+        {
+          echo "version: 0.0"
+          echo "Resources:"
+          while read -r line; do
+            NAME="$(echo "$line" | jq -r '.name')"
+            ALIAS="$(echo "$line" | jq -r '.alias')"
+            CURR="$(echo "$line" | jq -r '.current')"
+            TGT="$(echo "$line" | jq -r '.target')"
+            echo "  - $(basename "$NAME"):"
+            echo "      Type: AWS::Lambda::Function"
+            echo "      Properties:"
+            echo "        Name: \"$NAME\""
+            echo "        Alias: \"$ALIAS\""
+            echo "        CurrentVersion: $CURR"
+            echo "        TargetVersion: $TGT"
+          done < /tmp/versions.jsonl
+        } > appspec.yml
 
 artifacts:
   files:
-    - "services/signature-service/sign-*.zip"
-    - "services/signature-service/sign-core-layer.zip"
     - "services/signature-service/appspec.yml"
-    - "services/signature-service/appspec-*.yml"
   discard-paths: yes
