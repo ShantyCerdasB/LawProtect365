@@ -251,15 +251,15 @@ phases:
 
         # Build manifest JSON to iterate
         python3 - "$FUNCTIONS_MANIFEST" > /tmp/functions.json << 'PY'
-import json,sys
-raw = sys.argv[1] if len(sys.argv)>1 else "[]"
-try:
-  data = json.loads(raw)
-  assert isinstance(data, list)
-except Exception:
-  data = []
-print(json.dumps(data))
-PY
+        import json,sys
+        raw = sys.argv[1] if len(sys.argv)>1 else "[]"
+        try:
+          data = json.loads(raw)
+          assert isinstance(data, list)
+        except Exception:
+          data = []
+        print(json.dumps(data))
+        PY
         jq -e . >/dev/null 2>&1 || { echo "[ERROR] jq is required"; exit 1; }
         FUNS="$(cat /tmp/functions.json)"
         LAYERS_ARGS="$(build_layers_args)"
