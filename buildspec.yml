@@ -35,7 +35,7 @@ phases:
         {
           "name": "@lawprotect/shared-ts",
           "version": "0.1.0",
-          "type": "module",
+          "type": "commonjs",
           "main": "dist/cjs/index.js",
           "module": "dist/esm/index.js",
           "types": "dist/types/index.d.ts",
