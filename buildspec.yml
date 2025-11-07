@@ -28,6 +28,7 @@ phases:
       - |
         set -eu
         echo '[INFO] Assembling layer under /tmp/layer'
+        cd "$CODEBUILD_SRC_DIR/packages/shared-ts"
         LAYER_NODE_MODULES=/tmp/layer/nodejs/node_modules
         LAYER_DIR="$LAYER_NODE_MODULES/@lawprotect/shared-ts"
         mkdir -p "$LAYER_NODE_MODULES" "$LAYER_DIR/dist"
