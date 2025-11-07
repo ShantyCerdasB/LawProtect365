@@ -30,8 +30,7 @@ phases:
         echo '[INFO] Assembling layer under /tmp/layer'
         cd "$CODEBUILD_SRC_DIR/packages/shared-ts"
         LAYER_NODE_MODULES=/tmp/layer/nodejs/node_modules
-        LAYER_DIR="$LAYER_NODE_MODULES/@lawprotect/shared-ts"
-        mkdir -p "$LAYER_NODE_MODULES" "$LAYER_DIR/dist"
+        mkdir -p "$LAYER_NODE_MODULES"
         # Include runtime dependencies (e.g., zod) in the layer.
         # In npm workspaces, deps are hoisted to repo root.
         SRC_NODE_MODULES="$CODEBUILD_SRC_DIR/node_modules"
@@ -41,6 +40,10 @@ phases:
         else
           echo "[WARN] No node_modules found to copy into layer"
         fi
+        # Replace workspace symlink with actual package files in the layer
+        rm -rf "$LAYER_NODE_MODULES/@lawprotect/shared-ts"
+        LAYER_DIR="$LAYER_NODE_MODULES/@lawprotect/shared-ts"
+        mkdir -p "$LAYER_DIR/dist"
         cp -a dist/. "$LAYER_DIR/dist/"
         cat > "$LAYER_DIR/package.json" <<'EOF'
         {
