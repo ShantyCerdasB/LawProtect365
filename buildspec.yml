@@ -138,7 +138,7 @@ phases:
       - |
         set -eu
         echo '[INFO] Sanity invoking outbox to detect ImportModuleError'
-        ERR=$(aws lambda invoke --function-name "$OUTBOX_FUNCTION_NAME" --payload '{}' /tmp/invoke.json --query FunctionError --output text 2>/dev/null || true)
+        ERR=$(aws lambda invoke --function-name "$OUTBOX_FUNCTION_NAME" --payload '{"Records":[]}' /tmp/invoke.json --query FunctionError --output text 2>/dev/null || true)
         if [ -n "$ERR" ] && [ "$ERR" != "None" ]; then
           echo "[ERROR] Lambda invocation failed (FunctionError=$ERR). Check import errors." >&2
           cat /tmp/invoke.json >&2 || true

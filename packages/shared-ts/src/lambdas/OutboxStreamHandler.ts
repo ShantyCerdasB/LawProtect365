@@ -25,15 +25,18 @@ export const outboxStreamHandler = async (
   event: DynamoDBStreamEvent,
   context: Context
 ): Promise<{ statusCode: number; body: string }> => {
+  const records = Array.isArray((event as any)?.Records) ? (event as any).Records : [];
   console.log('OutboxStreamHandler started', { 
     requestId: context.awsRequestId,
-    recordCount: event.Records.length,
-    event: JSON.stringify(event, null, 2)
+    recordCount: records.length
   });
 
   try {
     const streamProcessor = await initializeStreamProcessor();
-    const processingResult = await processStreamRecords(event.Records, streamProcessor);
+    if (records.length === 0) {
+      return createSuccessResponse({ processedCount: 0, failedCount: 0 }, context.awsRequestId);
+    }
+    const processingResult = await processStreamRecords(records, streamProcessor);
     
     return createSuccessResponse(processingResult, context.awsRequestId);
   } catch (error) {
