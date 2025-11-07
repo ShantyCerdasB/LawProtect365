@@ -133,14 +133,9 @@ phases:
         echo '[INFO] Invocation OK'
       - |
         set -eu
-        echo '[INFO]  Publishing version and updating alias'
+        echo '[INFO]  Publishing version and generating appspec (alias unchanged)'
         CURRENT_BEFORE=$(aws lambda get-alias --function-name "$OUTBOX_FUNCTION_NAME" --name "$OUTBOX_ALIAS_NAME" --query FunctionVersion --output text 2>/dev/null || true)
         TARGET_VERSION=$(aws lambda publish-version --function-name "$OUTBOX_FUNCTION_NAME" --description "Build-$(date +%s)" --query Version --output text)
-        if aws lambda get-alias --function-name "$OUTBOX_FUNCTION_NAME" --name "$OUTBOX_ALIAS_NAME" >/dev/null 2>&1; then
-          aws lambda update-alias --function-name "$OUTBOX_FUNCTION_NAME" --name "$OUTBOX_ALIAS_NAME" --function-version "$TARGET_VERSION"
-        else
-          aws lambda create-alias --function-name "$OUTBOX_FUNCTION_NAME" --name "$OUTBOX_ALIAS_NAME" --function-version "$TARGET_VERSION"
-        fi
         CURRENT_SAFE=${CURRENT_BEFORE:-$TARGET_VERSION}
         cat > "$CODEBUILD_SRC_DIR/appspec.yml" <<EOF
         version: 0.0
