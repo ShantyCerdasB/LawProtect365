@@ -17,10 +17,7 @@ phases:
       - |
         set -eu
         echo "[INFO] ===== Build & Package ====="
-      - |
-        echo "[INFO] Building service (ESM)"
-        cd "$CODEBUILD_SRC_DIR/services/signature-service"
-        npm run build
+      - echo "[INFO] Skipping service build; using dist from Test stage"
 
       # ===== Deps layer skipped (using bundled core) =====
       - |
@@ -240,7 +237,7 @@ phases:
         PY
         jq -e . >/dev/null 2>&1 || { echo "[ERROR] jq is required"; exit 1; }
         FUNS="$(cat /tmp/functions.json)"
-        LAYERS_ARGS="$(build_layers_args)"
+          LAYERS_ARGS="$(build_layers_args)"
         : > /tmp/versions.jsonl
 
         retry() {
@@ -380,4 +377,4 @@ artifacts:
       base-directory: services/signature-service/out/appspecs/sign_download-document_artifact
       files:
         - appspec.yml
-      discard-paths: yes
+  discard-paths: yes
