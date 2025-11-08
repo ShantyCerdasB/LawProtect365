@@ -10,40 +10,13 @@ phases:
       - |
         set -eu
         echo "[INFO] ===== Pre-build ====="
-      - |
-        echo "[INFO] Installing workspace dependencies (npm workspaces)"
-        cd "$CODEBUILD_SRC_DIR"
-        npm ci --workspaces --include-workspace-root --no-audit --no-fund
-      - |
-        echo "[INFO] Building packages/shared-ts"
-        cd "$CODEBUILD_SRC_DIR/packages/shared-ts"
-        export DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}"
-        npm run prisma:generate
-        npm run build
-      - |
-        echo "[INFO] Using workspace install; skipping per-service npm ci"
-      - |
-        echo "[INFO] Preparing Prisma client"
-        cd "$CODEBUILD_SRC_DIR/services/signature-service"
-        if [ -d "$CODEBUILD_SRC_DIR/packages/shared-ts/prisma" ]; then
-          mkdir -p prisma
-          cp -r "$CODEBUILD_SRC_DIR/packages/shared-ts/prisma/"* prisma/
-        fi
-        export DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}"
-        npx -y prisma@5.22.0 generate
-        node -e "try{require.resolve('@prisma/client');console.log('[OK] @prisma/client')}catch(e){console.error(e);process.exit(1)}"
-        node -e "try{require.resolve('@lawprotect/shared-ts');console.log('[OK] @lawprotect/shared-ts')}catch(e){console.error(e);process.exit(1)}"
+      - echo "[INFO] Using compiled artifacts from Test stage (no npm ci / prisma generate here)"
 
   build:
     commands:
       - |
         set -eu
         echo "[INFO] ===== Build & Package ====="
-      - |
-        echo "[INFO] Running unit tests"
-        cd "$CODEBUILD_SRC_DIR/services/signature-service"
-        export DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}"
-        npm run test:unit:coverage
       - |
         echo "[INFO] Building service (ESM)"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
@@ -269,20 +242,35 @@ phases:
         FUNS="$(cat /tmp/functions.json)"
         LAYERS_ARGS="$(build_layers_args)"
         : > /tmp/versions.jsonl
+
+        retry() {
+          local attempts="$1"; shift
+          local delay=2
+          local i
+          for i in $(seq 1 "$attempts"); do
+            if "$@"; then return 0; fi
+            local rc=$?
+            echo "[WARN] Retry $i failed (rc=$rc). Sleeping ${delay}s..." >&2
+            sleep "$delay"
+            delay=$((delay*2))
+          done
+          return 1
+        }
+
         for row in $(echo "$FUNS" | jq -c '.[]'); do
           FN=$(echo "$row" | jq -r '.functionName')
           ZIP=$(echo "$row" | jq -r '.artifactS3Key')
           ALIAS=$(echo "$row" | jq -r '.alias')
           echo "[INFO] Deploying $FN (artifact=$ZIP, alias=$ALIAS)"
           aws s3 cp "$ZIP" "s3://$CODE_BUCKET/$ZIP"
-          aws lambda update-function-code --function-name "$FN" --s3-bucket "$CODE_BUCKET" --s3-key "$ZIP" >/dev/null
+          retry 5 aws lambda update-function-code --function-name "$FN" --s3-bucket "$CODE_BUCKET" --s3-key "$ZIP" >/dev/null
           aws lambda wait function-updated --function-name "$FN"
           ENV_JSON="$(aws lambda get-function-configuration --function-name "$FN" --query 'Environment.Variables' --output json 2>/dev/null || echo '{}')"
           ENV_ARG="$(python3 -c "import json,sys; raw=sys.argv[1] if len(sys.argv)>1 else '{}'; env=json.loads(raw or '{}') or {}; env['NODE_OPTIONS']='--experimental-specifier-resolution=node'; print(json.dumps({'Variables': env}, separators=(',',':')))" "$ENV_JSON")"
           if [ -n "$LAYERS_ARGS" ]; then
-            aws lambda update-function-configuration --function-name "$FN" --runtime nodejs20.x --handler index.handler --layers $LAYERS_ARGS --environment "$ENV_ARG" >/dev/null
+            retry 5 aws lambda update-function-configuration --function-name "$FN" --runtime nodejs20.x --handler index.handler --layers $LAYERS_ARGS --environment "$ENV_ARG" >/dev/null
           else
-            aws lambda update-function-configuration --function-name "$FN" --runtime nodejs20.x --handler index.handler --environment "$ENV_ARG" >/dev/null
+            retry 5 aws lambda update-function-configuration --function-name "$FN" --runtime nodejs20.x --handler index.handler --environment "$ENV_ARG" >/dev/null
           fi
           aws lambda wait function-updated --function-name "$FN"
           CURRENT_BEFORE="$(aws lambda get-alias --function-name "$FN" --name "$ALIAS" --query FunctionVersion --output text 2>/dev/null || true)"
@@ -307,15 +295,15 @@ phases:
 
       - |
         echo "[INFO] Writing per-function appspec.yml files for CodeDeploy"
-        cd "$CODEBUILD_SRC_DIR/services/signature-service"
+        OUTROOT="$CODEBUILD_SRC_DIR/services/signature-service/out/appspecs"
         while read -r line; do
           NAME="$(echo "$line" | jq -r '.name')"
           ALIAS="$(echo "$line" | jq -r '.alias')"
           CURR="$(echo "$line" | jq -r '.current')"
           TGT="$(echo "$line" | jq -r '.target')"
           ARTID="$(echo "$FUNS" | jq -r --arg fn "$NAME" '.[] | select(.functionName==$fn) | .artifactIdentifier')"
-          OUTDIR="services/signature-service/out/appspecs/${ARTID}"
-          mkdir -p "$OUTDIR"
+          OUTDIR="$OUTROOT/${ARTID}"
+          mkdir -p "$OUTDIR" || true
           {
             echo "version: 0.0"
             echo "Resources:"

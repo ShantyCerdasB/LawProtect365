@@ -1,0 +1,42 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 20
+
+  pre_build:
+    commands:
+      - |
+        set -eu
+        echo "[INFO][TEST] Installing workspace dependencies"
+        cd "$CODEBUILD_SRC_DIR"
+        npm ci --workspaces --include-workspace-root --no-audit --no-fund
+      - |
+        echo "[INFO][TEST] Build shared-ts (prisma generate + build)"
+        cd "$CODEBUILD_SRC_DIR/packages/shared-ts"
+        export DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}"
+        npx -y prisma@5.22.0 generate
+        npm run build
+      - |
+        echo "[INFO][TEST] Build signature-service (tsc)"
+        cd "$CODEBUILD_SRC_DIR/services/signature-service"
+        npm run build
+
+  build:
+    commands:
+      - |
+        set -eu
+        echo "[INFO][TEST] Running unit tests"
+        cd "$CODEBUILD_SRC_DIR/services/signature-service"
+        export DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}"
+        npm run test:unit:coverage
+
+artifacts:
+  files:
+    - "services/signature-service/dist/**"
+    - "packages/shared-ts/prisma/**"
+    - "services/signature-service/buildspec.yml"
+    - "services/signature-service/buildspec.tests.yml"
+  discard-paths: no
+
