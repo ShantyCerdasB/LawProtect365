@@ -232,10 +232,15 @@ phases:
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
 
         AWS_ACCOUNT_ID="${AWS_ACCOUNT_ID:-$(aws sts get-caller-identity --query Account --output text)}"
-        if [ -n "${SHARED_TS_LAYER_ARN:-}" ] && [ "${SHARED_TS_LAYER_ARN}" != "None" ]; then
+        # Resolve shared layer to latest version if ARN not versioned
+        if [ -n "${SHARED_TS_LAYER_ARN:-}" ] && echo "$SHARED_TS_LAYER_ARN" | grep -q ':'; then
           SHARED_LAYER_ARN="$SHARED_TS_LAYER_ARN"
         else
-          SHARED_LAYER_ARN="$(aws lambda list-layer-versions --layer-name "$SHARED_LAYER_NAME" --max-items 1 --query "LayerVersions[0].LayerVersionArn" --output text 2>/dev/null || true)"
+          SHARED_LAYER_NAME="${SHARED_TS_LAYER_NAME:-${PROJECT_NAME:-lawprotect365}-shared-ts-layer-${ENV:-stg}}"
+          SHARED_LAYER_ARN="$(aws lambda list-layer-versions \
+            --layer-name "$SHARED_LAYER_NAME" \
+            --query "sort_by(LayerVersions, &Version)[-1].LayerVersionArn" \
+            --output text 2>/dev/null || true)"
         fi
 
         build_layers_args() {
@@ -287,6 +292,15 @@ phases:
           fi
           [ -z "$CURRENT_BEFORE" ] || [ "$CURRENT_BEFORE" = "None" ] && CURRENT_BEFORE="$TARGET_VERSION"
           echo "{\"name\":\"$FN\",\"alias\":\"$ALIAS\",\"current\":\"$CURRENT_BEFORE\",\"target\":\"$TARGET_VERSION\"}" >> /tmp/versions.jsonl
+
+          # Sanity invoke the published version to surface runtime errors without failing the build
+          ERR=$(aws lambda invoke --function-name "$FN" --qualifier "$TARGET_VERSION" --payload '{}' /tmp/invoke.json --query FunctionError --output text 2>/dev/null || true)
+          if [ -n "$ERR" ] && [ "$ERR" != "None" ]; then
+            echo "[WARN] Sanity invoke failed for $FN (v$TARGET_VERSION) FunctionError=$ERR"
+            cat /tmp/invoke.json || true
+          else
+            echo "[INFO] Sanity invoke OK for $FN (v$TARGET_VERSION)"
+          fi
         done
 
       - |
