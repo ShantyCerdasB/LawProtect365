@@ -290,7 +290,9 @@ phases:
           if [ -z "$TARGET_VERSION" ] || [ "$TARGET_VERSION" = "None" ] || [ "$TARGET_VERSION" = "null" ]; then
             TARGET_VERSION="$(aws lambda publish-version --function-name "$FN" --query Version --output text 2>/dev/null || true)"
           fi
-          [ -z "$CURRENT_BEFORE" ] || [ "$CURRENT_BEFORE" = "None" ] && CURRENT_BEFORE="$TARGET_VERSION"
+          if [ -z "$CURRENT_BEFORE" ] || [ "$CURRENT_BEFORE" = "None" ] || [ "$CURRENT_BEFORE" = "$LATEST" ] || [ "$CURRENT_BEFORE" = "\$LATEST" ]; then
+            CURRENT_BEFORE="$TARGET_VERSION"
+          fi
           echo "{\"name\":\"$FN\",\"alias\":\"$ALIAS\",\"current\":\"$CURRENT_BEFORE\",\"target\":\"$TARGET_VERSION\"}" >> /tmp/versions.jsonl
 
           # Sanity invoke the published version to surface runtime errors without failing the build
@@ -304,16 +306,19 @@ phases:
         done
 
       - |
-        echo "[INFO] Writing appspec.yml from published versions"
+        echo "[INFO] Writing per-function appspec.yml files for CodeDeploy"
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
-        {
-          echo "version: 0.0"
-          echo "Resources:"
-          while read -r line; do
-            NAME="$(echo "$line" | jq -r '.name')"
-            ALIAS="$(echo "$line" | jq -r '.alias')"
-            CURR="$(echo "$line" | jq -r '.current')"
-            TGT="$(echo "$line" | jq -r '.target')"
+        while read -r line; do
+          NAME="$(echo "$line" | jq -r '.name')"
+          ALIAS="$(echo "$line" | jq -r '.alias')"
+          CURR="$(echo "$line" | jq -r '.current')"
+          TGT="$(echo "$line" | jq -r '.target')"
+          ARTID="$(echo "$FUNS" | jq -r --arg fn "$NAME" '.[] | select(.functionName==$fn) | .artifactIdentifier')"
+          OUTDIR="services/signature-service/out/appspecs/${ARTID}"
+          mkdir -p "$OUTDIR"
+          {
+            echo "version: 0.0"
+            echo "Resources:"
             echo "  - $(basename "$NAME"):"
             echo "      Type: AWS::Lambda::Function"
             echo "      Properties:"
@@ -321,10 +326,70 @@ phases:
             echo "        Alias: \"$ALIAS\""
             echo "        CurrentVersion: $CURR"
             echo "        TargetVersion: $TGT"
-          done < /tmp/versions.jsonl
-        } > appspec.yml
+          } > "$OUTDIR/appspec.yml"
+        done < /tmp/versions.jsonl
 
 artifacts:
-  files:
-    - "services/signature-service/appspec.yml"
+  files: []
   discard-paths: yes
+  secondary-artifacts:
+    sign_create-envelope_artifact:
+      base-directory: services/signature-service/out/appspecs/sign_create-envelope_artifact
+      files:
+        - appspec.yml
+      discard-paths: yes
+    sign_get-envelope_artifact:
+      base-directory: services/signature-service/out/appspecs/sign_get-envelope_artifact
+      files:
+        - appspec.yml
+      discard-paths: yes
+    sign_send-envelope_artifact:
+      base-directory: services/signature-service/out/appspecs/sign_send-envelope_artifact
+      files:
+        - appspec.yml
+      discard-paths: yes
+    sign_sign-document_artifact:
+      base-directory: services/signature-service/out/appspecs/sign_sign-document_artifact
+      files:
+        - appspec.yml
+      discard-paths: yes
+    sign_decline-signer_artifact:
+      base-directory: services/signature-service/out/appspecs/sign_decline-signer_artifact
+      files:
+        - appspec.yml
+      discard-paths: yes
+    sign_share-document_artifact:
+      base-directory: services/signature-service/out/appspecs/sign_share-document_artifact
+      files:
+        - appspec.yml
+      discard-paths: yes
+    sign_send-notification_artifact:
+      base-directory: services/signature-service/out/appspecs/sign_send-notification_artifact
+      files:
+        - appspec.yml
+      discard-paths: yes
+    sign_get-audit-trail_artifact:
+      base-directory: services/signature-service/out/appspecs/sign_get-audit-trail_artifact
+      files:
+        - appspec.yml
+      discard-paths: yes
+    sign_get-envelopes-by-user_artifact:
+      base-directory: services/signature-service/out/appspecs/sign_get-envelopes-by-user_artifact
+      files:
+        - appspec.yml
+      discard-paths: yes
+    sign_update-envelope_artifact:
+      base-directory: services/signature-service/out/appspecs/sign_update-envelope_artifact
+      files:
+        - appspec.yml
+      discard-paths: yes
+    sign_cancel-envelope_artifact:
+      base-directory: services/signature-service/out/appspecs/sign_cancel-envelope_artifact
+      files:
+        - appspec.yml
+      discard-paths: yes
+    sign_download-document_artifact:
+      base-directory: services/signature-service/out/appspecs/sign_download-document_artifact
+      files:
+        - appspec.yml
+      discard-paths: yes
