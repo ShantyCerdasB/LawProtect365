@@ -315,4 +315,4 @@ artifacts:
       base-directory: services/signature-service/out/appspecs/sign_download-document_artifact
       files:
         - appspec.yml
-    discard-paths: yes
+      discard-paths: yes
