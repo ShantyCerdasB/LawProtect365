@@ -41,12 +41,13 @@ export const cancelEnvelopeHandler = ControllerFactory.createCommand({
   requireAuth: true,
   
   // Service configuration - use new DDD architecture
+  /**
+   * Lazy DI: instantiate the orchestrator on first execution to avoid requiring
+   * DATABASE_URL at module import time. This keeps cold starts resilient when the
+   * DB secret is resolved at runtime by shared-ts.
+   */
   appServiceClass: class {
-    private readonly signatureOrchestrator: any;
-
-    constructor() {
-      this.signatureOrchestrator = CompositionRoot.createSignatureOrchestrator();
-    }
+    private signatureOrchestrator: any | undefined;
 
     /**
      * Executes the envelope cancellation orchestration
@@ -58,7 +59,9 @@ export const cancelEnvelopeHandler = ControllerFactory.createCommand({
       userId: string;
       securityContext: any;
     }) {
-      return await this.signatureOrchestrator.cancelEnvelope(
+      const orchestrator = this.signatureOrchestrator ?? await CompositionRoot.createSignatureOrchestratorAsync();
+      this.signatureOrchestrator = orchestrator;
+      return await orchestrator.cancelEnvelope(
         params.envelopeId,
         params.userId,
         params.securityContext

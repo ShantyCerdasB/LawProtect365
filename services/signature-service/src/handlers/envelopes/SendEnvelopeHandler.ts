@@ -58,11 +58,7 @@ export const sendEnvelopeHandler = ControllerFactory.createCommand({
   
   // Service configuration - use new DDD architecture
   appServiceClass: class {
-    private readonly signatureOrchestrator: any;
-
-    constructor() {
-      this.signatureOrchestrator = CompositionRoot.createSignatureOrchestrator();
-    }
+    private signatureOrchestrator: any | undefined;
 
     /**
      * Executes the envelope sending orchestration
@@ -70,7 +66,9 @@ export const sendEnvelopeHandler = ControllerFactory.createCommand({
      * @returns Promise resolving to send envelope result
      */
     async execute(params: any) {
-      return await this.signatureOrchestrator.sendEnvelope(
+      const orchestrator = this.signatureOrchestrator ?? await CompositionRoot.createSignatureOrchestratorAsync();
+      this.signatureOrchestrator = orchestrator;
+      return await orchestrator.sendEnvelope(
         params.envelopeId,
         params.userId,
         params.securityContext,

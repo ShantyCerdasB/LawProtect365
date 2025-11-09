@@ -57,13 +57,12 @@ export const createEnvelopeHandler = ControllerFactory.createCommand({
   bodySchema: CreateEnvelopeSchema,
   
   // Service configuration - use new DDD architecture
+  /**
+   * Lazy DI: delay orchestrator creation until first call to avoid import-time
+   * DB requirements. Supports resolving DATABASE_URL via shared-ts at runtime.
+   */
   appServiceClass: class {
-    private readonly signatureOrchestrator: any;
-
-    constructor() {
-      // Create SignatureOrchestrator using NewServiceFactory
-      this.signatureOrchestrator = CompositionRoot.createSignatureOrchestrator();
-    }
+    private signatureOrchestrator: any | undefined;
 
     /**
      * Executes the envelope creation orchestration
@@ -71,7 +70,9 @@ export const createEnvelopeHandler = ControllerFactory.createCommand({
      * @returns Promise resolving to created envelope
      */
     async execute(params: any) {
-      const result = await this.signatureOrchestrator.createEnvelope({
+      const orchestrator = this.signatureOrchestrator ?? await CompositionRoot.createSignatureOrchestratorAsync();
+      this.signatureOrchestrator = orchestrator;
+      const result = await orchestrator.createEnvelope({
         envelopeData: params.envelopeData,
         userId: params.userId,
         securityContext: params.securityContext,

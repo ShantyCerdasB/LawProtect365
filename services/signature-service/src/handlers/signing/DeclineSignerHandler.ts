@@ -42,11 +42,7 @@ export const declineSignerHandler = ControllerFactory.createCommand({
   
   // Service configuration - use new DDD architecture
   appServiceClass: class {
-    private readonly signatureOrchestrator: any;
-    
-    constructor() {
-      this.signatureOrchestrator = CompositionRoot.createSignatureOrchestrator();
-    }
+    private signatureOrchestrator: any | undefined;
     
     /**
      * Executes the signer decline orchestration
@@ -59,7 +55,9 @@ export const declineSignerHandler = ControllerFactory.createCommand({
       request: any;
       securityContext: any;
     }) {
-      return await this.signatureOrchestrator.declineSigner(
+      const orchestrator = this.signatureOrchestrator ?? await CompositionRoot.createSignatureOrchestratorAsync();
+      this.signatureOrchestrator = orchestrator;
+      return await orchestrator.declineSigner(
         params.envelopeId,
         params.signerId,
         params.request,

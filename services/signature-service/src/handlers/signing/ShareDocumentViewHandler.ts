@@ -51,12 +51,11 @@ export const shareDocumentViewHandler = ControllerFactory.createCommand({
   bodySchema: ShareDocumentViewBodySchema,
   
   // Service configuration - use new DDD architecture
+  /**
+   * Lazy DI: construct orchestrator at first execution to avoid import-time DB access.
+   */
   appServiceClass: class {
-    private readonly signatureOrchestrator: any;
-
-    constructor() {
-      this.signatureOrchestrator = CompositionRoot.createSignatureOrchestrator();
-    }
+    private signatureOrchestrator: any | undefined;
 
     /**
      * Executes the document view sharing orchestration
@@ -65,7 +64,9 @@ export const shareDocumentViewHandler = ControllerFactory.createCommand({
      * @returns Promise resolving to share document view result
      */
     async execute(params: any) {
-      return await this.signatureOrchestrator.shareDocumentView(
+      const orchestrator = this.signatureOrchestrator ?? await CompositionRoot.createSignatureOrchestratorAsync();
+      this.signatureOrchestrator = orchestrator;
+      return await orchestrator.shareDocumentView(
         params.envelopeId,
         params.email,
         params.fullName,

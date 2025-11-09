@@ -7,7 +7,7 @@
  */
 
 import { PrismaClient } from '@prisma/client';
-import { getPrisma } from '@lawprotect/shared-ts';
+import { getPrisma, getPrismaAsync } from '@lawprotect/shared-ts';
 
 import { SignatureEnvelopeRepository } from '../../../repositories/SignatureEnvelopeRepository';
 import { EnvelopeSignerRepository } from '../../../repositories/EnvelopeSignerRepository';
@@ -16,34 +16,55 @@ import { SignatureAuditEventRepository } from '../../../repositories/SignatureAu
 import { ConsentRepository } from '../../../repositories/ConsentRepository';
 import { SignerReminderTrackingRepository } from '../../../repositories/SignerReminderTrackingRepository';
 
-import { loadConfig } from '../../../config/AppConfig';
+// Avoid loading full AppConfig at module import time to prevent
+// requiring DATABASE_URL prematurely in Lambda cold start.
 
 /**
  * Factory responsible for creating all repository instances with proper database configuration.
- * Follows the Single Responsibility Principle by focusing exclusively on repository creation.
+ *
+ * Design notes:
+ * - Avoids reading `DATABASE_URL` at module import time (cold start).
+ * - Creates the Prisma client lazily on first use (sync or async variants).
+ * - The async path resolves the DB URL from Secrets Manager via shared-ts if needed.
  */
 export class RepositoryFactory {
-  private static readonly config = loadConfig();
-  
-  /** Singleton Prisma client instance */
-  private static readonly prismaClient: PrismaClient = getPrisma({
-    url: this.config.database.url,
-  });
+  /** Singleton Prisma client instance (lazy) */
+  private static prismaClient: PrismaClient | undefined;
+
+  /**
+   * Lazily creates or returns the Prisma client (sync).
+   * Note: Will throw if DATABASE_URL is not yet available.
+   */
+  private static getPrismaClientInternal(): PrismaClient {
+    if (!this.prismaClient) {
+      this.prismaClient = getPrisma();
+    }
+    return this.prismaClient!;
+  }
+
+  /**
+   * Lazily creates or returns the Prisma client (async).
+   * Resolves DATABASE_URL from Secrets Manager if needed.
+   */
+  static async getPrismaClientAsync(): Promise<PrismaClient> {
+    if (!this.prismaClient) {
+      this.prismaClient = await getPrismaAsync();
+    }
+    return this.prismaClient!;
+  }
 
   /**
    * Returns the shared Prisma client instance
    * @returns Configured PrismaClient instance
    */
-  static getPrismaClient(): PrismaClient {
-    return this.prismaClient;
-  }
+  static getPrismaClient(): PrismaClient { return this.getPrismaClientInternal(); }
 
   /**
    * Creates SignatureEnvelopeRepository with Prisma client
    * @returns Configured SignatureEnvelopeRepository instance
    */
   static createSignatureEnvelopeRepository(): SignatureEnvelopeRepository {
-    return new SignatureEnvelopeRepository(this.prismaClient);
+    return new SignatureEnvelopeRepository(this.getPrismaClientInternal());
   }
 
   /**
@@ -51,7 +72,7 @@ export class RepositoryFactory {
    * @returns Configured EnvelopeSignerRepository instance
    */
   static createEnvelopeSignerRepository(): EnvelopeSignerRepository {
-    return new EnvelopeSignerRepository(this.prismaClient);
+    return new EnvelopeSignerRepository(this.getPrismaClientInternal());
   }
 
   /**
@@ -59,7 +80,7 @@ export class RepositoryFactory {
    * @returns Configured InvitationTokenRepository instance
    */
   static createInvitationTokenRepository(): InvitationTokenRepository {
-    return new InvitationTokenRepository(this.prismaClient);
+    return new InvitationTokenRepository(this.getPrismaClientInternal());
   }
 
   /**
@@ -67,7 +88,7 @@ export class RepositoryFactory {
    * @returns Configured SignatureAuditEventRepository instance
    */
   static createSignatureAuditEventRepository(): SignatureAuditEventRepository {
-    return new SignatureAuditEventRepository(this.prismaClient);
+    return new SignatureAuditEventRepository(this.getPrismaClientInternal());
   }
 
   /**
@@ -75,7 +96,7 @@ export class RepositoryFactory {
    * @returns Configured ConsentRepository instance
    */
   static createConsentRepository(): ConsentRepository {
-    return new ConsentRepository(this.prismaClient);
+    return new ConsentRepository(this.getPrismaClientInternal());
   }
 
   /**
@@ -83,11 +104,12 @@ export class RepositoryFactory {
    * @returns Configured SignerReminderTrackingRepository instance
    */
   static createSignerReminderTrackingRepository(): SignerReminderTrackingRepository {
-    return new SignerReminderTrackingRepository(this.prismaClient);
+    return new SignerReminderTrackingRepository(this.getPrismaClientInternal());
   }
 
   /**
-   * Creates all repositories in a single operation
+   * Creates all repositories in a single operation (synchronous).
+   * Use when you're certain `DATABASE_URL` is already set.
    * @returns Object containing all repository instances
    */
   static createAll() {
@@ -98,6 +120,22 @@ export class RepositoryFactory {
       signatureAuditEventRepository: this.createSignatureAuditEventRepository(),
       consentRepository: this.createConsentRepository(),
       signerReminderTrackingRepository: this.createSignerReminderTrackingRepository(),
+    };
+  }
+
+  /**
+   * Creates all repositories ensuring `DATABASE_URL` is resolved first.
+   * Prefer this path inside Lambda handlers to avoid import-time failures.
+   */
+  static async createAllAsync() {
+    const prisma = await this.getPrismaClientAsync();
+    return {
+      signatureEnvelopeRepository: new SignatureEnvelopeRepository(prisma),
+      envelopeSignerRepository: new EnvelopeSignerRepository(prisma),
+      invitationTokenRepository: new InvitationTokenRepository(prisma),
+      signatureAuditEventRepository: new SignatureAuditEventRepository(prisma),
+      consentRepository: new ConsentRepository(prisma),
+      signerReminderTrackingRepository: new SignerReminderTrackingRepository(prisma),
     };
   }
 }

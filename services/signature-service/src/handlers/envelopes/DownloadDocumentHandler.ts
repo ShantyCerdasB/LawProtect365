@@ -20,11 +20,7 @@ export const downloadDocumentHandler = ControllerFactory.createQuery({
   requiredRoles: undefined, // Will be determined by invitation token or JWT
   
   appServiceClass: class {
-    private readonly signatureOrchestrator: any;
-
-    constructor() {
-      this.signatureOrchestrator = CompositionRoot.createSignatureOrchestrator();
-    }
+    private signatureOrchestrator: any | undefined;
 
     async execute(params: {
       envelopeId: EnvelopeId;
@@ -33,7 +29,9 @@ export const downloadDocumentHandler = ControllerFactory.createQuery({
       expiresIn?: number;
       securityContext: any;
     }) {
-      return await this.signatureOrchestrator.downloadDocument(
+      const orchestrator = this.signatureOrchestrator ?? await CompositionRoot.createSignatureOrchestratorAsync();
+      this.signatureOrchestrator = orchestrator;
+      return await orchestrator.downloadDocument(
         params.envelopeId,
         params.userId,
         params.invitationToken,

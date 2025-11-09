@@ -48,12 +48,12 @@ export const signDocumentHandler = ControllerFactory.createCommand({
   bodySchema: SignDocumentRequestSchema,
   
   // Service configuration - use new DDD architecture
+  /**
+   * Lazy DI: orchestrator is built on demand to keep module import side-effect free
+   * when DB credentials are resolved at runtime.
+   */
   appServiceClass: class {
-    private readonly signatureOrchestrator: any;
-    
-    constructor() {
-      this.signatureOrchestrator = CompositionRoot.createSignatureOrchestrator();
-    }
+    private signatureOrchestrator: any | undefined;
     
     /**
      * Executes the document signing orchestration
@@ -61,7 +61,9 @@ export const signDocumentHandler = ControllerFactory.createCommand({
      * @returns Promise resolving to signing result
      */
     async execute(params: any) {
-      return await this.signatureOrchestrator.signDocument(
+      const orchestrator = this.signatureOrchestrator ?? await CompositionRoot.createSignatureOrchestratorAsync();
+      this.signatureOrchestrator = orchestrator;
+      return await orchestrator.signDocument(
         params.request,
         params.userId,
         params.securityContext

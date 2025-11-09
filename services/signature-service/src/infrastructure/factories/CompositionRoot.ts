@@ -50,4 +50,25 @@ export class CompositionRoot {
     });
   }
 
+  /**
+   * Async variant that wires the full object graph ensuring DB configuration is available.
+   *
+   * Rationale:
+   * - Some environments don't set `DATABASE_URL` until runtime (resolved from Secrets Manager).
+   * - Building repositories here prevents module import from failing during cold start.
+   * Use this method inside Lambda handlers right before the first DB access.
+   */
+  static async createSignatureOrchestratorAsync(): Promise<SignatureOrchestrator> {
+    const repositories = await RepositoryFactory.createAllAsync();
+    const infrastructure = InfrastructureFactory.createAll();
+    const domainServices = ServiceFactory.createAll(repositories, infrastructure);
+    const services = {
+      ...domainServices,
+      auditEventService: infrastructure.auditEventService,
+      s3Service: infrastructure.s3Service,
+      kmsService: infrastructure.kmsService,
+    };
+    const useCases = UseCaseFactory.createAll(services);
+    return new SignatureOrchestrator({ services, useCases });
+  }
 }

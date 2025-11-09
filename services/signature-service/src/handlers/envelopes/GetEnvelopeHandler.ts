@@ -50,11 +50,7 @@ export const getEnvelopeHandler = ControllerFactory.createQuery({
   
   // Service configuration - use new DDD architecture
   appServiceClass: class {
-    private readonly signatureOrchestrator: any;
-    
-    constructor() {
-      this.signatureOrchestrator = CompositionRoot.createSignatureOrchestrator();
-    }
+    private signatureOrchestrator: any | undefined;
     
     /**
      * Executes the envelope retrieval orchestration
@@ -62,7 +58,9 @@ export const getEnvelopeHandler = ControllerFactory.createQuery({
      * @returns Promise resolving to envelope with complete signer information
      */
     async execute(params: any) {
-      return await this.signatureOrchestrator.getEnvelope(
+      const orchestrator = this.signatureOrchestrator ?? await CompositionRoot.createSignatureOrchestratorAsync();
+      this.signatureOrchestrator = orchestrator;
+      return await orchestrator.getEnvelope(
         params.envelopeId,
         params.userId,
         params.invitationToken,

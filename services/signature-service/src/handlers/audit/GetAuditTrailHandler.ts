@@ -48,11 +48,7 @@ export const getAuditTrailHandler = ControllerFactory.createQuery({
   
   // Service configuration
   appServiceClass: class {
-    private readonly signatureOrchestrator: any;
-    
-    constructor() {
-      this.signatureOrchestrator = CompositionRoot.createSignatureOrchestrator();
-    }
+    private signatureOrchestrator: any | undefined;
     
     /**
      * Executes the audit trail retrieval orchestration
@@ -60,7 +56,9 @@ export const getAuditTrailHandler = ControllerFactory.createQuery({
      * @returns Promise resolving to audit trail data
      */
     async execute(params: { envelopeId: EnvelopeId; userId: string }) {
-      return await this.signatureOrchestrator.getAuditTrail(
+      const orchestrator = this.signatureOrchestrator ?? await CompositionRoot.createSignatureOrchestratorAsync();
+      this.signatureOrchestrator = orchestrator;
+      return await orchestrator.getAuditTrail(
         params.envelopeId,
         params.userId
       );

@@ -21,17 +21,15 @@ export const sendNotificationHandler = ControllerFactory.createCommand({
   bodySchema: SendNotificationRequestSchema,
 
   appServiceClass: class {
-    private readonly signatureOrchestrator: any;
-
-    constructor() {
-      this.signatureOrchestrator = CompositionRoot.createSignatureOrchestrator();
-    }
+    private signatureOrchestrator: any | undefined;
 
     async execute(params: any) {
       const { envelopeId, request, userId, securityContext } = params;
+      const orchestrator = this.signatureOrchestrator ?? await CompositionRoot.createSignatureOrchestratorAsync();
+      this.signatureOrchestrator = orchestrator;
 
       if (request.type === NotificationType.REMINDER) {
-        return await this.signatureOrchestrator.sendReminders(
+        return await orchestrator.sendReminders(
           envelopeId,
           request,
           userId,

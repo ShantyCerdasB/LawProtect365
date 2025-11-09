@@ -49,11 +49,7 @@ export const getEnvelopesByUserHandler = ControllerFactory.createQuery({
   
   // Service configuration - use new DDD architecture
   appServiceClass: class {
-    private readonly signatureOrchestrator: any;
-    
-    constructor() {
-      this.signatureOrchestrator = CompositionRoot.createSignatureOrchestrator();
-    }
+    private signatureOrchestrator: any | undefined;
     
     /**
      * Executes the envelope listing orchestration
@@ -61,7 +57,9 @@ export const getEnvelopesByUserHandler = ControllerFactory.createQuery({
      * @returns Promise resolving to paginated envelopes with complete signer information
      */
     async execute(params: any) {
-      return await this.signatureOrchestrator.listEnvelopesByUser(
+      const orchestrator = this.signatureOrchestrator ?? await CompositionRoot.createSignatureOrchestratorAsync();
+      this.signatureOrchestrator = orchestrator;
+      return await orchestrator.listEnvelopesByUser(
         params.userId,
         {
           status: params.status,
