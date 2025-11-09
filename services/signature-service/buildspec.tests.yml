@@ -31,6 +31,79 @@ phases:
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
         export DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}"
         npm run test:unit:coverage
+      - |
+        echo "[INFO][TEST] Building and publishing sign-core layer (once per commit)"
+        cd "$CODEBUILD_SRC_DIR/services/signature-service"
+        rm -rf layer-core sign-core-layer.zip
+        mkdir -p "layer-core/nodejs/node_modules/@lawprotect/sign-core"
+
+        # Entry that re-exporta handlers desde dist (ya compilado arriba)
+        cat > "core-bundle-entry.mjs" << 'EOF'
+        import { createEnvelopeHandler } from './dist/src/handlers/envelopes/CreateEnvelopeHandler.js';
+        import { getEnvelopeHandler } from './dist/src/handlers/envelopes/GetEnvelopeHandler.js';
+        import { sendEnvelopeHandler } from './dist/src/handlers/envelopes/SendEnvelopeHandler.js';
+        import { updateEnvelopeHandler } from './dist/src/handlers/envelopes/UpdateEnvelopeHandler.js';
+        import { cancelEnvelopeHandler } from './dist/src/handlers/envelopes/CancelEnvelopeHandler.js';
+        import { getEnvelopesByUserHandler } from './dist/src/handlers/envelopes/GetEnvelopesByUserHandler.js';
+        import { downloadDocumentHandler } from './dist/src/handlers/envelopes/DownloadDocumentHandler.js';
+        import { signDocumentHandler } from './dist/src/handlers/signing/SignDocumentHandler.js';
+        import { declineSignerHandler } from './dist/src/handlers/signing/DeclineSignerHandler.js';
+        import { shareDocumentViewHandler } from './dist/src/handlers/signing/ShareDocumentViewHandler.js';
+        import { sendNotificationHandler } from './dist/src/handlers/notifications/SendNotificationHandler.js';
+        import { getAuditTrailHandler } from './dist/src/handlers/audit/GetAuditTrailHandler.js';
+        export const handlers = {
+          createEnvelope: createEnvelopeHandler,
+          getEnvelope: getEnvelopeHandler,
+          sendEnvelope: sendEnvelopeHandler,
+          updateEnvelope: updateEnvelopeHandler,
+          cancelEnvelope: cancelEnvelopeHandler,
+          getEnvelopesByUser: getEnvelopesByUserHandler,
+          downloadDocument: downloadDocumentHandler,
+          signDocument: signDocumentHandler,
+          declineSigner: declineSignerHandler,
+          shareDocument: shareDocumentViewHandler,
+          sendNotification: sendNotificationHandler,
+          getAuditTrail: getAuditTrailHandler
+        };
+        EOF
+
+        # Bundle a CJS (Node 20), sólo prisma externo (lo provee otra capa)
+        npx -y esbuild@0.21.5 core-bundle-entry.mjs \
+          --bundle --platform=node --format=cjs --target=node20 \
+          --external:@prisma/client \
+          --minify --sourcemap \
+          --outfile="layer-core/nodejs/node_modules/@lawprotect/sign-core/index.js"
+
+        # Inyectar crypto polyfill
+        echo "const{webcrypto:__wc}=require('node:crypto');if(!globalThis.crypto)globalThis.crypto=__wc;" > __banner.js
+        cat layer-core/nodejs/node_modules/@lawprotect/sign-core/index.js >> __banner.js
+        mv __banner.js layer-core/nodejs/node_modules/@lawprotect/sign-core/index.js
+
+        # package.json del módulo (CJS)
+        cat > "layer-core/nodejs/node_modules/@lawprotect/sign-core/package.json" << 'EOF'
+        {
+          "name": "@lawprotect/sign-core",
+          "version": "1.0.0",
+          "main": "index.js",
+          "type": "commonjs"
+        }
+        EOF
+
+        (cd layer-core && zip -qr ../sign-core-layer.zip .)
+        test -s sign-core-layer.zip || { echo "[ERROR][TEST] sign-core-layer.zip is empty"; exit 1; }
+
+        # Publicar como Lambda layer usando archivo local (sin S3)
+        CORE_LAYER_NAME="${SIGNATURE_LAYER_NAME:-lawprotect365-sign-core-${ENV:-stg}}"
+        CORE_LAYER_ARN="$(aws lambda publish-layer-version \
+          --layer-name "$CORE_LAYER_NAME" \
+          --zip-file fileb://sign-core-layer.zip \
+          --compatible-runtimes nodejs20.x \
+          --query LayerVersionArn --output text 2>/dev/null || true)"
+        if [ -z "$CORE_LAYER_ARN" ] || [ "$CORE_LAYER_ARN" = "None" ] || [ "$CORE_LAYER_ARN" = "null" ]; then
+          echo "[ERROR][TEST] Failed to publish sign-core layer"; exit 1;
+        fi
+        echo "[INFO][TEST] Published sign-core layer: $CORE_LAYER_ARN"
+        rm -rf layer-core sign-core-layer.zip
 
 artifacts:
   files:

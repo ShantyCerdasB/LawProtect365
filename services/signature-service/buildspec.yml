@@ -31,75 +31,19 @@ phases:
       - |
         echo "[INFO] Skipping prisma layer; @prisma/client y engines van en shared-ts layer"
 
-      # ===== Core layer (ESM) =====
+      # ===== Core layer (resolver última versión; publicación se maneja fuera) =====
       - |
-        echo "[INFO] Building core layer (ESM)"
-        cd "$CODEBUILD_SRC_DIR/services/signature-service"
-        rm -rf layer-core sign-core-layer.zip
-
-        mkdir -p "layer-core/nodejs/node_modules/@lawprotect/sign-core"
-
-
-        # Create ESM bundle entry that re-exports handlers
-        cat > "core-bundle-entry.mjs" << 'EOF'
-        import { createEnvelopeHandler } from './dist/src/handlers/envelopes/CreateEnvelopeHandler.js';
-        import { getEnvelopeHandler } from './dist/src/handlers/envelopes/GetEnvelopeHandler.js';
-        import { sendEnvelopeHandler } from './dist/src/handlers/envelopes/SendEnvelopeHandler.js';
-        import { updateEnvelopeHandler } from './dist/src/handlers/envelopes/UpdateEnvelopeHandler.js';
-        import { cancelEnvelopeHandler } from './dist/src/handlers/envelopes/CancelEnvelopeHandler.js';
-        import { getEnvelopesByUserHandler } from './dist/src/handlers/envelopes/GetEnvelopesByUserHandler.js';
-        import { downloadDocumentHandler } from './dist/src/handlers/envelopes/DownloadDocumentHandler.js';
-        import { signDocumentHandler } from './dist/src/handlers/signing/SignDocumentHandler.js';
-        import { declineSignerHandler } from './dist/src/handlers/signing/DeclineSignerHandler.js';
-        import { shareDocumentViewHandler } from './dist/src/handlers/signing/ShareDocumentViewHandler.js';
-        import { sendNotificationHandler } from './dist/src/handlers/notifications/SendNotificationHandler.js';
-        import { getAuditTrailHandler } from './dist/src/handlers/audit/GetAuditTrailHandler.js';
-        export const handlers = {
-          createEnvelope: createEnvelopeHandler,
-          getEnvelope: getEnvelopeHandler,
-          sendEnvelope: sendEnvelopeHandler,
-          updateEnvelope: updateEnvelopeHandler,
-          cancelEnvelope: cancelEnvelopeHandler,
-          getEnvelopesByUser: getEnvelopesByUserHandler,
-          downloadDocument: downloadDocumentHandler,
-          signDocument: signDocumentHandler,
-          declineSigner: declineSignerHandler,
-          shareDocument: shareDocumentViewHandler,
-          sendNotification: sendNotificationHandler,
-          getAuditTrail: getAuditTrailHandler
-        };
-        EOF
-
-        # Bundle with esbuild (Node 20 CJS), external only Prisma (native)
-        npx -y esbuild@0.21.5 core-bundle-entry.mjs \
-          --bundle --platform=node --format=cjs --target=node20 \
-          --external:@prisma/client \
-          --minify --sourcemap \
-          --outfile="layer-core/nodejs/node_modules/@lawprotect/sign-core/index.js"
-        
-        # Inject crypto polyfill manually at the start of the bundle (CJS)
-        echo "const{webcrypto:__wc}=require('node:crypto');if(!globalThis.crypto)globalThis.crypto=__wc;" > __banner.js
-        cat layer-core/nodejs/node_modules/@lawprotect/sign-core/index.js >> __banner.js
-        mv __banner.js layer-core/nodejs/node_modules/@lawprotect/sign-core/index.js
-
-        # package.json del módulo (CommonJS)
-        cat > "layer-core/nodejs/node_modules/@lawprotect/sign-core/package.json" << 'EOF'
-        {
-          "name": "@lawprotect/sign-core",
-          "version": "1.0.0",
-          "main": "index.js",
-          "type": "commonjs"
-        }
-        EOF
-
-
-        (cd layer-core && zip -qr ../sign-core-layer.zip .)
-        test -s sign-core-layer.zip || { echo "[ERROR] sign-core-layer.zip is empty"; exit 1; }
-        # Validate bundled index exists
-        unzip -l sign-core-layer.zip | grep -q 'nodejs/node_modules/@lawprotect/sign-core/index\.js' \
-          || { echo "[ERROR] index.js bundle missing from core layer"; exit 1; }
-        rm -rf layer-core
-        echo "[INFO] Core layer ZIP created"
+        echo "[INFO] Resolving core layer latest (no build/publish here)"
+        CORE_LAYER_NAME="${SIGNATURE_LAYER_NAME:-lawprotect365-sign-core-${ENV:-stg}}"
+        CORE_LAYER_ARN="$(aws lambda list-layer-versions \
+          --layer-name "$CORE_LAYER_NAME" \
+          --query "sort_by(LayerVersions, &Version)[-1].LayerVersionArn" \
+          --output text 2>/dev/null || true)"
+        if [ -z "$CORE_LAYER_ARN" ] || [ "$CORE_LAYER_ARN" = "None" ] || [ "$CORE_LAYER_ARN" = "null" ]; then
+          echo "[WARN] Core layer not found for $CORE_LAYER_NAME; proceeding without it"
+        else
+          echo "[INFO] Core layer ARN: $CORE_LAYER_ARN"
+        fi
 
       # ===== Zips de funciones (ESM) =====
       - |
@@ -115,11 +59,26 @@ phases:
         const { webcrypto } = require('node:crypto');
         if (!globalThis.crypto) { globalThis.crypto = webcrypto; }
         const core = require('@lawprotect/sign-core');
-        const handlers = (core && core.handlers) || (core && core.default && core.default.handlers) || core || {};
-        if (!handlers || typeof handlers.${exp} !== 'function') {
+        const root = (core && (core.handlers || (core.default && core.default.handlers))) ? (core.handlers || core.default.handlers) : (core || {});
+        const alias = {
+          createEnvelope: 'createEnvelopeHandler',
+          getEnvelope: 'getEnvelopeHandler',
+          sendEnvelope: 'sendEnvelopeHandler',
+          updateEnvelope: 'updateEnvelopeHandler',
+          cancelEnvelope: 'cancelEnvelopeHandler',
+          getEnvelopesByUser: 'getEnvelopesByUserHandler',
+          downloadDocument: 'downloadDocumentHandler',
+          signDocument: 'signDocumentHandler',
+          declineSigner: 'declineSignerHandler',
+          shareDocument: 'shareDocumentViewHandler',
+          sendNotification: 'sendNotificationHandler',
+          getAuditTrail: 'getAuditTrailHandler'
+        };
+        const fn = root['${exp}'] || root[alias['${exp}']] || root['${exp}Handler'];
+        if (typeof fn !== 'function') {
           throw new Error('Handler ${exp} not found in @lawprotect/sign-core');
         }
-        exports.handler = handlers.${exp};
+        exports.handler = fn;
         EOF
           cat > __tmp_fn/package.json << 'EOF'
         { "type": "commonjs" }
@@ -141,10 +100,10 @@ phases:
         make_zip "sign-cancel-envelope.zip"        "cancelEnvelope"
         make_zip "sign-download-document.zip"      "downloadDocument"
 
-      # ===== Publicar layers (con fallback a última versión) =====
+      # ===== Resolver layers a última versión (sin publicar) =====
       - |
-        echo "[INFO] Uploading layers to S3 & publishing versions"
-        set -euo
+        echo "[INFO] Resolving layer versions (no publish in this stage)"
+        set -eu
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
 
         if [ -z "${CODE_BUCKET:-}" ]; then
@@ -152,53 +111,30 @@ phases:
           exit 1
         fi
 
-        AWS_ACCOUNT_ID="${AWS_ACCOUNT_ID:-$(aws sts get-caller-identity --query Account --output text)}"
         AWS_REGION="${AWS_REGION:-${AWS_DEFAULT_REGION:-us-east-1}}"
-
-        aws s3 cp "sign-core-layer.zip"   "s3://$CODE_BUCKET/sign-core-layer.zip"
-
-        # Quick sanity check that S3 object exists
-        aws s3 ls "s3://$CODE_BUCKET/sign-core-layer.zip"   >/dev/null
-
-        publish_layer() {
-          NAME="$1"
-          ZIP="$2"
-          DESC="$3"
-          # Enforce 50MB compressed limit for Lambda layers
-          ZIP_SIZE=$( (stat -c%s "$ZIP" 2>/dev/null) || (wc -c < "$ZIP") )
-          MAX_SIZE=$((50*1024*1024))
-          if [ "$ZIP_SIZE" -gt "$MAX_SIZE" ]; then
-            echo "[ERROR] $ZIP exceeds 50MB compressed limit ($ZIP_SIZE bytes)" >&2
-            exit 1
-          fi
-          # Publish and capture errors for diagnostics
-          if ! ARN=$(aws lambda publish-layer-version \
-            --region "$AWS_REGION" \
-            --layer-name "$NAME" \
-            --description "$DESC" \
-            --content S3Bucket="$CODE_BUCKET",S3Key="$ZIP" \
-            --compatible-runtimes nodejs20.x \
-            --query LayerVersionArn --output text 2>"publish-$NAME.err"); then
-            echo "[ERROR] Failed to publish layer $NAME (see below)" >&2
-            cat "publish-$NAME.err" >&2 || true
-            exit 1
-          fi
-          if [ -z "$ARN" ] || [ "$ARN" = "None" ]; then
-            echo "[ERROR] Failed to obtain ARN for layer $NAME" >&2
-            cat "publish-$NAME.err" >&2 || true
-            exit 1
-          fi
-          echo "$ARN"
-        }
-
-        CORE_LAYER_NAME="${SIGNATURE_LAYER_NAME:-lawprotect365-sign-core-stg}"
+        CORE_LAYER_NAME="${SIGNATURE_LAYER_NAME:-lawprotect365-sign-core-${ENV:-stg}}"
         SHARED_LAYER_NAME="${SHARED_TS_LAYER_NAME:-${PROJECT_NAME:-lawprotect365}-shared-ts-layer-${ENV:-stg}}"
 
-        CORE_LAYER_VERSION="$(publish_layer "$CORE_LAYER_NAME" "sign-core-layer.zip" "Signature service core code")"
+        # Always prefer the latest published version by name
+        CORE_LAYER_ARN="$(aws lambda list-layer-versions \
+          --region "$AWS_REGION" --layer-name "$CORE_LAYER_NAME" \
+          --query "sort_by(LayerVersions, &Version)[-1].LayerVersionArn" \
+          --output text 2>/dev/null || true)"
+        SHARED_LAYER_ARN="$(aws lambda list-layer-versions \
+          --region "$AWS_REGION" --layer-name "$SHARED_LAYER_NAME" \
+          --query "sort_by(LayerVersions, &Version)[-1].LayerVersionArn" \
+          --output text 2>/dev/null || true)"
 
-        echo "[INFO] Core layer ARN:   ${CORE_LAYER_VERSION:-<empty>}"
+        # Fallbacks if list-layer-versions fails
+        if [ -z "$CORE_LAYER_ARN" ] || [ "$CORE_LAYER_ARN" = "None" ] || [ "$CORE_LAYER_ARN" = "null" ]; then
+          CORE_LAYER_ARN="${SIGNATURE_LAYER_ARN:-}"
+        fi
+        if [ -z "$SHARED_LAYER_ARN" ] || [ "$SHARED_LAYER_ARN" = "None" ] || [ "$SHARED_LAYER_ARN" = "null" ]; then
+          SHARED_LAYER_ARN="${SHARED_TS_LAYER_ARN:-}"
+        fi
 
-        aws lambda list-layer-versions --region "$AWS_REGION" --layer-name "$CORE_LAYER_NAME" --max-items 5 || true
+        echo "[INFO] Core layer ARN:   ${CORE_LAYER_ARN:-<empty>}"
+        echo "[INFO] Shared layer ARN: ${SHARED_LAYER_ARN:-<empty>}"
 
       # ===== Deploy de funciones =====
       - |
@@ -206,24 +142,14 @@ phases:
         cd "$CODEBUILD_SRC_DIR/services/signature-service"
 
         AWS_ACCOUNT_ID="${AWS_ACCOUNT_ID:-$(aws sts get-caller-identity --query Account --output text)}"
-        # Resolve shared layer to latest version if ARN not versioned
-        if [ -n "${SHARED_TS_LAYER_ARN:-}" ] && echo "$SHARED_TS_LAYER_ARN" | grep -q ':'; then
-          SHARED_LAYER_ARN="$SHARED_TS_LAYER_ARN"
-        else
-          SHARED_LAYER_NAME="${SHARED_TS_LAYER_NAME:-${PROJECT_NAME:-lawprotect365}-shared-ts-layer-${ENV:-stg}}"
-          SHARED_LAYER_ARN="$(aws lambda list-layer-versions \
-            --layer-name "$SHARED_LAYER_NAME" \
-            --query "sort_by(LayerVersions, &Version)[-1].LayerVersionArn" \
-            --output text 2>/dev/null || true)"
-        fi
 
         build_layers_args() {
           args=""
           if [ -n "${SHARED_LAYER_ARN:-}" ] && [ "${SHARED_LAYER_ARN}" != "None" ]; then
             args="${args} ${SHARED_LAYER_ARN}"
           fi
-          if [ -n "${CORE_LAYER_VERSION:-}" ] && [ "${CORE_LAYER_VERSION}" != "None" ]; then
-            args="${args} ${CORE_LAYER_VERSION}"
+          if [ -n "${CORE_LAYER_ARN:-}" ] && [ "${CORE_LAYER_ARN}" != "None" ]; then
+            args="${args} ${CORE_LAYER_ARN}"
           fi
           echo "$args" | sed -e 's/^ *//'
         }
@@ -389,4 +315,4 @@ artifacts:
       base-directory: services/signature-service/out/appspecs/sign_download-document_artifact
       files:
         - appspec.yml
-      discard-paths: yes
+    discard-paths: yes
