@@ -45,7 +45,7 @@
     local.shared_lambda_env,
     {
       # Database configuration
-      DATABASE_URL = var.shared_lambda_env.DB_SECRET_ARN
+      DB_SECRET_ARN = var.shared_lambda_env.DB_SECRET_ARN
       
       # S3 buckets
       S3_BUCKET_NAME = var.documents_bucket_name
@@ -89,14 +89,27 @@
     }
   )
 
-  # Shared layer ARN for all Lambda functions
+  # Shared layer ARN for all Lambda functions (injected from root)
   shared_layer_arn = var.shared_ts_layer_arn
 
-  # Sign core layer ARN (will be created below)
-  sign_core_layer_arn = aws_lambda_layer_version.sign_core_layer.arn
-  
-  # Sign dependencies layer ARN (will be created below)
-  sign_deps_layer_arn = aws_lambda_layer_version.sign_deps_layer.arn
+  # Service layer names (published by build)
+  signature_layer_name = "${var.project_name}-sign-core-${var.env}"
+
+  # Manifest of all Lambda functions for build automation
+  functions_manifest = [
+    { functionName = "${var.project_name}-${local.service_name}-create-envelope-${var.env}",        alias = "live", artifactS3Key = "sign-create-envelope.zip",       artifactIdentifier = "sign_create-envelope_artifact" },
+    { functionName = "${var.project_name}-${local.service_name}-get-envelope-${var.env}",           alias = "live", artifactS3Key = "sign-get-envelope.zip",          artifactIdentifier = "sign_get-envelope_artifact" },
+    { functionName = "${var.project_name}-${local.service_name}-send-envelope-${var.env}",          alias = "live", artifactS3Key = "sign-send-envelope.zip",         artifactIdentifier = "sign_send-envelope_artifact" },
+    { functionName = "${var.project_name}-${local.service_name}-sign-document-${var.env}",          alias = "live", artifactS3Key = "sign-sign-document.zip",         artifactIdentifier = "sign_sign-document_artifact" },
+    { functionName = "${var.project_name}-${local.service_name}-decline-signer-${var.env}",         alias = "live", artifactS3Key = "sign-decline-signer.zip",        artifactIdentifier = "sign_decline-signer_artifact" },
+    { functionName = "${var.project_name}-${local.service_name}-share-document-${var.env}",         alias = "live", artifactS3Key = "sign-share-document.zip",        artifactIdentifier = "sign_share-document_artifact" },
+    { functionName = "${var.project_name}-${local.service_name}-send-notification-${var.env}",      alias = "live", artifactS3Key = "sign-send-notification.zip",     artifactIdentifier = "sign_send-notification_artifact" },
+    { functionName = "${var.project_name}-${local.service_name}-get-audit-trail-${var.env}",        alias = "live", artifactS3Key = "sign-get-audit-trail.zip",       artifactIdentifier = "sign_get-audit-trail_artifact" },
+    { functionName = "${var.project_name}-${local.service_name}-get-envelopes-by-user-${var.env}",  alias = "live", artifactS3Key = "sign-get-envelopes-by-user.zip", artifactIdentifier = "sign_get-envelopes-by-user_artifact" },
+    { functionName = "${var.project_name}-${local.service_name}-update-envelope-${var.env}",        alias = "live", artifactS3Key = "sign-update-envelope.zip",       artifactIdentifier = "sign_update-envelope_artifact" },
+    { functionName = "${var.project_name}-${local.service_name}-cancel-envelope-${var.env}",        alias = "live", artifactS3Key = "sign-cancel-envelope.zip",       artifactIdentifier = "sign_cancel-envelope_artifact" },
+    { functionName = "${var.project_name}-${local.service_name}-download-document-${var.env}",      alias = "live", artifactS3Key = "sign-download-document.zip",     artifactIdentifier = "sign_download-document_artifact" }
+  ]
 
   # ---------- CODEBUILD/PIPELINE ENVS ----------
   codebuild_env_vars = concat(
@@ -117,32 +130,19 @@
       { name = "CODE_BUCKET",       value = var.code_bucket,                       type = "PLAINTEXT" },
       { name = "CODEDEPLOY_APP_PREFIX", value = "${var.project_name}-sign-${var.env}", type = "PLAINTEXT" },
       { name = "CODEDEPLOY_DG_PREFIX", value = "${var.project_name}-sign-${var.env}", type = "PLAINTEXT" },
-      { name = "AWS_REGION",         value = var.aws_region,                          type = "PLAINTEXT" }
+      { name = "AWS_REGION",         value = var.aws_region,                          type = "PLAINTEXT" },
+      { name = "SHARED_TS_LAYER_ARN", value = var.shared_ts_layer_arn,                type = "PLAINTEXT" },
+      { name = "SIGNATURE_LAYER_NAME", value = local.signature_layer_name,            type = "PLAINTEXT" },
+      { name = "FUNCTIONS_MANIFEST",  value = jsonencode(local.functions_manifest),   type = "PLAINTEXT" }
     ]
   )
 }
 
-
-
 ############################################################
-# Sign Core Layer
-# Contains compiled signature service code
+# Layers del servicio: publicados por el build (no por Terraform)
+# Se evita drift dejando que CodeBuild actualice los layers y Lambda
+# reciba los ARNs en cada despliegue.
 ############################################################
-resource "aws_lambda_layer_version" "sign_deps_layer" {
-  s3_bucket           = var.code_bucket
-  s3_key              = "sign-deps-layer.zip"
-  layer_name          = "${var.project_name}-sign-deps-${var.env}"
-  compatible_runtimes = ["nodejs20.x"]
-  description         = "Signature service dependencies layer"
-}
-
-resource "aws_lambda_layer_version" "sign_core_layer" {
-  s3_bucket           = var.code_bucket
-  s3_key              = "sign-core-layer.zip"
-  layer_name          = "${var.project_name}-sign-core-${var.env}"
-  compatible_runtimes = ["nodejs20.x"]
-  description         = "Signature service core code layer"
-}
 
 ############################################################
 # Evidence S3 Bucket
@@ -219,7 +219,6 @@ module "lambda_create_envelope" {
   role_arn      = module.sign_lambda_role.role_arn
 
   environment_variables = local.lambda_env_common
-  layers = [local.shared_layer_arn, local.sign_deps_layer_arn, local.sign_core_layer_arn]
 
   xray_tracing = true
 }
@@ -249,7 +248,6 @@ module "lambda_get_envelope" {
   role_arn      = module.sign_lambda_role.role_arn
 
   environment_variables = local.lambda_env_common
-  layers = [local.shared_layer_arn, local.sign_deps_layer_arn, local.sign_core_layer_arn]
 
   xray_tracing = true
 }
@@ -279,8 +277,6 @@ module "lambda_send_envelope" {
   role_arn      = module.sign_lambda_role.role_arn
 
   environment_variables = local.lambda_env_common
-  layers = [local.shared_layer_arn, local.sign_deps_layer_arn, local.sign_core_layer_arn]
-
   xray_tracing = true
 }
 
@@ -309,7 +305,6 @@ module "lambda_sign_document" {
   timeout        = 15
   role_arn       = module.sign_lambda_role.role_arn
   environment_variables = local.lambda_env_common
-  layers = [local.shared_layer_arn, local.sign_deps_layer_arn, local.sign_core_layer_arn]
   xray_tracing   = true
 }
 
@@ -336,7 +331,6 @@ module "lambda_decline_signer" {
   timeout        = 10
   role_arn       = module.sign_lambda_role.role_arn
   environment_variables = local.lambda_env_common
-  layers = [local.shared_layer_arn, local.sign_deps_layer_arn, local.sign_core_layer_arn]
   xray_tracing   = true
 }
 
@@ -363,7 +357,6 @@ module "lambda_share_document" {
   timeout        = 10
   role_arn       = module.sign_lambda_role.role_arn
   environment_variables = local.lambda_env_common
-  layers = [local.shared_layer_arn, local.sign_deps_layer_arn, local.sign_core_layer_arn]
   xray_tracing   = true
 }
 
@@ -390,7 +383,6 @@ module "lambda_send_notification" {
   timeout        = 10
   role_arn       = module.sign_lambda_role.role_arn
   environment_variables = local.lambda_env_common
-  layers = [local.shared_layer_arn, local.sign_deps_layer_arn, local.sign_core_layer_arn]
   xray_tracing   = true
 }
 
@@ -416,7 +408,6 @@ module "lambda_get_audit_trail" {
   timeout        = 10
   role_arn       = module.sign_lambda_role.role_arn
   environment_variables = local.lambda_env_common
-  layers = [local.shared_layer_arn, local.sign_deps_layer_arn, local.sign_core_layer_arn]
   xray_tracing   = true
 }
 
@@ -442,7 +433,6 @@ module "lambda_get_envelopes_by_user" {
   timeout        = 10
   role_arn       = module.sign_lambda_role.role_arn
   environment_variables = local.lambda_env_common
-  layers = [local.shared_layer_arn, local.sign_deps_layer_arn, local.sign_core_layer_arn]
   xray_tracing   = true
 }
 
@@ -468,7 +458,6 @@ module "lambda_update_envelope" {
   timeout        = 10
   role_arn       = module.sign_lambda_role.role_arn
   environment_variables = local.lambda_env_common
-  layers = [local.shared_layer_arn, local.sign_deps_layer_arn, local.sign_core_layer_arn]
   xray_tracing   = true
 }
 
@@ -495,7 +484,6 @@ module "lambda_cancel_envelope" {
   timeout        = 10
   role_arn       = module.sign_lambda_role.role_arn
   environment_variables = local.lambda_env_common
-  layers = [local.shared_layer_arn, local.sign_deps_layer_arn, local.sign_core_layer_arn]
   xray_tracing   = true
 }
 
@@ -522,7 +510,6 @@ module "lambda_download_document" {
   timeout        = 10
   role_arn       = module.sign_lambda_role.role_arn
   environment_variables = local.lambda_env_common
-  layers = [local.shared_layer_arn, local.sign_deps_layer_arn, local.sign_core_layer_arn]
   xray_tracing   = true
 }
 
@@ -746,6 +733,8 @@ module "sign_deployment" {
   service_name          = "sign"
   artifacts_bucket      = var.artifacts_bucket
   buildspec_path        = "services/signature-service/buildspec.yml"
+  enable_test_stage     = true
+  test_buildspec_path   = "services/signature-service/buildspec.tests.yml"
   compute_type          = var.compute_type
   environment_image     = var.environment_image
   environment_variables = local.codebuild_env_vars

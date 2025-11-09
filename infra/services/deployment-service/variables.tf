@@ -39,6 +39,17 @@ variable "environment_image" {
   type        = string
 }
 
+variable "enable_test_stage" {
+  description = "Enable a dedicated Test stage with a separate CodeBuild project"
+  type        = bool
+  default     = false
+}
+
+variable "test_buildspec_path" {
+  description = "Path to buildspec for the Test stage (required when enable_test_stage = true)"
+  type        = string
+  default     = ""
+}
 variable "environment_variables" {
   description = "List of env vars to inject into the build container"
   type = list(object({

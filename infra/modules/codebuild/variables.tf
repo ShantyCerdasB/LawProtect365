@@ -120,6 +120,16 @@ variable "artifacts_bucket" {
   default     = ""
 }
 
+/**
+ * Optional list of secondary artifact identifiers for CodePipeline integrations.
+ * Each identifier will produce a secondary_artifacts { type = CODEPIPELINE, artifact_identifier = "<id>" } block.
+ */
+variable "secondary_artifact_identifiers" {
+  description = "List of secondary artifact identifiers to be emitted by CodeBuild to CodePipeline"
+  type        = list(string)
+  default     = []
+}
+
 ########################################
 # Tags
 ########################################

@@ -158,6 +158,23 @@ module "build" {
 }
 
 ################################################################
+# 4b) CodeBuild Project (Tests) - optional
+################################################################
+module "build_tests" {
+  count                 = var.enable_test_stage ? 1 : 0
+  source                = "../../modules/codebuild"
+  project_name          = "${var.project_name}-${var.service_name}-tests"
+  env                   = var.env
+  service_role_arn      = module.codebuild_role.role_arn
+  artifacts_bucket      = var.artifacts_bucket
+  buildspec_path        = var.test_buildspec_path
+  compute_type          = var.compute_type
+  environment_image     = var.environment_image
+  environment_variables = var.environment_variables
+  tags                  = var.tags
+}
+
+################################################################
 # 5) CodeDeploy Applications & Deployment Groups
 #
 # Creates CodeDeploy applications and deployment groups
@@ -169,10 +186,8 @@ module "build" {
 #   - codedeploy_deployment_group_name  : Name of the CodeDeploy deployment group.
 ################################################################
 
-# Single Lambda deployment (backward compatibility)
+# Service-level CodeDeploy (single application/deployment group for all Lambdas)
 module "codedeploy" {
-  count = length(var.lambda_functions) == 0 ? 1 : 0
-  
   source                               = "../../modules/codedeploy"
   application_name                     = "${var.project_name}-${var.service_name}-app-${var.env}"
   deployment_group_name                = "${var.project_name}-${var.service_name}-dg-${var.env}"
@@ -184,10 +199,9 @@ module "codedeploy" {
   tags                                 = var.tags
 }
 
-# Multiple Lambda deployments
+# Per-Lambda CodeDeploy (needed when lambda_functions is non-empty)
 module "codedeploy_multi" {
   for_each = length(var.lambda_functions) > 0 ? toset(var.lambda_functions) : []
-  
   source                               = "../../modules/codedeploy"
   application_name                     = "${var.project_name}-${var.service_name}-${each.key}-${var.env}"
   deployment_group_name                = "${var.project_name}-${var.service_name}-${each.key}-${var.env}"
@@ -221,11 +235,28 @@ module "pipeline" {
   github_repo                      = var.github_repo
   github_branch                    = var.branch
   codebuild_project_name           = module.build.codebuild_project_name
-  build_output_artifact            = "${var.service_name}_build_output"
-  # For multiple Lambdas, we don't use CodeDeploy in the pipeline
-  # The buildspec handles all deployments directly
-  codedeploy_app_name              = length(var.lambda_functions) == 0 ? module.codedeploy[0].codedeploy_application_name : ""
-  codedeploy_deployment_group_name   = length(var.lambda_functions) == 0 ? module.codedeploy[0].codedeploy_deployment_group_name : ""
-  enable_codedeploy_stage            = length(var.lambda_functions) == 0
+  enable_test_stage                = var.enable_test_stage
+  test_codebuild_project_name      = var.enable_test_stage ? module.build_tests[0].codebuild_project_name : ""
+  test_output_artifact             = "test_output"
+  # Build actions: group artifacts in chunks of 5 to satisfy CodePipeline limit
+  build_actions                    = length(var.lambda_functions) > 0 ? [
+    for idx, group in chunklist([for fn in var.lambda_functions : "${var.service_name}_${fn}_artifact"], 5) : {
+      name             = "Build_${idx + 1}"
+      output_artifacts = group
+    }
+  ] : []
+  build_output_artifact            = "${var.service_name}_build_output" # fallback single
+  # Deploy actions: create one per lambda when multi-lambda; otherwise single stage uses service-level app/dg
+  deploy_actions                   = length(var.lambda_functions) > 0 ? [
+    for fn in var.lambda_functions : {
+      name                  = "Deploy_${fn}"
+      input_artifact        = "${var.service_name}_${fn}_artifact"
+      application_name      = module.codedeploy_multi[fn].codedeploy_application_name
+      deployment_group_name = module.codedeploy_multi[fn].codedeploy_deployment_group_name
+    }
+  ] : []
+  codedeploy_app_name              = module.codedeploy.codedeploy_application_name
+  codedeploy_deployment_group_name = module.codedeploy.codedeploy_deployment_group_name
+  enable_codedeploy_stage          = length(var.lambda_functions) == 0
   tags                             = var.tags
 }

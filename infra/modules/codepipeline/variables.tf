@@ -53,10 +53,24 @@ variable "codebuild_project_name" {
   type        = string
 }
 
+variable "build_actions" {
+  description = "Optional list of build actions. Each: { name, output_artifacts }"
+  type = list(object({
+    name             = string
+    output_artifacts = list(string)
+  }))
+  default = []
+}
 variable "build_output_artifact" {
   description = "Identifier for the build output artifact"
   type        = string
   default     = "build_output"
+}
+
+variable "build_output_artifacts" {
+  description = "Optional list of build output artifact identifiers (overrides build_output_artifact when non-empty)"
+  type        = list(string)
+  default     = []
 }
 
 ########################################
@@ -76,6 +90,34 @@ variable "enable_codedeploy_stage" {
   description = "Enable CodeDeploy stage in pipeline (false for multiple Lambdas)"
   type        = bool
   default     = true
+}
+
+variable "enable_test_stage" {
+  description = "Enable a separate Test stage (single CodeBuild) before Build/Package"
+  type        = bool
+  default     = false
+}
+
+variable "test_codebuild_project_name" {
+  description = "CodeBuild project name for the Test stage (required when enable_test_stage=true)"
+  type        = string
+  default     = ""
+}
+
+variable "test_output_artifact" {
+  description = "Artifact name produced by Test stage and consumed by Build stage when enable_test_stage=true"
+  type        = string
+  default     = "test_output"
+}
+variable "deploy_actions" {
+  description = "Optional list of deploy actions for CodeDeploy (one per Lambda). Each item: { name, input_artifact, application_name, deployment_group_name }"
+  type = list(object({
+    name                    = string
+    input_artifact          = string
+    application_name        = string
+    deployment_group_name   = string
+  }))
+  default = []
 }
 
 ########################################

@@ -10,23 +10,23 @@ output "build_project_name" {
 # CodeDeploy
 ############################################
 output "codedeploy_application_name" {
-  description = "CodeDeploy application name (single Lambda)."
-  value       = length(var.lambda_functions) == 0 ? module.codedeploy[0].codedeploy_application_name : null
+  description = "CodeDeploy application name."
+  value       = module.codedeploy.codedeploy_application_name
 }
 
 output "codedeploy_deployment_group_name" {
-  description = "CodeDeploy deployment group name (single Lambda)."
-  value       = length(var.lambda_functions) == 0 ? module.codedeploy[0].codedeploy_deployment_group_name : null
+  description = "CodeDeploy deployment group name."
+  value       = module.codedeploy.codedeploy_deployment_group_name
 }
 
 output "codedeploy_applications" {
-  description = "CodeDeploy applications (multiple Lambdas)."
-  value       = length(var.lambda_functions) > 0 ? { for k, v in module.codedeploy_multi : k => v.codedeploy_application_name } : {}
+  description = "CodeDeploy applications (service-level)."
+  value       = { (var.service_name) = module.codedeploy.codedeploy_application_name }
 }
 
 output "codedeploy_deployment_groups" {
-  description = "CodeDeploy deployment groups (multiple Lambdas)."
-  value       = length(var.lambda_functions) > 0 ? { for k, v in module.codedeploy_multi : k => v.codedeploy_deployment_group_name } : {}
+  description = "CodeDeploy deployment groups (service-level)."
+  value       = { (var.service_name) = module.codedeploy.codedeploy_deployment_group_name }
 }
 
 ############################################

@@ -66,6 +66,11 @@ resource "aws_lambda_function" "func" {
 
   layers = var.layers
 
+  lifecycle {
+    # Allow external systems (e.g., CodeBuild) to update function layers without causing drift
+    ignore_changes = [layers]
+  }
+
   environment {
     variables = merge(
       {
