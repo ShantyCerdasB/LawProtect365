@@ -11,6 +11,7 @@ jobs:
     outputs:
       shared-ts: ${{ steps.changes.outputs.shared-ts }}
       signature-service: ${{ steps.changes.outputs.signature-service }}
+      auth-service: ${{ steps.changes.outputs.auth-service }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -25,6 +26,8 @@ jobs:
               - 'buildspec.yml'
             signature-service:
               - 'services/signature-service/**'
+            auth-service:
+              - 'services/auth-service/**'
 
   trigger-shared-ts:
     needs: detect-changes
@@ -62,10 +65,28 @@ jobs:
       - name: Start CodePipeline (signature service)
         run: aws codepipeline start-pipeline-execution --name lawprotect365-sign-pipeline-stg
 
+  trigger-auth-service:
+    needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.auth-service == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+          role-session-name: GitHubActions
+      
+      - name: Start CodePipeline (auth service)
+        run: aws codepipeline start-pipeline-execution --name lawprotect365-auth-pipeline-stg
+
   no-changes:
     needs: detect-changes
-    if: ${{ needs.detect-changes.outputs.shared-ts == 'false' && needs.detect-changes.outputs.signature-service == 'false' }}
+    if: ${{ needs.detect-changes.outputs.shared-ts == 'false' && needs.detect-changes.outputs.signature-service == 'false' && needs.detect-changes.outputs.auth-service == 'false' }}
     runs-on: ubuntu-latest
     steps:
       - name: No changes detected
-        run: echo "No changes detected in shared-ts or signature-service"
+        run: echo "No changes detected in shared-ts, signature-service, or auth-service"
