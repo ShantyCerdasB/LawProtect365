@@ -10,7 +10,7 @@ phases:
       - |
         set -eu
         echo "[INFO] ===== Pre-build ====="
-      - echo "[INFO] Using compiled artifacts from Test stage (no npm ci / prisma generate here)"
+      - echo "[INFO] Using compiled artifacts from Test stage (no npm ci / prisma gener"
 
   build:
     commands:
