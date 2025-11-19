@@ -32,7 +32,8 @@ data "aws_iam_policy_document" "github_actions_policy" {
     ]
     resources = [
       "arn:aws:codepipeline:${var.region}:${var.account_id}:${var.project_name}-shared-components-pipeline-${var.env}",
-      "arn:aws:codepipeline:${var.region}:${var.account_id}:${var.project_name}-sign-pipeline-${var.env}"
+      "arn:aws:codepipeline:${var.region}:${var.account_id}:${var.project_name}-sign-pipeline-${var.env}",
+      "arn:aws:codepipeline:${var.region}:${var.account_id}:${var.project_name}-auth-pipeline-${var.env}"
     ]
   }
   
