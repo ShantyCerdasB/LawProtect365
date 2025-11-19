@@ -166,6 +166,7 @@ module "auth_service" {
   project_name               = var.project_name
   env                        = var.env
   code_bucket                = module.code_bucket.bucket_id
+  shared_ts_layer_arn        = module.shared_ts_layer.layer_arn
   lambda_exec_role_arn       = module.lambda_exec_role.role_arn
   apple_client_id            = var.apple_client_id
   callback_url               = module.frontend.callback_url
@@ -174,6 +175,9 @@ module "auth_service" {
   alerts_emails              = var.alerts_emails
   access_log_format          = var.access_logs_format
   existing_sns_topic_arn = aws_sns_topic.budgets_alerts.arn
+  # Share platform eventing and outbox resources (same as signature-service)
+  event_bus_name             = module.events.eventbridge_bus_name
+  outbox_table_name          = module.event_publisher_service.outbox_table_name
   
   # GitHub connection
   github_connection_arn = module.github_connection.connection_arn

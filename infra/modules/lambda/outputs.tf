@@ -15,6 +15,14 @@ output "lambda_function_arn" {
 }
 
 /**
+ * ARN of the 'live' alias for the Lambda function.
+ */
+output "lambda_alias_live_arn" {
+  description = "The ARN of the 'live' alias for the Lambda function."
+  value       = aws_lambda_alias.live.arn
+}
+
+/**
  * ARN of the IAM execution role assumed by the Lambda function.
  * This may be a provided role or one created by the module.
  */

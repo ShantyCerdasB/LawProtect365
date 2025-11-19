@@ -187,6 +187,11 @@ variable "artifacts_bucket" {
   type        = string
 }
 
+variable "shared_ts_layer_arn" {
+  description = "Shared-ts layer ARN (latest will be resolved at deploy time; provided for optional pinning)."
+  type        = string
+  default     = ""
+}
 variable "compute_type" {
   description = "Compute type for the service (e.g., 'FARGATE', 'EC2')"
   type        = string
@@ -201,4 +206,18 @@ variable "shared_lambda_env" {
   description = "Environment variables shared by ALL Lambdas in this service (e.g., { DB_SECRET_ARN = <arn>, FOO = bar })."
   type        = map(string)
   default     = {}
+}
+
+# EventBridge bus name for publishing auth events (reuse same as signature-service)
+variable "event_bus_name" {
+  description = "EventBridge bus name used by the platform (shared)."
+  type        = string
+  default     = ""
+}
+
+# Outbox DynamoDB table name for event publishing (reuse same as signature-service)
+variable "outbox_table_name" {
+  description = "DynamoDB table name for the outbox pattern (shared)."
+  type        = string
+  default     = ""
 }

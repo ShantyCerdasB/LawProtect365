@@ -18,28 +18,7 @@ locals {
   }
 }
 
-############################################
-# Pre-authentication Lambda for MFA enforcement
-############################################
-module "pre_auth_lambda" {
-  source        = "../../modules/lambda"
-  function_name = "${var.project_name}-pre-auth"
-  s3_bucket     = var.code_bucket
-  s3_key        = "pre-auth.zip"
-  handler       = "index.handler"
-  runtime       = "nodejs18.x"
 
-  environment_variables = merge(
-    var.shared_lambda_env,
-    {
-      LOG_LEVEL    = "info"
-      USER_POOL_ID = module.cognito.user_pool_id
-    }
-  )
-
-  project_name = var.project_name
-  env          = var.env
-}
 
 ############################################
 # IAM role for SNS MFA delivery
@@ -74,19 +53,15 @@ module "cognito" {
   apple_client_id      = var.apple_client_id
 
   sns_mfa_role_arn     = module.sns_mfa_role.role_arn
-  pre_auth_lambda_arn  = module.pre_auth_lambda.lambda_function_arn
+  # pre_auth_lambda_arn is optional and not used by cognito module
+  # Triggers are configured separately via cognito-trigger module below
 
   tags = local.common_tags
 }
 
 ############################################
-# Attach pre-auth Lambda as Cognito trigger
+# Cognito triggers (attached post Lambda creation below)
 ############################################
-module "cognito_trigger" {
-  source              = "../../modules/cognito-trigger"
-  user_pool_id        = module.cognito.user_pool_id
-  pre_auth_lambda_arn = module.pre_auth_lambda.lambda_function_arn
-}
 
 ############################################
 # Google OAuth 2.0 client configuration
@@ -205,7 +180,18 @@ module "cloudwatch_auth" {
 
   # Lambda functions to monitor
   lambda_function_names_map = {
-    pre_auth = module.pre_auth_lambda.lambda_function_name
+    get_me               = module.lambda_get_me.lambda_function_name
+    patch_me             = module.lambda_patch_me.lambda_function_name
+    link_provider        = module.lambda_link_provider.lambda_function_name
+    unlink_provider      = module.lambda_unlink_provider.lambda_function_name
+    get_users_admin      = module.lambda_get_users_admin.lambda_function_name
+    get_user_by_id_admin = module.lambda_get_user_by_id_admin.lambda_function_name
+    set_user_role_admin  = module.lambda_set_user_role_admin.lambda_function_name
+    set_user_status_admin= module.lambda_set_user_status_admin.lambda_function_name
+    pre_authentication   = module.lambda_pre_authentication.lambda_function_name
+    post_authentication  = module.lambda_post_authentication.lambda_function_name
+    post_confirmation    = module.lambda_post_confirmation.lambda_function_name
+    pre_token_generation = module.lambda_pre_token_generation.lambda_function_name
   }
 
   # API Gateway log group provided by API module
@@ -295,6 +281,11 @@ locals {
       { name = "AUTH_API_ID",       value = module.auth_api.api_id, type = "PLAINTEXT" },
       { name = "AUTH_API_ENDPOINT", value = module.auth_api.api_endpoint, type = "PLAINTEXT" },
 
+      # Eventing & Outbox (shared with signature-service)
+      { name = "EVENTBRIDGE_BUS_NAME", value = var.event_bus_name, type = "PLAINTEXT" },
+      { name = "EVENTBRIDGE_SOURCE",   value = "${var.project_name}.${var.env}.auth", type = "PLAINTEXT" },
+      { name = "OUTBOX_TABLE_NAME",    value = var.outbox_table_name, type = "PLAINTEXT" },
+
       # Operational metadata
       { name = "LOG_LEVEL",      value = "info", type = "PLAINTEXT" },
       { name = "SERVICE_NAME",   value = "auth", type = "PLAINTEXT" },
@@ -315,11 +306,18 @@ module "auth_deployment" {
   service_name          = "auth"
 
   artifacts_bucket      = var.artifacts_bucket
-  buildspec_path        = "../auth-service/buildspec.yml"
+  buildspec_path        = "services/auth-service/buildspec.yml"
+  enable_test_stage     = true
+  test_buildspec_path   = "services/auth-service/buildspec.tests.yml"
 
   compute_type          = var.compute_type
   environment_image     = var.environment_image
-  environment_variables = local.merged_env_vars
+  environment_variables = concat(local.merged_env_vars, [
+    { name = "AUTH_LAYER_NAME",        value = "${var.project_name}-auth-core-${var.env}", type = "PLAINTEXT" },
+    { name = "SHARED_TS_LAYER_ARN",    value = var.shared_ts_layer_arn, type = "PLAINTEXT" },
+    { name = "FUNCTIONS_MANIFEST",     value = jsonencode(local.functions_manifest), type = "PLAINTEXT" },
+    { name = "CODE_BUCKET",            value = var.code_bucket, type = "PLAINTEXT" },
+  ])
 
   github_owner          = var.github_owner
   github_repo           = var.github_repo
@@ -329,4 +327,239 @@ module "auth_deployment" {
   github_connection_arn = var.github_connection_arn
 
   tags = local.common_tags
+
+  # Enable multi-artifact build and multi-action deploys
+  lambda_functions = [
+    "get-me",
+    "patch-me",
+    "link-provider",
+    "unlink-provider",
+    "get-users-admin",
+    "get-user-by-id-admin",
+    "set-user-role-admin",
+    "set-user-status-admin",
+    "pre-authentication",
+    "post-authentication",
+    "post-confirmation",
+    "pre-token-generation"
+  ]
+}
+
+############################################
+# Lambda functions (HTTP handlers + triggers)
+############################################
+
+locals {
+  service_name = "auth-service"
+
+  lambda_env_common = merge(
+    var.shared_lambda_env,
+    {
+      LOG_LEVEL           = "info"
+      PROJECT_NAME        = var.project_name
+      ENV                 = var.env
+      EVENTBRIDGE_BUS_NAME = var.event_bus_name
+      EVENTBRIDGE_SOURCE   = "${var.project_name}.${var.env}.auth"
+      OUTBOX_TABLE_NAME    = var.outbox_table_name
+    }
+  )
+
+  functions_manifest = [
+    # HTTP
+    { functionName = "${var.project_name}-${local.service_name}-get-me-${var.env}",              alias = "live", artifactS3Key = "auth-get-me.zip",              artifactIdentifier = "auth_get-me_artifact" },
+    { functionName = "${var.project_name}-${local.service_name}-patch-me-${var.env}",            alias = "live", artifactS3Key = "auth-patch-me.zip",            artifactIdentifier = "auth_patch-me_artifact" },
+    { functionName = "${var.project_name}-${local.service_name}-link-provider-${var.env}",       alias = "live", artifactS3Key = "auth-link-provider.zip",       artifactIdentifier = "auth_link-provider_artifact" },
+    { functionName = "${var.project_name}-${local.service_name}-unlink-provider-${var.env}",     alias = "live", artifactS3Key = "auth-unlink-provider.zip",     artifactIdentifier = "auth_unlink-provider_artifact" },
+    { functionName = "${var.project_name}-${local.service_name}-get-users-admin-${var.env}",     alias = "live", artifactS3Key = "auth-get-users-admin.zip",     artifactIdentifier = "auth_get-users-admin_artifact" },
+    { functionName = "${var.project_name}-${local.service_name}-get-user-by-id-admin-${var.env}",alias = "live", artifactS3Key = "auth-get-user-by-id-admin.zip",artifactIdentifier = "auth_get-user-by-id-admin_artifact" },
+    { functionName = "${var.project_name}-${local.service_name}-set-user-role-admin-${var.env}", alias = "live", artifactS3Key = "auth-set-user-role-admin.zip", artifactIdentifier = "auth_set-user-role-admin_artifact" },
+    { functionName = "${var.project_name}-${local.service_name}-set-user-status-admin-${var.env}",alias = "live", artifactS3Key = "auth-set-user-status-admin.zip",artifactIdentifier = "auth_set-user-status-admin_artifact" },
+    # Triggers
+    { functionName = "${var.project_name}-${local.service_name}-pre-authentication-${var.env}",  alias = "live", artifactS3Key = "auth-pre-authentication.zip",  artifactIdentifier = "auth_pre-authentication_artifact" },
+    { functionName = "${var.project_name}-${local.service_name}-post-authentication-${var.env}", alias = "live", artifactS3Key = "auth-post-authentication.zip", artifactIdentifier = "auth_post-authentication_artifact" },
+    { functionName = "${var.project_name}-${local.service_name}-post-confirmation-${var.env}",   alias = "live", artifactS3Key = "auth-post-confirmation.zip",   artifactIdentifier = "auth_post-confirmation_artifact" },
+    { functionName = "${var.project_name}-${local.service_name}-pre-token-generation-${var.env}",alias = "live", artifactS3Key = "auth-pre-token-generation.zip",artifactIdentifier = "auth_pre-token-generation_artifact" },
+  ]
+}
+
+# HTTP handlers
+module "lambda_get_me" {
+  source       = "../../modules/lambda"
+  project_name = var.project_name
+  env          = var.env
+  function_name = "${var.project_name}-${local.service_name}-get-me"
+  s3_bucket     = var.code_bucket
+  s3_key        = "auth-get-me.zip"
+  handler       = "index.handler"
+  runtime       = "nodejs20.x"
+  memory_size   = 512
+  timeout       = 10
+  environment_variables = local.lambda_env_common
+}
+
+module "lambda_patch_me" {
+  source       = "../../modules/lambda"
+  project_name = var.project_name
+  env          = var.env
+  function_name = "${var.project_name}-${local.service_name}-patch-me"
+  s3_bucket     = var.code_bucket
+  s3_key        = "auth-patch-me.zip"
+  handler       = "index.handler"
+  runtime       = "nodejs20.x"
+  memory_size   = 512
+  timeout       = 10
+  environment_variables = local.lambda_env_common
+}
+
+module "lambda_link_provider" {
+  source       = "../../modules/lambda"
+  project_name = var.project_name
+  env          = var.env
+  function_name = "${var.project_name}-${local.service_name}-link-provider"
+  s3_bucket     = var.code_bucket
+  s3_key        = "auth-link-provider.zip"
+  handler       = "index.handler"
+  runtime       = "nodejs20.x"
+  memory_size   = 512
+  timeout       = 10
+  environment_variables = local.lambda_env_common
+}
+
+module "lambda_unlink_provider" {
+  source       = "../../modules/lambda"
+  project_name = var.project_name
+  env          = var.env
+  function_name = "${var.project_name}-${local.service_name}-unlink-provider"
+  s3_bucket     = var.code_bucket
+  s3_key        = "auth-unlink-provider.zip"
+  handler       = "index.handler"
+  runtime       = "nodejs20.x"
+  memory_size   = 512
+  timeout       = 10
+  environment_variables = local.lambda_env_common
+}
+
+module "lambda_get_users_admin" {
+  source       = "../../modules/lambda"
+  project_name = var.project_name
+  env          = var.env
+  function_name = "${var.project_name}-${local.service_name}-get-users-admin"
+  s3_bucket     = var.code_bucket
+  s3_key        = "auth-get-users-admin.zip"
+  handler       = "index.handler"
+  runtime       = "nodejs20.x"
+  memory_size   = 512
+  timeout       = 10
+  environment_variables = local.lambda_env_common
+}
+
+module "lambda_get_user_by_id_admin" {
+  source       = "../../modules/lambda"
+  project_name = var.project_name
+  env          = var.env
+  function_name = "${var.project_name}-${local.service_name}-get-user-by-id-admin"
+  s3_bucket     = var.code_bucket
+  s3_key        = "auth-get-user-by-id-admin.zip"
+  handler       = "index.handler"
+  runtime       = "nodejs20.x"
+  memory_size   = 512
+  timeout       = 10
+  environment_variables = local.lambda_env_common
+}
+
+module "lambda_set_user_role_admin" {
+  source       = "../../modules/lambda"
+  project_name = var.project_name
+  env          = var.env
+  function_name = "${var.project_name}-${local.service_name}-set-user-role-admin"
+  s3_bucket     = var.code_bucket
+  s3_key        = "auth-set-user-role-admin.zip"
+  handler       = "index.handler"
+  runtime       = "nodejs20.x"
+  memory_size   = 512
+  timeout       = 10
+  environment_variables = local.lambda_env_common
+}
+
+module "lambda_set_user_status_admin" {
+  source       = "../../modules/lambda"
+  project_name = var.project_name
+  env          = var.env
+  function_name = "${var.project_name}-${local.service_name}-set-user-status-admin"
+  s3_bucket     = var.code_bucket
+  s3_key        = "auth-set-user-status-admin.zip"
+  handler       = "index.handler"
+  runtime       = "nodejs20.x"
+  memory_size   = 512
+  timeout       = 10
+  environment_variables = local.lambda_env_common
+}
+
+# Triggers
+module "lambda_pre_authentication" {
+  source       = "../../modules/lambda"
+  project_name = var.project_name
+  env          = var.env
+  function_name = "${var.project_name}-${local.service_name}-pre-authentication"
+  s3_bucket     = var.code_bucket
+  s3_key        = "auth-pre-authentication.zip"
+  handler       = "index.handler"
+  runtime       = "nodejs20.x"
+  memory_size   = 512
+  timeout       = 10
+  environment_variables = local.lambda_env_common
+}
+
+module "lambda_post_authentication" {
+  source       = "../../modules/lambda"
+  project_name = var.project_name
+  env          = var.env
+  function_name = "${var.project_name}-${local.service_name}-post-authentication"
+  s3_bucket     = var.code_bucket
+  s3_key        = "auth-post-authentication.zip"
+  handler       = "index.handler"
+  runtime       = "nodejs20.x"
+  memory_size   = 512
+  timeout       = 10
+  environment_variables = local.lambda_env_common
+}
+
+module "lambda_post_confirmation" {
+  source       = "../../modules/lambda"
+  project_name = var.project_name
+  env          = var.env
+  function_name = "${var.project_name}-${local.service_name}-post-confirmation"
+  s3_bucket     = var.code_bucket
+  s3_key        = "auth-post-confirmation.zip"
+  handler       = "index.handler"
+  runtime       = "nodejs20.x"
+  memory_size   = 512
+  timeout       = 10
+  environment_variables = local.lambda_env_common
+}
+
+module "lambda_pre_token_generation" {
+  source       = "../../modules/lambda"
+  project_name = var.project_name
+  env          = var.env
+  function_name = "${var.project_name}-${local.service_name}-pre-token-generation"
+  s3_bucket     = var.code_bucket
+  s3_key        = "auth-pre-token-generation.zip"
+  handler       = "index.handler"
+  runtime       = "nodejs20.x"
+  memory_size   = 512
+  timeout       = 10
+  environment_variables = local.lambda_env_common
+}
+
+############################################
+# Attach Cognito triggers to 'live' aliases
+############################################
+module "cognito_triggers" {
+  source                            = "../../modules/cognito-trigger"
+  user_pool_id                      = module.cognito.user_pool_id
+  pre_auth_lambda_arn               = module.lambda_pre_authentication.lambda_alias_live_arn
+  post_auth_lambda_arn              = module.lambda_post_authentication.lambda_alias_live_arn
+  post_confirmation_lambda_arn      = module.lambda_post_confirmation.lambda_alias_live_arn
+  pre_token_generation_lambda_arn   = module.lambda_pre_token_generation.lambda_alias_live_arn
 }

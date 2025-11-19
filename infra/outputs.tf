@@ -2,15 +2,15 @@
 # Root Outputs for auth-service module
 ############################################
 
-# Lambda
+# Lambda - PreAuthentication trigger
 output "auth_pre_auth_lambda_arn" {
-  description = "ARN of the pre-authentication Lambda function."
-  value       = module.auth_service.pre_auth_lambda_arn
+  description = "Alias ARN of the pre-authentication Lambda function."
+  value       = module.auth_service.lambda_pre_authentication_alias_arn
 }
 
 output "auth_pre_auth_lambda_name" {
   description = "Name of the pre-authentication Lambda function."
-  value       = module.auth_service.pre_auth_lambda_name
+  value       = module.auth_service.lambda_pre_authentication_function_name
 }
 
 # IAM Role for SNS MFA

@@ -2,15 +2,35 @@
 # Auth-Service Outputs
 ############################################
 
-# Lambda
-output "pre_auth_lambda_arn" {
-  description = "ARN of the pre-authentication Lambda function."
-  value       = module.pre_auth_lambda.lambda_function_arn
+# Lambda (key functions)
+output "lambda_pre_authentication_alias_arn" {
+  description = "Alias ARN of the PreAuthentication Lambda."
+  value       = try(module.lambda_pre_authentication.lambda_alias_live_arn, null)
 }
 
-output "pre_auth_lambda_name" {
-  description = "Name of the pre-authentication Lambda function."
-  value       = module.pre_auth_lambda.lambda_function_name
+output "lambda_pre_authentication_function_name" {
+  description = "Function name of the PreAuthentication Lambda."
+  value       = try(module.lambda_pre_authentication.lambda_function_name, null)
+}
+
+output "lambda_pre_authentication_function_arn" {
+  description = "Function ARN of the PreAuthentication Lambda."
+  value       = try(module.lambda_pre_authentication.lambda_function_arn, null)
+}
+
+output "lambda_post_authentication_alias_arn" {
+  description = "Alias ARN of the PostAuthentication Lambda."
+  value       = try(module.lambda_post_authentication.lambda_alias_live_arn, null)
+}
+
+output "lambda_post_confirmation_alias_arn" {
+  description = "Alias ARN of the PostConfirmation Lambda."
+  value       = try(module.lambda_post_confirmation.lambda_alias_live_arn, null)
+}
+
+output "lambda_pre_token_generation_alias_arn" {
+  description = "Alias ARN of the PreTokenGeneration Lambda."
+  value       = try(module.lambda_pre_token_generation.lambda_alias_live_arn, null)
 }
 
 # IAM Role for SNS MFA

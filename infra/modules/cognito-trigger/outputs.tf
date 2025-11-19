@@ -1,9 +1,9 @@
 /**
  * @output triggered_pool_id
  * @description
- * ID of the Cognito User Pool after the PreAuthentication Lambda trigger has been set.
+ * ID of the Cognito User Pool after all Lambda triggers have been configured.
  */
 output "triggered_pool_id" {
-  description = "ID of the Cognito User Pool with the new PreAuthentication trigger."
-  value       = null_resource.cognito_attach_pre_auth.triggers.pool_id
+  description = "ID of the Cognito User Pool with all configured Lambda triggers."
+  value       = try(null_resource.cognito_attach_triggers.triggers.pool_id, null)
 }

@@ -158,10 +158,12 @@ variable "sns_mfa_role_arn" {
  * @var pre_auth_lambda_arn
  * @description
  * ARN of the Lambda function used for pre-authentication checks.
+ * Optional: if not provided, triggers will be configured separately via cognito-trigger module.
  */
 variable "pre_auth_lambda_arn" {
   description = "ARN of the Lambda function for pre-authentication checks."
   type        = string
+  default     = ""
 }
 
 ############################################
