@@ -9,7 +9,7 @@ import { LambdaTriggerBase } from '@lawprotect/shared-ts';
 import type { PostConfirmationEvent, PostConfirmationResult } from '../types/cognito/PostConfirmationEvent';
 import { PostConfirmationOrchestrator } from '../application/PostConfirmationOrchestrator';
 import { CompositionRoot } from '../infrastructure/factories/CompositionRoot';
-
+ 
 /**
  * PostConfirmation trigger handler that processes user registration
  * @summary Delegates to PostConfirmationOrchestrator for user registration
