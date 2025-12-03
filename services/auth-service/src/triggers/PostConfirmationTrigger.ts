@@ -14,7 +14,7 @@ import { CompositionRoot } from '../infrastructure/factories/CompositionRoot';
  * PostConfirmation trigger handler that processes user registration
  * @summary Delegates to PostConfirmationOrchestrator for user registration
  * @description This trigger follows SRP by only handling the Lambda trigger concerns 
- * and delegating all business logic to the PostConfirmationOrchestrator.
+ * and delegating all business logic to the PostConfirmationOrchestrator. 
  */
 export class PostConfirmationTrigger extends LambdaTriggerBase<PostConfirmationEvent, PostConfirmationResult> {
   private orchestrator!: PostConfirmationOrchestrator;
