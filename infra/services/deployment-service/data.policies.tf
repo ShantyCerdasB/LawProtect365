@@ -112,13 +112,13 @@ data "aws_iam_policy_document" "secrets_manager_policy" {
     actions = [
       "secretsmanager:GetSecretValue"
     ]
-    resources = [
-      # Database secrets (used by all services)
-      "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:${var.project_name}/database-${var.env}-*",
-      # Auth service secrets (Google OAuth and Azure AD)
-      "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:${var.project_name}/google-oauth-secret-${var.env}-*",
-      "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:${var.project_name}/azure-ad-secret-${var.env}-*"
-    ]
+    resources = concat(
+      [
+        # Database secrets (used by all services)
+        "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:${var.project_name}/database-${var.env}-*"
+      ],
+      var.extra_secret_arns
+    )
   }
 }
 

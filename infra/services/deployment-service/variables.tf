@@ -59,6 +59,12 @@ variable "environment_variables" {
   }))
 }
 
+variable "extra_secret_arns" {
+  description = "Optional list of additional Secrets Manager ARNs that CodeBuild must read (e.g., OAuth secrets)."
+  type        = list(string)
+  default     = []
+}
+
 variable "deployment_config_name" {
   description = "CodeDeploy config (e.g. CodeDeployDefault.LambdaAllAtOnce)"
   type        = string

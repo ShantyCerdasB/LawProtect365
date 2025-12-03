@@ -318,6 +318,10 @@ module "auth_deployment" {
     { name = "FUNCTIONS_MANIFEST",     value = jsonencode(local.functions_manifest), type = "PLAINTEXT" },
     { name = "CODE_BUCKET",            value = var.code_bucket, type = "PLAINTEXT" },
   ])
+  extra_secret_arns = compact([
+    module.secret_google.secret_arn,
+    module.secret_azure.secret_arn,
+  ])
 
   github_owner          = var.github_owner
   github_repo           = var.github_repo
