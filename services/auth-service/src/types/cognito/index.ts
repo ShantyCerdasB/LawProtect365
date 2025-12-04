@@ -7,3 +7,4 @@
 export * from './PreAuthEvent';
 export * from './PreTokenGenEvent';
 export * from './PostConfirmationEvent';
+export * from './PostAuthEvent';

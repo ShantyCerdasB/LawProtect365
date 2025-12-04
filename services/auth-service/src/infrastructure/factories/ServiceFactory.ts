@@ -28,14 +28,17 @@ export class ServiceFactory {
    * Creates UserService instance
    * @param userRepository - User repository instance
    * @param oauthAccountRepository - OAuth account repository instance
+   * @param userPersonalInfoRepository - User personal info repository instance
+   * @param eventPublishingService - Event publishing service instance
    * @returns Configured UserService instance
    */
   static createUserService(
     userRepository: UserRepository,
     oauthAccountRepository: OAuthAccountRepository,
-    userPersonalInfoRepository: any
+    userPersonalInfoRepository: any,
+    eventPublishingService: EventPublishingService
   ): UserService {
-    return new UserService(userRepository, oauthAccountRepository, userPersonalInfoRepository);
+    return new UserService(userRepository, oauthAccountRepository, userPersonalInfoRepository, eventPublishingService);
   }
 
   /**
@@ -94,17 +97,22 @@ export class ServiceFactory {
    * @returns Object containing all service instances
    */
   static createAll(repositories: any, infrastructure: any, logger: any) {
+    const eventPublishingService = this.createEventPublishingService(
+      this.createIntegrationEventPublisher(infrastructure.outboxRepository)
+    );
+
     return {
       userService: this.createUserService(
         repositories.userRepository,
         repositories.oauthAccountRepository,
-        repositories.userPersonalInfoRepository
+        repositories.userPersonalInfoRepository,
+        eventPublishingService
       ),
       cognitoService: this.createCognitoService(infrastructure.cognitoClient, logger),
       auditService: this.createAuditService(repositories.userAuditEventRepository),
       eventPublisherService: infrastructure.eventPublisherService,
       integrationEventPublisher: this.createIntegrationEventPublisher(infrastructure.outboxRepository),
-      eventPublishingService: this.createEventPublishingService(this.createIntegrationEventPublisher(infrastructure.outboxRepository)),
+      eventPublishingService: eventPublishingService,
     };
   }
 }

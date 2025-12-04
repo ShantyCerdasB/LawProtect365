@@ -7,3 +7,4 @@
 
 export * from './UserServiceTypes';
 export * from './cognito';
+export * from './users/UserProfileResponseDto';

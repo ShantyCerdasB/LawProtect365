@@ -6,14 +6,15 @@
  */
 
 export * from './RoleAssignmentRules';
+export * from './RoleChangeRules';
 export * from './MfaPolicyRules';
 export * from './UserLifecycleRules';
 export * from './UserAccessRules';
 export * from './ClaimsMappingRules';
 export * from './UserRegistrationRules';
 export * from './UserVisibilityRules';
+export * from './UserProfileRules';
 export * from './ProviderLinkingRules';
 export * from './ProviderUnlinkingRules';
-export * from './UserLifecycleRules';
 export * from './AdminStatusChangeRules';
 export * from './AdminVisibilityRules';

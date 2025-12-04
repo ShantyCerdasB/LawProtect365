@@ -68,7 +68,7 @@ export const getMeHandler = ControllerFactory.createQuery({
   
   // Parameter extraction
   extractParams: (_path: any, _body: any, query: any, context: any) => ({
-    cognitoSub: context.auth.cognitoSub, // From JWT token
+    cognitoSub: context.auth.cognitoSub, // From JWT token (set by withJwtAuth middleware)
     includeFlags: query.include || ''
   }),
   
