@@ -6,7 +6,7 @@
  */
 
 import { SignatureMetadata } from '../../../../src/domain/value-objects/SignatureMetadata';
-import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
+import { generateTestIpAddress } from '../../../helpers/testUtils';
 import { TEST_CONSTANTS } from '../../../helpers/testUtils';
 
 describe('SignatureMetadata', () => {

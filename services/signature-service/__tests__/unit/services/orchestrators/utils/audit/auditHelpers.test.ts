@@ -6,27 +6,31 @@
  */
 
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
-import { generateTestIpAddress } from '../../../../../integration/helpers/testHelpers';
+import { generateTestIpAddress } from '../../../../../helpers/testUtils';
 import { createAuditEvent, AuditEventData } from '../../../../../../src/services/orchestrators/utils/audit/auditHelpers';
 import { AuditEventType } from '../../../../../../src/domain/enums/AuditEventType';
 
 // Mock the createNetworkSecurityContext function
-jest.mock('@lawprotect/shared-ts', () => ({
-  createNetworkSecurityContext: jest.fn(() => ({
-    ipAddress: generateTestIpAddress(),
-    userAgent: 'TestAgent/1.0',
-    country: 'US'
-  })),
-  Email: jest.fn().mockImplementation((value: any) => ({
-    getValue: () => value,
-    domain: value.split('@')[1],
-    getDomain: () => value.split('@')[1],
-    extractDomain: () => value.split('@')[1],
-    equals: jest.fn(),
-    toString: () => value,
-    toJSON: () => value
-  }))
-}));
+jest.mock('@lawprotect/shared-ts', () => {
+  // Import the actual classes to avoid breaking inheritance
+  const actual = jest.requireActual('@lawprotect/shared-ts') as Record<string, any>;
+  return Object.assign({}, actual, {
+    createNetworkSecurityContext: jest.fn(() => ({
+      ipAddress: generateTestIpAddress(),
+      userAgent: 'TestAgent/1.0',
+      country: 'US'
+    })),
+    Email: jest.fn().mockImplementation((value: any) => ({
+      getValue: () => value,
+      domain: value.split('@')[1],
+      getDomain: () => value.split('@')[1],
+      extractDomain: () => value.split('@')[1],
+      equals: jest.fn(),
+      toString: () => value,
+      toJSON: () => value
+    }))
+  });
+});
 
 describe('auditHelpers', () => {
   beforeEach(() => {

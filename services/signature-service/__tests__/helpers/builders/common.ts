@@ -7,7 +7,7 @@
 
 import { NetworkSecurityContext } from '@lawprotect/shared-ts';
 import { TestUtils } from '../testUtils';
-import { generateTestIpAddress } from '../../integration/helpers/testHelpers';
+import { generateTestIpAddress } from '../testUtils';
 
 /**
  * Creates a NetworkSecurityContext with test data

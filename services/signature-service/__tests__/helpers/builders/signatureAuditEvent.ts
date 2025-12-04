@@ -11,7 +11,7 @@ import { EnvelopeId } from '../../../src/domain/value-objects/EnvelopeId';
 import { SignerId } from '../../../src/domain/value-objects/SignerId';
 import { AuditEventType } from '../../../src/domain/enums/AuditEventType';
 import { TestUtils } from '../testUtils';
-import { generateTestIpAddress } from '../../integration/helpers/testHelpers';
+import { generateTestIpAddress } from '../testUtils';
 import { networkSecurityContext } from './common';
 
 export function auditEventPersistenceRow(overrides: any = {}) {

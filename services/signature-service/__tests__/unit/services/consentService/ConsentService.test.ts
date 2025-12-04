@@ -5,7 +5,7 @@
  * validation, and linking with signatures with proper mocking and error handling.
  */
 
-import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
+import { generateTestIpAddress } from '../../../helpers/testUtils';
 import { ConsentService } from '../../../../src/services/consentService/ConsentService';
 import { ConsentRepository } from '../../../../src/repositories/ConsentRepository';
 import { EnvelopeSignerRepository } from '../../../../src/repositories/EnvelopeSignerRepository';

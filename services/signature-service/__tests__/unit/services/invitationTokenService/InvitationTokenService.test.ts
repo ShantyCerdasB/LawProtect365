@@ -6,7 +6,7 @@
  */
 
 import { jest } from '@jest/globals';
-import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
+import { generateTestIpAddress } from '../../../helpers/testUtils';
 import { InvitationTokenService } from '../../../../src/services/invitationTokenService/InvitationTokenService';
 import { AuditEventType } from '../../../../src/domain/enums/AuditEventType';
 

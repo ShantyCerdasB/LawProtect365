@@ -6,67 +6,71 @@
  */
 
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
-import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
+import { generateTestIpAddress } from '../../../helpers/testUtils';
 import { S3Service } from '../../../../src/services/s3Service/S3Service';
 import { S3Presigner, S3EvidenceStorage, NotFoundError, BadRequestError } from '@lawprotect/shared-ts';
 import { createAuditEventServiceMock } from '../../../helpers/mocks/services/AuditEventService.mock';
 import { DocumentType } from '../../../../src/domain/enums';
 
 // Mock the shared-ts modules
-jest.mock('@lawprotect/shared-ts', () => ({
-  createNetworkSecurityContext: jest.fn(() => ({
-    ipAddress: generateTestIpAddress(),
-    userAgent: 'TestAgent/1.0',
-    country: 'US'
-  })),
-  BadRequestError: class BadRequestError extends Error {
-    constructor(message: string, code?: string, details?: any) {
-      super(message);
-      this.name = 'BadRequestError';
+jest.mock('@lawprotect/shared-ts', () => {
+  // Import the actual classes to avoid breaking inheritance
+  const actual = jest.requireActual('@lawprotect/shared-ts') as Record<string, any>;
+  return Object.assign({}, actual, {
+    createNetworkSecurityContext: jest.fn(() => ({
+      ipAddress: generateTestIpAddress(),
+      userAgent: 'TestAgent/1.0',
+      country: 'US'
+    })),
+    BadRequestError: class BadRequestError extends Error {
+      constructor(message: string, code?: string, details?: any) {
+        super(message);
+        this.name = 'BadRequestError';
+      }
+    },
+    NotFoundError: class NotFoundError extends Error {
+      constructor(message: string, code?: string, details?: any) {
+        super(message);
+        this.name = 'NotFoundError';
+      }
+    },
+    InternalError: class InternalError extends Error {
+      constructor(message: string, code?: string, details?: any) {
+        super(message);
+        this.name = 'InternalError';
+      }
+    },
+    ContentType: {
+      fromString: jest.fn((value: string) => ({
+        getValue: () => value,
+        toString: () => value
+      }))
+    },
+    S3Key: {
+      fromString: jest.fn((value: string) => ({
+        getValue: () => value,
+        toString: () => value
+      }))
+    },
+    S3Operation: {
+      fromString: jest.fn((value: string) => ({
+        getValue: () => value,
+        toString: () => value,
+        isGet: () => value === 'GET',
+        isPut: () => value === 'PUT',
+        operation: value,
+        isReadOperation: () => value === 'GET',
+        isWriteOperation: () => value === 'PUT',
+        equals: () => false,
+        toJSON: () => value
+      }))
+    },
+    ErrorCodes: {
+      COMMON_NOT_FOUND: 'COMMON_NOT_FOUND',
+      COMMON_BAD_REQUEST: 'COMMON_BAD_REQUEST'
     }
-  },
-  NotFoundError: class NotFoundError extends Error {
-    constructor(message: string, code?: string, details?: any) {
-      super(message);
-      this.name = 'NotFoundError';
-    }
-  },
-  InternalError: class InternalError extends Error {
-    constructor(message: string, code?: string, details?: any) {
-      super(message);
-      this.name = 'InternalError';
-    }
-  },
-  ContentType: {
-    fromString: jest.fn((value: string) => ({
-      getValue: () => value,
-      toString: () => value
-    }))
-  },
-  S3Key: {
-    fromString: jest.fn((value: string) => ({
-      getValue: () => value,
-      toString: () => value
-    }))
-  },
-  S3Operation: {
-    fromString: jest.fn((value: string) => ({
-      getValue: () => value,
-      toString: () => value,
-      isGet: () => value === 'GET',
-      isPut: () => value === 'PUT',
-      operation: value,
-      isReadOperation: () => value === 'GET',
-      isWriteOperation: () => value === 'PUT',
-      equals: () => false,
-      toJSON: () => value
-    }))
-  },
-  ErrorCodes: {
-    COMMON_NOT_FOUND: 'COMMON_NOT_FOUND',
-    COMMON_BAD_REQUEST: 'COMMON_BAD_REQUEST'
-  }
-}));
+  });
+});
 
 // Mock the S3Service methods to avoid complex validation
 jest.mock('../../../../src/services/s3Service/S3Service', () => {

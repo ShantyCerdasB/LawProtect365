@@ -6,7 +6,7 @@
  */
 
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
-import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
+import { generateTestIpAddress } from '../../../helpers/testUtils';
 import { EnvelopeNotificationService } from '../../../../src/services/notification/EnvelopeNotificationService';
 import { IntegrationEventFactory } from '../../../../src/infrastructure/factories/events/IntegrationEventFactory';
 import { IntegrationEventPublisher } from '@lawprotect/shared-ts';
@@ -14,10 +14,14 @@ import { SignatureEnvelope } from '../../../../src/domain/entities/SignatureEnve
 import { EnvelopeSigner } from '../../../../src/domain/entities/EnvelopeSigner';
 
 // Mock the shared-ts modules
-jest.mock('@lawprotect/shared-ts', () => ({
-  nowIso: jest.fn(() => '2024-01-01T10:00:00Z'),
-  NetworkSecurityContext: jest.fn()
-}));
+jest.mock('@lawprotect/shared-ts', () => {
+  // Import the actual classes to avoid breaking inheritance
+  const actual = jest.requireActual('@lawprotect/shared-ts') as Record<string, any>;
+  return Object.assign({}, actual, {
+    nowIso: jest.fn(() => '2024-01-01T10:00:00Z'),
+    NetworkSecurityContext: jest.fn()
+  });
+});
 
 describe('EnvelopeNotificationService', () => {
   let envelopeNotificationService: EnvelopeNotificationService;

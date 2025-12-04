@@ -8,7 +8,7 @@
 import { S3Key, ContentType } from '@lawprotect/shared-ts';
 import { TestUtils } from '../testUtils';
 import { DocumentType } from '../../../src/domain/enums';
-import { generateTestIpAddress } from '../../integration/helpers/testHelpers';
+import { generateTestIpAddress } from '../testUtils';
 
 /**
  * Creates a StoreDocumentRequest for testing

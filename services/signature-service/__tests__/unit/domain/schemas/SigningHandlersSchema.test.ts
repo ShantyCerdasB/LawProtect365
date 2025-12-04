@@ -5,7 +5,7 @@
  * viewing, declining operations, and invitation token validation with proper error handling.
  */
 
-import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
+import { generateTestIpAddress } from '../../../helpers/testUtils';
 import {
   SignDocumentRequestSchema,
   ViewDocumentRequestSchema,

@@ -18,7 +18,7 @@ import {
   consentUserAgentRequired
 } from '../../../../src/signature-errors';
 import { TestUtils, TEST_CONSTANTS } from '../../../helpers/testUtils';
-import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
+import { generateTestIpAddress } from '../../../helpers/testUtils';
 import { consentEntity, consentPersistenceRow } from '../../../helpers/builders/consent';
 
 // Helper function to create Consent with custom parameters

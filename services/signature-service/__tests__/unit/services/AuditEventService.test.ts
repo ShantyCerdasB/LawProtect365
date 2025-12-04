@@ -6,7 +6,7 @@
  */
 
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
-import { generateTestIpAddress } from '../../integration/helpers/testHelpers';
+import { generateTestIpAddress } from '../../helpers/testUtils';
 import { AuditEventService } from '../../../src/services/audit/AuditEventService';
 import { AuditEventType } from '../../../src/domain/enums/AuditEventType';
 import { TestUtils } from '../../helpers/testUtils';

@@ -4,7 +4,7 @@
  * @description Comprehensive unit tests for Signature class methods
  */
 
-import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
+import { generateTestIpAddress } from '../../../helpers/testUtils';
 import { Signature } from '../../../../src/domain/value-objects/Signature';
 import { SignatureMetadata } from '../../../../src/domain/value-objects/SignatureMetadata';
 import { TestUtils } from '../../../helpers/testUtils';

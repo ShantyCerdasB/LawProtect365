@@ -1,5 +1,5 @@
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
-import { generateTestIpAddress } from '../../integration/helpers/testHelpers';
+import { generateTestIpAddress } from '../../helpers/testUtils';
 import { textContainsInsensitive, rangeFilter } from '@lawprotect/shared-ts';
 
 import { setupCursorPaginationMocks } from '../../helpers/mocks/cursorPagination';

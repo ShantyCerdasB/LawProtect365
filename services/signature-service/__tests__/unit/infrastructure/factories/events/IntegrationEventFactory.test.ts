@@ -1,4 +1,4 @@
-import { generateTestIpAddress } from '../../../../integration/helpers/testHelpers';
+import { generateTestIpAddress } from '../../../../helpers/testUtils';
 import { IntegrationEventFactory } from '../../../../../src/infrastructure/factories/events/IntegrationEventFactory';
 
 function createMockEnvelope() {

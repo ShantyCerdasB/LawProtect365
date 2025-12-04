@@ -5,7 +5,7 @@
  * testing all public methods with mocked dependencies to ensure proper delegation to use cases.
  */
 
-import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
+import { generateTestIpAddress } from '../../../helpers/testUtils';
 import { SignatureOrchestrator } from '@/services/orchestrators/SignatureOrchestrator';
 import { TestUtils } from '../../../helpers/testUtils';
 import { NetworkSecurityContext, NotificationType, Email } from '@lawprotect/shared-ts';

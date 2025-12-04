@@ -9,7 +9,7 @@ import { SignatureAuditEvent } from '../../../../src/domain/entities/SignatureAu
 import { EnvelopeId } from '../../../../src/domain/value-objects/EnvelopeId';
 import { AuditEventType } from '../../../../src/domain/enums/AuditEventType';
 import { TestUtils, TEST_CONSTANTS } from '../../../helpers/testUtils';
-import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
+import { generateTestIpAddress } from '../../../helpers/testUtils';
 import { 
   envelopeEventEntity,
   auditEventWithNetwork,
@@ -226,7 +226,8 @@ describe('SignatureAuditEvent', () => {
       // expect(recentEvent.isRecent(300001)).toBe(true); // Within 5 minutes + 1ms
       expect(recentEvent.isRecent(60000)).toBe(false); // Within 1 minute
 
-      expect(oldEvent.isRecent(3600001)).toBe(true); // Within 1 hour + 1ms
+      // Use 1 hour + 1 second to account for execution time delays
+      expect(oldEvent.isRecent(3601000)).toBe(true); // Within 1 hour + 1 second
       expect(oldEvent.isRecent(1800000)).toBe(false); // Within 30 minutes
     });
 

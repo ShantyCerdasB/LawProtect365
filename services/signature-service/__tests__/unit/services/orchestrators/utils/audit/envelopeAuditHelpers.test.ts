@@ -6,7 +6,7 @@
  */
 
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
-import { generateTestIpAddress } from '../../../../../integration/helpers/testHelpers';
+import { generateTestIpAddress } from '../../../../../helpers/testUtils';
 import {
   createEnvelopeCreatedAudit,
   createEnvelopeUpdatedAudit,

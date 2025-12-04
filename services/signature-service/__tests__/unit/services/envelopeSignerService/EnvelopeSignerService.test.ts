@@ -5,7 +5,7 @@
  */
 
 import { jest } from '@jest/globals';
-import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
+import { generateTestIpAddress } from '../../../helpers/testUtils';
 import { EnvelopeSignerService } from '../../../../src/services/envelopeSignerService/EnvelopeSignerService';
 import { EnvelopeSignerRepository } from '../../../../src/repositories/EnvelopeSignerRepository';
 import { SignatureEnvelopeRepository } from '../../../../src/repositories/SignatureEnvelopeRepository';

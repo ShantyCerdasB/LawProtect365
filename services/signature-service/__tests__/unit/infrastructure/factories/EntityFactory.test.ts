@@ -1,4 +1,4 @@
-import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
+import { generateTestIpAddress } from '../../../helpers/testUtils';
 import { EntityFactory } from '../../../../src/infrastructure/factories/EntityFactory';
 import { TestUtils } from '../../../helpers/testUtils';
 import { EnvelopeId } from '../../../../src/domain/value-objects/EnvelopeId';

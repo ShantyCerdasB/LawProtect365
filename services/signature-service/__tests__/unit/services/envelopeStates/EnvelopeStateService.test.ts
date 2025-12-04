@@ -5,7 +5,7 @@
  */
 
 import { jest } from '@jest/globals';
-import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
+import { generateTestIpAddress } from '../../../helpers/testUtils';
 import { EnvelopeStateService } from '../../../../src/services/envelopeStates/EnvelopeStateService';
 import { AuditEventType } from '../../../../src/domain/enums/AuditEventType';
 
@@ -33,13 +33,17 @@ function createMockEnvelope(envelopeId: string, isDraft: boolean = true) {
     getSentAt: () => new Date('2024-01-01T10:00:00Z')
   };
 }
-jest.mock('@lawprotect/shared-ts', () => ({
-  createNetworkSecurityContext: jest.fn(() => ({
-    ipAddress: generateTestIpAddress(),
-    userAgent: 'TestAgent/1.0',
-    country: 'US'
-  }))
-}));
+jest.mock('@lawprotect/shared-ts', () => {
+  // Import the actual classes to avoid breaking inheritance
+  const actual = jest.requireActual('@lawprotect/shared-ts') as Record<string, any>;
+  return Object.assign({}, actual, {
+    createNetworkSecurityContext: jest.fn(() => ({
+      ipAddress: generateTestIpAddress(),
+      userAgent: 'TestAgent/1.0',
+      country: 'US'
+    }))
+  });
+});
 
 // Mock the signature-errors
 jest.mock('../../../../src/signature-errors', () => ({

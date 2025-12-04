@@ -5,7 +5,7 @@
  * testing all CRUD operations with mocked dependencies to ensure proper functionality.
  */
 
-import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
+import { generateTestIpAddress } from '../../../helpers/testUtils';
 import { EnvelopeCrudService } from '@/services/envelopeCrud/EnvelopeCrudService';
 import { TestUtils } from '../../../helpers/testUtils';
 import { SignatureEnvelopeRepository } from '@/repositories/SignatureEnvelopeRepository';

@@ -6,6 +6,7 @@
  */
 
 import { uuid, sha256Hex } from '@lawprotect/shared-ts';
+import { randomBytes } from 'node:crypto';
 import { SignerId } from '../../src/domain/value-objects/SignerId';
 import { EnvelopeId } from '../../src/domain/value-objects/EnvelopeId';
 import { ConsentId } from '../../src/domain/value-objects/ConsentId';
@@ -126,11 +127,13 @@ export class TestUtils {
   /**
    * Creates a test IP address
    * @returns A test IP address
+   * @description Generates a random IP address in the 192.168.x.x range for testing
    */
   static createTestIpAddress(): string {
-    // Import generateTestIpAddress from testHelpers to avoid circular dependency
-    const { generateTestIpAddress } = require('../integration/helpers/testHelpers');
-    return generateTestIpAddress();
+    // Generate random IP in 192.168.x.x range (private network)
+    const thirdOctet = randomBytes(1)[0];
+    const fourthOctet = randomBytes(1)[0];
+    return `192.168.${thirdOctet}.${fourthOctet}`;
   }
 
   /**
@@ -160,4 +163,14 @@ export class TestUtils {
     return Array.from({ length: count }, () => this.generateSha256Hash());
   }
 }
+
+/**
+ * Generate a random test IP address
+ * @returns Random IP address in the 192.168.x.x range for testing
+ * @description Convenience function that wraps TestUtils.createTestIpAddress()
+ * for easier imports in test files
+ */
+export const generateTestIpAddress = (): string => {
+  return TestUtils.createTestIpAddress();
+};
 

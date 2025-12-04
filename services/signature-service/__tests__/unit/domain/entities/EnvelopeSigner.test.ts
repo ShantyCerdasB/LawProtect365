@@ -5,7 +5,7 @@
  * for the EnvelopeSigner entity that consolidates signer and signature data.
  */
 
-import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
+import { generateTestIpAddress } from '../../../helpers/testUtils';
 import { EnvelopeSigner } from '../../../../src/domain/entities/EnvelopeSigner';
 import { NetworkSecurityContext, Email } from '@lawprotect/shared-ts';
 import { SignerId } from '../../../../src/domain/value-objects/SignerId';

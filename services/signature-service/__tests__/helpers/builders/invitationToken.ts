@@ -8,7 +8,7 @@
 import { InvitationToken } from '../../../src/domain/entities/InvitationToken';
 import { InvitationTokenStatus } from '@prisma/client';
 import { TestUtils } from '../testUtils';
-import { generateTestIpAddress } from '../../integration/helpers/testHelpers';
+import { generateTestIpAddress } from '../testUtils';
 
 /**
  * Creates a persistence row for InvitationToken

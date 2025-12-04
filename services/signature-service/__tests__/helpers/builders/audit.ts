@@ -10,7 +10,7 @@ import { AuditEventData } from '../../../src/services/orchestrators/utils/audit/
 import { AuditEventType } from '../../../src/domain/enums/AuditEventType';
 import { TestUtils } from '../testUtils';
 import { networkSecurityContext as commonNetworkContext } from './common';
-import { generateTestIpAddress } from '../../integration/helpers/testHelpers';
+import { generateTestIpAddress } from '../testUtils';
 
 /**
  * Creates an Email object with test data

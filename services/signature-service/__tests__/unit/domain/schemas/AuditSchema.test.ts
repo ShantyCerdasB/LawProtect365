@@ -5,7 +5,7 @@
  * audit trail queries, and response validation with proper error handling and edge cases.
  */
 
-import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
+import { generateTestIpAddress } from '../../../helpers/testUtils';
 import {
   AuditEventTypeSchema,
   CreateAuditEventSchema,

@@ -12,7 +12,7 @@ import { EnvelopeId } from '../../../../src/domain/value-objects/EnvelopeId';
 import { SignerId } from '../../../../src/domain/value-objects/SignerId';
 import { InvitationTokenStatus } from '@prisma/client';
 import { TestUtils } from '../../../helpers/testUtils';
-import { generateTestIpAddress } from '../../../integration/helpers/testHelpers';
+import { generateTestIpAddress } from '../../../helpers/testUtils';
 import { 
   invitationTokenExpired,
   invitationTokenAlreadyUsed,
