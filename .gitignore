@@ -62,6 +62,10 @@ web_modules/
 # TypeScript cache
 *.tsbuildinfo
 
+# Compiled JavaScript files in src/ (Vite handles compilation)
+apps/web/src/**/*.js
+apps/web/src/**/*.js.map
+
 # Optional npm cache directory
 .npm
 
