@@ -13,4 +13,5 @@ export * from './PdfFileUploadInterfaces';
 export * from './ModalStateInterfaces';
 export * from './PendingElementStateInterfaces';
 export * from './PdfGenerationInterfaces';
+export * from './ElementTypePopoverInterfaces';
 
