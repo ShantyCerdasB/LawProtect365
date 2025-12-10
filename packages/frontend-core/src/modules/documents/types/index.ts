@@ -10,4 +10,5 @@ export * from './SignaturePlacement';
 export * from './TextPlacement';
 export * from './DatePlacement';
 export * from './UseDocumentSigning';
+export * from './PdfElementInteraction';
 

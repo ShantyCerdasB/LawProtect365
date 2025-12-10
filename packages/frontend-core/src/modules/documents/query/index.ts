@@ -4,6 +4,7 @@
  * @description Re-exports all React hooks related to document operations.
  */
 
-export * from './useDocumentSigning';
 export * from './useDocumentEditing';
+export * from './useDocumentSigning';
+export * from './useElementHandlers';
 

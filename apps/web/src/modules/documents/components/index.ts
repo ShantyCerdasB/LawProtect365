@@ -9,4 +9,6 @@ export * from './SignatureCanvas';
 export * from './TextInputModal';
 export * from './DateInputModal';
 export * from './ElementTypePopover';
+export * from './PdfPaginationControls';
+export * from './PdfPageCanvas';
 
