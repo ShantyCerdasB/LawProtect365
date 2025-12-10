@@ -15,4 +15,5 @@ export * from './ControlHitTestInterfaces';
 export * from './ElementPointerInteractionInterfaces';
 export * from './ElementHandlersInterfaces';
 export * from './DocumentEditingInterfaces';
+export * from './HitTestInterfaces';
 

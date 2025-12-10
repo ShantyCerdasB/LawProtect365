@@ -11,6 +11,7 @@ import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import type { SignaturePlacement } from '../types/SignaturePlacement';
 import type { TextPlacement } from '../types/TextPlacement';
 import type { DatePlacement } from '../types/DatePlacement';
+import { formatDate, DEFAULT_DATE_FORMAT } from './formatDate';
 
 /**
  * @description Applies signatures, text, and dates to a PDF document at specified coordinates.
@@ -117,7 +118,7 @@ export async function applyElementsToPdf(
   }
 
   // Process date elements
-  for (const { date, format = 'MM/DD/YYYY', coordinates, fontSize = 12, color } of dates) {
+  for (const { date, format = DEFAULT_DATE_FORMAT, coordinates, fontSize = 12, color } of dates) {
     const page = pdfDoc.getPage(coordinates.pageNumber - 1);
 
     // Format date
@@ -147,23 +148,5 @@ export async function applyElementsToPdf(
 
   // Save PDF and return as Uint8Array
   return await pdfDoc.save();
-}
-
-/**
- * @description Formats a date according to the specified format string.
- * @param date Date to format
- * @param format Format string (MM/DD/YYYY, DD/MM/YYYY, etc.)
- * @returns Formatted date string
- */
-function formatDate(date: Date, format: string): string {
-  const day = date.getDate().toString().padStart(2, '0');
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  const year = date.getFullYear();
-
-  return format
-    .replace('MM', month)
-    .replace('DD', day)
-    .replace('YYYY', year.toString())
-    .replace('YY', year.toString().slice(-2));
 }
 
