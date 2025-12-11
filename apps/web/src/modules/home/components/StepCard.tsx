@@ -22,7 +22,7 @@ export function StepCard({ icon, title, description }: StepCardProps): ReactElem
     <div className="flex flex-col items-center text-center max-w-sm">
       <div className="mb-6">{icon}</div>
       <h3 className="text-xl font-semibold text-blue mb-3">{title}</h3>
-      <p className="text-base text-gray leading-relaxed">{description}</p>
+      <p className="text-base text-blue leading-relaxed">{description}</p>
     </div>
   );
 }
