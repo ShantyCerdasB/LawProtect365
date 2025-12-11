@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import { PageLayout } from '../../ui-kit/layout/PageLayout';
 import { TextField } from '../../ui-kit/forms/TextField';
 import { Button } from '../../ui-kit/buttons/Button';
+import { useAuthStore } from '../../app/store/useAuthStore';
 import { createInterceptedHttpClient } from '@lawprotect/frontend-core';
 import { LocalStorageAdapter } from '../../app/adapters/LocalStorageAdapter';
 import { env } from '../../app/config/env';
@@ -21,12 +22,11 @@ import { env } from '../../app/config/env';
  */
 function LoginPage(): ReactElement {
   const navigate = useNavigate();
+  const { login } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
   const storage = useMemo(() => new LocalStorageAdapter(), []);
-  // HttpClient instance created here to demonstrate frontend-core integration.
-  // It will be used by future auth flows (e.g., fetching /me after OAuth redirect).
   useMemo(
     () =>
       createInterceptedHttpClient({
@@ -39,9 +39,9 @@ function LoginPage(): ReactElement {
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    // TODO: call real email/password auth endpoint.
     await storage.set('auth_token', 'dev-email-password-token');
-    navigate('/admin');
+    await login();
+    navigate('/dashboard');
   };
 
   return (
@@ -92,10 +92,10 @@ function LoginPage(): ReactElement {
             <Button
               type="button"
               className="flex-1 rounded-md border border-slate-300 bg-white px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-              // TODO: redirect to real Google OAuth URL and let backend set the auth token.
               onClick={async () => {
                 await storage.set('auth_token', 'dev-google-token');
-                navigate('/admin');
+                await login();
+                navigate('/dashboard');
               }}
             >
               Continue with Google
@@ -105,7 +105,8 @@ function LoginPage(): ReactElement {
               className="flex-1 rounded-md border border-slate-300 bg-white px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
               onClick={async () => {
                 await storage.set('auth_token', 'dev-outlook-token');
-                navigate('/admin');
+                await login();
+                navigate('/dashboard');
               }}
             >
               Continue with Outlook
@@ -115,7 +116,8 @@ function LoginPage(): ReactElement {
               className="flex-1 rounded-md border border-slate-300 bg-white px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
               onClick={async () => {
                 await storage.set('auth_token', 'dev-apple-token');
-                navigate('/admin');
+                await login();
+                navigate('/dashboard');
               }}
             >
               Continue with Apple

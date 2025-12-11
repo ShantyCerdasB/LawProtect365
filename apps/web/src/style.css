@@ -1,52 +1,12 @@
 @import "tailwindcss";
 
-/**
- * @fileoverview Global Styles - Application-wide styles and color palette
- * @summary Defines the color palette and base styles for the application
- * @description
- * This file contains the global color palette using descriptive color names
- * based on the actual color appearance rather than semantic names.
- * 
- * Color Palette (exact colors provided):
- * - Blue: #1D4878 (main brand color)
- * - Blue Dark: #003454 (darker variant of blue)
- * - Burgundy: #A32439 (error/danger states)
- * - Emerald: #5E9594 (success/info states)
- * - Emerald Dark: #12626D (darker variant of emerald)
- * - Gray: #444B59 (text, borders, backgrounds)
- * - White: #FFFFFF (pure white)
- * 
- * Naming Convention:
- * Colors are named based on their actual color appearance (blue, emerald, burgundy, gray)
- * rather than semantic purposes (primary, error, success) to make the color
- * palette more intuitive and maintainable.
- * 
- * Usage in Tailwind classes:
- * - bg-blue, text-blue, border-blue
- * - bg-blue-dark, text-blue-dark
- * - bg-burgundy, text-burgundy, border-burgundy
- * - bg-emerald, text-emerald, border-emerald
- * - bg-emerald-dark, text-emerald-dark
- * - bg-gray, text-gray, border-gray
- * - bg-white, text-white
- */
-
-:root {
-  /* Blue Colors */
+@theme {
   --color-blue: #1d4878;
   --color-blue-dark: #003454;
-
-  /* Burgundy Colors */
   --color-burgundy: #a32439;
-
-  /* Emerald Colors */
   --color-emerald: #5e9594;
   --color-emerald-dark: #12626d;
-
-  /* Gray Colors */
   --color-gray: #444b59;
-
-  /* Base Colors */
   --color-white: #ffffff;
 }
 

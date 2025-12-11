@@ -1,8 +1,49 @@
-import { ButtonHTMLAttributes } from 'react';
+import type { ReactElement } from 'react';
+import type { ButtonProps } from './interfaces/ButtonInterfaces';
+import {
+  SIZE_CLASSES,
+  VARIANT_CLASSES,
+  VARIANT_CONFIGS,
+  HOVER_CLASSES,
+  DEFAULT_OUTLINE_HOVER_BORDER,
+} from './constants/ButtonConstants';
 
-type Props = ButtonHTMLAttributes<HTMLButtonElement>;
+export function Button({
+  variant = 'primary',
+  size = 'md',
+  bgColor,
+  textColor,
+  borderColor,
+  hoverBgColor,
+  hoverTextColor,
+  className = '',
+  ...props
+}: ButtonProps): ReactElement {
+  const config = VARIANT_CONFIGS[variant];
+  const sizeClass = SIZE_CLASSES[size];
+  const variantClass = VARIANT_CLASSES[variant];
+  const hoverClass = HOVER_CLASSES[variant];
 
-export function Button(props: Props) {
-  return <button {...props} className={`px-3 py-2 rounded ${props.className || ''}`.trim()} />;
+  const styles: React.CSSProperties & Record<string, string> = {
+    backgroundColor: bgColor || config.backgroundColor,
+    color: textColor || config.color,
+    '--border-color': borderColor || config.borderColor,
+    borderColor: 'var(--border-color)',
+  };
+
+  if (variant === 'primary') {
+    styles['--hover-bg'] = hoverBgColor || config.hoverBg;
+  } else if (variant === 'outline') {
+    styles['--hover-border'] = DEFAULT_OUTLINE_HOVER_BORDER;
+  }
+
+  const baseClasses = 'rounded-full font-medium transition-colors border cursor-pointer';
+
+  return (
+    <button
+      {...props}
+      className={`${baseClasses} ${sizeClass} ${variantClass} ${hoverClass} ${className}`.trim()}
+      style={styles as React.CSSProperties}
+    />
+  );
 }
-
