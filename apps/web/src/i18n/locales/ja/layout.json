@@ -53,7 +53,7 @@
       },
       "beverlyHillsOffice": {
         "name": "ビバリーヒルズオフィス",
-        "address": "9440 Santa Monica Blvd, Beverly Hills, CA, 90210",
+        "address": "9440 Santa Monica Blvd, Beverly Hills, CA,\n90210",
         "phone": "(877) 711-8284",
         "email": "admin@lawprotect365.com"
       }

@@ -33,7 +33,7 @@ export function ContactInfo({ offices }: ContactInfoProps): ReactElement {
                 {office.name}
               </span>
             </div>
-            <p className="text-white text-sm md:text-base ml-6">{office.address}</p>
+            <p className="text-white text-sm md:text-base ml-6 whitespace-pre-line">{office.address}</p>
             <div className="flex items-center gap-2 ml-6">
               <PhoneIcon className="w-4 h-4 shrink-0" />
               <a

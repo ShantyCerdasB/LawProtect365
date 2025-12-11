@@ -68,7 +68,7 @@ export function Sign365Page(): ReactElement {
                   <IconWrapper
                     icon={
                       <img
-                        src="/UploadDocument.svg"
+                        src="/ShareDocument.svg"
                         alt="Share document"
                         className="w-full h-full"
                       />

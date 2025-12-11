@@ -31,7 +31,7 @@ export function ContactSection({ office }: ContactSectionProps): ReactElement {
         </div>
         <div className="flex items-start gap-2">
           <div className="w-4 h-4 shrink-0"></div>
-          <p className="text-white text-sm md:text-base">{office.address}</p>
+          <p className="text-white text-sm md:text-base whitespace-pre-line">{office.address}</p>
         </div>
         <div className="flex items-center gap-2">
           <PhoneIcon className="w-4 h-4 shrink-0" />
