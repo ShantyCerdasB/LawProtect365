@@ -55,6 +55,26 @@ export function createHttpClient(baseUrl: string, fetchImpl: typeof fetch): Http
       body: body ? JSON.stringify(body) : undefined
     });
 
+    if (!res.ok) {
+      let errorCode = 'UNKNOWN_ERROR';
+      let errorData: unknown = null;
+
+      try {
+        errorData = await res.json();
+        if (errorData && typeof errorData === 'object' && 'error' in errorData) {
+          const errorObj = errorData as { error?: { code?: string; field?: string; params?: Record<string, unknown> } };
+          if (errorObj.error?.code) {
+            errorCode = errorObj.error.code;
+          }
+        }
+      } catch {
+        errorCode = res.status === 401 ? 'UNAUTHORIZED' : res.status === 403 ? 'FORBIDDEN' : res.status === 404 ? 'NOT_FOUND' : 'UNKNOWN_ERROR';
+      }
+
+      const { HttpError } = await import('./errors');
+      throw new HttpError(errorCode, res.status, errorData);
+    }
+
     const json = (await res.json()) as unknown;
     const parsed = schema ? schema.parse(json) : (json as T);
     return parsed;

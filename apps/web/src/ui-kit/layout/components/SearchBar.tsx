@@ -1,11 +1,14 @@
 import { useState, type ReactElement } from 'react';
+import { useTranslation } from '@lawprotect/frontend-core';
 import type { SearchBarProps } from '../interfaces/SearchBarInterfaces';
 
 export function SearchBar({
   onSearch,
-  placeholder = 'Start your search',
+  placeholder,
   className = '',
 }: SearchBarProps): ReactElement {
+  const { t } = useTranslation('layout');
+  const defaultPlaceholder = placeholder || t('header.searchPlaceholder');
   const [query, setQuery] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -19,7 +22,7 @@ export function SearchBar({
         type="text"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder={placeholder}
+        placeholder={defaultPlaceholder}
         className="w-full px-4 py-2 pr-10 rounded-lg bg-white text-gray placeholder-gray/60 focus:outline-none focus:ring-2 focus:ring-emerald"
       />
       <button

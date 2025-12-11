@@ -1,16 +1,20 @@
 import { useState, type ReactElement } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../app/store/useAuthStore';
+import { useTranslation } from '@lawprotect/frontend-core';
 import { Button } from '../buttons/Button';
 import { Logo } from './components/Logo';
 import { NavigationMenu } from './components/NavigationMenu';
 import { SearchBar } from './components/SearchBar';
-import { menuConfig } from './config/menuConfig';
+import { LanguageSelector } from './components/LanguageSelector';
+import { useMenuConfig } from './hooks/useMenuConfig';
 
 export function Header(): ReactElement {
   const { isAuthenticated, login, logout } = useAuthStore();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { t } = useTranslation('layout');
+  const menuConfig = useMenuConfig();
 
   const publicMenuItems = menuConfig.filter((item) => item.showWhenLoggedOut && !item.requiresAuth);
 
@@ -43,13 +47,14 @@ export function Header(): ReactElement {
               <div className="hidden md:block flex-1 max-w-md mx-auto">
                 <SearchBar onSearch={handleSearch} />
               </div>
+              <LanguageSelector />
               <Button
                 variant="outline"
                 size="md"
                 onClick={() => navigate('/account')}
                 className="whitespace-nowrap"
               >
-                MY ACCOUNT
+                {t('header.myAccount')}
               </Button>
               <Button
                 variant="outline"
@@ -57,7 +62,7 @@ export function Header(): ReactElement {
                 onClick={handleSignOut}
                 className="whitespace-nowrap"
               >
-                SIGN OUT
+                {t('header.signOut')}
               </Button>
             </div>
           ) : (
@@ -68,14 +73,15 @@ export function Header(): ReactElement {
                 </div>
               </div>
               <div className="flex items-center gap-3 md:gap-4 mr-4 md:mr-6">
+                <LanguageSelector />
                 <Link
                   to="/register"
                   className="text-white text-lg md:text-xl hover:text-white hover:font-normal hover:text-2xl transition-all hidden md:block cursor-pointer"
                 >
-                  REGISTER
+                  {t('menu.register')}
                 </Link>
                 <Button variant="outline" size="md" onClick={handleSignIn} className="whitespace-nowrap">
-                  SIGN IN
+                  {t('header.signIn')}
                 </Button>
                 <button
                   type="button"
@@ -120,7 +126,7 @@ export function Header(): ReactElement {
                 to="/register"
                 className="block text-white text-lg hover:text-white hover:font-normal hover:text-xl transition-all py-2 cursor-pointer"
               >
-                REGISTER
+                {t('menu.register')}
               </Link>
             </div>
           </div>

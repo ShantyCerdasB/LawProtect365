@@ -12,3 +12,4 @@ export * from './modules/users';
 export * from './modules/kyc';
 export * from './modules/signature';
 export * from './modules/documents';
+export * from './i18n';
