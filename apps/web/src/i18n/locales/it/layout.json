@@ -12,6 +12,30 @@
     "signOut": "ESCI",
     "myAccount": "IL MIO ACCOUNT",
     "searchPlaceholder": "Inizia la ricerca"
+  },
+  "sign365": {
+    "hero": {
+      "title": "Firma 365",
+      "subtitle": "Prepara rapidamente documenti per la firma elettronica.",
+      "description": "Condividi, firma e gestisci senza problemi."
+    },
+    "steps": {
+      "addDocument": {
+        "title": "Aggiungi il tuo documento",
+        "description": "Aggiungi o seleziona semplicemente il tuo documento e inserisci i campi di firma e data."
+      },
+      "shareDocument": {
+        "title": "Condividi il tuo documento",
+        "description": "Scegli chi vedrà e firmerà il tuo documento, o condividilo con un avvocato."
+      },
+      "saveDocument": {
+        "title": "Salva il tuo documento",
+        "description": "Archivia documenti firmati per la custodia e l'accesso facile ovunque."
+      }
+    },
+    "cta": {
+      "button": "Inizia a firmare ora"
+    }
   }
 }
 

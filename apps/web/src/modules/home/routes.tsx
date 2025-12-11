@@ -11,6 +11,7 @@ import { Link } from 'react-router-dom';
 import type { ReactElement } from 'react';
 import { PageLayout } from '../../ui-kit/layout/PageLayout';
 import { queryKeys } from '@lawprotect/frontend-core';
+import { Sign365Page } from './pages/Sign365Page';
 
 const MODULE_LINKS = [
   { path: '/auth/login', label: 'Authentication' },
@@ -81,6 +82,10 @@ export function homeRoutes() {
     {
       path: '/',
       element: <HomePage />
+    },
+    {
+      path: '/sign-365',
+      element: <Sign365Page />
     }
   ];
 }

@@ -12,6 +12,30 @@
     "signOut": "CERRAR SESIÓN",
     "myAccount": "MI CUENTA",
     "searchPlaceholder": "Comienza tu búsqueda"
+  },
+  "sign365": {
+    "hero": {
+      "title": "Firma 365",
+      "subtitle": "Prepara rápidamente documentos para firma electrónica.",
+      "description": "Comparte, firma y gestiona sin problemas."
+    },
+    "steps": {
+      "addDocument": {
+        "title": "Agrega tu documento",
+        "description": "Simplemente agrega o selecciona tu documento y coloca campos de firma y fecha."
+      },
+      "shareDocument": {
+        "title": "Comparte tu documento",
+        "description": "Elige quién verá y firmará tu documento, o compártelo con un abogado."
+      },
+      "saveDocument": {
+        "title": "Guarda tu documento",
+        "description": "Almacena documentos firmados para su custodia y acceso fácil en cualquier lugar."
+      }
+    },
+    "cta": {
+      "button": "Comenzar a firmar ahora"
+    }
   }
 }
 

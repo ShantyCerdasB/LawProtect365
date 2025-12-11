@@ -12,6 +12,30 @@
     "signOut": "サインアウト",
     "myAccount": "マイアカウント",
     "searchPlaceholder": "検索を開始"
+  },
+  "sign365": {
+    "hero": {
+      "title": "サイン365",
+      "subtitle": "電子署名用の文書を迅速に準備します。",
+      "description": "シームレスに共有、署名、管理します。"
+    },
+    "steps": {
+      "addDocument": {
+        "title": "文書を追加",
+        "description": "文書を追加または選択し、署名と日付フィールドを配置します。"
+      },
+      "shareDocument": {
+        "title": "文書を共有",
+        "description": "文書を閲覧・署名する人を選択するか、弁護士と共有します。"
+      },
+      "saveDocument": {
+        "title": "文書を保存",
+        "description": "署名済み文書を安全に保管し、どこからでも簡単にアクセスできます。"
+      }
+    },
+    "cta": {
+      "button": "今すぐ署名を開始"
+    }
   }
 }
 

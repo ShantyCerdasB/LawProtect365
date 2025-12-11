@@ -12,6 +12,30 @@
     "signOut": "SIGN OUT",
     "myAccount": "MY ACCOUNT",
     "searchPlaceholder": "Start your search"
+  },
+  "sign365": {
+    "hero": {
+      "title": "Sign 365",
+      "subtitle": "Quickly prepare documents for electronic signature.",
+      "description": "Share, sign, and manage seamlessly."
+    },
+    "steps": {
+      "addDocument": {
+        "title": "Add your document",
+        "description": "Simply add or select your document and drop in signature and date fields."
+      },
+      "shareDocument": {
+        "title": "Share your document",
+        "description": "Choose who will see and sign your document, or share it with an attorney."
+      },
+      "saveDocument": {
+        "title": "Save your document",
+        "description": "Store signed documents for safekeeping and easy access anywhere."
+      }
+    },
+    "cta": {
+      "button": "Start signing now"
+    }
   }
 }
 
