@@ -8,22 +8,16 @@
 
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { withAuthGuard } from './guards';
-import { AppLayout } from '../layout/AppLayout';
 import { homeRoutes } from '../../modules/home/routes';
 import { authRoutes } from '../../modules/auth/routes';
 import { adminRoutes } from '../../modules/admin/routes';
 import { documentsRoutes } from '../../modules/documents/routes';
 
 const router = createBrowserRouter([
-  {
-    element: <AppLayout />,
-    children: [
-      ...homeRoutes(),
-      ...authRoutes(),
-      ...adminRoutes(),
-      ...documentsRoutes(),
-    ],
-  },
+  ...homeRoutes(),
+  ...authRoutes(),
+  ...adminRoutes(),
+  ...documentsRoutes()
 ]);
 
 import type { ReactElement } from 'react';

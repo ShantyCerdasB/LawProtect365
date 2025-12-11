@@ -245,14 +245,6 @@ export class WebElementInteractionHandler {
   }
 
   /**
-   * @description Updates the interaction context with new element data.
-   * @param context New interaction context
-   */
-  updateContext(context: ElementInteractionContext): void {
-    this.config.context = context;
-  }
-
-  /**
    * @description Handles pointer down event on the PDF canvas.
    * @param event React pointer event from the canvas
    * @param canvas HTML canvas element that received the event
