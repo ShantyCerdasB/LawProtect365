@@ -1,0 +1,51 @@
+{
+  "signing": {
+    "title": "Sign Document",
+    "uploadPdf": "Upload PDF",
+    "selectFile": "Select PDF file",
+    "placeSignature": "Place Signature",
+    "placeText": "Place Text",
+    "placeDate": "Place Date",
+    "download": "Download Signed PDF",
+    "clear": "Clear",
+    "save": "Save"
+  },
+  "editing": {
+    "title": "Edit Document",
+    "addElement": "Add Element",
+    "removeElement": "Remove Element",
+    "moveElement": "Move Element",
+    "resizeElement": "Resize Element"
+  },
+  "modals": {
+    "signature": {
+      "title": "Create Signature",
+      "draw": "Draw",
+      "type": "Type",
+      "clear": "Clear",
+      "cancel": "Cancel",
+      "save": "Save Signature"
+    },
+    "text": {
+      "title": "Add Text",
+      "placeholder": "Enter text to place on PDF",
+      "fontSize": "Font Size",
+      "cancel": "Cancel",
+      "add": "Add Text"
+    },
+    "date": {
+      "title": "Add Date",
+      "format": "Date Format",
+      "fontSize": "Font Size",
+      "cancel": "Cancel",
+      "add": "Add Date"
+    }
+  },
+  "pagination": {
+    "previous": "Previous",
+    "next": "Next",
+    "page": "Page",
+    "of": "of"
+  }
+}
+

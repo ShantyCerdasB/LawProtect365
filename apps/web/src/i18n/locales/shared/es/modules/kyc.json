@@ -1,0 +1,22 @@
+{
+  "title": "Verificación KYC",
+  "steps": {
+    "personalInfo": "Información Personal",
+    "identity": "Verificación de Identidad",
+    "address": "Verificación de Dirección",
+    "review": "Revisar y Enviar"
+  },
+  "form": {
+    "uploadDocument": "Subir Documento",
+    "documentType": "Tipo de Documento",
+    "submit": "Enviar para Revisión",
+    "status": "Estado de Verificación"
+  },
+  "status": {
+    "pending": "Pendiente de Revisión",
+    "approved": "Aprobado",
+    "rejected": "Rechazado",
+    "requiresAction": "Requiere Acción"
+  }
+}
+

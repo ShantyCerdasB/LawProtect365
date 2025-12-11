@@ -1,0 +1,16 @@
+{
+  "title": "Admin Dashboard",
+  "overview": {
+    "title": "Overview",
+    "totalUsers": "Total Users",
+    "totalDocuments": "Total Documents",
+    "totalPayments": "Total Payments"
+  },
+  "settings": {
+    "title": "Settings",
+    "general": "General Settings",
+    "security": "Security Settings",
+    "notifications": "Notification Settings"
+  }
+}
+

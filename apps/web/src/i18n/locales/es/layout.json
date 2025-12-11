@@ -1,0 +1,17 @@
+{
+  "menu": {
+    "home": "INICIO",
+    "ourServices": "NUESTROS SERVICIOS",
+    "membership": "MEMBRESÍA",
+    "sign365": "FIRMA 365",
+    "contact": "CONTACTO",
+    "register": "REGISTRARSE"
+  },
+  "header": {
+    "signIn": "INICIAR SESIÓN",
+    "signOut": "CERRAR SESIÓN",
+    "myAccount": "MI CUENTA",
+    "searchPlaceholder": "Comienza tu búsqueda"
+  }
+}
+

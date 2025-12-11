@@ -1,0 +1,26 @@
+{
+  "title": "Pagos",
+  "list": {
+    "title": "Historial de Pagos",
+    "noPayments": "No se encontraron pagos",
+    "amount": "Monto",
+    "date": "Fecha",
+    "status": "Estado"
+  },
+  "form": {
+    "makePayment": "Realizar Pago",
+    "amount": "Monto",
+    "paymentMethod": "Método de Pago",
+    "cardNumber": "Número de Tarjeta",
+    "expiryDate": "Fecha de Vencimiento",
+    "cvv": "CVV",
+    "process": "Procesar Pago"
+  },
+  "status": {
+    "pending": "Pendiente",
+    "completed": "Completado",
+    "failed": "Fallido",
+    "refunded": "Reembolsado"
+  }
+}
+

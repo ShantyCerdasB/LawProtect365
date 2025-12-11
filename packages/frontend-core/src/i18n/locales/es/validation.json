@@ -1,0 +1,11 @@
+{
+  "required": "Este campo es requerido",
+  "email": "Por favor ingresa un correo electrónico válido",
+  "minLength": "Debe tener al menos {{min}} caracteres",
+  "maxLength": "No debe tener más de {{max}} caracteres",
+  "pattern": "Formato inválido",
+  "number": "Debe ser un número",
+  "positive": "Debe ser un número positivo",
+  "date": "Por favor ingresa una fecha válida"
+}
+

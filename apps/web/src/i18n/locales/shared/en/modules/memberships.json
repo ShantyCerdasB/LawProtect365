@@ -1,0 +1,20 @@
+{
+  "title": "Memberships",
+  "list": {
+    "title": "Membership Plans",
+    "currentPlan": "Current Plan",
+    "upgrade": "Upgrade",
+    "downgrade": "Downgrade"
+  },
+  "plans": {
+    "basic": "Basic",
+    "premium": "Premium",
+    "enterprise": "Enterprise"
+  },
+  "features": {
+    "documents": "Documents",
+    "storage": "Storage",
+    "support": "Support Level"
+  }
+}
+

@@ -1,0 +1,22 @@
+{
+  "title": "KYC Verification",
+  "steps": {
+    "personalInfo": "Personal Information",
+    "identity": "Identity Verification",
+    "address": "Address Verification",
+    "review": "Review & Submit"
+  },
+  "form": {
+    "uploadDocument": "Upload Document",
+    "documentType": "Document Type",
+    "submit": "Submit for Review",
+    "status": "Verification Status"
+  },
+  "status": {
+    "pending": "Pending Review",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "requiresAction": "Requires Action"
+  }
+}
+

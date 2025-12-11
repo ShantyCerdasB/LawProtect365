@@ -1,0 +1,51 @@
+{
+  "signing": {
+    "title": "Firmar Documento",
+    "uploadPdf": "Subir PDF",
+    "selectFile": "Seleccionar archivo PDF",
+    "placeSignature": "Colocar Firma",
+    "placeText": "Colocar Texto",
+    "placeDate": "Colocar Fecha",
+    "download": "Descargar PDF Firmado",
+    "clear": "Limpiar",
+    "save": "Guardar"
+  },
+  "editing": {
+    "title": "Editar Documento",
+    "addElement": "Agregar Elemento",
+    "removeElement": "Eliminar Elemento",
+    "moveElement": "Mover Elemento",
+    "resizeElement": "Redimensionar Elemento"
+  },
+  "modals": {
+    "signature": {
+      "title": "Crear Firma",
+      "draw": "Dibujar",
+      "type": "Escribir",
+      "clear": "Limpiar",
+      "cancel": "Cancelar",
+      "save": "Guardar Firma"
+    },
+    "text": {
+      "title": "Agregar Texto",
+      "placeholder": "Ingresa el texto para colocar en el PDF",
+      "fontSize": "Tamaño de Fuente",
+      "cancel": "Cancelar",
+      "add": "Agregar Texto"
+    },
+    "date": {
+      "title": "Agregar Fecha",
+      "format": "Formato de Fecha",
+      "fontSize": "Tamaño de Fuente",
+      "cancel": "Cancelar",
+      "add": "Agregar Fecha"
+    }
+  },
+  "pagination": {
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "page": "Página",
+    "of": "de"
+  }
+}
+

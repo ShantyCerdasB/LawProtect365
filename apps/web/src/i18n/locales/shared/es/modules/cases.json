@@ -1,0 +1,25 @@
+{
+  "title": "Casos",
+  "list": {
+    "title": "Gestión de Casos",
+    "addCase": "Agregar Caso",
+    "search": "Buscar casos...",
+    "noCases": "No se encontraron casos"
+  },
+  "form": {
+    "create": "Crear Caso",
+    "edit": "Editar Caso",
+    "title": "Título del Caso",
+    "description": "Descripción",
+    "status": "Estado",
+    "priority": "Prioridad",
+    "assignee": "Asignado a",
+    "save": "Guardar Caso"
+  },
+  "status": {
+    "open": "Abierto",
+    "inProgress": "En Progreso",
+    "closed": "Cerrado"
+  }
+}
+

@@ -1,0 +1,25 @@
+{
+  "title": "Users",
+  "list": {
+    "title": "User Management",
+    "addUser": "Add User",
+    "search": "Search users...",
+    "noUsers": "No users found"
+  },
+  "form": {
+    "create": "Create User",
+    "edit": "Edit User",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "email": "Email",
+    "role": "Role",
+    "save": "Save User",
+    "cancel": "Cancel"
+  },
+  "actions": {
+    "edit": "Edit",
+    "delete": "Delete",
+    "view": "View"
+  }
+}
+

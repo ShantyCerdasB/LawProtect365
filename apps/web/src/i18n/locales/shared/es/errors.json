@@ -1,0 +1,22 @@
+{
+  "api": {
+    "VALIDATION_ERROR": "Por favor verifica tu entrada",
+    "EMAIL_INVALID": "Por favor ingresa un correo electrónico válido",
+    "EMAIL_REQUIRED": "El correo electrónico es requerido",
+    "PASSWORD_REQUIRED": "La contraseña es requerida",
+    "PASSWORD_TOO_SHORT": "La contraseña debe tener al menos 8 caracteres",
+    "UNAUTHORIZED": "No estás autorizado para realizar esta acción",
+    "FORBIDDEN": "No tienes permiso para acceder a este recurso",
+    "NOT_FOUND": "El recurso solicitado no fue encontrado",
+    "INTERNAL_SERVER_ERROR": "Ocurrió un error interno del servidor. Por favor intenta más tarde",
+    "NETWORK_ERROR": "Error de red. Por favor verifica tu conexión",
+    "TIMEOUT": "La solicitud expiró. Por favor intenta de nuevo",
+    "UNKNOWN_ERROR": "Ocurrió un error inesperado"
+  },
+  "generic": {
+    "somethingWentWrong": "Algo salió mal",
+    "tryAgain": "Por favor intenta de nuevo",
+    "contactSupport": "Si el problema persiste, por favor contacta soporte"
+  }
+}
+

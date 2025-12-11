@@ -1,0 +1,25 @@
+{
+  "title": "Cases",
+  "list": {
+    "title": "Case Management",
+    "addCase": "Add Case",
+    "search": "Search cases...",
+    "noCases": "No cases found"
+  },
+  "form": {
+    "create": "Create Case",
+    "edit": "Edit Case",
+    "title": "Case Title",
+    "description": "Description",
+    "status": "Status",
+    "priority": "Priority",
+    "assignee": "Assignee",
+    "save": "Save Case"
+  },
+  "status": {
+    "open": "Open",
+    "inProgress": "In Progress",
+    "closed": "Closed"
+  }
+}
+

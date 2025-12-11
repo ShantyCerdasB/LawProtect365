@@ -1,0 +1,16 @@
+{
+  "title": "Panel de Administración",
+  "overview": {
+    "title": "Resumen",
+    "totalUsers": "Total de Usuarios",
+    "totalDocuments": "Total de Documentos",
+    "totalPayments": "Total de Pagos"
+  },
+  "settings": {
+    "title": "Configuración",
+    "general": "Configuración General",
+    "security": "Configuración de Seguridad",
+    "notifications": "Configuración de Notificaciones"
+  }
+}
+

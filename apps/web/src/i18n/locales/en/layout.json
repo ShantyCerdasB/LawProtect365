@@ -1,0 +1,17 @@
+{
+  "menu": {
+    "home": "HOME",
+    "ourServices": "OUR SERVICES",
+    "membership": "MEMBERSHIP",
+    "sign365": "SIGN 365",
+    "contact": "CONTACT",
+    "register": "REGISTER"
+  },
+  "header": {
+    "signIn": "SIGN IN",
+    "signOut": "SIGN OUT",
+    "myAccount": "MY ACCOUNT",
+    "searchPlaceholder": "Start your search"
+  }
+}
+

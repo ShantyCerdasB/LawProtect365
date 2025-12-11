@@ -1,0 +1,16 @@
+{
+  "title": "Notificaciones",
+  "list": {
+    "title": "Notificaciones",
+    "noNotifications": "No hay notificaciones",
+    "markAllRead": "Marcar todas como leídas",
+    "clearAll": "Limpiar todas"
+  },
+  "types": {
+    "info": "Información",
+    "success": "Éxito",
+    "warning": "Advertencia",
+    "error": "Error"
+  }
+}
+

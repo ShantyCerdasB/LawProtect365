@@ -1,0 +1,25 @@
+{
+  "title": "Usuarios",
+  "list": {
+    "title": "Gestión de Usuarios",
+    "addUser": "Agregar Usuario",
+    "search": "Buscar usuarios...",
+    "noUsers": "No se encontraron usuarios"
+  },
+  "form": {
+    "create": "Crear Usuario",
+    "edit": "Editar Usuario",
+    "firstName": "Nombre",
+    "lastName": "Apellido",
+    "email": "Correo Electrónico",
+    "role": "Rol",
+    "save": "Guardar Usuario",
+    "cancel": "Cancelar"
+  },
+  "actions": {
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "view": "Ver"
+  }
+}
+

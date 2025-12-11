@@ -1,0 +1,16 @@
+{
+  "title": "Notifications",
+  "list": {
+    "title": "Notifications",
+    "noNotifications": "No notifications",
+    "markAllRead": "Mark all as read",
+    "clearAll": "Clear all"
+  },
+  "types": {
+    "info": "Information",
+    "success": "Success",
+    "warning": "Warning",
+    "error": "Error"
+  }
+}
+
