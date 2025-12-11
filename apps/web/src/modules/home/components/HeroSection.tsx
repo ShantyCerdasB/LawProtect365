@@ -22,14 +22,28 @@ export function HeroSection({
   subtitle,
   description,
 }: HeroSectionProps): ReactElement {
+  const renderSubtitle = () => {
+    const parts = subtitle.split(/(electronic signature)/i);
+    return parts.map((part, index) => {
+      if (part.toLowerCase() === 'electronic signature') {
+        return (
+          <span key={index} className="text-blue font-semibold">
+            {part}
+          </span>
+        );
+      }
+      return <span key={index}>{part}</span>;
+    });
+  };
+
   return (
     <div className="text-center mb-12">
       <h1 className="text-5xl md:text-6xl font-bold text-emerald-dark mb-4">
         {title}
       </h1>
-      <p className="text-lg md:text-xl text-gray mb-2">{subtitle}</p>
+      <p className="text-lg md:text-xl text-blue mb-2">{renderSubtitle()}</p>
       {description && (
-        <p className="text-base md:text-lg text-gray">{description}</p>
+        <p className="text-base md:text-lg text-blue">{description}</p>
       )}
     </div>
   );

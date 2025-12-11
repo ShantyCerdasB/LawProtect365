@@ -1,6 +1,7 @@
 import { type ReactElement } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Header } from '../../ui-kit/layout/Header';
+import { Footer } from '../../ui-kit/layout/components/Footer';
 
 export function AppLayout(): ReactElement {
   return (
@@ -9,6 +10,7 @@ export function AppLayout(): ReactElement {
       <main className="flex-1">
         <Outlet />
       </main>
+      <Footer />
     </div>
   );
 }

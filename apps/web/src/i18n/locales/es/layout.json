@@ -36,6 +36,31 @@
     "cta": {
       "button": "Comenzar a firmar ahora"
     }
+  },
+  "footer": {
+    "mission": "Ofrecemos apoyo legal constante, empoderando a individuos, familias y empresas con la fortaleza y claridad para navegar los desafíos de la vida, asegurando acceso a la justicia y protección todos los días del año.",
+    "workingHours": {
+      "title": "Horario de Atención",
+      "schedule": "Lun-Vie: 9:00AM - 5:00PM"
+    },
+    "contact": {
+      "title": "Contáctanos",
+      "corporateOffice": {
+        "name": "Oficina Corporativa",
+        "address": "13925 City Center Dr, Suite 200, Chino Hills, CA, 91709",
+        "phone": "(877) 711-8284",
+        "email": "admin@lawprotect365.com"
+      },
+      "beverlyHillsOffice": {
+        "name": "Oficina de Beverly Hills",
+        "address": "9440 Santa Monica Blvd, Beverly Hills, CA, 90210",
+        "phone": "(877) 711-8284",
+        "email": "admin@lawprotect365.com"
+      }
+    },
+    "bottom": {
+      "copyright": "©2024 LawProtect 365. Todos los Derechos Reservados."
+    }
   }
 }
 

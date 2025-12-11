@@ -36,6 +36,31 @@
     "cta": {
       "button": "今すぐ署名を開始"
     }
+  },
+  "footer": {
+    "mission": "私たちは、個人、家族、企業に強さと明確さを与え、人生の課題を乗り越え、毎日正義と保護へのアクセスを確保する、揺るぎない法的サポートを提供します。",
+    "workingHours": {
+      "title": "営業時間",
+      "schedule": "月-金: 9:00AM - 5:00PM"
+    },
+    "contact": {
+      "title": "お問い合わせ",
+      "corporateOffice": {
+        "name": "本社",
+        "address": "13925 City Center Dr, Suite 200, Chino Hills, CA, 91709",
+        "phone": "(877) 711-8284",
+        "email": "admin@lawprotect365.com"
+      },
+      "beverlyHillsOffice": {
+        "name": "ビバリーヒルズオフィス",
+        "address": "9440 Santa Monica Blvd, Beverly Hills, CA, 90210",
+        "phone": "(877) 711-8284",
+        "email": "admin@lawprotect365.com"
+      }
+    },
+    "bottom": {
+      "copyright": "©2024 LawProtect 365. 全著作権所有。"
+    }
   }
 }
 
