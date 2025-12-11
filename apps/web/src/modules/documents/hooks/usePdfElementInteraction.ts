@@ -54,6 +54,7 @@ export function usePdfElementInteraction(
   const [wasDragging, setWasDragging] = useState(false);
 
   const handlerRef = useRef<WebElementInteractionHandler | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
     if (!renderMetrics) return;
@@ -79,18 +80,33 @@ export function usePdfElementInteraction(
       pendingSignatureHeight,
     };
 
-    handlerRef.current = new WebElementInteractionHandler({
-      renderMetrics,
-      context,
-      setDraggedElement,
-      setResizeHandle,
-      onElementMove,
-      onElementDelete,
-      onSignatureResize,
-      onTextResize,
-      onDateResize,
-      onPageClick,
-    });
+    if (handlerRef.current) {
+      // Update existing handler instead of recreating
+      handlerRef.current.updateConfig({
+        renderMetrics,
+        context,
+        onElementMove,
+        onElementDelete,
+        onSignatureResize,
+        onTextResize,
+        onDateResize,
+        onPageClick,
+      });
+    } else {
+      // Create new handler only if it doesn't exist
+      handlerRef.current = new WebElementInteractionHandler({
+        renderMetrics,
+        context,
+        setDraggedElement,
+        setResizeHandle,
+        onElementMove,
+        onElementDelete,
+        onSignatureResize,
+        onTextResize,
+        onDateResize,
+        onPageClick,
+      });
+    }
   }, [
     renderMetrics,
     currentPage,
@@ -119,6 +135,7 @@ export function usePdfElementInteraction(
       if (!handler) return;
 
       const canvas = event.currentTarget;
+      canvasRef.current = canvas;
       handler.handlePointerDown(event, canvas);
     },
     []
@@ -138,6 +155,58 @@ export function usePdfElementInteraction(
     },
     [draggedElement, resizeHandle]
   );
+
+  /**
+   * @description Handles global pointer move events during drag or resize operations.
+   * This ensures drag continues even when pointer leaves the canvas.
+   */
+  useEffect(() => {
+    if (!draggedElement && !resizeHandle) return;
+    if (!canvasRef.current) return;
+
+    const handleGlobalPointerMove = (event: PointerEvent) => {
+      const handler = handlerRef.current;
+      const canvas = canvasRef.current;
+      if (!handler || !canvas) return;
+
+      // Create a synthetic React event-like object
+      const syntheticEvent = {
+        clientX: event.clientX,
+        clientY: event.clientY,
+        pointerId: event.pointerId,
+        currentTarget: canvas,
+      } as unknown as React.PointerEvent<HTMLCanvasElement>;
+
+      handler.handlePointerMove(syntheticEvent, canvas, draggedElement, resizeHandle);
+    };
+
+    const handleGlobalPointerUp = (event: PointerEvent) => {
+      const handler = handlerRef.current;
+      const canvas = canvasRef.current;
+      if (!handler || !canvas) return;
+
+      const syntheticEvent = {
+        pointerId: event.pointerId,
+        currentTarget: canvas,
+      } as unknown as React.PointerEvent<HTMLCanvasElement>;
+
+      handler.handlePointerUp(syntheticEvent, canvas);
+
+      setWasDragging(true);
+      setTimeout(() => setWasDragging(false), 100);
+
+      setDraggedElement(null);
+      setResizeHandle(null);
+    };
+
+    document.addEventListener('pointermove', handleGlobalPointerMove);
+    document.addEventListener('pointerup', handleGlobalPointerUp);
+
+    return () => {
+      document.removeEventListener('pointermove', handleGlobalPointerMove);
+      document.removeEventListener('pointerup', handleGlobalPointerUp);
+    };
+  }, [draggedElement, resizeHandle]);
 
   /**
    * @description Handles pointer up events on the PDF canvas, ending drag or resize operations.
