@@ -1,0 +1,30 @@
+{
+  "buttons": {
+    "save": "Salva",
+    "cancel": "Annulla",
+    "delete": "Elimina",
+    "edit": "Modifica",
+    "close": "Chiudi",
+    "submit": "Invia",
+    "confirm": "Conferma",
+    "back": "Indietro",
+    "next": "Avanti",
+    "previous": "Precedente"
+  },
+  "actions": {
+    "loading": "Caricamento...",
+    "saving": "Salvataggio...",
+    "deleting": "Eliminazione...",
+    "searching": "Ricerca...",
+    "uploading": "Caricamento...",
+    "downloading": "Download..."
+  },
+  "languages": {
+    "en": "Inglese",
+    "es": "Spagnolo",
+    "ja": "Giapponese",
+    "it": "Italiano",
+    "selectLanguage": "Seleziona Lingua"
+  }
+}
+

@@ -18,6 +18,13 @@
     "searching": "Buscando...",
     "uploading": "Subiendo...",
     "downloading": "Descargando..."
+  },
+  "languages": {
+    "en": "Inglés",
+    "es": "Español",
+    "ja": "Japonés",
+    "it": "Italiano",
+    "selectLanguage": "Seleccionar Idioma"
   }
 }
 

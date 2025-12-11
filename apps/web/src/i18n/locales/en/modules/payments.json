@@ -1,0 +1,26 @@
+{
+  "title": "Payments",
+  "list": {
+    "title": "Payment History",
+    "noPayments": "No payments found",
+    "amount": "Amount",
+    "date": "Date",
+    "status": "Status"
+  },
+  "form": {
+    "makePayment": "Make Payment",
+    "amount": "Amount",
+    "paymentMethod": "Payment Method",
+    "cardNumber": "Card Number",
+    "expiryDate": "Expiry Date",
+    "cvv": "CVV",
+    "process": "Process Payment"
+  },
+  "status": {
+    "pending": "Pending",
+    "completed": "Completed",
+    "failed": "Failed",
+    "refunded": "Refunded"
+  }
+}
+

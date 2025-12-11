@@ -1,0 +1,17 @@
+{
+  "menu": {
+    "home": "HOME",
+    "ourServices": "I NOSTRI SERVIZI",
+    "membership": "ABBONAMENTO",
+    "sign365": "FIRMA 365",
+    "contact": "CONTATTO",
+    "register": "REGISTRATI"
+  },
+  "header": {
+    "signIn": "ACCEDI",
+    "signOut": "ESCI",
+    "myAccount": "IL MIO ACCOUNT",
+    "searchPlaceholder": "Inizia la ricerca"
+  }
+}
+

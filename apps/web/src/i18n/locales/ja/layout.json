@@ -1,0 +1,17 @@
+{
+  "menu": {
+    "home": "ホーム",
+    "ourServices": "サービス",
+    "membership": "メンバーシップ",
+    "sign365": "サイン365",
+    "contact": "お問い合わせ",
+    "register": "登録"
+  },
+  "header": {
+    "signIn": "サインイン",
+    "signOut": "サインアウト",
+    "myAccount": "マイアカウント",
+    "searchPlaceholder": "検索を開始"
+  }
+}
+

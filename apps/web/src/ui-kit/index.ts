@@ -1,4 +1,5 @@
 export * from './buttons';
+export * from './dropdown';
 export * from './modals';
 export * from './tables';
 export * from './forms';

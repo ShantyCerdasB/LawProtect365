@@ -1,0 +1,22 @@
+{
+  "api": {
+    "VALIDATION_ERROR": "Controlla il tuo input",
+    "EMAIL_INVALID": "Inserisci un indirizzo email valido",
+    "EMAIL_REQUIRED": "L'email è obbligatoria",
+    "PASSWORD_REQUIRED": "La password è obbligatoria",
+    "PASSWORD_TOO_SHORT": "La password deve essere di almeno 8 caratteri",
+    "UNAUTHORIZED": "Non sei autorizzato a eseguire questa azione",
+    "FORBIDDEN": "Non hai il permesso di accedere a questa risorsa",
+    "NOT_FOUND": "La risorsa richiesta non è stata trovata",
+    "INTERNAL_SERVER_ERROR": "Si è verificato un errore interno del server. Riprova più tardi",
+    "NETWORK_ERROR": "Errore di rete. Controlla la tua connessione",
+    "TIMEOUT": "La richiesta è scaduta. Riprova",
+    "UNKNOWN_ERROR": "Si è verificato un errore imprevisto"
+  },
+  "generic": {
+    "somethingWentWrong": "Qualcosa è andato storto",
+    "tryAgain": "Riprova",
+    "contactSupport": "Se il problema persiste, contatta il supporto"
+  }
+}
+

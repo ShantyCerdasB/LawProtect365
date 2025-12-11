@@ -1,0 +1,18 @@
+{
+  "title": "Calendario",
+  "events": {
+    "title": "Eventos",
+    "addEvent": "Agregar Evento",
+    "noEvents": "No hay eventos programados"
+  },
+  "form": {
+    "create": "Crear Evento",
+    "edit": "Editar Evento",
+    "title": "Título del Evento",
+    "description": "Descripción",
+    "startDate": "Fecha de Inicio",
+    "endDate": "Fecha de Fin",
+    "save": "Guardar Evento"
+  }
+}
+

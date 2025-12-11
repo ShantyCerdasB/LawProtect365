@@ -1,0 +1,22 @@
+{
+  "api": {
+    "VALIDATION_ERROR": "入力を確認してください",
+    "EMAIL_INVALID": "有効なメールアドレスを入力してください",
+    "EMAIL_REQUIRED": "メールアドレスは必須です",
+    "PASSWORD_REQUIRED": "パスワードは必須です",
+    "PASSWORD_TOO_SHORT": "パスワードは8文字以上である必要があります",
+    "UNAUTHORIZED": "この操作を実行する権限がありません",
+    "FORBIDDEN": "このリソースにアクセスする権限がありません",
+    "NOT_FOUND": "要求されたリソースが見つかりませんでした",
+    "INTERNAL_SERVER_ERROR": "内部サーバーエラーが発生しました。後でもう一度お試しください",
+    "NETWORK_ERROR": "ネットワークエラー。接続を確認してください",
+    "TIMEOUT": "リクエストがタイムアウトしました。もう一度お試しください",
+    "UNKNOWN_ERROR": "予期しないエラーが発生しました"
+  },
+  "generic": {
+    "somethingWentWrong": "問題が発生しました",
+    "tryAgain": "もう一度お試しください",
+    "contactSupport": "問題が解決しない場合は、サポートにお問い合わせください"
+  }
+}
+
