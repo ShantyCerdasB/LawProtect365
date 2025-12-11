@@ -20,6 +20,7 @@ import {
 import {
   handleElementPointerDown,
   handleElementPointerMove,
+  detectControlAtPoint,
   type DisplayPoint,
   type PdfRenderMetrics,
 } from '@lawprotect/frontend-core';
@@ -231,6 +232,7 @@ function handleInteractionResult(
  */
 export class WebElementInteractionHandler {
   private config: WebElementInteractionHandlerConfig;
+  private lastElementHit: { type: PdfElementType; index: number } | null = null;
 
   constructor(config: WebElementInteractionHandlerConfig) {
     this.config = config;
@@ -275,6 +277,9 @@ export class WebElementInteractionHandler {
       context,
       displayPoint,
     });
+
+    // Store element hit for click prevention
+    this.lastElementHit = result.elementHit;
 
     if (result.result) {
       handleInteractionResult(result.result, this.config);
@@ -367,6 +372,13 @@ export class WebElementInteractionHandler {
     const { renderMetrics, context, onPageClick } = this.config;
 
     if (draggedElement || resizeHandle || wasDragging) {
+      this.lastElementHit = null;
+      return;
+    }
+
+    // If an element was hit in pointerDown, don't trigger onPageClick
+    if (this.lastElementHit) {
+      this.lastElementHit = null;
       return;
     }
 
@@ -374,6 +386,17 @@ export class WebElementInteractionHandler {
 
     const rect = canvas.getBoundingClientRect();
     const displayPoint = convertWebEventToDisplayPoint(event, rect, renderMetrics);
+
+    // Check if there's an element at this position - if so, don't trigger onPageClick
+    const result = handleElementPointerDown({
+      context,
+      displayPoint,
+    });
+
+    // If an element was hit, don't trigger onPageClick (user clicked on existing element)
+    if (result.elementHit) {
+      return;
+    }
 
     const pdfCoords = convertDisplayToPDF({
       displayPoint,

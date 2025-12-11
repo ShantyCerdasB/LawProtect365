@@ -9,6 +9,7 @@
 
 import type {
   PdfElementHit,
+  PdfControlHit,
   SignaturePlacement,
   TextPlacement,
   DatePlacement,
@@ -98,6 +99,10 @@ export function detectControlAtPoint(
     { type: PdfElementType.Date, array: elements.dates },
   ];
 
+  let foundElementHit: { type: PdfElementType; index: number } | null = null;
+  let foundControlHit: PdfControlHit | null = null;
+  let foundElementBounds: { x: number; y: number; width: number; height: number } | null = null;
+
   for (const { type, array } of elementTypes) {
     for (let i = 0; i < array.length; i++) {
       const bounds = getElementDisplayBounds({
@@ -112,27 +117,43 @@ export function detectControlAtPoint(
 
       if (!bounds) continue;
 
-      const controlHit = getControlAtDisplayPosition(
-        displayPoint.x,
-        displayPoint.y,
-        bounds,
-        type
-      );
+      // Check if point is within element bounds
+      const isWithinBounds =
+        displayPoint.x >= bounds.x &&
+        displayPoint.x <= bounds.x + bounds.width &&
+        displayPoint.y >= bounds.y &&
+        displayPoint.y <= bounds.y + bounds.height;
 
-      if (controlHit) {
-        return {
-          elementHit: { type, index: i },
-          controlHit,
-          elementBounds: bounds,
-        };
+      if (isWithinBounds) {
+        foundElementHit = { type, index: i };
+        foundElementBounds = bounds;
+
+        // Check for control hit (resize handle or delete button)
+        const controlHit = getControlAtDisplayPosition(
+          displayPoint.x,
+          displayPoint.y,
+          bounds,
+          type
+        );
+
+        if (controlHit) {
+          foundControlHit = controlHit;
+          // Return immediately if control is hit (higher priority)
+          return {
+            elementHit: foundElementHit,
+            controlHit: foundControlHit,
+            elementBounds: foundElementBounds,
+          };
+        }
       }
     }
   }
 
+  // Return element hit even if no control was hit
   return {
-    elementHit: null,
-    controlHit: null,
-    elementBounds: null,
+    elementHit: foundElementHit,
+    controlHit: foundControlHit,
+    elementBounds: foundElementBounds,
   };
 }
 

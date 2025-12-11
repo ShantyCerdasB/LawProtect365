@@ -55,6 +55,13 @@ export function usePdfElementInteraction(
 
   const handlerRef = useRef<WebElementInteractionHandler | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const draggedElementRef = useRef<DraggedElementState | null>(null);
+  const resizeHandleRef = useRef<ResizeHandleState | null>(null);
+
+  useEffect(() => {
+    draggedElementRef.current = draggedElement;
+    resizeHandleRef.current = resizeHandle;
+  }, [draggedElement, resizeHandle]);
 
   useEffect(() => {
     if (!renderMetrics) return;
@@ -85,6 +92,8 @@ export function usePdfElementInteraction(
       handlerRef.current.updateConfig({
         renderMetrics,
         context,
+        setDraggedElement,
+        setResizeHandle,
         onElementMove,
         onElementDelete,
         onSignatureResize,
@@ -117,6 +126,8 @@ export function usePdfElementInteraction(
     pendingElementType,
     pendingSignatureWidth,
     pendingSignatureHeight,
+    setDraggedElement,
+    setResizeHandle,
     onElementMove,
     onElementDelete,
     onSignatureResize,
@@ -136,7 +147,11 @@ export function usePdfElementInteraction(
 
       const canvas = event.currentTarget;
       canvasRef.current = canvas;
-      handler.handlePointerDown(event, canvas);
+      const shouldPrevent = handler.handlePointerDown(event, canvas);
+      if (shouldPrevent) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
     },
     []
   );
@@ -151,9 +166,12 @@ export function usePdfElementInteraction(
       if (!handler) return;
 
       const canvas = event.currentTarget;
-      handler.handlePointerMove(event, canvas, draggedElement, resizeHandle);
+      // Use refs to get the latest values
+      const currentDraggedElement = draggedElementRef.current;
+      const currentResizeHandle = resizeHandleRef.current;
+      handler.handlePointerMove(event, canvas, currentDraggedElement, currentResizeHandle);
     },
-    [draggedElement, resizeHandle]
+    []
   );
 
   /**
@@ -169,6 +187,10 @@ export function usePdfElementInteraction(
       const canvas = canvasRef.current;
       if (!handler || !canvas) return;
 
+      // Use refs to get the latest values
+      const currentDraggedElement = draggedElementRef.current;
+      const currentResizeHandle = resizeHandleRef.current;
+
       // Create a synthetic React event-like object
       const syntheticEvent = {
         clientX: event.clientX,
@@ -177,7 +199,7 @@ export function usePdfElementInteraction(
         currentTarget: canvas,
       } as unknown as React.PointerEvent<HTMLCanvasElement>;
 
-      handler.handlePointerMove(syntheticEvent, canvas, draggedElement, resizeHandle);
+      handler.handlePointerMove(syntheticEvent, canvas, currentDraggedElement, currentResizeHandle);
     };
 
     const handleGlobalPointerUp = (event: PointerEvent) => {
@@ -238,9 +260,12 @@ export function usePdfElementInteraction(
       if (!handler) return;
 
       const canvas = event.currentTarget;
-      handler.handleClick(event, canvas, draggedElement, resizeHandle, wasDragging);
+      // Use refs to get the latest values
+      const currentDraggedElement = draggedElementRef.current;
+      const currentResizeHandle = resizeHandleRef.current;
+      handler.handleClick(event, canvas, currentDraggedElement, currentResizeHandle, wasDragging);
     },
-    [draggedElement, resizeHandle, wasDragging]
+    [wasDragging]
   );
 
   return {
