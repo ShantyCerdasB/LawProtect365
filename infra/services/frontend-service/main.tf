@@ -111,10 +111,11 @@ locals {
   merged_env_vars = concat(
     var.environment_variables,      # from root main.tf
     [
-      { name = "FRONTEND_BUCKET",    value = module.frontend_bucket.bucket_id,   type = "PLAINTEXT" },
-      { name = "CLOUDFRONT_DOMAIN",  value = module.cloudfront.domain_name,      type = "PLAINTEXT" },
-      { name = "CALLBACK_URL",       value = local.callback_url,                 type = "PLAINTEXT" },
-      { name = "LOGOUT_URL",         value = local.logout_url,                   type = "PLAINTEXT" }
+      { name = "FRONTEND_BUCKET",           value = module.frontend_bucket.bucket_id,   type = "PLAINTEXT" },
+      { name = "CLOUDFRONT_DOMAIN",         value = module.cloudfront.domain_name,      type = "PLAINTEXT" },
+      { name = "CLOUDFRONT_DISTRIBUTION_ID", value = module.cloudfront.distribution_id, type = "PLAINTEXT" },
+      { name = "CALLBACK_URL",             value = local.callback_url,                 type = "PLAINTEXT" },
+      { name = "LOGOUT_URL",               value = local.logout_url,                   type = "PLAINTEXT" }
     ]
   )
 }
@@ -135,7 +136,11 @@ module "frontend_deployment" {
   service_name                  = var.service_name
 
   artifacts_bucket              = var.artifacts_bucket
-  buildspec_path                = "../frontend-service/buildspec.yml"
+  buildspec_path                = "apps/web/buildspec.yml"
+  extra_s3_buckets              = [
+    "arn:aws:s3:::${var.project_name}-frontend-${var.env}",
+    "arn:aws:s3:::${var.project_name}-frontend-${var.env}/*"
+  ]
   
   # GitHub connection
   github_connection_arn         = var.github_connection_arn

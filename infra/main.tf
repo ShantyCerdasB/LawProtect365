@@ -645,3 +645,46 @@ module "shared_components_pipeline" {
   
   tags = local.common_tags
 }
+
+# Frontend Core Pipeline (frontend-core package publish to CodeArtifact)
+module "frontend_core_pipeline" {
+  source = "./services/deployment-service"
+  
+  project_name          = var.project_name
+  env                   = var.env
+  service_name          = "frontend-core"
+  artifacts_bucket      = module.code_bucket.bucket_id
+  buildspec_path        = "packages/frontend-core/buildspec.yml"
+  compute_type          = var.compute_type
+  environment_image     = var.environment_image
+  environment_variables = [
+    {
+      name  = "CODEARTIFACT_REPO_ENDPOINTS"
+      value = jsonencode(module.codeartifact.artifact_repository_endpoints)
+      type  = "PLAINTEXT"
+    },
+    {
+      name  = "PROJECT_NAME"
+      value = var.project_name
+      type  = "PLAINTEXT"
+    },
+    {
+      name  = "PROJECT_DOMAIN"
+      value = "${var.project_name}-domain"
+      type  = "PLAINTEXT"
+    },
+    {
+      name  = "CODE_BUCKET"
+      value = module.code_bucket.bucket_id
+      type  = "PLAINTEXT"
+    },
+  ]
+  
+  github_connection_arn = module.github_connection.connection_arn
+  github_owner         = var.github_owner
+  github_repo          = var.github_repo
+  provider_type        = var.provider_type
+  branch               = var.github_branch
+  
+  tags = local.common_tags
+}

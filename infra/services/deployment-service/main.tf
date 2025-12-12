@@ -77,6 +77,8 @@ module "codebuild_role" {
     "codeartifact-access" = data.aws_iam_policy_document.codeartifact_policy.json
     "secrets-manager-access" = data.aws_iam_policy_document.secrets_manager_policy.json
     "lambda-access" = data.aws_iam_policy_document.lambda_policy.json
+    "cloudfront-access" = data.aws_iam_policy_document.cloudfront_policy.json
+    "s3-frontend-access" = data.aws_iam_policy_document.s3_frontend_policy.json
   }
   project_name    = var.project_name
   env             = var.env

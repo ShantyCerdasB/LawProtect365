@@ -96,6 +96,8 @@ data "aws_iam_policy_document" "codeartifact_policy" {
       "codeartifact:GetAuthorizationToken",
       "codeartifact:GetRepositoryEndpoint",
       "codeartifact:ReadFromRepository",
+      "codeartifact:PublishPackageVersion",
+      "codeartifact:PutPackageMetadata",
       "sts:GetServiceBearerToken"
     ]
     resources = [
@@ -178,5 +180,42 @@ data "aws_iam_policy_document" "lambda_policy" {
       "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:layer:${var.project_name}-${var.service_name}-deps-${var.env}",
       "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:layer:${var.project_name}-${var.service_name}-deps-${var.env}:*"
     ]
+  }
+}
+
+# CloudFront invalidation permissions for CodeBuild (frontend deployments)
+data "aws_iam_policy_document" "cloudfront_policy" {
+  statement {
+    effect = "Allow"
+    actions = [
+      "cloudfront:CreateInvalidation",
+      "cloudfront:GetInvalidation",
+      "cloudfront:ListInvalidations"
+    ]
+    resources = [
+      "arn:aws:cloudfront::${data.aws_caller_identity.current.account_id}:distribution/*"
+    ]
+  }
+}
+
+# S3 permissions for frontend bucket (for web app deployments)
+data "aws_iam_policy_document" "s3_frontend_policy" {
+  statement {
+    effect = "Allow"
+    actions = [
+      "s3:PutObject",
+      "s3:PutObjectAcl",
+      "s3:GetObject",
+      "s3:DeleteObject",
+      "s3:ListBucket"
+    ]
+    resources = concat(
+      [
+        # Frontend bucket (if provided via variable)
+        "arn:aws:s3:::${var.project_name}-frontend-${var.env}",
+        "arn:aws:s3:::${var.project_name}-frontend-${var.env}/*"
+      ],
+      var.extra_s3_buckets
+    )
   }
 }

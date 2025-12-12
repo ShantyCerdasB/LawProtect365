@@ -122,3 +122,9 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "extra_s3_buckets" {
+  description = "Optional list of additional S3 bucket ARNs that CodeBuild must access (e.g., frontend bucket)."
+  type        = list(string)
+  default     = []
+}

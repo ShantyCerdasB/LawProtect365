@@ -12,6 +12,8 @@ jobs:
       shared-ts: ${{ steps.changes.outputs.shared-ts }}
       signature-service: ${{ steps.changes.outputs.signature-service }}
       auth-service: ${{ steps.changes.outputs.auth-service }}
+      frontend-core: ${{ steps.changes.outputs.frontend-core }}
+      web: ${{ steps.changes.outputs.web }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -28,6 +30,12 @@ jobs:
               - 'services/signature-service/**'
             auth-service:
               - 'services/auth-service/**'
+            frontend-core:
+              - 'packages/frontend-core/**'
+              - 'packages/frontend-core/buildspec.yml'
+            web:
+              - 'apps/web/**'
+              - 'apps/web/buildspec.yml'
 
   trigger-shared-ts:
     needs: detect-changes
@@ -83,10 +91,46 @@ jobs:
       - name: Start CodePipeline (auth service)
         run: aws codepipeline start-pipeline-execution --name lawprotect365-auth-pipeline-stg
 
+  trigger-frontend-core:
+    needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.frontend-core == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+          role-session-name: GitHubActions
+      
+      - name: Start CodePipeline (frontend-core)
+        run: aws codepipeline start-pipeline-execution --name lawprotect365-frontend-core-pipeline-stg
+
+  trigger-web:
+    needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.web == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+          role-session-name: GitHubActions
+      
+      - name: Start CodePipeline (web frontend)
+        run: aws codepipeline start-pipeline-execution --name lawprotect365-frontend-pipeline-stg
+
   no-changes:
     needs: detect-changes
-    if: ${{ needs.detect-changes.outputs.shared-ts == 'false' && needs.detect-changes.outputs.signature-service == 'false' && needs.detect-changes.outputs.auth-service == 'false' }}
+    if: ${{ needs.detect-changes.outputs.shared-ts == 'false' && needs.detect-changes.outputs.signature-service == 'false' && needs.detect-changes.outputs.auth-service == 'false' && needs.detect-changes.outputs.frontend-core == 'false' && needs.detect-changes.outputs.web == 'false' }}
     runs-on: ubuntu-latest
     steps:
       - name: No changes detected
-        run: echo "No changes detected in shared-ts, signature-service, or auth-service"
+        run: echo "No changes detected in shared-ts, signature-service, auth-service, frontend-core, or web"

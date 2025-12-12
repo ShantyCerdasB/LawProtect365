@@ -1,0 +1,96 @@
+version: 0.2
+
+env:
+  variables:
+    AWS_REGION: us-east-1
+    PROJECT_NAME: lawprotect365
+    ENV: stg
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 20
+
+  pre_build:
+    commands:
+      - set -eu
+      - |
+        echo "[INFO] Configuring CodeArtifact authentication"
+      - |
+        set -eu
+        if [ -z "${CODEARTIFACT_REPO_ENDPOINTS:-}" ]; then
+          echo "[ERROR] CODEARTIFACT_REPO_ENDPOINTS not set"
+          exit 1
+        fi
+        REPO_ENDPOINTS=$(echo "$CODEARTIFACT_REPO_ENDPOINTS" | python3 -c "import sys, json; print(json.load(sys.stdin).get('npm', ''))")
+        if [ -z "$REPO_ENDPOINTS" ]; then
+          echo "[ERROR] npm endpoint not found in CODEARTIFACT_REPO_ENDPOINTS"
+          exit 1
+        fi
+        DOMAIN="${PROJECT_NAME:-lawprotect365}-domain"
+        echo "[INFO] Getting CodeArtifact authorization token"
+        export CODEARTIFACT_AUTH_TOKEN=$(aws codeartifact get-authorization-token \
+          --domain "$DOMAIN" \
+          --domain-owner "$(aws sts get-caller-identity --query Account --output text)" \
+          --region "$AWS_REGION" \
+          --query authorizationToken --output text)
+        echo "[INFO] Configuring npm registry"
+        npm config set registry "$REPO_ENDPOINTS"
+        npm config set //$(echo "$REPO_ENDPOINTS" | sed 's|https\?://||' | sed 's|/$||')/:_authToken "$CODEARTIFACT_AUTH_TOKEN"
+        npm config set //$(echo "$REPO_ENDPOINTS" | sed 's|https\?://||' | sed 's|/$||')/:always-auth true
+      - |
+        echo "[INFO] Installing dependencies"
+      - cd "$CODEBUILD_SRC_DIR"
+      - npm ci
+
+  build:
+    commands:
+      - set -eu
+      - |
+        echo "[INFO] Building web application"
+      - cd "$CODEBUILD_SRC_DIR/apps/web"
+      - |
+        echo "[INFO] Running build script (includes sync:i18n, typecheck, and vite build)"
+      - npm run build
+      - |
+        echo "[INFO] Verifying build output"
+      - test -d dist || { echo "[ERROR] dist directory not found after build"; exit 1; }
+      - |
+        echo "[INFO] Uploading build artifacts to S3"
+      - |
+        set -eu
+        if [ -z "${FRONTEND_BUCKET:-}" ]; then
+          echo "[ERROR] FRONTEND_BUCKET not set"
+          exit 1
+        fi
+        echo "[INFO] Syncing dist/ to s3://$FRONTEND_BUCKET/"
+        aws s3 sync dist/ "s3://$FRONTEND_BUCKET/" --delete --cache-control "public, max-age=31536000, immutable" --exclude "*.html" --exclude "service-worker.js"
+        aws s3 sync dist/ "s3://$FRONTEND_BUCKET/" --delete --cache-control "public, max-age=0, must-revalidate" --include "*.html" --include "service-worker.js"
+      - |
+        echo "[INFO] Invalidating CloudFront cache"
+      - |
+        set -eu
+        if [ -z "${CLOUDFRONT_DISTRIBUTION_ID:-}" ]; then
+          echo "[ERROR] CLOUDFRONT_DISTRIBUTION_ID not set"
+          exit 1
+        fi
+        echo "[INFO] Creating CloudFront invalidation for distribution: $CLOUDFRONT_DISTRIBUTION_ID"
+        INVALIDATION_ID=$(aws cloudfront create-invalidation \
+          --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" \
+          --paths "/*" \
+          --query 'Invalidation.Id' \
+          --output text)
+        echo "[INFO] CloudFront invalidation created: $INVALIDATION_ID"
+        echo "[INFO] Waiting for invalidation to complete..."
+        aws cloudfront wait invalidation-completed \
+          --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" \
+          --id "$INVALIDATION_ID" || {
+          echo "[WARN] Invalidation may still be in progress"
+        }
+      - |
+        echo "[INFO] Web application deployed successfully"
+
+artifacts:
+  files: []
+  discard-paths: yes
+

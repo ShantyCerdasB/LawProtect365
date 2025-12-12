@@ -1,0 +1,91 @@
+version: 0.2
+
+env:
+  variables:
+    AWS_REGION: us-east-1
+    PROJECT_NAME: lawprotect365
+    ENV: stg
+    CODE_BUCKET: lawprotect365-code
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 20
+
+  pre_build:
+    commands:
+      - set -eu
+      - |
+        echo "[INFO] Building @lawprotect/frontend-core"
+      - cd "$CODEBUILD_SRC_DIR"
+      - npm ci
+      - |
+        echo "[INFO] Configuring CodeArtifact authentication"
+      - |
+        set -eu
+        if [ -z "${CODEARTIFACT_REPO_ENDPOINTS:-}" ]; then
+          echo "[ERROR] CODEARTIFACT_REPO_ENDPOINTS not set"
+          exit 1
+        fi
+        REPO_ENDPOINTS=$(echo "$CODEARTIFACT_REPO_ENDPOINTS" | python3 -c "import sys, json; print(json.load(sys.stdin).get('npm', ''))")
+        if [ -z "$REPO_ENDPOINTS" ]; then
+          echo "[ERROR] npm endpoint not found in CODEARTIFACT_REPO_ENDPOINTS"
+          exit 1
+        fi
+        DOMAIN="${PROJECT_NAME:-lawprotect365}-domain"
+        REPO="${PROJECT_NAME:-lawprotect365}-shared-packages"
+        echo "[INFO] Getting CodeArtifact authorization token"
+        export CODEARTIFACT_AUTH_TOKEN=$(aws codeartifact get-authorization-token \
+          --domain "$DOMAIN" \
+          --domain-owner "$(aws sts get-caller-identity --query Account --output text)" \
+          --region "$AWS_REGION" \
+          --query authorizationToken --output text)
+        echo "[INFO] Configuring npm registry"
+        npm config set registry "$REPO_ENDPOINTS"
+        npm config set //$(echo "$REPO_ENDPOINTS" | sed 's|https\?://||' | sed 's|/$||')/:_authToken "$CODEARTIFACT_AUTH_TOKEN"
+        npm config set //$(echo "$REPO_ENDPOINTS" | sed 's|https\?://||' | sed 's|/$||')/:always-auth true
+        echo "$REPO_ENDPOINTS" > /tmp/REPO_ENDPOINTS
+      - cd "$CODEBUILD_SRC_DIR/packages/frontend-core"
+      - |
+        echo "[INFO] Building frontend-core package"
+      - npm run build
+      - |
+        echo "[INFO] Verifying build output"
+      - test -d dist || { echo "[ERROR] dist directory not found after build"; exit 1; }
+      - test -f dist/index.js || { echo "[ERROR] dist/index.js not found"; exit 1; }
+
+  build:
+    commands:
+      - set -eu
+      - |
+        echo "[INFO] Publishing @lawprotect/frontend-core to CodeArtifact"
+      - |
+        set -eu
+        REPO_ENDPOINTS=$(cat /tmp/REPO_ENDPOINTS)
+        if [ -z "$REPO_ENDPOINTS" ]; then
+          echo "[ERROR] REPO_ENDPOINTS not found"
+          exit 1
+        fi
+      - cd "$CODEBUILD_SRC_DIR/packages/frontend-core"
+      - |
+        echo "[INFO] Publishing package version"
+      - |
+        set -eu
+        REPO_ENDPOINTS=$(cat /tmp/REPO_ENDPOINTS)
+        npm publish --registry "$REPO_ENDPOINTS" || {
+          echo "[WARN] Package publish failed, checking if version already exists"
+          PUBLISHED_VERSION=$(npm view "@lawprotect/frontend-core@$(node -p "require('./package.json').version")" version --registry "$REPO_ENDPOINTS" 2>/dev/null || echo "")
+          if [ -n "$PUBLISHED_VERSION" ]; then
+            echo "[INFO] Version already published: $PUBLISHED_VERSION"
+          else
+            echo "[ERROR] Publish failed and version not found"
+            exit 1
+          fi
+        }
+      - |
+        echo "[INFO] Frontend-core package published successfully"
+
+artifacts:
+  files: []
+  discard-paths: yes
+
