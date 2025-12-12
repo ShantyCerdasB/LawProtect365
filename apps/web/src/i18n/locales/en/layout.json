@@ -37,6 +37,16 @@
       "button": "Start signing now"
     }
   },
+  "ourServices": {
+    "speechBubble": "I'm so happy, I found this site!",
+    "mission": {
+      "title": "Our Mission",
+      "line1": "is to",
+      "highlight": "Uplift people",
+      "line2": "with world-class",
+      "line3": "legal solutions"
+    }
+  },
   "footer": {
     "mission": "We offer steadfast legal support, empowering individuals, families, and businesses with the strength and clarity to navigate life's challenges, ensuring access to justice and protection every day of the year.",
     "workingHours": {

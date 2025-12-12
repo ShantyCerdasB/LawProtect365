@@ -37,6 +37,15 @@
       "button": "Inizia a firmare ora"
     }
   },
+  "ourServices": {
+    "mission": {
+      "title": "La Nostra Missione",
+      "line1": "è",
+      "highlight": "Elevare le persone",
+      "line2": "con soluzioni legali",
+      "line3": "di livello mondiale"
+    }
+  },
   "footer": {
     "mission": "Offriamo supporto legale costante, dando forza e chiarezza a individui, famiglie e aziende per navigare le sfide della vita, assicurando accesso alla giustizia e protezione ogni giorno dell'anno.",
     "workingHours": {

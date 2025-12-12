@@ -24,7 +24,7 @@ export function useMenuConfig(): MenuItemConfig[] {
     {
       id: MenuItem.OurServices,
       label: t('menu.ourServices'),
-      path: '/services',
+      path: '/our-services',
       requiresAuth: false,
       showWhenLoggedIn: false,
       showWhenLoggedOut: true,

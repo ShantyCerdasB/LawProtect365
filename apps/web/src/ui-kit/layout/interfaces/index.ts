@@ -20,3 +20,4 @@ export type {
   ContactSectionProps,
   OfficeInfoProps,
 } from './FooterInterfaces';
+export type { ImageTextSectionProps } from './ImageTextSectionInterfaces';

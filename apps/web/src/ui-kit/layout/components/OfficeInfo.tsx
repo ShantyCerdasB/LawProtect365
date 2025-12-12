@@ -19,7 +19,8 @@ import { LocationIcon, PhoneIcon, EmailIcon } from '../../icons';
  */
 export function OfficeInfo({ office }: OfficeInfoProps): ReactElement {
   return (
-    <FooterSection className="pt-0 md:pt-42 lg:pt-44">
+    <FooterSection className="pt-0 md:pt-28 lg:pt-36">
+      <div className="h-7 mb-4"></div>
       <div className="flex flex-col space-y-2 w-full">
         <div className="flex items-start gap-2">
           <LocationIcon className="w-4 h-4 shrink-0" />

@@ -13,7 +13,7 @@ export const menuConfig: MenuItemConfig[] = [
   {
     id: MenuItem.OurServices,
     label: 'OUR SERVICES',
-    path: '/services',
+    path: '/our-services',
     requiresAuth: false,
     showWhenLoggedIn: false,
     showWhenLoggedOut: true,

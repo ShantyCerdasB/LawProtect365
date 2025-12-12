@@ -11,3 +11,4 @@ export * from './ContactTitle';
 export * from './ContactSection';
 export * from './OfficeInfo';
 export * from './FooterBottom';
+export * from './ImageTextSection';
