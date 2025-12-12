@@ -44,14 +44,20 @@ export function DecorativeSVG({
   size = 'w-[600px] h-[600px] md:w-[800px] md:h-[800px]',
   opacity = 60,
   topOffset = 'top-[-50px] md:top-[-100px]',
+  bottomOffset = 'bottom-[-50px] md:bottom-[-100px]',
   className = '',
 }: DecorativeSVGProps): ReactElement {
   const positionClasses = getPositionClasses(position);
   const opacityValue = opacity / 100;
+  
+  // Use bottomOffset for bottom positions, topOffset for top positions
+  const offsetClasses = position.startsWith('bottom')
+    ? bottomOffset
+    : topOffset;
 
   return (
     <div
-      className={`absolute ${positionClasses} ${topOffset} ${size} pointer-events-none z-0 ${className}`.trim()}
+      className={`absolute ${positionClasses} ${offsetClasses} ${size} pointer-events-none z-0 ${className}`.trim()}
       style={{ opacity: opacityValue }}
     >
       <img src={src} alt={alt} className="w-full h-full object-contain" />

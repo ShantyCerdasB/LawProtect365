@@ -26,6 +26,8 @@ export interface DecorativeSVGProps {
   opacity?: number;
   /** Top offset classes (default: 'top-[-50px] md:top-[-100px]') */
   topOffset?: string;
+  /** Bottom offset classes (default: 'bottom-[-50px] md:bottom-[-100px]') */
+  bottomOffset?: string;
   /** Additional CSS classes */
   className?: string;
 }

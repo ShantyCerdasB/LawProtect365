@@ -22,5 +22,6 @@ export type {
 } from './FooterInterfaces';
 export type { ImageTextSectionProps } from './ImageTextSectionInterfaces';
 export type { GrayColumnProps } from './GrayColumnInterfaces';
+export type { GraySeparatorProps } from './GraySeparatorInterfaces';
 export type { DecorativeSVGProps, DecorativeSVGPosition } from './DecorativeSVGInterfaces';
 export type { Sign365PromoSectionProps } from './Sign365PromoSectionInterfaces';

@@ -68,6 +68,13 @@
       "subtitle": "with our digital signature for your legal documents",
       "description": "Digital signatures allow lawyers and clients to securely, quickly, and legally sign legal documents directly from the application, without the need to print or scan files.",
       "buttonLabel": "Learn more"
+    },
+    "testimonials": {
+      "title": {
+        "line1": "Trusted by Thousands of",
+        "line2": "Happy Customers"
+      },
+      "subtitle": "Find what they say about us!"
     }
   },
   "ourServices": {

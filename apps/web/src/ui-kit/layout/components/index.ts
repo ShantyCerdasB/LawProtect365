@@ -13,5 +13,6 @@ export * from './OfficeInfo';
 export * from './FooterBottom';
 export * from './ImageTextSection';
 export { GrayColumn } from './GrayColumn';
+export { GraySeparator } from './GraySeparator';
 export { DecorativeSVG } from './DecorativeSVG';
 export { Sign365PromoSection } from './Sign365PromoSection';

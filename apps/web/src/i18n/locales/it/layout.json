@@ -68,6 +68,13 @@
       "subtitle": "con la nostra firma digitale per i tuoi documenti legali",
       "description": "Le firme digitali consentono ad avvocati e clienti di firmare documenti legali in modo sicuro, rapido e legale direttamente dall'applicazione, senza la necessità di stampare o scansionare file.",
       "buttonLabel": "Scopri di più"
+    },
+    "testimonials": {
+      "title": {
+        "line1": "Fidato da Migliaia di",
+        "line2": "Clienti Soddisfatti"
+      },
+      "subtitle": "Scopri cosa dicono di noi!"
     }
   },
   "ourServices": {
