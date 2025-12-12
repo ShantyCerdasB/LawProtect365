@@ -21,3 +21,6 @@ export type {
   OfficeInfoProps,
 } from './FooterInterfaces';
 export type { ImageTextSectionProps } from './ImageTextSectionInterfaces';
+export type { GrayColumnProps } from './GrayColumnInterfaces';
+export type { DecorativeSVGProps, DecorativeSVGPosition } from './DecorativeSVGInterfaces';
+export type { Sign365PromoSectionProps } from './Sign365PromoSectionInterfaces';

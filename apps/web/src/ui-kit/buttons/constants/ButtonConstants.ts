@@ -20,6 +20,8 @@ export const SIZE_CLASSES: Record<ButtonSize, string> = {
 export const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary: 'text-white border-transparent',
   outline: 'bg-transparent border-white',
+  'emerald-primary': 'text-white border-transparent',
+  'emerald-outline': 'bg-transparent',
 };
 
 export const VARIANT_CONFIGS: Record<ButtonVariant, VariantConfig> = {
@@ -36,10 +38,25 @@ export const VARIANT_CONFIGS: Record<ButtonVariant, VariantConfig> = {
     hoverBg: DEFAULT_OUTLINE_HOVER_BG,
     hoverText: DEFAULT_OUTLINE_HOVER_TEXT,
   },
+  'emerald-primary': {
+    backgroundColor: '#12626d',
+    color: DEFAULT_TEXT_COLOR,
+    borderColor: DEFAULT_BORDER_COLOR_PRIMARY,
+    hoverBg: '#5e9594',
+  },
+  'emerald-outline': {
+    backgroundColor: DEFAULT_OUTLINE_BG,
+    color: '#5e9594',
+    borderColor: '#5e9594',
+    hoverBg: DEFAULT_OUTLINE_BG,
+    hoverText: '#1d4878',
+  },
 };
 
 export const HOVER_CLASSES: Record<ButtonVariant, string> = {
   primary: 'hover:bg-[var(--hover-bg)]',
   outline: '[&:hover]:!border-[var(--hover-border)]',
+  'emerald-primary': 'hover:!bg-[#5e9594]',
+  'emerald-outline': '[&:hover]:!border-blue [&:hover]:!text-blue',
 };
 

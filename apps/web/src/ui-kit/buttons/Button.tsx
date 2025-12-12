@@ -31,10 +31,12 @@ export function Button({
     borderColor: 'var(--border-color)',
   };
 
-  if (variant === 'primary') {
+  if (variant === 'primary' || variant === 'emerald-primary') {
     styles['--hover-bg'] = hoverBgColor || config.hoverBg;
   } else if (variant === 'outline') {
     styles['--hover-border'] = DEFAULT_OUTLINE_HOVER_BORDER;
+  } else if (variant === 'emerald-outline') {
+    styles['--hover-border'] = '#1d4878';
   }
 
   const baseClasses = 'rounded-full font-medium transition-colors border cursor-pointer';

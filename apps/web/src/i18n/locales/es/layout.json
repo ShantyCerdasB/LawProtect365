@@ -37,6 +37,39 @@
       "button": "Comenzar a firmar ahora"
     }
   },
+  "home": {
+    "carousel": {
+      "slides": [
+        {
+          "title": "Justicia para todos",
+          "description": "Creemos que todos merecen igual acceso a protección y representación legal, independientemente de su origen o circunstancias."
+        },
+        {
+          "title": "Promover acceso igualitario a nivel nacional",
+          "description": "Nuestra misión se extiende por toda la nación, asegurando que servicios legales de calidad sean accesibles para individuos y empresas en cada comunidad."
+        },
+        {
+          "title": "Mejorar la protección del consumidor y el medio ambiente",
+          "description": "Abogamos por derechos del consumidor más fuertes y salvaguardas ambientales, protegiendo tanto a las personas como al planeta mediante soluciones legales integrales."
+        },
+        {
+          "title": "Fortalecer la confianza pública en la justicia",
+          "description": "A través de la transparencia, integridad y compromiso inquebrantable con la equidad, trabajamos para restaurar y fortalecer la confianza pública en nuestro sistema de justicia."
+        }
+      ],
+      "buttons": {
+        "learnMore": "Saber más",
+        "startToday": "Comenzar hoy"
+      }
+    },
+    "sign365Promo": {
+      "title": "Firma 365",
+      "highlightText": "Ahorra tiempo y dinero",
+      "subtitle": "con nuestra firma digital para tus documentos legales",
+      "description": "Las firmas digitales permiten a abogados y clientes firmar documentos legales de forma segura, rápida y legal directamente desde la aplicación, sin necesidad de imprimir o escanear archivos.",
+      "buttonLabel": "Saber más"
+    }
+  },
   "ourServices": {
     "mission": {
       "title": "Nuestra Misión",

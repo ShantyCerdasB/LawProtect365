@@ -37,6 +37,39 @@
       "button": "Start signing now"
     }
   },
+  "home": {
+    "carousel": {
+      "slides": [
+        {
+          "title": "Justice for all",
+          "description": "We believe that everyone deserves equal access to legal protection and representation, regardless of their background or circumstances."
+        },
+        {
+          "title": "Promote equal access nation wide",
+          "description": "Our mission extends across the nation, ensuring that quality legal services are accessible to individuals and businesses in every community."
+        },
+        {
+          "title": "Enhance consumer and environment protection",
+          "description": "We advocate for stronger consumer rights and environmental safeguards, protecting both people and the planet through comprehensive legal solutions."
+        },
+        {
+          "title": "Strengthen public trust in justice",
+          "description": "Through transparency, integrity, and unwavering commitment to fairness, we work to restore and strengthen public confidence in our justice system."
+        }
+      ],
+      "buttons": {
+        "learnMore": "Learn more",
+        "startToday": "Start today"
+      }
+    },
+    "sign365Promo": {
+      "title": "Sign 365",
+      "highlightText": "Save time and money",
+      "subtitle": "with our digital signature for your legal documents",
+      "description": "Digital signatures allow lawyers and clients to securely, quickly, and legally sign legal documents directly from the application, without the need to print or scan files.",
+      "buttonLabel": "Learn more"
+    }
+  },
   "ourServices": {
     "speechBubble": "I'm so happy, I found this site!",
     "mission": {
