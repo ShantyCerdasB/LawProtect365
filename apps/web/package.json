@@ -10,7 +10,10 @@
     "build": "npm run sync:i18n && tsc -b && vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext .ts,.tsx",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:unit": "jest --config ./jest.config.cjs",
+    "test:unit:watch": "jest --config ./jest.config.cjs --watch",
+    "test:unit:coverage": "jest --config ./jest.config.cjs --coverage"
   },
   "dependencies": {
     "@lawprotect/frontend-core": "^0.1.0",
@@ -27,9 +30,16 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.0",
+    "@testing-library/jest-dom": "^6.1.5",
+    "@testing-library/react": "^14.1.2",
+    "@testing-library/user-event": "^14.5.1",
+    "@types/jest": "^29.5.14",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.3",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "ts-jest": "^29.2.4",
     "typescript": "^5.5.4",
     "vite": "^6.0.0"
   }
