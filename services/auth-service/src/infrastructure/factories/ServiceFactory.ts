@@ -10,7 +10,7 @@ import { UserService } from '../../services/UserService';
 import { CognitoService } from '../../services/CognitoService';
 import { AuditService } from '../../services/AuditService';
 import { EventPublishingService } from '../../services/EventPublishingService';
-import { EventPublisherService, EventServiceFactory, OutboxEventPublisher } from '@lawprotect/shared-ts';
+import { OutboxEventPublisher } from '@lawprotect/shared-ts';
 import { UserRepository } from '../../repositories/UserRepository';
 import { OAuthAccountRepository } from '../../repositories/OAuthAccountRepository';
 import { UserAuditEventRepository } from '../../repositories/UserAuditEventRepository';
@@ -60,19 +60,6 @@ export class ServiceFactory {
   }
 
   /**
-   * Creates EventPublisherService instance using Outbox pattern
-   * @param outboxRepository - Outbox repository instance
-   * @param eventBridgeAdapter - EventBridge adapter instance
-   * @returns Configured EventPublisherService instance
-   */
-  static createEventPublisherService(outboxRepository: any, eventBridgeAdapter: any): EventPublisherService {
-    return EventServiceFactory.createEventPublisherService({
-      outboxRepository,
-      eventBridgeAdapter,
-    });
-  }
-
-  /**
    * Creates IntegrationEventPublisher instance using Outbox pattern
    * @param outboxRepository - Outbox repository instance
    * @returns Configured IntegrationEventPublisher instance
@@ -110,7 +97,6 @@ export class ServiceFactory {
       ),
       cognitoService: this.createCognitoService(infrastructure.cognitoClient, logger),
       auditService: this.createAuditService(repositories.userAuditEventRepository),
-      eventPublisherService: infrastructure.eventPublisherService,
       integrationEventPublisher: this.createIntegrationEventPublisher(infrastructure.outboxRepository),
       eventPublishingService: eventPublishingService,
     };

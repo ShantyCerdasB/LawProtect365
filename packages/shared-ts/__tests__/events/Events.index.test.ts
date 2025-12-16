@@ -5,7 +5,6 @@
 
 import * as Events from '../../src/events/index.js';
 import * as EventFactoryMod from '../../src/events/EventFactory.js';
-import * as EventsPublisherMod from '../../src/events/EventsPublisher.js';
 import * as DomainEventMod from '../../src/events/DomainEvent.js';
 import * as EventBusPortMod from '../../src/events/EventBusPort.js';
 import * as EnvelopeMod from '../../src/events/Envelope.js';
@@ -14,7 +13,6 @@ import * as OutboxMod from '../../src/events/Outbox.js';
 describe('events index (barrel) re-exports', () => {
   it('re-exports runtime symbols with identity preserved', () => {
     expect(Events.makeEvent).toBe(EventFactoryMod.makeEvent);
-    expect(Events.makeEventPublisher).toBe(EventsPublisherMod.makeEventPublisher);
   });
 
   it('exposes all runtime (non-type) named exports from submodules', () => {
@@ -27,7 +25,6 @@ describe('events index (barrel) re-exports', () => {
 
     // Modules that may be type-only at build time will have zero runtime keys; this is OK.
     assertAllExportsPresent(EventFactoryMod);
-    assertAllExportsPresent(EventsPublisherMod);
     assertAllExportsPresent(DomainEventMod);
     assertAllExportsPresent(EventBusPortMod);
     assertAllExportsPresent(EnvelopeMod);

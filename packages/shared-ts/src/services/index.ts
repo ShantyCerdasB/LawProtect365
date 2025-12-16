@@ -6,7 +6,6 @@
 
 export * from "./metrics.js";
 export * from "./BaseEventService.js";
-export * from "./EventPublisher.js";
 export * from "./EventServiceFactory.js";
 
 

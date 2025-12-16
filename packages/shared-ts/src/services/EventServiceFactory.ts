@@ -10,13 +10,12 @@ import { DdbClientLike } from '../aws/ddb.js';
 import { EventBridgeAdapterClient, EventBridgeAdapterConfig } from '../aws/eventbridge/EventBridgeConfig.js';
 import { OutboxRepository } from '../aws/outbox/OutboxRepository.js';
 import { EventBridgeAdapter } from '../aws/eventbridge/EventBridgeAdapter.js';
-import { EventPublisherService, EventPublisherServiceConfig } from './EventPublisher.js';
 
 /**
  * Factory for creating event-related services
  * 
- * This factory provides methods to create outbox, EventBridge, and event publisher
- * services with proper dependency injection and configuration.
+ * This factory provides methods to create outbox and EventBridge services
+ * with proper dependency injection and configuration.
  */
 export class EventServiceFactory {
   /**
@@ -40,14 +39,5 @@ export class EventServiceFactory {
     client: EventBridgeAdapterClient
   ): EventBridgeAdapter {
     return new EventBridgeAdapter(config, client);
-  }
-
-  /**
-   * Creates an EventPublisherService instance
-   * @param config - Event publisher service configuration
-   * @returns Configured EventPublisherService instance
-   */
-  static createEventPublisherService(config: EventPublisherServiceConfig): EventPublisherService {
-    return new EventPublisherService(config);
   }
 }

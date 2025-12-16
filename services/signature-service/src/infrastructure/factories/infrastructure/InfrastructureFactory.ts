@@ -15,7 +15,6 @@ import {
   EventServiceFactory,
   OutboxRepository,
   EventBridgeAdapter,
-  EventPublisherService,
   DynamoDBClientAdapter,
   EventBridgeClientAdapter,
 } from '@lawprotect/shared-ts';
@@ -120,17 +119,6 @@ export class InfrastructureFactory {
   }
 
   /**
-   * Creates EventPublisherService using Outbox and EventBridge
-   * @returns Configured EventPublisherService instance
-   */
-  static createEventPublisherService(): EventPublisherService {
-    return EventServiceFactory.createEventPublisherService({
-      outboxRepository: this.createOutboxRepository(),
-      eventBridgeAdapter: this.createEventBridgeAdapter(),
-    });
-  }
-
-  /**
    * Creates all infrastructure services in a single operation
    * @returns Object containing all infrastructure service instances
    */
@@ -141,7 +129,6 @@ export class InfrastructureFactory {
       auditEventService: this.createAuditEventService(),
       outboxRepository: this.createOutboxRepository(),
       eventBridgeAdapter: this.createEventBridgeAdapter(),
-      eventPublisherService: this.createEventPublisherService(),
     };
   }
 }

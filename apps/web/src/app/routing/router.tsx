@@ -13,6 +13,7 @@ import { homeRoutes } from '../../modules/home/routes';
 import { authRoutes } from '../../modules/auth/routes';
 import { adminRoutes } from '../../modules/admin/routes';
 import { documentsRoutes } from '../../modules/documents/routes';
+import { signatureRoutes } from '../../modules/signature/routes';
 
 const router = createBrowserRouter([
   {
@@ -22,6 +23,7 @@ const router = createBrowserRouter([
       ...authRoutes(),
       ...adminRoutes(),
       ...documentsRoutes(),
+      ...signatureRoutes(),
     ],
   },
 ]);

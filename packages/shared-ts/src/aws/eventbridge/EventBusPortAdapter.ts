@@ -15,7 +15,7 @@
  *
  * Typical wiring:
  * - Construct with `{ busName, source, client }` in the service container.
- * - Use with `makeEventPublisher(bus, outbox)` (shared) to dispatch pending events.
+ * - Events are published via DynamoDB Streams (OutboxStreamHandler) in production.
  */
 
 import {

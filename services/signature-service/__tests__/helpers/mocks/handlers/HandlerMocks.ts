@@ -196,7 +196,6 @@ export const mockSharedTs = {
   EventServiceFactory: jest.fn(),
   OutboxRepository: jest.fn(),
   EventBridgeAdapter: jest.fn(),
-  EventPublisherService: jest.fn(),
   DynamoDBClientAdapter: jest.fn(),
   EventBridgeClientAdapter: jest.fn(),
   OutboxEventPublisher: jest.fn(),

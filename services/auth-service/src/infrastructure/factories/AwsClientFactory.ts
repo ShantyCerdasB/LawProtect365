@@ -13,7 +13,6 @@ import {
   EventServiceFactory,
   OutboxRepository,
   EventBridgeAdapter,
-  EventPublisherService,
   DynamoDBClientAdapter,
   EventBridgeClientAdapter,
   Logger,
@@ -85,17 +84,6 @@ export class AwsClientFactory {
   }
 
   /**
-   * Creates EventPublisherService using Outbox and EventBridge
-   * @returns Configured EventPublisherService instance
-   */
-  static createEventPublisherService(): EventPublisherService {
-    return EventServiceFactory.createEventPublisherService({
-      outboxRepository: this.createOutboxRepository(),
-      eventBridgeAdapter: this.createEventBridgeAdapter(),
-    });
-  }
-
-  /**
    * Creates all AWS clients in a single operation
    * @returns Object containing all AWS client instances
    */
@@ -106,7 +94,6 @@ export class AwsClientFactory {
       dynamoDBClient: this.createDynamoDBClient(),
       outboxRepository: this.createOutboxRepository(),
       eventBridgeAdapter: this.createEventBridgeAdapter(),
-      eventPublisherService: this.createEventPublisherService(),
       logger,
     };
   }

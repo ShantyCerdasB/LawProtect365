@@ -8,21 +8,34 @@
  * and PDF download for validation.
  */
 
-import { type ReactElement } from 'react';
+import { type ReactElement, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useDocumentEditing, useElementHandlers, type PDFCoordinates } from '@lawprotect/frontend-core';
-import { PdfElementType } from '@lawprotect/frontend-core';
+import { PdfElementType, SigningOrderType, DocumentOriginType } from '@lawprotect/frontend-core';
+import {
+  useSignatureHttpClient,
+  useCreateEnvelope,
+  useUpdateEnvelope,
+  useSendEnvelope,
+} from '@lawprotect/frontend-core';
+import { LocalStorageAdapter } from '../../../app/adapters/LocalStorageAdapter';
 import { PDFViewer } from '../components/PDFViewer';
 import { SignatureCanvas } from '../components/SignatureCanvas';
 import { TextInputModal } from '../components/TextInputModal';
 import { DateInputModal } from '../components/DateInputModal';
 import { ElementTypePopover } from '../components/ElementTypePopover';
+import { AddSignerSection } from '../components/AddSignerSection';
+import type { DocumentSigner } from '../interfaces/DocumentsComponentsInterfaces';
+import { CreateEnvelopeSection } from '../components/CreateEnvelopeSection';
 import { Button } from '../../../ui-kit/buttons/Button';
 import { PageLayout } from '../../../ui-kit/layout/PageLayout';
+import { Alert } from '../../../ui-kit/feedback/Alert';
 import type { SignDocumentPageProps } from '../types';
 import { usePdfFileUpload } from '../hooks/usePdfFileUpload';
 import { useModalState } from '../hooks/useModalState';
 import { usePendingElementState } from '../hooks/usePendingElementState';
 import { usePdfGeneration } from '../hooks/usePdfGeneration';
+import { useCheckUserEmail } from '../hooks/useCheckUserEmail';
 
 /**
  * @description Complete page component for editing PDF documents.
@@ -30,7 +43,23 @@ import { usePdfGeneration } from '../hooks/usePdfGeneration';
  * @returns JSX element with document editing interface
  */
 export function SignDocumentPage({ envelopeId, signerId, invitationToken }: SignDocumentPageProps): ReactElement {
+  const navigate = useNavigate();
+  const storage = new LocalStorageAdapter();
+  const httpClient = useSignatureHttpClient({
+    fetchImpl: fetch,
+    storage,
+    tokenKey: 'auth_token',
+  });
+
   const { pdfFile, pdfSource, handleFileUpload, clearFile } = usePdfFileUpload();
+  const [signers, setSigners] = useState<DocumentSigner[]>([]);
+  const [showCreateEnvelope, setShowCreateEnvelope] = useState(false);
+  const [createdEnvelopeId, setCreatedEnvelopeId] = useState<string | null>(null);
+  
+  const { checkEmail } = useCheckUserEmail();
+  const { mutateAsync: createEnvelope, isPending: isCreatingEnvelope } = useCreateEnvelope({ httpClient });
+  const { mutateAsync: updateEnvelope, isPending: isUpdating } = useUpdateEnvelope({ httpClient });
+  const { mutateAsync: sendEnvelope, isPending: isSending } = useSendEnvelope({ httpClient });
   const {
     isModalOpen,
     modalType,
@@ -247,6 +276,86 @@ export function SignDocumentPage({ envelopeId, signerId, invitationToken }: Sign
     }
   };
 
+  /**
+   * @description Handles adding a signer.
+   */
+  const handleAddSigner = (signer: DocumentSigner) => {
+    setSigners((prev) => [...prev, signer]);
+  };
+
+  /**
+   * @description Handles removing a signer.
+   */
+  const handleRemoveSigner = (index: number) => {
+    setSigners((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  /**
+   * @description Handles creating envelope from document.
+   */
+  const handleCreateEnvelope = async (data: {
+    title: string;
+    description?: string;
+    signingOrderType: SigningOrderType;
+    expiresAt?: string;
+    signers: DocumentSigner[];
+  }) => {
+    if (!pdfFile || !pdfSource) {
+      throw new Error('PDF file is required');
+    }
+
+    // TODO: Upload PDF to S3 via documents service
+    // For now, using placeholder keys
+    const sourceKey = `documents/${Date.now()}/${pdfFile.name}`;
+    const metaKey = `meta/${Date.now()}/${pdfFile.name}.meta.json`;
+
+    // First, apply elements to PDF and get the modified PDF
+    const modifiedPdfBytes = await applyElementsAsBytes();
+    
+    // TODO: Upload modified PDF to S3
+    // For now, using same sourceKey (in production, upload modified PDF)
+
+    try {
+      const envelope = await createEnvelope({
+        title: data.title,
+        description: data.description,
+        signingOrderType: data.signingOrderType,
+        originType: DocumentOriginType.UPLOAD,
+        expiresAt: data.expiresAt,
+        sourceKey,
+        metaKey,
+      });
+
+      const envelopeData = envelope as any;
+
+      // Add signers if any
+      if (data.signers.length > 0) {
+        await updateEnvelope({
+          envelopeId: envelopeData.id,
+          addSigners: data.signers.map((s) => ({
+            email: s.email,
+            fullName: s.fullName,
+            isExternal: s.isExternal,
+            order: s.order,
+            userId: s.userId,
+          })),
+        });
+
+        // Send envelope after signers are added
+        await sendEnvelope({
+          envelopeId: envelopeData.id,
+          sendToAll: true,
+        });
+      }
+
+      setCreatedEnvelopeId(envelopeData.id);
+      setShowCreateEnvelope(false);
+    } catch (err) {
+      console.error('Failed to create envelope:', err);
+      throw err;
+    }
+  };
+
   const totalElements = signatures.length + texts.length + dates.length;
 
   if (!pdfFile || !pdfSource) {
@@ -278,9 +387,9 @@ export function SignDocumentPage({ envelopeId, signerId, invitationToken }: Sign
     <PageLayout
       title={
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-50">Edit Document</h1>
+          <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-50">Edit Document & Create Envelope</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Click on the PDF to place elements (signature, text, or date)
+            Edit your PDF, add signers, and create an envelope to send for signing
           </p>
         </div>
       }
@@ -433,6 +542,55 @@ export function SignDocumentPage({ envelopeId, signerId, invitationToken }: Sign
           }}
           onPreview={updateDatePreview}
         />
+
+        {/* Add Signers Section */}
+        <AddSignerSection
+          signers={signers}
+          onAddSigner={handleAddSigner}
+          onRemoveSigner={handleRemoveSigner}
+          checkEmailExists={async (email) => {
+            const result = await checkEmail(email);
+            return result;
+          }}
+        />
+
+        {/* Create Envelope Section */}
+        {totalElements > 0 && (
+          <CreateEnvelopeSection
+            signers={signers}
+            pdfFile={pdfFile}
+            pdfSource={pdfSource}
+            onCreateEnvelope={handleCreateEnvelope}
+            isLoading={isCreatingEnvelope || isUpdating || isSending}
+          />
+        )}
+
+        {/* Success Message */}
+        {createdEnvelopeId && (
+          <div className="space-y-4">
+            <Alert tone="success" message="Envelope created successfully!" />
+            <div className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => navigate(`/signature/envelopes/${createdEnvelopeId}`)}
+                  className="bg-sky-600 text-white hover:bg-sky-500"
+                >
+                  View Envelope
+                </Button>
+                <Button
+                  onClick={() => {
+                    setCreatedEnvelopeId(null);
+                    setSigners([]);
+                    setShowCreateEnvelope(false);
+                  }}
+                  className="bg-slate-100 text-slate-700 hover:bg-slate-200"
+                >
+                  Create Another
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="flex justify-end gap-2">
           {totalElements > 0 && (

@@ -88,6 +88,11 @@ HTMLCanvasElement.prototype.getContext = jest.fn((contextType: string) => {
 HTMLCanvasElement.prototype.toDataURL = jest.fn(() => 'data:image/png;base64,test');
 
 // Mock PointerEvent (jsdom doesn't implement it)
+interface ExtendedPointerEventInit extends PointerEventInit {
+  altitudeAngle?: number;
+  azimuthAngle?: number;
+}
+
 global.PointerEvent = class PointerEvent extends MouseEvent {
   pointerId: number;
   pressure: number;
@@ -100,7 +105,7 @@ global.PointerEvent = class PointerEvent extends MouseEvent {
   pointerType: string;
   isPrimary: boolean;
 
-  constructor(type: string, eventInitDict?: PointerEventInit) {
+  constructor(type: string, eventInitDict?: ExtendedPointerEventInit) {
     super(type, eventInitDict);
     this.pointerId = eventInitDict?.pointerId ?? 0;
     this.pressure = eventInitDict?.pressure ?? 0;

@@ -33,11 +33,14 @@ export function createEnvelope<T = unknown, B = unknown>(
 export function getEnvelope<T = unknown>(
   client: HttpClient,
   envelopeId: string,
-  params?: { include?: string },
+  params?: { invitationToken?: string; includeSigners?: boolean },
   schema?: ZodSchema<T>
 ): Promise<T> {
-  const query = params?.include ? `?include=${params.include}` : '';
-  return client.get<T>(`/envelopes/${envelopeId}${query}`, schema);
+  const queryParams = new URLSearchParams();
+  if (params?.invitationToken) queryParams.append('invitationToken', params.invitationToken);
+  if (params?.includeSigners !== undefined) queryParams.append('includeSigners', params.includeSigners.toString());
+  const query = queryParams.toString();
+  return client.get<T>(`/envelopes/${envelopeId}${query ? `?${query}` : ''}`, schema);
 }
 
 /**
@@ -51,21 +54,17 @@ export function getEnvelopesByUser<T = unknown>(
   client: HttpClient,
   params?: {
     status?: string;
-    page?: number;
     limit?: number;
-    sortBy?: string;
-    sortOrder?: 'asc' | 'desc';
     cursor?: string;
+    includeSigners?: boolean;
   },
   schema?: ZodSchema<T>
 ): Promise<T> {
   const queryParams = new URLSearchParams();
   if (params?.status) queryParams.append('status', params.status);
-  if (params?.page) queryParams.append('page', params.page.toString());
   if (params?.limit) queryParams.append('limit', params.limit.toString());
-  if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
-  if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
   if (params?.cursor) queryParams.append('cursor', params.cursor);
+  if (params?.includeSigners !== undefined) queryParams.append('includeSigners', params.includeSigners.toString());
   const query = queryParams.toString();
   return client.get<T>(`/envelopes${query ? `?${query}` : ''}`, schema);
 }
@@ -84,7 +83,7 @@ export function updateEnvelope<T = unknown, B = unknown>(
   body: B,
   schema?: ZodSchema<T>
 ): Promise<T> {
-  return client.put<T, B>(`/envelopes/${envelopeId}`, body, schema);
+  return client.post<T, B>(`/envelopes/${envelopeId}`, body, schema);
 }
 
 /**
@@ -168,11 +167,14 @@ export function declineSigner<T = unknown, B = unknown>(
 export function downloadDocument<T = unknown>(
   client: HttpClient,
   envelopeId: string,
-  params?: { format?: string },
+  params?: { invitationToken?: string; expiresIn?: number },
   schema?: ZodSchema<T>
 ): Promise<T> {
-  const query = params?.format ? `?format=${params.format}` : '';
-  return client.get<T>(`/envelopes/${envelopeId}/document/download${query}`, schema);
+  const queryParams = new URLSearchParams();
+  if (params?.invitationToken) queryParams.append('invitationToken', params.invitationToken);
+  if (params?.expiresIn) queryParams.append('expiresIn', params.expiresIn.toString());
+  const query = queryParams.toString();
+  return client.get<T>(`/envelopes/${envelopeId}/download${query ? `?${query}` : ''}`, schema);
 }
 
 /**
@@ -189,7 +191,7 @@ export function shareDocumentView<T = unknown, B = unknown>(
   body: B,
   schema?: ZodSchema<T>
 ): Promise<T> {
-  return client.post<T, B>(`/envelopes/${envelopeId}/document/share`, body, schema);
+  return client.post<T, B>(`/envelopes/${envelopeId}/share-view`, body, schema);
 }
 
 /**
@@ -203,21 +205,9 @@ export function shareDocumentView<T = unknown, B = unknown>(
 export function getAuditTrail<T = unknown>(
   client: HttpClient,
   envelopeId: string,
-  params?: {
-    page?: number;
-    limit?: number;
-    cursor?: string;
-    eventType?: string;
-  },
   schema?: ZodSchema<T>
 ): Promise<T> {
-  const queryParams = new URLSearchParams();
-  if (params?.page) queryParams.append('page', params.page.toString());
-  if (params?.limit) queryParams.append('limit', params.limit.toString());
-  if (params?.cursor) queryParams.append('cursor', params.cursor);
-  if (params?.eventType) queryParams.append('eventType', params.eventType);
-  const query = queryParams.toString();
-  return client.get<T>(`/envelopes/${envelopeId}/audit-trail${query ? `?${query}` : ''}`, schema);
+  return client.get<T>(`/envelopes/${envelopeId}/audit-trail`, schema);
 }
 
 /**
