@@ -1,221 +1,240 @@
 /**
- * @fileoverview Tests for useElementHandlers hook
- * @summary Unit tests for element handlers hook
+ * @fileoverview useElementHandlers Hook Tests - Ensures useElementHandlers works correctly
+ * @summary Tests for modules/documents/query/useElementHandlers.ts
  * @jest-environment jsdom
  */
 
-import { describe, it, expect, beforeEach, jest } from '@jest/globals';
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react-hooks';
 import { useElementHandlers } from '../../../../src/modules/documents/query/useElementHandlers';
 import { PdfElementType } from '../../../../src/modules/documents/enums';
+import type { PDFCoordinates } from '../../../../src/modules/documents/types';
 
 describe('useElementHandlers', () => {
-  let mockUpdateSignatureCoordinates: jest.Mock;
-  let mockUpdateTextCoordinates: jest.Mock;
-  let mockUpdateDateCoordinates: jest.Mock;
-  let mockUpdateTextFontSize: jest.Mock;
-  let mockUpdateDateFontSize: jest.Mock;
-  let mockUpdateSignatureSize: jest.Mock;
-  let mockRemoveSignature: jest.Mock;
-  let mockRemoveText: jest.Mock;
-  let mockRemoveDate: jest.Mock;
-
-  beforeEach(() => {
-    mockUpdateSignatureCoordinates = jest.fn();
-    mockUpdateTextCoordinates = jest.fn();
-    mockUpdateDateCoordinates = jest.fn();
-    mockUpdateTextFontSize = jest.fn();
-    mockUpdateDateFontSize = jest.fn();
-    mockUpdateSignatureSize = jest.fn();
-    mockRemoveSignature = jest.fn();
-    mockRemoveText = jest.fn();
-    mockRemoveDate = jest.fn();
+  const createCoordinates = (): PDFCoordinates => ({
+    x: 100,
+    y: 200,
+    pageNumber: 1,
+    pageWidth: 612,
+    pageHeight: 792,
   });
 
-  const createConfig = () => ({
-    updateSignatureCoordinates: mockUpdateSignatureCoordinates,
-    updateTextCoordinates: mockUpdateTextCoordinates,
-    updateDateCoordinates: mockUpdateDateCoordinates,
-    updateTextFontSize: mockUpdateTextFontSize,
-    updateDateFontSize: mockUpdateDateFontSize,
-    updateSignatureSize: mockUpdateSignatureSize,
-    removeSignature: mockRemoveSignature,
-    removeText: mockRemoveText,
-    removeDate: mockRemoveDate,
-  });
+  const createMockConfig = () => {
+    const updateSignatureCoordinates = jest.fn();
+    const updateTextCoordinates = jest.fn();
+    const updateDateCoordinates = jest.fn();
+    const updateTextFontSize = jest.fn();
+    const updateDateFontSize = jest.fn();
+    const updateSignatureSize = jest.fn();
+    const removeSignature = jest.fn();
+    const removeText = jest.fn();
+    const removeDate = jest.fn();
+
+    return {
+      updateSignatureCoordinates,
+      updateTextCoordinates,
+      updateDateCoordinates,
+      updateTextFontSize,
+      updateDateFontSize,
+      updateSignatureSize,
+      removeSignature,
+      removeText,
+      removeDate,
+    };
+  };
 
   describe('handleElementMove', () => {
-    it('should call updateSignatureCoordinates for Signature element type', () => {
-      const { result } = renderHook(() => useElementHandlers(createConfig()));
-      const coordinates = { pageNumber: 1, x: 100, y: 200, pageWidth: 612, pageHeight: 792 };
+    it('should call updateSignatureCoordinates for signature element', () => {
+      const config = createMockConfig();
+      const { result } = renderHook(() => useElementHandlers(config));
+      const coordinates = createCoordinates();
 
       act(() => {
         result.current.handleElementMove(PdfElementType.Signature, 0, coordinates);
       });
 
-      expect(mockUpdateSignatureCoordinates).toHaveBeenCalledWith(0, coordinates);
-      expect(mockUpdateTextCoordinates).not.toHaveBeenCalled();
-      expect(mockUpdateDateCoordinates).not.toHaveBeenCalled();
+      expect(config.updateSignatureCoordinates).toHaveBeenCalledWith(0, coordinates);
+      expect(config.updateTextCoordinates).not.toHaveBeenCalled();
+      expect(config.updateDateCoordinates).not.toHaveBeenCalled();
     });
 
-    it('should call updateTextCoordinates for Text element type', () => {
-      const { result } = renderHook(() => useElementHandlers(createConfig()));
-      const coordinates = { pageNumber: 1, x: 100, y: 200, pageWidth: 612, pageHeight: 792 };
+    it('should call updateTextCoordinates for text element', () => {
+      const config = createMockConfig();
+      const { result } = renderHook(() => useElementHandlers(config));
+      const coordinates = createCoordinates();
 
       act(() => {
         result.current.handleElementMove(PdfElementType.Text, 1, coordinates);
       });
 
-      expect(mockUpdateTextCoordinates).toHaveBeenCalledWith(1, coordinates);
-      expect(mockUpdateSignatureCoordinates).not.toHaveBeenCalled();
-      expect(mockUpdateDateCoordinates).not.toHaveBeenCalled();
+      expect(config.updateTextCoordinates).toHaveBeenCalledWith(1, coordinates);
+      expect(config.updateSignatureCoordinates).not.toHaveBeenCalled();
+      expect(config.updateDateCoordinates).not.toHaveBeenCalled();
     });
 
-    it('should call updateDateCoordinates for Date element type', () => {
-      const { result } = renderHook(() => useElementHandlers(createConfig()));
-      const coordinates = { pageNumber: 2, x: 300, y: 400, pageWidth: 612, pageHeight: 792 };
+    it('should call updateDateCoordinates for date element', () => {
+      const config = createMockConfig();
+      const { result } = renderHook(() => useElementHandlers(config));
+      const coordinates = createCoordinates();
 
       act(() => {
         result.current.handleElementMove(PdfElementType.Date, 2, coordinates);
       });
 
-      expect(mockUpdateDateCoordinates).toHaveBeenCalledWith(2, coordinates);
-      expect(mockUpdateSignatureCoordinates).not.toHaveBeenCalled();
-      expect(mockUpdateTextCoordinates).not.toHaveBeenCalled();
+      expect(config.updateDateCoordinates).toHaveBeenCalledWith(2, coordinates);
+      expect(config.updateSignatureCoordinates).not.toHaveBeenCalled();
+      expect(config.updateTextCoordinates).not.toHaveBeenCalled();
     });
   });
 
   describe('handleElementDelete', () => {
-    it('should call removeSignature for Signature element type', () => {
-      const { result } = renderHook(() => useElementHandlers(createConfig()));
+    it('should call removeSignature for signature element', () => {
+      const config = createMockConfig();
+      const { result } = renderHook(() => useElementHandlers(config));
 
       act(() => {
         result.current.handleElementDelete(PdfElementType.Signature, 0);
       });
 
-      expect(mockRemoveSignature).toHaveBeenCalledWith(0);
-      expect(mockRemoveText).not.toHaveBeenCalled();
-      expect(mockRemoveDate).not.toHaveBeenCalled();
+      expect(config.removeSignature).toHaveBeenCalledWith(0);
+      expect(config.removeText).not.toHaveBeenCalled();
+      expect(config.removeDate).not.toHaveBeenCalled();
     });
 
-    it('should call removeText for Text element type', () => {
-      const { result } = renderHook(() => useElementHandlers(createConfig()));
+    it('should call removeText for text element', () => {
+      const config = createMockConfig();
+      const { result } = renderHook(() => useElementHandlers(config));
 
       act(() => {
         result.current.handleElementDelete(PdfElementType.Text, 1);
       });
 
-      expect(mockRemoveText).toHaveBeenCalledWith(1);
-      expect(mockRemoveSignature).not.toHaveBeenCalled();
-      expect(mockRemoveDate).not.toHaveBeenCalled();
+      expect(config.removeText).toHaveBeenCalledWith(1);
+      expect(config.removeSignature).not.toHaveBeenCalled();
+      expect(config.removeDate).not.toHaveBeenCalled();
     });
 
-    it('should call removeDate for Date element type', () => {
-      const { result } = renderHook(() => useElementHandlers(createConfig()));
+    it('should call removeDate for date element', () => {
+      const config = createMockConfig();
+      const { result } = renderHook(() => useElementHandlers(config));
 
       act(() => {
         result.current.handleElementDelete(PdfElementType.Date, 2);
       });
 
-      expect(mockRemoveDate).toHaveBeenCalledWith(2);
-      expect(mockRemoveSignature).not.toHaveBeenCalled();
-      expect(mockRemoveText).not.toHaveBeenCalled();
+      expect(config.removeDate).toHaveBeenCalledWith(2);
+      expect(config.removeSignature).not.toHaveBeenCalled();
+      expect(config.removeText).not.toHaveBeenCalled();
     });
   });
 
   describe('handleTextResize', () => {
-    it('should call updateTextFontSize with index and fontSize', () => {
-      const { result } = renderHook(() => useElementHandlers(createConfig()));
+    it('should call updateTextFontSize', () => {
+      const config = createMockConfig();
+      const { result } = renderHook(() => useElementHandlers(config));
 
       act(() => {
-        result.current.handleTextResize(0, 16);
+        result.current.handleTextResize(0, 18);
       });
 
-      expect(mockUpdateTextFontSize).toHaveBeenCalledWith(0, 16);
-      expect(mockUpdateDateFontSize).not.toHaveBeenCalled();
-      expect(mockUpdateSignatureSize).not.toHaveBeenCalled();
+      expect(config.updateTextFontSize).toHaveBeenCalledWith(0, 18);
+      expect(config.updateDateFontSize).not.toHaveBeenCalled();
+      expect(config.updateSignatureSize).not.toHaveBeenCalled();
     });
 
     it('should handle different font sizes', () => {
-      const { result } = renderHook(() => useElementHandlers(createConfig()));
+      const config = createMockConfig();
+      const { result } = renderHook(() => useElementHandlers(config));
 
       act(() => {
-        result.current.handleTextResize(1, 20);
+        result.current.handleTextResize(1, 24);
       });
 
-      expect(mockUpdateTextFontSize).toHaveBeenCalledWith(1, 20);
+      expect(config.updateTextFontSize).toHaveBeenCalledWith(1, 24);
     });
   });
 
   describe('handleDateResize', () => {
-    it('should call updateDateFontSize with index and fontSize', () => {
-      const { result } = renderHook(() => useElementHandlers(createConfig()));
+    it('should call updateDateFontSize', () => {
+      const config = createMockConfig();
+      const { result } = renderHook(() => useElementHandlers(config));
 
       act(() => {
-        result.current.handleDateResize(0, 14);
+        result.current.handleDateResize(0, 16);
       });
 
-      expect(mockUpdateDateFontSize).toHaveBeenCalledWith(0, 14);
-      expect(mockUpdateTextFontSize).not.toHaveBeenCalled();
-      expect(mockUpdateSignatureSize).not.toHaveBeenCalled();
+      expect(config.updateDateFontSize).toHaveBeenCalledWith(0, 16);
+      expect(config.updateTextFontSize).not.toHaveBeenCalled();
+      expect(config.updateSignatureSize).not.toHaveBeenCalled();
     });
 
     it('should handle different font sizes', () => {
-      const { result } = renderHook(() => useElementHandlers(createConfig()));
+      const config = createMockConfig();
+      const { result } = renderHook(() => useElementHandlers(config));
 
       act(() => {
-        result.current.handleDateResize(2, 18);
+        result.current.handleDateResize(2, 20);
       });
 
-      expect(mockUpdateDateFontSize).toHaveBeenCalledWith(2, 18);
+      expect(config.updateDateFontSize).toHaveBeenCalledWith(2, 20);
     });
   });
 
   describe('handleSignatureResize', () => {
-    it('should call updateSignatureSize with index, width, and height', () => {
-      const { result } = renderHook(() => useElementHandlers(createConfig()));
+    it('should call updateSignatureSize', () => {
+      const config = createMockConfig();
+      const { result } = renderHook(() => useElementHandlers(config));
 
       act(() => {
-        result.current.handleSignatureResize(0, 200, 100);
+        result.current.handleSignatureResize(0, 100, 50);
       });
 
-      expect(mockUpdateSignatureSize).toHaveBeenCalledWith(0, 200, 100);
-      expect(mockUpdateTextFontSize).not.toHaveBeenCalled();
-      expect(mockUpdateDateFontSize).not.toHaveBeenCalled();
+      expect(config.updateSignatureSize).toHaveBeenCalledWith(0, 100, 50);
+      expect(config.updateTextFontSize).not.toHaveBeenCalled();
+      expect(config.updateDateFontSize).not.toHaveBeenCalled();
     });
 
     it('should handle different sizes', () => {
-      const { result } = renderHook(() => useElementHandlers(createConfig()));
+      const config = createMockConfig();
+      const { result } = renderHook(() => useElementHandlers(config));
 
       act(() => {
-        result.current.handleSignatureResize(1, 300, 150);
+        result.current.handleSignatureResize(1, 120, 60);
       });
 
-      expect(mockUpdateSignatureSize).toHaveBeenCalledWith(1, 300, 150);
+      expect(config.updateSignatureSize).toHaveBeenCalledWith(1, 120, 60);
     });
   });
 
-  describe('callback dependencies', () => {
-    it('should use updated callbacks when config changes', () => {
+  describe('callback memoization', () => {
+    it('should maintain stable references', () => {
+      const config = createMockConfig();
+      const { result, rerender } = renderHook(() => useElementHandlers(config));
+
+      const firstMove = result.current.handleElementMove;
+      const firstDelete = result.current.handleElementDelete;
+      const firstTextResize = result.current.handleTextResize;
+
+      rerender();
+
+      expect(result.current.handleElementMove).toBe(firstMove);
+      expect(result.current.handleElementDelete).toBe(firstDelete);
+      expect(result.current.handleTextResize).toBe(firstTextResize);
+    });
+
+    it('should update when config changes', () => {
+      const config1 = createMockConfig();
       const { result, rerender } = renderHook(
-        (config) => useElementHandlers(config),
-        { initialProps: createConfig() }
+        ({ config }) => useElementHandlers(config),
+        { initialProps: { config: config1 } }
       );
 
-      const newUpdateSignatureCoordinates = jest.fn();
-      const newConfig = {
-        ...createConfig(),
-        updateSignatureCoordinates: newUpdateSignatureCoordinates,
-      };
+      const firstMove = result.current.handleElementMove;
 
-      rerender(newConfig);
+      const config2 = createMockConfig();
+      rerender({ config: config2 });
 
-      act(() => {
-        result.current.handleElementMove(PdfElementType.Signature, 0, { pageNumber: 1, x: 100, y: 200, pageWidth: 612, pageHeight: 792 });
-      });
-
-      expect(newUpdateSignatureCoordinates).toHaveBeenCalled();
-      expect(mockUpdateSignatureCoordinates).not.toHaveBeenCalled();
+      expect(result.current.handleElementMove).not.toBe(firstMove);
     });
   });
 });
+

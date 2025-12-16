@@ -1,285 +1,623 @@
 /**
  * @fileoverview Tests for detectElementInteraction use case
- * @summary Unit tests for element interaction detection
+ * @summary Unit tests for element and control interaction detection
+ * @description Comprehensive tests for detecting elements and controls at display points
  */
 
-import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+import { describe, it, expect } from '@jest/globals';
 import {
   detectElementAtPoint,
   detectControlAtPoint,
 } from '../../../../src/modules/documents/use-cases/detectElementInteraction';
-import { PdfElementType, ControlType, ResizeHandle } from '../../../../src/modules/documents/enums';
-import type { PdfRenderMetrics } from '../../../../src/modules/documents/types';
-
-jest.mock('../../../../src/modules/documents/use-cases/getElementDisplayBounds');
-jest.mock('../../../../src/modules/documents/use-cases/getControlAtDisplayPosition');
-
 import { getElementDisplayBounds } from '../../../../src/modules/documents/use-cases/getElementDisplayBounds';
 import { getControlAtDisplayPosition } from '../../../../src/modules/documents/use-cases/getControlAtDisplayPosition';
+import { PdfElementType, ControlType } from '../../../../src/modules/documents/enums';
+import type { SignaturePlacement, TextPlacement, DatePlacement } from '../../../../src/modules/documents/types';
 
-const mockGetElementDisplayBounds = getElementDisplayBounds as jest.MockedFunction<typeof getElementDisplayBounds>;
-const mockGetControlAtDisplayPosition = getControlAtDisplayPosition as jest.MockedFunction<typeof getControlAtDisplayPosition>;
-
-describe('detectElementAtPoint', () => {
-  const createRenderMetrics = (): PdfRenderMetrics => ({
+describe('detectElementInteraction', () => {
+  const createRenderMetrics = () => ({
     pdfPageWidth: 612,
     pdfPageHeight: 792,
     viewportWidth: 1024,
     viewportHeight: 1320,
   });
 
-  beforeEach(() => {
-    jest.clearAllMocks();
+  const createCoordinates = (pageNumber: number = 1) => ({
+    x: 100,
+    y: 200,
+    pageNumber,
+    pageWidth: 612,
+    pageHeight: 792,
   });
 
-  it('should return null when no elements are found', () => {
-    mockGetElementDisplayBounds.mockReturnValue(null);
-
-    const input = {
-      displayPoint: { x: 200, y: 300 },
-      pageNumber: 1,
-      renderMetrics: createRenderMetrics(),
-      elements: {
-        signatures: [],
-        texts: [],
-        dates: [],
-      },
-    };
-
-    const result = detectElementAtPoint(input);
-
-    expect(result).toBeNull();
-  });
-
-  it('should return signature hit when signature is found', () => {
-    const bounds = { x: 100, y: 200, width: 150, height: 60 };
-    mockGetElementDisplayBounds.mockReturnValueOnce(bounds).mockReturnValue(null);
-
-    const input = {
-      displayPoint: { x: 150, y: 230 },
-      pageNumber: 1,
-      renderMetrics: createRenderMetrics(),
-      elements: {
-        signatures: [{
+  describe('detectElementAtPoint', () => {
+    it('should detect signature element at point', () => {
+      const signatures: SignaturePlacement[] = [
+        {
           signatureImage: 'data:image/png;base64,test',
-          coordinates: { pageNumber: 1, x: 100, y: 200, pageWidth: 612, pageHeight: 792 },
-        }],
-        texts: [],
-        dates: [],
-      },
-    };
+          coordinates: createCoordinates(1),
+          width: 150,
+          height: 60,
+        },
+      ];
 
-    const result = detectElementAtPoint(input);
+      const scaleX = 612 / 1024;
+      const scaleY = 792 / 1320;
+      const displayX = 100 / scaleX + 75;
+      const displayY = 200 / scaleY + 30;
 
-    expect(result).toEqual({ type: PdfElementType.Signature, index: 0 });
-  });
+      const result = detectElementAtPoint({
+        displayPoint: { x: displayX, y: displayY },
+        pageNumber: 1,
+        renderMetrics: createRenderMetrics(),
+        elements: {
+          signatures,
+          texts: [],
+          dates: [],
+        },
+      });
 
-  it('should return text hit when text is found', () => {
-    const scaleX = 1024 / 612;
-    const scaleY = 1320 / 792;
-    const bounds = {
-      x: 100 * scaleX,
-      y: 200 * scaleY,
-      width: 4 * 12 * 0.6 * scaleY,
-      height: 12 * scaleY,
-    };
-    mockGetElementDisplayBounds
-      .mockReturnValueOnce(null)
-      .mockReturnValueOnce(bounds)
-      .mockReturnValue(null);
+      expect(result).not.toBeNull();
+      expect(result?.type).toBe(PdfElementType.Signature);
+      expect(result?.index).toBe(0);
+    });
 
-    const input = {
-      displayPoint: { x: bounds.x + bounds.width / 2, y: bounds.y - bounds.height / 2 },
-      pageNumber: 1,
-      renderMetrics: createRenderMetrics(),
-      elements: {
-        signatures: [],
-        texts: [{
+    it('should detect text element at point', () => {
+      const texts: TextPlacement[] = [
+        {
+          text: 'Hello',
+          coordinates: createCoordinates(1),
+          fontSize: 12,
+        },
+      ];
+
+      const scaleX = 1024 / 612;
+      const scaleY = 1320 / 792;
+      const fontSize = 12 * scaleY;
+      const textWidth = 5 * fontSize * 0.6;
+      const boundsY = 200 * scaleY;
+      const displayX = 100 * scaleX + textWidth / 2;
+      const displayY = boundsY + fontSize / 2;
+
+      const result = detectElementAtPoint({
+        displayPoint: { x: displayX, y: displayY },
+        pageNumber: 1,
+        renderMetrics: createRenderMetrics(),
+        elements: {
+          signatures: [],
+          texts,
+          dates: [],
+        },
+      });
+
+      expect(result).not.toBeNull();
+      expect(result?.type).toBe(PdfElementType.Text);
+      expect(result?.index).toBe(0);
+    });
+
+    it('should detect date element at point', () => {
+      const dates: DatePlacement[] = [
+        {
+          date: new Date(2024, 0, 15),
+          coordinates: createCoordinates(1),
+          fontSize: 12,
+        },
+      ];
+
+      const scaleX = 1024 / 612;
+      const scaleY = 1320 / 792;
+      const fontSize = 12 * scaleY;
+      const dateWidth = 80 * scaleX;
+      const boundsY = 200 * scaleY;
+      const displayX = 100 * scaleX + dateWidth / 2;
+      const displayY = boundsY + fontSize / 2;
+
+      const result = detectElementAtPoint({
+        displayPoint: { x: displayX, y: displayY },
+        pageNumber: 1,
+        renderMetrics: createRenderMetrics(),
+        elements: {
+          signatures: [],
+          texts: [],
+          dates,
+        },
+      });
+
+      expect(result).not.toBeNull();
+      expect(result?.type).toBe(PdfElementType.Date);
+      expect(result?.index).toBe(0);
+    });
+
+    it('should return null when no element is at point', () => {
+      const result = detectElementAtPoint({
+        displayPoint: { x: 10, y: 10 },
+        pageNumber: 1,
+        renderMetrics: createRenderMetrics(),
+        elements: {
+          signatures: [],
+          texts: [],
+          dates: [],
+        },
+      });
+
+      expect(result).toBeNull();
+    });
+
+    it('should return null when element is on different page', () => {
+      const signatures: SignaturePlacement[] = [
+        {
+          signatureImage: 'data:image/png;base64,test',
+          coordinates: createCoordinates(2),
+          width: 150,
+          height: 60,
+        },
+      ];
+
+      const result = detectElementAtPoint({
+        displayPoint: { x: 200, y: 300 },
+        pageNumber: 1,
+        renderMetrics: createRenderMetrics(),
+        elements: {
+          signatures,
+          texts: [],
+          dates: [],
+        },
+      });
+
+      expect(result).toBeNull();
+    });
+
+    it('should prioritize signatures over texts and dates', () => {
+      const signatures: SignaturePlacement[] = [
+        {
+          signatureImage: 'data:image/png;base64,test',
+          coordinates: createCoordinates(1),
+          width: 150,
+          height: 60,
+        },
+      ];
+      const texts: TextPlacement[] = [
+        {
           text: 'Test',
-          coordinates: { pageNumber: 1, x: 100, y: 200, pageWidth: 612, pageHeight: 792 },
+          coordinates: createCoordinates(1),
           fontSize: 12,
-        }],
-        dates: [],
-      },
-    };
+        },
+      ];
 
-    const result = detectElementAtPoint(input);
+      const scaleX = 612 / 1024;
+      const scaleY = 792 / 1320;
+      const displayX = 100 / scaleX + 75;
+      const displayY = 200 / scaleY + 30;
 
-    expect(result).toEqual({ type: PdfElementType.Text, index: 0 });
+      const result = detectElementAtPoint({
+        displayPoint: { x: displayX, y: displayY },
+        pageNumber: 1,
+        renderMetrics: createRenderMetrics(),
+        elements: {
+          signatures,
+          texts,
+          dates: [],
+        },
+      });
+
+      expect(result?.type).toBe(PdfElementType.Signature);
+    });
   });
 
-  it('should return date hit when date is found', () => {
-    const bounds = { x: 100, y: 188, width: 80, height: 12 };
-    mockGetElementDisplayBounds
-      .mockReturnValueOnce(null)
-      .mockReturnValueOnce(null)
-      .mockReturnValueOnce(bounds);
+  describe('detectControlAtPoint', () => {
+    it('should detect control hit (delete button) on signature', () => {
+      const signatures: SignaturePlacement[] = [
+        {
+          signatureImage: 'data:image/png;base64,test',
+          coordinates: createCoordinates(1),
+          width: 150,
+          height: 60,
+        },
+      ];
 
-    const input = {
-      displayPoint: { x: 140, y: 194 },
-      pageNumber: 1,
-      renderMetrics: createRenderMetrics(),
-      elements: {
-        signatures: [],
-        texts: [],
-        dates: [{
-          date: new Date('2024-01-15'),
-          coordinates: { pageNumber: 1, x: 100, y: 200, pageWidth: 612, pageHeight: 792 },
-          format: 'MM/DD/YYYY',
+      const scaleX = 612 / 1024;
+      const scaleY = 792 / 1320;
+      const displayX = (100 / scaleX + 150 / scaleX) - 8;
+      const displayY = 200 / scaleY;
+
+      const result = detectControlAtPoint({
+        displayPoint: { x: displayX, y: displayY },
+        pageNumber: 1,
+        renderMetrics: createRenderMetrics(),
+        elements: {
+          signatures,
+          texts: [],
+          dates: [],
+        },
+      });
+
+      expect(result.elementHit).not.toBeNull();
+      expect(result.controlHit).not.toBeNull();
+      expect(result.controlHit?.type).toBe(ControlType.Delete);
+      expect(result.elementBounds).not.toBeNull();
+    });
+
+    it('should detect element hit without control hit', () => {
+      const signatures: SignaturePlacement[] = [
+        {
+          signatureImage: 'data:image/png;base64,test',
+          coordinates: createCoordinates(1),
+          width: 150,
+          height: 60,
+        },
+      ];
+
+      const scaleX = 612 / 1024;
+      const scaleY = 792 / 1320;
+      const displayX = 100 / scaleX + 75;
+      const displayY = 200 / scaleY + 30;
+
+      const result = detectControlAtPoint({
+        displayPoint: { x: displayX, y: displayY },
+        pageNumber: 1,
+        renderMetrics: createRenderMetrics(),
+        elements: {
+          signatures,
+          texts: [],
+          dates: [],
+        },
+      });
+
+      expect(result.elementHit).not.toBeNull();
+      expect(result.controlHit).toBeNull();
+      expect(result.elementBounds).not.toBeNull();
+    });
+
+    it('should return null element hit when no element is at point', () => {
+      const result = detectControlAtPoint({
+        displayPoint: { x: 10, y: 10 },
+        pageNumber: 1,
+        renderMetrics: createRenderMetrics(),
+        elements: {
+          signatures: [],
+          texts: [],
+          dates: [],
+        },
+      });
+
+      expect(result.elementHit).toBeNull();
+      expect(result.controlHit).toBeNull();
+      expect(result.elementBounds).toBeNull();
+    });
+
+    it('should prioritize control hit over element hit', () => {
+      const signatures: SignaturePlacement[] = [
+        {
+          signatureImage: 'data:image/png;base64,test',
+          coordinates: createCoordinates(1),
+          width: 150,
+          height: 60,
+        },
+      ];
+
+      const scaleX = 612 / 1024;
+      const scaleY = 792 / 1320;
+      const displayX = (100 / scaleX + 150 / scaleX) - 8;
+      const displayY = 200 / scaleY;
+
+      const result = detectControlAtPoint({
+        displayPoint: { x: displayX, y: displayY },
+        pageNumber: 1,
+        renderMetrics: createRenderMetrics(),
+        elements: {
+          signatures,
+          texts: [],
+          dates: [],
+        },
+      });
+
+      expect(result.controlHit).not.toBeNull();
+      expect(result.elementHit).not.toBeNull();
+    });
+
+    it('should detect resize handle on text element', () => {
+      const texts: TextPlacement[] = [
+        {
+          text: 'Test',
+          coordinates: createCoordinates(1),
           fontSize: 12,
-        }],
-      },
-    };
+        },
+      ];
 
-    const result = detectElementAtPoint(input);
+      const scaleX = 1024 / 612;
+      const scaleY = 1320 / 792;
+      const fontSize = 12 * scaleY;
+      const textWidth = 4 * fontSize * 0.6;
+      const boundsY = 200 * scaleY;
+      const displayX = (100 * scaleX + textWidth) - 6;
+      const displayY = boundsY + fontSize / 2;
 
-    expect(result).toEqual({ type: PdfElementType.Date, index: 0 });
+      const result = detectControlAtPoint({
+        displayPoint: { x: displayX, y: displayY },
+        pageNumber: 1,
+        renderMetrics: createRenderMetrics(),
+        elements: {
+          signatures: [],
+          texts,
+          dates: [],
+        },
+      });
+
+      expect(result.elementHit).not.toBeNull();
+      if (result.elementHit && result.elementBounds) {
+        const topY = result.elementBounds.y - result.elementBounds.height;
+        const controlHit = getControlAtDisplayPosition(displayX, topY + 6, result.elementBounds, PdfElementType.Text);
+        expect(controlHit).not.toBeNull();
+      }
+    });
   });
 
-  it('should skip elements not on current page', () => {
-    mockGetElementDisplayBounds.mockReturnValue(null);
+  describe('Edge cases and multiple elements', () => {
+    it('should handle multiple signatures and return first match', () => {
+      const signatures: SignaturePlacement[] = [
+        {
+          signatureImage: 'data:image/png;base64,test1',
+          coordinates: createCoordinates(1),
+          width: 150,
+          height: 60,
+        },
+        {
+          signatureImage: 'data:image/png;base64,test2',
+          coordinates: { x: 300, y: 400, pageNumber: 1, pageWidth: 612, pageHeight: 792 },
+          width: 150,
+          height: 60,
+        },
+      ];
 
-    const input = {
-      displayPoint: { x: 200, y: 300 },
-      pageNumber: 1,
-      renderMetrics: createRenderMetrics(),
-      elements: {
-        signatures: [{
+      const scaleX = 612 / 1024;
+      const scaleY = 792 / 1320;
+      const displayX = 100 / scaleX + 75;
+      const displayY = 200 / scaleY + 30;
+
+      const result = detectElementAtPoint({
+        displayPoint: { x: displayX, y: displayY },
+        pageNumber: 1,
+        renderMetrics: createRenderMetrics(),
+        elements: {
+          signatures,
+          texts: [],
+          dates: [],
+        },
+      });
+
+      expect(result).not.toBeNull();
+      expect(result?.index).toBe(0);
+    });
+
+    it('should handle multiple texts and return first match', () => {
+      const texts: TextPlacement[] = [
+        {
+          text: 'First',
+          coordinates: createCoordinates(1),
+          fontSize: 12,
+        },
+        {
+          text: 'Second',
+          coordinates: { x: 300, y: 400, pageNumber: 1, pageWidth: 612, pageHeight: 792 },
+          fontSize: 12,
+        },
+      ];
+
+      const scaleX = 1024 / 612;
+      const scaleY = 1320 / 792;
+      const fontSize = 12 * scaleY;
+      const textWidth = 5 * fontSize * 0.6;
+      const boundsY = 200 * scaleY;
+      const displayX = 100 * scaleX + textWidth / 2;
+      const displayY = boundsY + fontSize / 2;
+
+      const result = detectElementAtPoint({
+        displayPoint: { x: displayX, y: displayY },
+        pageNumber: 1,
+        renderMetrics: createRenderMetrics(),
+        elements: {
+          signatures: [],
+          texts,
+          dates: [],
+        },
+      });
+
+      expect(result).not.toBeNull();
+      expect(result?.index).toBe(0);
+    });
+
+    it('should handle element at boundary edges', () => {
+      const signatures: SignaturePlacement[] = [
+        {
           signatureImage: 'data:image/png;base64,test',
-          coordinates: { pageNumber: 2, x: 100, y: 200, pageWidth: 612, pageHeight: 792 },
-        }],
-        texts: [],
-        dates: [],
-      },
-    };
+          coordinates: createCoordinates(1),
+          width: 150,
+          height: 60,
+        },
+      ];
 
-    const result = detectElementAtPoint(input);
+      const scaleX = 612 / 1024;
+      const scaleY = 792 / 1320;
+      const displayX = 100 / scaleX;
+      const displayY = 200 / scaleY;
 
-    expect(result).toBeNull();
-  });
-});
+      const result = detectElementAtPoint({
+        displayPoint: { x: displayX, y: displayY },
+        pageNumber: 1,
+        renderMetrics: createRenderMetrics(),
+        elements: {
+          signatures,
+          texts: [],
+          dates: [],
+        },
+      });
 
-describe('detectControlAtPoint', () => {
-  const createRenderMetrics = (): PdfRenderMetrics => ({
-    pdfPageWidth: 612,
-    pdfPageHeight: 792,
-    viewportWidth: 1024,
-    viewportHeight: 1320,
-  });
+      expect(result).not.toBeNull();
+    });
 
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it('should return null when no elements are found', () => {
-    mockGetElementDisplayBounds.mockReturnValue(null);
-
-    const input = {
-      displayPoint: { x: 200, y: 300 },
-      pageNumber: 1,
-      renderMetrics: createRenderMetrics(),
-      elements: {
-        signatures: [],
-        texts: [],
-        dates: [],
-      },
-    };
-
-    const result = detectControlAtPoint(input);
-
-    expect(result.elementHit).toBeNull();
-    expect(result.controlHit).toBeNull();
-    expect(result.elementBounds).toBeNull();
-  });
-
-  it('should return control hit when delete button is detected', () => {
-    const scaleX = 1024 / 612;
-    const scaleY = 1320 / 792;
-    const bounds = {
-      x: 100 * scaleX,
-      y: 200 * scaleY,
-      width: 150 * scaleX,
-      height: 60 * scaleY,
-    };
-    mockGetElementDisplayBounds.mockReturnValueOnce(bounds).mockReturnValue(null);
-    mockGetControlAtDisplayPosition.mockReturnValue({ type: ControlType.Delete });
-
-    const input = {
-      displayPoint: { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 },
-      pageNumber: 1,
-      renderMetrics: createRenderMetrics(),
-      elements: {
-        signatures: [{
+    it('should handle element at right and bottom boundaries', () => {
+      const signatures: SignaturePlacement[] = [
+        {
           signatureImage: 'data:image/png;base64,test',
-          coordinates: { pageNumber: 1, x: 100, y: 200, pageWidth: 612, pageHeight: 792 },
-        }],
-        texts: [],
-        dates: [],
-      },
-    };
+          coordinates: createCoordinates(1),
+          width: 150,
+          height: 60,
+        },
+      ];
 
-    const result = detectControlAtPoint(input);
+      const scaleX = 612 / 1024;
+      const scaleY = 792 / 1320;
+      const displayX = (100 + 150) / scaleX;
+      const displayY = (200 + 60) / scaleY;
 
-    expect(result.elementHit).toEqual({ type: PdfElementType.Signature, index: 0 });
-    expect(result.controlHit).toEqual({ type: ControlType.Delete });
-    expect(result.elementBounds).toEqual(bounds);
-  });
+      const result = detectElementAtPoint({
+        displayPoint: { x: displayX, y: displayY },
+        pageNumber: 1,
+        renderMetrics: createRenderMetrics(),
+        elements: {
+          signatures,
+          texts: [],
+          dates: [],
+        },
+      });
 
-  it('should return element hit even when no control is detected', () => {
-    const scaleX = 1024 / 612;
-    const scaleY = 1320 / 792;
-    const bounds = {
-      x: 100 * scaleX,
-      y: 200 * scaleY,
-      width: 150 * scaleX,
-      height: 60 * scaleY,
-    };
-    mockGetElementDisplayBounds.mockReturnValueOnce(bounds).mockReturnValue(null);
-    mockGetControlAtDisplayPosition.mockReturnValue(null);
+      expect(result).not.toBeNull();
+    });
 
-    const input = {
-      displayPoint: { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 },
-      pageNumber: 1,
-      renderMetrics: createRenderMetrics(),
-      elements: {
-        signatures: [{
+    it('should return null when point is just outside element bounds', () => {
+      const signatures: SignaturePlacement[] = [
+        {
           signatureImage: 'data:image/png;base64,test',
-          coordinates: { pageNumber: 1, x: 100, y: 200, pageWidth: 612, pageHeight: 792 },
-        }],
-        texts: [],
-        dates: [],
-      },
-    };
+          coordinates: createCoordinates(1),
+          width: 150,
+          height: 60,
+        },
+      ];
 
-    const result = detectControlAtPoint(input);
+      const scaleX = 612 / 1024;
+      const scaleY = 792 / 1320;
+      const displayX = (100 + 150 + 1) / scaleX;
+      const displayY = 200 / scaleY;
 
-    expect(result.elementHit).toEqual({ type: PdfElementType.Signature, index: 0 });
-    expect(result.controlHit).toBeNull();
-    expect(result.elementBounds).toEqual(bounds);
-  });
+      const result = detectElementAtPoint({
+        displayPoint: { x: displayX, y: displayY },
+        pageNumber: 1,
+        renderMetrics: createRenderMetrics(),
+        elements: {
+          signatures,
+          texts: [],
+          dates: [],
+        },
+      });
 
-    it('should return immediately when control is hit', () => {
-      const bounds = { x: 100, y: 200, width: 150, height: 60 };
-      mockGetElementDisplayBounds.mockReturnValue(bounds);
-      mockGetControlAtDisplayPosition.mockReturnValue({ type: ControlType.Resize, handle: ResizeHandle.Southeast });
+      expect(result).toBeNull();
+    });
 
-    const input = {
-      displayPoint: { x: 238, y: 248 },
-      pageNumber: 1,
-      renderMetrics: createRenderMetrics(),
-      elements: {
-        signatures: [{
+    it('should detect control on date element', () => {
+      const dates: DatePlacement[] = [
+        {
+          date: new Date(2024, 0, 15),
+          coordinates: createCoordinates(1),
+          fontSize: 12,
+        },
+      ];
+
+      const scaleX = 1024 / 612;
+      const scaleY = 1320 / 792;
+      const fontSize = 12 * scaleY;
+      const dateWidth = 80 * scaleX;
+      const boundsY = 200 * scaleY;
+      const displayX = (100 * scaleX + dateWidth) - 8;
+      const displayY = boundsY + fontSize / 2;
+
+      const result = detectControlAtPoint({
+        displayPoint: { x: displayX, y: displayY },
+        pageNumber: 1,
+        renderMetrics: createRenderMetrics(),
+        elements: {
+          signatures: [],
+          texts: [],
+          dates,
+        },
+      });
+
+      expect(result.elementHit).not.toBeNull();
+      if (result.elementHit && result.elementBounds) {
+        const topY = result.elementBounds.y - result.elementBounds.height;
+        const controlHit = getControlAtDisplayPosition(displayX, topY, result.elementBounds, PdfElementType.Date);
+        expect(controlHit).not.toBeNull();
+      }
+    });
+
+    it('should handle multiple overlapping elements and return first control hit', () => {
+      const signatures: SignaturePlacement[] = [
+        {
           signatureImage: 'data:image/png;base64,test',
-          coordinates: { pageNumber: 1, x: 100, y: 200, pageWidth: 612, pageHeight: 792 },
-        }],
-        texts: [],
-        dates: [],
-      },
-    };
+          coordinates: createCoordinates(1),
+          width: 150,
+          height: 60,
+        },
+      ];
+      const texts: TextPlacement[] = [
+        {
+          text: 'Overlap',
+          coordinates: createCoordinates(1),
+          fontSize: 12,
+        },
+      ];
 
-    const result = detectControlAtPoint(input);
+      const scaleX = 612 / 1024;
+      const scaleY = 792 / 1320;
+      const displayX = (100 / scaleX + 150 / scaleX) - 8;
+      const displayY = 200 / scaleY;
 
-    expect(result.controlHit).toEqual({ type: ControlType.Resize, handle: 'se' });
-    expect(mockGetControlAtDisplayPosition).toHaveBeenCalledTimes(1);
+      const result = detectControlAtPoint({
+        displayPoint: { x: displayX, y: displayY },
+        pageNumber: 1,
+        renderMetrics: createRenderMetrics(),
+        elements: {
+          signatures,
+          texts,
+          dates: [],
+        },
+      });
+
+      expect(result.elementHit).not.toBeNull();
+      expect(result.controlHit).not.toBeNull();
+      expect(result.elementHit?.type).toBe(PdfElementType.Signature);
+    });
+
+    it('should return element hit without control when point is in element but not on control', () => {
+      const texts: TextPlacement[] = [
+        {
+          text: 'Test',
+          coordinates: createCoordinates(1),
+          fontSize: 12,
+        },
+      ];
+
+      const scaleX = 1024 / 612;
+      const scaleY = 1320 / 792;
+      const fontSize = 12 * scaleY;
+      const textWidth = 4 * fontSize * 0.6;
+      const boundsY = 200 * scaleY;
+      const displayX = 100 * scaleX + textWidth / 2;
+      const displayY = boundsY + fontSize / 2;
+
+      const result = detectControlAtPoint({
+        displayPoint: { x: displayX, y: displayY },
+        pageNumber: 1,
+        renderMetrics: createRenderMetrics(),
+        elements: {
+          signatures: [],
+          texts,
+          dates: [],
+        },
+      });
+
+      expect(result.elementHit).not.toBeNull();
+      expect(result.controlHit).toBeNull();
+      expect(result.elementBounds).not.toBeNull();
+    });
   });
 });

@@ -39,6 +39,12 @@ module.exports = {
    * Maps @app and @ui-kit aliases used in the web application.
    */
   moduleNameMapper: {
+    '^react$': '<rootDir>/node_modules/react',
+    '^react-dom$': '<rootDir>/node_modules/react-dom',
+    '^react-dom/client$': '<rootDir>/node_modules/react-dom/client',
+    '^react/jsx-runtime$': '<rootDir>/node_modules/react/jsx-runtime',
+    '^react/jsx-dev-runtime$': '<rootDir>/node_modules/react/jsx-dev-runtime',
+
     // strip .js on relative imports (./foo.js -> ./foo) - MUST come first
     '^(\\.{1,2}/.*)\\.js$': '$1',
 
@@ -48,6 +54,21 @@ module.exports = {
 
     '^@ui-kit/(.*)\\.js$': '<rootDir>/src/ui-kit/$1',
     '^@ui-kit/(.*)$': '<rootDir>/src/ui-kit/$1',
+
+    // Test helpers alias
+    '^@/__tests__/(.*)$': '<rootDir>/__tests__/$1',
+
+    // App aliases with @/ prefix
+    '^@/app/(.*)\\.js$': '<rootDir>/src/app/$1',
+    '^@/app/(.*)$': '<rootDir>/src/app/$1',
+
+    // Modules aliases with @/ prefix
+    '^@/modules/(.*)\\.js$': '<rootDir>/src/modules/$1',
+    '^@/modules/(.*)$': '<rootDir>/src/modules/$1',
+
+    // UI Kit aliases with @/ prefix (must come after modules)
+    '^@/ui-kit/(.*)\\.js$': '<rootDir>/src/ui-kit/$1',
+    '^@/ui-kit/(.*)$': '<rootDir>/src/ui-kit/$1',
 
     // frontend-core package aliases
     '^@lawprotect/frontend-core$': '<rootDir>/../../packages/frontend-core/src/index.ts',
@@ -59,6 +80,9 @@ module.exports = {
 
   /** Test file globs - include both .ts and .tsx for React components */
   testMatch: ['<rootDir>/__tests__/**/*.test.ts', '<rootDir>/__tests__/**/*.test.tsx'],
+
+  /** Module file extensions */
+  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
 
   /** Setup files for test environment */
   setupFilesAfterEnv: ['<rootDir>/__tests__/setup.ts'],
@@ -78,5 +102,15 @@ module.exports = {
   transformIgnorePatterns: [
     'node_modules/(?!(@lawprotect/frontend-core|@tanstack/react-query)/)',
   ],
+
+  /** Coverage thresholds - 95% minimum for all metrics */
+  coverageThreshold: {
+    global: {
+      branches: 95,
+      functions: 95,
+      lines: 95,
+      statements: 95,
+    },
+  },
 };
 

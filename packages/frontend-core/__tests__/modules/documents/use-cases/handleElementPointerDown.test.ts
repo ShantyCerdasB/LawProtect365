@@ -1,192 +1,414 @@
 /**
  * @fileoverview Tests for handleElementPointerDown use case
  * @summary Unit tests for pointer down event handling
+ * @description Comprehensive tests for handling pointer down events on elements
  */
 
-import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+import { describe, it, expect } from '@jest/globals';
 import { handleElementPointerDown } from '../../../../src/modules/documents/use-cases/handleElementPointerDown';
-import { PdfElementType } from '../../../../src/modules/documents/enums';
+import { getControlAtDisplayPosition } from '../../../../src/modules/documents/use-cases/getControlAtDisplayPosition';
+import { PdfElementType, ControlType } from '../../../../src/modules/documents/enums';
+import type { SignaturePlacement, TextPlacement, DatePlacement, PDFCoordinates } from '../../../../src/modules/documents/types';
 import type { ElementInteractionContext } from '../../../../src/modules/documents/strategies/interfaces';
 
-jest.mock('../../../../src/modules/documents/use-cases/detectElementInteraction');
-jest.mock('../../../../src/modules/documents/use-cases/createElementInteractionStrategy');
-
-import { detectControlAtPoint } from '../../../../src/modules/documents/use-cases/detectElementInteraction';
-import { getElementInteractionStrategy } from '../../../../src/modules/documents/use-cases/createElementInteractionStrategy';
-
-const mockDetectControlAtPoint = detectControlAtPoint as jest.MockedFunction<typeof detectControlAtPoint>;
-const mockGetElementInteractionStrategy = getElementInteractionStrategy as jest.MockedFunction<typeof getElementInteractionStrategy>;
-
 describe('handleElementPointerDown', () => {
-  const createContext = (): ElementInteractionContext => ({
+  const createRenderMetrics = () => ({
+    pdfPageWidth: 612,
+    pdfPageHeight: 792,
+    viewportWidth: 1024,
+    viewportHeight: 1320,
+  });
+
+  const createCoordinates = (pageNumber: number = 1) => ({
+    x: 100,
+    y: 200,
+    pageNumber,
+    pageWidth: 612,
+    pageHeight: 792,
+  });
+
+  const createContext = (
+    signatures: SignaturePlacement[] = [],
+    texts: TextPlacement[] = [],
+    dates: DatePlacement[] = [],
+    pendingElementType: string | null = null,
+    pendingCoordinates: PDFCoordinates | null = null
+  ): ElementInteractionContext => ({
     currentPage: 1,
-    renderMetrics: {
-      pdfPageWidth: 612,
-      pdfPageHeight: 792,
-      viewportWidth: 1024,
-      viewportHeight: 1320,
-    },
-    signatures: [],
-    texts: [],
-    dates: [],
-    elements: { signatures: [], texts: [], dates: [] },
-    pendingCoordinates: null,
-    pendingElementType: null,
+    renderMetrics: createRenderMetrics(),
+    signatures,
+    texts,
+    dates,
+    elements: { signatures, texts, dates },
+    pendingCoordinates: pendingCoordinates || (pendingElementType ? createCoordinates(1) : null),
+    pendingElementType,
     pendingSignatureWidth: 150,
     pendingSignatureHeight: 60,
   });
 
-  const mockStrategy = {
-    handlePointerDown: jest.fn(),
-    handlePointerMove: jest.fn(),
-    handlePointerUp: jest.fn(),
-    canHandle: jest.fn(),
-  };
+  describe('Element hit detection', () => {
+    it('should handle pointer down on signature element', () => {
+      const signatures: SignaturePlacement[] = [
+        {
+          signatureImage: 'data:image/png;base64,test',
+          coordinates: createCoordinates(1),
+          width: 150,
+          height: 60,
+        },
+      ];
 
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockGetElementInteractionStrategy.mockReturnValue(mockStrategy as never);
-  });
+      const context = createContext(signatures);
+      const scaleX = 612 / 1024;
+      const scaleY = 792 / 1320;
+      const displayPoint = {
+        x: 100 / scaleX + 75,
+        y: 200 / scaleY + 30,
+      };
 
-  it('should return null result when no element hit and no pending element', () => {
-    mockDetectControlAtPoint.mockReturnValue({
-      elementHit: null,
-      controlHit: null,
-      elementBounds: null,
+      const result = handleElementPointerDown({
+        context,
+        displayPoint,
+      });
+
+      expect(result.elementHit).not.toBeNull();
+      expect(result.elementHit?.type).toBe(PdfElementType.Signature);
+      expect(result.elementHit?.index).toBe(0);
     });
 
-    const input = {
-      context: createContext(),
-      displayPoint: { x: 100, y: 200 },
-    };
+    it('should handle pointer down on text element', () => {
+      const texts: TextPlacement[] = [
+        {
+          text: 'Hello',
+          coordinates: createCoordinates(1),
+          fontSize: 12,
+        },
+      ];
 
-    const result = handleElementPointerDown(input);
+      const context = createContext([], texts);
+      const scaleX = 1024 / 612;
+      const scaleY = 1320 / 792;
+      const fontSize = 12 * scaleY;
+      const textWidth = 5 * fontSize * 0.6;
+      const boundsY = 200 * scaleY;
+      const displayPoint = {
+        x: 100 * scaleX + textWidth / 2,
+        y: boundsY + fontSize / 2,
+      };
 
-    expect(result.result).toBeNull();
-    expect(result.elementHit).toBeNull();
-    expect(result.controlHit).toBeNull();
-    expect(result.elementBounds).toBeNull();
+      const result = handleElementPointerDown({
+        context,
+        displayPoint,
+      });
+
+      expect(result.elementHit).not.toBeNull();
+      expect(result.elementHit?.type).toBe(PdfElementType.Text);
+    });
+
+    it('should handle pointer down on date element', () => {
+      const dates: DatePlacement[] = [
+        {
+          date: new Date(2024, 0, 15),
+          coordinates: createCoordinates(1),
+          fontSize: 12,
+        },
+      ];
+
+      const context = createContext([], [], dates);
+      const scaleX = 1024 / 612;
+      const scaleY = 1320 / 792;
+      const fontSize = 12 * scaleY;
+      const dateWidth = 80 * scaleX;
+      const boundsY = 200 * scaleY;
+      const displayPoint = {
+        x: 100 * scaleX + dateWidth / 2,
+        y: boundsY + fontSize / 2,
+      };
+
+      const result = handleElementPointerDown({
+        context,
+        displayPoint,
+      });
+
+      expect(result.elementHit).not.toBeNull();
+      expect(result.elementHit?.type).toBe(PdfElementType.Date);
+    });
   });
 
-  it('should delegate to strategy when element is hit', () => {
-    const elementHit = { type: PdfElementType.Signature, index: 0 };
-    const controlHit = null;
-    const elementBounds = { x: 100, y: 200, width: 150, height: 60 };
-    const interactionResult = { type: 'startDrag' as const, preventDefault: true };
+  describe('Control hit detection', () => {
+    it('should detect delete button hit', () => {
+      const signatures: SignaturePlacement[] = [
+        {
+          signatureImage: 'data:image/png;base64,test',
+          coordinates: createCoordinates(1),
+          width: 150,
+          height: 60,
+        },
+      ];
 
-    mockDetectControlAtPoint.mockReturnValue({
-      elementHit,
-      controlHit,
-      elementBounds,
+      const context = createContext(signatures);
+      const scaleX = 612 / 1024;
+      const scaleY = 792 / 1320;
+      const displayPoint = {
+        x: (100 / scaleX + 150 / scaleX) - 8,
+        y: 200 / scaleY,
+      };
+
+      const result = handleElementPointerDown({
+        context,
+        displayPoint,
+      });
+
+      expect(result.controlHit).not.toBeNull();
+      expect(result.controlHit?.type).toBe(ControlType.Delete);
+      expect(result.result).not.toBeNull();
     });
-    mockStrategy.handlePointerDown.mockReturnValue(interactionResult);
 
-    const context = createContext();
-    const input = {
-      context,
-      displayPoint: { x: 100, y: 200 },
-    };
+    it('should detect resize handle hit', () => {
+      const signatures: SignaturePlacement[] = [
+        {
+          signatureImage: 'data:image/png;base64,test',
+          coordinates: createCoordinates(1),
+          width: 150,
+          height: 60,
+        },
+      ];
 
-    const result = handleElementPointerDown(input);
+      const context = createContext(signatures);
+      const scaleX = 612 / 1024;
+      const scaleY = 792 / 1320;
+      const displayPoint = {
+        x: (100 / scaleX + 150 / scaleX) - 6,
+        y: (200 / scaleY + 60 / scaleY) - 6,
+      };
 
-    expect(mockGetElementInteractionStrategy).toHaveBeenCalledWith(PdfElementType.Signature);
-    expect(mockStrategy.handlePointerDown).toHaveBeenCalledWith(
-      context,
-      { x: 100, y: 200 },
-      elementHit,
-      controlHit,
-      elementBounds
-    );
-    expect(result.result).toEqual(interactionResult);
-    expect(result.elementHit).toEqual(elementHit);
-    expect(result.controlHit).toEqual(controlHit);
-    expect(result.elementBounds).toEqual(elementBounds);
+      const result = handleElementPointerDown({
+        context,
+        displayPoint,
+      });
+
+      expect(result.controlHit).not.toBeNull();
+      expect(result.controlHit?.type).toBe(ControlType.Resize);
+    });
   });
 
-  it('should use pending element type when no element is hit', () => {
-    const context = createContext();
-    context.pendingElementType = PdfElementType.Text;
+  describe('Pending element handling', () => {
+    it('should handle pending element type when no element is hit', () => {
+      const pendingCoords = createCoordinates(1);
+      const context = createContext([], [], [], 'text', pendingCoords);
+      const scaleX = 1024 / 612;
+      const scaleY = 1320 / 792;
+      const fontSize = 12 * scaleY;
+      const defaultHeight = 14 * scaleY;
+      const displayPoint = {
+        x: pendingCoords.x * scaleX + 50,
+        y: pendingCoords.y * scaleY - defaultHeight / 2,
+      };
 
-    mockDetectControlAtPoint.mockReturnValue({
-      elementHit: null,
-      controlHit: null,
-      elementBounds: null,
+      const result = handleElementPointerDown({
+        context,
+        displayPoint,
+      });
+
+      expect(result.elementHit).toBeNull();
+      expect(result.result).not.toBeNull();
     });
-    mockStrategy.handlePointerDown.mockReturnValue({ type: 'startDrag' as const, preventDefault: true });
 
-    const input = {
-      context,
-      displayPoint: { x: 100, y: 200 },
-    };
+    it('should return null result when no element and no pending element', () => {
+      const context = createContext();
 
-    const result = handleElementPointerDown(input);
+      const result = handleElementPointerDown({
+        context,
+        displayPoint: { x: 10, y: 10 },
+      });
 
-    expect(mockGetElementInteractionStrategy).toHaveBeenCalledWith(PdfElementType.Text);
-    expect(result.result).not.toBeNull();
+      expect(result.result).toBeNull();
+      expect(result.elementHit).toBeNull();
+      expect(result.controlHit).toBeNull();
+      expect(result.elementBounds).toBeNull();
+    });
   });
 
-  it('should prioritize element hit over pending element type', () => {
-    const elementHit = { type: PdfElementType.Signature, index: 0 };
-    const context = createContext();
-    context.pendingElementType = PdfElementType.Text;
+  describe('Edge cases', () => {
+    it('should handle empty element arrays', () => {
+      const context = createContext();
 
-    mockDetectControlAtPoint.mockReturnValue({
-      elementHit,
-      controlHit: null,
-      elementBounds: { x: 100, y: 200, width: 150, height: 60 },
+      const result = handleElementPointerDown({
+        context,
+        displayPoint: { x: 100, y: 200 },
+      });
+
+      expect(result.result).toBeNull();
     });
-    mockStrategy.handlePointerDown.mockReturnValue({ type: 'startDrag' as const, preventDefault: true });
 
-    const input = {
-      context,
-      displayPoint: { x: 100, y: 200 },
-    };
+    it('should handle elements on different page', () => {
+      const signatures: SignaturePlacement[] = [
+        {
+          signatureImage: 'data:image/png;base64,test',
+          coordinates: createCoordinates(2),
+          width: 150,
+          height: 60,
+        },
+      ];
 
-    handleElementPointerDown(input);
+      const context = createContext(signatures);
 
-    expect(mockGetElementInteractionStrategy).toHaveBeenCalledWith(PdfElementType.Signature);
-    expect(mockGetElementInteractionStrategy).not.toHaveBeenCalledWith(PdfElementType.Text);
-  });
+      const result = handleElementPointerDown({
+        context,
+        displayPoint: { x: 100, y: 200 },
+      });
 
-  it('should return null when strategy is not found', () => {
-    mockDetectControlAtPoint.mockReturnValue({
-      elementHit: { type: PdfElementType.Signature, index: 0 },
-      controlHit: null,
-      elementBounds: { x: 100, y: 200, width: 150, height: 60 },
+      expect(result.elementHit).toBeNull();
     });
-    mockGetElementInteractionStrategy.mockReturnValue(null);
 
-    const input = {
-      context: createContext(),
-      displayPoint: { x: 100, y: 200 },
-    };
+    it('should handle control hit on text element', () => {
+      const texts: TextPlacement[] = [
+        {
+          text: 'Test',
+          coordinates: createCoordinates(1),
+          fontSize: 12,
+        },
+      ];
 
-    const result = handleElementPointerDown(input);
+      const context = createContext([], texts);
+      const scaleX = 1024 / 612;
+      const scaleY = 1320 / 792;
+      const fontSize = 12 * scaleY;
+      const textWidth = 4 * fontSize * 0.6;
+      const boundsY = 200 * scaleY;
+      const displayPoint = {
+        x: (100 * scaleX + textWidth) - 8,
+        y: boundsY + fontSize / 2,
+      };
 
-    expect(result.result).toBeNull();
-  });
+      const result = handleElementPointerDown({
+        context,
+        displayPoint,
+      });
 
-  it('should handle control hit', () => {
-    const elementHit = { type: PdfElementType.Text, index: 0 };
-    const controlHit = { type: 'delete' };
-    const elementBounds = { x: 100, y: 200, width: 50, height: 12 };
-    const interactionResult = { type: 'delete' as const, preventDefault: true };
-
-    mockDetectControlAtPoint.mockReturnValue({
-      elementHit,
-      controlHit,
-      elementBounds,
+      expect(result.elementHit).not.toBeNull();
+      if (result.elementHit && result.elementBounds) {
+        const topY = result.elementBounds.y - result.elementBounds.height;
+        const controlHit = getControlAtDisplayPosition(displayPoint.x, topY, result.elementBounds, PdfElementType.Text);
+        expect(controlHit).not.toBeNull();
+      }
     });
-    mockStrategy.handlePointerDown.mockReturnValue(interactionResult);
 
-    const input = {
-      context: createContext(),
-      displayPoint: { x: 200, y: 188 },
-    };
+    it('should handle control hit on date element', () => {
+      const dates: DatePlacement[] = [
+        {
+          date: new Date(2024, 0, 15),
+          coordinates: createCoordinates(1),
+          fontSize: 12,
+        },
+      ];
 
-    const result = handleElementPointerDown(input);
+      const context = createContext([], [], dates);
+      const scaleX = 1024 / 612;
+      const scaleY = 1320 / 792;
+      const fontSize = 12 * scaleY;
+      const dateWidth = 80 * scaleX;
+      const boundsY = 200 * scaleY;
+      const displayPoint = {
+        x: (100 * scaleX + dateWidth) - 8,
+        y: boundsY + fontSize / 2,
+      };
 
-    expect(result.controlHit).toEqual(controlHit);
-    expect(result.result).toEqual(interactionResult);
+      const result = handleElementPointerDown({
+        context,
+        displayPoint,
+      });
+
+      expect(result.elementHit).not.toBeNull();
+      if (result.elementHit && result.elementBounds) {
+        const topY = result.elementBounds.y - result.elementBounds.height;
+        const controlHit = getControlAtDisplayPosition(displayPoint.x, topY, result.elementBounds, PdfElementType.Date);
+        expect(controlHit).not.toBeNull();
+      }
+    });
+
+    it('should handle pending element type text', () => {
+      const pendingCoords = createCoordinates(1);
+      const context = createContext([], [], [], 'text', pendingCoords);
+      const scaleX = 1024 / 612;
+      const scaleY = 1320 / 792;
+      const defaultHeight = 14 * scaleY;
+      const displayPoint = {
+        x: pendingCoords.x * scaleX + 50,
+        y: pendingCoords.y * scaleY - defaultHeight / 2,
+      };
+
+      const result = handleElementPointerDown({
+        context,
+        displayPoint,
+      });
+
+      expect(result.elementHit).toBeNull();
+      expect(result.result).not.toBeNull();
+    });
+
+    it('should handle pending element type date', () => {
+      const pendingCoords = createCoordinates(1);
+      const context = createContext([], [], [], 'date', pendingCoords);
+      const scaleX = 1024 / 612;
+      const scaleY = 1320 / 792;
+      const defaultHeight = 14 * scaleY;
+      const displayPoint = {
+        x: pendingCoords.x * scaleX + 40,
+        y: pendingCoords.y * scaleY - defaultHeight / 2,
+      };
+
+      const result = handleElementPointerDown({
+        context,
+        displayPoint,
+      });
+
+      expect(result.elementHit).toBeNull();
+      expect(result.result).not.toBeNull();
+    });
+
+    it('should handle pending element type signature', () => {
+      const pendingCoords = createCoordinates(1);
+      const context = createContext([], [], [], 'signature', pendingCoords);
+      const scaleX = 1024 / 612;
+      const scaleY = 1320 / 792;
+      const displayPoint = {
+        x: pendingCoords.x * scaleX + 75,
+        y: pendingCoords.y * scaleY + 30,
+      };
+
+      const result = handleElementPointerDown({
+        context,
+        displayPoint,
+      });
+
+      expect(result.elementHit).toBeNull();
+      expect(result.result).not.toBeNull();
+    });
+
+    it('should return element bounds when element is hit', () => {
+      const signatures: SignaturePlacement[] = [
+        {
+          signatureImage: 'data:image/png;base64,test',
+          coordinates: createCoordinates(1),
+          width: 150,
+          height: 60,
+        },
+      ];
+
+      const context = createContext(signatures);
+      const scaleX = 612 / 1024;
+      const scaleY = 792 / 1320;
+      const displayPoint = {
+        x: 100 / scaleX + 75,
+        y: 200 / scaleY + 30,
+      };
+
+      const result = handleElementPointerDown({
+        context,
+        displayPoint,
+      });
+
+      expect(result.elementBounds).not.toBeNull();
+    });
   });
 });

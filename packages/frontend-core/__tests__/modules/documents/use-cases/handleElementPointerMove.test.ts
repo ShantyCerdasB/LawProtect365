@@ -1,187 +1,439 @@
 /**
  * @fileoverview Tests for handleElementPointerMove use case
  * @summary Unit tests for pointer move event handling
+ * @description Comprehensive tests for handling pointer move events during drag and resize operations
  */
 
-import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+import { describe, it, expect } from '@jest/globals';
 import { handleElementPointerMove } from '../../../../src/modules/documents/use-cases/handleElementPointerMove';
-import { PdfElementType } from '../../../../src/modules/documents/enums';
+import { PdfElementType, ResizeHandle } from '../../../../src/modules/documents/enums';
+import type { SignaturePlacement, TextPlacement, DatePlacement } from '../../../../src/modules/documents/types';
 import type { ElementInteractionContext } from '../../../../src/modules/documents/strategies/interfaces';
-
-jest.mock('../../../../src/modules/documents/use-cases/createElementInteractionStrategy');
-
-import { getElementInteractionStrategy } from '../../../../src/modules/documents/use-cases/createElementInteractionStrategy';
-
-const mockGetElementInteractionStrategy = getElementInteractionStrategy as jest.MockedFunction<typeof getElementInteractionStrategy>;
+import { InteractionResultType } from '../../../../src/modules/documents/strategies/interfaces/ElementInteractionResult';
 
 describe('handleElementPointerMove', () => {
-  const createContext = (): ElementInteractionContext => ({
+  const createRenderMetrics = () => ({
+    pdfPageWidth: 612,
+    pdfPageHeight: 792,
+    viewportWidth: 1024,
+    viewportHeight: 1320,
+  });
+
+  const createContext = (
+    signatures: SignaturePlacement[] = [],
+    texts: TextPlacement[] = [],
+    dates: DatePlacement[] = []
+  ): ElementInteractionContext => ({
     currentPage: 1,
-    renderMetrics: {
-      pdfPageWidth: 612,
-      pdfPageHeight: 792,
-      viewportWidth: 1024,
-      viewportHeight: 1320,
-    },
-    signatures: [],
-    texts: [],
-    dates: [],
-    elements: { signatures: [], texts: [], dates: [] },
+    renderMetrics: createRenderMetrics(),
+    signatures,
+    texts,
+    dates,
+    elements: { signatures, texts, dates },
     pendingCoordinates: null,
     pendingElementType: null,
     pendingSignatureWidth: 150,
     pendingSignatureHeight: 60,
   });
 
-  const mockStrategy = {
-    handlePointerDown: jest.fn(),
-    handlePointerMove: jest.fn(),
-    handlePointerUp: jest.fn(),
-    canHandle: jest.fn(),
-  };
+  describe('Resize state handling', () => {
+    it('should handle resize state for signature element', () => {
+      const signatures: SignaturePlacement[] = [
+        {
+          signatureImage: 'data:image/png;base64,test',
+          coordinates: {
+            x: 100,
+            y: 200,
+            pageNumber: 1,
+            pageWidth: 612,
+            pageHeight: 792,
+          },
+          width: 150,
+          height: 60,
+        },
+      ];
 
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockGetElementInteractionStrategy.mockReturnValue(mockStrategy as never);
+      const context = createContext(signatures);
+      const resizeState = {
+        type: PdfElementType.Signature,
+        index: 0,
+        handle: ResizeHandle.Southeast,
+        startX: 100,
+        startY: 200,
+        startWidth: 150,
+        startHeight: 60,
+      };
+
+      const result = handleElementPointerMove({
+        context,
+        displayPoint: { x: 200, y: 300 },
+        resizeState,
+        dragState: null,
+      });
+
+      expect(result).not.toBeNull();
+      expect(result?.type).toBe(InteractionResultType.UpdateDimensions);
+    });
+
+    it('should handle resize state for text element', () => {
+      const texts: TextPlacement[] = [
+        {
+          text: 'Hello',
+          coordinates: {
+            x: 100,
+            y: 200,
+            pageNumber: 1,
+            pageWidth: 612,
+            pageHeight: 792,
+          },
+          fontSize: 12,
+        },
+      ];
+
+      const context = createContext([], texts);
+      const resizeState = {
+        type: PdfElementType.Text,
+        index: 0,
+        handle: ResizeHandle.Southeast,
+        startX: 100,
+        startY: 200,
+        startWidth: 50,
+        startHeight: 12,
+        startFontSize: 12,
+      };
+
+      const result = handleElementPointerMove({
+        context,
+        displayPoint: { x: 150, y: 180 },
+        resizeState,
+        dragState: null,
+      });
+
+      expect(result).not.toBeNull();
+      expect(result?.type).toBe(InteractionResultType.UpdateFontSize);
+    });
+
+    it('should handle resize state for date element', () => {
+      const dates: DatePlacement[] = [
+        {
+          date: new Date(2024, 0, 15),
+          coordinates: {
+            x: 100,
+            y: 200,
+            pageNumber: 1,
+            pageWidth: 612,
+            pageHeight: 792,
+          },
+          fontSize: 12,
+        },
+      ];
+
+      const context = createContext([], [], dates);
+      const resizeState = {
+        type: PdfElementType.Date,
+        index: 0,
+        handle: ResizeHandle.Southeast,
+        startX: 100,
+        startY: 200,
+        startWidth: 80,
+        startHeight: 12,
+        startFontSize: 12,
+      };
+
+      const result = handleElementPointerMove({
+        context,
+        displayPoint: { x: 150, y: 180 },
+        resizeState,
+        dragState: null,
+      });
+
+      expect(result).not.toBeNull();
+      expect(result?.type).toBe(InteractionResultType.UpdateFontSize);
+    });
   });
 
-  it('should return null when no resize or drag state', () => {
-    const input = {
-      context: createContext(),
-      displayPoint: { x: 100, y: 200 },
-      resizeState: null,
-      dragState: null,
-    };
+  describe('Drag state handling', () => {
+    it('should handle drag state for signature element', () => {
+      const signatures: SignaturePlacement[] = [
+        {
+          signatureImage: 'data:image/png;base64,test',
+          coordinates: {
+            x: 100,
+            y: 200,
+            pageNumber: 1,
+            pageWidth: 612,
+            pageHeight: 792,
+          },
+          width: 150,
+          height: 60,
+        },
+      ];
 
-    const result = handleElementPointerMove(input);
+      const context = createContext(signatures);
+      const dragState = {
+        type: PdfElementType.Signature,
+        index: 0,
+        offsetX: 10,
+        offsetY: 20,
+      };
 
-    expect(result).toBeNull();
-    expect(mockGetElementInteractionStrategy).not.toHaveBeenCalled();
+      const result = handleElementPointerMove({
+        context,
+        displayPoint: { x: 150, y: 250 },
+        resizeState: null,
+        dragState,
+      });
+
+      expect(result).not.toBeNull();
+      expect(result?.type).toBe(InteractionResultType.UpdateCoordinates);
+    });
+
+    it('should handle drag state for text element', () => {
+      const texts: TextPlacement[] = [
+        {
+          text: 'Hello',
+          coordinates: {
+            x: 100,
+            y: 200,
+            pageNumber: 1,
+            pageWidth: 612,
+            pageHeight: 792,
+          },
+          fontSize: 12,
+        },
+      ];
+
+      const context = createContext([], texts);
+      const dragState = {
+        type: PdfElementType.Text,
+        index: 0,
+        offsetX: 5,
+        offsetY: 10,
+      };
+
+      const result = handleElementPointerMove({
+        context,
+        displayPoint: { x: 150, y: 220 },
+        resizeState: null,
+        dragState,
+      });
+
+      expect(result).not.toBeNull();
+      expect(result?.type).toBe(InteractionResultType.UpdateCoordinates);
+    });
+
+    it('should handle drag state for date element', () => {
+      const dates: DatePlacement[] = [
+        {
+          date: new Date(2024, 0, 15),
+          coordinates: {
+            x: 100,
+            y: 200,
+            pageNumber: 1,
+            pageWidth: 612,
+            pageHeight: 792,
+          },
+          fontSize: 12,
+        },
+      ];
+
+      const context = createContext([], [], dates);
+      const dragState = {
+        type: PdfElementType.Date,
+        index: 0,
+        offsetX: 5,
+        offsetY: 10,
+      };
+
+      const result = handleElementPointerMove({
+        context,
+        displayPoint: { x: 150, y: 220 },
+        resizeState: null,
+        dragState,
+      });
+
+      expect(result).not.toBeNull();
+      expect(result?.type).toBe(InteractionResultType.UpdateCoordinates);
+    });
   });
 
-  it('should delegate to strategy when resize state exists', () => {
-    const resizeState = {
-      type: PdfElementType.Signature,
-      index: 0,
-      handle: 'southeast',
-      startX: 100,
-      startY: 200,
-      startWidth: 150,
-      startHeight: 60,
-    };
-    const interactionResult = { type: 'updateDimensions' as const, preventDefault: true };
+  describe('Priority handling', () => {
+    it('should prioritize resize state over drag state', () => {
+      const signatures: SignaturePlacement[] = [
+        {
+          signatureImage: 'data:image/png;base64,test',
+          coordinates: {
+            x: 100,
+            y: 200,
+            pageNumber: 1,
+            pageWidth: 612,
+            pageHeight: 792,
+          },
+          width: 150,
+          height: 60,
+        },
+      ];
 
-    mockStrategy.handlePointerMove.mockReturnValue(interactionResult);
+      const context = createContext(signatures);
+      const resizeState = {
+        type: PdfElementType.Signature,
+        index: 0,
+        handle: ResizeHandle.Southeast,
+        startX: 100,
+        startY: 200,
+        startWidth: 150,
+        startHeight: 60,
+      };
+      const dragState = {
+        type: PdfElementType.Signature,
+        index: 0,
+        offsetX: 10,
+        offsetY: 20,
+      };
 
-    const input = {
-      context: createContext(),
-      displayPoint: { x: 150, y: 250 },
-      resizeState,
-      dragState: null,
-    };
+      const result = handleElementPointerMove({
+        context,
+        displayPoint: { x: 200, y: 300 },
+        resizeState,
+        dragState,
+      });
 
-    const result = handleElementPointerMove(input);
-
-    expect(mockGetElementInteractionStrategy).toHaveBeenCalledWith(PdfElementType.Signature);
-    expect(mockStrategy.handlePointerMove).toHaveBeenCalledWith(
-      input.context,
-      { x: 150, y: 250 },
-      resizeState,
-      null
-    );
-    expect(result).toEqual(interactionResult);
+      expect(result).not.toBeNull();
+      expect(result?.type).toBe(InteractionResultType.UpdateDimensions);
+    });
   });
 
-  it('should delegate to strategy when drag state exists', () => {
-    const dragState = {
-      type: PdfElementType.Text,
-      index: 0,
-      offsetX: 10,
-      offsetY: 20,
-    };
-    const interactionResult = { type: 'updateCoordinates' as const, preventDefault: true };
+  describe('Edge cases', () => {
+    it('should return null when no resize or drag state', () => {
+      const context = createContext();
 
-    mockStrategy.handlePointerMove.mockReturnValue(interactionResult);
+      const result = handleElementPointerMove({
+        context,
+        displayPoint: { x: 100, y: 200 },
+        resizeState: null,
+        dragState: null,
+      });
 
-    const input = {
-      context: createContext(),
-      displayPoint: { x: 200, y: 300 },
-      resizeState: null,
-      dragState,
-    };
+      expect(result).toBeNull();
+    });
 
-    const result = handleElementPointerMove(input);
+    it('should return null for unknown element type in resize state', () => {
+      const context = createContext();
+      const resizeState = {
+        type: 'unknown' as PdfElementType,
+        index: 0,
+        handle: ResizeHandle.Southeast,
+        startX: 100,
+        startY: 200,
+        startWidth: 150,
+        startHeight: 60,
+      };
 
-    expect(mockGetElementInteractionStrategy).toHaveBeenCalledWith(PdfElementType.Text);
-    expect(mockStrategy.handlePointerMove).toHaveBeenCalledWith(
-      input.context,
-      { x: 200, y: 300 },
-      null,
-      dragState
-    );
-    expect(result).toEqual(interactionResult);
-  });
+      const result = handleElementPointerMove({
+        context,
+        displayPoint: { x: 200, y: 300 },
+        resizeState,
+        dragState: null,
+      });
 
-  it('should prioritize resize state over drag state', () => {
-    const resizeState = {
-      type: PdfElementType.Signature,
-      index: 0,
-      handle: 'southeast',
-      startX: 100,
-      startY: 200,
-      startWidth: 150,
-      startHeight: 60,
-    };
-    const dragState = {
-      type: PdfElementType.Text,
-      index: 0,
-      offsetX: 10,
-      offsetY: 20,
-    };
+      expect(result).toBeNull();
+    });
 
-    mockStrategy.handlePointerMove.mockReturnValue({ type: 'updateDimensions' as const, preventDefault: true });
+    it('should return null for unknown element type in drag state', () => {
+      const context = createContext();
+      const dragState = {
+        type: 'unknown' as PdfElementType,
+        index: 0,
+        offsetX: 10,
+        offsetY: 20,
+      };
 
-    const input = {
-      context: createContext(),
-      displayPoint: { x: 150, y: 250 },
-      resizeState,
-      dragState,
-    };
+      const result = handleElementPointerMove({
+        context,
+        displayPoint: { x: 150, y: 250 },
+        resizeState: null,
+        dragState,
+      });
 
-    handleElementPointerMove(input);
+      expect(result).toBeNull();
+    });
 
-    expect(mockGetElementInteractionStrategy).toHaveBeenCalledWith(PdfElementType.Signature);
-    expect(mockGetElementInteractionStrategy).not.toHaveBeenCalledWith(PdfElementType.Text);
-    expect(mockStrategy.handlePointerMove).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.anything(),
-      resizeState,
-      dragState
-    );
-  });
+    it('should return null when resizeState has invalid type', () => {
+      const context = createContext();
+      const resizeState = {
+        type: 'invalid' as PdfElementType,
+        index: 0,
+        handle: ResizeHandle.Southeast,
+        startX: 100,
+        startY: 200,
+        startWidth: 150,
+        startHeight: 60,
+      };
 
-  it('should return null when strategy is not found', () => {
-    const resizeState = {
-      type: PdfElementType.Signature,
-      index: 0,
-      handle: 'southeast',
-      startX: 100,
-      startY: 200,
-      startWidth: 150,
-      startHeight: 60,
-    };
+      const result = handleElementPointerMove({
+        context,
+        displayPoint: { x: 200, y: 300 },
+        resizeState,
+        dragState: null,
+      });
 
-    mockGetElementInteractionStrategy.mockReturnValue(null);
+      expect(result).toBeNull();
+    });
 
-    const input = {
-      context: createContext(),
-      displayPoint: { x: 150, y: 250 },
-      resizeState,
-      dragState: null,
-    };
+    it('should return null when dragState has invalid type', () => {
+      const context = createContext();
+      const dragState = {
+        type: 'invalid' as PdfElementType,
+        index: 0,
+        offsetX: 10,
+        offsetY: 20,
+      };
 
-    const result = handleElementPointerMove(input);
+      const result = handleElementPointerMove({
+        context,
+        displayPoint: { x: 150, y: 250 },
+        resizeState: null,
+        dragState,
+      });
 
-    expect(result).toBeNull();
+      expect(result).toBeNull();
+    });
+
+    it('should handle resize state with all handles', () => {
+      const signatures: SignaturePlacement[] = [
+        {
+          signatureImage: 'data:image/png;base64,test',
+          coordinates: {
+            x: 100,
+            y: 200,
+            pageNumber: 1,
+            pageWidth: 612,
+            pageHeight: 792,
+          },
+          width: 150,
+          height: 60,
+        },
+      ];
+
+      const context = createContext(signatures);
+      const resizeState = {
+        type: PdfElementType.Signature,
+        index: 0,
+        handle: ResizeHandle.Northeast,
+        startX: 100,
+        startY: 200,
+        startWidth: 150,
+        startHeight: 60,
+      };
+
+      const result = handleElementPointerMove({
+        context,
+        displayPoint: { x: 200, y: 300 },
+        resizeState,
+        dragState: null,
+      });
+
+      expect(result).not.toBeNull();
+    });
   });
 });

@@ -6,4 +6,5 @@
 
 export * from './mocks';
 export * from './test-helpers';
+export * from './fixtures';
 

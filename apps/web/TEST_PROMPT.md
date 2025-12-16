@@ -357,3 +357,14 @@ Para cada módulo, crear:
 
 **Nota**: Este prompt debe usarse para generar tests de forma sistemática, módulo por módulo, asegurando cobertura completa y calidad de código. Usar siempre `renderWithProviders` para componentes que necesiten React Query o Router, y `createAppWrapper` cuando se necesiten ambos.
 
+
+
+
+
+
+
+
+
+
+
+

@@ -33,10 +33,19 @@ export function Button({
 
   if (variant === 'primary' || variant === 'emerald-primary') {
     styles['--hover-bg'] = hoverBgColor || config.hoverBg;
+    if (hoverTextColor) {
+      styles['--hover-text'] = hoverTextColor;
+    }
   } else if (variant === 'outline') {
     styles['--hover-border'] = DEFAULT_OUTLINE_HOVER_BORDER;
+    if (hoverTextColor) {
+      styles['--hover-text'] = hoverTextColor;
+    }
   } else if (variant === 'emerald-outline') {
     styles['--hover-border'] = '#1d4878';
+    if (hoverTextColor) {
+      styles['--hover-text'] = hoverTextColor;
+    }
   }
 
   const baseClasses = 'rounded-full font-medium transition-colors border cursor-pointer';

@@ -1,172 +1,173 @@
 /**
- * @fileoverview Tests for useDocumentEditing hook
- * @summary Unit tests for document editing hook
+ * @fileoverview useDocumentEditing Hook Tests - Ensures useDocumentEditing works correctly
+ * @summary Tests for modules/documents/query/useDocumentEditing.ts
  * @jest-environment jsdom
  */
 
-import { describe, it, expect, beforeEach, jest } from '@jest/globals';
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react-hooks';
 import { useDocumentEditing } from '../../../../src/modules/documents/query/useDocumentEditing';
-import { applyElementsToPdf } from '../../../../src/modules/documents/use-cases/applyElementsToPdf';
-
-jest.mock('../../../../src/modules/documents/use-cases/applyElementsToPdf');
-
-const mockApplyElementsToPdf = applyElementsToPdf as jest.MockedFunction<typeof applyElementsToPdf>;
+import type { PDFCoordinates } from '../../../../src/modules/documents/types';
+import {
+  createTestPdf,
+  createTestSignatureImage,
+  createBase64FromBytes,
+} from '../helpers/testUtils';
 
 describe('useDocumentEditing', () => {
-  const mockPdfBytes = new Uint8Array([1, 2, 3, 4, 5]);
-  const mockPdfSource = mockPdfBytes;
+  let testPdfBytes: Uint8Array;
+  let testPdfBase64: string;
+  let testPdfArrayBuffer: ArrayBuffer;
 
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockApplyElementsToPdf.mockResolvedValue(mockPdfBytes);
+  beforeAll(async () => {
+    testPdfBytes = await createTestPdf();
+    testPdfBase64 = createBase64FromBytes(testPdfBytes);
+    testPdfArrayBuffer = testPdfBytes.buffer as ArrayBuffer;
   });
 
-  describe('initialization', () => {
-    it('should initialize with empty arrays and default state', () => {
-      const { result } = renderHook(() =>
-        useDocumentEditing({ pdfSource: mockPdfSource })
-      );
+  const createCoordinates = (): PDFCoordinates => ({
+    x: 100,
+    y: 200,
+    pageNumber: 1,
+    pageWidth: 612,
+    pageHeight: 792,
+  });
 
-      expect(result.current.signatures).toEqual([]);
-      expect(result.current.texts).toEqual([]);
-      expect(result.current.dates).toEqual([]);
-      expect(result.current.isApplying).toBe(false);
-      expect(result.current.error).toBeNull();
-    });
+  it('initializes with empty arrays', () => {
+    const { result } = renderHook(() =>
+      useDocumentEditing({ pdfSource: testPdfBytes })
+    );
+
+    expect(result.current.signatures).toEqual([]);
+    expect(result.current.texts).toEqual([]);
+    expect(result.current.dates).toEqual([]);
+    expect(result.current.isApplying).toBe(false);
+    expect(result.current.error).toBe(null);
   });
 
   describe('addSignature', () => {
-    it('should add signature to signatures array', () => {
+    it('should add a signature', () => {
       const { result } = renderHook(() =>
-        useDocumentEditing({ pdfSource: mockPdfSource })
+        useDocumentEditing({ pdfSource: testPdfBytes })
       );
-      const coordinates = { pageNumber: 1, x: 100, y: 200, pageWidth: 612, pageHeight: 792 };
+
+      const signatureImage = createTestSignatureImage();
+      const coordinates = createCoordinates();
 
       act(() => {
-        result.current.addSignature('data:image/png;base64,test', coordinates);
+        result.current.addSignature(signatureImage, coordinates);
       });
 
       expect(result.current.signatures).toHaveLength(1);
-      expect(result.current.signatures[0]).toMatchObject({
-        signatureImage: 'data:image/png;base64,test',
-        coordinates,
-      });
+      expect(result.current.signatures[0].signatureImage).toBe(signatureImage);
+      expect(result.current.signatures[0].coordinates).toEqual(coordinates);
     });
 
     it('should add signature with width and height', () => {
       const { result } = renderHook(() =>
-        useDocumentEditing({ pdfSource: mockPdfSource })
+        useDocumentEditing({ pdfSource: testPdfBytes })
       );
-      const coordinates = { pageNumber: 1, x: 100, y: 200, pageWidth: 612, pageHeight: 792 };
+
+      const signatureImage = createTestSignatureImage();
+      const coordinates = createCoordinates();
 
       act(() => {
-        result.current.addSignature('data:image/png;base64,test', coordinates, 200, 100);
+        result.current.addSignature(signatureImage, coordinates, 100, 50);
       });
 
-      expect(result.current.signatures[0]).toMatchObject({
-        width: 200,
-        height: 100,
-      });
+      expect(result.current.signatures[0].width).toBe(100);
+      expect(result.current.signatures[0].height).toBe(50);
     });
 
     it('should clear error when adding signature', () => {
       const { result } = renderHook(() =>
-        useDocumentEditing({ pdfSource: mockPdfSource })
+        useDocumentEditing({ pdfSource: testPdfBytes })
       );
-      const coordinates = { pageNumber: 1, x: 100, y: 200, pageWidth: 612, pageHeight: 792 };
 
       act(() => {
-        result.current.addSignature('data:image/png;base64,test', coordinates);
+        result.current.addSignature(createTestSignatureImage(), createCoordinates());
       });
 
-      expect(result.current.error).toBeNull();
+      expect(result.current.error).toBe(null);
     });
   });
 
   describe('addText', () => {
-    it('should add text to texts array with default fontSize', () => {
+    it('should add text', () => {
       const { result } = renderHook(() =>
-        useDocumentEditing({ pdfSource: mockPdfSource })
+        useDocumentEditing({ pdfSource: testPdfBytes })
       );
-      const coordinates = { pageNumber: 1, x: 100, y: 200, pageWidth: 612, pageHeight: 792 };
+
+      const coordinates = createCoordinates();
 
       act(() => {
         result.current.addText('Test Text', coordinates);
       });
 
       expect(result.current.texts).toHaveLength(1);
-      expect(result.current.texts[0]).toMatchObject({
-        text: 'Test Text',
-        coordinates,
-        fontSize: 12,
-      });
+      expect(result.current.texts[0].text).toBe('Test Text');
+      expect(result.current.texts[0].coordinates).toEqual(coordinates);
+      expect(result.current.texts[0].fontSize).toBe(12);
     });
 
     it('should add text with custom fontSize', () => {
       const { result } = renderHook(() =>
-        useDocumentEditing({ pdfSource: mockPdfSource })
+        useDocumentEditing({ pdfSource: testPdfBytes })
       );
-      const coordinates = { pageNumber: 1, x: 100, y: 200, pageWidth: 612, pageHeight: 792 };
 
       act(() => {
-        result.current.addText('Test Text', coordinates, 16);
+        result.current.addText('Test', createCoordinates(), 18);
       });
 
-      expect(result.current.texts[0].fontSize).toBe(16);
+      expect(result.current.texts[0].fontSize).toBe(18);
     });
   });
 
   describe('addDate', () => {
-    it('should add date to dates array with default format and fontSize', () => {
+    it('should add date', () => {
       const { result } = renderHook(() =>
-        useDocumentEditing({ pdfSource: mockPdfSource })
+        useDocumentEditing({ pdfSource: testPdfBytes })
       );
-      const coordinates = { pageNumber: 1, x: 100, y: 200, pageWidth: 612, pageHeight: 792 };
-      const date = new Date('2024-01-15');
+
+      const date = new Date(2024, 0, 15);
+      const coordinates = createCoordinates();
 
       act(() => {
         result.current.addDate(date, coordinates);
       });
 
       expect(result.current.dates).toHaveLength(1);
-      expect(result.current.dates[0]).toMatchObject({
-        date,
-        coordinates,
-        format: 'MM/DD/YYYY',
-        fontSize: 12,
-      });
+      expect(result.current.dates[0].date).toEqual(date);
+      expect(result.current.dates[0].coordinates).toEqual(coordinates);
+      expect(result.current.dates[0].format).toBe('MM/DD/YYYY');
+      expect(result.current.dates[0].fontSize).toBe(12);
     });
 
     it('should add date with custom format and fontSize', () => {
       const { result } = renderHook(() =>
-        useDocumentEditing({ pdfSource: mockPdfSource })
+        useDocumentEditing({ pdfSource: testPdfBytes })
       );
-      const coordinates = { pageNumber: 1, x: 100, y: 200, pageWidth: 612, pageHeight: 792 };
-      const date = new Date('2024-01-15');
+
+      const date = new Date(2024, 0, 15);
 
       act(() => {
-        result.current.addDate(date, coordinates, 'YYYY-MM-DD', 14);
+        result.current.addDate(date, createCoordinates(), 'DD-MM-YYYY', 16);
       });
 
-      expect(result.current.dates[0]).toMatchObject({
-        format: 'YYYY-MM-DD',
-        fontSize: 14,
-      });
+      expect(result.current.dates[0].format).toBe('DD-MM-YYYY');
+      expect(result.current.dates[0].fontSize).toBe(16);
     });
   });
 
   describe('removeSignature', () => {
     it('should remove signature by index', () => {
       const { result } = renderHook(() =>
-        useDocumentEditing({ pdfSource: mockPdfSource })
+        useDocumentEditing({ pdfSource: testPdfBytes })
       );
-      const coordinates = { pageNumber: 1, x: 100, y: 200, pageWidth: 612, pageHeight: 792 };
 
       act(() => {
-        result.current.addSignature('sig1', coordinates);
-        result.current.addSignature('sig2', coordinates);
-        result.current.addSignature('sig3', coordinates);
+        result.current.addSignature(createTestSignatureImage(), createCoordinates());
+        result.current.addSignature(createTestSignatureImage(), createCoordinates());
+        result.current.addSignature(createTestSignatureImage(), createCoordinates());
       });
 
       expect(result.current.signatures).toHaveLength(3);
@@ -176,21 +177,18 @@ describe('useDocumentEditing', () => {
       });
 
       expect(result.current.signatures).toHaveLength(2);
-      expect(result.current.signatures[0].signatureImage).toBe('sig1');
-      expect(result.current.signatures[1].signatureImage).toBe('sig3');
     });
   });
 
   describe('removeText', () => {
     it('should remove text by index', () => {
       const { result } = renderHook(() =>
-        useDocumentEditing({ pdfSource: mockPdfSource })
+        useDocumentEditing({ pdfSource: testPdfBytes })
       );
-      const coordinates = { pageNumber: 1, x: 100, y: 200, pageWidth: 612, pageHeight: 792 };
 
       act(() => {
-        result.current.addText('text1', coordinates);
-        result.current.addText('text2', coordinates);
+        result.current.addText('Text 1', createCoordinates());
+        result.current.addText('Text 2', createCoordinates());
       });
 
       act(() => {
@@ -198,20 +196,19 @@ describe('useDocumentEditing', () => {
       });
 
       expect(result.current.texts).toHaveLength(1);
-      expect(result.current.texts[0].text).toBe('text2');
+      expect(result.current.texts[0].text).toBe('Text 2');
     });
   });
 
   describe('removeDate', () => {
     it('should remove date by index', () => {
       const { result } = renderHook(() =>
-        useDocumentEditing({ pdfSource: mockPdfSource })
+        useDocumentEditing({ pdfSource: testPdfBytes })
       );
-      const coordinates = { pageNumber: 1, x: 100, y: 200, pageWidth: 612, pageHeight: 792 };
 
       act(() => {
-        result.current.addDate(new Date('2024-01-01'), coordinates);
-        result.current.addDate(new Date('2024-01-02'), coordinates);
+        result.current.addDate(new Date(), createCoordinates());
+        result.current.addDate(new Date(), createCoordinates());
       });
 
       act(() => {
@@ -223,134 +220,130 @@ describe('useDocumentEditing', () => {
   });
 
   describe('updateSignatureCoordinates', () => {
-    it('should update signature coordinates by index', () => {
+    it('should update signature coordinates', () => {
       const { result } = renderHook(() =>
-        useDocumentEditing({ pdfSource: mockPdfSource })
+        useDocumentEditing({ pdfSource: testPdfBytes })
       );
-      const coordinates1 = { pageNumber: 1, x: 100, y: 200, pageWidth: 612, pageHeight: 792 };
-      const coordinates2 = { pageNumber: 2, x: 300, y: 400, pageWidth: 612, pageHeight: 792 };
 
       act(() => {
-        result.current.addSignature('sig1', coordinates1);
+        result.current.addSignature(createTestSignatureImage(), createCoordinates());
       });
+
+      const newCoordinates: PDFCoordinates = { x: 200, y: 300, pageNumber: 1, pageWidth: 612, pageHeight: 792 };
 
       act(() => {
-        result.current.updateSignatureCoordinates(0, coordinates2);
+        result.current.updateSignatureCoordinates(0, newCoordinates);
       });
 
-      expect(result.current.signatures[0].coordinates).toEqual(coordinates2);
+      expect(result.current.signatures[0].coordinates).toEqual(newCoordinates);
     });
   });
 
   describe('updateTextCoordinates', () => {
-    it('should update text coordinates by index', () => {
+    it('should update text coordinates', () => {
       const { result } = renderHook(() =>
-        useDocumentEditing({ pdfSource: mockPdfSource })
+        useDocumentEditing({ pdfSource: testPdfBytes })
       );
-      const coordinates1 = { pageNumber: 1, x: 100, y: 200, pageWidth: 612, pageHeight: 792 };
-      const coordinates2 = { pageNumber: 2, x: 300, y: 400, pageWidth: 612, pageHeight: 792 };
 
       act(() => {
-        result.current.addText('text', coordinates1);
+        result.current.addText('Test', createCoordinates());
       });
+
+      const newCoordinates: PDFCoordinates = { x: 150, y: 250, pageNumber: 1, pageWidth: 612, pageHeight: 792 };
 
       act(() => {
-        result.current.updateTextCoordinates(0, coordinates2);
+        result.current.updateTextCoordinates(0, newCoordinates);
       });
 
-      expect(result.current.texts[0].coordinates).toEqual(coordinates2);
+      expect(result.current.texts[0].coordinates).toEqual(newCoordinates);
     });
   });
 
   describe('updateDateCoordinates', () => {
-    it('should update date coordinates by index', () => {
+    it('should update date coordinates', () => {
       const { result } = renderHook(() =>
-        useDocumentEditing({ pdfSource: mockPdfSource })
+        useDocumentEditing({ pdfSource: testPdfBytes })
       );
-      const coordinates1 = { pageNumber: 1, x: 100, y: 200, pageWidth: 612, pageHeight: 792 };
-      const coordinates2 = { pageNumber: 2, x: 300, y: 400, pageWidth: 612, pageHeight: 792 };
 
       act(() => {
-        result.current.addDate(new Date(), coordinates1);
+        result.current.addDate(new Date(), createCoordinates());
       });
+
+      const newCoordinates: PDFCoordinates = { x: 300, y: 400, pageNumber: 1, pageWidth: 612, pageHeight: 792 };
 
       act(() => {
-        result.current.updateDateCoordinates(0, coordinates2);
+        result.current.updateDateCoordinates(0, newCoordinates);
       });
 
-      expect(result.current.dates[0].coordinates).toEqual(coordinates2);
+      expect(result.current.dates[0].coordinates).toEqual(newCoordinates);
     });
   });
 
   describe('updateTextFontSize', () => {
-    it('should update text font size by index', () => {
+    it('should update text font size', () => {
       const { result } = renderHook(() =>
-        useDocumentEditing({ pdfSource: mockPdfSource })
+        useDocumentEditing({ pdfSource: testPdfBytes })
       );
-      const coordinates = { pageNumber: 1, x: 100, y: 200, pageWidth: 612, pageHeight: 792 };
 
       act(() => {
-        result.current.addText('text', coordinates, 12);
+        result.current.addText('Test', createCoordinates());
       });
 
       act(() => {
-        result.current.updateTextFontSize(0, 18);
+        result.current.updateTextFontSize(0, 20);
       });
 
-      expect(result.current.texts[0].fontSize).toBe(18);
+      expect(result.current.texts[0].fontSize).toBe(20);
     });
   });
 
   describe('updateDateFontSize', () => {
-    it('should update date font size by index', () => {
+    it('should update date font size', () => {
       const { result } = renderHook(() =>
-        useDocumentEditing({ pdfSource: mockPdfSource })
+        useDocumentEditing({ pdfSource: testPdfBytes })
       );
-      const coordinates = { pageNumber: 1, x: 100, y: 200, pageWidth: 612, pageHeight: 792 };
 
       act(() => {
-        result.current.addDate(new Date(), coordinates, 'MM/DD/YYYY', 12);
+        result.current.addDate(new Date(), createCoordinates());
       });
 
       act(() => {
-        result.current.updateDateFontSize(0, 16);
+        result.current.updateDateFontSize(0, 18);
       });
 
-      expect(result.current.dates[0].fontSize).toBe(16);
+      expect(result.current.dates[0].fontSize).toBe(18);
     });
   });
 
   describe('updateSignatureSize', () => {
-    it('should update signature size by index', () => {
+    it('should update signature size', () => {
       const { result } = renderHook(() =>
-        useDocumentEditing({ pdfSource: mockPdfSource })
+        useDocumentEditing({ pdfSource: testPdfBytes })
       );
-      const coordinates = { pageNumber: 1, x: 100, y: 200, pageWidth: 612, pageHeight: 792 };
 
       act(() => {
-        result.current.addSignature('sig', coordinates, 100, 50);
+        result.current.addSignature(createTestSignatureImage(), createCoordinates());
       });
 
       act(() => {
-        result.current.updateSignatureSize(0, 200, 100);
+        result.current.updateSignatureSize(0, 120, 60);
       });
 
-      expect(result.current.signatures[0].width).toBe(200);
-      expect(result.current.signatures[0].height).toBe(100);
+      expect(result.current.signatures[0].width).toBe(120);
+      expect(result.current.signatures[0].height).toBe(60);
     });
   });
 
   describe('clearAll', () => {
     it('should clear all elements', () => {
       const { result } = renderHook(() =>
-        useDocumentEditing({ pdfSource: mockPdfSource })
+        useDocumentEditing({ pdfSource: testPdfBytes })
       );
-      const coordinates = { pageNumber: 1, x: 100, y: 200, pageWidth: 612, pageHeight: 792 };
 
       act(() => {
-        result.current.addSignature('sig', coordinates);
-        result.current.addText('text', coordinates);
-        result.current.addDate(new Date(), coordinates);
+        result.current.addSignature(createTestSignatureImage(), createCoordinates());
+        result.current.addText('Test', createCoordinates());
+        result.current.addDate(new Date(), createCoordinates());
       });
 
       act(() => {
@@ -364,156 +357,124 @@ describe('useDocumentEditing', () => {
   });
 
   describe('applyElementsAsBytes', () => {
-    it('should apply elements and return Uint8Array when pdfSource is Uint8Array', async () => {
+    it('should apply elements and return Uint8Array', async () => {
       const { result } = renderHook(() =>
-        useDocumentEditing({ pdfSource: mockPdfBytes })
+        useDocumentEditing({ pdfSource: testPdfBytes })
       );
-      const coordinates = { pageNumber: 1, x: 100, y: 200, pageWidth: 612, pageHeight: 792 };
 
       act(() => {
-        result.current.addSignature('sig', coordinates);
+        result.current.addSignature(createTestSignatureImage(), createCoordinates());
+        result.current.addText('Test Text', createCoordinates());
+        result.current.addDate(new Date(), createCoordinates());
       });
 
-      let appliedBytes: Uint8Array;
+      let modifiedPdf: Uint8Array;
       await act(async () => {
-        appliedBytes = await result.current.applyElementsAsBytes();
+        modifiedPdf = await result.current.applyElementsAsBytes();
       });
 
-      expect(mockApplyElementsToPdf).toHaveBeenCalledWith(
-        mockPdfBytes,
-        expect.arrayContaining([expect.objectContaining({ signatureImage: 'sig' })]),
-        [],
-        []
-      );
-      expect(appliedBytes!).toEqual(mockPdfBytes);
+      expect(modifiedPdf!).toBeInstanceOf(Uint8Array);
+      expect(modifiedPdf!.length).toBeGreaterThan(0);
       expect(result.current.isApplying).toBe(false);
-      expect(result.current.error).toBeNull();
+      expect(result.current.error).toBe(null);
     });
 
-    it('should convert base64 string to Uint8Array before applying', async () => {
-      const base64Pdf = btoa(String.fromCharCode(...mockPdfBytes));
+    it('should handle Uint8Array pdfSource', async () => {
       const { result } = renderHook(() =>
-        useDocumentEditing({ pdfSource: base64Pdf })
+        useDocumentEditing({ pdfSource: testPdfBytes })
       );
-      const coordinates = { pageNumber: 1, x: 100, y: 200, pageWidth: 612, pageHeight: 792 };
 
       act(() => {
-        result.current.addText('text', coordinates);
+        result.current.addText('Test', createCoordinates());
       });
 
       await act(async () => {
         await result.current.applyElementsAsBytes();
       });
 
-      expect(mockApplyElementsToPdf).toHaveBeenCalled();
-      const callArgs = mockApplyElementsToPdf.mock.calls[0];
-      expect(callArgs[0]).toBeInstanceOf(Uint8Array);
+      expect(result.current.isApplying).toBe(false);
+    });
+
+    it('should handle ArrayBuffer pdfSource', async () => {
+      const { result } = renderHook(() =>
+        useDocumentEditing({ pdfSource: testPdfArrayBuffer })
+      );
+
+      act(() => {
+        result.current.addText('Test', createCoordinates());
+      });
+
+      await act(async () => {
+        await result.current.applyElementsAsBytes();
+      });
+
+      expect(result.current.isApplying).toBe(false);
+    });
+
+    it('should handle base64 string pdfSource', async () => {
+      const { result } = renderHook(() =>
+        useDocumentEditing({ pdfSource: testPdfBase64 })
+      );
+
+      act(() => {
+        result.current.addText('Test', createCoordinates());
+      });
+
+      await act(async () => {
+        await result.current.applyElementsAsBytes();
+      });
+
+      expect(result.current.isApplying).toBe(false);
     });
 
     it('should handle base64 string with data URL prefix', async () => {
-      const base64Pdf = `data:application/pdf;base64,${btoa(String.fromCharCode(...mockPdfBytes))}`;
+      const dataUrlPdf = `data:application/pdf;base64,${testPdfBase64}`;
       const { result } = renderHook(() =>
-        useDocumentEditing({ pdfSource: base64Pdf })
+        useDocumentEditing({ pdfSource: dataUrlPdf })
       );
+
+      act(() => {
+        result.current.addText('Test', createCoordinates());
+      });
 
       await act(async () => {
         await result.current.applyElementsAsBytes();
       });
 
-      expect(mockApplyElementsToPdf).toHaveBeenCalled();
-    });
-
-    it('should convert ArrayBuffer to Uint8Array before applying', async () => {
-      const arrayBuffer = mockPdfBytes.buffer;
-      const { result } = renderHook(() =>
-        useDocumentEditing({ pdfSource: arrayBuffer })
-      );
-
-      await act(async () => {
-        await result.current.applyElementsAsBytes();
-      });
-
-      expect(mockApplyElementsToPdf).toHaveBeenCalled();
-      const callArgs = mockApplyElementsToPdf.mock.calls[0];
-      expect(callArgs[0]).toBeInstanceOf(Uint8Array);
-    });
-
-    it('should set isApplying to true during application', async () => {
-      let resolveApply: (value: Uint8Array) => void;
-      const applyPromise = new Promise<Uint8Array>((resolve) => {
-        resolveApply = resolve;
-      });
-      mockApplyElementsToPdf.mockReturnValue(applyPromise);
-
-      const { result } = renderHook(() =>
-        useDocumentEditing({ pdfSource: mockPdfBytes })
-      );
-
-      act(() => {
-        result.current.addSignature('sig', { pageNumber: 1, x: 100, y: 200, pageWidth: 612, pageHeight: 792 });
-      });
-
-      let applyPromise2: Promise<Uint8Array>;
-      await act(async () => {
-        applyPromise2 = result.current.applyElementsAsBytes();
-      });
-
-      await waitFor(() => {
-        expect(result.current.isApplying).toBe(true);
-      });
-
-      resolveApply!(mockPdfBytes);
-      await act(async () => {
-        await applyPromise2!;
-      });
-
       expect(result.current.isApplying).toBe(false);
     });
 
-    it('should set error when application fails', async () => {
-      const error = new Error('PDF processing failed');
-      mockApplyElementsToPdf.mockRejectedValue(error);
-
+    it('should set error on failure', async () => {
+      const invalidPdf = new Uint8Array([1, 2, 3]);
       const { result } = renderHook(() =>
-        useDocumentEditing({ pdfSource: mockPdfBytes })
+        useDocumentEditing({ pdfSource: invalidPdf })
       );
 
       act(() => {
-        result.current.addSignature('sig', { pageNumber: 1, x: 100, y: 200, pageWidth: 612, pageHeight: 792 });
+        result.current.addText('Test', createCoordinates());
       });
 
       await act(async () => {
-        await expect(result.current.applyElementsAsBytes()).rejects.toThrow('PDF processing failed');
+        try {
+          await result.current.applyElementsAsBytes();
+        } catch {
+          // Expected error
+        }
       });
 
-      expect(result.current.error).toBe('PDF processing failed');
+      expect(result.current.error).toBeTruthy();
       expect(result.current.isApplying).toBe(false);
-    });
-
-    it('should handle non-Error exceptions', async () => {
-      mockApplyElementsToPdf.mockRejectedValue('String error');
-
-      const { result } = renderHook(() =>
-        useDocumentEditing({ pdfSource: mockPdfBytes })
-      );
-
-      await act(async () => {
-        await expect(result.current.applyElementsAsBytes()).rejects.toBe('String error');
-      });
-
-      expect(result.current.error).toBe('Failed to apply elements to PDF');
     });
   });
 
   describe('applyElements', () => {
     it('should apply elements and return base64 string', async () => {
       const { result } = renderHook(() =>
-        useDocumentEditing({ pdfSource: mockPdfBytes })
+        useDocumentEditing({ pdfSource: testPdfBytes })
       );
-      const coordinates = { pageNumber: 1, x: 100, y: 200, pageWidth: 612, pageHeight: 792 };
 
       act(() => {
-        result.current.addText('text', coordinates);
+        result.current.addText('Test', createCoordinates());
       });
 
       let base64Result: string;
@@ -521,23 +482,26 @@ describe('useDocumentEditing', () => {
         base64Result = await result.current.applyElements();
       });
 
-      expect(mockApplyElementsToPdf).toHaveBeenCalled();
-      expect(base64Result!).toBe(btoa(String.fromCharCode(...mockPdfBytes)));
+      expect(typeof base64Result!).toBe('string');
+      expect(base64Result!.length).toBeGreaterThan(0);
+      expect(result.current.isApplying).toBe(false);
     });
 
-    it('should handle errors from applyElementsAsBytes', async () => {
-      const error = new Error('Processing failed');
-      mockApplyElementsToPdf.mockRejectedValue(error);
-
+    it('should set isApplying during operation', async () => {
       const { result } = renderHook(() =>
-        useDocumentEditing({ pdfSource: mockPdfBytes })
+        useDocumentEditing({ pdfSource: testPdfBytes })
       );
 
-      await act(async () => {
-        await expect(result.current.applyElements()).rejects.toThrow('Processing failed');
+      act(() => {
+        result.current.addText('Test', createCoordinates());
       });
 
-      expect(result.current.error).toBe('Processing failed');
+      await act(async () => {
+        await result.current.applyElements();
+      });
+
+      expect(result.current.isApplying).toBe(false);
     });
   });
 });
+

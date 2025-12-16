@@ -13,11 +13,13 @@ export const PENDING_ELEMENT_INDEX = -1;
 
 /**
  * @description Default coordinates when coordinates are not available.
+ * Frozen to prevent accidental mutation at runtime.
  */
-export const DEFAULT_COORDINATES = { x: 0, y: 0 } as const;
+export const DEFAULT_COORDINATES = Object.freeze({ x: 0, y: 0 } as const);
 
 /**
  * @description Default event coordinates when event coordinates are not available.
+ * Frozen to prevent accidental mutation at runtime.
  */
-export const DEFAULT_EVENT_COORDINATES = { clientX: 0, clientY: 0 } as const;
+export const DEFAULT_EVENT_COORDINATES = Object.freeze({ clientX: 0, clientY: 0 } as const);
 

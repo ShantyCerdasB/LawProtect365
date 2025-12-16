@@ -11,13 +11,9 @@ import type {
   TextPlacement,
   DatePlacement,
 } from '../types';
-import { ResizeHandle } from '../enums';
+import { ResizeHandle, PdfElementType, ControlType } from '../enums';
 
-export type { ResizeHandle };
-
-import { PdfElementType, ControlType } from '../enums';
-
-export { PdfElementType, ControlType };
+export { ResizeHandle, PdfElementType, ControlType };
 
 /**
  * @description Hit-test result for interactive PDF elements.

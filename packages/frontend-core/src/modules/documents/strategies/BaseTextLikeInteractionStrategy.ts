@@ -235,8 +235,8 @@ export abstract class BaseTextLikeInteractionStrategy implements ElementInteract
    * @description Handles drag interaction for pending text-like element.
    * @param displayPoint Display point coordinates where pointer was pressed
    * @param bounds Bounds of pending element in display space (x, y, width, height)
-   * @param px X coordinate of pending element top-left corner in display space
-   * @param py Y coordinate of pending element top-left corner in display space
+   * @param px X coordinate of pending element in display space
+   * @param py Y coordinate of pending element baseline (bottom) in display space
    * @param width Width of pending element in display space
    * @param height Height of pending element in display space
    * @param elementType Element type (Text or Date)
@@ -251,11 +251,12 @@ export abstract class BaseTextLikeInteractionStrategy implements ElementInteract
     height: number,
     elementType: PdfElementType
   ): AnyInteractionResult | null {
+    const topY = py - height;
     const isWithinBounds =
       displayPoint.x >= px &&
       displayPoint.x <= px + width &&
-      displayPoint.y >= py &&
-      displayPoint.y <= py + height;
+      displayPoint.y >= topY &&
+      displayPoint.y <= py;
 
     if (!isWithinBounds) {
       return null;

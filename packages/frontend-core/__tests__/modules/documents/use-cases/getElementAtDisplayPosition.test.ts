@@ -1,253 +1,666 @@
 /**
  * @fileoverview Tests for getElementAtDisplayPosition use case
- * @summary Unit tests for element hit-testing at display position
+ * @summary Unit tests for element hit-testing at display positions
+ * @description Comprehensive tests for detecting elements at display coordinates
  */
 
-import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+import { describe, it, expect } from '@jest/globals';
 import { getElementAtDisplayPosition } from '../../../../src/modules/documents/use-cases/getElementAtDisplayPosition';
 import { PdfElementType } from '../../../../src/modules/documents/enums';
-import type { PdfRenderMetrics } from '../../../../src/modules/documents/types';
-
-jest.mock('../../../../src/modules/documents/use-cases/helpers/hitTestElement');
-
-import { hitTestElement } from '../../../../src/modules/documents/use-cases/helpers/hitTestElement';
-
-const mockHitTestElement = hitTestElement as jest.MockedFunction<typeof hitTestElement>;
+import type { SignaturePlacement, TextPlacement, DatePlacement } from '../../../../src/modules/documents/types';
 
 describe('getElementAtDisplayPosition', () => {
-  const createRenderMetrics = (): PdfRenderMetrics => ({
+  const createRenderMetrics = () => ({
     pdfPageWidth: 612,
     pdfPageHeight: 792,
     viewportWidth: 1024,
     viewportHeight: 1320,
   });
 
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockHitTestElement.mockReturnValue(false);
+  const createCoordinates = (pageNumber: number = 1) => ({
+    x: 100,
+    y: 200,
+    pageNumber,
+    pageWidth: 612,
+    pageHeight: 792,
   });
 
-  it('should return null when viewport dimensions are invalid', () => {
-    const input = {
-      displayX: 100,
-      displayY: 200,
-      pageNumber: 1,
-      renderMetrics: {
-        pdfPageWidth: 612,
-        pdfPageHeight: 792,
-        viewportWidth: 0,
-        viewportHeight: 1320,
-      },
-      signatures: [],
-      texts: [],
-      dates: [],
-    };
+  describe('Signature detection', () => {
+    it('should detect signature at display position', () => {
+      const signatures: SignaturePlacement[] = [
+        {
+          signatureImage: 'data:image/png;base64,test',
+          coordinates: createCoordinates(1),
+          width: 150,
+          height: 60,
+        },
+      ];
 
-    const result = getElementAtDisplayPosition(input);
+      const displayX = 100 * (1024 / 612) + 75;
+      const displayY = 200 * (1320 / 792) + 30;
 
-    expect(result).toBeNull();
+      const result = getElementAtDisplayPosition({
+        displayX,
+        displayY,
+        pageNumber: 1,
+        renderMetrics: createRenderMetrics(),
+        signatures,
+        texts: [],
+        dates: [],
+      });
+
+      expect(result).not.toBeNull();
+      expect(result?.type).toBe(PdfElementType.Signature);
+      expect(result?.index).toBe(0);
+    });
+
+    it('should return null when signature is on different page', () => {
+      const signatures: SignaturePlacement[] = [
+        {
+          signatureImage: 'data:image/png;base64,test',
+          coordinates: createCoordinates(2),
+          width: 150,
+          height: 60,
+        },
+      ];
+
+      const result = getElementAtDisplayPosition({
+        displayX: 200,
+        displayY: 300,
+        pageNumber: 1,
+        renderMetrics: createRenderMetrics(),
+        signatures,
+        texts: [],
+        dates: [],
+      });
+
+      expect(result).toBeNull();
+    });
+
+    it('should return null when point is outside signature bounds', () => {
+      const signatures: SignaturePlacement[] = [
+        {
+          signatureImage: 'data:image/png;base64,test',
+          coordinates: createCoordinates(1),
+          width: 150,
+          height: 60,
+        },
+      ];
+
+      const result = getElementAtDisplayPosition({
+        displayX: 10,
+        displayY: 10,
+        pageNumber: 1,
+        renderMetrics: createRenderMetrics(),
+        signatures,
+        texts: [],
+        dates: [],
+      });
+
+      expect(result).toBeNull();
+    });
   });
 
-  it('should return null when PDF dimensions are invalid', () => {
-    const input = {
-      displayX: 100,
-      displayY: 200,
-      pageNumber: 1,
-      renderMetrics: {
-        pdfPageWidth: 0,
-        pdfPageHeight: 792,
-        viewportWidth: 1024,
-        viewportHeight: 1320,
-      },
-      signatures: [],
-      texts: [],
-      dates: [],
-    };
+  describe('Text detection', () => {
+    it('should detect text at display position', () => {
+      const texts: TextPlacement[] = [
+        {
+          text: 'Hello',
+          coordinates: createCoordinates(1),
+          fontSize: 12,
+        },
+      ];
 
-    const result = getElementAtDisplayPosition(input);
+      const displayX = 100 * (1024 / 612) + 20;
+      const displayY = 200 * (1320 / 792) - 6;
 
-    expect(result).toBeNull();
+      const result = getElementAtDisplayPosition({
+        displayX,
+        displayY,
+        pageNumber: 1,
+        renderMetrics: createRenderMetrics(),
+        signatures: [],
+        texts,
+        dates: [],
+      });
+
+      expect(result).not.toBeNull();
+      expect(result?.type).toBe(PdfElementType.Text);
+      expect(result?.index).toBe(0);
+    });
+
+    it('should return null when text is on different page', () => {
+      const texts: TextPlacement[] = [
+        {
+          text: 'Test',
+          coordinates: createCoordinates(2),
+          fontSize: 12,
+        },
+      ];
+
+      const result = getElementAtDisplayPosition({
+        displayX: 200,
+        displayY: 300,
+        pageNumber: 1,
+        renderMetrics: createRenderMetrics(),
+        signatures: [],
+        texts,
+        dates: [],
+      });
+
+      expect(result).toBeNull();
+    });
   });
 
-  it('should convert display coordinates to PDF coordinates', () => {
-    const input = {
-      displayX: 512,
-      displayY: 660,
-      pageNumber: 1,
-      renderMetrics: createRenderMetrics(),
-      signatures: [],
-      texts: [],
-      dates: [],
-    };
+  describe('Date detection', () => {
+    it('should detect date at display position', () => {
+      const dates: DatePlacement[] = [
+        {
+          date: new Date(2024, 0, 15),
+          coordinates: createCoordinates(1),
+          fontSize: 12,
+        },
+      ];
 
-    getElementAtDisplayPosition(input);
+      const displayX = 100 * (1024 / 612) + 40;
+      const displayY = 200 * (1320 / 792) - 6;
 
-    const expectedPdfX = 512 * (612 / 1024);
-    const expectedPdfY = 660 * (792 / 1320);
+      const result = getElementAtDisplayPosition({
+        displayX,
+        displayY,
+        pageNumber: 1,
+        renderMetrics: createRenderMetrics(),
+        signatures: [],
+        texts: [],
+        dates,
+      });
 
-    expect(mockHitTestElement).toHaveBeenCalled();
-    const calls = mockHitTestElement.mock.calls;
-    if (calls.length > 0) {
-      expect(calls[0][2]).toBeCloseTo(expectedPdfX, 2);
-      expect(calls[0][3]).toBeCloseTo(expectedPdfY, 2);
-    }
+      expect(result).not.toBeNull();
+      expect(result?.type).toBe(PdfElementType.Date);
+      expect(result?.index).toBe(0);
+    });
   });
 
-  it('should test signatures first when multiple elements could match', () => {
-    const signatures = [
-      {
-        signatureImage: 'test1',
-        coordinates: { pageNumber: 1, x: 100, y: 200, pageWidth: 612, pageHeight: 792 },
-      },
-    ];
-    const texts = [
-      {
-        text: 'Test',
-        coordinates: { pageNumber: 1, x: 100, y: 200, pageWidth: 612, pageHeight: 792 },
-        fontSize: 12,
-      },
-    ];
+  describe('Priority order', () => {
+    it('should prioritize signatures over texts and dates', () => {
+      const signatures: SignaturePlacement[] = [
+        {
+          signatureImage: 'data:image/png;base64,test',
+          coordinates: createCoordinates(1),
+          width: 150,
+          height: 60,
+        },
+      ];
+      const texts: TextPlacement[] = [
+        {
+          text: 'Test',
+          coordinates: createCoordinates(1),
+          fontSize: 12,
+        },
+      ];
+      const dates: DatePlacement[] = [
+        {
+          date: new Date(2024, 0, 15),
+          coordinates: createCoordinates(1),
+          fontSize: 12,
+        },
+      ];
 
-    mockHitTestElement
-      .mockReturnValueOnce(true)
-      .mockReturnValueOnce(false);
+      const displayX = 100 * (1024 / 612) + 75;
+      const displayY = 200 * (1320 / 792) + 30;
 
-    const input = {
-      displayX: 100,
-      displayY: 200,
-      pageNumber: 1,
-      renderMetrics: createRenderMetrics(),
-      signatures,
-      texts,
-      dates: [],
-    };
+      const result = getElementAtDisplayPosition({
+        displayX,
+        displayY,
+        pageNumber: 1,
+        renderMetrics: createRenderMetrics(),
+        signatures,
+        texts,
+        dates,
+      });
 
-    const result = getElementAtDisplayPosition(input);
-
-    expect(result).toEqual({ type: PdfElementType.Signature, index: 0 });
-    expect(mockHitTestElement).toHaveBeenCalledTimes(1);
+      expect(result?.type).toBe(PdfElementType.Signature);
+    });
   });
 
-  it('should test texts if signatures do not match', () => {
-    const texts = [
-      {
-        text: 'Test',
-        coordinates: { pageNumber: 1, x: 100, y: 200, pageWidth: 612, pageHeight: 792 },
-        fontSize: 12,
-      },
-    ];
+  describe('Edge cases', () => {
+    it('should return null when viewport dimensions are invalid', () => {
+      const result = getElementAtDisplayPosition({
+        displayX: 100,
+        displayY: 200,
+        pageNumber: 1,
+        renderMetrics: {
+          pdfPageWidth: 612,
+          pdfPageHeight: 792,
+          viewportWidth: 0,
+          viewportHeight: 1320,
+        },
+        signatures: [],
+        texts: [],
+        dates: [],
+      });
 
-    mockHitTestElement.mockReturnValueOnce(true);
+      expect(result).toBeNull();
+    });
 
-    const input = {
-      displayX: 100,
-      displayY: 200,
-      pageNumber: 1,
-      renderMetrics: createRenderMetrics(),
-      signatures: [],
-      texts,
-      dates: [],
-    };
+    it('should return null when PDF dimensions are invalid', () => {
+      const result = getElementAtDisplayPosition({
+        displayX: 100,
+        displayY: 200,
+        pageNumber: 1,
+        renderMetrics: {
+          pdfPageWidth: 0,
+          pdfPageHeight: 792,
+          viewportWidth: 1024,
+          viewportHeight: 1320,
+        },
+        signatures: [],
+        texts: [],
+        dates: [],
+      });
 
-    const result = getElementAtDisplayPosition(input);
+      expect(result).toBeNull();
+    });
 
-    expect(result).toEqual({ type: PdfElementType.Text, index: 0 });
+    it('should return null when no elements are provided', () => {
+      const result = getElementAtDisplayPosition({
+        displayX: 100,
+        displayY: 200,
+        pageNumber: 1,
+        renderMetrics: createRenderMetrics(),
+        signatures: [],
+        texts: [],
+        dates: [],
+      });
+
+      expect(result).toBeNull();
+    });
   });
 
-  it('should test dates if signatures and texts do not match', () => {
-    const dates = [
-      {
-        date: new Date('2024-01-15'),
-        coordinates: { pageNumber: 1, x: 100, y: 200, pageWidth: 612, pageHeight: 792 },
-        format: 'MM/DD/YYYY',
-        fontSize: 12,
-      },
-    ];
+  describe('Multiple elements and edge cases', () => {
+    it('should test multiple signatures and return first match', () => {
+      const signatures: SignaturePlacement[] = [
+        {
+          signatureImage: 'data:image/png;base64,test1',
+          coordinates: createCoordinates(1),
+          width: 150,
+          height: 60,
+        },
+        {
+          signatureImage: 'data:image/png;base64,test2',
+          coordinates: { x: 300, y: 400, pageNumber: 1, pageWidth: 612, pageHeight: 792 },
+          width: 150,
+          height: 60,
+        },
+      ];
 
-    mockHitTestElement.mockReturnValueOnce(true);
+      const displayX = 100 * (1024 / 612) + 75;
+      const displayY = 200 * (1320 / 792) + 30;
 
-    const input = {
-      displayX: 100,
-      displayY: 200,
-      pageNumber: 1,
-      renderMetrics: createRenderMetrics(),
-      signatures: [],
-      texts: [],
-      dates,
-    };
+      const result = getElementAtDisplayPosition({
+        displayX,
+        displayY,
+        pageNumber: 1,
+        renderMetrics: createRenderMetrics(),
+        signatures,
+        texts: [],
+        dates: [],
+      });
 
-    const result = getElementAtDisplayPosition(input);
+      expect(result).not.toBeNull();
+      expect(result?.index).toBe(0);
+    });
 
-    expect(result).toEqual({ type: PdfElementType.Date, index: 0 });
-  });
+    it('should test multiple texts and return first match', () => {
+      const texts: TextPlacement[] = [
+        {
+          text: 'First',
+          coordinates: createCoordinates(1),
+          fontSize: 12,
+        },
+        {
+          text: 'Second',
+          coordinates: { x: 300, y: 400, pageNumber: 1, pageWidth: 612, pageHeight: 792 },
+          fontSize: 12,
+        },
+      ];
 
-  it('should skip elements not on the current page', () => {
-    const signatures = [
-      {
-        signatureImage: 'test1',
-        coordinates: { pageNumber: 2, x: 100, y: 200, pageWidth: 612, pageHeight: 792 },
-      },
-    ];
+      const displayX = 100 * (1024 / 612) + 20;
+      const displayY = 200 * (1320 / 792) - 6;
 
-    const input = {
-      displayX: 100,
-      displayY: 200,
-      pageNumber: 1,
-      renderMetrics: createRenderMetrics(),
-      signatures,
-      texts: [],
-      dates: [],
-    };
+      const result = getElementAtDisplayPosition({
+        displayX,
+        displayY,
+        pageNumber: 1,
+        renderMetrics: createRenderMetrics(),
+        signatures: [],
+        texts,
+        dates: [],
+      });
 
-    const result = getElementAtDisplayPosition(input);
+      expect(result).not.toBeNull();
+      expect(result?.index).toBe(0);
+    });
 
-    expect(result).toBeNull();
-    expect(mockHitTestElement).not.toHaveBeenCalled();
-  });
+    it('should test multiple dates and return first match', () => {
+      const dates: DatePlacement[] = [
+        {
+          date: new Date(2024, 0, 15),
+          coordinates: createCoordinates(1),
+          fontSize: 12,
+        },
+        {
+          date: new Date(2024, 1, 20),
+          coordinates: { x: 300, y: 400, pageNumber: 1, pageWidth: 612, pageHeight: 792 },
+          fontSize: 12,
+        },
+      ];
 
-  it('should return null when no elements are hit', () => {
-    const input = {
-      displayX: 1000,
-      displayY: 2000,
-      pageNumber: 1,
-      renderMetrics: createRenderMetrics(),
-      signatures: [],
-      texts: [],
-      dates: [],
-    };
+      const displayX = 100 * (1024 / 612) + 40;
+      const displayY = 200 * (1320 / 792) - 6;
 
-    const result = getElementAtDisplayPosition(input);
+      const result = getElementAtDisplayPosition({
+        displayX,
+        displayY,
+        pageNumber: 1,
+        renderMetrics: createRenderMetrics(),
+        signatures: [],
+        texts: [],
+        dates,
+      });
 
-    expect(result).toBeNull();
-  });
+      expect(result).not.toBeNull();
+      expect(result?.index).toBe(0);
+    });
 
-  it('should return first matching element when multiple elements of same type match', () => {
-    const signatures = [
-      {
-        signatureImage: 'test1',
-        coordinates: { pageNumber: 1, x: 100, y: 200, pageWidth: 612, pageHeight: 792 },
-      },
-      {
-        signatureImage: 'test2',
-        coordinates: { pageNumber: 1, x: 150, y: 250, pageWidth: 612, pageHeight: 792 },
-      },
-    ];
+    it('should skip elements on different pages', () => {
+      const signatures: SignaturePlacement[] = [
+        {
+          signatureImage: 'data:image/png;base64,test',
+          coordinates: createCoordinates(2),
+          width: 150,
+          height: 60,
+        },
+      ];
+      const texts: TextPlacement[] = [
+        {
+          text: 'Test',
+          coordinates: createCoordinates(1),
+          fontSize: 12,
+        },
+      ];
 
-    mockHitTestElement.mockReturnValueOnce(true);
+      const displayX = 100 * (1024 / 612) + 20;
+      const displayY = 200 * (1320 / 792) - 6;
 
-    const input = {
-      displayX: 100,
-      displayY: 200,
-      pageNumber: 1,
-      renderMetrics: createRenderMetrics(),
-      signatures,
-      texts: [],
-      dates: [],
-    };
+      const result = getElementAtDisplayPosition({
+        displayX,
+        displayY,
+        pageNumber: 1,
+        renderMetrics: createRenderMetrics(),
+        signatures,
+        texts,
+        dates: [],
+      });
 
-    const result = getElementAtDisplayPosition(input);
+      expect(result).not.toBeNull();
+      expect(result?.type).toBe(PdfElementType.Text);
+    });
 
-    expect(result).toEqual({ type: PdfElementType.Signature, index: 0 });
-    expect(mockHitTestElement).toHaveBeenCalledTimes(1);
+    it('should return null when all elements are on different page', () => {
+      const signatures: SignaturePlacement[] = [
+        {
+          signatureImage: 'data:image/png;base64,test',
+          coordinates: createCoordinates(2),
+          width: 150,
+          height: 60,
+        },
+      ];
+
+      const result = getElementAtDisplayPosition({
+        displayX: 200,
+        displayY: 300,
+        pageNumber: 1,
+        renderMetrics: createRenderMetrics(),
+        signatures,
+        texts: [],
+        dates: [],
+      });
+
+      expect(result).toBeNull();
+    });
+
+    it('should handle point at element boundary', () => {
+      const signatures: SignaturePlacement[] = [
+        {
+          signatureImage: 'data:image/png;base64,test',
+          coordinates: createCoordinates(1),
+          width: 150,
+          height: 60,
+        },
+      ];
+
+      const displayX = 100 * (1024 / 612);
+      const displayY = 200 * (1320 / 792);
+
+      const result = getElementAtDisplayPosition({
+        displayX,
+        displayY,
+        pageNumber: 1,
+        renderMetrics: createRenderMetrics(),
+        signatures,
+        texts: [],
+        dates: [],
+      });
+
+      expect(result).not.toBeNull();
+    });
+
+    it('should handle point at element right and bottom boundary', () => {
+      const signatures: SignaturePlacement[] = [
+        {
+          signatureImage: 'data:image/png;base64,test',
+          coordinates: createCoordinates(1),
+          width: 150,
+          height: 60,
+        },
+      ];
+
+      const displayX = (100 + 150) * (1024 / 612);
+      const displayY = (200 + 60) * (1320 / 792);
+
+      const result = getElementAtDisplayPosition({
+        displayX,
+        displayY,
+        pageNumber: 1,
+        renderMetrics: createRenderMetrics(),
+        signatures,
+        texts: [],
+        dates: [],
+      });
+
+      expect(result).not.toBeNull();
+    });
+
+    it('should return null when viewport height is invalid', () => {
+      const result = getElementAtDisplayPosition({
+        displayX: 100,
+        displayY: 200,
+        pageNumber: 1,
+        renderMetrics: {
+          pdfPageWidth: 612,
+          pdfPageHeight: 792,
+          viewportWidth: 1024,
+          viewportHeight: 0,
+        },
+        signatures: [],
+        texts: [],
+        dates: [],
+      });
+
+      expect(result).toBeNull();
+    });
+
+    it('should return null when PDF page height is invalid', () => {
+      const result = getElementAtDisplayPosition({
+        displayX: 100,
+        displayY: 200,
+        pageNumber: 1,
+        renderMetrics: {
+          pdfPageWidth: 612,
+          pdfPageHeight: 0,
+          viewportWidth: 1024,
+          viewportHeight: 1320,
+        },
+        signatures: [],
+        texts: [],
+        dates: [],
+      });
+
+      expect(result).toBeNull();
+    });
+
+    it('should return null when viewport height is invalid', () => {
+      const result = getElementAtDisplayPosition({
+        displayX: 100,
+        displayY: 200,
+        pageNumber: 1,
+        renderMetrics: {
+          pdfPageWidth: 612,
+          pdfPageHeight: 792,
+          viewportWidth: 1024,
+          viewportHeight: 0,
+        },
+        signatures: [],
+        texts: [],
+        dates: [],
+      });
+
+      expect(result).toBeNull();
+    });
+
+    it('should return null when PDF page height is invalid', () => {
+      const result = getElementAtDisplayPosition({
+        displayX: 100,
+        displayY: 200,
+        pageNumber: 1,
+        renderMetrics: {
+          pdfPageWidth: 612,
+          pdfPageHeight: 0,
+          viewportWidth: 1024,
+          viewportHeight: 1320,
+        },
+        signatures: [],
+        texts: [],
+        dates: [],
+      });
+
+      expect(result).toBeNull();
+    });
+
+    it('should test elements in order and return first match', () => {
+      const signatures: SignaturePlacement[] = [
+        {
+          signatureImage: 'data:image/png;base64,test',
+          coordinates: createCoordinates(1),
+          width: 150,
+          height: 60,
+        },
+      ];
+      const texts: TextPlacement[] = [
+        {
+          text: 'Overlap',
+          coordinates: createCoordinates(1),
+          fontSize: 12,
+        },
+      ];
+
+      const displayX = 100 * (1024 / 612) + 75;
+      const displayY = 200 * (1320 / 792) + 30;
+
+      const result = getElementAtDisplayPosition({
+        displayX,
+        displayY,
+        pageNumber: 1,
+        renderMetrics: createRenderMetrics(),
+        signatures,
+        texts,
+        dates: [],
+      });
+
+      expect(result).not.toBeNull();
+      expect(result?.type).toBe(PdfElementType.Signature);
+    });
+
+    it('should skip elements on different page in testElementType', () => {
+      const texts: TextPlacement[] = [
+        {
+          text: 'Page 2',
+          coordinates: createCoordinates(2),
+          fontSize: 12,
+        },
+        {
+          text: 'Page 1',
+          coordinates: createCoordinates(1),
+          fontSize: 12,
+        },
+      ];
+
+      const scaleX = 1024 / 612;
+      const scaleY = 1320 / 792;
+      const fontSize = 12 * scaleY;
+      const textWidth = 6 * fontSize * 0.6;
+      const boundsY = 200 * scaleY;
+      const displayX = 100 * scaleX + textWidth / 2;
+      const displayY = boundsY - fontSize / 2;
+
+      const result = getElementAtDisplayPosition({
+        displayX,
+        displayY,
+        pageNumber: 1,
+        renderMetrics: createRenderMetrics(),
+        signatures: [],
+        texts,
+        dates: [],
+      });
+
+      expect(result).not.toBeNull();
+      expect(result?.type).toBe(PdfElementType.Text);
+      expect(result?.index).toBe(1);
+    });
+
+    it('should test multiple element types and return first match', () => {
+      const signatures: SignaturePlacement[] = [
+        {
+          signatureImage: 'data:image/png;base64,test',
+          coordinates: createCoordinates(1),
+          width: 150,
+          height: 60,
+        },
+      ];
+      const texts: TextPlacement[] = [
+        {
+          text: 'Overlap',
+          coordinates: createCoordinates(1),
+          fontSize: 12,
+        },
+      ];
+
+      const displayX = 100 * (1024 / 612) + 75;
+      const displayY = 200 * (1320 / 792) + 30;
+
+      const result = getElementAtDisplayPosition({
+        displayX,
+        displayY,
+        pageNumber: 1,
+        renderMetrics: createRenderMetrics(),
+        signatures,
+        texts,
+        dates: [],
+      });
+
+      expect(result).not.toBeNull();
+      expect(result?.type).toBe(PdfElementType.Signature);
+    });
   });
 });

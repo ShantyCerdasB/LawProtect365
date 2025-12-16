@@ -1,6 +1,7 @@
 /**
  * @fileoverview Tests for getControlAtDisplayPosition use case
- * @summary Unit tests for control hit-testing at display position
+ * @summary Unit tests for control hit-testing
+ * @description Comprehensive tests for detecting resize handles and delete buttons
  */
 
 import { describe, it, expect } from '@jest/globals';
@@ -9,173 +10,325 @@ import { PdfElementType, ControlType, ResizeHandle } from '../../../../src/modul
 import type { ElementDisplayBounds } from '../../../../src/modules/documents/types';
 
 describe('getControlAtDisplayPosition', () => {
-  describe('Signature elements', () => {
-    const bounds: ElementDisplayBounds = {
-      x: 100,
-      y: 200,
-      width: 150,
-      height: 60,
-    };
+  const createBounds = (): ElementDisplayBounds => ({
+    x: 100,
+    y: 200,
+    width: 150,
+    height: 60,
+  });
 
-    it('should detect delete button at top-right corner', () => {
-      const deleteSize = 16;
-      const deleteX = 100 + 150 - deleteSize;
-      const deleteY = 200;
-      const result = getControlAtDisplayPosition(deleteX, deleteY, bounds, PdfElementType.Signature);
+  describe('Delete button detection', () => {
+    it('should detect delete button for signature element', () => {
+      const bounds = createBounds();
+      const deleteX = bounds.x + bounds.width - 12;
+      const deleteY = bounds.y;
+
+      const result = getControlAtDisplayPosition(
+        deleteX + 5,
+        deleteY + 5,
+        bounds,
+        PdfElementType.Signature
+      );
 
       expect(result).not.toBeNull();
       expect(result?.type).toBe(ControlType.Delete);
     });
 
-    it('should detect northwest resize handle', () => {
-      const handleSize = 12;
-      const result = getControlAtDisplayPosition(105, 205, bounds, PdfElementType.Signature);
+    it('should detect delete button for text element', () => {
+      const bounds = createBounds();
+      const deleteX = bounds.x + bounds.width - 12;
+      const deleteY = bounds.y - bounds.height;
+
+      const result = getControlAtDisplayPosition(
+        deleteX + 5,
+        deleteY + 5,
+        bounds,
+        PdfElementType.Text
+      );
 
       expect(result).not.toBeNull();
-      expect(result?.type).toBe(ControlType.Resize);
-      expect(result?.handle).toBe(ResizeHandle.Northwest);
+      expect(result?.type).toBe(ControlType.Delete);
     });
 
-    it('should detect southwest resize handle', () => {
-      const handleSize = 12;
-      const result = getControlAtDisplayPosition(100, 200 + 60 - handleSize, bounds, PdfElementType.Signature);
+    it('should detect delete button for date element', () => {
+      const bounds = createBounds();
+      const deleteX = bounds.x + bounds.width - 12;
+      const deleteY = bounds.y - bounds.height;
+
+      const result = getControlAtDisplayPosition(
+        deleteX + 5,
+        deleteY + 5,
+        bounds,
+        PdfElementType.Date
+      );
 
       expect(result).not.toBeNull();
-      expect(result?.type).toBe(ControlType.Resize);
-      expect(result?.handle).toBe(ResizeHandle.Southwest);
+      expect(result?.type).toBe(ControlType.Delete);
     });
 
-    it('should return null when point is not on any control', () => {
-      const result = getControlAtDisplayPosition(150, 230, bounds, PdfElementType.Signature);
+    it('should return null when pointer is not on delete button', () => {
+      const bounds = createBounds();
+
+      const result = getControlAtDisplayPosition(
+        bounds.x + 50,
+        bounds.y + 30,
+        bounds,
+        PdfElementType.Signature
+      );
 
       expect(result).toBeNull();
     });
   });
 
-  describe('Text elements', () => {
-    const bounds: ElementDisplayBounds = {
-      x: 100,
-      y: 200,
-      width: 50,
-      height: 12,
-    };
+  describe('Resize handle detection for signature', () => {
+    it('should detect southeast resize handle', () => {
+      const bounds = createBounds();
+      const handleX = bounds.x + bounds.width - 8;
+      const handleY = bounds.y + bounds.height - 8;
 
-    it('should detect delete button at top-right corner', () => {
-      const deleteSize = 16;
-      const topY = 200 - 12;
-      const result = getControlAtDisplayPosition(100 + 50 - deleteSize, topY, bounds, PdfElementType.Text);
-
-      expect(result).not.toBeNull();
-      expect(result?.type).toBe(ControlType.Delete);
-    });
-
-    it('should detect northwest resize handle', () => {
-      const topY = 200 - 12;
-      const handleSize = 12;
-      const result = getControlAtDisplayPosition(105, topY + handleSize / 2, bounds, PdfElementType.Text);
+      const result = getControlAtDisplayPosition(
+        handleX + 3,
+        handleY + 3,
+        bounds,
+        PdfElementType.Signature
+      );
 
       expect(result).not.toBeNull();
       expect(result?.type).toBe(ControlType.Resize);
-      expect(result?.handle).toBe(ResizeHandle.Northwest);
+      expect(result?.handle).toBe(ResizeHandle.Southeast);
     });
 
     it('should detect southwest resize handle', () => {
-      const handleSize = 12;
-      const result = getControlAtDisplayPosition(100, 200 - handleSize, bounds, PdfElementType.Text);
+      const bounds = createBounds();
+      const handleX = bounds.x;
+      const handleY = bounds.y + bounds.height - 8;
+
+      const result = getControlAtDisplayPosition(
+        handleX + 3,
+        handleY + 3,
+        bounds,
+        PdfElementType.Signature
+      );
 
       expect(result).not.toBeNull();
       expect(result?.type).toBe(ControlType.Resize);
       expect(result?.handle).toBe(ResizeHandle.Southwest);
     });
 
-    it('should return null when point is not on any control', () => {
-      const result = getControlAtDisplayPosition(125, 194, bounds, PdfElementType.Text);
+    it('should detect northeast resize handle when delete button is smaller', () => {
+      const bounds = createBounds();
+      const handleX = bounds.x + bounds.width - 12;
+      const handleY = bounds.y;
+
+      const result = getControlAtDisplayPosition(
+        handleX + 2,
+        handleY + 2,
+        bounds,
+        PdfElementType.Signature,
+        { deleteSize: 8 }
+      );
+
+      expect(result).not.toBeNull();
+      expect(result?.type).toBe(ControlType.Resize);
+      expect(result?.handle).toBe(ResizeHandle.Northeast);
+    });
+
+    it('should detect northwest resize handle', () => {
+      const bounds = createBounds();
+      const handleX = bounds.x;
+      const handleY = bounds.y;
+
+      const result = getControlAtDisplayPosition(
+        handleX + 3,
+        handleY + 3,
+        bounds,
+        PdfElementType.Signature
+      );
+
+      expect(result).not.toBeNull();
+      expect(result?.type).toBe(ControlType.Resize);
+      expect(result?.handle).toBe(ResizeHandle.Northwest);
+    });
+  });
+
+  describe('Resize handle detection for text/date', () => {
+    it('should detect southeast resize handle for text', () => {
+      const bounds = createBounds();
+      const handleX = bounds.x + bounds.width - 8;
+      const handleY = bounds.y - 8;
+
+      const result = getControlAtDisplayPosition(
+        handleX + 3,
+        handleY + 3,
+        bounds,
+        PdfElementType.Text
+      );
+
+      expect(result).not.toBeNull();
+      expect(result?.type).toBe(ControlType.Resize);
+      expect(result?.handle).toBe(ResizeHandle.Southeast);
+    });
+
+    it('should detect southwest resize handle for date', () => {
+      const bounds = createBounds();
+      const handleX = bounds.x;
+      const handleY = bounds.y - 8;
+
+      const result = getControlAtDisplayPosition(
+        handleX + 3,
+        handleY + 3,
+        bounds,
+        PdfElementType.Date
+      );
+
+      expect(result).not.toBeNull();
+      expect(result?.type).toBe(ControlType.Resize);
+      expect(result?.handle).toBe(ResizeHandle.Southwest);
+    });
+
+    it('should detect northeast resize handle for text when delete button is smaller', () => {
+      const bounds = createBounds();
+      const topY = bounds.y - bounds.height;
+      const handleX = bounds.x + bounds.width - 12;
+      const handleY = topY;
+
+      const result = getControlAtDisplayPosition(
+        handleX + 2,
+        handleY + 2,
+        bounds,
+        PdfElementType.Text,
+        { deleteSize: 8 }
+      );
+
+      expect(result).not.toBeNull();
+      expect(result?.type).toBe(ControlType.Resize);
+      expect(result?.handle).toBe(ResizeHandle.Northeast);
+    });
+
+    it('should detect northwest resize handle for date', () => {
+      const bounds = createBounds();
+      const topY = bounds.y - bounds.height;
+      const handleX = bounds.x;
+      const handleY = topY;
+
+      const result = getControlAtDisplayPosition(
+        handleX + 3,
+        handleY + 3,
+        bounds,
+        PdfElementType.Date
+      );
+
+      expect(result).not.toBeNull();
+      expect(result?.type).toBe(ControlType.Resize);
+      expect(result?.handle).toBe(ResizeHandle.Northwest);
+    });
+  });
+
+  describe('Edge cases', () => {
+    it('should return null when pointer is outside all controls', () => {
+      const bounds = createBounds();
+
+      const result = getControlAtDisplayPosition(
+        bounds.x + bounds.width / 2,
+        bounds.y + bounds.height / 2,
+        bounds,
+        PdfElementType.Signature
+      );
 
       expect(result).toBeNull();
     });
-  });
 
-  describe('Date elements', () => {
-    const bounds: ElementDisplayBounds = {
-      x: 100,
-      y: 200,
-      width: 80,
-      height: 12,
-    };
+    it('should handle custom handle size configuration', () => {
+      const bounds = createBounds();
+      const customHandleSize = 16;
+      const handleX = bounds.x + bounds.width - customHandleSize;
+      const handleY = bounds.y + bounds.height - customHandleSize;
 
-    it('should detect delete button at top-right corner', () => {
-      const deleteSize = 16;
-      const topY = 200 - 12;
-      const result = getControlAtDisplayPosition(100 + 80 - deleteSize, topY, bounds, PdfElementType.Date);
+      const result = getControlAtDisplayPosition(
+        handleX + 5,
+        handleY + 5,
+        bounds,
+        PdfElementType.Signature,
+        { handleSize: customHandleSize }
+      );
+
+      expect(result).not.toBeNull();
+      expect(result?.type).toBe(ControlType.Resize);
+    });
+
+    it('should handle custom delete size configuration', () => {
+      const bounds = createBounds();
+      const customDeleteSize = 20;
+      const deleteX = bounds.x + bounds.width - customDeleteSize;
+      const deleteY = bounds.y;
+
+      const result = getControlAtDisplayPosition(
+        deleteX + 5,
+        deleteY + 5,
+        bounds,
+        PdfElementType.Signature,
+        { deleteSize: customDeleteSize }
+      );
 
       expect(result).not.toBeNull();
       expect(result?.type).toBe(ControlType.Delete);
     });
 
-    it('should detect northwest resize handle', () => {
-      const topY = 200 - 12;
-      const handleSize = 12;
-      const result = getControlAtDisplayPosition(105, topY + handleSize / 2, bounds, PdfElementType.Date);
-
-      expect(result).not.toBeNull();
-      expect(result?.type).toBe(ControlType.Resize);
-      expect(result?.handle).toBe(ResizeHandle.Northwest);
-    });
-
-    it('should detect southwest resize handle', () => {
-      const handleSize = 12;
-      const result = getControlAtDisplayPosition(100, 200 - handleSize, bounds, PdfElementType.Date);
-
-      expect(result).not.toBeNull();
-      expect(result?.type).toBe(ControlType.Resize);
-      expect(result?.handle).toBe(ResizeHandle.Southwest);
-    });
-  });
-
-  describe('custom control sizes', () => {
-    const bounds: ElementDisplayBounds = {
-      x: 100,
-      y: 200,
-      width: 150,
-      height: 60,
-    };
-
-    it('should use custom handle size', () => {
-      const handleSize = 20;
-      const result = getControlAtDisplayPosition(105, 205, bounds, PdfElementType.Signature, {
-        handleSize: 20,
-        deleteSize: 16,
-      });
-
-      expect(result).not.toBeNull();
-      expect(result?.type).toBe(ControlType.Resize);
-      expect(result?.handle).toBe(ResizeHandle.Northwest);
-    });
-
-    it('should use custom delete size', () => {
-      const deleteSize = 20;
-      const result = getControlAtDisplayPosition(100 + 150 - deleteSize, 200, bounds, PdfElementType.Signature, {
-        handleSize: 12,
-        deleteSize: 20,
-      });
-
-      expect(result).not.toBeNull();
-      expect(result?.type).toBe(ControlType.Delete);
-    });
-  });
-
-  describe('edge cases', () => {
-    it('should handle zero-sized element', () => {
+    it('should handle bounds at origin', () => {
       const bounds: ElementDisplayBounds = {
-        x: 100,
-        y: 200,
-        width: 0,
-        height: 0,
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 50,
       };
 
-      const result = getControlAtDisplayPosition(100, 200, bounds, PdfElementType.Signature);
+      const result = getControlAtDisplayPosition(
+        5,
+        5,
+        bounds,
+        PdfElementType.Signature
+      );
 
-      expect(result).toBeNull();
+      expect(result).not.toBeNull();
+      expect(result?.type).toBe(ControlType.Resize);
+      expect(result?.handle).toBe(ResizeHandle.Northwest);
+    });
+
+    it('should handle very small bounds', () => {
+      const bounds: ElementDisplayBounds = {
+        x: 10,
+        y: 10,
+        width: 20,
+        height: 20,
+      };
+
+      const result = getControlAtDisplayPosition(
+        12,
+        12,
+        bounds,
+        PdfElementType.Signature
+      );
+
+      expect(result).not.toBeNull();
+    });
+
+    it('should prioritize delete button over resize handles', () => {
+      const bounds = createBounds();
+      const deleteX = bounds.x + bounds.width - 12;
+      const deleteY = bounds.y;
+
+      const result = getControlAtDisplayPosition(
+        deleteX + 5,
+        deleteY + 5,
+        bounds,
+        PdfElementType.Signature
+      );
+
+      expect(result?.type).toBe(ControlType.Delete);
     });
   });
 });
+
+
+
+

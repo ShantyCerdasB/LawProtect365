@@ -2,12 +2,38 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "types": ["jest", "@testing-library/jest-dom", "node"],
+    "typeRoots": ["./node_modules/@types", "./__tests__"],
+    "jsx": "react-jsx",
+    "skipLibCheck": true,
     "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true
+    "allowSyntheticDefaultImports": true,
+    "baseUrl": "./",
+    "paths": {
+      "@app/*": ["src/*"],
+      "@ui-kit/*": ["src/ui-kit/*"],
+      "@/app/*": ["src/app/*"],
+      "@/ui-kit/*": ["src/ui-kit/*"],
+      "@/modules/*": ["src/modules/*"],
+      "@/__tests__/*": ["__tests__/*"]
+    }
   },
   "include": [
     "src/**/*",
-    "__tests__/**/*"
-  ]
+    "__tests__/**/*",
+    "__tests__/**/*.d.ts",
+    "__tests__/jest-dom.d.ts"
+  ],
+  "files": ["./__tests__/jest-dom.d.ts"]
 }
+
+
+
+
+
+
+
+
+
+
+
 

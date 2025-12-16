@@ -51,7 +51,7 @@ export function Carousel({
   }
 
   return (
-    <div className={`relative w-full ${className}`}>
+    <section aria-label="Carousel" className={`relative w-full ${className}`}>
       {/* Slides Container */}
       <div className="relative w-full min-h-[400px] md:min-h-[600px]">
         {slides.map((slide, index) => (
@@ -74,7 +74,7 @@ export function Carousel({
         ))}
       </div>
 
-    </div>
+    </section>
   );
 }
 

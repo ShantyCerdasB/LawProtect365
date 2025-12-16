@@ -42,7 +42,7 @@ export function calculateElementCenter(
   if (elementType === PdfElementType.Signature) {
     centerY = y + height / 2;
   } else {
-    centerY = y + height / 2;
+    centerY = y - height / 2;
   }
 
   return { x: centerX, y: centerY };

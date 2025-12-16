@@ -8,21 +8,22 @@
 
 /**
  * @description Default dimensions for elements in PDF space.
+ * Frozen to prevent accidental mutation at runtime.
  */
-export const DEFAULT_DIMENSIONS = {
+export const DEFAULT_DIMENSIONS = Object.freeze({
   /** Default signature width in PDF space */
   SIGNATURE_WIDTH: 150,
   /** Default signature height in PDF space */
   SIGNATURE_HEIGHT: 60,
   /** Default text placeholder width in PDF space */
   TEXT_PLACEHOLDER_WIDTH: 100,
-  /** Default text placeholder height in PDF space */
+  /** Default text placeholder height */
   TEXT_PLACEHOLDER_HEIGHT: 14,
   /** Default date placeholder width in PDF space */
   DATE_PLACEHOLDER_WIDTH: 80,
-  /** Default date placeholder height in PDF space */
+  /** Default date placeholder height */
   DATE_PLACEHOLDER_HEIGHT: 14,
-} as const;
+} as const);
 
 /**
  * @description Default font size in PDF space.
@@ -36,8 +37,9 @@ export const DEFAULT_FONT_FAMILY = 'Arial';
 
 /**
  * @description Control sizes in display pixels.
+ * Frozen to prevent accidental mutation at runtime.
  */
-export const CONTROL_SIZES = {
+export const CONTROL_SIZES = Object.freeze({
   /** Size of resize handles in display pixels */
   HANDLE_SIZE: 12,
   /** Size of delete button in display pixels */
@@ -48,12 +50,13 @@ export const CONTROL_SIZES = {
   DELETE_OFFSET_Y: 3,
   /** Radius of click indicator circle */
   CLICK_INDICATOR_RADIUS: 3,
-} as const;
+} as const);
 
 /**
  * @description Stroke and padding values.
+ * Frozen to prevent accidental mutation at runtime.
  */
-export const STROKE_CONFIG = {
+export const STROKE_CONFIG = Object.freeze({
   /** Stroke padding around elements */
   PADDING: 2,
   /** Line width for normal stroke */
@@ -64,12 +67,13 @@ export const STROKE_CONFIG = {
   LINE_WIDTH_DRAGGED: 3,
   /** Dash pattern for pending/active elements */
   DASH_PATTERN: [5, 5] as const,
-} as const;
+} as const);
 
 /**
  * @description Colors for overlay rendering.
+ * Frozen to prevent accidental mutation at runtime.
  */
-export const OVERLAY_COLORS = {
+export const OVERLAY_COLORS = Object.freeze({
   /** Orange color for active/dragged elements */
   ACTIVE: '#f59e0b',
   /** Blue color for normal elements */
@@ -84,7 +88,7 @@ export const OVERLAY_COLORS = {
   RED: 'red',
   /** Orange with transparency for pending elements */
   PENDING_FILL: 'rgba(245, 158, 11, 0.1)',
-} as const;
+} as const);
 
 /**
  * @description Timeout for redraw debouncing in milliseconds.

@@ -15,7 +15,8 @@ import type { StoragePort } from '@lawprotect/frontend-core';
 export class LocalStorageAdapter implements StoragePort {
   async get<T = unknown>(key: string): Promise<T | null> {
     const raw = window.localStorage.getItem(key);
-    if (raw == null) return null;
+    if (raw === null) return null;
+    if (raw === '') return '' as unknown as T;
     try {
       return JSON.parse(raw) as T;
     } catch {
