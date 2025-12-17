@@ -1,0 +1,25 @@
+{
+  "_comment": "TypeScript configuration for notifications-service production build",
+  "_description": "Main TypeScript configuration for building the notifications service with ESM support and strict type checking",
+  
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "outDir": "dist",
+    "rootDir": ".",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    },
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "types": ["node"]
+  },
+  
+  "include": ["src"]
+}
+

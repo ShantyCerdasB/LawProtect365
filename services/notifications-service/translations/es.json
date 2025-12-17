@@ -1,0 +1,53 @@
+{
+  "notifications": {
+    "envelope_invitation": {
+      "subject": "Firmar Documento: {{envelopeTitle}}",
+      "body": "Has sido invitado a firmar un documento."
+    },
+    "document_view_invitation": {
+      "subject": "Ver Documento: {{envelopeTitle}}",
+      "body": "Has sido invitado a ver un documento."
+    },
+    "signer_declined": {
+      "subject": "Firma de Documento Rechazada: {{envelopeTitle}}",
+      "body": "El documento \"{{envelopeTitle}}\" fue rechazado. Razón: {{declineReason}}"
+    },
+    "envelope_cancelled": {
+      "subject": "Documento Cancelado: {{envelopeTitle}}",
+      "body": "El documento \"{{envelopeTitle}}\" ha sido cancelado."
+    },
+    "reminder_notification": {
+      "subject": "Recordatorio: Por favor firme el documento (Recordatorio #{{reminderCount}})",
+      "body": "Este es un recordatorio para firmar el documento."
+    },
+    "user_registered": {
+      "subject": "Bienvenido a LawProtect365",
+      "body": "¡Bienvenido {{firstName}}{{lastName}}! Tu cuenta ha sido creada exitosamente."
+    },
+    "user_updated": {
+      "subject": "Cuenta Actualizada",
+      "body": "Hola {{firstName}}, la información de tu cuenta ha sido actualizada."
+    },
+    "userrolechanged": {
+      "subject": "Tu Rol Ha Cambiado",
+      "body": "Hola {{firstName}}, tu rol ha sido cambiado de {{oldRole}} a {{newRole}}."
+    },
+    "userstatuschanged": {
+      "subject": "Estado de Cuenta Cambiado",
+      "body": "Hola {{firstName}}, el estado de tu cuenta ha sido cambiado de {{oldStatus}} a {{newStatus}}."
+    },
+    "mfastatuschanged": {
+      "subject": "Configuración MFA Cambiada",
+      "body": "Hola {{firstName}}, MFA ha sido {{mfaEnabled}} en tu cuenta."
+    },
+    "oauthaccountlinked": {
+      "subject": "Cuenta OAuth Vinculada",
+      "body": "Hola {{firstName}}, una cuenta OAuth ha sido vinculada a tu cuenta."
+    },
+    "oauthaccountunlinked": {
+      "subject": "Cuenta OAuth Desvinculada",
+      "body": "Hola {{firstName}}, una cuenta OAuth ha sido desvinculada de tu cuenta."
+    }
+  }
+}
+

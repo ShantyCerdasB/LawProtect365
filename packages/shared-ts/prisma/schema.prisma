@@ -112,11 +112,11 @@ model User {
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
 
-  oauthAccounts     OAuthAccount[]
-  createdEnvelopes  SignatureEnvelope[] @relation("EnvelopeCreator")
-  envelopeSigners   EnvelopeSigner[]
-  userAuditEvents   UserAuditEvent[]
-  personalInfo      UserPersonalInfo?
+  oauthAccounts    OAuthAccount[]
+  createdEnvelopes SignatureEnvelope[] @relation("EnvelopeCreator")
+  envelopeSigners  EnvelopeSigner[]
+  userAuditEvents  UserAuditEvent[]
+  personalInfo     UserPersonalInfo?
 
   @@index([email, status])
   @@index([status, createdAt])
@@ -140,12 +140,12 @@ model UserPersonalInfo {
 
 model OAuthAccount {
   /// Federated identity link (e.g., Google Workspace, Microsoft 365, Apple).
-  id                String         @id @default(uuid()) @db.Uuid
-  userId            String         @db.Uuid
+  id                String        @id @default(uuid()) @db.Uuid
+  userId            String        @db.Uuid
   provider          OAuthProvider
   /// Provider-side account identifier (must be non-empty).
   providerAccountId String
-  createdAt         DateTime       @default(now())
+  createdAt         DateTime      @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -156,12 +156,12 @@ model OAuthAccount {
 
 model SignatureEnvelope {
   /// Envelope metadata and document references.
-  id                 String           @id @default(uuid()) @db.Uuid
-  createdBy          String           @db.Uuid
+  id                 String             @id @default(uuid()) @db.Uuid
+  createdBy          String             @db.Uuid
   title              String
   description        String?
-  status             EnvelopeStatus   @default(DRAFT)
-  signingOrderType   SigningOrderType @default(OWNER_FIRST)
+  status             EnvelopeStatus     @default(DRAFT)
+  signingOrderType   SigningOrderType   @default(OWNER_FIRST)
   originType         DocumentOriginType
   /// Template linkage when originType=TEMPLATE.
   templateId         String?
@@ -180,19 +180,19 @@ model SignatureEnvelope {
   completedAt        DateTime?
   cancelledAt        DateTime?
   declinedAt         DateTime?
-  declinedBySignerId String?         @db.Uuid
+  declinedBySignerId String?            @db.Uuid
   declinedReason     String?
   expiresAt          DateTime?
-  createdAt          DateTime        @default(now())
-  updatedAt          DateTime        @updatedAt
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
 
-  creator         User               @relation("EnvelopeCreator", fields: [createdBy], references: [id])
-  signers         EnvelopeSigner[]
-  auditEvents     SignatureAuditEvent[]
-  consents        Consent[]
+  creator          User                     @relation("EnvelopeCreator", fields: [createdBy], references: [id])
+  signers          EnvelopeSigner[]
+  auditEvents      SignatureAuditEvent[]
+  consents         Consent[]
   reminderTracking SignerReminderTracking[]
   /// Who declined the envelope (FK enforced in SQL migration).
-  declinedBySigner EnvelopeSigner?   @relation("DeclinedBySigner", fields: [declinedBySignerId], references: [id])
+  declinedBySigner EnvelopeSigner?          @relation("DeclinedBySigner", fields: [declinedBySignerId], references: [id])
 
   @@index([status])
   @@index([createdBy])
@@ -200,26 +200,26 @@ model SignatureEnvelope {
 
 model EnvelopeSigner {
   /// A participant (signer/viewer) per envelope, internal or external.
-  id               String  @id @default(uuid()) @db.Uuid
-  envelopeId       String  @db.Uuid
+  id               String          @id @default(uuid()) @db.Uuid
+  envelopeId       String          @db.Uuid
   /// Internal user linkage (nullable for external signers).
-  userId           String? @db.Uuid
+  userId           String?         @db.Uuid
   /// Convenience flag for external participants (derived from userId null).
-  isExternal       Boolean @default(false)
+  isExternal       Boolean         @default(false)
   /// External contact email (nullable when userId is set).
   email            String?
   /// External display name (nullable when userId is set).
   fullName         String?
-  invitedByUserId  String? @db.Uuid
+  invitedByUserId  String?         @db.Uuid
   participantRole  ParticipantRole @default(SIGNER)
   /// Ordering within the envelope flow (not enforced unique by request).
   order            Int
-  status           SignerStatus @default(PENDING)
+  status           SignerStatus    @default(PENDING)
   signedAt         DateTime?
   declinedAt       DateTime?
   declineReason    String?
   /// Optional per-signer consent snapshot.
-  consentGiven     Boolean?   @default(false)
+  consentGiven     Boolean?        @default(false)
   consentTimestamp DateTime?
   /// Cryptographic evidence fields (optional).
   documentHash     String?
@@ -231,19 +231,19 @@ model EnvelopeSigner {
   ipAddress        String?
   userAgent        String?
   location         String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
 
-  envelope  SignatureEnvelope @relation(fields: [envelopeId], references: [id], onDelete: Cascade)
-  user      User?             @relation(fields: [userId], references: [id])
+  envelope          SignatureEnvelope   @relation(fields: [envelopeId], references: [id], onDelete: Cascade)
+  user              User?               @relation(fields: [userId], references: [id])
   /// Reverse relation for SignatureEnvelope.declinedBySigner
   declinedEnvelopes SignatureEnvelope[] @relation("DeclinedBySigner")
 
-  auditEvents          SignatureAuditEvent[]
-  consents             Consent[] @relation("ConsentSigner")
-  consentsAsSignature  Consent[] @relation("ConsentSignature")
-  invitationTokens     InvitationToken[]
-  reminderTracking     SignerReminderTracking[]
+  auditEvents         SignatureAuditEvent[]
+  consents            Consent[]                @relation("ConsentSigner")
+  consentsAsSignature Consent[]                @relation("ConsentSignature")
+  invitationTokens    InvitationToken[]
+  reminderTracking    SignerReminderTracking[]
 
   /// Prevent duplicate external invite by email within the same envelope.
   @@unique([envelopeId, email])
@@ -279,38 +279,38 @@ model Consent {
 
 model InvitationToken {
   /// External invitation link lifecycle per signer.
-  id            String  @id @default(uuid()) @db.Uuid
-  envelopeId    String  @db.Uuid
-  signerId      String  @db.Uuid
+  id            String                @id @default(uuid()) @db.Uuid
+  envelopeId    String                @db.Uuid
+  signerId      String                @db.Uuid
   /// Store a hash of the token (never the raw token).
-  tokenHash     String  @unique
+  tokenHash     String                @unique
   status        InvitationTokenStatus @default(ACTIVE)
   expiresAt     DateTime?
   sentAt        DateTime?
   lastSentAt    DateTime?
-  resendCount   Int      @default(0)
+  resendCount   Int                   @default(0)
   usedAt        DateTime?
   usedBy        String?
-  viewCount     Int      @default(0)
+  viewCount     Int                   @default(0)
   lastViewedAt  DateTime?
   signedAt      DateTime?
-  signedBy      String?  @db.Uuid
+  signedBy      String?               @db.Uuid
   revokedAt     DateTime?
   revokedReason String?
-  createdBy     String?  @db.Uuid
+  createdBy     String?               @db.Uuid
   ipAddress     String?
   userAgent     String?
   country       String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
 
   /// Relation to the signer this token belongs to
-  signer        EnvelopeSigner @relation(fields: [signerId], references: [id], onDelete: Cascade)
+  signer EnvelopeSigner @relation(fields: [signerId], references: [id], onDelete: Cascade)
+  // Note: the "one ACTIVE token per signer" is enforced via a partial unique index in SQL migration.
 
   @@index([envelopeId, signerId])
   @@index([signerId, status])
   @@index([status, expiresAt])
-  // Note: the "one ACTIVE token per signer" is enforced via a partial unique index in SQL migration.
 }
 
 model SignatureAuditEvent {
@@ -349,7 +349,7 @@ model UserAuditEvent {
   metadata    Json?
   createdAt   DateTime        @default(now())
 
-  user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
   @@index([action, createdAt])
@@ -357,20 +357,79 @@ model UserAuditEvent {
 
 model SignerReminderTracking {
   /// Tracks reminder history and limits for each signer per envelope
-  id                    String   @id @default(uuid()) @db.Uuid
-  signerId              String   @db.Uuid
-  envelopeId            String   @db.Uuid
-  lastReminderAt        DateTime?
-  reminderCount         Int      @default(0)
-  lastReminderMessage   String?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  id                  String    @id @default(uuid()) @db.Uuid
+  signerId            String    @db.Uuid
+  envelopeId          String    @db.Uuid
+  lastReminderAt      DateTime?
+  reminderCount       Int       @default(0)
+  lastReminderMessage String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
-  signer    EnvelopeSigner    @relation(fields: [signerId], references: [id], onDelete: Cascade)
-  envelope  SignatureEnvelope @relation(fields: [envelopeId], references: [id], onDelete: Cascade)
+  signer   EnvelopeSigner    @relation(fields: [signerId], references: [id], onDelete: Cascade)
+  envelope SignatureEnvelope @relation(fields: [envelopeId], references: [id], onDelete: Cascade)
 
   @@unique([signerId, envelopeId])
   @@index([envelopeId])
   @@index([signerId])
   @@index([lastReminderAt])
+}
+
+enum NotificationChannel {
+  EMAIL
+  SMS
+  PUSH
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  DELIVERED
+  FAILED
+  BOUNCED
+  REJECTED
+}
+
+enum RecipientType {
+  EMAIL
+  PHONE
+}
+
+model Notification {
+  id                String              @id @default(uuid()) @db.Uuid
+  notificationId    String              @unique
+  eventId           String?
+  eventType         String
+  channel           NotificationChannel
+  recipient         String
+  recipientType     RecipientType
+  status            NotificationStatus  @default(PENDING)
+  sentAt            DateTime?
+  deliveredAt       DateTime?
+  failedAt          DateTime?
+  bouncedAt         DateTime?
+  errorMessage      String?             @db.Text
+  errorCode         String?
+  retryCount        Int                 @default(0)
+  maxRetries        Int                 @default(3)
+  subject           String?
+  body              String?             @db.Text
+  templateId        String?
+  metadata          Json?
+  providerMessageId String?
+  providerResponse  Json?
+  userId            String?             @db.Uuid
+  envelopeId        String?             @db.Uuid
+  signerId          String?             @db.Uuid
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  @@index([status, createdAt])
+  @@index([recipient, createdAt])
+  @@index([eventType, createdAt])
+  @@index([channel, status])
+  @@index([userId, createdAt])
+  @@index([envelopeId, createdAt])
+  @@index([providerMessageId])
+  @@index([eventId])
 }

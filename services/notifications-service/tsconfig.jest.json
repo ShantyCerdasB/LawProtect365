@@ -1,0 +1,25 @@
+{
+  "_comment": "TypeScript configuration for Jest testing environment in notifications-service",
+  "_description": "Extends the main tsconfig.json with Jest-specific settings for test compilation and module resolution",
+  
+  "extends": "./tsconfig.json",
+  
+  "compilerOptions": {
+    "baseUrl": ".",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "types": ["jest", "node"],
+    "paths": {
+      "@/*": ["src/*"]
+    },
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
+  },
+
+  "include": ["src", "__tests__"],
+  
+  "exclude": [
+    "__tests__/integration/disabled"
+  ]
+}
+

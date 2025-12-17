@@ -1,0 +1,53 @@
+{
+  "notifications": {
+    "envelope_invitation": {
+      "subject": "Sign Document: {{envelopeTitle}}",
+      "body": "You have been invited to sign a document."
+    },
+    "document_view_invitation": {
+      "subject": "View Document: {{envelopeTitle}}",
+      "body": "You have been invited to view a document."
+    },
+    "signer_declined": {
+      "subject": "Document Signing Declined: {{envelopeTitle}}",
+      "body": "The document \"{{envelopeTitle}}\" was declined. Reason: {{declineReason}}"
+    },
+    "envelope_cancelled": {
+      "subject": "Document Cancelled: {{envelopeTitle}}",
+      "body": "The document \"{{envelopeTitle}}\" has been cancelled."
+    },
+    "reminder_notification": {
+      "subject": "Reminder: Please Sign Document (Reminder #{{reminderCount}})",
+      "body": "This is a reminder to sign the document."
+    },
+    "user_registered": {
+      "subject": "Welcome to LawProtect365",
+      "body": "Welcome {{firstName}}{{lastName}}! Your account has been successfully created."
+    },
+    "user_updated": {
+      "subject": "Account Updated",
+      "body": "Hello {{firstName}}, your account information has been updated."
+    },
+    "userrolechanged": {
+      "subject": "Your Role Has Changed",
+      "body": "Hello {{firstName}}, your role has been changed from {{oldRole}} to {{newRole}}."
+    },
+    "userstatuschanged": {
+      "subject": "Account Status Changed",
+      "body": "Hello {{firstName}}, your account status has been changed from {{oldStatus}} to {{newStatus}}."
+    },
+    "mfastatuschanged": {
+      "subject": "MFA Settings Changed",
+      "body": "Hello {{firstName}}, MFA has been {{mfaEnabled}} on your account."
+    },
+    "oauthaccountlinked": {
+      "subject": "OAuth Account Linked",
+      "body": "Hello {{firstName}}, an OAuth account has been linked to your account."
+    },
+    "oauthaccountunlinked": {
+      "subject": "OAuth Account Unlinked",
+      "body": "Hello {{firstName}}, an OAuth account has been unlinked from your account."
+    }
+  }
+}
+

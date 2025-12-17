@@ -16,8 +16,6 @@ import { SignatureAuditEventRepository } from '../../../repositories/SignatureAu
 import { ConsentRepository } from '../../../repositories/ConsentRepository';
 import { SignerReminderTrackingRepository } from '../../../repositories/SignerReminderTrackingRepository';
 
-// Avoid loading full AppConfig at module import time to prevent
-// requiring DATABASE_URL prematurely in Lambda cold start.
 
 /**
  * Factory responsible for creating all repository instances with proper database configuration.

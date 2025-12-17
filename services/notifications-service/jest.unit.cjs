@@ -1,0 +1,39 @@
+/**
+ * @file jest.unit.cjs
+ * @summary Jest configuration for unit tests (notifications-service)
+ * @description Extends root jest.base.cjs with minimal overrides for unit tests.
+ */
+
+const baseConfig = require('../../jest.base.cjs');
+
+/** @type {import('jest').Config} */
+module.exports = {
+  ...baseConfig,
+  roots: ['<rootDir>'],
+  testMatch: ['<rootDir>/__tests__/unit/**/*.test.ts'],
+
+  // Coverage threshold: Custom thresholds per metric
+  coverageThreshold: {
+    global: {
+      branches: 79,
+      functions: 90,
+      lines: 90,
+      statements: 90
+    }
+  },
+
+  // Unit tests: no global setup/teardown or AWS mocks
+  globalSetup: undefined,
+  globalTeardown: undefined,
+  setupFiles: [],
+  setupFilesAfterEnv: [],
+
+  moduleNameMapper: {
+    // Mock uuid module to prevent ES modules issues
+    '^uuid$': '<rootDir>/__tests__/mocks/uuid.ts',
+    ...baseConfig.moduleNameMapper,
+    '^@/(.*)\\.js$': '<rootDir>/src/$1',
+    '^@/(.*)$': '<rootDir>/src/$1',
+  },
+};
+
