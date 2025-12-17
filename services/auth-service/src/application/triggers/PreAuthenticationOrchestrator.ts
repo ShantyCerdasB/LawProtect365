@@ -5,16 +5,16 @@
  * including user validation, MFA policy evaluation, and access control decisions.
  */
 
-import { User } from '../domain/entities/User';
-import { UserService } from '../services/UserService';
-import { CognitoService } from '../services/CognitoService';
-import { PreAuthEvent, PreAuthResult } from '../types/cognito/PreAuthEvent';
-import { MfaPolicyRules } from '../domain/rules/MfaPolicyRules';
-import { CognitoMfaSettings } from '../domain/interfaces';
-import { UserAccessRules } from '../domain/rules/UserAccessRules';
-import { UserRole, UserAccountStatus, CognitoAttribute } from '../domain/enums';
-import { authenticationFailed } from '../auth-errors/factories';
-import { AuthServiceConfig } from '../config/AppConfig';
+import { User } from '../../domain/entities/User';
+import { UserService } from '../../services/UserService';
+import { CognitoService } from '../../services/CognitoService';
+import { PreAuthEvent, PreAuthResult } from '../../types/cognito/PreAuthEvent';
+import { MfaPolicyRules } from '../../domain/rules/MfaPolicyRules';
+import { CognitoMfaSettings } from '../../domain/interfaces';
+import { UserAccessRules } from '../../domain/rules/UserAccessRules';
+import { UserRole, UserAccountStatus, CognitoAttribute } from '../../domain/enums';
+import { authenticationFailed } from '../../auth-errors/factories';
+import { AuthServiceConfig } from '../../config/AppConfig';
 
 /**
  * Application service that orchestrates the PreAuthentication flow

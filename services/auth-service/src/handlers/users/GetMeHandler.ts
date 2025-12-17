@@ -8,7 +8,7 @@
 import { ControllerFactory } from '@lawprotect/shared-ts';
 import { CompositionRoot } from '../../infrastructure/factories/CompositionRoot';
 import { GetMeQuerySchema } from '../../domain/schemas/GetMeSchema';
-import { GetMeUseCase } from '../../application/GetMeUseCase';
+import { GetMeUseCase } from '../../application/users/GetMeUseCase';
 
 /**
  * GetMeHandler - Production-ready handler using ControllerFactory

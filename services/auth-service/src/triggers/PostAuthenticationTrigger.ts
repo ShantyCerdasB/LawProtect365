@@ -8,7 +8,7 @@
 
 import { LambdaTriggerBase } from '@lawprotect/shared-ts';
 import type { PostAuthEvent, PostAuthResult } from '../types/cognito/PostAuthEvent';
-import { PostAuthenticationOrchestrator } from '../application/PostAuthenticationOrchestrator';
+import { PostAuthenticationOrchestrator } from '../application/triggers/PostAuthenticationOrchestrator';
 import { CompositionRoot } from '../infrastructure/factories/CompositionRoot';
 
 /**

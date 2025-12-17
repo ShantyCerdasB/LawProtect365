@@ -7,7 +7,7 @@
 
 import { LambdaTriggerBase } from '@lawprotect/shared-ts';
 import type { PostConfirmationEvent, PostConfirmationResult } from '../types/cognito/PostConfirmationEvent';
-import { PostConfirmationOrchestrator } from '../application/PostConfirmationOrchestrator';
+import { PostConfirmationOrchestrator } from '../application/triggers/PostConfirmationOrchestrator';
 import { CompositionRoot } from '../infrastructure/factories/CompositionRoot';
  
 /**

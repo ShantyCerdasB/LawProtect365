@@ -5,15 +5,15 @@
  * including user resolution, conditional data fetching, and response assembly.
  */
 
-import { User } from '../domain/entities/User';
-import { UserService } from '../services/UserService';
-import { OAuthAccountRepository } from '../repositories/OAuthAccountRepository';
-import { UserVisibilityRules } from '../domain/rules/UserVisibilityRules';
-import { IncludeFlags } from '../domain/value-objects/IncludeFlags';
-import { UserProfileResponseDto, GetMeInput, GetMeResult } from '../types/users/UserProfileResponseDto';
-import { UserId } from '../domain/value-objects/UserId';
+import { User } from '../../domain/entities/User';
+import { UserService } from '../../services/UserService';
+import { OAuthAccountRepository } from '../../repositories/OAuthAccountRepository';
+import { UserVisibilityRules } from '../../domain/rules/UserVisibilityRules';
+import { IncludeFlags } from '../../domain/value-objects/IncludeFlags';
+import { UserProfileResponseDto, GetMeInput, GetMeResult } from '../../types/users/UserProfileResponseDto';
+import { UserId } from '../../domain/value-objects/UserId';
 import { Logger } from '@lawprotect/shared-ts';
-import { userNotFound } from '../auth-errors/factories';
+import { userNotFound } from '../../auth-errors/factories';
 
 /**
  * Application service for handling GET /me use case

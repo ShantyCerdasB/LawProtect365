@@ -8,7 +8,7 @@
 
 import { LambdaTriggerBase } from '@lawprotect/shared-ts';
 import type { PreAuthEvent, PreAuthResult } from '../types/cognito/PreAuthEvent';
-import { PreAuthenticationOrchestrator } from '../application/PreAuthenticationOrchestrator';
+import { PreAuthenticationOrchestrator } from '../application/triggers/PreAuthenticationOrchestrator';
 import { CompositionRoot } from '../infrastructure/factories/CompositionRoot';
 
 /**

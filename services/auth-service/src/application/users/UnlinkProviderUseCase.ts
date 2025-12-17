@@ -5,23 +5,23 @@
  * including validation, conflict detection, and audit trail creation.
  */
 
-import { User } from '../domain/entities/User';
-import { UserService } from '../services/UserService';
-import { CognitoService } from '../services/CognitoService';
-import { OAuthAccountRepository } from '../repositories/OAuthAccountRepository';
-import { AuditService } from '../services/AuditService';
-import { EventPublishingService } from '../services/EventPublishingService';
-import { UnlinkProviderRequest, UnlinkProviderResponse } from '../domain/interfaces';
-import { UnlinkingMode, OAuthProvider, ProviderUnlinkingStatus } from '../domain/enums';
-import { ProviderUnlinkingRules } from '../domain/rules/ProviderUnlinkingRules';
-import { AuthServiceConfig } from '../config/AppConfig';
+import { User } from '../../domain/entities/User';
+import { UserService } from '../../services/UserService';
+import { CognitoService } from '../../services/CognitoService';
+import { OAuthAccountRepository } from '../../repositories/OAuthAccountRepository';
+import { AuditService } from '../../services/AuditService';
+import { EventPublishingService } from '../../services/EventPublishingService';
+import { UnlinkProviderRequest, UnlinkProviderResponse } from '../../domain/interfaces';
+import { UnlinkingMode, OAuthProvider, ProviderUnlinkingStatus } from '../../domain/enums';
+import { ProviderUnlinkingRules } from '../../domain/rules/ProviderUnlinkingRules';
+import { AuthServiceConfig } from '../../config/AppConfig';
 import { Logger } from '@lawprotect/shared-ts';
 import { 
   oauthProviderNotSupported, 
   oauthAccountUnlinkingFailed,
   missingRequiredFields 
-} from '../auth-errors/factories';
-import { OAuthAccountId } from '../domain/value-objects/OAuthAccountId';
+} from '../../auth-errors/factories';
+import { OAuthAccountId } from '../../domain/value-objects/OAuthAccountId';
 
 export class UnlinkProviderUseCase {
   constructor(

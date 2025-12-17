@@ -5,16 +5,16 @@
  * including user registration, role assignment, and provider linking.
  */
 
-import { User } from '../domain/entities/User';
-import { UserService } from '../services/UserService';
-import { CognitoService } from '../services/CognitoService';
-import { AuditService } from '../services/AuditService';
-import { EventPublishingService } from '../services/EventPublishingService';
-import { PostConfirmationEvent, PostConfirmationResult } from '../types/cognito/PostConfirmationEvent';
-import { UserRegistrationRules } from '../domain/rules/UserRegistrationRules';
-import { UserRole, CognitoAttribute } from '../domain/enums';
-import { AuthServiceConfig } from '../config/AppConfig';
-import { authenticationFailed } from '../auth-errors/factories';
+import { User } from '../../domain/entities/User';
+import { UserService } from '../../services/UserService';
+import { CognitoService } from '../../services/CognitoService';
+import { AuditService } from '../../services/AuditService';
+import { EventPublishingService } from '../../services/EventPublishingService';
+import { PostConfirmationEvent, PostConfirmationResult } from '../../types/cognito/PostConfirmationEvent';
+import { UserRegistrationRules } from '../../domain/rules/UserRegistrationRules';
+import { UserRole, CognitoAttribute } from '../../domain/enums';
+import { AuthServiceConfig } from '../../config/AppConfig';
+import { authenticationFailed } from '../../auth-errors/factories';
 import { Logger } from '@lawprotect/shared-ts';
 
 /**

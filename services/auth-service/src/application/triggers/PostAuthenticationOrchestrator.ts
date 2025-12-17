@@ -6,13 +6,13 @@
  * audit events, and integration event publishing.
  */
 
-import { User } from '../domain/entities/User';
-import { UserService } from '../services/UserService';
-import { CognitoService } from '../services/CognitoService';
-import { AuditService } from '../services/AuditService';
-import { EventPublishingService } from '../services/EventPublishingService';
-import { PostAuthEvent, PostAuthResult } from '../types/cognito/PostAuthEvent';
-import { authenticationFailed } from '../auth-errors/factories';
+import { User } from '../../domain/entities/User';
+import { UserService } from '../../services/UserService';
+import { CognitoService } from '../../services/CognitoService';
+import { AuditService } from '../../services/AuditService';
+import { EventPublishingService } from '../../services/EventPublishingService';
+import { PostAuthEvent, PostAuthResult } from '../../types/cognito/PostAuthEvent';
+import { authenticationFailed } from '../../auth-errors/factories';
 
 /**
  * Application service that orchestrates the PostAuthentication flow

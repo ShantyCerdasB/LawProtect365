@@ -7,7 +7,7 @@
 import { ControllerFactory } from '@lawprotect/shared-ts';
 import { UnlinkProviderBodySchema } from '../../domain/schemas/UnlinkProviderSchema';
 import { CompositionRoot } from '../../infrastructure/factories/CompositionRoot';
-import { UnlinkProviderUseCase } from '../../application/UnlinkProviderUseCase';
+import { UnlinkProviderUseCase } from '../../application/users/UnlinkProviderUseCase';
 import { UnlinkingMode } from '../../domain/enums';
 
 export const unlinkProviderHandler = ControllerFactory.createCommand({

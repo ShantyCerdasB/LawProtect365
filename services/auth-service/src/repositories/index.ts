@@ -9,4 +9,3 @@ export * from './UserRepository';
 export * from './OAuthAccountRepository';
 export * from './UserPersonalInfoRepository';
 export * from './UserAuditEventRepository';
-export * from './RoleRepository';

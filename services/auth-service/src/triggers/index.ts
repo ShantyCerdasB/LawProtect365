@@ -5,7 +5,7 @@
  * throughout the application.
  */
 
-export * from './PreAuthenticationTrigger';
-export * from './PostAuthenticationTrigger';
-export * from './PostConfirmationTrigger';
-export * from './PreTokenGenerationTrigger';
+export { PreAuthenticationTrigger, handler as preAuthenticationHandler } from './PreAuthenticationTrigger';
+export { PostAuthenticationTrigger, handler as postAuthenticationHandler } from './PostAuthenticationTrigger';
+export { PostConfirmationTrigger, handler as postConfirmationHandler } from './PostConfirmationTrigger';
+export { PreTokenGenerationTrigger, handler as preTokenGenerationHandler } from './PreTokenGenerationTrigger';

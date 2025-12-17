@@ -7,7 +7,7 @@
 
 import { LambdaTriggerBase } from '@lawprotect/shared-ts';
 import type { PreTokenGenEvent, PreTokenGenResult } from '../types/cognito/PreTokenGenEvent';
-import { PreTokenGenerationOrchestrator } from '../application/PreTokenGenerationOrchestrator';
+import { PreTokenGenerationOrchestrator } from '../application/triggers/PreTokenGenerationOrchestrator';
 import { CompositionRoot } from '../infrastructure/factories/CompositionRoot';
 
 /**

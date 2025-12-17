@@ -8,7 +8,7 @@
 import { ControllerFactory } from '@lawprotect/shared-ts';
 import { CompositionRoot } from '../../infrastructure/factories/CompositionRoot';
 import { LinkProviderBodySchema } from '../../domain/schemas/LinkProviderSchema';
-import { LinkProviderUseCase } from '../../application/LinkProviderUseCase';
+import { LinkProviderUseCase } from '../../application/users/LinkProviderUseCase';
 import { LinkingMode, OAuthProvider } from '../../domain/enums';
 
 export const linkProviderHandler = ControllerFactory.createCommand({
