@@ -29,6 +29,8 @@ module.exports = {
   setupFilesAfterEnv: [],
 
   moduleNameMapper: {
+    // Mock AWS modules that are not available in test environment - MUST come first
+    '^@aws/lambda-invoke-store$': '<rootDir>/__tests__/mocks/@aws/lambda-invoke-store.ts',
     // Mock uuid module to prevent ES modules issues
     '^uuid$': '<rootDir>/__tests__/mocks/uuid.ts',
     ...baseConfig.moduleNameMapper,

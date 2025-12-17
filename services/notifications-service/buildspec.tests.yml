@@ -1,0 +1,93 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 20
+
+  pre_build:
+    commands:
+      - |
+        set -eu
+        echo "[INFO][TEST] Installing workspace dependencies"
+        cd "$CODEBUILD_SRC_DIR"
+        npm ci --workspaces --include-workspace-root --no-audit --no-fund
+      - |
+        echo "[INFO][TEST] Build shared-ts (prisma generate + build)"
+        cd "$CODEBUILD_SRC_DIR/packages/shared-ts"
+        export DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}"
+        npx -y prisma@5.22.0 generate
+        npm run build
+      - |
+        echo "[INFO][TEST] Build notifications-service (tsc)"
+        cd "$CODEBUILD_SRC_DIR/services/notifications-service"
+        npm run build
+
+  build:
+    commands:
+      - |
+        set -eu
+        echo "[INFO][TEST] Running unit tests"
+        cd "$CODEBUILD_SRC_DIR/services/notifications-service"
+        export DATABASE_URL="${DATABASE_URL:-postgresql://user:pass@localhost:5432/postgres?schema=public}"
+        npm run test:unit:coverage
+      - |
+        echo "[INFO][TEST] Building and publishing notifications-core layer (once per commit)"
+        cd "$CODEBUILD_SRC_DIR/services/notifications-service"
+        rm -rf layer-core notifications-core-layer.zip
+        mkdir -p "layer-core/nodejs/node_modules/@lawprotect/notifications-core"
+
+        # Entry that re-exports handler from dist (already compiled above)
+        cat > "core-bundle-entry.mjs" << 'EOF'
+        import { handler } from './dist/src/handlers/EventBridgeHandler.js';
+        export const handlers = {
+          handler: handler
+        };
+        EOF
+
+        # Bundle to CJS (Node 20), only prisma external (provided by another layer)
+        npx -y esbuild@0.21.5 core-bundle-entry.mjs \
+          --bundle --platform=node --format=cjs --target=node20 \
+          --external:@prisma/client \
+          --minify --sourcemap \
+          --outfile="layer-core/nodejs/node_modules/@lawprotect/notifications-core/index.js"
+
+        # Inject crypto polyfill
+        echo "const{webcrypto:__wc}=require('node:crypto');if(!globalThis.crypto)globalThis.crypto=__wc;" > __banner.js
+        cat layer-core/nodejs/node_modules/@lawprotect/notifications-core/index.js >> __banner.js
+        mv __banner.js layer-core/nodejs/node_modules/@lawprotect/notifications-core/index.js
+
+        # package.json for the module (CJS)
+        cat > "layer-core/nodejs/node_modules/@lawprotect/notifications-core/package.json" << 'EOF'
+        {
+          "name": "@lawprotect/notifications-core",
+          "version": "1.0.0",
+          "main": "index.js",
+          "type": "commonjs"
+        }
+        EOF
+
+        (cd layer-core && zip -qr ../notifications-core-layer.zip .)
+        test -s notifications-core-layer.zip || { echo "[ERROR][TEST] notifications-core-layer.zip is empty"; exit 1; }
+
+        # Publish as Lambda layer using local file (without S3)
+        CORE_LAYER_NAME="${NOTIFICATIONS_LAYER_NAME:-lawprotect365-notifications-core-${ENV:-stg}}"
+        CORE_LAYER_ARN="$(aws lambda publish-layer-version \
+          --layer-name "$CORE_LAYER_NAME" \
+          --zip-file fileb://notifications-core-layer.zip \
+          --compatible-runtimes nodejs20.x \
+          --query LayerVersionArn --output text 2>/dev/null || true)"
+        if [ -z "$CORE_LAYER_ARN" ] || [ "$CORE_LAYER_ARN" = "None" ] || [ "$CORE_LAYER_ARN" = "null" ]; then
+          echo "[ERROR][TEST] Failed to publish notifications-core layer"; exit 1;
+        fi
+        echo "[INFO][TEST] Published notifications-core layer: $CORE_LAYER_ARN"
+        rm -rf layer-core notifications-core-layer.zip
+
+artifacts:
+  files:
+    - "services/notifications-service/dist/**"
+    - "packages/shared-ts/prisma/**"
+    - "services/notifications-service/buildspec.yml"
+    - "services/notifications-service/buildspec.tests.yml"
+  discard-paths: no
+

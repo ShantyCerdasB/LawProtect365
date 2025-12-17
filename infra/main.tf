@@ -277,7 +277,8 @@ module "cloudwatch_budgets" {
   dashboard_services = distinct(compact(concat(
     try(module.frontend.budget_dashboard_services, []),
     try(module.documents_service.budget_dashboard_services, []),
-    try(module.sign_service.budget_dashboard_services, [])
+    try(module.sign_service.budget_dashboard_services, []),
+    try(module.notifications_service.notifications_budgets_dashboard_name != null ? ["notifications-service"] : [], [])
   )))
 }
 
@@ -477,6 +478,87 @@ module "sign_service" {
   ]
 
     depends_on = [ module.auth_service ]
+}
+
+############################################
+# notifications_service — EventBridge consumer for notifications
+############################################
+
+# Calculate SES hosted zone ID: use provided value, or fallback to frontend's hosted zone if domain identity is configured
+locals {
+  ses_hosted_zone_id_final = var.ses_hosted_zone_id != null ? var.ses_hosted_zone_id : (var.ses_domain_name != null && var.create_ses_identity ? module.frontend.hosted_zone_id : null)
+}
+
+module "notifications_service" {
+  source       = "./services/notifications-service"
+  project_name = var.project_name
+  env          = var.env
+  aws_region   = var.region
+
+  code_bucket        = module.code_bucket.bucket_id
+  artifacts_bucket   = module.code_bucket.bucket_id
+  shared_ts_layer_arn = module.shared_ts_layer.layer_arn
+  lambda_assume_role_policy = data.aws_iam_policy_document.lambda_assume.json
+  db_secret_read_policy = data.aws_iam_policy_document.db_secret_read.json
+
+  event_bus_name     = module.events.eventbridge_bus_name
+  logs_kms_key_arn   = module.kms_factory.observability_kms_key_arn
+  alerts_emails      = var.alerts_emails
+  existing_sns_topic_arn = aws_sns_topic.budgets_alerts.arn
+
+  notifications_budget_amount = var.notifications_budget_amount
+  threshold_percentages       = var.threshold_percentages
+  budget_notify_emails        = var.budget_notify_emails
+
+  github_connection_arn = module.github_connection.connection_arn
+  github_owner          = var.github_owner
+  github_repo          = var.github_repo
+  provider_type        = var.provider_type
+  compute_type         = var.compute_type
+  environment_image    = var.environment_image
+
+  db_max_connections    = var.db_max_connections
+  db_connection_timeout = var.db_connection_timeout
+
+  ses_from_email        = var.ses_from_email
+  ses_reply_to_email    = var.ses_reply_to_email
+  ses_configuration_set = var.ses_configuration_set
+  ses_domain_name       = var.ses_domain_name
+  ses_hosted_zone_id    = local.ses_hosted_zone_id_final
+  create_ses_identity   = var.create_ses_identity
+
+  pinpoint_application_id = var.pinpoint_application_id
+  pinpoint_sender_id      = var.pinpoint_sender_id
+  create_pinpoint_app     = var.create_pinpoint_app
+
+  fcm_service_account_key = var.fcm_service_account_key
+  fcm_project_id          = var.fcm_project_id
+  fcm_secret_arn          = var.fcm_secret_arn
+
+  apns_key_id     = var.apns_key_id
+  apns_team_id    = var.apns_team_id
+  apns_key        = var.apns_key
+  apns_bundle_id  = var.apns_bundle_id
+  apns_production = var.apns_production
+  apns_secret_arn = var.apns_secret_arn
+
+  enable_email = var.enable_email_notifications
+  enable_sms   = var.enable_sms_notifications
+  enable_push  = var.enable_push_notifications
+
+  shared_lambda_env = {
+    DB_SECRET_ARN = module.db_secret.secret_arn
+  }
+
+  environment_variables = [
+    {
+      name  = "CODEARTIFACT_REPO_ENDPOINTS"
+      value = jsonencode(module.codeartifact.artifact_repository_endpoints)
+      type  = "PLAINTEXT"
+    },
+  ]
+
+  depends_on = [module.events, module.db_secret]
 }
 
 module "db_secret" {

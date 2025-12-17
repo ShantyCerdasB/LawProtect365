@@ -287,3 +287,139 @@ variable "github_branch" {
   type        = string
   default     = "main"
 }
+
+############################################
+# Notifications Service Configuration
+############################################
+
+variable "notifications_budget_amount" {
+  description = "Monthly cost budget for notifications-service (USD)"
+  type        = number
+  default     = 10
+}
+
+variable "ses_from_email" {
+  description = "SES email address for sending notifications"
+  type        = string
+}
+
+variable "ses_reply_to_email" {
+  description = "SES reply-to email address (defaults to ses_from_email if not provided)"
+  type        = string
+  default     = ""
+}
+
+variable "ses_configuration_set" {
+  description = "SES configuration set name (optional)"
+  type        = string
+  default     = null
+}
+
+variable "ses_domain_name" {
+  description = "SES domain name for email identity (optional, if using domain instead of email)"
+  type        = string
+  default     = null
+}
+
+variable "ses_hosted_zone_id" {
+  description = "Route53 hosted zone ID for SES domain verification (required if creating domain identity)"
+  type        = string
+  default     = null
+}
+
+variable "create_ses_identity" {
+  description = "Whether to create SES email identity"
+  type        = bool
+  default     = true
+}
+
+variable "pinpoint_application_id" {
+  description = "Pinpoint application ID for SMS sending"
+  type        = string
+}
+
+variable "pinpoint_sender_id" {
+  description = "Pinpoint sender ID for SMS"
+  type        = string
+}
+
+variable "create_pinpoint_app" {
+  description = "Whether to create Pinpoint application"
+  type        = bool
+  default     = true
+}
+
+variable "fcm_service_account_key" {
+  description = "FCM service account key JSON (sensitive, stored in Secrets Manager)"
+  type        = string
+  default     = null
+  sensitive   = true
+}
+
+variable "fcm_project_id" {
+  description = "FCM project ID"
+  type        = string
+  default     = null
+}
+
+variable "fcm_secret_arn" {
+  description = "ARN of existing FCM secret in Secrets Manager (if not creating new)"
+  type        = string
+  default     = null
+}
+
+variable "apns_key_id" {
+  description = "APNS key ID (sensitive, stored in Secrets Manager)"
+  type        = string
+  default     = null
+  sensitive   = true
+}
+
+variable "apns_team_id" {
+  description = "APNS team ID"
+  type        = string
+  default     = null
+}
+
+variable "apns_key" {
+  description = "APNS private key (sensitive, stored in Secrets Manager)"
+  type        = string
+  default     = null
+  sensitive   = true
+}
+
+variable "apns_bundle_id" {
+  description = "APNS bundle ID"
+  type        = string
+  default     = null
+}
+
+variable "apns_production" {
+  description = "Whether to use APNS production environment"
+  type        = bool
+  default     = true
+}
+
+variable "apns_secret_arn" {
+  description = "ARN of existing APNS secret in Secrets Manager (if not creating new)"
+  type        = string
+  default     = null
+}
+
+variable "enable_email_notifications" {
+  description = "Enable email notifications"
+  type        = bool
+  default     = true
+}
+
+variable "enable_sms_notifications" {
+  description = "Enable SMS notifications"
+  type        = bool
+  default     = true
+}
+
+variable "enable_push_notifications" {
+  description = "Enable push notifications"
+  type        = bool
+  default     = false
+}

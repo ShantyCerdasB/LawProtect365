@@ -65,7 +65,18 @@ export class PhoneNumber extends StringValueObject {
    * @returns {boolean} True if valid format, false otherwise
    */
   static isValid(phoneNumber: string): boolean {
-    const phoneRegex = /^\+?[1-9]\d{1,14}$/;
+    // E.164 format: must start with +, then 1-14 digits total (country code + number)
+    // Must start with 1-9 (not 0) and be between 7-14 digits total
+    if (!phoneNumber.startsWith('+')) {
+      return false;
+    }
+    const digitsOnly = phoneNumber.replace(/\+/, '');
+    // E.164 allows 1-14 digits total (excluding the +) - practical limit
+    if (digitsOnly.length < 7 || digitsOnly.length > 14) {
+      return false;
+    }
+    // Must start with 1-9 (not 0) - first digit after +
+    const phoneRegex = /^\+[1-9]\d{6,13}$/;
     return phoneRegex.test(phoneNumber);
   }
 }
