@@ -5,4 +5,5 @@
  */
 
 export * from './AuthQueryInterfaces';
+export * from './CognitoAuthInterfaces';
 
