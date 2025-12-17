@@ -8,16 +8,16 @@
 import { describe, it, expect } from '@jest/globals';
 import { PlatformDetectionRule } from '../../../../src/domain/rules/PlatformDetectionRule';
 import { Platform } from '../../../../src/domain/enums';
-import { recipientRequired } from '../../../../src/notification-errors';
+import { BadRequestError } from '@lawprotect/shared-ts';
 
 describe('PlatformDetectionRule', () => {
   describe('detectPlatform', () => {
     it('throws error when device token is empty', () => {
-      expect(() => PlatformDetectionRule.detectPlatform('')).toThrow(recipientRequired);
+      expect(() => PlatformDetectionRule.detectPlatform('')).toThrow(BadRequestError);
     });
 
     it('throws error when device token is whitespace only', () => {
-      expect(() => PlatformDetectionRule.detectPlatform('   ')).toThrow(recipientRequired);
+      expect(() => PlatformDetectionRule.detectPlatform('   ')).toThrow(BadRequestError);
     });
 
     it('detects iOS platform for 64-character hexadecimal token', () => {

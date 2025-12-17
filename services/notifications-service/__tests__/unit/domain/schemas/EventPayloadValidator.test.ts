@@ -10,7 +10,7 @@ import { validateEventPayload } from '../../../../src/domain/schemas/EventPayloa
 import { EventSource } from '../../../../src/domain/enums/EventSource';
 import { SignatureServiceEventType } from '../../../../src/domain/enums/SignatureServiceEventType';
 import { AuthServiceEventType } from '../../../../src/domain/enums/AuthServiceEventType';
-import { eventValidationFailed } from '../../../../src/notification-errors';
+import { BadRequestError } from '@lawprotect/shared-ts';
 
 describe('EventPayloadValidator', () => {
   describe('validateEventPayload', () => {
@@ -127,7 +127,7 @@ describe('EventPayloadValidator', () => {
       const payload = {
         signerEmail: 'invalid-email',
       };
-      expect(() => validateEventPayload(EventSource.SIGNATURE_SERVICE, SignatureServiceEventType.ENVELOPE_INVITATION, payload)).toThrow(eventValidationFailed);
+      expect(() => validateEventPayload(EventSource.SIGNATURE_SERVICE, SignatureServiceEventType.ENVELOPE_INVITATION, payload)).toThrow(BadRequestError);
     });
 
     it('returns payload as-is for unknown event type', () => {
