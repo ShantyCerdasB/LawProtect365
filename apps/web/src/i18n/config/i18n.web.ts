@@ -43,9 +43,11 @@ import esAdmin from '../locales/shared/es/modules/admin.json';
 import jaCommon from '../locales/shared/ja/common.json';
 import jaErrors from '../locales/shared/ja/errors.json';
 import jaValidation from '../locales/shared/ja/validation.json';
+import jaAuth from '../locales/shared/ja/modules/auth.json';
 import itCommon from '../locales/shared/it/common.json';
 import itErrors from '../locales/shared/it/errors.json';
 import itValidation from '../locales/shared/it/validation.json';
+import itAuth from '../locales/shared/it/modules/auth.json';
 
 import enLayout from '../locales/en/layout.json';
 import esLayout from '../locales/es/layout.json';
@@ -90,12 +92,14 @@ const resources = {
     errors: jaErrors,
     validation: jaValidation,
     layout: jaLayout,
+    auth: jaAuth,
   },
   it: {
     common: itCommon,
     errors: itErrors,
     validation: itValidation,
     layout: itLayout,
+    auth: itAuth,
   },
 };
 

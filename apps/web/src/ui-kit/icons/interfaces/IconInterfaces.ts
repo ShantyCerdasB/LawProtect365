@@ -30,3 +30,27 @@ export interface EmailIconProps {
   className?: string;
 }
 
+/**
+ * @description Props for the GoogleIcon component.
+ * @property {string} [className] - Optional additional CSS classes
+ */
+export interface GoogleIconProps {
+  className?: string;
+}
+
+/**
+ * @description Props for the OutlookIcon component.
+ * @property {string} [className] - Optional additional CSS classes
+ */
+export interface OutlookIconProps {
+  className?: string;
+}
+
+/**
+ * @description Props for the AppleIcon component.
+ * @property {string} [className] - Optional additional CSS classes
+ */
+export interface AppleIconProps {
+  className?: string;
+}
+

@@ -75,7 +75,7 @@ export function Header(): ReactElement {
               <div className="flex items-center gap-3 md:gap-4 mr-4 md:mr-6">
                 <LanguageSelector />
                 <Link
-                  to="/register"
+                  to="/auth/login"
                   className="text-white text-lg md:text-xl hover:text-white hover:font-normal hover:text-2xl transition-all hidden md:block cursor-pointer"
                 >
                   {t('menu.register')}
@@ -123,7 +123,7 @@ export function Header(): ReactElement {
             <NavigationMenu items={publicMenuItems} className="flex-col" />
             <div className="mt-4">
               <Link
-                to="/register"
+                to="/auth/login"
                 className="block text-white text-lg hover:text-white hover:font-normal hover:text-xl transition-all py-2 cursor-pointer"
               >
                 {t('menu.register')}

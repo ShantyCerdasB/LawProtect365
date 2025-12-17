@@ -9,6 +9,11 @@
 type EnvShape = {
   VITE_API_BASE_URL?: string;
   VITE_APP_NAME?: string;
+  VITE_COGNITO_USER_POOL_ID?: string;
+  VITE_COGNITO_CLIENT_ID?: string;
+  VITE_COGNITO_DOMAIN?: string;
+  VITE_COGNITO_REGION?: string;
+  VITE_COGNITO_CALLBACK_URL?: string;
 };
 
 /**
@@ -38,5 +43,12 @@ const resolvedEnv: EnvShape = resolveRuntimeEnv();
 export const env = {
   apiBaseUrl: resolvedEnv.VITE_API_BASE_URL ?? '',
   appName: resolvedEnv.VITE_APP_NAME ?? 'LawProtect365',
+  cognito: {
+    userPoolId: resolvedEnv.VITE_COGNITO_USER_POOL_ID ?? '',
+    clientId: resolvedEnv.VITE_COGNITO_CLIENT_ID ?? '',
+    domain: resolvedEnv.VITE_COGNITO_DOMAIN ?? '',
+    region: resolvedEnv.VITE_COGNITO_REGION ?? 'us-east-1',
+    callbackUrl: resolvedEnv.VITE_COGNITO_CALLBACK_URL ?? '',
+  },
 };
 

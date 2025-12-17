@@ -29,6 +29,7 @@ export function getCarouselSlides(t: TFunction): CarouselSlideData[] {
         {
           label: t('home.carousel.buttons.startToday'),
           variant: 'secondary',
+          href: '/auth/login',
         },
       ],
     },
@@ -45,6 +46,7 @@ export function getCarouselSlides(t: TFunction): CarouselSlideData[] {
         {
           label: t('home.carousel.buttons.startToday'),
           variant: 'secondary',
+          href: '/auth/login',
         },
       ],
     },
@@ -61,6 +63,7 @@ export function getCarouselSlides(t: TFunction): CarouselSlideData[] {
         {
           label: t('home.carousel.buttons.startToday'),
           variant: 'secondary',
+          href: '/auth/login',
         },
       ],
     },
@@ -77,6 +80,7 @@ export function getCarouselSlides(t: TFunction): CarouselSlideData[] {
         {
           label: t('home.carousel.buttons.startToday'),
           variant: 'secondary',
+          href: '/auth/login',
         },
       ],
     },
