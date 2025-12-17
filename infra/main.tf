@@ -239,6 +239,51 @@ module "frontend" {
       value = jsonencode(module.codeartifact.artifact_repository_endpoints)
       type  = "PLAINTEXT"
     },
+    {
+      name  = "VITE_API_BASE_URL"
+      value = "${module.auth_service.auth_api_endpoint}/${module.auth_service.auth_api_stage_name}"
+      type  = "PLAINTEXT"
+    },
+    {
+      name  = "VITE_SIGNATURE_API_BASE_URL"
+      value = "${module.signature_service.sign_api_endpoint}/${module.signature_service.sign_api_stage}"
+      type  = "PLAINTEXT"
+    },
+    {
+      name  = "VITE_DOCUMENTS_API_BASE_URL"
+      value = "${module.documents_service.documents_api_endpoint}/${module.documents_service.documents_api_stage_name}"
+      type  = "PLAINTEXT"
+    },
+    {
+      name  = "VITE_NOTIFICATIONS_API_BASE_URL"
+      value = "${module.auth_service.auth_api_endpoint}/${module.auth_service.auth_api_stage_name}"
+      type  = "PLAINTEXT"
+    },
+    {
+      name  = "VITE_COGNITO_USER_POOL_ID"
+      value = module.auth_service.cognito_user_pool_id
+      type  = "PLAINTEXT"
+    },
+    {
+      name  = "VITE_COGNITO_CLIENT_ID"
+      value = module.auth_service.cognito_user_pool_client_id
+      type  = "PLAINTEXT"
+    },
+    {
+      name  = "VITE_COGNITO_DOMAIN"
+      value = module.auth_service.cognito_domain
+      type  = "PLAINTEXT"
+    },
+    {
+      name  = "VITE_COGNITO_REGION"
+      value = var.region
+      type  = "PLAINTEXT"
+    },
+    {
+      name  = "VITE_COGNITO_CALLBACK_URL"
+      value = "https://${module.frontend.frontend_domain}/callback"
+      type  = "PLAINTEXT"
+    },
   ]
   github_owner     = var.github_owner
   github_repo      = var.github_repo
