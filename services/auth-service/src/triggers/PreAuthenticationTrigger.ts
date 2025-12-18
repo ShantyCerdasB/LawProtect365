@@ -6,69 +6,39 @@
  * or enforce MFA for specific roles.
  */
 
-import { LambdaTriggerBase } from '@lawprotect/shared-ts';
 import type { PreAuthEvent, PreAuthResult } from '../types/cognito/PreAuthEvent';
-import { PreAuthenticationOrchestrator } from '../application/triggers/PreAuthenticationOrchestrator';
-import { CompositionRoot } from '../infrastructure/factories/CompositionRoot';
+import { CognitoTriggerBase } from './base/CognitoTriggerBase';
+import type { CognitoEventData } from '../domain/value-objects';
 
 /**
- * PreAuthentication trigger handler that validates user access
+ * @description PreAuthentication trigger handler that validates user access.
  * @summary Validates user status and MFA requirements before authentication
- * @description This trigger follows SRP by only handling the Lambda trigger concerns
- * and delegating all business logic to appropriate services.
  */
-export class PreAuthenticationTrigger extends LambdaTriggerBase<PreAuthEvent, PreAuthResult> {
-  private orchestrator!: PreAuthenticationOrchestrator;
-
+export class PreAuthenticationTrigger extends CognitoTriggerBase<PreAuthEvent, PreAuthResult> {
   /**
-   * Process the PreAuthentication event
-   * @param event - The Cognito PreAuthentication event
-   * @returns Promise that resolves to the processed event
+   * @description Processes the orchestration logic for PreAuthentication.
+   * @param {PreAuthEvent} event - The Cognito PreAuthentication event
+   * @param {CognitoEventData} eventData - Extracted event data
+   * @returns {Promise<PreAuthResult>} Promise that resolves to the processed event
    */
-  protected async processEvent(event: PreAuthEvent): Promise<PreAuthResult> {
-    const cr = await CompositionRoot.build();
-
-    // Initialize orchestrator with dependencies
-    this.orchestrator = new PreAuthenticationOrchestrator(
-      cr.userService,
-      cr.cognitoService,
-      cr.config
-    );
-
-    const { cognitoSub } = this.extractUserData(event);
-    console.log(`Processing PreAuthentication for user: ${cognitoSub}`);
-
-    const result = await this.orchestrator.processPreAuthentication(event);
-
-    console.log(`PreAuthentication completed for user: ${cognitoSub}`);
-    return result;
+  protected async processOrchestration(event: PreAuthEvent, eventData: CognitoEventData): Promise<PreAuthResult> {
+    const orchestrator = this.orchestratorFactory.createPreAuthenticationOrchestrator();
+    return orchestrator.processPreAuthenticationWithData(event, eventData);
   }
 
   /**
-   * Extract request ID from the event for logging
-   * @param event - The PreAuthentication event
-   * @returns Request ID if available, undefined otherwise
+   * @description Gets the name of the trigger for logging purposes.
+   * @returns {string} Trigger name
    */
-  protected getRequestId(event: PreAuthEvent): string | undefined {
-    return event.requestContext?.awsRequestId;
-  }
-
-  /**
-   * Extract user data from the Cognito event (for logging purposes)
-   * @param event - The PreAuthentication event
-   * @returns Extracted user data
-   */
-  private extractUserData(event: PreAuthEvent) {
-    return {
-      cognitoSub: event.userName
-    };
+  protected getTriggerName(): string {
+    return 'PreAuthentication';
   }
 }
 
 /**
- * Lambda handler function for PreAuthentication trigger
- * @param event - The Cognito PreAuthentication event
- * @returns PreAuthentication result (echoes back the event)
+ * @description Lambda handler function for PreAuthentication trigger.
+ * @param {PreAuthEvent} event - The Cognito PreAuthentication event
+ * @returns {Promise<PreAuthResult>} PreAuthentication result
  */
 export const handler = async (event: PreAuthEvent): Promise<PreAuthResult> => {
   const trigger = new PreAuthenticationTrigger();

@@ -7,6 +7,8 @@
 
 export * from './UserId';
 export * from './CognitoSub';
+export * from './CognitoEventData';
+export * from './CognitoUserAttributes';
 export * from './ProviderAccountId';
 export * from './UserAuditEventId';
 export * from './OAuthAccountId';

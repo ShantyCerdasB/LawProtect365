@@ -8,6 +8,12 @@
     // Test environment specific settings
     "types": ["node", "jest"],
     
+    // Override module settings for Jest compatibility
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    
     // Comprehensive path mapping for test imports
     "baseUrl": ".",
     "paths": {

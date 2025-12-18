@@ -5,10 +5,12 @@
  * PostConfirmation trigger event and response structures.
  */
 
+import type { LambdaTriggerEvent } from '@lawprotect/shared-ts';
+
 /**
  * PostConfirmation trigger event structure
  */
-export interface PostConfirmationEvent {
+export interface PostConfirmationEvent extends LambdaTriggerEvent {
   userName: string;
   requestContext?: {
     awsRequestId?: string;

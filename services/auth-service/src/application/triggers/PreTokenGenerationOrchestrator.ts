@@ -13,6 +13,7 @@ import { ClaimsMappingRules } from '../../domain/rules/ClaimsMappingRules';
 import { UserClaimsData, MfaClaimsData, ClaimsOverrideDetails } from '../../domain/interfaces';
 import { CognitoAttribute } from '../../domain/enums';
 import { AuthServiceConfig } from '../../config/AppConfig';
+import { CognitoEventData } from '../../domain/value-objects/CognitoEventData';
 
 /**
  * Application service that orchestrates the PreTokenGeneration flow
@@ -33,51 +34,44 @@ export class PreTokenGenerationOrchestrator {
    * @returns Promise that resolves to the processed event with claims
    */
   async processPreTokenGeneration(event: PreTokenGenEvent): Promise<PreTokenGenResult> {
-    const { cognitoSub, userAttributes } = this.extractUserData(event);
-    
+    const eventData = this.extractUserData(event);
+    return this.processPreTokenGenerationWithData(event, eventData);
+  }
+
+  async processPreTokenGenerationWithData(event: PreTokenGenEvent, eventData: CognitoEventData): Promise<PreTokenGenResult> {
     try {
-      // Get user data from database
-      const user = await this.getUserFromDatabase(cognitoSub);
+      const user = await this.getUserFromDatabase(eventData.cognitoSub);
+      const cognitoMfaData = await this.getCognitoMfaData(eventData.cognitoSub);
       
-      // Get Cognito MFA data
-      const cognitoMfaData = await this.getCognitoMfaData(cognitoSub);
-      
-      // Build claims based on user data and configuration
-      const claims = await this.buildClaims(user, cognitoMfaData, userAttributes);
-      
-      // Create claims override details
+      const claims = await this.buildClaims(user, cognitoMfaData, eventData.userAttributes);
       const claimsOverrideDetails = this.createClaimsOverrideDetails(claims);
-      
-      // Update event with claims
       const updatedEvent = this.updateEventWithClaims(event, claimsOverrideDetails);
       
-      // Log successful token generation
-      this.logTokenGenerationSuccess(cognitoSub, user, claims);
+      this.logTokenGenerationSuccess(eventData.cognitoSub, user, claims);
       
       return updatedEvent;
       
     } catch (error) {
-      // Handle errors gracefully - don't block token generation
-      this.logTokenGenerationError(cognitoSub, error);
+      this.logTokenGenerationError(eventData.cognitoSub, error);
       
-      // Return event with default claims or empty claims
       const defaultClaims = this.getDefaultClaims();
       const claimsOverrideDetails = this.createClaimsOverrideDetails(defaultClaims);
       return this.updateEventWithClaims(event, claimsOverrideDetails);
     }
   }
 
-  /**
-   * Extract user data from the Cognito event
-   * @param event - The PreTokenGeneration event
-   * @returns Extracted user data
-   */
-  private extractUserData(event: PreTokenGenEvent) {
-    return {
-      cognitoSub: event.userName,
-      userAttributes: event.request.userAttributes,
-      clientMetadata: event.request.clientMetadata
-    };
+  private extractUserData(event: PreTokenGenEvent): CognitoEventData {
+    return new CognitoEventData(
+      event.userName,
+      event.request.userAttributes as Record<string, string>,
+      event.request.userAttributes.email,
+      event.request.userAttributes.given_name,
+      event.request.userAttributes.family_name,
+      event.request.userAttributes.phone_number,
+      event.request.userAttributes.locale,
+      event.request.clientMetadata,
+      event.requestContext?.awsRequestId
+    );
   }
 
   /**

@@ -15,6 +15,7 @@ import { UserAccessRules } from '../../domain/rules/UserAccessRules';
 import { UserRole, UserAccountStatus, CognitoAttribute } from '../../domain/enums';
 import { authenticationFailed } from '../../auth-errors/factories';
 import { AuthServiceConfig } from '../../config/AppConfig';
+import { CognitoEventData } from '../../domain/value-objects/CognitoEventData';
 
 /**
  * Application service that orchestrates the PreAuthentication flow
@@ -31,40 +32,49 @@ export class PreAuthenticationOrchestrator {
 
   /**
    * Process the complete PreAuthentication flow
-   * @param event - The Cognito PreAuthentication event
-   * @returns Promise that resolves to the processed event
+   * @param {PreAuthEvent} event - The Cognito PreAuthentication event
+   * @returns {Promise<PreAuthResult>} Promise that resolves to the processed event
    */
   async processPreAuthentication(event: PreAuthEvent): Promise<PreAuthResult> {
-    const { cognitoSub, userAttributes } = this.extractUserData(event);
+    const eventData = this.extractUserData(event);
+    return this.processPreAuthenticationWithData(event, eventData);
+  }
+
+  /**
+   * Process the complete PreAuthentication flow with extracted event data
+   * @param {PreAuthEvent} event - The Cognito PreAuthentication event
+   * @param {CognitoEventData} eventData - Extracted event data
+   * @returns {Promise<PreAuthResult>} Promise that resolves to the processed event
+   */
+  async processPreAuthenticationWithData(event: PreAuthEvent, eventData: CognitoEventData): Promise<PreAuthResult> {
+    const cognitoData = await this.getCognitoData(eventData.cognitoSub);
+    const user = await this.getUserFromDatabase(eventData.cognitoSub);
     
-    // Get user data from Cognito
-    const cognitoData = await this.getCognitoData(cognitoSub);
+    await this.evaluateMfaPolicy(user, cognitoData.mfaSettings, eventData.userAttributes);
+    await this.evaluateUserAccess(user, eventData.userAttributes);
     
-    // Get user from database (if exists)
-    const user = await this.getUserFromDatabase(cognitoSub);
-    
-    // Evaluate MFA policy
-    await this.evaluateMfaPolicy(user, cognitoData.mfaSettings, userAttributes);
-    
-    // Evaluate user access
-    await this.evaluateUserAccess(user, userAttributes);
-    
-    // Log successful validation
-    this.logValidationSuccess(cognitoSub, user, cognitoData.mfaSettings);
+    this.logValidationSuccess(eventData.cognitoSub, user, cognitoData.mfaSettings);
     
     return event;
   }
 
   /**
    * Extract user data from the Cognito event
-   * @param event - The PreAuthentication event
-   * @returns Extracted user data
+   * @param {PreAuthEvent} event - The PreAuthentication event
+   * @returns {CognitoEventData} Extracted user data
    */
-  private extractUserData(event: PreAuthEvent) {
-    return {
-      cognitoSub: event.userName,
-      userAttributes: event.request.userAttributes
-    };
+  private extractUserData(event: PreAuthEvent): CognitoEventData {
+    return new CognitoEventData(
+      event.userName,
+      event.request.userAttributes as Record<string, string>,
+      event.request.userAttributes.email,
+      event.request.userAttributes.given_name,
+      event.request.userAttributes.family_name,
+      event.request.userAttributes.phone_number,
+      undefined,
+      event.request.clientMetadata,
+      event.requestContext?.awsRequestId
+    );
   }
 
   /**
@@ -113,7 +123,7 @@ export class PreAuthenticationOrchestrator {
   private async evaluateMfaPolicy(
     user: User | null, 
     mfaSettings: CognitoMfaSettings, 
-    userAttributes: Record<string, string | undefined>
+    userAttributes: Record<string, string>
   ) {
     // Get user role (from database or attributes)
     const userRole = this.getUserRole(user, userAttributes);
@@ -132,7 +142,7 @@ export class PreAuthenticationOrchestrator {
    */
   private async evaluateUserAccess(
     user: User | null, 
-    _userAttributes: Record<string, string | undefined>
+    _userAttributes: Record<string, string>
   ) {
     // Get user status (from database or default)
     const userStatus = this.getUserStatus(user, _userAttributes);
@@ -150,7 +160,7 @@ export class PreAuthenticationOrchestrator {
    * @param userAttributes - User attributes from event
    * @returns User role
    */
-  private getUserRole(user: User | null, userAttributes: Record<string, string | undefined>): UserRole {
+  private getUserRole(user: User | null, userAttributes: Record<string, string>): UserRole {
     if (user) {
       return user.getRole();
     }
@@ -170,7 +180,7 @@ export class PreAuthenticationOrchestrator {
    * @param _userAttributes - User attributes from event (unused for now)
    * @returns User account status
    */
-  private getUserStatus(user: User | null, _userAttributes: Record<string, string | undefined>): UserAccountStatus {
+  private getUserStatus(user: User | null, _userAttributes: Record<string, string>): UserAccountStatus {
     if (user) {
       return user.getStatus();
     }
@@ -184,7 +194,7 @@ export class PreAuthenticationOrchestrator {
    * @param userAttributes - User attributes from event
    * @returns Custom MFA requirement or undefined
    */
-  private getCustomMfaRequired(userAttributes: Record<string, string | undefined>): boolean | undefined {
+  private getCustomMfaRequired(userAttributes: Record<string, string>): boolean | undefined {
     const customMfaRequired = userAttributes[CognitoAttribute.CUSTOM_MFA_REQUIRED];
     if (customMfaRequired === 'true') return true;
     if (customMfaRequired === 'false') return false;

@@ -16,6 +16,7 @@ import { UserRole, CognitoAttribute } from '../../domain/enums';
 import { AuthServiceConfig } from '../../config/AppConfig';
 import { authenticationFailed } from '../../auth-errors/factories';
 import { Logger } from '@lawprotect/shared-ts';
+import { CognitoEventData } from '../../domain/value-objects/CognitoEventData';
 
 /**
  * Application service that orchestrates the PostConfirmation flow
@@ -39,60 +40,53 @@ export class PostConfirmationOrchestrator {
    * @returns Promise that resolves to the processed event
    */
   async processPostConfirmation(event: PostConfirmationEvent): Promise<PostConfirmationResult> {
-    const { cognitoSub, email, givenName, familyName, phoneNumber, locale } = this.extractUserData(event);
-    
+    const eventData = this.extractUserData(event);
+    return this.processPostConfirmationWithData(event, eventData);
+  }
+
+  async processPostConfirmationWithData(event: PostConfirmationEvent, eventData: CognitoEventData): Promise<PostConfirmationResult> {
     this.logger.info('Starting PostConfirmation flow', {
-      cognitoSub,
-      hasEmail: !!email,
-      hasPhone: !!phoneNumber,
-      hasLocale: !!locale
+      cognitoSub: eventData.cognitoSub,
+      hasEmail: !!eventData.email,
+      hasPhone: !!eventData.phoneNumber,
+      hasLocale: !!eventData.locale
     });
     
     try {
-      // Get Cognito data for provider linking
-      const cognitoData = await this.getCognitoData(cognitoSub);
+      const cognitoData = await this.getCognitoData(eventData.cognitoSub);
       
-      // Register user with appropriate role and status
       const registrationResult = await this.registerUser({
-        cognitoSub,
-        email,
-        givenName,
-        familyName,
-        phoneNumber,
-        locale,
-        intendedRole: this.getIntendedRole(event.request.userAttributes)
+        cognitoSub: eventData.cognitoSub,
+        email: eventData.email,
+        givenName: eventData.givenName,
+        familyName: eventData.familyName,
+        phoneNumber: eventData.phoneNumber,
+        locale: eventData.locale,
+        intendedRole: this.getIntendedRole(eventData.userAttributes)
       });
       
-      // Link provider identities if configured
       if (this.config.features.postConfirmationLinkProviders && cognitoData.identities.length > 0) {
         await this.linkProviderIdentities(registrationResult.user, cognitoData.identities);
       }
       
-      // Create audit events
       await this.createAuditEvents(registrationResult.user, registrationResult.created);
-      
-      // Publish integration events
       await this.publishIntegrationEvents(registrationResult.user, registrationResult.created);
       
-      // Log successful registration
-      this.logRegistrationSuccess(cognitoSub, registrationResult.user, registrationResult.created);
+      this.logRegistrationSuccess(eventData.cognitoSub, registrationResult.user, registrationResult.created);
       
       return event;
       
     } catch (error) {
-      // Handle errors gracefully - don't block confirmation
-      this.logRegistrationError(cognitoSub, error);
+      this.logRegistrationError(eventData.cognitoSub, error);
       
-      // Only throw if it's a critical integrity violation
       if (this.isCriticalError(error)) {
         throw authenticationFailed({
           cause: `Critical error during user registration: ${error instanceof Error ? error.message : String(error)}`
         });
       }
       
-      // For non-critical errors, log and continue
       this.logger.warn('Non-critical error during PostConfirmation', {
-        cognitoSub,
+        cognitoSub: eventData.cognitoSub,
         error: error instanceof Error ? error.message : String(error)
       });
       
@@ -100,22 +94,20 @@ export class PostConfirmationOrchestrator {
     }
   }
 
-  /**
-   * Extract user data from the Cognito event
-   * @param event - The PostConfirmation event
-   * @returns Extracted user data
-   */
-  private extractUserData(event: PostConfirmationEvent) {
+  private extractUserData(event: PostConfirmationEvent): CognitoEventData {
     const userAttributes = event.request.userAttributes;
     
-    return {
-      cognitoSub: event.userName,
-      email: userAttributes.email,
-      givenName: userAttributes.given_name,
-      familyName: userAttributes.family_name,
-      phoneNumber: userAttributes.phone_number,
-      locale: userAttributes.locale
-    };
+    return new CognitoEventData(
+      event.userName,
+      userAttributes as Record<string, string>,
+      userAttributes.email,
+      userAttributes.given_name,
+      userAttributes.family_name,
+      userAttributes.phone_number,
+      userAttributes.locale,
+      event.request.clientMetadata,
+      event.requestContext?.awsRequestId
+    );
   }
 
   /**

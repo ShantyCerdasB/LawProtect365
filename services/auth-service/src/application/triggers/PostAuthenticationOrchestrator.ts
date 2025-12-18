@@ -13,6 +13,7 @@ import { AuditService } from '../../services/AuditService';
 import { EventPublishingService } from '../../services/EventPublishingService';
 import { PostAuthEvent, PostAuthResult } from '../../types/cognito/PostAuthEvent';
 import { authenticationFailed } from '../../auth-errors/factories';
+import { CognitoEventData } from '../../domain/value-objects/CognitoEventData';
 
 /**
  * Application service that orchestrates the PostAuthentication flow
@@ -30,14 +31,31 @@ export class PostAuthenticationOrchestrator {
 
   /**
    * Process the complete PostAuthentication flow
-   * @param event - The Cognito PostAuthentication event
-   * @returns Promise that resolves to the processed event
+   * @param {PostAuthEvent} event - The Cognito PostAuthentication event
+   * @returns {Promise<PostAuthResult>} Promise that resolves to the processed event
    */
   async processPostAuthentication(event: PostAuthEvent): Promise<PostAuthResult> {
-    const { cognitoSub, email, givenName, familyName } = this.extractUserData(event);
+    const eventData = this.extractUserData(event);
+    return this.processPostAuthenticationWithData(event, eventData);
+  }
 
-    const cognitoData = await this.getCognitoData(cognitoSub);
-    const userResult = await this.upsertUser({ cognitoSub, email, givenName, familyName }, cognitoData);
+  /**
+   * Process the complete PostAuthentication flow with extracted event data
+   * @param {PostAuthEvent} event - The Cognito PostAuthentication event
+   * @param {CognitoEventData} eventData - Extracted event data
+   * @returns {Promise<PostAuthResult>} Promise that resolves to the processed event
+   */
+  async processPostAuthenticationWithData(event: PostAuthEvent, eventData: CognitoEventData): Promise<PostAuthResult> {
+    const cognitoData = await this.getCognitoData(eventData.cognitoSub);
+    const userResult = await this.upsertUser(
+      {
+        cognitoSub: eventData.cognitoSub,
+        email: eventData.email,
+        givenName: eventData.givenName,
+        familyName: eventData.familyName
+      },
+      cognitoData
+    );
     
     await this.linkOAuthAccounts(userResult.user, cognitoData.identities);
     await this.createAuditEvents(userResult.user, userResult.created, userResult.mfaChanged);
@@ -48,17 +66,22 @@ export class PostAuthenticationOrchestrator {
 
   /**
    * Extract user data from the Cognito event
-   * @param event - The PostAuthentication event
-   * @returns Extracted user data
+   * @param {PostAuthEvent} event - The PostAuthentication event
+   * @returns {CognitoEventData} Extracted user data
    */
-  private extractUserData(event: PostAuthEvent) {
+  private extractUserData(event: PostAuthEvent): CognitoEventData {
     const attrs = event.request.userAttributes || {};
-    return {
-      cognitoSub: event.userName,
-      email: attrs.email as string | undefined,
-      givenName: attrs.given_name as string | undefined,
-      familyName: attrs.family_name as string | undefined
-    };
+    return new CognitoEventData(
+      event.userName,
+      attrs,
+      attrs.email,
+      attrs.given_name,
+      attrs.family_name,
+      attrs.phone_number,
+      attrs.locale,
+      undefined,
+      event.requestContext?.awsRequestId
+    );
   }
 
   /**

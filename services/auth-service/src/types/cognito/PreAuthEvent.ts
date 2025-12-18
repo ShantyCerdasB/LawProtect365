@@ -11,7 +11,9 @@
  * This event is triggered before user authentication to validate
  * user access and MFA requirements.
  */
-export interface PreAuthEvent {
+import type { LambdaTriggerEvent } from '@lawprotect/shared-ts';
+
+export interface PreAuthEvent extends LambdaTriggerEvent {
   /** Cognito user sub (unique identifier) */
   userName: string;
   

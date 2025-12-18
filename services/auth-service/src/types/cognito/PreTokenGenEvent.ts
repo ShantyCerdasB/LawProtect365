@@ -5,12 +5,12 @@
  * PreTokenGeneration trigger event and response structures.
  */
 
-// import { PreTokenGenerationTriggerEvent } from 'aws-lambda';
+import type { LambdaTriggerEvent } from '@lawprotect/shared-ts';
 
 /**
  * PreTokenGeneration trigger event structure
  */
-export interface PreTokenGenEvent {
+export interface PreTokenGenEvent extends LambdaTriggerEvent {
   userName: string;
   requestContext?: {
     awsRequestId?: string;

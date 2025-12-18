@@ -5,10 +5,12 @@
  * including request/response structures and user attribute mappings.
  */
 
+import type { LambdaTriggerEvent } from '@lawprotect/shared-ts';
+
 /**
  * Cognito PostAuthentication trigger event structure
  */
-export type PostAuthEvent = {
+export type PostAuthEvent = LambdaTriggerEvent & {
   version: string;
   triggerSource: string; // "PostAuthentication_Authentication" etc.
   region: string;
@@ -28,15 +30,3 @@ export type PostAuthEvent = {
  */
 export type PostAuthResult = PostAuthEvent;
 
-/**
- * User attributes from Cognito request
- */
-export type CognitoUserAttributes = {
-  email?: string;
-  given_name?: string;
-  family_name?: string;
-  name?: string;
-  phone_number?: string;
-  locale?: string;
-  [key: string]: string | undefined;
-};
