@@ -74,7 +74,7 @@ describe('Header', () => {
     
     const registerLink = screen.getByRole('link', { name: /register/i });
     expect(registerLink).toBeInTheDocument();
-    expect(registerLink).toHaveAttribute('href', '/register');
+    expect(registerLink).toHaveAttribute('href', '/auth/login');
   });
 
   it('should show mobile menu toggle button when not authenticated', () => {

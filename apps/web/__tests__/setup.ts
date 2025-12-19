@@ -47,6 +47,23 @@ global.ResizeObserver = class ResizeObserver {
   unobserve() {}
 } as any;
 
+// Mock fetch (used by HTTP clients in tests)
+global.fetch = jest.fn(() =>
+  Promise.resolve({
+    ok: true,
+    status: 200,
+    statusText: 'OK',
+    json: async () => ({}),
+    text: async () => '',
+    headers: new Headers(),
+  } as Response)
+) as jest.MockedFunction<typeof fetch>;
+
+// Also make fetch available on window for browser-like environment
+if (typeof window !== 'undefined') {
+  (window as any).fetch = global.fetch;
+}
+
 // Mock HTMLCanvasElement.getContext (jsdom doesn't implement it)
 HTMLCanvasElement.prototype.getContext = jest.fn((contextType: string) => {
   if (contextType === '2d') {

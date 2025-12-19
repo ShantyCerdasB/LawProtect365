@@ -35,38 +35,47 @@ export interface RenderWithProvidersOptions extends RenderOptions {
  * @param options Optional render and provider configuration options
  * @returns Render result with all testing utilities
  */
+function createTestWrapper(
+  queryClient: QueryClient,
+  initialEntries: string[],
+  initialIndex: number
+) {
+  return ({ children }: { children: ReactNode }): ReactElement => {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter
+          initialEntries={initialEntries}
+          initialIndex={initialIndex}
+          future={{
+            v7_startTransition: true,
+            v7_relativeSplatPath: true,
+          }}
+        >
+          <I18nextProvider i18n={i18n}>
+            {children as any}
+          </I18nextProvider>
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+  };
+}
+
 export function renderWithProviders(
   ui: React.ReactElement,
   options?: RenderWithProvidersOptions
 ): RenderResult {
   const {
-    queryClient = createTestQueryClient(),
+    queryClient: providedQueryClient,
     initialEntries = ['/'],
     initialIndex = 0,
     ...renderOptions
   } = options || {};
 
-  function Wrapper({ children }: { children: ReactNode }): ReactElement {
-    return React.createElement(
-      QueryClientProvider,
-      { client: queryClient },
-      React.createElement(
-        MemoryRouter,
-        {
-          initialEntries,
-          initialIndex,
-          future: {
-            v7_startTransition: true,
-            v7_relativeSplatPath: true,
-          },
-        },
-        React.createElement(I18nextProvider, { i18n }, children)
-      )
-    );
-  }
+  const queryClient = providedQueryClient || createTestQueryClient();
+  const Wrapper = createTestWrapper(queryClient, initialEntries, initialIndex);
 
-  return render(ui, { 
-    wrapper: Wrapper as React.ComponentType<{ children: ReactNode }>, 
+  return render(ui as any, { 
+    wrapper: Wrapper as any, 
     ...renderOptions 
   });
 }
@@ -79,7 +88,7 @@ export function renderWithProviders(
 export function createQueryClientWrapper(queryClient?: QueryClient) {
   const client = queryClient || createTestQueryClient();
   return ({ children }: { children: ReactNode }): ReactElement => (
-    <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    <QueryClientProvider client={client}>{children as any}</QueryClientProvider>
   );
 }
 
