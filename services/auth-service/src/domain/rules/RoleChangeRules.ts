@@ -102,15 +102,6 @@ export class RoleChangeRules {
         message: 'Cannot assign EXTERNAL_USER role to existing users'
       });
     }
-
-    // No role can transition TO EXTERNAL_USER except from UNASSIGNED
-    if (newRole === UserRole.EXTERNAL_USER && currentRole !== UserRole.UNASSIGNED) {
-      throw insufficientPermissions({
-        currentRole,
-        newRole,
-        message: 'Only UNASSIGNED users can become EXTERNAL_USER'
-      });
-    }
   }
 
   /**

@@ -301,3 +301,4 @@ describe('SetUserStatusResponseSchema', () => {
     expect(result.success).toBe(false);
   });
 });
+

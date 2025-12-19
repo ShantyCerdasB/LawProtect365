@@ -36,11 +36,11 @@ export class UserAuditEvent {
       data.id,
       UserId.fromString(data.userId),
       data.action as UserAuditAction,
-      data.description,
-      data.actorId,
-      data.ipAddress,
-      data.userAgent,
-      data.metadata,
+      data.description ?? undefined,
+      data.actorId ?? undefined,
+      data.ipAddress ?? undefined,
+      data.userAgent ?? undefined,
+      data.metadata ?? undefined,
       data.createdAt
     );
   }

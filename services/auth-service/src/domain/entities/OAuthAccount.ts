@@ -41,7 +41,7 @@ export class OAuthAccount {
       data.providerName,
       data.isPrimary || false,
       data.linkedAt,
-      data.lastUsedAt
+      data.lastUsedAt ?? undefined
     );
   }
 

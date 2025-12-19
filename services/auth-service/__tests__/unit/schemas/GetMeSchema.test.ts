@@ -6,7 +6,7 @@
 
 import { describe, it, expect } from '@jest/globals';
 import { GetMeQuerySchema, GetMeResponseSchema } from '../../../src/domain/schemas/GetMeSchema';
-import { UserRole, UserAccountStatus, OAuthProvider, IncludeFlag } from '../../../src/domain/enums';
+import { UserRole, UserAccountStatus, OAuthProvider } from '../../../src/domain/enums';
 
 describe('GetMeQuerySchema', () => {
   it('should validate empty query', () => {

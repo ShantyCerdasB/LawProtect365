@@ -55,11 +55,11 @@ export class UserAuditEventRepository extends RepositoryBase<UserAuditEvent, Use
       id: entity.getId(),
       userId: entity.getUserId().toString(),
       action: entity.getAction() as PrismaUserAuditAction,
-      description: entity.getDescription(),
-      actorId: entity.getActorId(),
-      ipAddress: entity.getIpAddress(),
-      userAgent: entity.getUserAgent(),
-      metadata: entity.getMetadata() as any,
+      description: entity.getDescription() ?? null,
+      actorId: entity.getActorId() ?? null,
+      ipAddress: entity.getIpAddress() ?? null,
+      userAgent: entity.getUserAgent() ?? null,
+      metadata: (entity.getMetadata() ?? null) as any,
       createdAt: entity.getCreatedAt()
     };
   }
