@@ -364,6 +364,107 @@ describe('PostAuthenticationOrchestrator', () => {
 
       expect(auditService.mfaDisabled).toHaveBeenCalled();
     });
+
+    it('should handle case when user already exists during upsert', async () => {
+      const event = new PostAuthEventBuilder()
+        .withUserName('test-cognito-sub')
+        .build();
+
+      const eventData = new CognitoEventData(
+        'test-cognito-sub',
+        {},
+        'test@example.com',
+        'John',
+        'Doe'
+      );
+
+      const updatedUser = userEntity({ cognitoSub: CognitoSub.fromString('test-cognito-sub') });
+
+      cognitoService.adminGetUser.mockResolvedValue({} as any);
+      cognitoService.parseAdminUser.mockReturnValue({ mfaEnabled: false, identities: [] });
+      userService.upsertOnPostAuth.mockResolvedValue({
+        user: updatedUser,
+        created: false,
+        mfaChanged: false
+      });
+      auditService.userUpdated.mockResolvedValue(undefined);
+      eventPublishingService.publishUserUpdated.mockResolvedValue(undefined);
+
+      const result = await orchestrator.processPostAuthenticationWithData(event, eventData);
+
+      expect(result).toBe(event);
+      expect(userService.upsertOnPostAuth).toHaveBeenCalled();
+      expect(auditService.userUpdated).toHaveBeenCalledWith(
+        updatedUser.getId().toString(),
+        expect.any(Object)
+      );
+    });
+
+    it('should handle provider linking failure gracefully', async () => {
+      const event = new PostAuthEventBuilder()
+        .withUserName('test-cognito-sub')
+        .build();
+
+      const eventData = new CognitoEventData(
+        'test-cognito-sub',
+        {},
+        'test@example.com',
+        'John',
+        'Doe'
+      );
+
+      const user = userEntity({ cognitoSub: CognitoSub.fromString('test-cognito-sub') });
+      const identities = [{
+        provider: OAuthProvider.GOOGLE,
+        providerAccountId: '123456789'
+      }];
+
+      cognitoService.adminGetUser.mockResolvedValue({} as any);
+      cognitoService.parseAdminUser.mockReturnValue({
+        mfaEnabled: false,
+        identities
+      });
+      userService.upsertOnPostAuth.mockResolvedValue({
+        user,
+        created: true,
+        mfaChanged: false
+      });
+      userService.linkProviderIdentities.mockRejectedValue(new Error('Linking failed'));
+      auditService.userRegistered.mockResolvedValue(undefined);
+      eventPublishingService.publishUserRegistered.mockResolvedValue(undefined);
+
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const result = await orchestrator.processPostAuthenticationWithData(event, eventData);
+
+      expect(result).toBe(event);
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'OAuth linking failed (non-blocking): Linking failed'
+      );
+
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should handle error when getUserFromDatabase fails', async () => {
+      const event = new PostAuthEventBuilder()
+        .withUserName('test-cognito-sub')
+        .build();
+
+      const eventData = new CognitoEventData(
+        'test-cognito-sub',
+        {},
+        'test@example.com',
+        'John',
+        'Doe'
+      );
+
+      const error = new Error('Database error');
+      cognitoService.adminGetUser.mockResolvedValue({} as any);
+      cognitoService.parseAdminUser.mockReturnValue({ mfaEnabled: false, identities: [] });
+      userService.upsertOnPostAuth.mockRejectedValue(error);
+
+      await expect(orchestrator.processPostAuthenticationWithData(event, eventData)).rejects.toThrow();
+    });
   });
 });
 

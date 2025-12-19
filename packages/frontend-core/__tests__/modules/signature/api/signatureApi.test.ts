@@ -55,9 +55,9 @@ describe('signatureApi', () => {
     it('should include query parameters when provided', async () => {
       mockClient.get.mockResolvedValue({ id: 'env-1', status: 'sent' });
 
-      await getEnvelope(mockClient, 'env-1', { include: 'signers,documents' });
+      await getEnvelope(mockClient, 'env-1', { includeSigners: true });
 
-      expect(mockClient.get).toHaveBeenCalledWith('/envelopes/env-1?include=signers,documents', undefined);
+      expect(mockClient.get).toHaveBeenCalledWith('/envelopes/env-1?includeSigners=true', undefined);
     });
   });
 
@@ -75,14 +75,13 @@ describe('signatureApi', () => {
 
       await getEnvelopesByUser(mockClient, {
         status: 'sent',
-        page: 1,
         limit: 10,
-        sortBy: 'createdAt',
-        sortOrder: 'desc',
+        cursor: 'cursor-123',
+        includeSigners: true,
       });
 
       expect(mockClient.get).toHaveBeenCalledWith(
-        '/envelopes?status=sent&page=1&limit=10&sortBy=createdAt&sortOrder=desc',
+        '/envelopes?status=sent&limit=10&cursor=cursor-123&includeSigners=true',
         undefined
       );
     });
@@ -97,13 +96,13 @@ describe('signatureApi', () => {
   });
 
   describe('updateEnvelope', () => {
-    it('should call client.put with envelope ID and body', async () => {
+    it('should call client.post with envelope ID and body', async () => {
       const body = { title: 'Updated Title' };
-      mockClient.put.mockResolvedValue({ id: 'env-1', title: 'Updated Title' });
+      mockClient.post.mockResolvedValue({ id: 'env-1', title: 'Updated Title' });
 
       await updateEnvelope(mockClient, 'env-1', body);
 
-      assertHttpClientCall(mockClient, 'put', '/envelopes/env-1', body);
+      assertHttpClientCall(mockClient, 'post', '/envelopes/env-1', body);
     });
   });
 
@@ -160,31 +159,31 @@ describe('signatureApi', () => {
   });
 
   describe('downloadDocument', () => {
-    it('should call client.get with /envelopes/:id/document/download path', async () => {
+    it('should call client.get with /envelopes/:id/download path', async () => {
       mockClient.get.mockResolvedValue({ url: 'https://example.com/doc.pdf' });
 
       await downloadDocument(mockClient, 'env-1');
 
-      expect(mockClient.get).toHaveBeenCalledWith('/envelopes/env-1/document/download', undefined);
+      expect(mockClient.get).toHaveBeenCalledWith('/envelopes/env-1/download', undefined);
     });
 
-    it('should include format query parameter when provided', async () => {
+    it('should include query parameters when provided', async () => {
       mockClient.get.mockResolvedValue({ url: 'https://example.com/doc.pdf' });
 
-      await downloadDocument(mockClient, 'env-1', { format: 'pdf' });
+      await downloadDocument(mockClient, 'env-1', { invitationToken: 'token-123', expiresIn: 3600 });
 
-      expect(mockClient.get).toHaveBeenCalledWith('/envelopes/env-1/document/download?format=pdf', undefined);
+      expect(mockClient.get).toHaveBeenCalledWith('/envelopes/env-1/download?invitationToken=token-123&expiresIn=3600', undefined);
     });
   });
 
   describe('shareDocumentView', () => {
-    it('should call client.post with /envelopes/:id/document/share path and body', async () => {
+    it('should call client.post with /envelopes/:id/share-view path and body', async () => {
       const body = { signerId: 'signer-1' };
       mockClient.post.mockResolvedValue({ url: 'https://example.com/view' });
 
       await shareDocumentView(mockClient, 'env-1', body);
 
-      assertHttpClientCall(mockClient, 'post', '/envelopes/env-1/document/share', body);
+      assertHttpClientCall(mockClient, 'post', '/envelopes/env-1/share-view', body);
     });
   });
 
@@ -197,20 +196,12 @@ describe('signatureApi', () => {
       expect(mockClient.get).toHaveBeenCalledWith('/envelopes/env-1/audit-trail', undefined);
     });
 
-    it('should include query parameters when provided', async () => {
+    it('should call client.get with audit trail path', async () => {
       mockClient.get.mockResolvedValue({ events: [] });
 
-      await getAuditTrail(mockClient, 'env-1', {
-        page: 1,
-        limit: 20,
-        cursor: 'cursor-123',
-        eventType: 'signature',
-      });
+      await getAuditTrail(mockClient, 'env-1');
 
-      expect(mockClient.get).toHaveBeenCalledWith(
-        '/envelopes/env-1/audit-trail?page=1&limit=20&cursor=cursor-123&eventType=signature',
-        undefined
-      );
+      expect(mockClient.get).toHaveBeenCalledWith('/envelopes/env-1/audit-trail', undefined);
     });
   });
 

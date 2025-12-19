@@ -490,6 +490,91 @@ describe('PostConfirmationOrchestrator', () => {
         })
       );
     });
+
+    it('should handle case when intended role is not in UserRole enum', async () => {
+      const event = new PostConfirmationEventBuilder()
+        .withUserName('test-cognito-sub')
+        .withUserAttributes({
+          [CognitoAttribute.CUSTOM_ROLE]: 'INVALID_ROLE'
+        })
+        .build();
+
+      const eventData = new CognitoEventData(
+        'test-cognito-sub',
+        {
+          [CognitoAttribute.CUSTOM_ROLE]: 'INVALID_ROLE'
+        },
+        'test@example.com',
+        'John',
+        'Doe'
+      );
+
+      const cognitoData = {
+        mfaEnabled: false,
+        identities: []
+      };
+      const user = userEntity({ cognitoSub: CognitoSub.fromString('test-cognito-sub') });
+      const registrationResult = {
+        user,
+        created: true
+      };
+
+      (UserRegistrationRules.determineInitialRole as jest.Mock).mockReturnValue(UserRole.CUSTOMER);
+      (UserRegistrationRules.determineInitialStatus as jest.Mock).mockReturnValue('ACTIVE' as any);
+      cognitoService.adminGetUser.mockResolvedValue({} as any);
+      cognitoService.parseAdminUser.mockReturnValue(cognitoData);
+      userService.registerOnConfirmation.mockResolvedValue(registrationResult as any);
+      auditService.userRegistered.mockResolvedValue(undefined);
+      eventPublishingService.publishUserRegistered.mockResolvedValue(undefined);
+
+      const result = await orchestrator.processPostConfirmationWithData(event, eventData);
+
+      expect(result).toBe(event);
+      expect(UserRegistrationRules.determineInitialRole).toHaveBeenCalledWith(
+        undefined,
+        UserRole.CUSTOMER
+      );
+    });
+
+    it('should handle publish integration event failure gracefully', async () => {
+      const event = new PostConfirmationEventBuilder()
+        .withUserName('test-cognito-sub')
+        .build();
+
+      const eventData = new CognitoEventData(
+        'test-cognito-sub',
+        {},
+        'test@example.com',
+        'John',
+        'Doe'
+      );
+
+      const cognitoData = {
+        mfaEnabled: false,
+        identities: []
+      };
+      const user = userEntity({ cognitoSub: CognitoSub.fromString('test-cognito-sub') });
+      const registrationResult = {
+        user,
+        created: true
+      };
+
+      (UserRegistrationRules.determineInitialRole as jest.Mock).mockReturnValue(UserRole.CUSTOMER);
+      (UserRegistrationRules.determineInitialStatus as jest.Mock).mockReturnValue('ACTIVE' as any);
+      cognitoService.adminGetUser.mockResolvedValue({} as any);
+      cognitoService.parseAdminUser.mockReturnValue(cognitoData);
+      userService.registerOnConfirmation.mockResolvedValue(registrationResult as any);
+      auditService.userRegistered.mockResolvedValue(undefined);
+      eventPublishingService.publishUserRegistered.mockRejectedValue(new Error('Publish error'));
+
+      const result = await orchestrator.processPostConfirmationWithData(event, eventData);
+
+      expect(result).toBe(event);
+      expect(logger.warn).toHaveBeenCalledWith(
+        'Failed to publish integration events',
+        expect.any(Object)
+      );
+    });
   });
 });
 

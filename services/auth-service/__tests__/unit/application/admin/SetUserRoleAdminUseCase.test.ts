@@ -353,6 +353,71 @@ describe('SetUserRoleAdminUseCase', () => {
         })
       );
     });
+
+    it('should handle error in execute and log it', async () => {
+      const userId = TestUtils.generateUuid();
+      const actorId = TestUtils.generateUuid();
+      const request = { role: UserRole.LAWYER };
+      const error = new Error('Unexpected error');
+
+      userRepository.findById.mockRejectedValue(error);
+
+      await expect(useCase.execute(userId, request, UserRole.ADMIN, actorId)).rejects.toThrow(error);
+      expect(logger.error).toHaveBeenCalledWith(
+        'Error in SetUserRoleAdminUseCase',
+        expect.objectContaining({
+          userId,
+          error: 'Unexpected error'
+        })
+      );
+    });
+
+    it('should handle error when error has stack', async () => {
+      const userId = TestUtils.generateUuid();
+      const actorId = TestUtils.generateUuid();
+      const request = { role: UserRole.LAWYER };
+      const error = new Error('Unexpected error');
+      error.stack = 'Error stack trace';
+
+      userRepository.findById.mockRejectedValue(error);
+
+      await expect(useCase.execute(userId, request, UserRole.ADMIN, actorId)).rejects.toThrow(error);
+      expect(logger.error).toHaveBeenCalledWith(
+        'Error in SetUserRoleAdminUseCase',
+        expect.objectContaining({
+          userId,
+          error: 'Unexpected error',
+          stack: 'Error stack trace'
+        })
+      );
+    });
+
+    it('should handle error when Cognito actions fail', async () => {
+      const userId = TestUtils.generateUuid();
+      const actorId = TestUtils.generateUuid();
+      const request = { role: UserRole.LAWYER };
+      const targetUser = userEntity({ id: UserId.fromString(userId), role: UserRole.CUSTOMER });
+      const cognitoError = new Error('Cognito error');
+
+      userRepository.findById.mockResolvedValue(targetUser);
+      (RoleChangeRules.validateRoleChange as jest.Mock).mockImplementation(() => {});
+      (RoleChangeRules.validateRoleTransition as jest.Mock).mockImplementation(() => {});
+      (RoleChangeRules.getRoleChangeEffects as jest.Mock).mockReturnValue({
+        mfaRequired: false,
+        globalSignOut: false
+      });
+      cognitoService.adminUpdateUserAttributes.mockRejectedValue(cognitoError);
+
+      await expect(useCase.execute(userId, request, UserRole.ADMIN, actorId)).rejects.toThrow();
+      expect(logger.error).toHaveBeenCalledWith(
+        'Failed to execute Cognito actions for role change',
+        expect.objectContaining({
+          cognitoSub: targetUser.getCognitoSub().toString(),
+          newRole: UserRole.LAWYER,
+          error: 'Cognito error'
+        })
+      );
+    });
   });
 });
 

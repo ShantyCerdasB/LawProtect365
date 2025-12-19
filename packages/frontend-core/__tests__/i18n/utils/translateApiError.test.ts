@@ -59,15 +59,22 @@ describe('translateApiError', () => {
     expect(t).toHaveBeenCalledWith('errors.api.NOT_FOUND_TRANSLATION', expect.objectContaining({ defaultValue: 'An unknown error occurred' }));
   });
 
-  it('should return UNKNOWN_ERROR when translation key equals error key', () => {
+  it('should return UNKNOWN_ERROR when translation key equals error key (line 28)', () => {
     const t = createMockT({
       'errors.api.UNKNOWN_ERROR': 'An unknown error occurred',
     });
     const error: ApiError = { code: 'MISSING_KEY' };
 
+    // Mock should return the key when translation is not found (no defaultValue match)
+    // This makes translated === errorKey true, triggering line 28
     const result = translateApiError(t, error);
 
     expect(result).toBe('An unknown error occurred');
+    // Verify t was called with the error key
+    expect(t).toHaveBeenCalledWith('errors.api.MISSING_KEY', expect.objectContaining({ defaultValue: expect.any(String) }));
+    // When translation key equals error key, it calls UNKNOWN_ERROR
+    // The mock returns the key when not found, so the condition on line 27 is true
+    expect(t).toHaveBeenCalledTimes(2);
   });
 
   it('should pass params to translation function', () => {
@@ -125,6 +132,7 @@ describe('translateApiError', () => {
     expect(result).toBe('Error message');
   });
 });
+
 
 
 

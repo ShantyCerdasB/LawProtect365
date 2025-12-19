@@ -393,6 +393,33 @@ describe('PreTokenGenerationOrchestrator', () => {
         })
       );
     });
+
+    it('should handle error path and return default claims', async () => {
+      const event = new PreTokenGenEventBuilder()
+        .withUserName('test-cognito-sub')
+        .build();
+
+      const eventData = new CognitoEventData(
+        'test-cognito-sub',
+        {},
+        'test@example.com',
+        'John',
+        'Doe'
+      );
+
+      const defaultClaims = {
+        'custom:role': UserRole.UNASSIGNED
+      };
+
+      userService.findByCognitoSub.mockRejectedValue(new Error('Database error'));
+      (ClaimsMappingRules.getDefaultClaims as jest.Mock).mockReturnValue(defaultClaims);
+      (ClaimsMappingRules.toClaimsOverrideDetails as jest.Mock).mockReturnValue({} as any);
+
+      const result = await orchestrator.processPreTokenGenerationWithData(event, eventData);
+
+      expect(result.response.claimsOverrideDetails).toBeDefined();
+    });
+
   });
 });
 

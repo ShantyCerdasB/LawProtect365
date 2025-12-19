@@ -250,6 +250,124 @@ describe('GetMeUseCase', () => {
         })
       );
     });
+
+    it('should handle error in execute and log it', async () => {
+      const cognitoSub = TestUtils.generateCognitoSub();
+      const error = new Error('Unexpected error');
+
+      userService.findByCognitoSub.mockRejectedValue(error);
+
+      await expect(useCase.execute({
+        cognitoSub,
+        includeFlags: ''
+      })).rejects.toThrow(error);
+      expect(logger.error).toHaveBeenCalledWith(
+        'GetMe use case failed',
+        expect.objectContaining({
+          cognitoSub,
+          error: 'Unexpected error'
+        })
+      );
+    });
+
+    it('should return empty providers array when repository fails', async () => {
+      const cognitoSub = TestUtils.generateCognitoSub();
+      const userId = UserId.fromString(TestUtils.generateUuid());
+      const user = userEntity({ id: userId, cognitoSub: CognitoSub.fromString(cognitoSub) });
+
+      userService.findByCognitoSub.mockResolvedValue(user);
+      oauthAccountRepository.listByUserId.mockRejectedValue(new Error('Repository error'));
+
+      const result = await useCase.execute({
+        cognitoSub,
+        includeFlags: 'idp'
+      });
+
+      expect(result.user.providers).toEqual([]);
+      expect(logger.warn).toHaveBeenCalledWith(
+        'Failed to retrieve OAuth providers',
+        expect.objectContaining({
+          userId: userId.toString(),
+          error: 'Repository error'
+        })
+      );
+    });
+
+    it('should return undefined personalInfo when getPersonalInfo returns null', async () => {
+      const cognitoSub = TestUtils.generateCognitoSub();
+      const userId = UserId.fromString(TestUtils.generateUuid());
+      const user = userEntity({ id: userId, cognitoSub: CognitoSub.fromString(cognitoSub) });
+
+      userService.findByCognitoSub.mockResolvedValue(user);
+      userService.getPersonalInfo.mockResolvedValue(null);
+
+      const result = await useCase.execute({
+        cognitoSub,
+        includeFlags: 'profile'
+      });
+
+      expect(result.user.personalInfo).toBeUndefined();
+    });
+
+    it('should handle error when error is not Error instance', async () => {
+      const cognitoSub = TestUtils.generateCognitoSub();
+      const stringError = 'String error';
+
+      userService.findByCognitoSub.mockRejectedValue(stringError);
+
+      await expect(useCase.execute({
+        cognitoSub,
+        includeFlags: ''
+      })).rejects.toBe(stringError);
+      expect(logger.error).toHaveBeenCalledWith(
+        'GetMe use case failed',
+        expect.objectContaining({
+          cognitoSub,
+          error: 'String error'
+        })
+      );
+    });
+
+    it('should include claims when claims flag is set', async () => {
+      const cognitoSub = TestUtils.generateCognitoSub();
+      const userId = UserId.fromString(TestUtils.generateUuid());
+      const user = userEntity({ id: userId, cognitoSub: CognitoSub.fromString(cognitoSub) });
+
+      userService.findByCognitoSub.mockResolvedValue(user);
+
+      const result = await useCase.execute({
+        cognitoSub,
+        includeFlags: 'claims'
+      });
+
+      expect(result.user.claims).toBeDefined();
+    });
+
+    it('should build response with all optional fields', async () => {
+      const cognitoSub = TestUtils.generateCognitoSub();
+      const userId = UserId.fromString(TestUtils.generateUuid());
+      const user = userEntity({ id: userId, cognitoSub: CognitoSub.fromString(cognitoSub) });
+      const accounts = [oauthAccountEntity({ userId, provider: OAuthProvider.GOOGLE })];
+      const personalInfo = userPersonalInfoEntity({
+        userId,
+        phone: '+1234567890',
+        locale: 'en-US',
+        timeZone: 'America/New_York'
+      });
+
+      userService.findByCognitoSub.mockResolvedValue(user);
+      oauthAccountRepository.listByUserId.mockResolvedValue(accounts as any);
+      userService.getPersonalInfo.mockResolvedValue(personalInfo);
+
+      const result = await useCase.execute({
+        cognitoSub,
+        includeFlags: 'idp,profile,claims'
+      });
+
+      expect(result.user.providers).toBeDefined();
+      expect(result.user.personalInfo).toBeDefined();
+      expect(result.user.claims).toBeDefined();
+    });
   });
 });
 

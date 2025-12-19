@@ -397,6 +397,90 @@ describe('PreAuthenticationOrchestrator', () => {
         false
       );
     });
+
+    it('should handle case when custom MFA required is false', async () => {
+      const event = new PreAuthEventBuilder()
+        .withUserName('test-cognito-sub')
+        .withUserAttributes({
+          [CognitoAttribute.CUSTOM_MFA_REQUIRED]: 'false'
+        })
+        .build();
+
+      const eventData = new CognitoEventData(
+        'test-cognito-sub',
+        {
+          [CognitoAttribute.CUSTOM_MFA_REQUIRED]: 'false'
+        },
+        'test@example.com',
+        'John',
+        'Doe'
+      );
+
+      const mfaSettings = {
+        mfaEnabled: false,
+        isMfaRequiredAttr: false
+      };
+      const user = userEntity({
+        cognitoSub: CognitoSub.fromString('test-cognito-sub'),
+        role: UserRole.CUSTOMER
+      });
+
+      cognitoService.adminGetUser.mockResolvedValue({} as any);
+      cognitoService.parseMfaSettings.mockReturnValue(mfaSettings);
+      userService.findByCognitoSub.mockResolvedValue(user);
+      (MfaPolicyRules.validateMfaPolicy as jest.Mock).mockImplementation(() => {});
+      (UserAccessRules.validateUserAccess as jest.Mock).mockImplementation(() => {});
+
+      await orchestrator.processPreAuthenticationWithData(event, eventData);
+
+      expect(MfaPolicyRules.validateMfaPolicy).toHaveBeenCalledWith(
+        UserRole.CUSTOMER,
+        mfaSettings,
+        false
+      );
+    });
+
+    it('should handle case when custom MFA required is undefined', async () => {
+      const event = new PreAuthEventBuilder()
+        .withUserName('test-cognito-sub')
+        .withUserAttributes({
+          [CognitoAttribute.CUSTOM_MFA_REQUIRED]: 'invalid'
+        })
+        .build();
+
+      const eventData = new CognitoEventData(
+        'test-cognito-sub',
+        {
+          [CognitoAttribute.CUSTOM_MFA_REQUIRED]: 'invalid'
+        },
+        'test@example.com',
+        'John',
+        'Doe'
+      );
+
+      const mfaSettings = {
+        mfaEnabled: false,
+        isMfaRequiredAttr: false
+      };
+      const user = userEntity({
+        cognitoSub: CognitoSub.fromString('test-cognito-sub'),
+        role: UserRole.CUSTOMER
+      });
+
+      cognitoService.adminGetUser.mockResolvedValue({} as any);
+      cognitoService.parseMfaSettings.mockReturnValue(mfaSettings);
+      userService.findByCognitoSub.mockResolvedValue(user);
+      (MfaPolicyRules.validateMfaPolicy as jest.Mock).mockImplementation(() => {});
+      (UserAccessRules.validateUserAccess as jest.Mock).mockImplementation(() => {});
+
+      await orchestrator.processPreAuthenticationWithData(event, eventData);
+
+      expect(MfaPolicyRules.validateMfaPolicy).toHaveBeenCalledWith(
+        UserRole.CUSTOMER,
+        mfaSettings,
+        undefined
+      );
+    });
   });
 });
 

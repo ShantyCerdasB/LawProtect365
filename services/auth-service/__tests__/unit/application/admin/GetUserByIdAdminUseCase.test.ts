@@ -255,6 +255,42 @@ describe('GetUserByIdAdminUseCase', () => {
 
       expect(result.providers).toBeUndefined();
     });
+
+    it('should handle error in execute and log it', async () => {
+      const userId = TestUtils.generateUuid();
+      const viewerId = TestUtils.generateUuid();
+      const error = new Error('Unexpected error');
+
+      userRepository.findByIdWithIncludes.mockRejectedValue(error);
+
+      await expect(useCase.execute(userId, [], UserRole.ADMIN, viewerId)).rejects.toThrow(error);
+      expect(logger.error).toHaveBeenCalledWith(
+        'Error in GetUserByIdAdminUseCase',
+        expect.objectContaining({
+          userId,
+          error: 'Unexpected error'
+        })
+      );
+    });
+
+    it('should handle error when error has stack', async () => {
+      const userId = TestUtils.generateUuid();
+      const viewerId = TestUtils.generateUuid();
+      const error = new Error('Unexpected error');
+      error.stack = 'Error stack trace';
+
+      userRepository.findByIdWithIncludes.mockRejectedValue(error);
+
+      await expect(useCase.execute(userId, [], UserRole.ADMIN, viewerId)).rejects.toThrow(error);
+      expect(logger.error).toHaveBeenCalledWith(
+        'Error in GetUserByIdAdminUseCase',
+        expect.objectContaining({
+          userId,
+          error: 'Unexpected error',
+          stack: 'Error stack trace'
+        })
+      );
+    });
   });
 });
 

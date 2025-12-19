@@ -419,6 +419,145 @@ describe('UnlinkProviderUseCase', () => {
         })
       );
     });
+
+    it('should handle unsupported mode', async () => {
+      const cognitoSub = TestUtils.generateCognitoSub();
+      const input = {
+        mode: 'UNSUPPORTED' as any,
+        provider: OAuthProvider.GOOGLE,
+        providerAccountId: '123456789',
+        cognitoSub
+      };
+
+      (ProviderUnlinkingRules.ensureProviderAllowed as jest.Mock).mockImplementation(() => {});
+      (ProviderUnlinkingRules.ensureModeEnabled as jest.Mock).mockImplementation(() => {});
+
+      await expect(useCase.execute(input)).rejects.toThrow('OAuth provider not supported');
+    });
+
+    it('should handle error when invalid providerAccountId in confirm mode', async () => {
+      const cognitoSub = TestUtils.generateCognitoSub();
+      const input = {
+        mode: UnlinkingMode.CONFIRM,
+        provider: OAuthProvider.GOOGLE,
+        providerAccountId: '',
+        confirmationToken: 'test-token',
+        cognitoSub
+      };
+
+      (ProviderUnlinkingRules.ensureProviderAllowed as jest.Mock).mockImplementation(() => {});
+      (ProviderUnlinkingRules.ensureModeEnabled as jest.Mock).mockImplementation(() => {});
+      (ProviderUnlinkingRules.validateProviderAccountId as jest.Mock).mockReturnValue(false);
+
+      await expect(useCase.execute(input)).rejects.toThrow('OAuth account unlinking failed');
+    });
+
+    it('should handle MICROSOFT_365 provider in getCognitoProviderName', async () => {
+      const cognitoSub = TestUtils.generateCognitoSub();
+      const input = {
+        mode: UnlinkingMode.DIRECT,
+        provider: OAuthProvider.MICROSOFT_365,
+        providerAccountId: '123456789',
+        cognitoSub
+      };
+      const userId = UserId.fromString(TestUtils.generateUuid());
+      const user = userEntity({ id: userId, cognitoSub: CognitoSub.fromString(cognitoSub) });
+      const existingAccount = oauthAccountEntity({ userId, provider: OAuthProvider.MICROSOFT_365 });
+
+      (ProviderUnlinkingRules.ensureProviderAllowed as jest.Mock).mockImplementation(() => {});
+      (ProviderUnlinkingRules.ensureModeEnabled as jest.Mock).mockImplementation(() => {});
+      (ProviderUnlinkingRules.validateProviderAccountId as jest.Mock).mockReturnValue(true);
+      (ProviderUnlinkingRules.shouldAllowUnlinking as jest.Mock).mockReturnValue(true);
+      (ProviderUnlinkingRules.checkForConflicts as jest.Mock).mockImplementation(() => {});
+      userService.findByCognitoSub.mockResolvedValue(user);
+      oauthAccountRepository.findByProviderAndAccountId.mockResolvedValue(existingAccount as any);
+      oauthAccountRepository.listByUserId.mockResolvedValue([existingAccount as any]);
+      cognitoService.adminUnlinkProviderForUser.mockResolvedValue(undefined);
+      oauthAccountRepository.delete.mockResolvedValue(undefined);
+      auditService.userProviderUnlinked.mockResolvedValue(undefined);
+      eventPublishingService.publishUserProviderUnlinked.mockResolvedValue(undefined);
+
+      const result = await useCase.execute(input);
+
+      expect(result.unlinked).toBe(true);
+      expect(cognitoService.adminUnlinkProviderForUser).toHaveBeenCalledWith(
+        cognitoSub,
+        'Microsoft',
+        '123456789'
+      );
+    });
+
+    it('should handle APPLE provider in getCognitoProviderName', async () => {
+      const cognitoSub = TestUtils.generateCognitoSub();
+      const input = {
+        mode: UnlinkingMode.DIRECT,
+        provider: OAuthProvider.APPLE,
+        providerAccountId: '123456789',
+        cognitoSub
+      };
+      const userId = UserId.fromString(TestUtils.generateUuid());
+      const user = userEntity({ id: userId, cognitoSub: CognitoSub.fromString(cognitoSub) });
+      const existingAccount = oauthAccountEntity({ userId, provider: OAuthProvider.APPLE });
+
+      (ProviderUnlinkingRules.ensureProviderAllowed as jest.Mock).mockImplementation(() => {});
+      (ProviderUnlinkingRules.ensureModeEnabled as jest.Mock).mockImplementation(() => {});
+      (ProviderUnlinkingRules.validateProviderAccountId as jest.Mock).mockReturnValue(true);
+      (ProviderUnlinkingRules.shouldAllowUnlinking as jest.Mock).mockReturnValue(true);
+      (ProviderUnlinkingRules.checkForConflicts as jest.Mock).mockImplementation(() => {});
+      userService.findByCognitoSub.mockResolvedValue(user);
+      oauthAccountRepository.findByProviderAndAccountId.mockResolvedValue(existingAccount as any);
+      oauthAccountRepository.listByUserId.mockResolvedValue([existingAccount as any]);
+      cognitoService.adminUnlinkProviderForUser.mockResolvedValue(undefined);
+      oauthAccountRepository.delete.mockResolvedValue(undefined);
+      auditService.userProviderUnlinked.mockResolvedValue(undefined);
+      eventPublishingService.publishUserProviderUnlinked.mockResolvedValue(undefined);
+
+      const result = await useCase.execute(input);
+
+      expect(result.unlinked).toBe(true);
+      expect(cognitoService.adminUnlinkProviderForUser).toHaveBeenCalledWith(
+        cognitoSub,
+        'SignInWithApple',
+        '123456789'
+      );
+    });
+
+    it('should handle default provider in getCognitoProviderName', async () => {
+      const cognitoSub = TestUtils.generateCognitoSub();
+      const input = {
+        mode: UnlinkingMode.DIRECT,
+        provider: 'UNKNOWN' as any,
+        providerAccountId: '123456789',
+        cognitoSub
+      };
+
+      (ProviderUnlinkingRules.ensureProviderAllowed as jest.Mock).mockImplementation(() => {});
+      (ProviderUnlinkingRules.ensureModeEnabled as jest.Mock).mockImplementation(() => {});
+
+      const userId = UserId.fromString(TestUtils.generateUuid());
+      const user = userEntity({ id: userId, cognitoSub: CognitoSub.fromString(cognitoSub) });
+      const existingAccount = oauthAccountEntity({ userId, provider: OAuthProvider.GOOGLE });
+
+      (ProviderUnlinkingRules.validateProviderAccountId as jest.Mock).mockReturnValue(true);
+      (ProviderUnlinkingRules.shouldAllowUnlinking as jest.Mock).mockReturnValue(true);
+      (ProviderUnlinkingRules.checkForConflicts as jest.Mock).mockImplementation(() => {});
+      userService.findByCognitoSub.mockResolvedValue(user);
+      oauthAccountRepository.findByProviderAndAccountId.mockResolvedValue(existingAccount as any);
+      oauthAccountRepository.listByUserId.mockResolvedValue([existingAccount as any]);
+      cognitoService.adminUnlinkProviderForUser.mockResolvedValue(undefined);
+      oauthAccountRepository.delete.mockResolvedValue(undefined);
+      auditService.userProviderUnlinked.mockResolvedValue(undefined);
+      eventPublishingService.publishUserProviderUnlinked.mockResolvedValue(undefined);
+
+      const result = await useCase.execute(input);
+
+      expect(result.unlinked).toBe(true);
+      expect(cognitoService.adminUnlinkProviderForUser).toHaveBeenCalledWith(
+        cognitoSub,
+        'Cognito',
+        '123456789'
+      );
+    });
   });
 });
 

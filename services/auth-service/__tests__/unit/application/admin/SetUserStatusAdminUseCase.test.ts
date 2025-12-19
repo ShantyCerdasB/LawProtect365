@@ -397,6 +397,44 @@ describe('SetUserStatusAdminUseCase', () => {
         expect.any(Object)
       );
     });
+
+    it('should handle error in execute and log it', async () => {
+      const userId = TestUtils.generateUuid();
+      const actorId = TestUtils.generateUuid();
+      const request = { status: UserAccountStatus.SUSPENDED };
+      const error = new Error('Unexpected error');
+
+      userRepository.findById.mockRejectedValue(error);
+
+      await expect(useCase.execute(userId, request, UserRole.ADMIN, actorId)).rejects.toThrow(error);
+      expect(logger.error).toHaveBeenCalledWith(
+        'Error in SetUserStatusAdminUseCase',
+        expect.objectContaining({
+          userId,
+          error: 'Unexpected error'
+        })
+      );
+    });
+
+    it('should handle error when error has stack', async () => {
+      const userId = TestUtils.generateUuid();
+      const actorId = TestUtils.generateUuid();
+      const request = { status: UserAccountStatus.SUSPENDED };
+      const error = new Error('Unexpected error');
+      error.stack = 'Error stack trace';
+
+      userRepository.findById.mockRejectedValue(error);
+
+      await expect(useCase.execute(userId, request, UserRole.ADMIN, actorId)).rejects.toThrow(error);
+      expect(logger.error).toHaveBeenCalledWith(
+        'Error in SetUserStatusAdminUseCase',
+        expect.objectContaining({
+          userId,
+          error: 'Unexpected error',
+          stack: 'Error stack trace'
+        })
+      );
+    });
   });
 });
 

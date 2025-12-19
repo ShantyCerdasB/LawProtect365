@@ -28,5 +28,50 @@ describe('queryKeys', () => {
     // React Query accepts arrays as keys
     expect(Array.isArray(key)).toBe(true);
   });
+
+  describe('signature.envelopes', () => {
+    it('should generate query key with params (line 10)', () => {
+      const key = queryKeys.signature.envelopes({ status: 'sent', limit: 10 });
+      
+      expect(key).toEqual(['signature', 'envelopes', { status: 'sent', limit: 10 }]);
+      expect(Array.isArray(key)).toBe(true);
+    });
+
+    it('should generate query key without params', () => {
+      const key = queryKeys.signature.envelopes();
+      
+      expect(key).toEqual(['signature', 'envelopes', undefined]);
+    });
+
+    it('should generate query key with cursor', () => {
+      const key = queryKeys.signature.envelopes({ cursor: 'cursor-123' });
+      
+      expect(key).toEqual(['signature', 'envelopes', { cursor: 'cursor-123' }]);
+    });
+  });
+
+  describe('signature.envelope', () => {
+    it('should generate query key with envelopeId and params (line 11-12)', () => {
+      const key = queryKeys.signature.envelope('env-1', { invitationToken: 'token-123' });
+      
+      expect(key).toEqual(['signature', 'envelope', 'env-1', { invitationToken: 'token-123' }]);
+      expect(Array.isArray(key)).toBe(true);
+    });
+
+    it('should generate query key with envelopeId only', () => {
+      const key = queryKeys.signature.envelope('env-1');
+      
+      expect(key).toEqual(['signature', 'envelope', 'env-1', undefined]);
+    });
+  });
+
+  describe('signature.auditTrail', () => {
+    it('should generate query key with envelopeId (line 13-14)', () => {
+      const key = queryKeys.signature.auditTrail('env-1');
+      
+      expect(key).toEqual(['signature', 'audit-trail', 'env-1']);
+      expect(Array.isArray(key)).toBe(true);
+    });
+  });
 });
 

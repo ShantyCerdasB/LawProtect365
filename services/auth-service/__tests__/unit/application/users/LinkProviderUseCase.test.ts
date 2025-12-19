@@ -417,6 +417,363 @@ describe('LinkProviderUseCase', () => {
         })
       );
     });
+
+    it('should handle unsupported mode', async () => {
+      const input = {
+        mode: 'UNSUPPORTED' as any,
+        provider: OAuthProvider.GOOGLE
+      };
+
+      (ProviderLinkingRules.ensureProviderAllowed as jest.Mock).mockImplementation(() => {});
+      (ProviderLinkingRules.isModeSupported as jest.Mock).mockReturnValue(false);
+
+      await expect(useCase.execute(input)).rejects.toThrow('OAuth provider not supported');
+    });
+
+    it('should handle Cognito linking failure', async () => {
+      const input = {
+        mode: LinkingMode.DIRECT,
+        provider: OAuthProvider.GOOGLE,
+        idToken: 'test-id-token'
+      };
+      const cognitoSub = TestUtils.generateCognitoSub();
+      const userId = UserId.fromString(TestUtils.generateUuid());
+      const user = userEntity({ id: userId, cognitoSub: CognitoSub.fromString(cognitoSub) });
+      const identity = {
+        provider: OAuthProvider.GOOGLE,
+        providerAccountId: '123456789',
+        email: 'test@example.com'
+      };
+      const cognitoError = new Error('Cognito linking failed');
+
+      (ProviderLinkingRules.ensureProviderAllowed as jest.Mock).mockImplementation(() => {});
+      (ProviderLinkingRules.isModeSupported as jest.Mock).mockReturnValue(true);
+      (ProviderLinkingRules.validateProviderAccountId as jest.Mock).mockReturnValue(true);
+      (ProviderLinkingRules.shouldAllowLinking as jest.Mock).mockReturnValue(true);
+      (ProviderLinkingRules.checkForConflicts as jest.Mock).mockImplementation(() => {});
+      cognitoService.validateIdToken.mockResolvedValue(identity as any);
+      userService.findByCognitoSub.mockResolvedValue(user);
+      oauthAccountRepository.findByProviderAndAccountId.mockResolvedValue(null);
+      cognitoService.adminLinkProviderForUser.mockRejectedValue(cognitoError);
+
+      await expect(useCase.execute(input)).rejects.toThrow();
+      expect(logger.error).toHaveBeenCalledWith(
+        'Failed to link provider in Cognito',
+        expect.objectContaining({
+          provider: OAuthProvider.GOOGLE,
+          userId: userId.toString(),
+          error: 'Cognito linking failed'
+        })
+      );
+    });
+
+    it('should handle database persistence failure', async () => {
+      const input = {
+        mode: LinkingMode.DIRECT,
+        provider: OAuthProvider.GOOGLE,
+        idToken: 'test-id-token'
+      };
+      const cognitoSub = TestUtils.generateCognitoSub();
+      const userId = UserId.fromString(TestUtils.generateUuid());
+      const user = userEntity({ id: userId, cognitoSub: CognitoSub.fromString(cognitoSub) });
+      const identity = {
+        provider: OAuthProvider.GOOGLE,
+        providerAccountId: '123456789',
+        email: 'test@example.com'
+      };
+      const dbError = new Error('Database error');
+
+      (ProviderLinkingRules.ensureProviderAllowed as jest.Mock).mockImplementation(() => {});
+      (ProviderLinkingRules.isModeSupported as jest.Mock).mockReturnValue(true);
+      (ProviderLinkingRules.validateProviderAccountId as jest.Mock).mockReturnValue(true);
+      (ProviderLinkingRules.shouldAllowLinking as jest.Mock).mockReturnValue(true);
+      (ProviderLinkingRules.checkForConflicts as jest.Mock).mockImplementation(() => {});
+      cognitoService.validateIdToken.mockResolvedValue(identity as any);
+      userService.findByCognitoSub.mockResolvedValue(user);
+      oauthAccountRepository.findByProviderAndAccountId.mockResolvedValue(null);
+      cognitoService.adminLinkProviderForUser.mockResolvedValue(undefined);
+      oauthAccountRepository.upsert.mockRejectedValue(dbError);
+
+      await expect(useCase.execute(input)).rejects.toThrow();
+      expect(logger.error).toHaveBeenCalledWith(
+        'Failed to persist provider link',
+        expect.objectContaining({
+          provider: OAuthProvider.GOOGLE,
+          userId: userId.toString(),
+          error: 'Database error'
+        })
+      );
+    });
+
+    it('should handle finalize mode with idToken instead of code', async () => {
+      const validState = Buffer.from(JSON.stringify({
+        userId: TestUtils.generateUuid(),
+        timestamp: Date.now(),
+        nonce: 'test-nonce'
+      })).toString('base64');
+      const input = {
+        mode: LinkingMode.FINALIZE,
+        provider: OAuthProvider.GOOGLE,
+        idToken: 'test-id-token',
+        state: validState
+      };
+      const cognitoSub = TestUtils.generateCognitoSub();
+      const userId = UserId.fromString(TestUtils.generateUuid());
+      const user = userEntity({ id: userId, cognitoSub: CognitoSub.fromString(cognitoSub) });
+      const identity = {
+        provider: OAuthProvider.GOOGLE,
+        providerAccountId: '123456789',
+        email: 'test@example.com'
+      };
+
+      (ProviderLinkingRules.ensureProviderAllowed as jest.Mock).mockImplementation(() => {});
+      (ProviderLinkingRules.isModeSupported as jest.Mock).mockReturnValue(true);
+      (ProviderLinkingRules.validateState as jest.Mock).mockReturnValue(true);
+      (ProviderLinkingRules.validateProviderAccountId as jest.Mock).mockReturnValue(true);
+      (ProviderLinkingRules.shouldAllowLinking as jest.Mock).mockReturnValue(true);
+      (ProviderLinkingRules.checkForConflicts as jest.Mock).mockImplementation(() => {});
+      cognitoService.validateIdToken.mockResolvedValue(identity as any);
+      userService.findByCognitoSub.mockResolvedValue(user);
+      oauthAccountRepository.findByProviderAndAccountId.mockResolvedValue(null);
+      cognitoService.adminLinkProviderForUser.mockResolvedValue(undefined);
+      oauthAccountRepository.upsert.mockResolvedValue(oauthAccountEntity({ userId }) as any);
+      auditService.userProviderLinked.mockResolvedValue(undefined);
+      eventPublishingService.publishUserProviderLinked.mockResolvedValue(undefined);
+
+      const result = await useCase.execute(input);
+
+      expect(result.linked).toBe(true);
+      expect(cognitoService.validateIdToken).toHaveBeenCalledWith(OAuthProvider.GOOGLE, 'test-id-token');
+    });
+
+    it('should handle finalize mode missing both code and idToken', async () => {
+      const validState = Buffer.from(JSON.stringify({
+        userId: TestUtils.generateUuid(),
+        timestamp: Date.now(),
+        nonce: 'test-nonce'
+      })).toString('base64');
+      const input = {
+        mode: LinkingMode.FINALIZE,
+        provider: OAuthProvider.GOOGLE,
+        state: validState
+      };
+
+      (ProviderLinkingRules.ensureProviderAllowed as jest.Mock).mockImplementation(() => {});
+      (ProviderLinkingRules.isModeSupported as jest.Mock).mockReturnValue(true);
+      (ProviderLinkingRules.validateState as jest.Mock).mockReturnValue(true);
+
+      await expect(useCase.execute(input)).rejects.toThrow('Missing required fields');
+    });
+
+    it('should handle APPLE provider in getCognitoProviderName', async () => {
+      const input = {
+        mode: LinkingMode.DIRECT,
+        provider: OAuthProvider.APPLE,
+        idToken: 'test-id-token'
+      };
+      const cognitoSub = TestUtils.generateCognitoSub();
+      const userId = UserId.fromString(TestUtils.generateUuid());
+      const user = userEntity({ id: userId, cognitoSub: CognitoSub.fromString(cognitoSub) });
+      const identity = {
+        provider: OAuthProvider.APPLE,
+        providerAccountId: '123456789',
+        email: 'test@example.com'
+      };
+
+      (ProviderLinkingRules.ensureProviderAllowed as jest.Mock).mockImplementation(() => {});
+      (ProviderLinkingRules.isModeSupported as jest.Mock).mockReturnValue(true);
+      (ProviderLinkingRules.validateProviderAccountId as jest.Mock).mockReturnValue(true);
+      (ProviderLinkingRules.shouldAllowLinking as jest.Mock).mockReturnValue(true);
+      (ProviderLinkingRules.checkForConflicts as jest.Mock).mockImplementation(() => {});
+      cognitoService.validateIdToken.mockResolvedValue(identity as any);
+      userService.findByCognitoSub.mockResolvedValue(user);
+      oauthAccountRepository.findByProviderAndAccountId.mockResolvedValue(null);
+      cognitoService.adminLinkProviderForUser.mockResolvedValue(undefined);
+      oauthAccountRepository.upsert.mockResolvedValue(oauthAccountEntity({ userId }) as any);
+      auditService.userProviderLinked.mockResolvedValue(undefined);
+      eventPublishingService.publishUserProviderLinked.mockResolvedValue(undefined);
+
+      const result = await useCase.execute(input);
+
+      expect(result.linked).toBe(true);
+      expect(cognitoService.adminLinkProviderForUser).toHaveBeenCalledWith(
+        cognitoSub,
+        'SignInWithApple',
+        '123456789'
+      );
+    });
+
+    it('should handle error when neither idToken nor authorizationCode provided in direct mode', async () => {
+      const input = {
+        mode: LinkingMode.DIRECT,
+        provider: OAuthProvider.GOOGLE
+      };
+
+      (ProviderLinkingRules.ensureProviderAllowed as jest.Mock).mockImplementation(() => {});
+      (ProviderLinkingRules.isModeSupported as jest.Mock).mockReturnValue(true);
+
+      await expect(useCase.execute(input)).rejects.toThrow('Missing required fields');
+    });
+
+    it('should handle audit event creation failure gracefully', async () => {
+      const input = {
+        mode: LinkingMode.DIRECT,
+        provider: OAuthProvider.GOOGLE,
+        idToken: 'test-id-token'
+      };
+      const cognitoSub = TestUtils.generateCognitoSub();
+      const userId = UserId.fromString(TestUtils.generateUuid());
+      const user = userEntity({ id: userId, cognitoSub: CognitoSub.fromString(cognitoSub) });
+      const identity = {
+        provider: OAuthProvider.GOOGLE,
+        providerAccountId: '123456789',
+        email: 'test@example.com'
+      };
+
+      (ProviderLinkingRules.ensureProviderAllowed as jest.Mock).mockImplementation(() => {});
+      (ProviderLinkingRules.isModeSupported as jest.Mock).mockReturnValue(true);
+      (ProviderLinkingRules.validateProviderAccountId as jest.Mock).mockReturnValue(true);
+      (ProviderLinkingRules.shouldAllowLinking as jest.Mock).mockReturnValue(true);
+      (ProviderLinkingRules.checkForConflicts as jest.Mock).mockImplementation(() => {});
+      cognitoService.validateIdToken.mockResolvedValue(identity as any);
+      userService.findByCognitoSub.mockResolvedValue(user);
+      oauthAccountRepository.findByProviderAndAccountId.mockResolvedValue(null);
+      cognitoService.adminLinkProviderForUser.mockResolvedValue(undefined);
+      oauthAccountRepository.upsert.mockResolvedValue(oauthAccountEntity({ userId }) as any);
+      auditService.userProviderLinked.mockRejectedValue(new Error('Audit error'));
+      eventPublishingService.publishUserProviderLinked.mockResolvedValue(undefined);
+
+      const result = await useCase.execute(input);
+
+      expect(result.linked).toBe(true);
+      expect(logger.warn).toHaveBeenCalledWith(
+        'Failed to create audit event for provider linking',
+        expect.objectContaining({
+          provider: OAuthProvider.GOOGLE,
+          userId: userId.toString(),
+          error: 'Audit error'
+        })
+      );
+    });
+
+    it('should handle integration event publishing failure gracefully', async () => {
+      const input = {
+        mode: LinkingMode.DIRECT,
+        provider: OAuthProvider.GOOGLE,
+        idToken: 'test-id-token'
+      };
+      const cognitoSub = TestUtils.generateCognitoSub();
+      const userId = UserId.fromString(TestUtils.generateUuid());
+      const user = userEntity({ id: userId, cognitoSub: CognitoSub.fromString(cognitoSub) });
+      const identity = {
+        provider: OAuthProvider.GOOGLE,
+        providerAccountId: '123456789',
+        email: 'test@example.com'
+      };
+
+      (ProviderLinkingRules.ensureProviderAllowed as jest.Mock).mockImplementation(() => {});
+      (ProviderLinkingRules.isModeSupported as jest.Mock).mockReturnValue(true);
+      (ProviderLinkingRules.validateProviderAccountId as jest.Mock).mockReturnValue(true);
+      (ProviderLinkingRules.shouldAllowLinking as jest.Mock).mockReturnValue(true);
+      (ProviderLinkingRules.checkForConflicts as jest.Mock).mockImplementation(() => {});
+      cognitoService.validateIdToken.mockResolvedValue(identity as any);
+      userService.findByCognitoSub.mockResolvedValue(user);
+      oauthAccountRepository.findByProviderAndAccountId.mockResolvedValue(null);
+      cognitoService.adminLinkProviderForUser.mockResolvedValue(undefined);
+      oauthAccountRepository.upsert.mockResolvedValue(oauthAccountEntity({ userId }) as any);
+      auditService.userProviderLinked.mockResolvedValue(undefined);
+      eventPublishingService.publishUserProviderLinked.mockRejectedValue(new Error('Publish error'));
+
+      const result = await useCase.execute(input);
+
+      expect(result.linked).toBe(true);
+      expect(logger.warn).toHaveBeenCalledWith(
+        'Failed to publish integration event for provider linking',
+        expect.objectContaining({
+          provider: OAuthProvider.GOOGLE,
+          userId: userId.toString(),
+          error: 'Publish error'
+        })
+      );
+    });
+
+    it('should handle MICROSOFT_365 provider in getCognitoProviderName', async () => {
+      const input = {
+        mode: LinkingMode.DIRECT,
+        provider: OAuthProvider.MICROSOFT_365,
+        idToken: 'test-id-token'
+      };
+      const cognitoSub = TestUtils.generateCognitoSub();
+      const userId = UserId.fromString(TestUtils.generateUuid());
+      const user = userEntity({ id: userId, cognitoSub: CognitoSub.fromString(cognitoSub) });
+      const identity = {
+        provider: OAuthProvider.MICROSOFT_365,
+        providerAccountId: '123456789',
+        email: 'test@example.com'
+      };
+
+      (ProviderLinkingRules.ensureProviderAllowed as jest.Mock).mockImplementation(() => {});
+      (ProviderLinkingRules.isModeSupported as jest.Mock).mockReturnValue(true);
+      (ProviderLinkingRules.validateProviderAccountId as jest.Mock).mockReturnValue(true);
+      (ProviderLinkingRules.shouldAllowLinking as jest.Mock).mockReturnValue(true);
+      (ProviderLinkingRules.checkForConflicts as jest.Mock).mockImplementation(() => {});
+      cognitoService.validateIdToken.mockResolvedValue(identity as any);
+      userService.findByCognitoSub.mockResolvedValue(user);
+      oauthAccountRepository.findByProviderAndAccountId.mockResolvedValue(null);
+      cognitoService.adminLinkProviderForUser.mockResolvedValue(undefined);
+      oauthAccountRepository.upsert.mockResolvedValue(oauthAccountEntity({ userId }) as any);
+      auditService.userProviderLinked.mockResolvedValue(undefined);
+      eventPublishingService.publishUserProviderLinked.mockResolvedValue(undefined);
+
+      const result = await useCase.execute(input);
+
+      expect(result.linked).toBe(true);
+      expect(cognitoService.adminLinkProviderForUser).toHaveBeenCalledWith(
+        cognitoSub,
+        'Microsoft',
+        '123456789'
+      );
+    });
+
+    it('should handle default provider in getCognitoProviderName', async () => {
+      const input = {
+        mode: LinkingMode.DIRECT,
+        provider: 'UNKNOWN' as any,
+        idToken: 'test-id-token'
+      };
+
+      (ProviderLinkingRules.ensureProviderAllowed as jest.Mock).mockImplementation(() => {});
+      (ProviderLinkingRules.isModeSupported as jest.Mock).mockReturnValue(true);
+
+      const cognitoSub = TestUtils.generateCognitoSub();
+      const userId = UserId.fromString(TestUtils.generateUuid());
+      const user = userEntity({ id: userId, cognitoSub: CognitoSub.fromString(cognitoSub) });
+      const identity = {
+        provider: 'UNKNOWN' as any,
+        providerAccountId: '123456789',
+        email: 'test@example.com'
+      };
+
+      (ProviderLinkingRules.validateProviderAccountId as jest.Mock).mockReturnValue(true);
+      (ProviderLinkingRules.shouldAllowLinking as jest.Mock).mockReturnValue(true);
+      (ProviderLinkingRules.checkForConflicts as jest.Mock).mockImplementation(() => {});
+      cognitoService.validateIdToken.mockResolvedValue(identity as any);
+      userService.findByCognitoSub.mockResolvedValue(user);
+      oauthAccountRepository.findByProviderAndAccountId.mockResolvedValue(null);
+      cognitoService.adminLinkProviderForUser.mockResolvedValue(undefined);
+      oauthAccountRepository.upsert.mockResolvedValue(oauthAccountEntity({ userId }) as any);
+      auditService.userProviderLinked.mockResolvedValue(undefined);
+      eventPublishingService.publishUserProviderLinked.mockResolvedValue(undefined);
+
+      const result = await useCase.execute(input);
+
+      expect(result.linked).toBe(true);
+      expect(cognitoService.adminLinkProviderForUser).toHaveBeenCalledWith(
+        cognitoSub,
+        'Cognito',
+        '123456789'
+      );
+    });
   });
 });
 

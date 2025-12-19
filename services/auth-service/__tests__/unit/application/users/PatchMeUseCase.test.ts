@@ -404,6 +404,68 @@ describe('PatchMeUseCase', () => {
         })
       );
     });
+
+    it('should handle error when error is not Error instance', async () => {
+      const userId = TestUtils.generateUuid();
+      const request = { givenName: 'John' };
+      const stringError = 'String error';
+
+      userService.updateUserProfile.mockRejectedValue(stringError);
+
+      await expect(useCase.execute(userId, request)).rejects.toBe(stringError);
+      expect(logger.error).toHaveBeenCalledWith(
+        'Error in PatchMeUseCase',
+        expect.objectContaining({
+          userId,
+          error: 'String error'
+        })
+      );
+    });
+
+    it('should handle error when error has stack', async () => {
+      const userId = TestUtils.generateUuid();
+      const request = { givenName: 'John' };
+      const error = new Error('Database error');
+      error.stack = 'Error stack trace';
+
+      userService.updateUserProfile.mockRejectedValue(error);
+
+      await expect(useCase.execute(userId, request)).rejects.toThrow(error);
+      expect(logger.error).toHaveBeenCalledWith(
+        'Error in PatchMeUseCase',
+        expect.objectContaining({
+          userId,
+          error: 'Database error',
+          stack: 'Error stack trace'
+        })
+      );
+    });
+
+    it('should handle audit event creation failure gracefully', async () => {
+      const userId = TestUtils.generateUuid();
+      const request = { givenName: 'John' };
+      const response = {
+        meta: {
+          changed: true,
+          updatedAt: new Date().toISOString()
+        }
+      };
+
+      (UserProfileRules.validateProfileUpdate as jest.Mock).mockImplementation(() => {});
+      userService.updateUserProfile.mockResolvedValue(response as any);
+      auditService.userProfileUpdated.mockRejectedValue(new Error('Audit error'));
+
+      const result = await useCase.execute(userId, request);
+
+      expect(result).toBe(response);
+      expect(logger.warn).toHaveBeenCalledWith(
+        'Failed to create audit event for profile update',
+        expect.objectContaining({
+          userId,
+          error: 'Audit error'
+        })
+      );
+    });
   });
 });
 
