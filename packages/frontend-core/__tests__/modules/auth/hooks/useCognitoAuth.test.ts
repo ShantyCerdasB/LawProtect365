@@ -4,7 +4,7 @@
  * @jest-environment jsdom
  */
 
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react-hooks';
 import { useCognitoAuth } from '../../../../src/modules/auth/hooks/useCognitoAuth';
 import { exchangeCodeForTokens, generateCognitoAuthUrl } from '../../../../src/modules/auth/api/cognitoApi';
 import type { CognitoConfig } from '../../../../src/modules/auth/types';
@@ -54,15 +54,14 @@ describe('useCognitoAuth', () => {
     });
 
     it('should use window.location.href when deepLinkPort is not provided and window exists', () => {
-      const originalWindow = global.window;
-      const mockLocation = {
-        href: '',
-      };
-      Object.defineProperty(global, 'window', {
+      // Mock window.location.href
+      const originalHref = window.location.href;
+      Object.defineProperty(window, 'location', {
         value: {
-          location: mockLocation,
+          href: '',
         },
         writable: true,
+        configurable: true,
       });
 
       const { result } = renderHook(() =>
@@ -76,9 +75,14 @@ describe('useCognitoAuth', () => {
       });
 
       expect(generateCognitoAuthUrl).toHaveBeenCalledWith(mockConfig, 'google', undefined);
-      expect(mockLocation.href).toBe('https://test-auth-url.com');
+      expect(window.location.href).toBe('https://test-auth-url.com');
 
-      global.window = originalWindow;
+      // Restore
+      Object.defineProperty(window, 'location', {
+        value: { href: originalHref },
+        writable: true,
+        configurable: true,
+      });
     });
 
     it('should handle all OAuth providers', () => {
