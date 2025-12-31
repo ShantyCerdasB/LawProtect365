@@ -22,7 +22,6 @@ describe('PdfSignatureManipulator', () => {
 
   describe('embedSignature', () => {
     it('should embed signature into valid PDF', async () => {
-      jest.setTimeout(30000);
       const pdfContent = await createTestPdf();
       const request = {
         pdfContent,
@@ -36,7 +35,7 @@ describe('PdfSignatureManipulator', () => {
 
       expect(result).toBeInstanceOf(Buffer);
       expect(result.length).toBeGreaterThan(pdfContent.length);
-    });
+    }, 30000);
 
     it('should throw error for PDF with no pages', async () => {
       const emptyPdf = Buffer.from('%PDF-1.7\n%%EOF');

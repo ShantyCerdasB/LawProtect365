@@ -377,6 +377,29 @@ describe('SignatureEnvelope', () => {
 
       expect(() => completedEnvelope.cancel(createdBy)).toThrow(envelopeCompleted());
     });
+
+    it('should throw error when cancelling expired envelope', () => {
+      const expiredEnvelope = createBasicEnvelope(EnvelopeStatus.expired());
+      const createdBy = expiredEnvelope.getCreatedBy();
+      expect(() => expiredEnvelope.cancel(createdBy)).toThrow();
+    });
+
+    it('should throw error when cancelling declined envelope', () => {
+      const declinedEnvelope = createBasicEnvelope(EnvelopeStatus.declined());
+      const createdBy = declinedEnvelope.getCreatedBy();
+      expect(() => declinedEnvelope.cancel(createdBy)).toThrow();
+    });
+
+    it('should throw error when cancelling already cancelled envelope', () => {
+      const cancelledEnvelope = createBasicEnvelope(EnvelopeStatus.cancelled());
+      const createdBy = cancelledEnvelope.getCreatedBy();
+      expect(() => cancelledEnvelope.cancel(createdBy)).toThrow();
+    });
+
+    it('should throw error when non-creator tries to cancel', () => {
+      const otherUserId = TestUtils.generateUuid();
+      expect(() => envelope.cancel(otherUserId)).toThrow();
+    });
   });
 
   describe('Complete Envelope', () => {
@@ -906,6 +929,24 @@ describe('SignatureEnvelope', () => {
       expect(correctedType).toBe('INVITEES_FIRST');
     });
 
+    it('should return null when no correction needed', () => {
+      const createdBy = envelope.getCreatedBy();
+      const signersData = [
+        {
+          envelopeId: envelope.getId(),
+          userId: createdBy,
+          email: 'creator@example.com',
+          fullName: 'Creator',
+          isExternal: false,
+          order: 1,
+          participantRole: 'SIGNER' as const
+        }
+      ];
+
+      const correctedType = envelope.validateSigningOrderConsistency(signersData);
+      expect(correctedType).toBeNull();
+    });
+
     it('should update signing order', () => {
       const newSigningOrder = SigningOrder.inviteesFirst();
       envelope.updateSigningOrder(newSigningOrder);
@@ -1051,6 +1092,246 @@ describe('SignatureEnvelope', () => {
       ]);
 
       expect(envelopeWithAllSigned.calculateProgress()).toBe(100);
+    });
+  });
+
+  describe('fromPersistence', () => {
+    it('should create envelope from persistence data with signers', () => {
+      const data = {
+        id: TestUtils.generateUuid(),
+        createdBy: TestUtils.generateUuid(),
+        title: 'Test Envelope',
+        description: 'Test Description',
+        status: 'DRAFT',
+        signers: [
+          {
+            id: TestUtils.generateUuid(),
+            envelopeId: TestUtils.generateUuid(),
+            userId: TestUtils.generateUuid(),
+            email: 'test@example.com',
+            status: 'PENDING'
+          }
+        ],
+        signingOrderType: 'OWNER_FIRST',
+        originType: 'USER_UPLOAD',
+        sourceKey: 'source-key',
+        metaKey: 'meta-key',
+        flattenedKey: 'flattened-key',
+        signedKey: null,
+        sourceSha256: TestUtils.generateSha256Hash('source'),
+        flattenedSha256: TestUtils.generateSha256Hash('flattened'),
+        signedSha256: null,
+        sentAt: null,
+        completedAt: null,
+        cancelledAt: null,
+        declinedAt: null,
+        declinedBySignerId: null,
+        declinedReason: null,
+        expiresAt: null,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      const envelope = SignatureEnvelope.fromPersistence(data);
+      expect(envelope).toBeDefined();
+      expect(envelope.getSigners()).toHaveLength(1);
+    });
+
+    it('should create envelope from persistence data without signers', () => {
+      const data = {
+        id: TestUtils.generateUuid(),
+        createdBy: TestUtils.generateUuid(),
+        title: 'Test Envelope',
+        description: 'Test Description',
+        status: 'DRAFT',
+        signers: null,
+        signingOrderType: 'OWNER_FIRST',
+        originType: 'USER_UPLOAD',
+        sourceKey: 'source-key',
+        metaKey: 'meta-key',
+        flattenedKey: 'flattened-key',
+        signedKey: null,
+        sourceSha256: TestUtils.generateSha256Hash('source'),
+        flattenedSha256: TestUtils.generateSha256Hash('flattened'),
+        signedSha256: null,
+        sentAt: null,
+        completedAt: null,
+        cancelledAt: null,
+        declinedAt: null,
+        declinedBySignerId: null,
+        declinedReason: null,
+        expiresAt: null,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      const envelope = SignatureEnvelope.fromPersistence(data);
+      expect(envelope).toBeDefined();
+      expect(envelope.getSigners()).toHaveLength(0);
+    });
+  });
+
+  describe('validateSigningOrder', () => {
+    it('should validate signing order', () => {
+      const signerId = SignerId.fromString(TestUtils.generateUuid());
+      const userId = TestUtils.generateUuid();
+      const mockSigner = createMockSigner(signerId.getValue(), 'test@example.com', SignerStatus.PENDING, userId);
+      mockSigner.getId = jest.fn().mockReturnValue({
+        getValue: () => signerId.getValue(),
+        equals: (other: SignerId) => other.getValue() === signerId.getValue()
+      });
+      const allSigners = [mockSigner];
+
+      expect(() => {
+        envelope.validateSigningOrder(signerId, userId, allSigners);
+      }).not.toThrow();
+    });
+  });
+
+  describe('reorderSignersForSigningOrder', () => {
+    it('should reorder signers for OWNER_FIRST with creator', () => {
+      const createdBy = envelope.getCreatedBy();
+      const creatorSigner = createMockSigner('creator-1', 'creator@example.com', SignerStatus.PENDING, createdBy, false);
+      const externalSigner1 = createMockSigner('external-1', 'external1@example.com', SignerStatus.PENDING, undefined, true);
+      const externalSigner2 = createMockSigner('external-2', 'external2@example.com', SignerStatus.PENDING, undefined, true);
+      
+      creatorSigner.updateOrder = jest.fn();
+      externalSigner1.updateOrder = jest.fn();
+      externalSigner2.updateOrder = jest.fn();
+
+      const reordered = envelope.reorderSignersForSigningOrder('OWNER_FIRST', [
+        creatorSigner,
+        externalSigner1,
+        externalSigner2
+      ]);
+
+      expect(creatorSigner.updateOrder).toHaveBeenCalledWith(1);
+      expect(externalSigner1.updateOrder).toHaveBeenCalledWith(2);
+      expect(externalSigner2.updateOrder).toHaveBeenCalledWith(3);
+    });
+
+    it('should reorder signers for OWNER_FIRST without creator', () => {
+      const externalSigner1 = createMockSigner('external-1', 'external1@example.com', SignerStatus.PENDING, undefined, true);
+      const externalSigner2 = createMockSigner('external-2', 'external2@example.com', SignerStatus.PENDING, undefined, true);
+      
+      externalSigner1.updateOrder = jest.fn();
+      externalSigner2.updateOrder = jest.fn();
+
+      const reordered = envelope.reorderSignersForSigningOrder('OWNER_FIRST', [
+        externalSigner1,
+        externalSigner2
+      ]);
+
+      expect(externalSigner1.updateOrder).toHaveBeenCalledWith(1);
+      expect(externalSigner2.updateOrder).toHaveBeenCalledWith(2);
+    });
+
+    it('should reorder signers for INVITEES_FIRST with creator', () => {
+      const createdBy = envelope.getCreatedBy();
+      const creatorSigner = createMockSigner('creator-1', 'creator@example.com', SignerStatus.PENDING, createdBy, false);
+      const externalSigner1 = createMockSigner('external-1', 'external1@example.com', SignerStatus.PENDING, undefined, true);
+      const externalSigner2 = createMockSigner('external-2', 'external2@example.com', SignerStatus.PENDING, undefined, true);
+      
+      creatorSigner.updateOrder = jest.fn();
+      externalSigner1.updateOrder = jest.fn();
+      externalSigner2.updateOrder = jest.fn();
+
+      const reordered = envelope.reorderSignersForSigningOrder('INVITEES_FIRST', [
+        creatorSigner,
+        externalSigner1,
+        externalSigner2
+      ]);
+
+      expect(externalSigner1.updateOrder).toHaveBeenCalledWith(1);
+      expect(externalSigner2.updateOrder).toHaveBeenCalledWith(2);
+      expect(creatorSigner.updateOrder).toHaveBeenCalledWith(3);
+    });
+  });
+
+  describe('hasExternalSigners', () => {
+    it('should return true when envelope has external signers', () => {
+      const externalSigner = createMockSigner('external-1', 'external@example.com', SignerStatus.PENDING, undefined, true);
+      const envelopeWithExternal = createBasicEnvelope(EnvelopeStatus.draft(), [externalSigner]);
+
+      expect(envelopeWithExternal.hasExternalSigners()).toBe(true);
+    });
+
+    it('should return false when envelope has no external signers', () => {
+      const internalSigner = createMockSigner('internal-1', 'internal@example.com', SignerStatus.PENDING, TestUtils.generateUuid(), false);
+      const envelopeWithoutExternal = createBasicEnvelope(EnvelopeStatus.draft(), [internalSigner]);
+
+      expect(envelopeWithoutExternal.hasExternalSigners()).toBe(false);
+    });
+  });
+
+  describe('validateExternalSigners', () => {
+    it('should pass when all external signers have email and full name', () => {
+      const externalSigner = createMockSigner('external-1', 'external@example.com', SignerStatus.PENDING, undefined, true);
+      externalSigner.getEmail = jest.fn().mockReturnValue({ getValue: () => 'external@example.com' });
+      externalSigner.getFullName = jest.fn().mockReturnValue('External User');
+      
+      const envelopeWithExternal = createBasicEnvelope(EnvelopeStatus.draft(), [externalSigner]);
+
+      expect(() => {
+        envelopeWithExternal.validateExternalSigners();
+      }).not.toThrow();
+    });
+
+    it('should throw when external signer is missing email', () => {
+      const externalSigner = createMockSigner('external-1', 'external@example.com', SignerStatus.PENDING, undefined, true);
+      externalSigner.getEmail = jest.fn().mockReturnValue(null);
+      externalSigner.getFullName = jest.fn().mockReturnValue('External User');
+      
+      const envelopeWithExternal = createBasicEnvelope(EnvelopeStatus.draft(), [externalSigner]);
+
+      expect(() => {
+        envelopeWithExternal.validateExternalSigners();
+      }).toThrow();
+    });
+
+    it('should throw when external signer is missing full name', () => {
+      const externalSigner = createMockSigner('external-1', 'external@example.com', SignerStatus.PENDING, undefined, true);
+      externalSigner.getEmail = jest.fn().mockReturnValue({ getValue: () => 'external@example.com' });
+      externalSigner.getFullName = jest.fn().mockReturnValue(null);
+      
+      const envelopeWithExternal = createBasicEnvelope(EnvelopeStatus.draft(), [externalSigner]);
+
+      expect(() => {
+        envelopeWithExternal.validateExternalSigners();
+      }).toThrow();
+    });
+  });
+
+  describe('getProgressInfo', () => {
+    it('should return correct progress statistics', () => {
+      const signedSigner = createMockSigner('signed-1', 'signed@example.com', SignerStatus.SIGNED);
+      const pendingSigner = createMockSigner('pending-1', 'pending@example.com', SignerStatus.PENDING);
+      const declinedSigner = createMockSigner('declined-1', 'declined@example.com', SignerStatus.DECLINED);
+      
+      const envelopeWithMixedStatus = createBasicEnvelope(EnvelopeStatus.readyForSignature(), [
+        signedSigner,
+        pendingSigner,
+        declinedSigner
+      ]);
+
+      const progress = envelopeWithMixedStatus.getProgressInfo();
+
+      expect(progress.total).toBe(3);
+      expect(progress.signed).toBe(1);
+      expect(progress.pending).toBe(1);
+      expect(progress.declined).toBe(1);
+      expect(progress.percentage).toBe(33);
+    });
+
+    it('should return 0 percentage when no signers', () => {
+      const emptyEnvelope = createBasicEnvelope(EnvelopeStatus.draft(), []);
+      const progress = emptyEnvelope.getProgressInfo();
+
+      expect(progress.total).toBe(0);
+      expect(progress.signed).toBe(0);
+      expect(progress.pending).toBe(0);
+      expect(progress.declined).toBe(0);
+      expect(progress.percentage).toBe(0);
     });
   });
 

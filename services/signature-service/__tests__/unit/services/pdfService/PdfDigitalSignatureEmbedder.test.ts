@@ -22,7 +22,6 @@ describe('PdfDigitalSignatureEmbedder', () => {
 
   describe('embedSignature', () => {
     it('should embed signature successfully', async () => {
-      jest.setTimeout(30000);
       const pdfContent = await createTestPdf();
       const request = {
         pdfContent,
@@ -37,7 +36,7 @@ describe('PdfDigitalSignatureEmbedder', () => {
       expect(result.signedPdfContent).toBeInstanceOf(Buffer);
       expect(result.signatureFieldName).toBe('Signature1');
       expect(result.signedPdfContent.length).toBeGreaterThan(pdfContent.length);
-    });
+    }, 30000);
 
     it('should throw error when certificate chain is empty', async () => {
       const pdfContent = await createTestPdf();

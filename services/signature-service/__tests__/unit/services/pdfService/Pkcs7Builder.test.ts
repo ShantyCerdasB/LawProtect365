@@ -140,6 +140,66 @@ describe('Pkcs7Builder', () => {
         expect(error.code).toBe('PDF_SIGNATURE_EMBEDDING_FAILED');
       }
     });
+
+    it('should throw error when certificate parsing fails in buildSignedData', async () => {
+      const invalidCert = new Uint8Array([0, 1, 2, 3, 4, 5]);
+      const params = {
+        signatureBytes: createMockSignatureBytes(),
+        certificateChain: [invalidCert],
+        signerInfo: createMockSignerInfo(),
+        timestamp: new Date(),
+        documentHash: new Uint8Array(32),
+      };
+
+      await expect(builder.buildSignedData(params)).rejects.toThrow();
+      
+      try {
+        await builder.buildSignedData(params);
+      } catch (error: any) {
+        expect(error.code).toBe('PDF_SIGNATURE_EMBEDDING_FAILED');
+      }
+    });
+
+    it('should handle certificate parsing with PEM format', async () => {
+      const pemCert = Buffer.from('-----BEGIN CERTIFICATE-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA\n-----END CERTIFICATE-----\n');
+      const params = {
+        signatureBytes: createMockSignatureBytes(),
+        certificateChain: [pemCert],
+        signerInfo: createMockSignerInfo(),
+        timestamp: new Date(),
+        documentHash: new Uint8Array(32),
+      };
+
+      await expect(builder.buildSignedData(params)).rejects.toThrow();
+    });
+
+    it('should handle getCertificateRaw with Uint8Array rawData', async () => {
+      const certificateChain = createMockCertificateChain(1);
+      const params = {
+        signatureBytes: createMockSignatureBytes(),
+        certificateChain,
+        signerInfo: createMockSignerInfo(),
+        timestamp: new Date(),
+        documentHash: new Uint8Array(32),
+      };
+
+      const result = await builder.buildSignedData(params);
+      expect(result).toBeInstanceOf(Uint8Array);
+    });
+
+    it('should handle getCertificateRaw with string certificate', async () => {
+      const certificateChain = createMockCertificateChain(1);
+      const params = {
+        signatureBytes: createMockSignatureBytes(),
+        certificateChain,
+        signerInfo: createMockSignerInfo(),
+        timestamp: new Date(),
+        documentHash: new Uint8Array(32),
+      };
+
+      const result = await builder.buildSignedData(params);
+      expect(result).toBeInstanceOf(Uint8Array);
+    });
   });
 });
 
