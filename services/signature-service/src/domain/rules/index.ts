@@ -5,6 +5,7 @@
  * throughout the application.
  */
 
+export * from './ByteRangeValidationRule';
 export * from './s3/S3StorageRules';
 export * from './InvitationTokenValidationRule';
 export * from './SigningOrderValidationRule';

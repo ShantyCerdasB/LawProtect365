@@ -16,23 +16,19 @@ import { EnvelopeAccessService } from '../../../services/envelopeAccess/Envelope
 import { EnvelopeStateService } from '../../../services/envelopeStates/EnvelopeStateService';
 import { EnvelopeCrudService } from '../../../services/envelopeCrud/EnvelopeCrudService';
 import { EnvelopeDownloadService } from '../../../services/envelopeDownload/EnvelopeDownloadService';
+import { PdfDigitalSignatureEmbedder } from '../../../services/pdfService';
 import { RepositoryFactory } from '../repositories';
 import { InfrastructureFactory } from '../infrastructure';
 import { IntegrationEventFactory } from '../events/IntegrationEventFactory';
-import { OutboxEventPublisher } from '@lawprotect/shared-ts';
+import { OutboxEventPublisher, getRequired, getNumber, BadRequestError, ErrorCodes } from '@lawprotect/shared-ts';
+import { makeDocumentServicePort } from '../../../app/adapters/documents/makeDocumentServicePort';
+import type { DocumentServicePort } from '../../../app/ports/documents/DocumentServicePort';
 
 /**
  * Factory responsible for creating all domain and application service instances.
  * Follows the Single Responsibility Principle by focusing exclusively on service creation.
  */
 export class ServiceFactory {
-  /**
-   * Creates SignatureEnvelopeService with required dependencies
-   * @param repositories - Object containing all repository instances
-   * @param infrastructure - Object containing all infrastructure services
-   * @returns Configured SignatureEnvelopeService instance
-   */
-
   /**
    * Creates EnvelopeSignerService with required dependencies
    * @param repositories - Object containing all repository instances
@@ -143,6 +139,12 @@ export class ServiceFactory {
     );
   }
 
+  /**
+   * Creates EnvelopeStateService with required dependencies
+   * @param repositories - Object containing all repository instances
+   * @param infrastructure - Object containing all infrastructure services
+   * @returns Configured EnvelopeStateService instance
+   */
   static createEnvelopeStateService(
     repositories: ReturnType<typeof RepositoryFactory.createAll>,
     infrastructure: ReturnType<typeof InfrastructureFactory.createAll>
@@ -153,6 +155,12 @@ export class ServiceFactory {
     );
   }
 
+  /**
+   * Creates EnvelopeCrudService with required dependencies
+   * @param repositories - Object containing all repository instances
+   * @param infrastructure - Object containing all infrastructure services
+   * @returns Configured EnvelopeCrudService instance
+   */
   static createEnvelopeCrudService(
     repositories: ReturnType<typeof RepositoryFactory.createAll>,
     infrastructure: ReturnType<typeof InfrastructureFactory.createAll>
@@ -164,6 +172,12 @@ export class ServiceFactory {
     );
   }
 
+  /**
+   * Creates EnvelopeDownloadService with required dependencies
+   * @param repositories - Object containing all repository instances
+   * @param infrastructure - Object containing all infrastructure services
+   * @returns Configured EnvelopeDownloadService instance
+   */
   static createEnvelopeDownloadService(
     repositories: ReturnType<typeof RepositoryFactory.createAll>,
     infrastructure: ReturnType<typeof InfrastructureFactory.createAll>
@@ -172,6 +186,43 @@ export class ServiceFactory {
       repositories.signatureEnvelopeRepository,
       infrastructure.s3Service
     );
+  }
+
+  /**
+   * Creates PdfDigitalSignatureEmbedder service
+   * @returns Configured PdfDigitalSignatureEmbedder instance
+   */
+  static createPdfDigitalSignatureEmbedder(): PdfDigitalSignatureEmbedder {
+    return new PdfDigitalSignatureEmbedder();
+  }
+
+  /**
+   * Creates DocumentServicePort for Document Service communication
+   * @returns Configured DocumentServicePort instance
+   * @throws BadRequestError when DOCUMENT_SERVICE_URL is not configured
+   * @description
+   * Creates a DocumentServicePort instance using environment variables.
+   * DOCUMENT_SERVICE_URL is required, DOCUMENT_SERVICE_TIMEOUT is optional (default: 30000ms).
+   */
+  static createDocumentServicePort(): DocumentServicePort {
+    try {
+      const documentServiceUrl = getRequired('DOCUMENT_SERVICE_URL');
+      const documentServiceTimeout = getNumber('DOCUMENT_SERVICE_TIMEOUT', 30000);
+
+      return makeDocumentServicePort({
+        documentServiceUrl,
+        documentServiceTimeout,
+      });
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('Missing required env')) {
+        throw new BadRequestError(
+          'DOCUMENT_SERVICE_URL environment variable is required',
+          ErrorCodes.COMMON_BAD_REQUEST,
+          { missingVariable: 'DOCUMENT_SERVICE_URL' }
+        );
+      }
+      throw error;
+    }
   }
 
   /**
@@ -195,6 +246,9 @@ export class ServiceFactory {
       envelopeStateService: this.createEnvelopeStateService(repositories, infrastructure),
       envelopeCrudService: this.createEnvelopeCrudService(repositories, infrastructure),
       envelopeDownloadService: this.createEnvelopeDownloadService(repositories, infrastructure),
+      pdfDigitalSignatureEmbedder: this.createPdfDigitalSignatureEmbedder(),
+      documentServicePort: this.createDocumentServicePort(),
+      userPersonalInfoRepository: repositories.userPersonalInfoRepository,
     };
   }
 }

@@ -8,3 +8,4 @@ export * from "./withControllerLogging.js";
 export * from "./withObservability.js";
 export * from "./withRequestContext.js";
 export * from "./headers.js";
+export * from "./clientConfig.js";

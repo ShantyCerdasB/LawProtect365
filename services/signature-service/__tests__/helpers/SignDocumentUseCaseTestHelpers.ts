@@ -11,6 +11,10 @@ import { signatureEnvelopeEntity } from './builders/signatureEnvelope';
 import { Email } from '@lawprotect/shared-ts';
 import { EnvelopeSigner } from '../../src/domain/entities/EnvelopeSigner';
 import { SignDocumentUseCaseInput } from '../../src/domain/types/usecase/orchestrator/SignDocumentUseCase';
+import { EnvelopeSignerBuilder } from './builders/EnvelopeSignerBuilder';
+import { SignerStatus } from '@prisma/client';
+import { SignatureEnvelopeBuilder } from './builders/SignatureEnvelopeBuilder';
+import { EnvelopeStatus } from '../../src/domain/value-objects/EnvelopeStatus';
 
 /**
  * Interface for test data overrides
@@ -88,16 +92,22 @@ export function createSignDocumentTestData(overrides: SignDocumentTestDataOverri
     ...overrides.securityContext
   };
 
-  const testEnvelope = signatureEnvelopeEntity({ 
-    id: envelopeId.getValue(), 
-    createdBy: userId 
-  });
+  const testSigner = EnvelopeSignerBuilder.create()
+    .withId(signerId)
+    .withEnvelopeId(envelopeId)
+    .withUserId(userId)
+    .withEmail('signer@example.com')
+    .withFullName('John Signer')
+    .withIsExternal(false)
+    .withStatus(SignerStatus.PENDING)
+    .build();
   
-  const testSigner = { 
-    getId: () => signerId, 
-    getEmail: () => Email.fromString('signer@example.com'),
-    getFullName: () => 'John Signer'
-  } as EnvelopeSigner;
+  const testEnvelope = SignatureEnvelopeBuilder.create()
+    .withId(envelopeId)
+    .withCreatedBy(userId)
+    .withStatus(EnvelopeStatus.readyForSignature())
+    .withSigners([testSigner])
+    .build();
   
   const testConsent = { getId: () => consentId };
   
@@ -208,6 +218,8 @@ export function setupSignDocumentMocks(
     handleFlattenedDocument: any;
     buildSigningResponse: any;
     uuid: any;
+    pdfEmbedder?: any;
+    s3Service?: any;
   },
   testData: ReturnType<typeof createSignDocumentTestData>,
   overrides: SignDocumentMockOverrides = {}
@@ -224,21 +236,32 @@ export function setupSignDocumentMocks(
     mocks.signatureEnvelopeService.validateUserAccess.mockResolvedValue(testData.testEnvelope);
   }
   
-  mocks.signatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue(
-    overrides.getEnvelopeWithSigners || {
-      ...testData.testEnvelope,
-      getSigners: jest.fn().mockReturnValue([testData.testSigner]),
-      isCompleted: jest.fn().mockReturnValue(false)
-    }
-  );
+  if (overrides.getEnvelopeWithSigners !== undefined) {
+    mocks.signatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue(overrides.getEnvelopeWithSigners);
+  } else {
+    mocks.signatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValue(testData.testEnvelope);
+  }
   
-  mocks.consentService.createConsent.mockResolvedValue(
-    overrides.createConsent || testData.testConsent
-  );
+  if (overrides.createConsent instanceof Error) {
+    mocks.consentService.createConsent.mockRejectedValue(overrides.createConsent);
+  } else {
+    mocks.consentService.createConsent.mockResolvedValue(
+      overrides.createConsent || testData.testConsent
+    );
+  }
   
-  mocks.kmsService.sign.mockResolvedValue(
-    overrides.sign || testData.kmsResult
-  );
+  if (overrides.sign instanceof Error) {
+    mocks.kmsService.sign.mockRejectedValue(overrides.sign);
+  } else {
+    mocks.kmsService.sign.mockResolvedValue(
+      overrides.sign || testData.kmsResult
+    );
+  }
+  
+  if (mocks.kmsService.getCertificateChain) {
+    mocks.kmsService.getCertificateChain.mockResolvedValue([]);
+  }
+  
   
   mocks.envelopeSignerService.markSignerAsSigned.mockResolvedValue(
     overrides.markSignerAsSigned || undefined
@@ -265,9 +288,13 @@ export function setupSignDocumentMocks(
     overrides.handleSignedDocumentFromFrontend || testData.preparedDocument
   );
   
-  mocks.handleFlattenedDocument.mockResolvedValue(
-    overrides.handleFlattenedDocument || testData.preparedDocument
-  );
+  if (overrides.handleFlattenedDocument instanceof Error) {
+    mocks.handleFlattenedDocument.mockRejectedValue(overrides.handleFlattenedDocument);
+  } else {
+    mocks.handleFlattenedDocument.mockResolvedValue(
+      overrides.handleFlattenedDocument || testData.preparedDocument
+    );
+  }
   
   mocks.buildSigningResponse.mockReturnValue(
     overrides.buildSigningResponse || testData.expectedResult
@@ -276,6 +303,24 @@ export function setupSignDocumentMocks(
   mocks.uuid.mockReturnValue(
     overrides.uuid || 'uuid-123'
   );
+
+  // S3Service mocks
+  if (mocks.s3Service) {
+    mocks.s3Service.storeSignedDocument.mockResolvedValue({
+      documentKey: testData.preparedDocument.signedDocumentKey,
+      s3Location: `s3://bucket/${testData.preparedDocument.signedDocumentKey}`,
+      contentType: 'application/pdf',
+      size: 1024
+    });
+  }
+
+  // PdfEmbedder mocks
+  if (mocks.pdfEmbedder) {
+    mocks.pdfEmbedder.embedSignature.mockResolvedValue({
+      signedPdfContent: Buffer.from('mock-pdf-content'),
+      signatureFieldName: 'Signature1'
+    });
+  }
 }
 
 /**
@@ -297,6 +342,8 @@ export function createMockConfiguration(mocks: {
   handleFlattenedDocument: any;
   buildSigningResponse: any;
   uuid: any;
+  pdfEmbedder?: any;
+  s3Service?: any;
 }) {
   return {
     entityFactory: mocks.entityFactory,
@@ -309,7 +356,9 @@ export function createMockConfiguration(mocks: {
     handleSignedDocumentFromFrontend: mocks.handleSignedDocumentFromFrontend,
     handleFlattenedDocument: mocks.handleFlattenedDocument,
     buildSigningResponse: mocks.buildSigningResponse,
-    uuid: mocks.uuid
+    uuid: mocks.uuid,
+    pdfEmbedder: mocks.pdfEmbedder,
+    s3Service: mocks.s3Service
   };
 }
 
@@ -393,14 +442,16 @@ export function createErrorScenarioData(scenario: 'envelope' | 'signer' | 'conse
       };
     
     case 'signer':
+      const envelopeWithoutSigners = SignatureEnvelopeBuilder.create()
+        .withId(baseData.envelopeId)
+        .withCreatedBy(baseData.userId)
+        .withStatus(EnvelopeStatus.readyForSignature())
+        .withSigners([])
+        .build();
       return {
         ...baseData,
         mockOverrides: {
-          getEnvelopeWithSigners: {
-            ...baseData.testEnvelope,
-            getSigners: jest.fn().mockReturnValue([]), // No signers
-            isCompleted: jest.fn().mockReturnValue(false)
-          }
+          getEnvelopeWithSigners: envelopeWithoutSigners
         }
       };
     
@@ -408,7 +459,7 @@ export function createErrorScenarioData(scenario: 'envelope' | 'signer' | 'conse
       return {
         ...baseData,
         mockOverrides: {
-          createConsent: Promise.reject(new Error('Failed to create consent'))
+          createConsent: new Error('Failed to create consent')
         }
       };
     
@@ -416,7 +467,7 @@ export function createErrorScenarioData(scenario: 'envelope' | 'signer' | 'conse
       return {
         ...baseData,
         mockOverrides: {
-          handleFlattenedDocument: Promise.reject(new Error('Failed to prepare document'))
+          handleFlattenedDocument: new Error('Failed to prepare document')
         }
       };
     
@@ -424,7 +475,7 @@ export function createErrorScenarioData(scenario: 'envelope' | 'signer' | 'conse
       return {
         ...baseData,
         mockOverrides: {
-          sign: Promise.reject(new Error('KMS signing failed'))
+          sign: new Error('KMS signing failed')
         }
       };
     
@@ -460,13 +511,25 @@ export function createEdgeCaseData(edgeCase: 'missing-consent-fields' | 'missing
       };
     
     case 'missing-signer-fields':
+      const signerWithoutFields = EnvelopeSignerBuilder.create()
+        .withId(baseData.signerId)
+        .withEnvelopeId(baseData.envelopeId)
+        .withUserId(baseData.userId)
+        .withEmail(undefined)
+        .withFullName(undefined)
+        .withIsExternal(false)
+        .withStatus(SignerStatus.PENDING)
+        .build();
+      const envelopeWithoutSignerFields = SignatureEnvelopeBuilder.create()
+        .withId(baseData.envelopeId)
+        .withCreatedBy(baseData.userId)
+        .withStatus(EnvelopeStatus.readyForSignature())
+        .withSigners([signerWithoutFields])
+        .build();
       return {
         ...baseData,
-        testSigner: {
-          getId: () => baseData.signerId,
-          getEmail: () => undefined, // Missing email
-          getFullName: () => undefined // Missing full name
-        } as EnvelopeSigner,
+        testSigner: signerWithoutFields,
+        testEnvelope: envelopeWithoutSignerFields,
         inputOverrides: {}
       };
     

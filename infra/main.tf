@@ -494,9 +494,15 @@ module "sign_service" {
   jwt_audiences         = [module.auth_service.cognito_user_pool_client_id]
 
   # FinOps
-  sign_budget_amount    = var.generic_service_budget_amount
+  sign_budget_amount    = var.sign_budget_amount
   threshold_percentages = var.threshold_percentages
   budget_notify_emails  = var.budget_notify_emails
+
+  # Document Service integration
+  document_service_url = var.document_service_url
+
+  # Certificate configuration
+  certificate_validity_days = var.certificate_validity_days
 
   # CI/CD
   artifacts_bucket      = module.code_bucket.bucket_id

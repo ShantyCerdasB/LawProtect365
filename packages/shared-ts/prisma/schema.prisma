@@ -130,6 +130,7 @@ model UserPersonalInfo {
   phone     String?
   locale    String?
   timeZone  String?
+  dateOfBirth DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

@@ -423,3 +423,20 @@ variable "enable_push_notifications" {
   type        = bool
   default     = false
 }
+
+# Signature Service Configuration
+variable "sign_budget_amount" {
+  description = "Monthly budget (USD) for signature-service"
+  type        = number
+}
+
+variable "certificate_validity_days" {
+  description = "Certificate validity period in days (default: 365, can be set to 730 for 2 years, etc.)"
+  type        = number
+  default     = 365
+}
+
+variable "document_service_url" {
+  description = "Base URL of the Document Service API (required for final signed PDF storage)"
+  type        = string
+}

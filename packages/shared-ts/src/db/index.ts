@@ -6,3 +6,4 @@ export * from "./prismaPage.js";
 export * from "./ports.js";
 export * from "./repositoryBase.js";
 export * from "./repositoryFactory.js";
+export * from "./repositories/index.js";

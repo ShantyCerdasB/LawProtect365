@@ -14,6 +14,7 @@ export class UserPersonalInfo {
     private readonly phone: string | null,
     private readonly locale: string | null,
     private readonly timeZone: string | null,
+    private readonly dateOfBirth: Date | null,
     private readonly createdAt: Date,
     private readonly updatedAt: Date
   ) {}
@@ -30,6 +31,7 @@ export class UserPersonalInfo {
       data.phone,
       data.locale,
       data.timeZone,
+      data.dateOfBirth ? new Date(data.dateOfBirth) : null,
       new Date(data.createdAt),
       new Date(data.updatedAt)
     );
@@ -46,6 +48,7 @@ export class UserPersonalInfo {
       phone: this.phone,
       locale: this.locale,
       timeZone: this.timeZone,
+      dateOfBirth: this.dateOfBirth,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt
     };
@@ -71,6 +74,10 @@ export class UserPersonalInfo {
     return this.timeZone;
   }
 
+  getDateOfBirth(): Date | null {
+    return this.dateOfBirth;
+  }
+
   getCreatedAt(): Date {
     return this.createdAt;
   }
@@ -88,6 +95,7 @@ export class UserPersonalInfo {
     phone?: string | null;
     locale?: string | null;
     timeZone?: string | null;
+    dateOfBirth?: Date | null;
   }): UserPersonalInfo {
     return new UserPersonalInfo(
       this.id,
@@ -95,6 +103,7 @@ export class UserPersonalInfo {
       updates.phone !== undefined ? updates.phone : this.phone,
       updates.locale !== undefined ? updates.locale : this.locale,
       updates.timeZone !== undefined ? updates.timeZone : this.timeZone,
+      updates.dateOfBirth !== undefined ? updates.dateOfBirth : this.dateOfBirth,
       this.createdAt,
       new Date()
     );

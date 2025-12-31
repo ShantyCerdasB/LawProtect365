@@ -264,6 +264,9 @@ export const kmsSigningFailed = (details?: unknown) =>
 export const kmsValidationFailed = (details?: unknown) =>
   new UnprocessableEntityError("KMS validation failed", SignatureErrorCodes.KMS_VALIDATION_FAILED, details);
 
+export const certificateGenerationFailed = (details?: unknown) =>
+  new InternalError("Certificate generation failed", SignatureErrorCodes.CERTIFICATE_GENERATION_FAILED, details);
+
 // ============================================================================
 // CONSENT & AUTHENTICATION ERRORS
 // ============================================================================
@@ -329,6 +332,58 @@ export const consentUserAgentRequired = (details?: unknown) =>
   new BadRequestError("User agent is required for legal compliance", SignatureErrorCodes.CONSENT_USER_AGENT_REQUIRED, details);
 
 /**
+ * Creates a BadRequestError for missing date of birth (400).
+ */
+export const ageValidationRequired = (details?: unknown) =>
+  new BadRequestError("Date of birth is required for electronic signing", SignatureErrorCodes.AGE_VALIDATION_REQUIRED, details);
+
+/**
+ * Creates a ForbiddenError for age requirement not met (403).
+ */
+export const ageRequirementNotMet = (details?: unknown) =>
+  new ForbiddenError("Age requirement not met for electronic signing", SignatureErrorCodes.AGE_REQUIREMENT_NOT_MET, details);
+
+// ============================================================================
+// PDF ERRORS
+// ============================================================================
+
+/**
+ * Creates a BadRequestError for encrypted PDF (400).
+ */
+export const pdfEncrypted = (details?: unknown) =>
+  new BadRequestError("PDF is encrypted and cannot be signed", SignatureErrorCodes.PDF_ENCRYPTED, details);
+
+/**
+ * Creates a ConflictError for PDF already signed (409).
+ */
+export const pdfAlreadySigned = (details?: unknown) =>
+  new ConflictError("PDF already contains digital signatures", SignatureErrorCodes.PDF_ALREADY_SIGNED, details);
+
+/**
+ * Creates a BadRequestError for corrupted PDF (400).
+ */
+export const pdfCorrupted = (details?: unknown) =>
+  new BadRequestError("PDF is corrupted or invalid", SignatureErrorCodes.PDF_CORRUPTED, details);
+
+/**
+ * Creates a BadRequestError for invalid PDF structure (400).
+ */
+export const pdfInvalidStructure = (details?: unknown) =>
+  new BadRequestError("PDF has invalid structure", SignatureErrorCodes.PDF_INVALID_STRUCTURE, details);
+
+/**
+ * Creates an InternalError for signature embedding failure (500).
+ */
+export const pdfSignatureEmbeddingFailed = (details?: unknown) =>
+  new InternalError("Failed to embed digital signature in PDF", SignatureErrorCodes.PDF_SIGNATURE_EMBEDDING_FAILED, details);
+
+/**
+ * Creates a BadRequestError for invalid byte range (400).
+ */
+export const pdfByteRangeInvalid = (details?: unknown) =>
+  new BadRequestError("Invalid byte range for PDF signature", SignatureErrorCodes.PDF_BYTE_RANGE_INVALID, details);
+
+/**
  * Creates an UnauthorizedError for invalid invitation token (401).
  */
 export const invitationTokenInvalid = (details?: unknown) =>
@@ -385,6 +440,12 @@ export const documentS3Error = (details?: unknown) =>
  */
 export const documentS3NotFound = (details?: unknown) =>
   new BadRequestError("Document not found in S3", SignatureErrorCodes.DOCUMENT_S3_ERROR, details);
+
+/**
+ * Creates an InternalError for Document Service communication failures (500).
+ */
+export const documentServiceError = (details?: unknown) =>
+  new InternalError("Document Service communication failed", SignatureErrorCodes.DOCUMENT_SERVICE_ERROR, details);
 
 /**
  * Creates a BadRequestError for when an entity is invalid (400).

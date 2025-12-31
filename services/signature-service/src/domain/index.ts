@@ -11,6 +11,9 @@ export * from './entities';
 // Enums
 export * from './enums';
 
+// Constants
+export * from './constants';
+
 // Value Objects
 export * from './value-objects';
 
@@ -20,13 +23,6 @@ export * from './types/signer';
 export * from './types/invitation-token';
 export * from './types/consent';
 export * from './types/orchestrator';
-
-// Infrastructure types (explicit exports to avoid conflicts)
-
-// Note: Outbox types are exported from entities and enums, avoiding duplicate exports
-
-// Schemas (commented to avoid conflicts with types)
-// export * from './schemas';
 
 // Rules
 export * from './rules';

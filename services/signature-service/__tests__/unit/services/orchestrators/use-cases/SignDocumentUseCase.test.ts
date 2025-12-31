@@ -31,9 +31,9 @@ jest.mock('../../../../../src/infrastructure/factories/EntityFactory', () => ({
 
 // Mock the SigningFlowValidationRule
 jest.mock('../../../../../src/domain/rules/SigningFlowValidationRule', () => ({
-  SigningFlowValidationRule: jest.fn().mockImplementation(() => ({
+  SigningFlowValidationRule: {
     validateSigningFlow: jest.fn()
-  }))
+  }
 }));
 
 // Mock the orchestrator utilities
@@ -62,6 +62,8 @@ describe('SignDocumentUseCase', () => {
   let mockS3Service: any;
   let mockKmsService: any;
   let mockAuditEventService: any;
+  let mockPdfEmbedder: any;
+  let mockDocumentServicePort: any;
   let mockEntityFactory: any;
   let mockBuildSigningResponse: jest.Mock;
   let mockHandleSignedDocumentFromFrontend: jest.Mock;
@@ -80,6 +82,12 @@ describe('SignDocumentUseCase', () => {
     mockS3Service = createS3ServiceMock();
     mockKmsService = createKmsServiceMock();
     mockAuditEventService = createAuditEventServiceMock();
+    mockPdfEmbedder = {
+      embedSignature: jest.fn()
+    };
+    mockDocumentServicePort = {
+      storeFinalSignedPdf: jest.fn()
+    };
 
     // Get references to mocked functions
     mockEntityFactory = require('../../../../../src/infrastructure/factories/EntityFactory').EntityFactory;
@@ -100,14 +108,16 @@ describe('SignDocumentUseCase', () => {
       handleSignedDocumentFromFrontend: mockHandleSignedDocumentFromFrontend,
       handleFlattenedDocument: mockHandleFlattenedDocument,
       buildSigningResponse: mockBuildSigningResponse,
-      uuid: mockUuid
+      uuid: mockUuid,
+      pdfEmbedder: mockPdfEmbedder,
+      s3Service: mockS3Service
     });
 
     // Reset the mock implementation for SigningFlowValidationRule
     const { SigningFlowValidationRule } = require('../../../../../src/domain/rules/SigningFlowValidationRule');
-    jest.mocked(SigningFlowValidationRule).mockImplementation(() => ({
-      validateSigningFlow: jest.fn()
-    }));
+    jest.mocked(SigningFlowValidationRule.validateSigningFlow).mockImplementation(() => {
+      // Default implementation does nothing (validation passes)
+    });
 
     useCase = new SignDocumentUseCase(
       mockSignatureEnvelopeService,
@@ -119,7 +129,9 @@ describe('SignDocumentUseCase', () => {
       mockAuditEventService,
       mockSignatureEnvelopeService, // envelopeHashService
       mockSignatureEnvelopeService, // envelopeAccessService
-      mockSignatureEnvelopeService  // envelopeStateService
+      mockSignatureEnvelopeService, // envelopeStateService
+      mockPdfEmbedder,
+      mockDocumentServicePort
     );
   });
 
@@ -149,10 +161,11 @@ describe('SignDocumentUseCase', () => {
       setupSignDocumentMocks(mockConfig, testData);
 
       mockInvitationTokenService.markTokenAsSigned.mockResolvedValue(undefined);
-      mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValueOnce({
-        ...testData.testEnvelope,
-        isCompleted: jest.fn().mockReturnValue(false),
-        getSigners: jest.fn().mockReturnValue([testData.testSigner])
+      mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValueOnce(testData.testEnvelope);
+      mockKmsService.getCertificateChain.mockResolvedValue([]);
+      mockPdfEmbedder.embedSignature.mockResolvedValue({
+        signedPdfContent: Buffer.from('mock-pdf-content'),
+        signatureFieldName: 'Signature1'
       });
 
       const result = await useCase.execute(input);
@@ -264,10 +277,11 @@ describe('SignDocumentUseCase', () => {
 
       setupSignDocumentMocks(mockConfig, testData);
 
-      mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValueOnce({
-        ...testData.testEnvelope,
-        isCompleted: jest.fn().mockReturnValue(false),
-        getSigners: jest.fn().mockReturnValue([testData.testSigner])
+      mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValueOnce(testData.testEnvelope);
+      mockKmsService.getCertificateChain.mockResolvedValue([]);
+      mockPdfEmbedder.embedSignature.mockResolvedValue({
+        signedPdfContent: Buffer.from('mock-pdf-content'),
+        signatureFieldName: 'Signature1'
       });
 
       const result = await useCase.execute(input);
@@ -289,20 +303,46 @@ describe('SignDocumentUseCase', () => {
     it('should finalize envelope when all signers are complete', async () => {
       const testData = createSignDocumentTestData();
       const input = createSignDocumentInput(testData);
-      const completedEnvelope = { ...testData.testEnvelope, isCompleted: jest.fn().mockReturnValue(true) };
-
       setupSignDocumentMocks(mockConfig, testData);
 
+      const { SignatureEnvelopeBuilder } = require('../../../../helpers/builders/SignatureEnvelopeBuilder');
+      const { EnvelopeStatus } = require('../../../../../src/domain/value-objects/EnvelopeStatus');
+      const { SignerStatus } = require('@prisma/client');
+      const { EnvelopeSignerBuilder } = require('../../../../helpers/builders/EnvelopeSignerBuilder');
+
+      const signedSigner = EnvelopeSignerBuilder.create()
+        .withId(testData.signerId)
+        .withEnvelopeId(testData.envelopeId)
+        .withUserId(testData.userId)
+        .withEmail('signer@example.com')
+        .withFullName('John Signer')
+        .withIsExternal(false)
+        .withStatus(SignerStatus.SIGNED)
+        .build();
+
+      const completedEnvelope = SignatureEnvelopeBuilder.create()
+        .withId(testData.envelopeId)
+        .withCreatedBy(testData.userId)
+        .withStatus(EnvelopeStatus.completed())
+        .withSigners([signedSigner])
+        .build();
+
       mockSignatureEnvelopeService.getEnvelopeWithSigners
-        .mockResolvedValueOnce({ ...testData.testEnvelope, getSigners: () => [testData.testSigner] })
+        .mockResolvedValueOnce(testData.testEnvelope)
+        .mockResolvedValueOnce(testData.testEnvelope)
         .mockResolvedValueOnce(completedEnvelope)
         .mockResolvedValueOnce(completedEnvelope);
-      mockSignatureEnvelopeService.completeEnvelope.mockResolvedValue(undefined);
+      mockSignatureEnvelopeService.completeEnvelope.mockResolvedValue(completedEnvelope);
+      mockKmsService.getCertificateChain.mockResolvedValue([]);
+      mockPdfEmbedder.embedSignature.mockResolvedValue({
+        signedPdfContent: Buffer.from('mock-pdf-content'),
+        signatureFieldName: 'Signature1'
+      });
 
       const result = await useCase.execute(input);
 
       expect(mockSignatureEnvelopeService.completeEnvelope).toHaveBeenCalledWith(testData.envelopeId, testData.userId);
-      expect(mockSignatureEnvelopeService.getEnvelopeWithSigners).toHaveBeenCalledTimes(3);
+      expect(mockSignatureEnvelopeService.getEnvelopeWithSigners).toHaveBeenCalledTimes(4);
       expect(result).toBe(testData.expectedResult);
     });
 
@@ -312,10 +352,11 @@ describe('SignDocumentUseCase', () => {
 
       setupSignDocumentMocks(mockConfig, edgeCaseData);
 
-      mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValueOnce({
-        ...edgeCaseData.testEnvelope,
-        isCompleted: jest.fn().mockReturnValue(false),
-        getSigners: jest.fn().mockReturnValue([edgeCaseData.testSigner])
+      mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValueOnce(edgeCaseData.testEnvelope);
+      mockKmsService.getCertificateChain.mockResolvedValue([]);
+      mockPdfEmbedder.embedSignature.mockResolvedValue({
+        signedPdfContent: Buffer.from('mock-pdf-content'),
+        signatureFieldName: 'Signature1'
       });
 
       const result = await useCase.execute(input);
@@ -366,10 +407,11 @@ describe('SignDocumentUseCase', () => {
 
       setupSignDocumentMocks(mockConfig, edgeCaseData);
 
-      mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValueOnce({
-        ...edgeCaseData.testEnvelope,
-        isCompleted: jest.fn().mockReturnValue(false),
-        getSigners: jest.fn().mockReturnValue([edgeCaseData.testSigner])
+      mockSignatureEnvelopeService.getEnvelopeWithSigners.mockResolvedValueOnce(edgeCaseData.testEnvelope);
+      mockKmsService.getCertificateChain.mockResolvedValue([]);
+      mockPdfEmbedder.embedSignature.mockResolvedValue({
+        signedPdfContent: Buffer.from('mock-pdf-content'),
+        signatureFieldName: 'Signature1'
       });
 
       const result = await useCase.execute(input);

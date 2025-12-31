@@ -29,7 +29,7 @@ export interface CreateEnvelopeData {
   /** Optional expiration date */
   expiresAt?: Date;
   /** Source key from Document Service */
-  sourceKey: string;
+  sourceKey?: string;
   /** Meta key from Document Service */
-  metaKey: string;
+  metaKey?: string;
 }

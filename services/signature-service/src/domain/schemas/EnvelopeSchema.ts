@@ -36,8 +36,8 @@ export const CreateEnvelopeSchema = z.object({
   templateId: z.string().optional(),
   templateVersion: z.string().optional(),
   expiresAt: z.date().optional(),
-  sourceKey: z.string().min(1, 'Source key is required'),
-  metaKey: z.string().min(1, 'Meta key is required')
+  sourceKey: z.string().optional(),
+  metaKey: z.string().optional()
 }).refine((data) => {
   // Validate template fields when originType is TEMPLATE
   if (data.originType === DocumentOriginType.TEMPLATE) {

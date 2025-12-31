@@ -318,3 +318,15 @@ variable "shared_ts_layer_arn" {
   description = "ARN of the shared-ts Lambda layer from root"
   type        = string
 }
+
+variable "document_service_url" {
+  description = "Base URL of the Document Service API (required for final signed PDF storage)"
+  type        = string
+}
+
+# Certificate configuration
+variable "certificate_validity_days" {
+  description = "Certificate validity period in days (default: 365, can be set to 730 for 2 years, etc.)"
+  type        = number
+  default     = 365
+}

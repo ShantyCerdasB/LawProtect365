@@ -223,6 +223,7 @@ export class UserPersonalInfoRepository extends RepositoryBase<UserPersonalInfo,
       phone?: string;
       locale?: string;
       timeZone?: string;
+      dateOfBirth?: Date | null;
     }
   ): Promise<UserPersonalInfo> {
     try {
@@ -240,6 +241,9 @@ export class UserPersonalInfoRepository extends RepositoryBase<UserPersonalInfo,
         if (personalInfoData.timeZone !== undefined) {
           (existing as any).timeZone = personalInfoData.timeZone;
         }
+        if (personalInfoData.dateOfBirth !== undefined) {
+          (existing as any).dateOfBirth = personalInfoData.dateOfBirth;
+        }
         
         (existing as any).updatedAt = new Date();
         
@@ -252,6 +256,7 @@ export class UserPersonalInfoRepository extends RepositoryBase<UserPersonalInfo,
           personalInfoData.phone || null,
           personalInfoData.locale || null,
           personalInfoData.timeZone || null,
+          personalInfoData.dateOfBirth || null,
           new Date(),
           new Date()
         );

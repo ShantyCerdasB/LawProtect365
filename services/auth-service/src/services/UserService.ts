@@ -263,6 +263,7 @@ export class UserService {
     phone?: string | null;
     locale?: string | null;
     timeZone?: string | null;
+    dateOfBirth?: Date | null;
   }): Promise<any> {
     const existing = await this.userPersonalInfoRepository.findByUserId(userId);
     
@@ -277,6 +278,7 @@ export class UserService {
         personalInfo.phone || null,
         personalInfo.locale || null,
         personalInfo.timeZone || null,
+        personalInfo.dateOfBirth || null,
         new Date(),
         new Date()
       );

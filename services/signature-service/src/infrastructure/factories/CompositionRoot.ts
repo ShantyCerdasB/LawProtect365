@@ -38,6 +38,8 @@ export class CompositionRoot {
       auditEventService: infrastructure.auditEventService,
       s3Service: infrastructure.s3Service,
       kmsService: infrastructure.kmsService,
+      pdfDigitalSignatureEmbedder: domainServices.pdfDigitalSignatureEmbedder,
+      documentServicePort: domainServices.documentServicePort,
     };
 
     // Create all use cases
@@ -67,6 +69,8 @@ export class CompositionRoot {
       auditEventService: infrastructure.auditEventService,
       s3Service: infrastructure.s3Service,
       kmsService: infrastructure.kmsService,
+      pdfDigitalSignatureEmbedder: domainServices.pdfDigitalSignatureEmbedder,
+      documentServicePort: domainServices.documentServicePort,
     };
     const useCases = UseCaseFactory.createAll(services);
     return new SignatureOrchestrator({ services, useCases });

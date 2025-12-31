@@ -8,13 +8,11 @@ import { SignatureEnvelopeBuilder } from '../../../helpers/builders/SignatureEnv
 import { EnvelopeSignerBuilder } from '../../../helpers/builders/EnvelopeSignerBuilder';
 
 describe('SigningFlowValidationRule', () => {
-  let rule: SigningFlowValidationRule;
   let envelope: SignatureEnvelope;
   let signer: EnvelopeSigner;
   let allSigners: EnvelopeSigner[];
 
   beforeEach(() => {
-    rule = new SigningFlowValidationRule();
     envelope = SignatureEnvelopeBuilder.create()
       .withId(TestUtils.generateEnvelopeId())
       .withStatus(EnvelopeStatus.readyForSignature())
@@ -35,7 +33,7 @@ describe('SigningFlowValidationRule', () => {
   describe('validateSigningFlow', () => {
     it('should validate successfully when all conditions are met', () => {
       expect(() => {
-        rule.validateSigningFlow(envelope, signer, TestUtils.generateUuid(), allSigners);
+        SigningFlowValidationRule.validateSigningFlow(envelope, signer, TestUtils.generateUuid(), allSigners);
       }).not.toThrow();
     });
 
@@ -47,7 +45,7 @@ describe('SigningFlowValidationRule', () => {
         .build();
 
       expect(() => {
-        rule.validateSigningFlow(draftEnvelope, signer, TestUtils.generateUuid(), allSigners);
+        SigningFlowValidationRule.validateSigningFlow(draftEnvelope, signer, TestUtils.generateUuid(), allSigners);
       }).toThrow('Invalid envelope state');
     });
 
@@ -60,7 +58,7 @@ describe('SigningFlowValidationRule', () => {
         .build();
 
       expect(() => {
-        rule.validateSigningFlow(envelope, signedSigner, TestUtils.generateUuid(), allSigners);
+        SigningFlowValidationRule.validateSigningFlow(envelope, signedSigner, TestUtils.generateUuid(), allSigners);
       }).toThrow('Invalid signer state');
     });
 
@@ -80,7 +78,7 @@ describe('SigningFlowValidationRule', () => {
         .build();
 
       expect(() => {
-        rule.validateSigningFlow(unsentEnvelope, externalSigner, TestUtils.generateUuid(), [externalSigner]);
+        SigningFlowValidationRule.validateSigningFlow(unsentEnvelope, externalSigner, TestUtils.generateUuid(), [externalSigner]);
       }).toThrow('Invalid envelope state');
     });
 
@@ -100,7 +98,7 @@ describe('SigningFlowValidationRule', () => {
         .build();
 
       expect(() => {
-        rule.validateSigningFlow(sentEnvelope, externalSigner, TestUtils.generateUuid(), [externalSigner]);
+        SigningFlowValidationRule.validateSigningFlow(sentEnvelope, externalSigner, TestUtils.generateUuid(), [externalSigner]);
       }).not.toThrow();
     });
 
@@ -121,7 +119,7 @@ describe('SigningFlowValidationRule', () => {
         .build();
 
       expect(() => {
-        rule.validateSigningFlow(ownerEnvelope, ownerSigner, ownerId, [ownerSigner]);
+        SigningFlowValidationRule.validateSigningFlow(ownerEnvelope, ownerSigner, ownerId, [ownerSigner]);
       }).not.toThrow();
     });
   });

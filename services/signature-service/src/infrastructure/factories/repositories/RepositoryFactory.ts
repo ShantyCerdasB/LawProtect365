@@ -7,7 +7,7 @@
  */
 
 import { PrismaClient } from '@prisma/client';
-import { getPrisma, getPrismaAsync } from '@lawprotect/shared-ts';
+import { getPrisma, getPrismaAsync, UserPersonalInfoRepository } from '@lawprotect/shared-ts';
 
 import { SignatureEnvelopeRepository } from '../../../repositories/SignatureEnvelopeRepository';
 import { EnvelopeSignerRepository } from '../../../repositories/EnvelopeSignerRepository';
@@ -106,6 +106,14 @@ export class RepositoryFactory {
   }
 
   /**
+   * Creates UserPersonalInfoRepository with Prisma client
+   * @returns Configured UserPersonalInfoRepository instance
+   */
+  static createUserPersonalInfoRepository(): UserPersonalInfoRepository {
+    return new UserPersonalInfoRepository(this.getPrismaClientInternal());
+  }
+
+  /**
    * Creates all repositories in a single operation (synchronous).
    * Use when you're certain `DATABASE_URL` is already set.
    * @returns Object containing all repository instances
@@ -118,6 +126,7 @@ export class RepositoryFactory {
       signatureAuditEventRepository: this.createSignatureAuditEventRepository(),
       consentRepository: this.createConsentRepository(),
       signerReminderTrackingRepository: this.createSignerReminderTrackingRepository(),
+      userPersonalInfoRepository: this.createUserPersonalInfoRepository(),
     };
   }
 
@@ -134,6 +143,7 @@ export class RepositoryFactory {
       signatureAuditEventRepository: new SignatureAuditEventRepository(prisma),
       consentRepository: new ConsentRepository(prisma),
       signerReminderTrackingRepository: new SignerReminderTrackingRepository(prisma),
+      userPersonalInfoRepository: new UserPersonalInfoRepository(prisma),
     };
   }
 }

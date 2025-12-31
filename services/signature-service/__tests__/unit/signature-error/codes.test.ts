@@ -133,7 +133,7 @@ describe('SignatureErrorCodes', () => {
       const documentCodes = Object.keys(SignatureErrorCodes).filter(key => 
         key.startsWith('DOCUMENT_')
       );
-      expect(documentCodes).toHaveLength(5);
+      expect(documentCodes).toHaveLength(6);
       for (const code of documentCodes) {
         expect(code).toMatch(/^DOCUMENT_[A-Z0-9_]+$/);
       }
@@ -243,7 +243,7 @@ describe('SignatureErrorCodes', () => {
   describe('Total Count and Categories', () => {
     it('should have the expected total number of error codes', () => {
       const totalCodes = Object.keys(SignatureErrorCodes).length;
-      expect(totalCodes).toBe(84);
+      expect(totalCodes).toBe(94);
     });
 
     it('should have all expected categories', () => {

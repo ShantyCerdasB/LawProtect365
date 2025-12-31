@@ -21,6 +21,9 @@ import {
   EnvelopeCrudService,
   EnvelopeDownloadService,
 } from '@/services/index';
+import { PdfDigitalSignatureEmbedder } from '@/services/pdfService';
+import type { DocumentServicePort } from '@/app/ports/documents/DocumentServicePort';
+import type { UserPersonalInfoRepository } from '@lawprotect/shared-ts';
 
 import {
   CreateEnvelopeUseCase,
@@ -55,6 +58,9 @@ export type Services = {
   envelopeStateService: EnvelopeStateService;
   envelopeCrudService: EnvelopeCrudService;
   envelopeDownloadService: EnvelopeDownloadService;
+  pdfDigitalSignatureEmbedder: PdfDigitalSignatureEmbedder;
+  documentServicePort: DocumentServicePort;
+  userPersonalInfoRepository: UserPersonalInfoRepository;
 };
 
 /**

@@ -52,6 +52,7 @@
       EVIDENCE_BUCKET = module.evidence_bucket.bucket_id
       
       # AWS Region
+      AWS_REGION = var.aws_region != null ? var.aws_region : "us-east-1"
       
       # KMS configuration
       KMS_SIGNER_KEY_ID = var.kms_sign_key_arn
@@ -61,6 +62,7 @@
       
       # EventBridge configuration
       EVENTBRIDGE_BUS_NAME = var.event_bus_arn
+      EVENTBRIDGE_SOURCE = "${var.project_name}.${local.service_name}"
       
       # SSM Parameter Store
       SSM_PARAM_PREFIX = "/${var.project_name}/${var.env}"
@@ -84,8 +86,15 @@
       SECOND_REMINDER_HOURS = var.second_reminder_hours
       THIRD_REMINDER_HOURS = var.third_reminder_hours
       
-  # CloudWatch metrics
-  METRICS_NAMESPACE = "SignService"
+      # Document Service configuration
+      DOCUMENT_SERVICE_URL = var.document_service_url
+      DOCUMENT_SERVICE_TIMEOUT = "30000"
+      
+      # CloudWatch metrics
+      METRICS_NAMESPACE = "SignService"
+      
+      # Certificate configuration
+      CERTIFICATE_VALIDITY_DAYS = tostring(var.certificate_validity_days)
     }
   )
 
@@ -282,10 +291,10 @@ module "lambda_send_envelope" {
 
 
 ############################################################
-# Lambda: POST /documents/{id}/sign
+# Lambda: POST /envelopes/{id}/sign
 #
 # Purpose:
-# - Signs a document with cryptographic signature
+# - Signs a document within an envelope with cryptographic signature
 #
 # Key environment variables:
 # - DATABASE_URL: PostgreSQL connection string
@@ -572,7 +581,7 @@ module "sign_api" {
     # DOCUMENTS
     # ----------------------------
     { route_key = "GET /documents/{id}/download", integration_uri = module.lambda_download_document.lambda_function_arn, integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
-    { route_key = "POST /documents/{id}/sign", integration_uri = module.lambda_sign_document.lambda_function_arn, integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
+    { route_key = "POST /envelopes/{id}/sign", integration_uri = module.lambda_sign_document.lambda_function_arn, integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
     { route_key = "GET /documents/{id}/share", integration_uri = module.lambda_share_document.lambda_function_arn, integration_type = "AWS_PROXY", authorization_type = var.enable_jwt_authorizer ? "JWT" : "NONE" },
 
     # ----------------------------

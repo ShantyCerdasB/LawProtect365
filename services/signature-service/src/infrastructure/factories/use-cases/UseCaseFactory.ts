@@ -191,7 +191,10 @@ export class UseCaseFactory {
       services.auditEventService,
       services.envelopeHashService,
       services.envelopeAccessService,
-      services.envelopeStateService
+      services.envelopeStateService,
+      services.pdfDigitalSignatureEmbedder,
+      services.documentServicePort,
+      services.userPersonalInfoRepository
     );
   }
 

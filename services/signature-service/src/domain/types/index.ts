@@ -23,3 +23,6 @@ export * from './events';
 
 // Use case types
 export * from './usecase';
+
+// PDF types
+export * from './pdf';

@@ -1,7 +1,8 @@
 /**
  * @fileoverview SigningFlowValidationRule - Validates complete signing flow
  * @summary Domain rule for validating signing flow operations
- * @description Validates envelope state, signer state, and signing order for document signing operations
+ * @description Validates envelope state, signer state, and signing order for document signing operations.
+ * Note: Age validation requires data access and should be handled in the use case or domain service.
  */
 
 import { SignatureEnvelope } from '../entities/SignatureEnvelope';
@@ -16,9 +17,11 @@ import {
 
 /**
  * Domain rule for validating signing flow operations
+ * @description
+ * Validates pure domain invariants: envelope state, signer state, and signing order.
+ * These validations are stateless and do not require external data access.
  */
 export class SigningFlowValidationRule {
-
   /**
    * Validates complete signing flow for a signer
    * @param envelope - The envelope being signed
@@ -29,23 +32,25 @@ export class SigningFlowValidationRule {
    * @throws ConflictError when signer is not in valid state
    * @throws ConflictError when signing order is violated
    */
-  validateSigningFlow(
+  static validateSigningFlow(
     envelope: SignatureEnvelope,
     signer: EnvelopeSigner,
-    userId: string,
+    userId: string | undefined,
     allSigners: EnvelopeSigner[]
   ): void {
-    this.validateEnvelopeState(envelope);
-    this.validateSignerState(signer);
+    SigningFlowValidationRule.validateEnvelopeState(envelope);
+    SigningFlowValidationRule.validateSignerState(signer);
     
-    SigningOrderValidationRule.validateSigningOrder(
-      envelope,
-      signer.getId(),
-      userId,
-      allSigners
-    );
+    if (userId) {
+      SigningOrderValidationRule.validateSigningOrder(
+        envelope,
+        signer.getId(),
+        userId,
+        allSigners
+      );
+    }
     
-    this.validateEnvelopeSent(envelope, signer, userId);
+    SigningFlowValidationRule.validateEnvelopeSent(envelope, signer, userId);
   }
 
   /**
@@ -53,7 +58,7 @@ export class SigningFlowValidationRule {
    * @param envelope - The envelope to validate
    * @throws ConflictError when envelope is not ready
    */
-  private validateEnvelopeState(envelope: SignatureEnvelope): void {
+  private static validateEnvelopeState(envelope: SignatureEnvelope): void {
     const status = envelope.getStatus();
     
     if (status.getValue() !== EnvelopeStatus.readyForSignature().getValue()) {
@@ -68,7 +73,7 @@ export class SigningFlowValidationRule {
    * @param signer - The signer to validate
    * @throws ConflictError when signer is not ready
    */
-  private validateSignerState(signer: EnvelopeSigner): void {
+  private static validateSignerState(signer: EnvelopeSigner): void {
     const status = signer.getStatus();
     
     if (status !== SignerStatus.PENDING) {
@@ -85,7 +90,7 @@ export class SigningFlowValidationRule {
    * @param userId - The user making the request
    * @throws ConflictError when external signer tries to sign unsent envelope
    */
-  private validateEnvelopeSent(envelope: SignatureEnvelope, signer: EnvelopeSigner, _userId: string): void {
+  private static validateEnvelopeSent(envelope: SignatureEnvelope, signer: EnvelopeSigner, _userId: string | undefined): void {
     const isOwner = !signer.getIsExternal() && signer.getUserId() === envelope.getCreatedBy();
     
     if (!isOwner && !envelope.getSentAt()) {
@@ -94,4 +99,5 @@ export class SigningFlowValidationRule {
       );
     }
   }
+
 }

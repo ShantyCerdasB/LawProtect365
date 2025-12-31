@@ -16,6 +16,7 @@ export function createKmsServiceMock() {
     sign: jest.fn() as jest.MockedFunction<any>,
     verify: jest.fn() as jest.MockedFunction<any>,
     createKey: jest.fn() as jest.MockedFunction<any>,
-    deleteKey: jest.fn() as jest.MockedFunction<any>
+    deleteKey: jest.fn() as jest.MockedFunction<any>,
+    getCertificateChain: jest.fn() as jest.MockedFunction<any>
   };
 }

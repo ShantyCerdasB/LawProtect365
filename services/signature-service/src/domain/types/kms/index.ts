@@ -9,3 +9,4 @@ export type { KmsSignRequest } from './KmsSignRequest';
 export type { KmsSignResult } from './KmsSignResult';
 export type { KmsVerifyRequest } from './KmsVerifyRequest';
 export type { KmsVerifyResult } from './KmsVerifyResult';
+export type { CertificateGenerationParams, CertificateSubject } from './CertificateGenerationParams';
