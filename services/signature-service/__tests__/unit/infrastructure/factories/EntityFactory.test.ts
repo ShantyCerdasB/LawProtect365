@@ -7,6 +7,7 @@ import { InvitationTokenId } from '../../../../src/domain/value-objects/Invitati
 import { ConsentId } from '../../../../src/domain/value-objects/ConsentId';
 import { DocumentOrigin } from '../../../../src/domain/value-objects/DocumentOrigin';
 import { SigningOrder } from '../../../../src/domain/value-objects/SigningOrder';
+import { DocumentOriginType, SigningOrderType } from '@prisma/client';
 
 describe('EntityFactory', () => {
   it('should be importable', () => {
@@ -164,6 +165,49 @@ describe('EntityFactory', () => {
       expect(result).toBeDefined();
       expect(result.getValue()).toBeDefined();
     });
+
+    it('should create Email from string', () => {
+      const value = 'test@example.com';
+      const result = EntityFactory.createValueObjects.email(value);
+      expect(result).toBeDefined();
+      expect(result.getValue()).toBe(value);
+    });
+
+    it('should create S3Key from string', () => {
+      const value = 'bucket-name/path/to/file.pdf';
+      const result = EntityFactory.createValueObjects.s3Key(value);
+      expect(result).toBeDefined();
+      expect(result.getValue()).toBe(value);
+    });
+
+    it('should create DocumentHash from string', () => {
+      const value = 'a'.repeat(64);
+      const result = EntityFactory.createValueObjects.documentHash(value);
+      expect(result).toBeDefined();
+      expect(result.getValue()).toBe(value);
+    });
+
+    it('should create DocumentOrigin from type and metadata', () => {
+      const type = DocumentOriginType.TEMPLATE;
+      const metadata = { templateId: 'template-123', templateVersion: 'v1.0' };
+      const result = EntityFactory.createValueObjects.documentOrigin(type, metadata);
+      expect(result).toBeDefined();
+      expect(result.getType()).toBe(type);
+    });
+
+    it('should create DocumentOrigin from type without metadata', () => {
+      const type = DocumentOriginType.USER_UPLOAD;
+      const result = EntityFactory.createValueObjects.documentOrigin(type);
+      expect(result).toBeDefined();
+      expect(result.getType()).toBe(type);
+    });
+
+    it('should create SigningOrder from type', () => {
+      const type = SigningOrderType.OWNER_FIRST;
+      const result = EntityFactory.createValueObjects.signingOrder(type);
+      expect(result).toBeDefined();
+      expect(result.getType()).toBe(type);
+    });
   });
 
   describe('createSignatureEnvelope method', () => {
@@ -200,6 +244,38 @@ describe('EntityFactory', () => {
       const result = EntityFactory.createEnvelopeSigner(data);
       expect(result).toBeDefined();
       expect((result as any).constructor.name).toBe('EnvelopeSigner');
+    });
+
+    it('should throw error when external signer does not have fullName', () => {
+      const data = {
+        envelopeId: EnvelopeId.fromString(TestUtils.generateUuid()),
+        userId: undefined,
+        email: 'test@example.com',
+        fullName: undefined,
+        isExternal: true,
+        order: 1,
+        participantRole: 'SIGNER' as const,
+      };
+
+      expect(() => {
+        EntityFactory.createEnvelopeSigner(data);
+      }).toThrow('External signers must have fullName');
+    });
+
+    it('should throw error when external signer does not have email', () => {
+      const data = {
+        envelopeId: EnvelopeId.fromString(TestUtils.generateUuid()),
+        userId: undefined,
+        email: undefined,
+        fullName: 'Test User',
+        isExternal: true,
+        order: 1,
+        participantRole: 'SIGNER' as const,
+      };
+
+      expect(() => {
+        EntityFactory.createEnvelopeSigner(data);
+      }).toThrow('External signers must have email');
     });
   });
 

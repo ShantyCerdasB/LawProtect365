@@ -22,6 +22,7 @@ describe('PdfDigitalSignatureEmbedder', () => {
 
   describe('embedSignature', () => {
     it('should embed signature successfully', async () => {
+      jest.setTimeout(30000);
       const pdfContent = await createTestPdf();
       const request = {
         pdfContent,

@@ -19,8 +19,36 @@ jest.mock('../../../../../src/infrastructure/factories/infrastructure/Infrastruc
       auditEventService: jest.fn(),
       envelopeNotificationService: jest.fn(),
       invitationTokenService: jest.fn(),
+      s3Service: jest.fn(),
+      outboxRepository: jest.fn(),
     }))
   }
+}));
+
+jest.mock('../../../../../src/services/envelopeHashService/EnvelopeHashService', () => ({
+  EnvelopeHashService: jest.fn().mockImplementation(() => ({})),
+}));
+
+jest.mock('../../../../../src/services/pdfService', () => ({
+  PdfDigitalSignatureEmbedder: jest.fn().mockImplementation(() => ({})),
+}));
+
+jest.mock('../../../../../src/app/adapters/documents/makeDocumentServicePort', () => ({
+  makeDocumentServicePort: jest.fn(() => ({})),
+}));
+
+jest.mock('../../../../../src/infrastructure/factories/events/IntegrationEventFactory', () => ({
+  IntegrationEventFactory: jest.fn().mockImplementation(() => ({})),
+}));
+
+jest.mock('@lawprotect/shared-ts', () => ({
+  ...jest.requireActual('@lawprotect/shared-ts'),
+  getRequired: jest.fn((key: string) => {
+    if (key === 'DOCUMENT_SERVICE_URL') return 'https://api.example.com';
+    throw new Error('Missing required env');
+  }),
+  getNumber: jest.fn((key: string, defaultValue: number) => defaultValue),
+  OutboxEventPublisher: jest.fn().mockImplementation(() => ({})),
 }));
 
 describe('ServiceFactory', () => {
@@ -184,6 +212,94 @@ describe('ServiceFactory', () => {
 
       const result = ServiceFactory.createConsentService(mockRepositories as any, mockInfrastructure as any);
       expect(result).toBeDefined();
+    });
+
+    it('should execute createSignerReminderTrackingService with mock dependencies', () => {
+      const mockRepositories = {
+        signerReminderTrackingRepository: jest.fn(),
+      };
+
+      const result = ServiceFactory.createSignerReminderTrackingService(mockRepositories as any);
+      expect(result).toBeDefined();
+    });
+
+    it('should execute createEnvelopeHashService with mock dependencies', () => {
+      const mockRepositories = {
+        signatureEnvelopeRepository: jest.fn(),
+      };
+
+      const mockInfrastructure = {
+        auditEventService: jest.fn(),
+      };
+
+      const result = ServiceFactory.createEnvelopeHashService(mockRepositories as any, mockInfrastructure as any);
+      expect(result).toBeDefined();
+    });
+
+    it('should execute createEnvelopeDownloadService with mock dependencies', () => {
+      const mockRepositories = {
+        signatureEnvelopeRepository: jest.fn(),
+      };
+
+      const mockInfrastructure = {
+        s3Service: jest.fn(),
+      };
+
+      const result = ServiceFactory.createEnvelopeDownloadService(mockRepositories as any, mockInfrastructure as any);
+      expect(result).toBeDefined();
+    });
+
+    it('should execute createPdfDigitalSignatureEmbedder', () => {
+      const result = ServiceFactory.createPdfDigitalSignatureEmbedder();
+      expect(result).toBeDefined();
+    });
+
+    it('should execute createDocumentServicePort with valid environment', () => {
+      const result = ServiceFactory.createDocumentServicePort();
+      expect(result).toBeDefined();
+    });
+
+    it('should throw BadRequestError when DOCUMENT_SERVICE_URL is missing', () => {
+      const { getRequired } = require('@lawprotect/shared-ts');
+      getRequired.mockImplementationOnce(() => {
+        throw new Error('Missing required env');
+      });
+
+      expect(() => {
+        ServiceFactory.createDocumentServicePort();
+      }).toThrow();
+    });
+
+    it('should execute createAll with mock dependencies', () => {
+      const mockRepositories = {
+        signatureEnvelopeRepository: jest.fn(),
+        envelopeSignerRepository: jest.fn(),
+        invitationTokenRepository: jest.fn(),
+        consentRepository: jest.fn(),
+        signerReminderTrackingRepository: jest.fn(),
+        userPersonalInfoRepository: jest.fn(),
+      };
+
+      const mockInfrastructure = {
+        auditEventService: jest.fn(),
+        s3Service: jest.fn(),
+        outboxRepository: jest.fn(),
+      };
+
+      const result = ServiceFactory.createAll(mockRepositories as any, mockInfrastructure as any);
+      expect(result).toBeDefined();
+      expect(result.envelopeSignerService).toBeDefined();
+      expect(result.invitationTokenService).toBeDefined();
+      expect(result.consentService).toBeDefined();
+      expect(result.signerReminderTrackingService).toBeDefined();
+      expect(result.envelopeNotificationService).toBeDefined();
+      expect(result.envelopeHashService).toBeDefined();
+      expect(result.envelopeAccessService).toBeDefined();
+      expect(result.envelopeStateService).toBeDefined();
+      expect(result.envelopeCrudService).toBeDefined();
+      expect(result.envelopeDownloadService).toBeDefined();
+      expect(result.pdfDigitalSignatureEmbedder).toBeDefined();
+      expect(result.documentServicePort).toBeDefined();
     });
   });
 });

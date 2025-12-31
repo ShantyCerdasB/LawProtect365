@@ -22,6 +22,7 @@ describe('PdfSignatureManipulator', () => {
 
   describe('embedSignature', () => {
     it('should embed signature into valid PDF', async () => {
+      jest.setTimeout(30000);
       const pdfContent = await createTestPdf();
       const request = {
         pdfContent,

@@ -16,6 +16,13 @@ jest.mock('../../../../src/infrastructure/factories/repositories/RepositoryFacto
       invitationTokenRepository: jest.fn(),
       consentRepository: jest.fn(),
       signerReminderTrackingRepository: jest.fn(),
+    })),
+    createAllAsync: jest.fn(() => Promise.resolve({
+      signatureEnvelopeRepository: jest.fn(),
+      envelopeSignerRepository: jest.fn(),
+      invitationTokenRepository: jest.fn(),
+      consentRepository: jest.fn(),
+      signerReminderTrackingRepository: jest.fn(),
     }))
   }
 }));
@@ -43,6 +50,9 @@ jest.mock('../../../../src/infrastructure/factories/services/ServiceFactory', ()
       envelopeNotificationService: jest.fn(),
       invitationTokenService: jest.fn(),
       consentService: jest.fn(),
+      pdfDigitalSignatureEmbedder: jest.fn(),
+      documentServicePort: jest.fn(),
+      userPersonalInfoRepository: jest.fn(),
     }))
   }
 }));
@@ -207,6 +217,57 @@ describe('CompositionRoot', () => {
 
     it('should return a valid SignatureOrchestrator instance', () => {
       const result = CompositionRoot.createSignatureOrchestrator();
+
+      expect(result).toBeDefined();
+      expect(typeof result.createEnvelope).toBe('function');
+      expect(typeof result.getEnvelope).toBe('function');
+    });
+  });
+
+  describe('createSignatureOrchestratorAsync', () => {
+    it('should have createSignatureOrchestratorAsync method', () => {
+      expect(CompositionRoot.createSignatureOrchestratorAsync).toBeDefined();
+      expect(typeof CompositionRoot.createSignatureOrchestratorAsync).toBe('function');
+    });
+
+    it('should create SignatureOrchestrator with all dependencies asynchronously', async () => {
+      const { RepositoryFactory } = require('../../../../src/infrastructure/factories/repositories/RepositoryFactory');
+      const { InfrastructureFactory } = require('../../../../src/infrastructure/factories/infrastructure/InfrastructureFactory');
+      const { ServiceFactory } = require('../../../../src/infrastructure/factories/services/ServiceFactory');
+      const { UseCaseFactory } = require('../../../../src/infrastructure/factories/use-cases/UseCaseFactory');
+      const { SignatureOrchestrator } = require('../../../../src/services/orchestrators/SignatureOrchestrator');
+
+      const result = await CompositionRoot.createSignatureOrchestratorAsync();
+
+      expect(result).toBeDefined();
+      expect(SignatureOrchestrator).toHaveBeenCalledWith({
+        services: expect.objectContaining({
+          auditEventService: expect.anything(),
+          s3Service: expect.anything(),
+          kmsService: expect.anything(),
+        }),
+        useCases: expect.objectContaining({
+          createEnvelopeUseCase: expect.anything(),
+        }),
+      });
+
+      expect(RepositoryFactory.createAllAsync).toHaveBeenCalled();
+      expect(InfrastructureFactory.createAll).toHaveBeenCalled();
+      expect(ServiceFactory.createAll).toHaveBeenCalled();
+      expect(UseCaseFactory.createAll).toHaveBeenCalled();
+    });
+
+    it('should use createAllAsync instead of createAll for repositories', async () => {
+      const { RepositoryFactory } = require('../../../../src/infrastructure/factories/repositories/RepositoryFactory');
+
+      await CompositionRoot.createSignatureOrchestratorAsync();
+
+      expect(RepositoryFactory.createAllAsync).toHaveBeenCalledTimes(1);
+      expect(RepositoryFactory.createAll).not.toHaveBeenCalled();
+    });
+
+    it('should return a valid SignatureOrchestrator instance', async () => {
+      const result = await CompositionRoot.createSignatureOrchestratorAsync();
 
       expect(result).toBeDefined();
       expect(typeof result.createEnvelope).toBe('function');
