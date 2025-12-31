@@ -14,6 +14,7 @@
 
 import * as x509 from '@peculiar/x509';
 import {
+  Certificate,
   SignedData,
   EncapsulatedContentInfo,
   SignerInfo,
@@ -51,15 +52,10 @@ export class Pkcs7Builder {
         throw pdfSignatureEmbeddingFailed('Certificate chain is required for PKCS#7 SignedData');
       }
       
-      const leafCert = certificates[0];
       const signedAttrs = this.buildSignedAttributes(params);
       
       const signerInfo = new SignerInfo();
       signerInfo.version = 1;
-      signerInfo.sid = new IssuerAndSerialNumber({
-        issuer: this.parseIssuerName(leafCert) as any,
-        serialNumber: this.parseSerialNumber(leafCert),
-      });
       signerInfo.digestAlgorithm = new AlgorithmIdentifier({
         algorithmId: CryptographicOids.HASH_ALGORITHMS.SHA_256,
       });
@@ -87,14 +83,20 @@ export class Pkcs7Builder {
       });
       signedData.signerInfos = [signerInfo];
       
-      signedData.certificates = certificates.map(cert => {
+      const pkijsCertificates = certificates.map((cert, index) => {
         const raw = this.getCertificateRaw(cert);
         const result = asn1js.fromBER(raw);
         if (result.result instanceof asn1js.Sequence) {
-          return result.result as any;
+          return new Certificate({ schema: result.result });
         }
-        throw pdfSignatureEmbeddingFailed('Failed to parse certificate as ASN.1 sequence');
-      }) as any;
+        throw pdfSignatureEmbeddingFailed(`Failed to parse certificate at index ${index} as ASN.1 sequence`);
+      });
+      const leafPkijsCert = pkijsCertificates[0];
+      signerInfo.sid = new IssuerAndSerialNumber({
+        issuer: leafPkijsCert.issuer,
+        serialNumber: leafPkijsCert.serialNumber,
+      });
+      signedData.certificates = pkijsCertificates as any;
       
       const signedDataSchema = signedData.toSchema();
       const signedDataDER = signedDataSchema.toBER(false);
@@ -121,16 +123,13 @@ export class Pkcs7Builder {
     return certificateChain.map((certBytes, index) => {
       try {
         const text = Buffer.from(certBytes).toString('utf-8');
-        // Prefer PEM parse when it looks like PEM
         if (text.includes('BEGIN CERTIFICATE')) {
           return new x509.X509Certificate(text);
         }
-        // Try DER parse
         const buffer = new Uint8Array(certBytes).buffer;
         return new x509.X509Certificate(buffer as any);
       } catch (_directError) {
         try {
-          // Fallback: wrap DER as PEM and parse
           const b64 = Buffer.from(certBytes).toString('base64');
           const pem = `-----BEGIN CERTIFICATE-----\n${b64}\n-----END CERTIFICATE-----`;
           return new x509.X509Certificate(pem);
@@ -170,7 +169,6 @@ export class Pkcs7Builder {
       return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as unknown as ArrayBuffer;
     }
 
-    // Fallback: treat as base64 string
     const sanitized = typeof certString === 'string' ? certString.replace(/\s+/g, '') : '';
     if (sanitized && /^[A-Za-z0-9+/=]+$/.test(sanitized)) {
       const buf = Buffer.from(sanitized, 'base64');
@@ -178,63 +176,6 @@ export class Pkcs7Builder {
     }
 
     throw pdfSignatureEmbeddingFailed('Failed to extract raw certificate bytes');
-  }
-
-  /**
-   * @description
-   * Parses issuer name from X.509 certificate and creates ASN.1 structure
-   * for PKCS#7 SignerInfo. Uses simplified structure with Common Name (CN) only.
-   * @param {x509.X509Certificate} cert - X.509 certificate object
-   * @returns {asn1js.Sequence} ASN.1 sequence representing issuer name
-   */
-  private parseIssuerName(cert: x509.X509Certificate): asn1js.Sequence {
-    const issuerName = cert.issuer;
-    
-    return new asn1js.Sequence({
-      value: [
-        new asn1js.Set({
-          value: [
-            new asn1js.Sequence({
-              value: [
-                new asn1js.ObjectIdentifier({ value: CryptographicOids.X500_ATTRIBUTES.COMMON_NAME }),
-                new asn1js.Utf8String({ value: issuerName }),
-              ],
-            }),
-          ],
-        }),
-      ],
-    });
-  }
-
-  /**
-   * @description
-   * Parses serial number from X.509 certificate and converts it to ASN.1 Integer
-   * format required for PKCS#7 SignerInfo issuer and serial number.
-   * @param {x509.X509Certificate} cert - X.509 certificate object
-   * @returns {asn1js.Integer} ASN.1 Integer representing certificate serial number
-   */
-  private parseSerialNumber(cert: x509.X509Certificate): asn1js.Integer {
-    const serial = (cert as any).serialNumber;
-    if (typeof serial === 'string') {
-      const cleanHex = serial.replace(/[^0-9a-fA-F]/g, '');
-      const hex = cleanHex.length % 2 === 0 ? cleanHex : `0${cleanHex}`;
-      const buf = Buffer.from(hex || '00', 'hex');
-      return new asn1js.Integer({
-        valueHex: buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as unknown as ArrayBuffer,
-      });
-    }
-
-    if (serial instanceof Uint8Array) {
-      return new asn1js.Integer({
-        valueHex: serial.buffer.slice(serial.byteOffset, serial.byteOffset + serial.byteLength) as unknown as ArrayBuffer,
-      });
-    }
-
-    if (serial instanceof ArrayBuffer) {
-      return new asn1js.Integer({ valueHex: serial });
-    }
-
-    return new asn1js.Integer({ value: 0 });
   }
 
   /**

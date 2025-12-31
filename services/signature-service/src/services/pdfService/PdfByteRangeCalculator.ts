@@ -20,9 +20,10 @@ export class PdfByteRangeCalculator {
    * Calculates byte ranges for signature embedding. The signature content is excluded
    * from the signed ranges to allow verification.
    * @param {ByteRangeParams} params - Parameters for calculation
+   * @param {boolean} skipValidation - If true, skip validation (useful for iterative calculations)
    * @returns {ByteRange} Byte range array [start1, end1, start2, end2]
    */
-  calculateByteRanges(params: ByteRangeParams): ByteRange {
+  calculateByteRanges(params: ByteRangeParams, skipValidation: boolean = false): ByteRange {
     const { pdfLength, signatureDictPosition, signatureLength } = params;
     
     const start1 = 0;
@@ -32,7 +33,10 @@ export class PdfByteRangeCalculator {
     const end2 = pdfLength;
     
     const byteRange: ByteRange = [start1, end1, start2, end2];
-    ByteRangeValidationRule.validate(byteRange, pdfLength);
+    
+    if (!skipValidation) {
+      ByteRangeValidationRule.validate(byteRange, pdfLength);
+    }
     
     return byteRange;
   }

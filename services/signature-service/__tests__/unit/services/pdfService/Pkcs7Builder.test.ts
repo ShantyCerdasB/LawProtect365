@@ -34,15 +34,7 @@ describe('Pkcs7Builder', () => {
         documentHash,
       };
 
-      let result: Uint8Array;
-      try {
-        result = await builder.buildSignedData(params);
-      } catch (error: any) {
-        // Temporary debug to surface underlying failure details from custom error factories
-        // eslint-disable-next-line no-console
-        console.log('Pkcs7Builder buildSignedData error details:', error?.details ?? error);
-        throw error;
-      }
+      const result = await builder.buildSignedData(params);
 
       expect(result).toBeInstanceOf(Uint8Array);
       expect(result.length).toBeGreaterThan(0);

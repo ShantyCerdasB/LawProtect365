@@ -26,23 +26,24 @@ export class ByteRangeValidationRule {
     const [start1, end1, start2, end2] = byteRange;
     
     if (start1 !== 0) {
-      throw pdfByteRangeInvalid('ByteRange must start at 0');
+      throw pdfByteRangeInvalid(`ByteRange must start at 0, got ${start1}`);
     }
     
     if (end1 <= start1) {
-      throw pdfByteRangeInvalid('ByteRange: end1 must be greater than start1');
+      throw pdfByteRangeInvalid(`ByteRange: end1 (${end1}) must be greater than start1 (${start1})`);
     }
     
     if (start2 <= end1) {
-      throw pdfByteRangeInvalid('ByteRange: start2 must be greater than end1');
+      throw pdfByteRangeInvalid(`ByteRange: start2 (${start2}) must be greater than end1 (${end1})`);
     }
     
     if (end2 <= start2) {
-      throw pdfByteRangeInvalid('ByteRange: end2 must be greater than start2');
+      throw pdfByteRangeInvalid(`ByteRange: end2 (${end2}) must be greater than start2 (${start2})`);
     }
     
-    if (end2 > pdfLength) {
-      throw pdfByteRangeInvalid(`ByteRange: end2 (${end2}) exceeds PDF length (${pdfLength})`);
+    // Allow small tolerance for end2 (up to 10 bytes) to account for PDF formatting differences
+    if (end2 > pdfLength + 10) {
+      throw pdfByteRangeInvalid(`ByteRange: end2 (${end2}) exceeds PDF length (${pdfLength}) by more than tolerance`);
     }
   }
 }

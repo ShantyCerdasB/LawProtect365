@@ -80,8 +80,6 @@ export class PdfStructureParser {
    * @returns {number} Offset of last xref or -1 if not found
    */
   private findLastXrefOffset(content: string): number {
-    // Match standalone "xref" at start of file or start of a line.
-    // Avoid matching the "xref" substring inside "startxref".
     const xrefMatches = [...content.matchAll(/(^|[\r\n])xref[\s\r\n]/g)];
     if (xrefMatches.length === 0) {
       return -1;
@@ -138,11 +136,9 @@ export class PdfStructureParser {
       throw pdfCorrupted('Cannot parse cross-reference table: xref keyword not found');
     }
     
-    // Lenient search: case-insensitive positions for trailer/startxref
     let trailerPos = xrefSection.search(/trailer/i);
     let startxrefPos = xrefSection.search(/startxref/i);
 
-    // Fallback: search in full content if not found in the section
     if (trailerPos === -1 || startxrefPos === -1) {
       const lowerContent = content.toLowerCase();
       const globalTrailer = lowerContent.lastIndexOf('trailer');
@@ -160,7 +156,6 @@ export class PdfStructureParser {
     const endPos = this.determineXrefEndPosition(trailerPos, startxrefPos, xrefSection, content, offset);
     
     let xrefContent = this.extractXrefContent(xrefSection, xrefKeywordPos, endPos);
-    // Trim xrefContent to exclude any following trailer/startxref noise
     const cutPos = (() => {
       const lower = xrefContent.toLowerCase();
       const tPos = lower.indexOf('trailer');
@@ -212,14 +207,12 @@ export class PdfStructureParser {
       return startxrefPos;
     }
     
-    // Fallback: next startxref in full content after current offset
     const lower = content.toLowerCase();
     const nextStartxref = lower.indexOf('startxref', offset + 1);
     if (nextStartxref !== -1) {
       return nextStartxref - offset;
     }
     
-    // Last resort: end of content relative to offset
     return content.length - offset;
   }
 
@@ -359,7 +352,7 @@ export class PdfStructureParser {
       if (!trimmed) continue;
       if (trimmed.toLowerCase().startsWith('trailer')) break;
       if (trimmed.toLowerCase().startsWith('startxref')) break;
-      if (/^\d+\s+\d+$/.test(trimmed)) break; // header of another subsection
+      if (/^\d+\s+\d+$/.test(trimmed)) break;
       
       const parts = trimmed.split(/\s+/);
       if (parts.length >= 3) {

@@ -32,7 +32,8 @@ import { Pkcs7Builder } from './Pkcs7Builder';
 import { PdfSignatureDictionaryBuilder } from './PdfSignatureDictionaryBuilder';
 import { PdfByteRangeCalculator } from './PdfByteRangeCalculator';
 import { PdfXrefUpdater } from './PdfXrefUpdater';
-import type { NewPdfObject } from '@/domain/types/pdf';
+import { ByteRangeValidationRule } from '@/domain/rules/ByteRangeValidationRule';
+import type { NewPdfObject, ByteRange } from '@/domain/types/pdf';
 
 /**
  * @description
@@ -87,21 +88,26 @@ export class PdfSignatureManipulator {
       await this.validateSignedPdf(signedPdf);
       return signedPdf;
     } catch (error) {
-      // Preserve specific error types
       if (error && typeof error === 'object' && 'code' in error) {
         const errorCode = (error as any).code;
         if (
           errorCode === SignatureErrorCodes.PDF_ENCRYPTED ||
           errorCode === SignatureErrorCodes.PDF_INVALID_STRUCTURE ||
           errorCode === SignatureErrorCodes.PDF_CORRUPTED ||
-          errorCode === SignatureErrorCodes.PDF_ALREADY_SIGNED
+          errorCode === SignatureErrorCodes.PDF_ALREADY_SIGNED ||
+          errorCode === SignatureErrorCodes.PDF_BYTE_RANGE_INVALID
         ) {
           throw error;
         }
       }
 
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorDetails = error && typeof error === 'object' && 'details' in error 
+        ? (error as any).details 
+        : undefined;
+      
       throw pdfSignatureEmbeddingFailed(
-        `Failed to embed signature: ${error instanceof Error ? error.message : String(error)}`
+        `Failed to embed signature: ${errorMessage}${errorDetails ? ` (${String(errorDetails)})` : ''}`
       );
     }
   }
@@ -156,19 +162,28 @@ export class PdfSignatureManipulator {
 
   /**
    * @description
-   * Builds signature dictionary with correct byte ranges. Uses iterative process:
-   * 1. Build dictionary with placeholder byte ranges
-   * 2. Serialize to calculate actual size
-   * 3. Calculate correct byte ranges based on actual size
-   * 4. Rebuild dictionary with correct byte ranges
+   * Builds signature dictionary with correct byte ranges using a robust two-pass approach.
+   * This is the industry-standard method for PDF signature embedding:
    * 
-   * This iterative approach is necessary because byte ranges must reference the
-   * exact byte positions where the signature dictionary will be embedded.
+   * Pass 1: Estimate
+   * 1. Build dictionary with placeholder byte ranges
+   * 2. Measure actual dictionary size
+   * 3. Build temporary PDF to measure final length
+   * 
+   * Pass 2: Finalize
+   * 4. Calculate byte ranges with measured lengths (skip validation during calculation)
+   * 5. Build final dictionary with correct byte ranges
+   * 6. Build final PDF
+   * 7. Validate byte ranges against actual final PDF length
+   * 
+   * This approach ensures byte ranges are accurate and handles the circular dependency
+   * between byte range values and PDF length.
    * @param {Uint8Array} signedDataDER - DER-encoded PKCS#7 SignedData
    * @param {EmbedSignatureRequest} request - Signature embedding request
    * @param {PdfStructure} pdfStructure - Parsed PDF structure
    * @param {number} objectNumber - PDF object number for signature dictionary
    * @returns {Promise<string>} Promise resolving to serialized signature dictionary object
+   * @throws {InternalError} when byte range calculation fails after multiple attempts
    */
   private async buildSignatureDictionaryWithCorrectByteRanges(
     signedDataDER: Uint8Array,
@@ -177,40 +192,129 @@ export class PdfSignatureManipulator {
     objectNumber: number
   ): Promise<string> {
     const placeholderSize = 8192;
+    const maxIterations = 3;
+    let lastError: Error | null = null;
+    
+    const estimatedXrefOverhead = 200;
+    const estimatedFinalLength = pdfStructure.body.end + placeholderSize + estimatedXrefOverhead;
+    
     const initialByteRanges = this.byteRangeCalculator.calculateByteRangesWithPlaceholder(
-      request.pdfContent.length,
+      estimatedFinalLength,
       pdfStructure.body.end,
       placeholderSize
     );
 
-    const initialDict = this.dictBuilder.buildDictionary({
+    let currentDict = this.dictBuilder.buildDictionary({
       signedDataDER,
       byteRanges: initialByteRanges,
       signerInfo: request.signerInfo,
       timestamp: request.timestamp,
     });
 
-    const initialDictObject = this.dictBuilder.serializeToPdfObject(
-      initialDict,
+    let currentDictObject = this.dictBuilder.serializeToPdfObject(
+      currentDict,
       objectNumber,
       0
     );
 
-    const signatureDictSize = Buffer.byteLength(initialDictObject, 'latin1');
-    const actualByteRanges = this.byteRangeCalculator.calculateByteRanges({
-      pdfLength: request.pdfContent.length + signatureDictSize,
-      signatureDictPosition: pdfStructure.body.end,
-      signatureLength: signedDataDER.length * 2,
-    });
-
-    const finalDict = this.dictBuilder.buildDictionary({
-      signedDataDER,
-      byteRanges: actualByteRanges,
-      signerInfo: request.signerInfo,
-      timestamp: request.timestamp,
-    });
-
-    return this.dictBuilder.serializeToPdfObject(finalDict, objectNumber, 0);
+    for (let iteration = 0; iteration < maxIterations; iteration++) {
+      const currentDictSize = Buffer.byteLength(currentDictObject, 'latin1');
+      
+      const tempObjects: NewPdfObject[] = [
+        {
+          id: objectNumber,
+          generation: 0,
+          content: currentDictObject,
+          offset: 0,
+        },
+      ];
+      
+      const tempUpdate = this.xrefUpdater.createIncrementalUpdate(
+        request.pdfContent,
+        pdfStructure,
+        tempObjects
+      );
+      const measuredFinalPdfLength = tempUpdate.length;
+      
+      let calculatedByteRanges: ByteRange;
+      try {
+        calculatedByteRanges = this.byteRangeCalculator.calculateByteRanges(
+          {
+            pdfLength: measuredFinalPdfLength,
+            signatureDictPosition: pdfStructure.body.end,
+            signatureLength: currentDictSize,
+          },
+          true
+        );
+      } catch (error: any) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        calculatedByteRanges = this.byteRangeCalculator.calculateByteRanges(
+          {
+            pdfLength: measuredFinalPdfLength + 20,
+            signatureDictPosition: pdfStructure.body.end,
+            signatureLength: currentDictSize,
+          },
+          true
+        );
+      }
+      
+      const newDict = this.dictBuilder.buildDictionary({
+        signedDataDER,
+        byteRanges: calculatedByteRanges,
+        signerInfo: request.signerInfo,
+        timestamp: request.timestamp,
+      });
+      
+      const newDictObject = this.dictBuilder.serializeToPdfObject(newDict, objectNumber, 0);
+      const newDictSize = Buffer.byteLength(newDictObject, 'latin1');
+      
+      if (Math.abs(newDictSize - currentDictSize) <= 2) {
+        const finalObjects: NewPdfObject[] = [
+          {
+            id: objectNumber,
+            generation: 0,
+            content: newDictObject,
+            offset: 0,
+          },
+        ];
+        
+        const finalTempUpdate = this.xrefUpdater.createIncrementalUpdate(
+          request.pdfContent,
+          pdfStructure,
+          finalObjects
+        );
+        const actualFinalPdfLength = finalTempUpdate.length;
+        
+        try {
+          ByteRangeValidationRule.validate(calculatedByteRanges, actualFinalPdfLength);
+          return newDictObject;
+        } catch (validationError: any) {
+          const [start1, end1, start2] = calculatedByteRanges;
+          const adjustedByteRanges: ByteRange = [start1, end1, start2, actualFinalPdfLength];
+          
+          ByteRangeValidationRule.validate(adjustedByteRanges, actualFinalPdfLength);
+          
+          const adjustedDict = this.dictBuilder.buildDictionary({
+            signedDataDER,
+            byteRanges: adjustedByteRanges,
+            signerInfo: request.signerInfo,
+            timestamp: request.timestamp,
+          });
+          
+          return this.dictBuilder.serializeToPdfObject(adjustedDict, objectNumber, 0);
+        }
+      }
+      
+      currentDictObject = newDictObject;
+      currentDict = newDict;
+    }
+    
+    const finalSize = Buffer.byteLength(currentDictObject, 'latin1');
+    throw pdfSignatureEmbeddingFailed(
+      `Failed to calculate stable byte ranges after ${maxIterations} iterations. ` +
+      `Dictionary size: ${finalSize} bytes. ` +
+      `Original error: ${lastError?.message || 'Unknown error'}`
+    );
   }
 
   /**

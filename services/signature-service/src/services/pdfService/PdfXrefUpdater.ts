@@ -32,8 +32,6 @@ export class PdfXrefUpdater {
     let content = pdfContent.toString('latin1');
     const parts: string[] = [];
     
-    // Incremental update: preserve the entire original PDF and append a new revision.
-    // Ensure there is a newline boundary before appending new objects.
     if (!content.endsWith('\n')) {
       content += '\n';
     }
