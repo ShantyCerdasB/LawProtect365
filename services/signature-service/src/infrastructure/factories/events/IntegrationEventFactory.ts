@@ -14,7 +14,8 @@ import {
   ViewerInvitationPayload,
   SignerDeclinedPayload,
   EnvelopeCancelledPayload,
-  ReminderNotificationPayload
+  ReminderNotificationPayload,
+  DocumentSignedPayload
 } from '../../../domain/types/events/IntegrationEventTypes';
 import { ParticipantRole } from '@prisma/client';
 

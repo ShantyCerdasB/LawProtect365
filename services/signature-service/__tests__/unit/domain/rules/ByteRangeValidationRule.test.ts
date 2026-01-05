@@ -6,7 +6,6 @@
  */
 
 import { ByteRangeValidationRule } from '../../../../src/domain/rules/ByteRangeValidationRule';
-import { pdfByteRangeInvalid } from '../../../../src/signature-errors';
 
 describe('ByteRangeValidationRule', () => {
   describe('validate', () => {

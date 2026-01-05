@@ -105,3 +105,14 @@ export interface ReminderNotificationPayload {
   source: 'signature-service';
   version: '1.0';
 }
+
+/**
+ * Payload for DOCUMENT_SIGNED events
+ */
+export interface DocumentSignedPayload {
+  documentId: string;
+  envelopeId: string;
+  signedPdfS3Key: string;
+  signatureHash: string;
+  signedAt: string;
+}

@@ -498,8 +498,8 @@ module "sign_service" {
   threshold_percentages = var.threshold_percentages
   budget_notify_emails  = var.budget_notify_emails
 
-  # Document Service integration
-  document_service_url = var.document_service_url
+  # Document Service integration (from documents-service module output)
+  document_service_url = "${module.documents_service.documents_api_endpoint}/${module.documents_service.documents_api_stage_name}"
 
   # Certificate configuration
   certificate_validity_days = var.certificate_validity_days

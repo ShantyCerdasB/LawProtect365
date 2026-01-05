@@ -435,8 +435,3 @@ variable "certificate_validity_days" {
   type        = number
   default     = 365
 }
-
-variable "document_service_url" {
-  description = "Base URL of the Document Service API (required for final signed PDF storage)"
-  type        = string
-}
