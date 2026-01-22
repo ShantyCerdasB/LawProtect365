@@ -7,7 +7,7 @@
  * It ensures proper workflow orchestration and maintains compliance with signing policies.
  */
 
-import {  createNetworkSecurityContext, rethrow } from '@lawprotect/shared-ts';
+import {  createNetworkSecurityContext, rethrow, IntegrationEventPublisher } from '@lawprotect/shared-ts';
 import { EnvelopeCrudService } from '@/services/envelopeCrud/EnvelopeCrudService';
 import { EnvelopeSignerService } from '@/services/envelopeSignerService';
 import { InvitationTokenService } from '@/services/invitationTokenService';
@@ -20,6 +20,7 @@ import { EnvelopeAccessService } from '@/services/envelopeAccess/EnvelopeAccessS
 import { EnvelopeStateService } from '@/services/envelopeStates/EnvelopeStateService';
 import { PdfDigitalSignatureEmbedder } from '@/services/pdfService';
 import type { DocumentServicePort } from '@/app/ports/documents/DocumentServicePort';
+import { IntegrationEventFactory } from '@/infrastructure/factories/events/IntegrationEventFactory';
 
 import { EntityFactory } from '@/infrastructure/factories/EntityFactory';
 import { EnvelopeId } from '@/domain/value-objects/EnvelopeId';
@@ -66,6 +67,8 @@ export class SignDocumentUseCase {
     private readonly envelopeStateService: EnvelopeStateService,
     private readonly pdfEmbedder: PdfDigitalSignatureEmbedder,
     private readonly documentServicePort: DocumentServicePort,
+    private readonly integrationEventFactory: IntegrationEventFactory,
+    private readonly eventPublisher: IntegrationEventPublisher,
     userPersonalInfoRepository?: UserPersonalInfoRepository
   ) {
     this.userPersonalInfoRepository = userPersonalInfoRepository;
@@ -134,7 +137,13 @@ export class SignDocumentUseCase {
         userId
       );
 
-      await this.notifyDocumentService(envelope, envelopeId, embeddedPdf.signedPdfContent, kmsResult);
+      await this.notifyDocumentService(
+        envelope,
+        envelopeId,
+        embeddedPdf.signedPdfContent,
+        kmsResult,
+        embeddedPdfStored.documentKey
+      );
       await this.recordAuditEvent(envelopeId, signerId, signer, userId, securityContext, {
         documentHash,
         signatureHash: kmsResult.signatureHash,
@@ -428,18 +437,24 @@ export class SignDocumentUseCase {
 
   /**
    * @description
-   * Notifies Document Service about the final signed PDF. Extracts documentId from envelope
-   * source key and sends signed PDF. Errors are logged but do not fail the signing process.
+   * Notifies Document Service about the final signed PDF using hybrid approach:
+   * 1. Attempts synchronous HTTP call with exponential backoff retry (3 attempts)
+   * 2. If HTTP fails, publishes async event to outbox for eventual consistency
+   * 
+   * This ensures the signing process never fails due to Document Service issues
+   * while maintaining eventual consistency through event-driven fallback.
    * @param {SignatureEnvelope} envelope - Envelope entity
    * @param {EnvelopeId} envelopeId - Envelope identifier
    * @param {Buffer} signedPdfContent - Signed PDF content
    * @param {KmsSignResult} kmsResult - KMS signing result
+   * @param {string} signedPdfS3Key - S3 key where signed PDF is stored
    */
   private async notifyDocumentService(
     envelope: SignatureEnvelope,
     envelopeId: EnvelopeId,
     signedPdfContent: Buffer,
-    kmsResult: KmsSignResult
+    kmsResult: KmsSignResult,
+    signedPdfS3Key: string
   ): Promise<void> {
     const sourceKey = envelope.getSourceKey()?.getValue();
     if (!sourceKey) {
@@ -453,15 +468,67 @@ export class SignDocumentUseCase {
       return;
     }
 
-    await this.documentServicePort.storeFinalSignedPdf({
-      documentId,
-      envelopeId: envelopeId.getValue(),
-      signedPdfContent,
-      signatureHash: kmsResult.signatureHash,
-      signedAt: kmsResult.signedAt,
-    }).catch((error) => {
-      console.error('Failed to store final signed PDF in Document Service:', error);
-    });
+    try {
+      await this.retryWithBackoff(
+        () => this.documentServicePort.storeFinalSignedPdf({
+          documentId,
+          envelopeId: envelopeId.getValue(),
+          signedPdfContent,
+          signatureHash: kmsResult.signatureHash,
+          signedAt: kmsResult.signedAt,
+        }),
+        { maxRetries: 3, initialDelay: 1000 }
+      );
+    } catch (error) {
+      const event = this.integrationEventFactory.documentSigned({
+        documentId,
+        envelopeId: envelopeId.getValue(),
+        signedPdfS3Key,
+        signatureHash: kmsResult.signatureHash,
+        signedAt: kmsResult.signedAt.toISOString(),
+      });
+
+      await this.eventPublisher.publish(event, `${documentId}-${kmsResult.signatureHash}`);
+      
+      console.warn('Document Service sync failed, using async event fallback:', {
+        documentId,
+        envelopeId: envelopeId.getValue(),
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  }
+
+  /**
+   * @description
+   * Retries a function with exponential backoff. Attempts the function up to
+   * maxRetries + 1 times, with delays increasing exponentially (1s, 2s, 4s).
+   * @param {() => Promise<T>} fn - Function to retry
+   * @param {object} options - Retry options
+   * @param {number} options.maxRetries - Maximum number of retry attempts (default: 3)
+   * @param {number} options.initialDelay - Initial delay in milliseconds (default: 1000)
+   * @returns {Promise<T>} Promise resolving to function result
+   * @throws {Error} Last error if all retries fail
+   */
+  private async retryWithBackoff<T>(
+    fn: () => Promise<T>,
+    options: { maxRetries: number; initialDelay: number }
+  ): Promise<T> {
+    let lastError: Error;
+    
+    for (let attempt = 0; attempt <= options.maxRetries; attempt++) {
+      try {
+        return await fn();
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        
+        if (attempt < options.maxRetries) {
+          const delay = options.initialDelay * Math.pow(2, attempt);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
+    }
+    
+    throw lastError!;
   }
 
   /**

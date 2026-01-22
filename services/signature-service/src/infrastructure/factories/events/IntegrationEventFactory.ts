@@ -185,4 +185,38 @@ export class IntegrationEventFactory {
       payload: domainEvent.payload
     };
   }
+
+  /**
+   * @description
+   * Builds a DOCUMENT_SIGNED event when a document is successfully signed.
+   * This event is published as a fallback when synchronous HTTP notification to
+   * Document Service fails, ensuring eventual consistency.
+   * @param {object} args - Event arguments
+   * @param {string} args.documentId - Document ID in Document Service
+   * @param {string} args.envelopeId - Envelope ID
+   * @param {string} args.signedPdfS3Key - S3 key where signed PDF is stored
+   * @param {string} args.signatureHash - SHA-256 hash of the signature
+   * @param {string} args.signedAt - ISO timestamp when signature was created
+   * @returns {IntegrationEvent<'DOCUMENT_SIGNED', DocumentSignedPayload>} Integration event ready to be published
+   */
+  documentSigned(args: {
+    documentId: string;
+    envelopeId: string;
+    signedPdfS3Key: string;
+    signatureHash: string;
+    signedAt: string;
+  }): IntegrationEvent<'DOCUMENT_SIGNED', DocumentSignedPayload> {
+    const domainEvent = makeEvent(EventNames.DOCUMENT_SIGNED, {
+      documentId: args.documentId,
+      envelopeId: args.envelopeId,
+      signedPdfS3Key: args.signedPdfS3Key,
+      signatureHash: args.signatureHash,
+      signedAt: args.signedAt,
+    });
+    
+    return {
+      name: EventNames.DOCUMENT_SIGNED,
+      payload: domainEvent.payload
+    };
+  }
 }

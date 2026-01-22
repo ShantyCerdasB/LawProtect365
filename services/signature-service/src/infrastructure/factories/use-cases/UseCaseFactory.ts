@@ -20,8 +20,8 @@ import {
   ListEnvelopesByUserUseCase,
   SignDocumentUseCase,
 } from '../../../services/orchestrators';
-
-
+import { IntegrationEventFactory } from '../events/IntegrationEventFactory';
+import { OutboxEventPublisher } from '@lawprotect/shared-ts';
 import type { Services } from '@/domain/types/infraestructure/container';
 
 /**
@@ -178,9 +178,16 @@ export class UseCaseFactory {
   /**
    * Creates SignDocumentUseCase with required services
    * @param services - Object containing all required services
+   * @param infrastructure - Object containing infrastructure services (from InfrastructureFactory.createAll)
    * @returns Configured SignDocumentUseCase instance
    */
-  static createSignDocumentUseCase(services: Services): SignDocumentUseCase {
+  static createSignDocumentUseCase(
+    services: Services,
+    infrastructure: ReturnType<typeof import('../infrastructure/InfrastructureFactory').InfrastructureFactory.createAll>
+  ): SignDocumentUseCase {
+    const integrationEventFactory = new IntegrationEventFactory();
+    const eventPublisher = new OutboxEventPublisher(infrastructure.outboxRepository);
+    
     return new SignDocumentUseCase(
       services.envelopeCrudService,
       services.envelopeSignerService,
@@ -194,6 +201,8 @@ export class UseCaseFactory {
       services.envelopeStateService,
       services.pdfDigitalSignatureEmbedder,
       services.documentServicePort,
+      integrationEventFactory,
+      eventPublisher,
       services.userPersonalInfoRepository
     );
   }
@@ -201,9 +210,13 @@ export class UseCaseFactory {
   /**
    * Creates all use cases in a single operation
    * @param services - Object containing all required services
+   * @param infrastructure - Object containing infrastructure services
    * @returns Object containing all use case instances
    */
-  static createAll(services: Services) {
+  static createAll(
+    services: Services,
+    infrastructure: ReturnType<typeof import('../infrastructure/InfrastructureFactory').InfrastructureFactory.createAll>
+  ) {
     return {
       createEnvelopeUseCase: this.createCreateEnvelopeUseCase(services),
       cancelEnvelopeUseCase: this.createCancelEnvelopeUseCase(services),
@@ -216,7 +229,7 @@ export class UseCaseFactory {
       getAuditTrailUseCase: this.createGetAuditTrailUseCase(services),
       getEnvelopeUseCase: this.createGetEnvelopeUseCase(services),
       listEnvelopesByUserUseCase: this.createListEnvelopesByUserUseCase(services),
-      signDocumentUseCase: this.createSignDocumentUseCase(services),
+      signDocumentUseCase: this.createSignDocumentUseCase(services, infrastructure),
     };
   }
 }

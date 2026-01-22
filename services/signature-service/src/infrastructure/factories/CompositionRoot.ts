@@ -43,7 +43,7 @@ export class CompositionRoot {
     };
 
     // Create all use cases
-    const useCases = UseCaseFactory.createAll(services);
+    const useCases = UseCaseFactory.createAll(services, infrastructure);
 
     // Create orchestrator with complete dependency graph
     return new SignatureOrchestrator({
@@ -72,7 +72,7 @@ export class CompositionRoot {
       pdfDigitalSignatureEmbedder: domainServices.pdfDigitalSignatureEmbedder,
       documentServicePort: domainServices.documentServicePort,
     };
-    const useCases = UseCaseFactory.createAll(services);
+    const useCases = UseCaseFactory.createAll(services, infrastructure);
     return new SignatureOrchestrator({ services, useCases });
   }
 }
